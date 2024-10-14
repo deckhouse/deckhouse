@@ -369,7 +369,7 @@ Use the following `registryDockerCfg` if authentication is required to access De
 
 `registryDockerCfg` must be Base64-encoded.
 
-You can use this helper script to generate `registryDockerCfg`:
+You can use the following script to generate `registryDockerCfg`:
 
 ```shell
 declare MYUSER='<PROXY_USERNAME>'
