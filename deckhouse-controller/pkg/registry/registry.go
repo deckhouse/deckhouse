@@ -38,22 +38,7 @@ var semVerRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
 	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
 	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
 
-// Now:
-//
-// list releases
-// list releases --all
-// get release alpha
-// get release alpha --all
-// list sources
-// list modules deckhouse-prod
-// list module-release deckhouse-prod console
-// list module-release deckhouse-prod console --all
-// get module-release deckhouse-prod console alpha
-// get module-release deckhouse-prod console alpha --all
-
-// Proposal:
-//
-// get releases (test alias release or releases)
+// get releases
 // get releases --all
 // get releases -c auto (default channel, print name, if empty - stable)
 // get releases -c alpha --all
@@ -105,7 +90,11 @@ func registerReleaseCommand(parentCMD *kingpin.CmdClause) {
 				channel = *releaseChannel
 			}
 
-			return handleGetDeckhouseRelease(svc, channel, *allFlag)
+			if channel == "" || channel == UnknownChannelSecretDiscovery {
+				channel = ChannelStable
+			}
+
+			return handleGetDeckhouseRelease(ctx, svc, channel, *allFlag)
 		}
 
 		return handleListDeckhouseReleases(ctx, svc, *allFlag)
@@ -148,8 +137,8 @@ func handleListDeckhouseReleases(ctx context.Context, svc *DeckhouseService, all
 	return nil
 }
 
-func handleGetDeckhouseRelease(svc *DeckhouseService, channel string, all bool) error {
-	meta, err := svc.GetDeckhouseRelease(channel)
+func handleGetDeckhouseRelease(ctx context.Context, svc *DeckhouseService, channel string, all bool) error {
+	meta, err := svc.GetDeckhouseRelease(ctx, channel)
 	if err != nil && !errors.Is(err, ErrChannelIsNotFound) {
 		return fmt.Errorf("get deckhouse release: %w", err)
 	}
@@ -231,7 +220,7 @@ func registerModuleCommand(parentCMD *kingpin.CmdClause) {
 
 		if *moduleName != "" {
 			if *moduleChannel != "" {
-				return handleGetModuleInfoInChannel(svc, *moduleName, *moduleChannel, *allFlag)
+				return handleGetModuleInfoInChannel(ctx, svc, *moduleName, *moduleChannel, *allFlag)
 			}
 
 			return handleListModulesVersions(ctx, svc, *moduleName, *allFlag)
@@ -241,8 +230,8 @@ func registerModuleCommand(parentCMD *kingpin.CmdClause) {
 	})
 }
 
-func handleGetModuleInfoInChannel(svc *ModuleService, name string, channel string, all bool) error {
-	meta, err := svc.GetModuleRelease(name, channel)
+func handleGetModuleInfoInChannel(ctx context.Context, svc *ModuleService, name string, channel string, all bool) error {
+	meta, err := svc.GetModuleRelease(ctx, name, channel)
 	if err != nil && !errors.Is(err, ErrChannelIsNotFound) {
 		return fmt.Errorf("get module release %s: %w", name, err)
 	}

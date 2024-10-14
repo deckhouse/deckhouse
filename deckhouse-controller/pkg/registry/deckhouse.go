@@ -52,13 +52,13 @@ func NewDeckhouseService(registryAddress string, registryConfig *utils.RegistryC
 	}
 }
 
-func (svc *DeckhouseService) GetDeckhouseRelease(releaseChannel string) (*ReleaseMetadata, error) {
+func (svc *DeckhouseService) GetDeckhouseRelease(ctx context.Context, releaseChannel string) (*ReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, "release-channel"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
 	}
 
-	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
+	img, err := regCli.Image(ctx, strcase.ToKebab(releaseChannel))
 	if err != nil {
 		if strings.Contains(err.Error(), string(regTransport.ManifestUnknownErrorCode)) {
 			err = errors.Join(err, ErrChannelIsNotFound)

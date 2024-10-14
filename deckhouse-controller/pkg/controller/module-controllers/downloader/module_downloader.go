@@ -17,6 +17,7 @@ package downloader
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -177,7 +178,7 @@ func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, e
 		return nil, fmt.Errorf("fetch module error: %v", err)
 	}
 
-	return regCli.Image(imageTag)
+	return regCli.Image(context.TODO(), imageTag)
 }
 
 func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) (*DownloadStatistic, error) {
@@ -299,7 +300,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
 	}
 
-	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
+	img, err := regCli.Image(context.TODO(), strcase.ToKebab(releaseChannel))
 	if err != nil {
 		return "", "", nil, fmt.Errorf("fetch image error: %v", err)
 	}

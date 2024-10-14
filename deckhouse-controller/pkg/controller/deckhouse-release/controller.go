@@ -490,7 +490,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 	r.metricStorage.CounterAdd("deckhouse_registry_check_total", 1, map[string]string{})
 	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_total", 1, map[string]string{})
 
-	repoDigest, err := regClient.Digest(tag)
+	repoDigest, err := regClient.Digest(context.TODO(), tag)
 	if err != nil {
 		r.metricStorage.CounterAdd("deckhouse_registry_check_errors_total", 1, map[string]string{})
 		return fmt.Errorf("registry (%s) get digest failed: %s", repo, err)

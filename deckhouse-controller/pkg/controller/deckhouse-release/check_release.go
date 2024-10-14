@@ -353,7 +353,7 @@ func (dcr *DeckhouseReleaseChecker) releaseCanarySettings() canarySettings {
 }
 
 func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash string) (digestHash string, err error) {
-	image, err := dcr.registryClient.Image(dcr.releaseChannel)
+	image, err := dcr.registryClient.Image(context.TODO(), dcr.releaseChannel)
 	if err != nil {
 		return "", err
 	}
@@ -543,7 +543,7 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, actual
 		return nil, fmt.Errorf("get next version: %w", err)
 	}
 
-	image, err := dcr.registryClient.Image(nextVersion.Original())
+	image, err := dcr.registryClient.Image(context.TODO(), nextVersion.Original())
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
 	}

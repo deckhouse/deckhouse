@@ -93,13 +93,13 @@ type ModuleReleaseMetadata struct {
 	Changelog map[string]any
 }
 
-func (svc *ModuleService) GetModuleRelease(moduleName, releaseChannel string) (*ModuleReleaseMetadata, error) {
+func (svc *ModuleService) GetModuleRelease(ctx context.Context, moduleName, releaseChannel string) (*ModuleReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName, "release"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
 	}
 
-	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
+	img, err := regCli.Image(ctx, strcase.ToKebab(releaseChannel))
 	if err != nil {
 		if strings.Contains(err.Error(), string(regTransport.ManifestUnknownErrorCode)) {
 			err = errors.Join(err, ErrChannelIsNotFound)

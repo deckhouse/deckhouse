@@ -44,8 +44,8 @@ const (
 )
 
 type Client interface {
-	Image(tag string) (v1.Image, error)
-	Digest(tag string) (string, error)
+	Image(ctx context.Context, tag string) (v1.Image, error)
+	Digest(ctx context.Context, tag string) (string, error)
 	ListTags(ctx context.Context) ([]string, error)
 }
 
@@ -91,7 +91,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	return r, nil
 }
 
-func (r *client) Image(tag string) (v1.Image, error) {
+func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 	imageURL := r.registryURL + ":" + tag
 
 	var nameOpts []name.Option
@@ -115,13 +115,15 @@ func (r *client) Image(tag string) (v1.Image, error) {
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge image
-		ctx, cancel := context.WithTimeout(context.Background(), r.options.timeout)
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
 		// seems weird - yes! but we can't call cancel here, otherwise Image outside this function would be inaccessible
 		go func() {
-			<-ctx.Done()
+			<-ctxWTO.Done()
 			cancel()
 		}()
 
+		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
+	} else {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
@@ -166,8 +168,8 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 	return remote.List(repo, imageOptions...)
 }
 
-func (r *client) Digest(tag string) (string, error) {
-	image, err := r.Image(tag)
+func (r *client) Digest(ctx context.Context, tag string) (string, error) {
+	image, err := r.Image(ctx, tag)
 	if err != nil {
 		return "", err
 	}
