@@ -146,7 +146,7 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 		log.WarnF("Many pipelines will run in parallel, terraform output for nodes %s-%v will be displayed after main execution.\n\n", nodeGroupName, nodesIndexToCreate[1:])
 	}
 
-	resultsСhan := make(chan checkResult, len(nodesIndexToCreate))
+	resultsChan := make(chan checkResult, len(nodesIndexToCreate))
 	for i, indexCandidate := range nodesIndexToCreate {
 		saveLogToBuffer := true
 		candidateName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, indexCandidate)
@@ -159,7 +159,7 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 			}
 			err := BootstrapAdditionalNodeForParallelRun(kubeCl, cfg, indexCandidate, step, nodeGroupName, cloudConfig, true, terraformContext, &buffLog, saveLogToBuffer)
 
-			resultsСhan <- checkResult{
+			resultsChan <- checkResult{
 				name:    candidateName,
 				buffLog: &buffLog,
 				err:     err,
@@ -171,10 +171,10 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 
 	go func() {
 		wg.Wait()
-		close(resultsСhan)
+		close(resultsChan)
 	}()
 
-	for candidate := range resultsСhan {
+	for candidate := range resultsChan {
 		if candidate.err != nil {
 			return nodesToWait, candidate.err
 		}
