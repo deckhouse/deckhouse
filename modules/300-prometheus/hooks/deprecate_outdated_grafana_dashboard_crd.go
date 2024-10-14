@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/tidwall/gjson"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +31,10 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+)
+
+const (
+	outdatedGrafanaDashboardsDeprecationMetricGroup = "d8_deprecated_graphana_dashboards"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -43,6 +48,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(handleGrafanaDashboardCRDs))
 
 func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Container) error {
+	input.MetricsCollector.Expire(outdatedGrafanaDashboardsDeprecationMetricGroup)
+
 	client, err := dc.GetK8sClient()
 	if err != nil {
 		return err
@@ -71,6 +78,7 @@ func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Containe
 						"panel":     sanitizeLabelName(panelTitle),
 						"interval":  interval,
 					},
+					metrics.WithGroup(outdatedGrafanaDashboardsDeprecationMetricGroup),
 				)
 			}
 			alertRule := panel.Get("alert")
@@ -82,6 +90,7 @@ func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Containe
 						"panel":      sanitizeLabelName(panelTitle),
 						"alert_rule": sanitizeLabelName(alertRuleName),
 					},
+					metrics.WithGroup(outdatedGrafanaDashboardsDeprecationMetricGroup),
 				)
 			}
 			panelType := panel.Get("type").String()
@@ -92,6 +101,7 @@ func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Containe
 						"panel":     sanitizeLabelName(panelTitle),
 						"plugin":    panelType,
 					},
+					metrics.WithGroup(outdatedGrafanaDashboardsDeprecationMetricGroup),
 				)
 			}
 		}

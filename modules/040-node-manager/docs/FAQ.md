@@ -784,6 +784,47 @@ Adding custom settings causes a restart of the `containerd` service.
 
 Bashible on nodes merges main Deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
 
+{% endraw %}
+{% alert level="warning" %}
+You can override the values of the parameters that are specified in the file `/etc/containerd/deckhouse.toml`, but you will have to ensure their functionality on your own. Also, it is better not to change the configuration for the master nodes (nodeGroup `master`).
+{% endalert %}
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-option-config.sh
+spec:
+  bundles:
+    - '*'
+  content: |
+    # Copyright 2024 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/additional_option.toml - << EOF
+    oom_score = 500
+    [metrics]
+    address = "127.0.0.1"
+    grpc_histogram = true
+    EOF
+  nodeGroups:
+    - "worker"
+  weight: 31
+```
+
 ### How to add additional registry auth?
 
 Deploy `NodeGroupConfiguration` script:
