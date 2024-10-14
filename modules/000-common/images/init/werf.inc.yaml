@@ -9,7 +9,7 @@ import:
   before: setup
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromArtifact: common/relocate-artifact
+fromArtifact: relocate-artifact
 shell:
   beforeInstall:
   - apt-get update
