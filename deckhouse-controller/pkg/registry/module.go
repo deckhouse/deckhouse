@@ -16,16 +16,21 @@ package registry
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"gopkg.in/yaml.v2"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
@@ -37,37 +42,46 @@ type ModuleService struct {
 	registryOptions []cr.Option
 }
 
-func NewModuleService(registryAddress string, registryConfig *RegistryConfig) *ModuleService {
+func NewModuleService(registryAddress string, registryConfig *utils.RegistryConfig) *ModuleService {
 	return &ModuleService{
 		dc:              dependency.NewDependencyContainer(),
 		registry:        registryAddress,
-		registryOptions: GenerateRegistryOptions(registryConfig),
+		registryOptions: utils.GenerateRegistryOptions(registryConfig),
 	}
 }
 
-func (svc *ModuleService) ListModules() ([]string, error) {
+func (svc *ModuleService) ListModules(ctx context.Context) ([]string, error) {
 	regCli, err := svc.dc.GetRegistryClient(svc.registry, svc.registryOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("get registry client: %v", err)
+		return nil, fmt.Errorf("get registry client: %w", err)
 	}
 
-	ls, err := regCli.ListTags()
+	ls, err := regCli.ListTags(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list tags: %v", err)
+		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
 	return ls, err
 }
 
-func (svc *ModuleService) ListModuleTags(moduleName string) ([]string, error) {
+var (
+	ErrChannelIsNotFound = errors.New("channel is not found")
+	ErrModuleIsNotFound  = errors.New("module is not found")
+)
+
+func (svc *ModuleService) ListModuleTags(ctx context.Context, moduleName string) ([]string, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName), svc.registryOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("get registry client: %v", err)
+		return nil, fmt.Errorf("get registry client: %w", err)
 	}
 
-	ls, err := regCli.ListTags()
+	ls, err := regCli.ListTags(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list tags: %v", err)
+		if strings.Contains(err.Error(), string(regTransport.NameUnknownErrorCode)) {
+			err = errors.Join(err, ErrModuleIsNotFound)
+		}
+
+		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
 	return ls, err
@@ -82,17 +96,21 @@ type ModuleReleaseMetadata struct {
 func (svc *ModuleService) GetModuleRelease(moduleName, releaseChannel string) (*ModuleReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName, "release"), svc.registryOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("get registry client: %v", err)
+		return nil, fmt.Errorf("get registry client: %w", err)
 	}
 
 	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
 	if err != nil {
-		return nil, fmt.Errorf("fetch image error: %v", err)
+		if strings.Contains(err.Error(), string(regTransport.ManifestUnknownErrorCode)) {
+			err = errors.Join(err, ErrChannelIsNotFound)
+		}
+
+		return nil, fmt.Errorf("fetch image error: %w", err)
 	}
 
 	moduleMetadata, err := svc.fetchModuleReleaseMetadata(img)
 	if err != nil {
-		return nil, fmt.Errorf("fetch module release metadata error: %v", err)
+		return nil, fmt.Errorf("fetch module release metadata error: %w", err)
 	}
 
 	if moduleMetadata.Version == nil {

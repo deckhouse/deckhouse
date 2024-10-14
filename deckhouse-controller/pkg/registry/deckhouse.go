@@ -16,17 +16,22 @@ package registry
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
@@ -39,28 +44,32 @@ type DeckhouseService struct {
 	registryOptions []cr.Option
 }
 
-func NewDeckhouseService(registryAddress string, registryConfig *RegistryConfig) *DeckhouseService {
+func NewDeckhouseService(registryAddress string, registryConfig *utils.RegistryConfig) *DeckhouseService {
 	return &DeckhouseService{
 		dc:              dependency.NewDependencyContainer(),
 		registry:        registryAddress,
-		registryOptions: GenerateRegistryOptions(registryConfig),
+		registryOptions: utils.GenerateRegistryOptions(registryConfig),
 	}
 }
 
 func (svc *DeckhouseService) GetDeckhouseRelease(releaseChannel string) (*ReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, "release-channel"), svc.registryOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("get registry client: %v", err)
+		return nil, fmt.Errorf("get registry client: %w", err)
 	}
 
 	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
 	if err != nil {
-		return nil, fmt.Errorf("fetch image: %v", err)
+		if strings.Contains(err.Error(), string(regTransport.ManifestUnknownErrorCode)) {
+			err = errors.Join(err, ErrChannelIsNotFound)
+		}
+
+		return nil, fmt.Errorf("fetch image: %w", err)
 	}
 
 	releaseMetadata, err := svc.fetchReleaseMetadata(img)
 	if err != nil {
-		return nil, fmt.Errorf("fetch release metadata: %v", err)
+		return nil, fmt.Errorf("fetch release metadata: %w", err)
 	}
 
 	if releaseMetadata.Version == nil {
@@ -70,15 +79,15 @@ func (svc *DeckhouseService) GetDeckhouseRelease(releaseChannel string) (*Releas
 	return releaseMetadata, nil
 }
 
-func (svc *DeckhouseService) ListDeckhouseReleases() ([]string, error) {
+func (svc *DeckhouseService) ListDeckhouseReleases(ctx context.Context) ([]string, error) {
 	regCli, err := svc.dc.GetRegistryClient(svc.registry, svc.registryOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("get registry client: %v", err)
+		return nil, fmt.Errorf("get registry client: %w", err)
 	}
 
-	ls, err := regCli.ListTags()
+	ls, err := regCli.ListTags(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("list tags: %v", err)
+		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
 	return ls, nil
