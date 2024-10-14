@@ -50,7 +50,7 @@ shell:
   install:
   - cd /src
   - git clone --depth 1 -b openssl-{{ $opensslVersion }} {{ .SOURCE_REPO }}/openssl/openssl.git ./openssl
-  - git clone --depth 1 -b v{{ $libcapNgVersion }} https://github.com/stevegrubb/libcap-ng.git ./libcap-ng
+  - git clone --depth 1 -b v{{ $libcapNgVersion }} {{ .SOURCE_REPO }}/stevegrubb/libcap-ng.git ./libcap-ng
   - git clone --depth 1 -b v{{ $openvpnVersion }} {{ .SOURCE_REPO }}/OpenVPN/openvpn.git ./openvpn
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
