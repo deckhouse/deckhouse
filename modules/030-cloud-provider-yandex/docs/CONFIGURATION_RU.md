@@ -10,12 +10,12 @@ title: "Cloud provider — Yandex Cloud: настройки"
 
 Модуль автоматически создает StorageClass'ы, покрывающие все варианты дисков в Yandex Cloud:
 
-| Тип | Имя StorageClass | Комментарии |
-|---|---|---|
-| network-hdd | network-hdd | |'
-| network-ssd | network-ssd | |
-| network-ssd-nonreplicated | network-ssd-nonreplicated | |
-| network-ssd-io-m3         | network-ssd-io-m3 | Размер дисков должен быть кратен 93 ГБ |
+| Тип                     | Имя StorageClass           | Комментарии               |
+|-------------------------|----------------------------|---------------------------|
+| network-hdd              | network-hdd               |                           |
+| network-ssd              | network-ssd               |                           |
+| network-ssd-nonreplicated | network-ssd-nonreplicated|                           |
+| network-ssd-io-m3         | network-ssd-io-m3        |Размер дисков должен быть кратен 93 ГБ |
 
 Вы можете отфильтровать ненужные StorageClass'ы с помощью параметра [exclude](#parameters-storageclass-exclude).
 
