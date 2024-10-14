@@ -26,7 +26,7 @@ index 6163a19a9..a610384b6 100644
 +	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +	CertificateOwnerRef *bool
  }
-
+ 
  // CertificatePrivateKey contains configuration options for private keys
 diff --git a/internal/apis/certmanager/v1/zz_generated.conversion.go b/internal/apis/certmanager/v1/zz_generated.conversion.go
 index 41e6cd26b..e8ec0dcd1 100644
@@ -39,7 +39,7 @@ index 41e6cd26b..e8ec0dcd1 100644
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
-
+ 
 @@ -878,6 +879,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1_CertificateSpec(in *certmanag
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
@@ -47,7 +47,7 @@ index 41e6cd26b..e8ec0dcd1 100644
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
-
+ 
 diff --git a/internal/apis/certmanager/v1alpha2/types_certificate.go b/internal/apis/certmanager/v1alpha2/types_certificate.go
 index 5872612d7..69706178b 100644
 --- a/internal/apis/certmanager/v1alpha2/types_certificate.go
@@ -62,7 +62,7 @@ index 5872612d7..69706178b 100644
 +	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +	CertificateOwnerRef *bool
  }
-
+ 
  // CertificatePrivateKey contains configuration options for private keys
 diff --git a/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go b/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
 index 427b8c168..615809611 100644
@@ -75,7 +75,7 @@ index 427b8c168..615809611 100644
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
-
+ 
 @@ -894,6 +895,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1alpha2_CertificateSpec(in *cer
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
@@ -83,7 +83,7 @@ index 427b8c168..615809611 100644
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
-
+ 
 diff --git a/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go b/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go
 index fba61454a..029902566 100644
 --- a/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go
@@ -99,7 +99,7 @@ index fba61454a..029902566 100644
 +	}
  	return
  }
-
+ 
 diff --git a/internal/apis/certmanager/v1alpha3/types_certificate.go b/internal/apis/certmanager/v1alpha3/types_certificate.go
 index 7748fdad0..bce015b4f 100644
 --- a/internal/apis/certmanager/v1alpha3/types_certificate.go
@@ -114,7 +114,7 @@ index 7748fdad0..bce015b4f 100644
 +	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +	CertificateOwnerRef *bool
  }
-
+ 
  // CertificatePrivateKey contains configuration options for private keys
 diff --git a/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go b/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
 index 958d721f4..d93893dc5 100644
@@ -127,7 +127,7 @@ index 958d721f4..d93893dc5 100644
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
-
+ 
 @@ -893,6 +894,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1alpha3_CertificateSpec(in *cer
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
@@ -135,7 +135,7 @@ index 958d721f4..d93893dc5 100644
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
-
+ 
 diff --git a/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go b/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go
 index 6f3bcaebc..8fdd3edd4 100644
 --- a/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go
@@ -151,7 +151,7 @@ index 6f3bcaebc..8fdd3edd4 100644
 +	}
  	return
  }
-
+ 
 diff --git a/internal/apis/certmanager/v1beta1/types_certificate.go b/internal/apis/certmanager/v1beta1/types_certificate.go
 index 2f2a5b18f..057baf771 100644
 --- a/internal/apis/certmanager/v1beta1/types_certificate.go
@@ -166,7 +166,7 @@ index 2f2a5b18f..057baf771 100644
 +	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +	CertificateOwnerRef *bool
  }
-
+ 
  // CertificatePrivateKey contains configuration options for private keys
 diff --git a/internal/apis/certmanager/v1beta1/zz_generated.conversion.go b/internal/apis/certmanager/v1beta1/zz_generated.conversion.go
 index 72b72178e..6aa9b3537 100644
@@ -179,7 +179,7 @@ index 72b72178e..6aa9b3537 100644
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
-
+ 
 @@ -881,6 +882,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1beta1_CertificateSpec(in *cert
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
@@ -187,7 +187,7 @@ index 72b72178e..6aa9b3537 100644
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
-
+ 
 diff --git a/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go b/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go
 index 7644138e1..fee02661c 100644
 --- a/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go
@@ -203,7 +203,7 @@ index 7644138e1..fee02661c 100644
 +	}
  	return
  }
-
+ 
 diff --git a/internal/apis/certmanager/zz_generated.deepcopy.go b/internal/apis/certmanager/zz_generated.deepcopy.go
 index 67361a89e..dac61e476 100644
 --- a/internal/apis/certmanager/zz_generated.deepcopy.go
@@ -220,7 +220,7 @@ index 67361a89e..dac61e476 100644
 +	}
  	return
  }
-
+ 
 diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
 index 767a18ffc..7e6a648ff 100644
 --- a/pkg/apis/certmanager/v1/types_certificate.go
@@ -236,7 +236,7 @@ index 767a18ffc..7e6a648ff 100644
 +	// +optional
 +	CertificateOwnerRef *bool `json:"certificateOwnerRef,omitempty"`
  }
-
+ 
  // CertificatePrivateKey contains configuration options for private keys
 diff --git a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
 index 8ba5ea3aa..fdbb35c07 100644
@@ -253,7 +253,7 @@ index 8ba5ea3aa..fdbb35c07 100644
 +	}
  	return
  }
-
+ 
 diff --git a/pkg/controller/certificates/issuing/internal/secret.go b/pkg/controller/certificates/issuing/internal/secret.go
 index ad952e031..fda4276d7 100644
 --- a/pkg/controller/certificates/issuing/internal/secret.go
@@ -261,7 +261,7 @@ index ad952e031..fda4276d7 100644
 @@ -102,10 +102,16 @@ func (s *SecretsManager) UpdateData(ctx context.Context, crt *cmapi.Certificate,
  		WithAnnotations(secret.Annotations).WithLabels(secret.Labels).
  		WithData(secret.Data).WithType(secret.Type)
-
+ 
 +	certificateOwnerRef := s.enableSecretOwnerReferences
 +	// Check the CertificateOwnerRef field of the certificate, and if it is not nil, override enableSecretOwnerReferences with the CertificateOwnerRef value.
 +	if crt.Spec.CertificateOwnerRef != nil {
@@ -283,7 +283,7 @@ index 49a9db3d2..0889a7e7a 100644
 @@ -72,6 +72,30 @@ func Test_SecretsManager(t *testing.T) {
  		gen.SetCertificateDNSNames("example.com"),
  	), fixedClock)
-
+ 
 +	baseCertWithCertificateOwnerRefEnabled := gen.Certificate("test",
 +		gen.SetCertificateIssuer(cmmeta.ObjectReference{Name: "ca-issuer", Kind: "Issuer", Group: "foo.io"}),
 +		gen.SetCertificateSecretName("output"),
@@ -314,7 +314,7 @@ index 49a9db3d2..0889a7e7a 100644
 @@ -155,6 +179,77 @@ func Test_SecretsManager(t *testing.T) {
  			expectedErr: false,
  		},
-
+ 
 +		"if secret does not exist, but certificateOwnerRef is set to true, create new Secret, with owner disabled": {
 +			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: false},
 +			certificate:        baseCertBundleWithCertificateOwnerRefEnabled.Certificate,
@@ -400,7 +400,7 @@ index 49a9db3d2..0889a7e7a 100644
 @@ -277,6 +373,103 @@ func Test_SecretsManager(t *testing.T) {
  						})
  					assert.Equal(t, expCnf, gotCnf)
-
+ 
 +					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test"}
 +					assert.Equal(t, expOpts, gotOpts)
 +
@@ -500,7 +500,7 @@ index 49a9db3d2..0889a7e7a 100644
 +
  					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test", Force: true}
  					assert.Equal(t, expOpts, gotOpts)
-
+ 
 diff --git a/test/unit/gen/certificate.go b/test/unit/gen/certificate.go
 index 22766e228..aa02588b2 100644
 --- a/test/unit/gen/certificate.go

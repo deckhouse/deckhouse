@@ -111,7 +111,6 @@ func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.Filter
 
 	return cpod, nil
 }
-
 func lockQueueFilterDS(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ds appsv1.DaemonSet
 

@@ -281,7 +281,7 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 			},
 		},
 		Spec: batchv1.JobSpec{
-			BackoffLimit: ptr.To[int32](1),
+			BackoffLimit: ptr.To(int32(1)),
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					ImagePullSecrets: []corev1.LocalObjectReference{{Name: "deckhouse-registry"}},

@@ -45,6 +45,7 @@ istio:
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(0))
+
 		})
 	})
 

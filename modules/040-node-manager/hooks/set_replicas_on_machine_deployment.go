@@ -144,8 +144,7 @@ func capiSetReplicasFilterMD(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func calculateReplicasAndPatchMachineDeployment(
-	input *go_hook.HookInput, snap []go_hook.FilterResult, nodeGroups map[string]setReplicasNodeGroup, apiGroup string,
-) {
+	input *go_hook.HookInput, snap []go_hook.FilterResult, nodeGroups map[string]setReplicasNodeGroup, apiGroup string) {
 	for _, sn := range snap {
 		md := sn.(setReplicasMachineDeployment)
 
@@ -155,7 +154,7 @@ func calculateReplicasAndPatchMachineDeployment(
 			continue
 		}
 
-		desiredReplicas := md.Replicas
+		var desiredReplicas = md.Replicas
 
 		switch {
 		case ng.Min >= ng.Max:

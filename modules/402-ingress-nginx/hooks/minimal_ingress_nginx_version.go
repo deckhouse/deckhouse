@@ -122,7 +122,9 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 	return nil
 }
 
-var borderVersion = semver.MustParse("1.0.0")
+var (
+	borderVersion = semver.MustParse("1.0.0")
+)
 
 func versionsIncompatible(v1, v2 *semver.Version) bool {
 	if v1.GreaterThan(borderVersion) && v2.LessThan(borderVersion) {

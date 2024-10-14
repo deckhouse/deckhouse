@@ -63,7 +63,6 @@ func csiFilterCSINode(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 	return csiNode.Name, nil
 }
-
 func csiFilterNode(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var node v1.Node
 

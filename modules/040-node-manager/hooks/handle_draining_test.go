@@ -92,7 +92,7 @@ metadata:
 	})
 
 	Context("draining_nodes", func() {
-		initialState := `
+		var initialState = `
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -125,7 +125,7 @@ data:
   worker: dXBkYXRlZA== # updated
   undisruptable-worker: dXBkYXRlZA== # updated
 `
-		nodeNames := []string{"worker-1", "worker-2", "worker-3"}
+		var nodeNames = []string{"worker-1", "worker-2", "worker-3"}
 		for _, gDraining := range []bool{true, false} {
 			for _, gUnschedulable := range []bool{true, false} {
 				Context(fmt.Sprintf("Draining: %t, Unschedulable: %t", gDraining, gUnschedulable), func() {
@@ -176,6 +176,7 @@ data:
 		var event *eventsv1.Event
 
 		BeforeEach(func() {
+
 			st := f.KubeStateSet("")
 			f.BindingContexts.Set(st)
 
@@ -202,6 +203,7 @@ data:
 
 	Context("simulate error metrics", func() {
 		BeforeEach(func() {
+
 			st := f.KubeStateSet(`
 ---
 apiVersion: v1

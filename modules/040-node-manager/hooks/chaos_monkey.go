@@ -262,10 +262,12 @@ type chaosNode struct {
 	NodeGroup string
 }
 
-var victimAnnotationPatch = map[string]interface{}{
-	"metadata": map[string]interface{}{
-		"annotations": map[string]interface{}{
-			"node.deckhouse.io/chaos-monkey-victim": "",
+var (
+	victimAnnotationPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"node.deckhouse.io/chaos-monkey-victim": "",
+			},
 		},
-	},
-}
+	}
+)

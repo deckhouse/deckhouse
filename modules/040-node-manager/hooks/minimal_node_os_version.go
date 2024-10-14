@@ -31,10 +31,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
-var (
-	osImageUbuntuRegex = regexp.MustCompile(`^Ubuntu ([0-9.]+)( )?(LTS)?$`)
-	osImageDebianRegex = regexp.MustCompile(`^Debian GNU\/Linux ([0-9.]+)( )?(.*)?$`)
-)
+var osImageUbuntuRegex = regexp.MustCompile(`^Ubuntu ([0-9.]+)( )?(LTS)?$`)
+var osImageDebianRegex = regexp.MustCompile(`^Debian GNU\/Linux ([0-9.]+)( )?(.*)?$`)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
