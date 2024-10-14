@@ -19,10 +19,16 @@ git:
     install:
     - '**/*'
 shell:
+  beforeInstall:
+  {{ - include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache patch
   install:
   - git clone --depth 1 --branch v0.22.0 {{ $.SOURCE_REPO }}/aquasecurity/trivy-operator.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
+  - |
+      for f in /patches/*.patch; do
+        patch -p1 < $f
+      done
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
