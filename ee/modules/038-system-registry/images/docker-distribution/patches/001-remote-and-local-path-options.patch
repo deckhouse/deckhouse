@@ -15,6 +15,38 @@ index 7076df85..35d9f435 100644
  }
  
  // Parse parses an input configuration yaml document into a Configuration struct
+diff --git a/errors.go b/errors.go
+index 8e0b788d..0ba113d5 100644
+--- a/errors.go
++++ b/errors.go
+@@ -117,3 +117,14 @@ type ErrManifestNameInvalid struct {
+ func (err ErrManifestNameInvalid) Error() string {
+ 	return fmt.Sprintf("manifest name %q invalid: %v", err.Name, err.Reason)
+ }
++
++// ErrRepositoryUnknownWithReason is returned if the named repository is not known by
++// the registry, along with the reason for this status.
++type ErrRepositoryUnknownWithReason struct {
++	Name   string
++	Reason error
++}
++
++func (err ErrRepositoryUnknownWithReason) Error() string {
++	return fmt.Sprintf("repository '%s' is not known to the registry: %v", err.Name, err.Reason)
++}
+diff --git a/registry/handlers/app.go b/registry/handlers/app.go
+index bf56cea2..fa87f23a 100644
+--- a/registry/handlers/app.go
++++ b/registry/handlers/app.go
+@@ -692,6 +692,8 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
+ 				switch err := err.(type) {
+ 				case distribution.ErrRepositoryUnknown:
+ 					context.Errors = append(context.Errors, v2.ErrorCodeNameUnknown.WithDetail(err))
++				case distribution.ErrRepositoryUnknownWithReason:
++					context.Errors = append(context.Errors, v2.ErrorCodeNameUnknown.WithMessage(err.Error()))
+ 				case distribution.ErrRepositoryNameInvalid:
+ 					context.Errors = append(context.Errors, v2.ErrorCodeNameInvalid.WithDetail(err))
+ 				case errcode.Error:
 diff --git a/registry/proxy/proxyblobstore.go b/registry/proxy/proxyblobstore.go
 index 5605e077..cd7db713 100644
 --- a/registry/proxy/proxyblobstore.go
@@ -258,7 +290,7 @@ index 4927dc1e..b60c0285 100644
  	localStats := env.LocalStats()
  	remoteStats := env.RemoteStats()
 diff --git a/registry/proxy/proxyregistry.go b/registry/proxy/proxyregistry.go
-index 8e5506ed..d5201905 100644
+index 8e5506ed..7d152248 100644
 --- a/registry/proxy/proxyregistry.go
 +++ b/registry/proxy/proxyregistry.go
 @@ -5,6 +5,7 @@ import (
@@ -387,20 +419,12 @@ index 8e5506ed..d5201905 100644
  		tags: &proxyTagService{
  			localTags:      localRepo.Tags(ctx),
  			remoteTags:     remoteRepo.Tags(ctx),
-@@ -189,6 +216,55 @@ func (pr *proxyingRegistry) BlobStatter() distribution.BlobStatter {
+@@ -189,6 +216,57 @@ func (pr *proxyingRegistry) BlobStatter() distribution.BlobStatter {
  	return pr.embedded.BlobStatter()
  }
  
 +func (pr *proxyingRegistry) getRemoteRepositoryName(name reference.Named) (reference.Named, error) {
 +	repoName := name.String()
-+
-+	// Duplicate error for unit tests
-+	if pr.remotePathOnly == "" && pr.localPathAlias != "" {
-+		return nil, fmt.Errorf(
-+			"unknown remote path for the alias of the local path '%s', fill in the 'proxy.remotepathonly' field",
-+			pr.localPathAlias,
-+		)
-+	}
 +
 +	// If localPathAlias is empty, no changes to the remote repository
 +	if pr.localPathAlias == "" {
@@ -412,7 +436,10 @@ index 8e5506ed..d5201905 100644
 +		newRepoName := pr.remotePathOnly + strings.TrimPrefix(repoName, pr.localPathAlias)
 +		remoteRepositoryName, err := reference.WithName(newRepoName)
 +		if err != nil {
-+			return nil, err
++			return nil, distribution.ErrRepositoryNameInvalid{
++				Name:   newRepoName,
++				Reason: err,
++			}
 +		}
 +		return remoteRepositoryName, nil
 +	}
@@ -421,6 +448,11 @@ index 8e5506ed..d5201905 100644
 +}
 +
 +func (pr *proxyingRegistry) repositoryIsAllowed(name reference.Named) (bool, error) {
++	// Skip if remotePathOnly is empty
++	if pr.remotePathOnly == "" {
++		return true, nil
++	}
++
 +	repoName := name.String()
 +	allowedPrefix := pr.remotePathOnly
 +
@@ -431,11 +463,13 @@ index 8e5506ed..d5201905 100644
 +
 +	// Check if the repository name has the allowed prefix
 +	if !strings.HasPrefix(repoName, allowedPrefix) {
-+		return false, fmt.Errorf(
-+			"not allowed repository '%s', allowed prefix is '%s'",
-+			repoName,
-+			allowedPrefix,
-+		)
++		return false, distribution.ErrRepositoryUnknownWithReason{
++			Name: repoName,
++			Reason: fmt.Errorf(
++				"allowed prefix is '%s'",
++				allowedPrefix,
++			),
++		}
 +	}
 +	return true, nil
 +}
@@ -443,7 +477,7 @@ index 8e5506ed..d5201905 100644
  // authChallenger encapsulates a request to the upstream to establish credential challenges
  type authChallenger interface {
  	tryEstablishChallenges(context.Context) error
-@@ -240,10 +316,10 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
+@@ -240,10 +318,10 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
  // locally, or pulling it through from a remote and caching it locally if it doesn't
  // already exist
  type proxiedRepository struct {
@@ -458,7 +492,7 @@ index 8e5506ed..d5201905 100644
  }
  
  func (pr *proxiedRepository) Manifests(ctx context.Context, options ...distribution.ManifestServiceOption) (distribution.ManifestService, error) {
-@@ -255,7 +331,7 @@ func (pr *proxiedRepository) Blobs(ctx context.Context) distribution.BlobStore {
+@@ -255,7 +333,7 @@ func (pr *proxiedRepository) Blobs(ctx context.Context) distribution.BlobStore {
  }
  
  func (pr *proxiedRepository) Named() reference.Named {
@@ -469,10 +503,10 @@ index 8e5506ed..d5201905 100644
  func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
 diff --git a/registry/proxy/proxyregistry_test.go b/registry/proxy/proxyregistry_test.go
 new file mode 100644
-index 00000000..11f3109c
+index 00000000..7aa602b7
 --- /dev/null
 +++ b/registry/proxy/proxyregistry_test.go
-@@ -0,0 +1,147 @@
+@@ -0,0 +1,155 @@
 +package proxy
 +
 +import (
@@ -558,6 +592,14 @@ index 00000000..11f3109c
 +		expectedAllowed bool
 +		expectError     bool
 +	}{
++		{
++			name:            "Allowed repository without remotePathOnly option",
++			remotePathOnly:  "",
++			localPathAlias:  "",
++			repoName:        "remote/repo",
++			expectedAllowed: true,
++			expectError:     false,
++		},
 +		{
 +			name:            "Allowed repository without alias",
 +			remotePathOnly:  "remote",
