@@ -25,7 +25,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -74,8 +74,8 @@ var (
 			},
 		},
 		NameSelector:                 &types.NameSelector{MatchNames: []string{"d8-pki"}},
-		ExecuteHookOnSynchronization: pointer.Bool(false),
-		ExecuteHookOnEvents:          pointer.Bool(false),
+		ExecuteHookOnSynchronization: ptr.To(false),
+		ExecuteHookOnEvents:          ptr.To(false),
 		FilterFunc:                   syncEtcdFilter,
 	}
 )

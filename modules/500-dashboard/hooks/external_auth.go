@@ -17,7 +17,7 @@ limitations under the License.
 package hooks
 
 import (
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/external_auth"
 )
@@ -28,6 +28,6 @@ var _ = external_auth.RegisterHook(external_auth.Settings{
 	DexExternalAuth: external_auth.ExternalAuth{
 		AuthURL:         "https://dashboard-dex-authenticator.d8-dashboard.svc.%CLUSTER_DOMAIN%/dex-authenticator/auth",
 		AuthSignInURL:   "https://$host/dex-authenticator/sign_in",
-		UseBearerTokens: pointer.Bool(true),
+		UseBearerTokens: ptr.To(true),
 	},
 })

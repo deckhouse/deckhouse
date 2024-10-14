@@ -114,6 +114,8 @@ In high-load clusters, where many alerts are generated and many metrics are coll
 
 When allocating monitoring nodes, it is important to allocate fast disks to them. You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (global parameter [storageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)) or allocate a dedicated `storageClass` to monitoring components only ([storageClass](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
 
+If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), it is recommended to explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](../documentation/v1/modules/300-prometheus/configuration.html#parameters-nodeselector).
+
 ### System nodes
 
 {% alert %}

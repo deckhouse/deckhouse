@@ -127,6 +127,10 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	}
 
 	if cloud.Provider == "Yandex" {
+		if err := ValidateClusterConfigurationPrefix(cloud.Prefix, cloud.Provider); err != nil {
+			return nil, err
+		}
+
 		var masterNodeGroup YandexMasterNodeGroupSpec
 		if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)

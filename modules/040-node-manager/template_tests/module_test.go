@@ -52,7 +52,7 @@ clusterConfiguration:
     provider: vSphere
   clusterDomain: cluster.local
   clusterType: Cloud
-  defaultCRI: Docker
+  defaultCRI: Containerd
   kind: ClusterConfiguration
   kubernetesVersion: "1.29"
   podSubnetCIDR: 10.111.0.0/16
@@ -199,7 +199,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: AzureInstanceClass
@@ -336,7 +336,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -422,7 +422,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -573,7 +573,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: YandexInstanceClass
@@ -1803,7 +1803,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.24"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass
@@ -1826,7 +1826,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.24"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass

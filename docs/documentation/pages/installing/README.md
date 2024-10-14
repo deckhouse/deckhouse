@@ -59,6 +59,8 @@ The YAML installation config contains multiple resource configurations (manifest
 
 - `ModuleConfig` — a set of resources containing [Deckhouse configuration](../) parameters.
 
+If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), it is recommended to explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](../modules/300-prometheus/configuration.html#parameters-nodeselector).
+
 {% offtopic title="An example of the installation config..." %}
 
 ```yaml
@@ -124,6 +126,18 @@ spec:
   enabled: true
   settings:
     allowedBundles: ["ubuntu-lts"]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  # Specify, in case of using dedicated nodes for monitoring.
+  # settings:
+  #   nodeSelector:
+  #     node.deckhouse.io/group: monitoring
 ```
 
 {% endofftopic %}

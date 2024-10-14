@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/go-openapi/spec"
@@ -26,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sYAML "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -48,6 +49,17 @@ var cloudProviderToProviderKind = map[string]string{
 	"Azure":     "AzureClusterConfiguration",
 	"VCD":       "VCDClusterConfiguration",
 	"Zvirt":     "ZvirtClusterConfiguration",
+}
+
+var cloudProviderSpecificClusterPrefix = map[string]interface{}{
+	"OpenStack": regexp.MustCompile(".+"),
+	"AWS":       regexp.MustCompile(".+"),
+	"GCP":       regexp.MustCompile(".+"),
+	"Yandex":    regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$"),
+	"vSphere":   regexp.MustCompile(".+"),
+	"Azure":     regexp.MustCompile(".+"),
+	"VCD":       regexp.MustCompile(".+"),
+	"Zvirt":     regexp.MustCompile(".+"),
 }
 
 type ClusterConfig struct {
@@ -82,7 +94,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 		_, gvk, err := scheme.Codecs.UniversalDecoder().Decode(docData, nil, obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -100,7 +112,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -136,7 +148,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -167,7 +179,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -216,7 +228,7 @@ func ValidateClusterConfiguration(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -250,7 +262,7 @@ func ValidateClusterConfiguration(
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -325,7 +337,7 @@ func ValidateProviderSpecificClusterConfiguration(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -355,7 +367,7 @@ func ValidateProviderSpecificClusterConfiguration(
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -400,7 +412,7 @@ func ValidateStaticClusterConfiguration(
 		err := yaml.Unmarshal(docData, &obj)
 		if err != nil {
 			errs.Append(ErrKindInvalidYAML, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
 			})
 			continue
@@ -430,7 +442,7 @@ func ValidateStaticClusterConfiguration(
 
 		if len(errMessages) != 0 {
 			errs.Append(ErrKindValidationFailed, Error{
-				Index:    pointer.Int(i),
+				Index:    ptr.To(i),
 				Group:    gvk.Group,
 				Version:  gvk.Version,
 				Kind:     gvk.Kind,
@@ -739,4 +751,17 @@ func (i *namedIndex) String() string {
 		return fmt.Sprintf("%s, %s", i.Kind, i.Version)
 	}
 	return fmt.Sprintf("%s, %s, metadata.name: %q", i.Kind, i.Version, i.Metadata.Name)
+}
+
+func ValidateClusterConfigurationPrefix(prefix string, provider string) error {
+	regex, ok := cloudProviderSpecificClusterPrefix[provider]
+	if !ok {
+		return nil
+	}
+
+	if !regex.(*regexp.Regexp).MatchString(prefix) {
+		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", prefix, provider, regex)
+	}
+
+	return nil
 }

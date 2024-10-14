@@ -1,0 +1,14 @@
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ .Images.BASE_ALT_P11 }}
+git:
+- add: /tools/dev_images/additional_tools/alt/binary_replace.sh
+  to: /binary_replace.sh
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y glibc-utils
+  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial

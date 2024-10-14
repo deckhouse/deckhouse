@@ -25,7 +25,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -34,7 +34,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -127,6 +130,9 @@ func (s *Service) abort(
 ) *pb.AbortResult {
 	var err error
 
+	cleanuper := callback.NewCallback()
+	defer cleanuper.Call()
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
@@ -145,18 +151,21 @@ func (s *Service) abort(
 	var (
 		configPath    string
 		resourcesPath string
+		cleanup       func() error
 	)
 	err = log.Process("default", "Preparing configuration", func() error {
-		configPath, err = writeTempFile([]byte(input.CombineYAMLs(
+		configPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
 			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
 		)))
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("failed to write init configuration: %w", err)
 		}
 
-		resourcesPath, err = writeTempFile([]byte(input.CombineYAMLs(
+		resourcesPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
 			request.InitResources, request.Resources,
 		)))
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("failed to write resources: %w", err)
 		}
@@ -194,7 +203,8 @@ func (s *Service) abort(
 			return fmt.Errorf("parsing connection config: %w", err)
 		}
 
-		sshClient, err = prepareSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
@@ -203,7 +213,6 @@ func (s *Service) abort(
 	if err != nil {
 		return &pb.AbortResult{Err: err.Error()}
 	}
-	defer sshClient.Stop()
 
 	var commanderUUID uuid.UUID
 	if request.Options.CommanderUuid != "" {
@@ -218,8 +227,8 @@ func (s *Service) abort(
 		ResourcesPath:    resourcesPath,
 		InitialState:     initialState,
 		NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-		UseTfCache:       pointer.Bool(true),
-		AutoApprove:      pointer.Bool(true),
+		UseTfCache:       ptr.To(true),
+		AutoApprove:      ptr.To(true),
 		ResourcesTimeout: request.Options.ResourcesTimeout.AsDuration(),
 		DeckhouseTimeout: request.Options.DeckhouseTimeout.AsDuration(),
 
@@ -235,7 +244,7 @@ func (s *Service) abort(
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(abortErr, marshalErr)
 
-	return &pb.AbortResult{State: string(stateData), Err: errToString(err)}
+	return &pb.AbortResult{State: string(stateData), Err: util.ErrToString(err)}
 }
 
 func (s *Service) abortServerTransitions() []fsm.Transition {
