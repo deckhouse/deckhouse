@@ -183,6 +183,11 @@ defaults:
     values:
       featureStatus: experimental
   - scope:
+      path: "*/610-service-with-healthcheck"
+      type: "pages"
+    values:
+      featureStatus: experimental    
+  - scope:
       path: "*/160-multitenancy-manager"
       type: "pages"
     values:
