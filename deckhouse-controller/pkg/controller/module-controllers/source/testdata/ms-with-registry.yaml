@@ -1,0 +1,18 @@
+# ModuleSource must download modules and create ModuleReleases
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  name: test-source-1
+spec:
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  moduleErrors: null
+  modules: null
+  modulesCount: 0
+  syncTime: null

@@ -17,14 +17,21 @@ limitations under the License.
 package client
 
 import (
+	"time"
+
 	"caps-controller-manager/internal/event"
+
+	"k8s.io/client-go/util/workqueue"
 )
 
 // Client is a client that executes commands on hosts using the OpenSSH client.
 // It spawns tasks and stores their results by providerID.
 type Client struct {
+	checkTaskManager     *taskManager
 	bootstrapTaskManager *taskManager
 	cleanupTaskManager   *taskManager
+	tcpCheckTaskManager  *taskManager
+	tcpCheckRateLimiter  workqueue.RateLimiter
 
 	recorder *event.Recorder
 }
@@ -32,8 +39,11 @@ type Client struct {
 // NewClient creates a new Client.
 func NewClient(recorder *event.Recorder) *Client {
 	return &Client{
+		checkTaskManager:     newTaskManager(),
 		bootstrapTaskManager: newTaskManager(),
 		cleanupTaskManager:   newTaskManager(),
+		tcpCheckTaskManager:  newTaskManager(),
+		tcpCheckRateLimiter:  workqueue.NewItemExponentialFailureRateLimiter(250*time.Millisecond, time.Minute),
 		recorder:             recorder,
 	}
 }

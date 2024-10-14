@@ -4,11 +4,14 @@ webIfaces:
 - name: istio
 ---
 
-Currently supported Istio versions:
-* 1.12 (deprecated)
-* 1.13 (deprecated)
-* 1.16 (deprecated)
-* 1.19
+## Compatibility table for supported versions
+
+| Istio version | [K8S versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in D8          |
+|:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
+|     1.16      |                                                1.22<sup>*</sup>, 1.23<sup>*</sup>, 1.24<sup>*</sup>, 1.25                                                | Deprecated and will be deleted |
+|     1.19      |                                                    1.25, 1.26, 1.27, 1.28                                                     |           Supported            |
+
+<sup>*</sup> — the Kubernetes version **is NOT supported** in the current Deckhouse Kubernetes Platform release.
 
 ## What issues does Istio help to resolve?
 
@@ -58,6 +61,7 @@ The [AuthorizationPolicy](istio-cr.html#authorizationpolicy) resource is respons
 In other words, if you explicitly deny something, then only this restrictive rule will work. On the other hand, if you explicitly allow something, only explicitly authorized requests would be allowed (however, restrictions will have precedence).
 
 You can use the following arguments for defining authorization rules:
+
 * service IDs and wildcard expressions based on them (`mycluster.local/ns/myns/sa/myapp` or `mycluster.local/*`)
 * namespace
 * IP ranges
@@ -67,6 +71,7 @@ You can use the following arguments for defining authorization rules:
 ## Request routing
 
 [VirtualService](istio-cr.html#virtualservice) is the main resource for routing control; it allows you to override the destination of an HTTP or TCP request. Routing decisions can be based on the following parameters:
+
 * Host or other headers
 * URI
 * method (GET, POST, etc.)
@@ -76,6 +81,7 @@ You can use the following arguments for defining authorization rules:
 ## Managing request balancing between service Endpoints
 
 [DestinationRule](istio-cr.html#destinationrule) is the main resource for managing request balancing; it allows you to configure the details of requests leaving the Pods:
+
 * limits/timeouts for TCP
 * balancing algorithms between Endpoints
 * rules for detecting problems on the Endpoint side to take it out of balancing
@@ -88,12 +94,14 @@ You can use the following arguments for defining authorization rules:
 ### Tracing
 
 Istio makes it possible to collect application traces and inject trace headers if there are none. In doing so, however, you have to keep in mind the following:
+
 * If a request initiates secondary requests for a service, they must inherit the trace headers by means of the application.
 * You will need to install Jaeger to collect and display traces.
 
 ### Grafana
 
 The standard module bundle includes the following additional dashboards:
+
 * Dashboard for evaluating the throughput and success of requests/responses between applications.
 * Dashboard for evaluating control plane performance and load.
 
@@ -104,6 +112,7 @@ Kiali is a tool for visualizing your application's service tree. It allows you t
 ## Architecture of the cluster with Istio enabled
 
 The cluster components are divided into two categories:
+
 * control plane — managing and maintaining services; "control-plane" usually refers to istiod Pods;
 * data plane — mediating and controlling all network communication between microservices, it is composed of a set of sidecar-proxy containers.
 
@@ -111,10 +120,12 @@ The cluster components are divided into two categories:
 <!--- Source: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
 
 All data plane services are grouped into a mesh with the following features:
+
 * It has a common namespace for generating service ID in the form `<TrustDomain>/ns/<Namespace>/sa/<ServiceAccount>`. Each mesh has a TrustDomain ID (in our case, it is the same as the cluster domain), e.g. `mycluster.local/ns/myns/sa/myapp`.
 * Services within a single mesh can authenticate each other using trusted root certificates.
 
 Control plane components:
+
 * `istiod` — the main service with the following tasks:
   * Continuous connection to the Kubernetes API and collecting information about services.
   * Processing and validating all Istio-related Custom Resources using the Kubernetes Validating Webhook mechanism.
@@ -133,6 +144,7 @@ Control plane components:
   * Diagnose the control plane state.
 
 The Ingress controller must be refined to receive user traffic:
+
 * You need to add sidecar-proxy to the controller Pods. It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the `IngressNginxController` resource).
 * Services not managed by Istio continue to function as before, requests to them are not intercepted by the controller sidecar.
 * Requests to services running under Istio are intercepted by the sidecar and processed according to Istio rules (read more about [activating Istio to work with the application](#activating-istio-to-work-with-the-application)).
@@ -175,22 +187,21 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 The main purpose of the activation is to add a sidecar container to the application Pods so that Istio can manage the traffic.
 
 The sidecar-injector is a recommended way to add sidecars. Istio can inject sidecar containers into user Pods using the [Admission Webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) mechanism. You can configure it using labels and annotations:
-{% alert level="info" %}
-When using Deckhouse version >= 1.55 and the [admission-policy-engine](../015-admission-policy-engine/) module is enabled, it works in `Baseline` mode by default. In this regard, Istio's init-containers can't configure rules for application's traffic interception, so the Pod's can't start. The solution is either configure the admission-policy-engine module to work in `Restricted` mode or add a label `security.deckhouse.io/pod-policy=privileged` to application's Namespace.
-{% endalert %}
 
-* A label attached to a **namespace** allows the sidecar-injector to identify a group of Pods to inject sidecar containers into:
-  * `istio-injection=enabled` — use the latest installed version of Istio;
+* A label attached to a namespace allows the sidecar-injector to identify a group of Pods to inject sidecar containers into:
+  * `istio-injection=enabled` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`);
   * `istio.io/rev=v1x16` — use the specific Istio version for a given namespace.
 * The `sidecar.istio.io/inject` (`"true"` or `"false"`) **Pod** annotation lets you redefine the `sidecarInjectorPolicy` policy locally. These annotations work only in namespaces to which the above labels are attached.
 
 It is also possible to add the sidecar to an individual pod in namespace without the `istio-injection=enabled` or `istio.io/rev=vXxYZ` labels by setting the `sidecar.istio.io/inject=true` Pod label.
 
 **Note!** Istio-proxy, running as a sidecar container, consumes resources and adds overhead:
+
 * Each request is DNAT'ed to Envoy that processes it and creates another one. The same thing happens on the receiving side.
 * Each Envoy stores information about all the services in the cluster, thereby consuming memory. The bigger the cluster, the more memory Envoy consumes. You can use the [Sidecar](istio-cr.html#sidecar) CustomResource to solve this problem.
 
 It is also important to get the Ingress controller and the application's Ingress resources ready:
+
 * Enable [`enableIstioSidecar`](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) of the `IngressNginxController` resource.
 * Add annotations to the application's Ingress resources:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — the Ingress controller will use the service's ClusterIP as upstream instead of the Pod addresses. In this case, traffic balancing between the Pods is now handled by the sidecar-proxy. Use this option only if your service has a ClusterIP.
@@ -206,6 +217,7 @@ Deckhouse supports two schemes of inter-cluster interaction:
 * [multicluster](#multicluster)
 
 Below are their fundamental differences:
+
 * The federation aggregates multiple sovereign (independent) clusters:
   * each cluster has its own namespace (for Namespace, Service, etc.);
   * access to individual services between clusters is clearly defined.
@@ -213,6 +225,11 @@ Below are their fundamental differences:
   * cluster namespaces are shared — each service is available to neighboring clusters as if it were running in a local cluster (unless authorization rules prohibit that).
 
 ### Federation
+
+#### Requirements for clusters
+
+* Each cluster must have a unique domain in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration). The default value is `cluster.local`.
+* Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) can be the same.
 
 #### General principles of federation
 
@@ -225,6 +242,7 @@ Below are their fundamental differences:
 #### Enabling the federation
 
 Enabling federation (via the `istio.federation.enabled = true` module parameter) results in the following activities:
+
 * The `ingressgateway` service is added to the cluster. Its task is to proxy mTLS traffic coming from outside of the cluster to application services.
 * A service gets added to the cluster that exports the following cluster metadata to the outside:
   * Istio root certificate (accessible without authentication).
@@ -237,6 +255,7 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 <!--- Source: https://docs.google.com/presentation/d/1dYOeYKGaGOsgskWCDDcVJfXcMC9iQ4cvaCkhyqrDKgg/ --->
 
 To establish a federation, you must:
+
 * Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
   * After successful auto-negotiation between clusters, the status of `IstioFederation` resoure will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
 * Add the `federation.istio.deckhouse.io/public-service=` label to each resource(`service`) that is considered public within the federation.
@@ -246,6 +265,11 @@ To establish a federation, you must:
 > It is important, that in these `services`, in the `.spec.ports` section, each port must have the `name` field filled.
 
 ### Multicluster
+
+#### Requirements for clusters
+
+* Cluster domains in the [`clusterDomain`](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be the same for all multicluster members. The default value is `cluster.local`.
+* Pod and Service subnets in the [`podSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../installing/configuration.html#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../installing/configuration.html#clusterconfiguration) must be unique for each multicluster member.
 
 #### General principles
 
@@ -258,6 +282,7 @@ To establish a federation, you must:
 #### Enabling the multicluster
 
 Enabling the multicluster (via the `istio.multicluster.enabled = true` module parameter) results in the following activities:
+
 * A proxy is added to the cluster to publish access to the API server via the standard Ingress resource:
   * Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. Deckhouse automatically exchanges trusted public keys during the mutual configuration of the multicluster.
   * The proxy itself has read-only access to a limited set of resources.
@@ -276,5 +301,26 @@ To create a multicluster, you need to create a set of `IstioMulticluster` resour
 
 ## Estimating overhead
 
-A rough estimate of overhead when using Istio is available [here](https://istio.io/v1.19/docs/ops/deployment/performance-and-scalability/).
-You can use the [Sidecar](istio-cr.html#sidecar) resource to limit resource consumption by limiting the field of view of a sidecar.
+Using Istio will incur additional resource costs for both **control-plane** (istiod controller) and **data-plane** (istio-sidecars).
+
+### control-plane
+
+The istiod controller continuously monitors the cluster configuration, compiles the settings for the istio-sidecars and distributes them over the network. Accordingly, the more applications and their instances, the more services, and the more frequently this configuration changes, the more computational resources are required and the greater the load on the network. Two approaches are supported to reduce the load on controller instances:
+* horizontal scaling (module configuration [`controlPlane.replicasManagement`](configuration.html#parameters-controlplane-replicasmanagement)) — the more controller instances, the fewer instances of istio-sidecars to serve for each controller and the less CPU and network load.
+* data-plane segmentation using the [*Sidecar*](istio-cr.html#sidecar) resource (recommended approach) — the smaller the scope of an individual istio-sidecar, the less data in the data-plane needs to be updated and the less CPU and network overhead.
+
+A rough estimate of overhead for a control-plane instance that serves 1000 services and 2000 istio-sidecars is 1 vCPU and 1.5GB RAM.
+
+### data-plane
+
+The consumption of data-plane resources (istio-sidecar) is affected by many factors:
+
+* number of connections,
+* the intensity of requests,
+* size of requests and responses,
+* protocol (HTTP/TCP),
+* number of CPU cores,
+* complexity of Service Mesh configuration.
+
+A rough estimate of the overhead for an istio-sidecar instance is 0.5 vCPU for 1000 requests/sec and 50MB RAM.
+istio-sidecars also increase latency in network requests — about 2.5ms per request.

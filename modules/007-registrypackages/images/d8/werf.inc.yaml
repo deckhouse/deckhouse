@@ -1,0 +1,34 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - d8
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    d8: {{ .CandiVersionMap.d8.d8CliVersion }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  setup:
+  - export GOPROXY={{ $.GOPROXY }}
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
+  - cd /deckhouse-cli
+  - task build:dist:linux:amd64
+  - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
+  - chmod +x /d8 /install /uninstall

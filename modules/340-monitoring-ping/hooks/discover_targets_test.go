@@ -75,6 +75,21 @@ status:
 spec:
   unschedulable: true
 `
+		nodeWithEmptyIP = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: system3
+  labels:
+    node-role.deckhouse.io/system: ""
+status:
+  addresses:
+  - address: ""
+    type: InternalIP
+  - address: worker
+    type: Hostname
+`
 	)
 	f := HookExecutionConfigInit(
 		`{"monitoringPing":{"internal":{}},"global":{"enabledModules":[]}}`,
@@ -111,7 +126,6 @@ spec:
         }
 `))
 		})
-
 	})
 
 	Context("Two nodes", func() {
@@ -137,7 +151,6 @@ spec:
         }
 `))
 		})
-
 	})
 
 	Context("Two nodes with external targets", func() {
@@ -174,7 +187,6 @@ spec:
         }
 `))
 		})
-
 	})
 
 	Context("One node ready, one unschedulable", func() {
@@ -196,6 +208,26 @@ spec:
         }
 `))
 		})
+	})
 
+	Context("One node ready, one without IP", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(node1 + nodeWithEmptyIP))
+			f.RunHook()
+		})
+		It("Hook must not fail, monitoringPing.internal.targets must be set", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchUnorderedJSON(`
+ {
+          "cluster_targets": [
+            {
+              "ipAddress": "192.168.199.213",
+              "name": "system"
+            }
+          ],
+          "external_targets": []
+        }
+`))
+		})
 	})
 })

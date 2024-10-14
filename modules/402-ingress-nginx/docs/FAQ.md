@@ -213,7 +213,7 @@ spec:
 
 HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
-The IngressNginxController is deployed using Daemonset. Daemonset does not provide horizontal scaling capabilities, so `hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. If CPU utilization exceeds 50%, the HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect to `minReplicas` and `maxReplicas`).
+The IngressNginxController is deployed using DaemonSet. DaemonSet does not provide horizontal scaling capabilities, so `hpa-scaler` Deployment will be created with the HPA resource, which is observing custom metric `prometheus-metrics-adapter-d8-ingress-nginx-cpu-utilization-for-hpa`. If CPU utilization exceeds 50%, the HPA-controller scales `hpa-scaler` Deployment with a new replica (with respect to `minReplicas` and `maxReplicas`).
 
 `hpa-scaler` Deployment has HardPodAntiAffinity, and it will order a new Node (inside its NodeGroup), where one more ingress-controller will be set.
 
@@ -260,4 +260,19 @@ Example of disabling statistics (metrics) collection for all `test-site` Ingress
 
 ```shell
 kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
+```
+
+## How do I correctly drain a node running an IngressNginxController's pods?
+
+There are two ways of draining such a node correctly - either by annotating the node (the annotation will be deleted once the node is drained):
+
+```shell
+kubectl annotate node <node_name> update.node.deckhouse.io/draining=user
+```
+
+or by using kubectl drain functionality (it's worth mentioning that --force flag is required despite having --ignore-daemonsets flag set, as IngressNginxControllers
+are backed by Advanced DaemonSets):
+
+```shell
+kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
 ```

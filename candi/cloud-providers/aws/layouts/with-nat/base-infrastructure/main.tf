@@ -31,6 +31,13 @@ module "security-groups" {
 
 data "aws_availability_zones" "available" {}
 
+data "aws_availability_zones" "available_except_local_zone" {
+  filter {
+    name   = "opt-in-status"
+    values = ["opt-in-not-required"]
+  }
+}
+
 locals {
   az_count    = length(data.aws_availability_zones.available.names)
   subnet_cidr = lookup(var.providerClusterConfiguration, "nodeNetworkCIDR", module.vpc.cidr_block)
@@ -80,8 +87,15 @@ resource "aws_internet_gateway" "kube" {
   })
 }
 
+locals {
+  first_non_local_az = data.aws_availability_zones.available_except_local_zone.names[0]
+  first_non_local_subnet_id = [for subnet in aws_subnet.kube_public : 
+    subnet.id if subnet.availability_zone == local.first_non_local_az][0]
+}
+
+
 resource "aws_nat_gateway" "kube" {
-  subnet_id     = aws_subnet.kube_public[0].id
+  subnet_id     = local.first_non_local_subnet_id
   allocation_id = aws_eip.natgw.id
 
   tags = merge(local.tags, {
@@ -131,56 +145,11 @@ resource "aws_route_table_association" "kube_public" {
   route_table_id = aws_route_table.kube_public.id
 }
 
-resource "aws_iam_role" "node" {
-  name = "${local.prefix}-node"
-
-  assume_role_policy = <<-EOF
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Action": "sts:AssumeRole",
-        "Principal": {
-          "Service": "ec2.amazonaws.com"
-        },
-        "Effect": "Allow"
-      }
-    ]
-  }
-  EOF
-
-  tags = local.tags
-}
-
-resource "aws_iam_role_policy" "node" {
-  name = "${local.prefix}-node"
-  role = aws_iam_role.node.id
-
-  policy = <<-EOF
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Action": [
-          %{for policy in local.additional_role_policies}
-          "${policy}",
-          %{endfor}
-          "ec2:DescribeTags",
-          "ec2:DescribeInstances"
-        ],
-        "Resource": [
-          "*"
-        ]
-      }
-    ]
-  }
-  EOF
-}
-
-resource "aws_iam_instance_profile" "node" {
-  name = "${local.prefix}-node"
-  role = aws_iam_role.node.id
+module "base-infrastructure-iam" {
+  source                       = "../../../terraform-modules/base-infrastructure-iam"
+  prefix                       = local.prefix
+  providerClusterConfiguration = var.providerClusterConfiguration
+  tags                         = local.tags
 }
 
 resource "aws_key_pair" "ssh" {

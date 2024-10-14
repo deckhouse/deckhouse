@@ -52,9 +52,11 @@ default            example-com                     13m
 
 ## Какие виды сертификатов поддерживаются?
 
-На данный момент модуль устанавливает два ClusterIssuer'а:
-* letsencrypt;
-* letsencrypt-staging.
+На данный момент модуль устанавливает следующие ClusterIssuer:
+* letsencrypt
+* letsencrypt-staging
+* selfsigned
+* selfsigned-no-trust
 
 ## Работает ли старая аннотация TLS-acme?
 

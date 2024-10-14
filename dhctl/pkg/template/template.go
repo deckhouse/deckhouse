@@ -15,10 +15,8 @@
 package template
 
 import (
-	"bytes"
 	"fmt"
 	"os"
-	"text/template"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -29,24 +27,21 @@ func RenderAndSaveTemplate(outFileName, templatePath string, data map[string]int
 		return "", fmt.Errorf("loading %s: %v", templatePath, err)
 	}
 
+	e := Engine{
+		Name: outFileName,
+		Data: data,
+	}
+
 	content := string(fileContent)
 
 	if data != nil {
-		t := template.New(fmt.Sprintf("%s-render", outFileName)).Funcs(FuncMap())
-		t, err := t.Parse(content)
+		res, err := e.Render(fileContent)
 		if err != nil {
 			return "", err
 		}
-
-		var tpl bytes.Buffer
-
-		err = t.Execute(&tpl, data)
-		if err != nil {
-			return "", err
-		}
-
-		content = tpl.String()
-		log.DebugF("Bundle script content:\n%s", content)
+		cnt := res.Bytes()
+		content = string(cnt)
+		log.DebugF("Render and save template content:\n%s", content)
 	}
 
 	outFile, err := os.CreateTemp(os.TempDir(), fmt.Sprintf("*-%s", outFileName))

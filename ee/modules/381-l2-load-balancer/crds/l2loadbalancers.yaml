@@ -1,0 +1,59 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: l2loadbalancers.network.deckhouse.io
+spec:
+  group: network.deckhouse.io
+  names:
+    kind: L2LoadBalancer
+    listKind: L2LoadBalancerList
+    plural: l2loadbalancers
+    singular: l2loadbalancer
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: L2LoadBalancer is the Schema for the l2loadbalancers API
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                addressPool:
+                  items:
+                    type: string
+                  type: array
+                  x-doc-examples: ["10.42.0.0/24", "10.33.5.100-10.33.5.106"]
+                  description: |-
+                    An array of public IP address ranges. Each range can be specified using a CIDR notation or
+                    by directly specifying the range, for example, `10.10.10.1-10.10.10.100`.
+                interfaces:
+                  items:
+                    type: string
+                  type: array
+                  x-doc-examples: ["eth1", "eth2"]
+                  description: |-
+                    A list of network interfaces from which the assigned IP addresses will be announced.
+                    If this field is not filled in or an empty array is specified, the announcement will occur from all interfaces on the node.
+                nodeSelector:
+                  additionalProperties:
+                    type: string
+                  type: object
+                  description: |-
+                    Allows restricting the list of nodes from which the announcement will occur. Specified as a set of labels for filtering nodes.
+              type: object
+            status:
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

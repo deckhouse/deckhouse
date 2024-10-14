@@ -22,7 +22,7 @@ spec:
 
 ### Service object Annotations
 
-The following parameters are supported in addition to the existing upstream ones:
+The following parameters are supported in addition to the existing [upstream](https://cloud-provider-aws.sigs.k8s.io/service_controller/) ones:
 
 1. `service.beta.kubernetes.io/aws-load-balancer-type` — if it has the `none` value, then the Target Group will **only** be created (without any LoadBalancer).
 2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — this parameter is used together with `service.beta.kubernetes.io/aws-load-balancer-type: none`:
@@ -62,6 +62,6 @@ Set the following annotation for the Service object: `service.beta.kubernetes.io
 You can get current subnets for a particular installation as follows:
 
 ```bash
-kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module values cloud-provider-aws -o json \
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values cloud-provider-aws -o json \
 | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
 ```

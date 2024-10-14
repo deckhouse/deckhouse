@@ -198,7 +198,7 @@ EOF
 Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name and the ARN identifier:
 
 ```shell
-aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
 
 You will see the following:
@@ -206,9 +206,9 @@ You will see the following:
 ```yaml
 {
     "Policy": {
-        "PolicyName": "D8Policy",
+        "PolicyName": "D8CloudProviderAWS",
         "PolicyId": "AAA",
-        "Arn": "arn:aws:iam::123:policy/D8Policy",
+        "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
         "Path": "/",
         "DefaultVersionId": "v1",
         "AttachmentCount": 0,
@@ -263,7 +263,7 @@ You will see the following:
 Attach the specified `Policy` to the specified `User`:
 
 ```shell
-aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
 
 ## Configuring IAM via Terraform
@@ -280,7 +280,7 @@ resource "aws_iam_access_key" "user" {
 }
 
 resource "aws_iam_policy" "policy" {
-  name        = "D8Policy"
+  name        = "D8CloudProviderAWS"
   path        = "/"
   description = "Deckhouse policy"
 

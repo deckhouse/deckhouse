@@ -3,88 +3,67 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
   },
   "editable": false,
-  "gnetId": null,
   "graphTooltip": 1,
   "iteration": 1628520681205,
   "links": [],
   "panels": [
     {
-      "cacheTimeout": null,
-      "cards": {
-        "cardHSpacing": 2,
-        "cardMinWidth": 5,
-        "cardRound": null,
-        "cardVSpacing": 2
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
       },
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateGnYlRd",
-        "defaultColor": "#757575",
-        "exponent": 0.5,
-        "max": 7,
-        "min": 4,
-        "mode": "discrete",
-        "thresholds": [
-          {
-            "color": "#FFCB7D",
-            "tooltip": "Heartbeat missing",
-            "value": "0"
-          },
-          {
-            "color": "#73BF69",
-            "tooltip": "Ok",
-            "value": "1"
-          }
-        ]
-      },
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
-          "custom": {},
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 70,
+            "lineWidth": 0
+          },
           "mappings": [
             {
-              "from": "",
-              "id": 0,
-              "operator": "",
-              "text": "Ok",
-              "to": "",
-              "type": 1,
-              "value": "6"
-            },
-            {
-              "from": "",
-              "id": 1,
-              "operator": "",
-              "text": "Error",
-              "to": "",
-              "type": 1,
-              "value": "0"
+              "options": {
+                "0": {
+                  "color": "yellow",
+                  "index": 0,
+                  "text": "heartbeat is missing"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "OK"
+                }
+              },
+              "type": "value"
             }
           ],
-          "max": 6,
-          "min": 0,
-          "noValue": "Error",
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
-                "value": null
-              },
-              {
                 "color": "green",
-                "value": 6
+                "value": null
               }
             ]
           }
@@ -97,20 +76,24 @@
         "x": 0,
         "y": 0
       },
-      "highlightCards": true,
       "id": 44,
-      "interval": null,
-      "legend": {
-        "show": true
-      },
       "links": [],
-      "nullPointMode": "as zero",
-      "pageSize": 15,
-      "pluginVersion": "7.0.6",
-      "seriesFilterIndex": -1,
-      "statusmap": {
-        "ConfigVersion": "v1"
+      "maxDataPoints": 150,
+      "options": {
+        "alignValue": "left",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "mergeValues": false,
+        "rowHeight": 0.9,
+        "showValue": "never",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
+      "pluginVersion": "7.0.6",
       "targets": [
         {
           "expr": "ceil(max by (job) (increase(deckhouse_live_ticks[1m]) > 5))^0",
@@ -120,33 +103,16 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Heartbeat",
-      "tooltip": {
-        "freezeOnClick": true,
-        "items": [],
-        "show": true,
-        "showItems": false
-      },
-      "type": "flant-statusmap-panel",
-      "useMax": true,
-      "usingPagination": false,
-      "xAxis": {
-        "show": true
-      },
-      "yAxis": {
-        "maxWidth": -1,
-        "minWidth": -1,
-        "show": true
-      },
-      "yAxisSort": "metrics"
+      "type": "state-timeline"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "mappings": [],
           "max": 100,
           "min": 0,
@@ -190,7 +156,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": false
       },
-      "pluginVersion": "7.0.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "expr": "deckhouse_tasks_queue_length{queue=\"main\"}",
@@ -200,16 +166,16 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Main queue length",
       "type": "gauge"
     },
     {
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "custom": {},
           "mappings": [],
           "max": 700,
           "min": 0,
@@ -253,7 +219,7 @@
         "showThresholdLabels": false,
         "showThresholdMarkers": false
       },
-      "pluginVersion": "7.0.6",
+      "pluginVersion": "8.5.13",
       "targets": [
         {
           "expr": "deckhouse_convergence_seconds{activation=\"OperatorStartup\"}",
@@ -263,14 +229,15 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Last startup converge duration",
       "type": "gauge"
     },
     {
       "collapsed": true,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -280,11 +247,13 @@
       "id": 40,
       "panels": [
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "fieldConfig": {
             "defaults": {
               "custom": {
-                "align": null,
                 "displayMode": "color-text"
               },
               "mappings": [],
@@ -294,8 +263,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "#EAB839",
@@ -363,8 +331,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Queue length",
           "transformations": [
             {
@@ -397,10 +363,43 @@
           "bars": true,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "fieldConfig": {
             "defaults": {
-              "custom": {},
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 90,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 0,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
               "mappings": [],
               "thresholds": {
                 "mode": "absolute",
@@ -414,7 +413,8 @@
                     "value": 80
                   }
                 ]
-              }
+              },
+              "unit": "ops"
             },
             "overrides": []
           },
@@ -443,7 +443,16 @@
           "linewidth": 1,
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [],
+              "displayMode": "table",
+              "placement": "right"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
           },
           "percentage": false,
           "pluginVersion": "7.0.6",
@@ -456,27 +465,23 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(deckhouse_tasks_queue_length[$__interval_sx4]) > 0",
+              "expr": "rate(deckhouse_tasks_queue_length[$__rate_interval]) > 0",
               "interval": "",
               "legendFormat": "{{ queue }}",
               "refId": "A"
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Queue rate",
           "tooltip": {
             "shared": true,
             "sort": 2,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -484,25 +489,18 @@
             {
               "$$hashKey": "object:1373",
               "format": "ops",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:1374",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         }
       ],
@@ -511,7 +509,10 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -521,12 +522,13 @@
       "id": 36,
       "panels": [
         {
-          "cacheTimeout": null,
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "fieldConfig": {
             "defaults": {
               "custom": {
-                "align": null,
                 "displayMode": "color-text"
               },
               "mappings": [],
@@ -536,8 +538,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "#EAB839",
@@ -579,12 +580,11 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 12,
+            "w": 24,
             "x": 0,
             "y": 18
           },
           "id": 32,
-          "interval": null,
           "links": [],
           "maxDataPoints": 100,
           "options": {
@@ -607,8 +607,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Snapshots objects",
           "transformations": [
             {
@@ -641,125 +639,6 @@
             }
           ],
           "type": "table"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "custom": {
-                "align": null,
-                "displayMode": "color-text"
-              },
-              "mappings": [],
-              "max": 100000000,
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "#EAB839",
-                    "value": 10000
-                  },
-                  {
-                    "color": "red",
-                    "value": 10000000
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Hook"
-                },
-                "properties": [
-                  {
-                    "id": "custom.width",
-                    "value": 356
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Binding"
-                },
-                "properties": [
-                  {
-                    "id": "custom.width",
-                    "value": 235
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 18
-          },
-          "id": 34,
-          "options": {
-            "showHeader": true,
-            "sortBy": [
-              {
-                "desc": true,
-                "displayName": "Size"
-              }
-            ]
-          },
-          "pluginVersion": "7.0.6",
-          "targets": [
-            {
-              "expr": "sum by (hook, binding) (deckhouse_kube_snapshot_bytes)",
-              "format": "table",
-              "instant": true,
-              "interval": "",
-              "legendFormat": "{{ hook }} - {{ binding }}",
-              "refId": "A"
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Snapshots size",
-          "transformations": [
-            {
-              "id": "filterFieldsByName",
-              "options": {
-                "include": {
-                  "names": [
-                    "binding",
-                    "hook",
-                    "Value"
-                  ]
-                }
-              }
-            },
-            {
-              "id": "organize",
-              "options": {
-                "excludeByName": {},
-                "indexByName": {
-                  "Value": 2,
-                  "binding": 1,
-                  "hook": 0
-                },
-                "renameByName": {
-                  "Value": "Size",
-                  "binding": "Binding",
-                  "hook": "Hook"
-                }
-              }
-            }
-          ],
-          "type": "table"
         }
       ],
       "title": "Snapshots",
@@ -767,7 +646,10 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -781,12 +663,63 @@
           "bars": true,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "main",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "editable": true,
           "error": false,
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 40,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineStyle": {
+                  "fill": "solid"
+                },
+                "lineWidth": 1,
+                "pointSize": 10,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
             },
             "overrides": []
           },
@@ -818,7 +751,16 @@
           "links": [],
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [],
+              "displayMode": "hidden",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "asc"
+            }
           },
           "percentage": false,
           "pointradius": 5,
@@ -830,7 +772,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(process_cpu_seconds_total{job=\"deckhouse\"}[$__interval_sx4])",
+              "expr": "rate(process_cpu_seconds_total{job=\"deckhouse\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -841,9 +783,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Total CPU time",
           "tooltip": {
             "msResolution": false,
@@ -851,11 +791,9 @@
             "sort": 0,
             "value_type": "cumulative"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -864,22 +802,16 @@
               "format": "short",
               "label": "seconds",
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -887,12 +819,60 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "main",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "editable": true,
           "error": false,
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "bytes"
             },
             "overrides": []
           },
@@ -924,7 +904,16 @@
           "links": [],
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [],
+              "displayMode": "hidden",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
           },
           "percentage": false,
           "pointradius": 5,
@@ -952,9 +941,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Total Memory",
           "tooltip": {
             "msResolution": false,
@@ -962,35 +949,26 @@
             "sort": 0,
             "value_type": "cumulative"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "bytes",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -998,12 +976,60 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "main",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "editable": true,
           "error": false,
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "bytes"
             },
             "overrides": []
           },
@@ -1035,7 +1061,20 @@
           "links": [],
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [
+                "max",
+                "mean",
+                "last"
+              ],
+              "displayMode": "table",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
           },
           "percentage": false,
           "pointradius": 5,
@@ -1073,9 +1112,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Process Memory",
           "tooltip": {
             "msResolution": false,
@@ -1083,35 +1120,26 @@
             "sort": 0,
             "value_type": "cumulative"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "bytes",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -1119,12 +1147,60 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "main",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "editable": true,
           "error": false,
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "short"
             },
             "overrides": []
           },
@@ -1155,7 +1231,16 @@
           "links": [],
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [],
+              "displayMode": "hidden",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
           },
           "percentage": false,
           "pointradius": 5,
@@ -1178,9 +1263,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Goroutines",
           "tooltip": {
             "msResolution": false,
@@ -1188,35 +1271,26 @@
             "sort": 0,
             "value_type": "cumulative"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -1224,12 +1298,59 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "main",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "editable": true,
           "error": false,
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
             },
             "overrides": []
           },
@@ -1260,7 +1381,16 @@
           "links": [],
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [],
+              "displayMode": "hidden",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
           },
           "percentage": false,
           "pointradius": 5,
@@ -1283,9 +1413,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Opened file descriptors",
           "tooltip": {
             "msResolution": false,
@@ -1293,11 +1421,9 @@
             "sort": 0,
             "value_type": "cumulative"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -1305,24 +1431,17 @@
             {
               "decimals": 0,
               "format": "none",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -1330,12 +1449,64 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "main",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "editable": true,
           "error": false,
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineStyle": {
+                  "fill": "solid"
+                },
+                "lineWidth": 2,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "cps"
             },
             "overrides": []
           },
@@ -1346,7 +1517,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 33
+            "y": 25
           },
           "hiddenSeries": false,
           "id": 16,
@@ -1367,7 +1538,16 @@
           "links": [],
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [],
+              "displayMode": "hidden",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
           },
           "percentage": false,
           "pointradius": 5,
@@ -1384,7 +1564,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(go_memstats_mallocs_total{job=\"deckhouse\"}[$__interval_sx4])",
+              "expr": "rate(go_memstats_mallocs_total{job=\"deckhouse\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 2,
@@ -1395,9 +1575,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Object allocations rate",
           "tooltip": {
             "msResolution": false,
@@ -1405,35 +1583,26 @@
             "sort": 0,
             "value_type": "cumulative"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "cps",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -1441,12 +1610,60 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": "main",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "editable": true,
           "error": false,
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "ns"
             },
             "overrides": []
           },
@@ -1478,7 +1695,16 @@
           "links": [],
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "right"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
           },
           "percentage": false,
           "pointradius": 5,
@@ -1501,9 +1727,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "GC duration",
           "tooltip": {
             "msResolution": false,
@@ -1511,35 +1735,26 @@
             "sort": 0,
             "value_type": "cumulative"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "ns",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         }
       ],
@@ -1548,7 +1763,10 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1562,10 +1780,58 @@
           "bars": true,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 90,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 0,
+                "pointSize": 3,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "ops"
             },
             "overrides": []
           },
@@ -1575,7 +1841,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 12
+            "y": 40
           },
           "hiddenSeries": false,
           "id": 46,
@@ -1596,7 +1862,19 @@
           "linewidth": 1,
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [
+                "max",
+                "mean"
+              ],
+              "displayMode": "table",
+              "placement": "right"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "asc"
+            }
           },
           "percentage": false,
           "pointradius": 0.5,
@@ -1608,27 +1886,23 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (kind) (rate(deckhouse_kube_event_duration_seconds_count[$__interval_sx4])) > 0",
+              "expr": "sum by (kind) (rate(deckhouse_kube_event_duration_seconds_count[$__rate_interval])) > 0",
               "interval": "",
               "legendFormat": " {{ kind }}",
               "refId": "A"
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Events frequency by Kind",
           "tooltip": {
             "shared": true,
             "sort": 2,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -1637,25 +1911,18 @@
               "$$hashKey": "object:1929",
               "decimals": 0,
               "format": "ops",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:1930",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -1663,10 +1930,58 @@
           "bars": true,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 90,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "ops"
             },
             "overrides": []
           },
@@ -1676,7 +1991,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 19
+            "y": 47
           },
           "hiddenSeries": false,
           "id": 48,
@@ -1697,7 +2012,19 @@
           "linewidth": 1,
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [
+                "max",
+                "mean"
+              ],
+              "displayMode": "table",
+              "placement": "right"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "asc"
+            }
           },
           "percentage": false,
           "pointradius": 0.5,
@@ -1709,60 +2036,48 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (hook) (rate(deckhouse_module_hook_run_seconds_count[$__interval_sx4])) > 0",
+              "expr": "sum by (hook) (rate(deckhouse_module_hook_run_seconds_count[$__rate_interval])) > 0",
               "interval": "",
               "legendFormat": " {{ hook }}",
               "refId": "A"
             },
             {
-              "expr": "sum by (hook) (rate(deckhouse_glob_hook_run_seconds_count[$__interval_sx4])) > 0",
+              "expr": "sum by (hook) (rate(deckhouse_glob_hook_run_seconds_count[$__rate_interval])) > 0",
               "interval": "",
               "legendFormat": "",
               "refId": "B"
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Hook run frequency",
           "tooltip": {
             "shared": true,
             "sort": 2,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "$$hashKey": "object:1929",
-              "decimals": null,
               "format": "ops",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:1930",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -1770,10 +2085,58 @@
           "bars": true,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 90,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "ops"
             },
             "overrides": []
           },
@@ -1783,7 +2146,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 26
+            "y": 54
           },
           "hiddenSeries": false,
           "id": 4,
@@ -1804,7 +2167,19 @@
           "linewidth": 1,
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [
+                "max",
+                "mean"
+              ],
+              "displayMode": "table",
+              "placement": "right"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "asc"
+            }
           },
           "percentage": false,
           "pointradius": 0.5,
@@ -1816,27 +2191,23 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (hook, binding) (rate(deckhouse_kube_jq_filter_duration_seconds_count[$__interval_sx4])) > 0",
+              "expr": "sum by (hook, binding) (rate(deckhouse_kube_jq_filter_duration_seconds_count[$__rate_interval])) > 0",
               "interval": "",
               "legendFormat": "{{ hook }} - {{ binding }}",
               "refId": "A"
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "JQ Filter frequency",
           "tooltip": {
             "shared": true,
             "sort": 2,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -1845,25 +2216,18 @@
               "$$hashKey": "object:437",
               "decimals": 0,
               "format": "ops",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:438",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -1871,10 +2235,58 @@
           "bars": true,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "fieldConfig": {
             "defaults": {
-              "custom": {}
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "normal"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "ops"
             },
             "overrides": []
           },
@@ -1884,7 +2296,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 33
+            "y": 61
           },
           "hiddenSeries": false,
           "id": 6,
@@ -1907,7 +2319,18 @@
           "linewidth": 1,
           "nullPointMode": "null as zero",
           "options": {
-            "dataLinks": []
+            "dataLinks": [],
+            "legend": {
+              "calcs": [
+                "max"
+              ],
+              "displayMode": "table",
+              "placement": "right"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "asc"
+            }
           },
           "percentage": false,
           "pointradius": 0.5,
@@ -1919,153 +2342,43 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by (module) (rate(deckhouse_helm_operation_seconds_count[$__interval_sx4])) > 0",
+              "expr": "sum by (module) (rate(deckhouse_helm_operation_seconds_count[$__rate_interval])) > 0",
               "interval": "",
               "legendFormat": "{{ module }}",
               "refId": "A"
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Helm run frequency",
           "tooltip": {
             "shared": false,
             "sort": 2,
             "value_type": "individual"
           },
-          "type": "graph",
+          "type": "timeseries",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "$$hashKey": "object:592",
-              "decimals": null,
               "format": "ops",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:593",
               "decimals": 0,
               "format": "ops",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": true,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "custom": {}
-            },
-            "overrides": []
-          },
-          "fill": 1,
-          "fillGradient": 1,
-          "gridPos": {
-            "h": 7,
-            "w": 12,
-            "x": 12,
-            "y": 33
-          },
-          "hiddenSeries": false,
-          "id": 42,
-          "legend": {
-            "alignAsTable": false,
-            "avg": false,
-            "current": false,
-            "max": true,
-            "min": false,
-            "rightSide": false,
-            "show": false,
-            "sort": "max",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": false,
-          "linewidth": 1,
-          "nullPointMode": "null as zero",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 0.5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "ceil(sum by (module) (increase(deckhouse_kubernetes_client_request_result_total[$__interval_sx4]))) > 0",
-              "interval": "",
-              "legendFormat": "{{ module }}",
-              "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "Kubernetes client requests frequency",
-          "tooltip": {
-            "shared": true,
-            "sort": 1,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         }
       ],
@@ -2074,7 +2387,10 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2084,7 +2400,10 @@
       "id": 52,
       "panels": [
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "description": "5 top global hooks that have lognest duration on startup",
           "fieldConfig": {
             "defaults": {
@@ -2100,8 +2419,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2155,7 +2473,10 @@
           "type": "table"
         },
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "description": "5 top module hooks that have lognest duration on startup",
           "fieldConfig": {
             "defaults": {
@@ -2171,8 +2492,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2226,7 +2546,10 @@
           "type": "table"
         },
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "description": "5 top global hooks that have longest helm render duration on startup",
           "fieldConfig": {
             "defaults": {
@@ -2242,8 +2565,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2295,7 +2617,10 @@
           "type": "table"
         },
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "description": "5 top global hooks that have the longest helm check duration on startup",
           "fieldConfig": {
             "defaults": {
@@ -2311,8 +2636,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2364,7 +2688,10 @@
           "type": "table"
         },
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "description": "5 top global hooks that have the longest helm upgrade duration on startup",
           "fieldConfig": {
             "defaults": {
@@ -2380,8 +2707,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2433,7 +2759,10 @@
           "type": "table"
         },
         {
-          "datasource": null,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -2449,8 +2778,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2507,7 +2835,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 27,
+  "schemaVersion": 36,
   "style": "dark",
   "tags": [],
   "templating": {

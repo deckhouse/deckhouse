@@ -19,9 +19,6 @@ package deckhouse_config
 import (
 	"sync"
 
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/values/validation"
-
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -37,13 +34,13 @@ func InitService(mm ModuleManager) {
 	serviceInstanceLock.Lock()
 	defer serviceInstanceLock.Unlock()
 
-	possibleNames := set.New(mm.GetModuleNames()...)
+	possibleNames := set.New()
 	possibleNames.Add("global")
 
 	serviceInstance = &ConfigService{
 		moduleManager:        mm,
 		possibleNames:        possibleNames,
-		configValidator:      NewConfigValidator(mm.GetValuesValidator()),
+		configValidator:      NewConfigValidator(mm),
 		statusReporter:       NewModuleInfo(mm, possibleNames),
 		moduleNamesToSources: make(map[string]string),
 	}
@@ -106,10 +103,8 @@ func (srv *ConfigService) ModuleToSourcesNames() map[string]string {
 	return res
 }
 
-func (srv *ConfigService) GetValuesValidator() *validation.ValuesValidator {
-	return srv.moduleManager.GetValuesValidator()
-}
-
-func (srv *ConfigService) ValidateModule(module *modules.BasicModule) error {
-	return srv.moduleManager.ValidateModule(module)
+func (srv *ConfigService) AddPossibleName(name string) {
+	serviceInstanceLock.Lock()
+	srv.possibleNames.Add(name)
+	serviceInstanceLock.Unlock()
 }

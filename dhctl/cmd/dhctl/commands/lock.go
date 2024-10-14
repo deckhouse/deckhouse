@@ -17,13 +17,14 @@ package commands
 import (
 	"fmt"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	v1 "k8s.io/api/coordination/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -38,7 +39,7 @@ Lock info:
 func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("release", "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful")
 	app.DefineSanityFlags(cmd)
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -48,7 +49,10 @@ func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 			return err
 		}
 
-		kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+		kubeCl := client.NewKubernetesClient().
+			WithNodeInterface(
+				ssh.NewNodeInterfaceWrapper(sshClient),
+			)
 		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 			return err
 		}

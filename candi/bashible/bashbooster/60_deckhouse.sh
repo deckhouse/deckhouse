@@ -28,7 +28,7 @@ bb-deckhouse-get-disruptive-update-approval() {
     attempt=0
     until
         node_data="$(
-          bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | jq '
+          bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "${D8_NODE_HOSTNAME}" -o json | jq '
           {
             "resourceVersion": .metadata.resourceVersion,
             "isDisruptionApproved": (.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")),
@@ -48,7 +48,7 @@ bb-deckhouse-get-disruptive-update-approval() {
           bb-kubectl \
             --kubeconfig=/etc/kubernetes/kubelet.conf \
             --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-            annotate node "$(hostname -s)" update.node.deckhouse.io/rolling-update= || { bb-log-info "Retry setting update.node.deckhouse.io/rolling-update= annotation on Node in 10 sec..."; sleep 10; }
+            annotate node "${D8_NODE_HOSTNAME}" update.node.deckhouse.io/rolling-update= || { bb-log-info "Retry setting update.node.deckhouse.io/rolling-update= annotation on Node in 10 sec..."; sleep 10; }
           exit 0
         else
           bb-log-info "Disruption required, asking for approval."
@@ -56,7 +56,7 @@ bb-deckhouse-get-disruptive-update-approval() {
           bb-kubectl \
             --kubeconfig=/etc/kubernetes/kubelet.conf \
             --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-            annotate node "$(hostname -s)" update.node.deckhouse.io/disruption-required= || { bb-log-info "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
+            annotate node "${D8_NODE_HOSTNAME}" update.node.deckhouse.io/disruption-required= || { bb-log-info "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
         fi
     done
 
@@ -64,7 +64,7 @@ bb-deckhouse-get-disruptive-update-approval() {
 
     attempt=0
     until
-      bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "$(hostname -s)" -o json | \
+      bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node "${D8_NODE_HOSTNAME}" -o json | \
       jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")' >/dev/null
     do
         attempt=$(( attempt + 1 ))
@@ -73,7 +73,7 @@ bb-deckhouse-get-disruptive-update-approval() {
             exit 1
         fi
         bb-log-info "Step needs to make some disruptive action. It will continue upon approval:"
-        bb-log-info "kubectl annotate node $(hostname -s) update.node.deckhouse.io/disruption-approved="
+        bb-log-info "kubectl annotate node ${D8_NODE_HOSTNAME} update.node.deckhouse.io/disruption-approved="
         bb-log-info "Retry in 10sec..."
         sleep 10
     done

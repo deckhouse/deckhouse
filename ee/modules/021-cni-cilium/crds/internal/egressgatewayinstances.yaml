@@ -1,0 +1,153 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sdninternalegressgatewayinstances.internal.network.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cni-cilium
+spec:
+  group: internal.network.deckhouse.io
+  names:
+    kind: SDNInternalEgressGatewayInstance
+    listKind: SDNInternalEgressGatewayInstanceList
+    plural: sdninternalegressgatewayinstances
+    singular: sdninternalegressgatewayinstance
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: EgressGatewayInstance is the Schema for the sdninternalegressgatewayinstances API.
+          properties:
+            spec:
+              type: object
+              description: EgressGatewayInstanceSpec defines the desired state of SDNInternalEgressGatewayInstance.
+              properties:
+                nodeName:
+                  type: string
+                  description: Name of the active node.
+                sourceIP:
+                  properties:
+                    mode:
+                      type: string
+                      description: |-
+                        A method for determining the source IP address to be assigned to requests through this gateway.
+
+                        Possible options:
+                        * `PrimaryIPFromEgressGatewayNodeInterface` — the primary IP address on the "public" network interface of the node will be used as the source IP address.
+
+                          Particularities:
+                          * When the active node goes down and a new node is assigned, the outgoing IP address will change.
+                          * The network subsystem on all egress nodes must be configured in advance:
+                            * the "public" interfaces must have the same name (eth1, for example),
+                            * all necessary routes for access to all external public services must be configured.
+                        * `VirtualIPAddress` — explicitly specify the outgoing IP address.
+
+                          Particularities:
+                          * If the active node goes down, the outgoing IP address will not change.
+                          * The network subsystem on all egress nodes must be configured in advance:
+                            * all necessary routes for access to all external public services must be configured,
+                            * the "public" interface must be prepared to automatically configure a "virtual" IP as a secondary IP address (if an egress node is designated as active, the address will not appear in the IP list on the "public" interface, but the node will emulate it with ARP-responses)
+                    primaryIPFromEgressGatewayNodeInterface:
+                      properties:
+                        interfaceName:
+                          description: The interface name on the egress nodes through which external requests are processed.
+                          type: string
+                      type: object
+                    virtualIPAddress:
+                      properties:
+                        ip:
+                          type: string
+                          description: |-
+                            "Virtual" IP address that will be assigned to outgoing requests through the egress gateway.
+                        routingTableName:
+                          type: string
+                          description: |-
+                            Name of the routing table.
+                      type: object
+                  required:
+                    - mode
+                  type: object
+            status:
+              type: object
+              description: EgressGatewayInstanceStatus defines the observed state of
+                SDNInternalEgressGatewayInstance
+              properties:
+                conditions:
+                  items:
+                    properties:
+                      lastHeartbeatTime:
+                        format: date-time
+                        type: string
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: |-
+                          type of condition in CamelCase or in foo.example.com/CamelCase.
+                          ---
+                          Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                          useful (see .node.status.conditions), the ability to deconflict is important.
+                          The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                observedGeneration:
+                  format: int64
+                  type: integer
+      additionalPrinterColumns:
+        - jsonPath: .spec.sourceIP.virtualIPAddress.ip
+          name: IP
+          type: string
+        - jsonPath: .spec.nodeName
+          name: Node
+          type: string

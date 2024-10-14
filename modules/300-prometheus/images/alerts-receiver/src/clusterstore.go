@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -62,10 +63,10 @@ func newClusterStore() *clusterStore {
 }
 
 func (c *clusterStore) listCRs(rootCtx context.Context) (map[string]struct{}, error) {
-	log.Info("list CRs")
+	log.Info("list CRs in the cluster")
 	ctx, cancel := context.WithTimeout(rootCtx, contextTimeout)
 	crList, err := c.dc.Resource(c.GVR).List(ctx, v1.ListOptions{
-		LabelSelector:        "app=" + appName + ",heritage=deckhouse",
+		LabelSelector:        fmt.Sprintf("app=%s,heritage=deckhouse", appName),
 		ResourceVersionMatch: v1.ResourceVersionMatchNotOlderThan,
 		ResourceVersion:      "0",
 	})
@@ -101,18 +102,14 @@ func (c *clusterStore) createCR(rootCtx context.Context, fingerprint string, ale
 	summary := getLabel(alert.Annotations, summaryLabel)
 	description := getLabel(alert.Annotations, descriptionLabel)
 
-	reducedAnnotations := make(model.LabelSet, len(alert.Annotations))
-	for k, v := range alert.Annotations {
-		reducedAnnotations[k] = v
-	}
+	reducedAnnotations := alert.Annotations.Clone()
+	reducedLabels := alert.Labels.Clone()
 
-	reducedLabels := make(model.LabelSet, len(alert.Labels))
-	for k, v := range alert.Labels {
-		reducedLabels[k] = v
-	}
-
+	// remove unnecessary fields
 	delete(reducedAnnotations, summaryLabel)
 	delete(reducedAnnotations, descriptionLabel)
+	removePlkAnnotations(reducedAnnotations)
+
 	delete(reducedLabels, severityLabel)
 	delete(reducedLabels, model.AlertNameLabel)
 
@@ -145,27 +142,44 @@ func (c *clusterStore) createCR(rootCtx context.Context, fingerprint string, ale
 	_, err = c.dc.Resource(c.GVR).Create(ctx, obj, v1.CreateOptions{})
 	cancel()
 
+	if err != nil {
+		return err
+	}
+
+	// if alert.StartsAt time is zero, set status startsAt field to now on CR create
+	startsAt := alert.StartsAt
+	if startsAt.IsZero() {
+		startsAt = time.Now()
+	}
+
+	err = c.updateCRStatus(rootCtx, fingerprint, startsAt, alert.UpdatedAt)
 	return err
 }
 
 // Uodate CR status
-func (c *clusterStore) updateCRStatus(rootCtx context.Context, fingerprint string, alert *types.Alert) error {
+func (c *clusterStore) updateCRStatus(rootCtx context.Context, fingerprint string, startsAt, updatedAt time.Time) error {
 	log.Infof("update status of CR with name %s", fingerprint)
 
 	alertStatus := clusterAlertFiring
 
 	// If alert was updated last time > 2min ago, alert is marked as stale
-	if time.Since(alert.UpdatedAt) > 2*reconcileTime {
+	if time.Since(updatedAt) > 2*reconcileTime {
 		alertStatus = clusterAlertFiringStaled
 	}
 
-	patch := map[string]interface{}{
-		"status": map[string]interface{}{
-			"alertStatus":    alertStatus,
-			"startsAt":       alert.StartsAt.Format(time.RFC3339),
-			"lastUpdateTime": alert.UpdatedAt.Format(time.RFC3339),
-		},
+	statusField := map[string]interface{}{
+		"alertStatus":    alertStatus,
+		"lastUpdateTime": updatedAt.Format(time.RFC3339),
 	}
+	// id StartsAt field of alert is zero, don't update startsAt status field
+	if !startsAt.IsZero() {
+		statusField["startsAt"] = startsAt.Format(time.RFC3339)
+	}
+
+	patch := map[string]interface{}{
+		"status": statusField,
+	}
+
 	data, err := json.Marshal(patch)
 	if err != nil {
 		return err
@@ -182,10 +196,10 @@ func getLabel(labels model.LabelSet, key string) string {
 }
 
 // Remove unwanted annotations started with plk_
-func removePlkAnnotations(alert *model.Alert) {
-	for k := range alert.Annotations {
+func removePlkAnnotations(annotations model.LabelSet) {
+	for k := range annotations {
 		if strings.HasPrefix(string(k), "plk_") {
-			delete(alert.Annotations, k)
+			delete(annotations, k)
 		}
 	}
 }

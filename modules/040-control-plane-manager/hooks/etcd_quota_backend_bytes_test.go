@@ -23,7 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -150,7 +150,6 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 		}
 
 		for _, c := range casesIncrementalIncrease {
-			c := c
 			It(fmt.Sprintf("Node size %d", c.nodeSize/1024/1024/1024), func() {
 				newQuota := calcNewQuotaForMemory(c.nodeSize)
 
@@ -314,7 +313,6 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: etcd-quota-backen
 		}
 
 		for _, c := range cases {
-			c := c
 			It(c.title, func() {
 				node := getNodeWithMinimalMemory(c.nodes)
 
@@ -401,7 +399,7 @@ status:
 		for _, m := range metrics {
 			if m.Name == "d8_etcd_quota_backend_should_decrease" {
 				Expect(m.Group).To(Equal(etcdBackendBytesGroup))
-				Expect(m.Value).To(Equal(pointer.Float64(1.0)))
+				Expect(m.Value).To(Equal(ptr.To(1.0)))
 
 				found = true
 			}

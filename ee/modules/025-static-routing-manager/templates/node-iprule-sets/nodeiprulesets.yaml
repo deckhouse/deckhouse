@@ -1,0 +1,90 @@
+{{- range $nirs := .Values.staticRoutingManager.internal.nodeIPRuleSets }}
+---
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalNodeIPRuleSet
+metadata:
+  finalizers:
+    - routing-tables-manager.network.deckhouse.io
+  {{ include "helm_lib_module_labels" (list $ (dict "routing-manager.network.deckhouse.io/node-name" $nirs.nodeName)) | nindent 2 }}
+  name: {{ $nirs.name }}
+  ownerReferences:
+    - apiVersion: network.deckhouse.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: IPRuleSet
+      name: {{ $nirs.ownerIRSName }}
+      uid: {{ $nirs.ownerIRSUID }}
+spec:
+  nodeName: {{ $nirs.nodeName }}
+  rules:
+  {{- range $rule := $nirs.rules }}
+    - selectors:
+    {{- if $rule.selectors.not }}
+        not: {{ $rule.selectors.not }}
+    {{- end }}
+    {{- if $rule.selectors.from }}
+        from:
+      {{- range $prefix := $rule.selectors.from }}
+          - {{ $prefix | quote }}
+      {{- end }}
+    {{- end }}
+    {{- if $rule.selectors.to }}
+        to:
+      {{- range $prefix := $rule.selectors.to }}
+          - {{ $prefix | quote }}
+      {{- end }}
+    {{- end }}
+    {{- if $rule.selectors.iif }}
+        iif: {{ $rule.selectors.iif | quote }}
+    {{- end }}
+    {{- if $rule.selectors.oif }}
+        oif: {{ $rule.selectors.oif | quote }}
+    {{- end }}
+    {{- if $rule.selectors.tos }}
+        tos: {{ $rule.selectors.tos | quote }}
+    {{- end }}
+    {{- if $rule.selectors.fwMark }}
+        fwMark: {{ $rule.selectors.fwMark | quote }}
+    {{- end }}
+    {{- if $rule.selectors.ipProto }}
+        ipProto: {{ $rule.selectors.ipProto }}
+    {{- end }}
+    {{- if $rule.selectors.sportRange }}
+        sportRange:
+      {{- if $rule.selectors.sportRange.start }}
+          start: {{ $rule.selectors.sportRange.start }}
+      {{- end }}
+      {{- if $rule.selectors.sportRange.end }}
+          end: {{ $rule.selectors.sportRange.end }}
+      {{- end }}
+    {{- end }}
+    {{- if $rule.selectors.dportRange }}
+        dportRange:
+      {{- if $rule.selectors.dportRange.start }}
+          start: {{ $rule.selectors.dportRange.start }}
+      {{- end }}
+      {{- if $rule.selectors.dportRange.end }}
+          end: {{ $rule.selectors.dportRange.end }}
+      {{- end }}
+    {{- end }}
+    {{- if $rule.selectors.uidRange }}
+        uidRange:
+      {{- if $rule.selectors.uidRange.start }}
+          start: {{ $rule.selectors.uidRange.start }}
+      {{- end }}
+      {{- if $rule.selectors.uidRange.end }}
+          end: {{ $rule.selectors.uidRange.end }}
+      {{- end }}
+    {{- end }}
+      actions:
+    {{- if $rule.actions.lookup }}
+        lookup:
+      {{- if $rule.actions.lookup.ipRoutingTableID }}
+          ipRoutingTableID: {{ $rule.actions.lookup.ipRoutingTableID }}
+      {{- end }}
+    {{- end }}
+    {{- if $rule.priority }}
+      priority: {{ $rule.priority }}
+    {{- end }}
+  {{- end }}
+{{- end }}

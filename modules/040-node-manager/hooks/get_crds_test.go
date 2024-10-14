@@ -1112,8 +1112,8 @@ spec:
 		})
 	})
 
-	// config    1.25
-	// apiserver 1.27.X  |  effective 1.25
+	// config    1.27
+	// apiserver 1.29.X  |  effective 1.27
 	Context("Cluster with NG", func() {
 		BeforeEach(func() {
 			ng := `
@@ -1131,15 +1131,15 @@ spec:
     zones: [a,b]
 `
 			f.BindingContexts.Set(f.KubeStateSet(ng + stateICProper))
-			setK8sVersionAsClusterConfig(f, "1.25")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.27.0")
-			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.27.0")
+			setK8sVersionAsClusterConfig(f, "1.27")
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.29.0")
+			f.ValuesSet("global.discovery.kubernetesVersions.0", "1.29.0")
 			f.RunHook()
 		})
 
-		It("must be executed successfully; kubernetesVersion must be 1.25", func() {
+		It("must be executed successfully; kubernetesVersion must be 1.27", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.25"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.kubernetesVersion").String()).To(Equal("1.27"))
 		})
 	})
 
@@ -1462,6 +1462,36 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.staticInstances").Exists()).To(BeTrue())
+		})
+	})
+
+	const (
+		staticNodeGroupWithFencing = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  staticInstances:
+    labelSelector:
+      matchLabels:
+        node-group: worker
+  fencing:
+    mode: Watchdog
+`
+	)
+
+	Context("Static instances with fencing", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(staticNodeGroupWithFencing))
+			f.RunHook()
+		})
+
+		It("Internal fencing values should be generated", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.fencing.mode").Value()).To(Equal("Watchdog"))
 		})
 	})
 })

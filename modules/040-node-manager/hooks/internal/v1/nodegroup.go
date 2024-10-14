@@ -93,6 +93,9 @@ type NodeGroupSpec struct {
 
 	// Kubelet settings for nodes. Optional.
 	Kubelet Kubelet `json:"kubelet,omitempty"`
+
+	// Fencing settings for nodes. Optional.
+	Fencing Fencing `json:"fencing,omitempty"`
 }
 
 type CRI struct {
@@ -310,7 +313,38 @@ type Kubelet struct {
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
 
 	ResourceReservation KubeletResourceReservation `json:"resourceReservation"`
+
+	TopologyManager KubeletTopologyManager `json:"topologyManager"`
 }
+
+type KubeletTopologyManager struct {
+	// https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/
+	// usage topology
+	// Default: False
+	Enabled *bool `json:"enabled,omitempty"`
+	// Default: Container
+	// +optional
+	Scope KubeletTopologyManagerScope `json:"scope,omitempty"`
+	// Default: 'None'
+	// +optional
+	Policy KubeletTopologyManagerPolicy `json:"policy,omitempty"`
+}
+
+type KubeletTopologyManagerScope string
+
+const (
+	KubeletTopologyManagerScopeContainer KubeletTopologyManagerScope = "Container"
+	KubeletTopologyManagerScopePod       KubeletTopologyManagerScope = "Pod"
+)
+
+type KubeletTopologyManagerPolicy string
+
+const (
+	KubeletTopologyManagerPolicyNone           KubeletTopologyManagerPolicy = "None"
+	KubeletTopologyManagerPolicyBestEffort     KubeletTopologyManagerPolicy = "BestEffort"
+	KubeletTopologyManagerPolicyRestricted     KubeletTopologyManagerPolicy = "Restricted"
+	KubeletTopologyManagerPolicySingleNumaNode KubeletTopologyManagerPolicy = "SingleNumaNode"
+)
 
 type KubeletResourceReservation struct {
 	Mode KubeletResourceReservationMode `json:"mode"`
@@ -319,9 +353,9 @@ type KubeletResourceReservation struct {
 }
 
 type KubeletStaticResourceReservation struct {
-	CPU              resource.Quantity `json:"cpu"`
-	Memory           resource.Quantity `json:"memory"`
-	EphemeralStorage resource.Quantity `json:"ephemeralStorage"`
+	CPU              resource.Quantity `json:"cpu,omitempty"`
+	Memory           resource.Quantity `json:"memory,omitempty"`
+	EphemeralStorage resource.Quantity `json:"ephemeralStorage,omitempty"`
 }
 
 type KubeletResourceReservationMode string
@@ -335,6 +369,15 @@ const (
 func (k Kubelet) IsEmpty() bool {
 	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 &&
 		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil
+}
+
+type Fencing struct {
+	// Set custom settings for fencing controller
+	Mode string `json:"mode,omitempty"`
+}
+
+func (f Fencing) IsEmpty() bool {
+	return f.Mode == ""
 }
 
 type NodeGroupConditionType string

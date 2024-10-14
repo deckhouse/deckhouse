@@ -1,5 +1,12 @@
 type: object
 properties:
+  ebpfExporterEnabled:
+    type: boolean
+    default: true
+    x-examples:
+    - false
+    description: |
+      Set to 'false' to disable ebpf_exporter in case it behaves incorrectly.
   highAvailability:
     type: boolean
     x-examples: [true, false]
@@ -17,7 +24,7 @@ properties:
     description: |
       The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     items:
@@ -42,7 +49,7 @@ properties:
     description: |
       The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   vpa:
     type: object
     description: |

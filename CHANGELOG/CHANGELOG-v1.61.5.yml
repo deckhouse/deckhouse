@@ -1,0 +1,29 @@
+cloud-provider-aws:
+  features:
+    - summary: Update documentation. Add a link to the service annotations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8654
+cni-cilium:
+  fixes:
+    - summary: Fix trouble with empty `excludedCIDRs` field in `EgressGatewayPolicy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8930
+deckhouse-controller:
+  fixes:
+    - summary: Fix kubectl version detection in `kubectl_wrapper.sh`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8829
+dhctl:
+  fixes:
+    - summary: Fix registry preflight check for anonymous docker registries.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8940
+    - summary: Fix SSH tunneling preflight check not triggering when TCP forwarding is disabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8857
+docs:
+  fixes:
+    - summary: Improve information about manually uploading images in a private environment.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8735
+    - summary: Fixed objects examples on page "Cloud provider — OpenStack"
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8716
+static-routing-manager:
+  fixes:
+    - summary: Fixed CRDs path in `ensure_crds` hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8928
+

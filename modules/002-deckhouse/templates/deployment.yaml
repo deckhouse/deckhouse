@@ -3,7 +3,7 @@ cpu: 500m
 memory: 1000Mi
 {{- end }}
 
-{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -56,13 +56,15 @@ metadata:
     core.deckhouse.io/edition: {{ .Values.global.deckhouseEdition | quote }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
 spec:
+{{- if .Values.global.clusterIsBootstrapped }}
+  {{- include "helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha" (list . (dict "strategy" "Recreate")) | nindent 2 }}
+{{- else }}
   replicas: 1
+{{- end }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: deckhouse
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:
@@ -72,11 +74,27 @@ spec:
     spec:
       affinity:
         nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: dhctl.deckhouse.io/node-for-converge
-                    operator: DoesNotExist
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - preference:
+                matchExpressions:
+                - key: node.deckhouse.io/deckhouse-ready
+                  operator: In
+                  values:
+                  - "true"
+              weight: 100
+{{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - deckhouse
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+{{- end }}
 {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
 {{- if .Values.deckhouse.nodeSelector }}
       nodeSelector:
@@ -91,12 +109,11 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
 {{- end }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
-{{- if (.Values.global.enabledModules | has "external-module-manager") }}
       initContainers:
-        - name: init-external-modules
+        - name: init-downloaded-modules
           image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
           imagePullPolicy: Always
-          command: ['sh', '-c', 'mkdir -p /deckhouse/external-modules/modules && chown -hR 64535 /deckhouse/external-modules /deckhouse/external-modules/modules && chmod 0700 /deckhouse/external-modules /deckhouse/external-modules/modules']
+          command: ['sh', '-c', 'if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
@@ -104,9 +121,8 @@ spec:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
           volumeMounts:
-            - mountPath: /deckhouse/external-modules
-              name: external-modules
-{{- end }}
+            - mountPath: /deckhouse/
+              name: deckhouse
       containers:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
@@ -129,6 +145,14 @@ spec:
               value: {{ .Values.deckhouse.logLevel }}
             - name: LOG_TYPE
               value: "json"
+            - name: DECKHOUSE_HA
+{{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
+              value: "true"
+            - name: KUBERNETES_CLUSTER_DOMAIN
+              value: {{ .Values.global.discovery.clusterDomain | quote }}
+{{- else }}
+              value: "false"
+{{- end }}
             - name: DECKHOUSE_BUNDLE
               value: {{ .Values.deckhouse.bundle }}
             - name: DECKHOUSE_POD
@@ -141,6 +165,12 @@ spec:
                   fieldPath: spec.nodeName
             - name: HELM_HOST
               value: "127.0.0.1:44434"
+            - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
+              value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled"
+            - name: ADDON_OPERATOR_LISTEN_PORT
+              value: "4222"
+            - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
+              value: "4223"
             - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
               value: "30"
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
@@ -163,19 +193,19 @@ spec:
               value: "true"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_CERTS_DIR
               value: "/certs"
+            - name: ADDON_OPERATOR_CRD_EXTRA_LABELS
+              value: "heritage=deckhouse"
             - name: HELM3LIB
               value: "yes"
             - name: HELM_HISTORY_MAX
               value: "3"
-{{- if (.Values.global.enabledModules | has "external-module-manager") }}
             - name: MODULES_DIR
-              value: "/deckhouse/modules:/deckhouse/external-modules/modules"
+              value: "/deckhouse/modules:/deckhouse/downloaded/modules"
+            - name: DOWNLOADED_MODULES_DIR
+              value: "/deckhouse/downloaded/"
+            # For backward compatibility with current modules' hooks - remove after 1.69
             - name: EXTERNAL_MODULES_DIR
-              value: "/deckhouse/external-modules/"
-{{- else }}
-            - name: MODULES_DIR
-              value: "/deckhouse/modules"
-{{- end }}
+              value: "/deckhouse/downloaded/"
             - name: DEBUG_UNIX_SOCKET
               value: /tmp/shell-operator-debug.socket
             - name: HISTFILE
@@ -184,14 +214,14 @@ spec:
               value: "127.0.0.1:9652"
             {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
           ports:
-            - containerPort: 9650
+            - containerPort: 4222
               name: self
-            - containerPort: 9651
+            - containerPort: 4223
               name: webhook
           readinessProbe:
             httpGet:
               path: /readyz
-              port: 9650
+              port: 4222
             initialDelaySeconds: 5
             # fail after 10 minutes
             periodSeconds: 5
@@ -199,7 +229,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "deckhouse_resources" . | nindent 14 }}
 {{- end }}
           workingDir: /deckhouse
@@ -211,15 +241,13 @@ spec:
           - mountPath: /certs
             name: certs
             readOnly: true
-{{- if (.Values.global.enabledModules | has "external-module-manager") }}
-          - mountPath: /deckhouse/external-modules
-            name: external-modules
-{{- end }}
+          - mountPath: /deckhouse/downloaded
+            name: downloaded
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
           args:
-          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9889"
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4204"
           - "--v=2"
           - "--logtostderr=true"
           - "--stale-cache-interval=1h30m"
@@ -243,22 +271,22 @@ spec:
                     subresource: http
                     name: debugSrv
           ports:
-          - containerPort: 9889
+          - containerPort: 4204
             name: https
           livenessProbe:
             httpGet:
               path: /livez
-              port: 9889
+              port: 4204
               scheme: HTTPS
           readinessProbe:
             httpGet:
               path: /livez
-              port: 9889
+              port: 4204
               scheme: HTTPS
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
 {{- end }}
       hostNetwork: true
@@ -278,9 +306,11 @@ spec:
       - name: certs
         secret:
           secretName: admission-webhook-certs
-{{- if (.Values.global.enabledModules | has "external-module-manager") }}
-      - name: external-modules
+      - name: deckhouse
         hostPath:
-          path: /var/lib/deckhouse/external-modules
+          path: /var/lib/deckhouse
           type: DirectoryOrCreate
-{{- end}}
+      - name: downloaded
+        hostPath:
+          path: /var/lib/deckhouse/downloaded
+          type: DirectoryOrCreate

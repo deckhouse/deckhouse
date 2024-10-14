@@ -17,10 +17,12 @@ package backend
 import (
 	"context"
 	"errors"
+	"reflect"
 	"time"
 
 	logger "github.com/docker/distribution/context"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -33,22 +35,41 @@ import (
 )
 
 type ModuleConfigBackend struct {
-	mcKubeClient *versioned.Clientset
-	logger       logger.Logger
+	mcKubeClient     *versioned.Clientset
+	deckhouseConfigC chan<- utils.Values
+	moduleEventC     chan events.ModuleEvent
+	logger           logger.Logger
 }
 
 // New returns native(Deckhouse) implementation for addon-operator's KubeConfigManager which works directly with
 // deckhouse.io/ModuleConfig, avoiding moving configs to the ConfigMap
-func New(config *rest.Config, logger logger.Logger) *ModuleConfigBackend {
+func New(config *rest.Config, deckhouseConfigC chan<- utils.Values, logger logger.Logger) *ModuleConfigBackend {
 	mcClient, err := versioned.NewForConfig(config)
 	if err != nil {
 		panic(err)
 	}
 
 	return &ModuleConfigBackend{
-		mcClient,
-		logger,
+		mcKubeClient:     mcClient,
+		deckhouseConfigC: deckhouseConfigC,
+		logger:           logger,
 	}
+}
+
+func (mc ModuleConfigBackend) handleDeckhouseConfig(moduleName string, val utils.Values) {
+	if moduleName != "deckhouse" {
+		return
+	}
+
+	mc.deckhouseConfigC <- val
+}
+
+func (mc *ModuleConfigBackend) GetEventsChannel() chan events.ModuleEvent {
+	if mc.moduleEventC == nil {
+		mc.moduleEventC = make(chan events.ModuleEvent, 350)
+	}
+
+	return mc.moduleEventC
 }
 
 func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan config.Event) {
@@ -65,9 +86,19 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 			mconfig := obj.(*v1alpha1.ModuleConfig)
 			mc.handleEvent(mconfig, eventC, config.EventAdd)
 		},
-		UpdateFunc: func(prevObj interface{}, obj interface{}) {
+		UpdateFunc: func(prev interface{}, obj interface{}) {
+			prevConfig := prev.(*v1alpha1.ModuleConfig)
 			mconfig := obj.(*v1alpha1.ModuleConfig)
-			mc.handleEvent(mconfig, eventC, config.EventUpdate)
+			// TODO: find a better way of comparing mconfigs (some sort of generator for DeepEqual method)
+			if !reflect.DeepEqual(prevConfig.Spec, mconfig.Spec) {
+				mc.handleEvent(mconfig, eventC, config.EventUpdate)
+				// send an event to moduleEventC so that the moduleconfig status could be refreshed
+			} else if mc.moduleEventC != nil {
+				mc.moduleEventC <- events.ModuleEvent{
+					ModuleName: mconfig.Name,
+					EventType:  events.ModuleConfigChanged,
+				}
+			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			mc.handleEvent(obj.(*v1alpha1.ModuleConfig), eventC, config.EventDelete)
@@ -102,8 +133,15 @@ func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC cha
 			ModuleConfig: *mcfg,
 			Checksum:     mcfg.Checksum(),
 		}
+		mc.handleDeckhouseConfig(obj.Name, values)
 	}
 	eventC <- config.Event{Key: obj.Name, Config: cfg, Op: op}
+	if mc.moduleEventC != nil {
+		mc.moduleEventC <- events.ModuleEvent{
+			ModuleName: obj.Name,
+			EventType:  events.ModuleConfigChanged,
+		}
+	}
 }
 
 func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConfig, error) {
@@ -133,6 +171,7 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*con
 				ModuleConfig: *mcfg,
 				Checksum:     mcfg.Checksum(),
 			}
+			mc.handleDeckhouseConfig(item.Name, values)
 		}
 	}
 
@@ -146,24 +185,21 @@ func (mc ModuleConfigBackend) fetchValuesFromModuleConfig(item *v1alpha1.ModuleC
 	}
 
 	if item.Spec.Version == 0 {
-		// spec version not set explicitly
 		return utils.Values(item.Spec.Settings), nil
 	}
 
-	chain := conversion.Registry().Chain(item.Name)
-	if chain.LatestVersion() != item.Spec.Version {
-		newVersion, newSettings, err := chain.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
-		if err != nil {
-			return utils.Values{}, err
-		}
-		item.Spec.Version = newVersion
-		item.Spec.Settings = newSettings
+	converter := conversion.Store().Get(item.Name)
+	newVersion, newSettings, err := converter.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
+	if err != nil {
+		return utils.Values{}, err
 	}
+	item.Spec.Version = newVersion
+	item.Spec.Settings = newSettings
 
 	return utils.Values(item.Spec.Settings), nil
 }
 
-// SaveConfigValues saving patches in ModuleConfigBackend. Used for settings-conversions
+// SaveConfigValues saving patches in ModuleConfigBackend.
 func (mc ModuleConfigBackend) SaveConfigValues(_ context.Context, moduleName string, values utils.Values) ( /*checksum*/ string, error) {
 	mc.logger.Errorf("module %s tries to save values in ModuleConfig: %s", moduleName, values.DebugString())
 	return "", errors.New("saving patch values in ModuleConfig is forbidden")

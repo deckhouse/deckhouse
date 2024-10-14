@@ -1,0 +1,40 @@
+{{- $version := "1.25" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - virt-what
+  - virt-what-cpuid-helper
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    virt-what: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  setup:
+    - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/virt-what.git src
+    - cd /src
+    - autoreconf -fi
+    - autoconf
+    - LDFLAGS="-static" ./configure
+    - make
+    - strip ./virt-what-cpuid-helper
+    - mv ./virt-what /virt-what && mv ./virt-what-cpuid-helper /virt-what-cpuid-helper
+    - chmod +x /virt-what-cpuid-helper /virt-what  /install /uninstall

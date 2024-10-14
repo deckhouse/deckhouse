@@ -16,6 +16,7 @@ package tomb
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -69,7 +70,8 @@ func runAction(p *testActionParams) *testRunResult {
 	err = cmd.Wait()
 
 	exitCode := 0
-	if exitError, ok := err.(*exec.ExitError); ok {
+	var exitError *exec.ExitError
+	if errors.As(err, &exitError) {
 		exitCode = exitError.ExitCode()
 	}
 

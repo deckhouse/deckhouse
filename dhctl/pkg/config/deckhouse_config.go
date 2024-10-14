@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -45,36 +46,6 @@ metadata:
 spec:
   settings:
     %s
-`
-	configOverridesWarn = `
-Config overrides are deprecated. Please use module config:
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterConfiguration
-...
-apiVersion: deckhouse.io/v1alpha1
-kind: InitConfiguration
-...
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: global
-spec:
-  settings:
-    highAvailability: false
-    modules:
-      publicDomainTemplate: '%s.example.com'
-  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-flannel
-spec:
-  enabled: true
----
-...
 `
 
 	DefaultBundle   = "Default"
@@ -101,13 +72,16 @@ type DeckhouseInstaller struct {
 
 	ReleaseChannel   string
 	InstallerVersion string
+
+	CommanderMode bool
+	CommanderUUID uuid.UUID
 }
 
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	registryNameTemplate := "%s%s:%s"
 	tag := c.DevBranch
 	if forceVersionTag {
-		versionTag, foundValidTag := readVersionTagFromInstallerContainer()
+		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer()
 		if foundValidTag {
 			tag = versionTag
 		}
@@ -124,7 +98,7 @@ func (c *DeckhouseInstaller) IsRegistryAccessRequired() bool {
 	return c.Registry.DockerCfg != ""
 }
 
-func readVersionTagFromInstallerContainer() (string, bool) {
+func ReadVersionTagFromInstallerContainer() (string, bool) {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
 		log.WarnF(
@@ -148,17 +122,17 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 	clusterConfig, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("marshal cluster config: %v", err)
+		return nil, fmt.Errorf("Marshal cluster config failed: %v", err)
 	}
 
 	providerClusterConfig, err := metaConfig.ProviderClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("marshal provider config: %v", err)
+		return nil, fmt.Errorf("Marshal provider config failed: %v", err)
 	}
 
 	staticClusterConfig, err := metaConfig.StaticClusterConfigYAML()
 	if err != nil {
-		return nil, fmt.Errorf("marshal static config: %v", err)
+		return nil, fmt.Errorf("Marshal static config failed: %v", err)
 	}
 
 	bundle := DefaultBundle
@@ -194,17 +168,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	schemasStore := NewSchemaStore()
 
 	if len(metaConfig.DeckhouseConfig.ConfigOverrides) > 0 {
-		log.WarnLn(configOverridesWarn)
-		if len(metaConfig.ModuleConfigs) > 0 {
-			return nil, fmt.Errorf("Cannot use ModuleConfig's and configOverrides at the same time. Please use ModuleConfig's")
-		}
-
-		mcs, err := ConvertInitConfigurationToModuleConfigs(metaConfig, schemasStore, bundle, logLevel)
-		if err != nil {
-			return nil, err
-		}
-
-		metaConfig.ModuleConfigs = mcs
+		return nil, fmt.Errorf("Support for 'configOverrides' was removed. Please use ModuleConfig's instead.")
 	}
 
 	var deckhouseCm *ModuleConfig
@@ -227,7 +191,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 
 	if deckhouseCm == nil {
-		deckhouseCm, err = buildModuleConfigWithOverrides(schemasStore, "deckhouse", true, map[string]any{
+		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, map[string]any{
 			"bundle":   bundle,
 			"logLevel": logLevel,
 		})

@@ -1,6 +1,6 @@
 {{- define "falco_resources" }}
-cpu: 10m
-memory: 25Mi
+cpu: 50m
+memory: 64Mi
 {{- end }}
 
 {{- define "falcosidekick_resources" }}
@@ -13,7 +13,7 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -22,20 +22,8 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: DaemonSet
-    name: {{ $.Chart.Name }}
-  updatePolicy:
-    updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: "falco"
-      minAllowed:
-      {{- include "falco_resources" . | nindent 8 }}
-      maxAllowed:
-        cpu: 4000m
-        memory: 5Gi
+    {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" $.Chart.Name "falco" $.Values.runtimeAuditEngine.resourcesRequests ) | nindent 2}}
+    {{- if eq (.Values.runtimeAuditEngine.resourcesRequests.mode) "VPA" }}
     - containerName: "falcosidekick"
       minAllowed:
       {{- include "falcosidekick_resources" . | nindent 8 }}
@@ -49,6 +37,7 @@ spec:
         cpu: 100m
         memory: 300Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+    {{- end }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -80,30 +69,24 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
-
       - name: falco
-        # TODO(nabokihms): Fix 'Error response from daemon: invalid CapAdd: unknown capability: "CAP_BPF"'
-        # Migrate to capabilities: "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE"
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list  "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falco") }}
         args:
         - /usr/bin/falco
-        - -K
-        - /var/run/secrets/kubernetes.io/serviceaccount/token
-        - -k
-        - https://$(KUBERNETES_SERVICE_HOST)
-        - --k8s-node
-        - $(FALCO_K8S_NODE_NAME)
         - -pk
-        - --modern-bpf
-        - --unbuffered
+        - -U
         env:
+        - name: HOST_ROOT
+          value: /host
+        - name: FALCO_HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         - name: FALCO_K8S_NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        - name: SKIP_DRIVER_LOADER
-          value: ""
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -127,7 +110,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "falco_resources" . | nindent 14 }}
           {{- end }}
         volumeMounts:
@@ -140,8 +123,6 @@ spec:
           readOnly: true
         - mountPath: /etc/falco
           name: config-volume
-        - mountPath: /sys/kernel/debug
-          name: debug-fs
         - mountPath: /etc/falco/webhook
           name: webhook-tls
           readOnly: true
@@ -153,6 +134,8 @@ spec:
       - name: falcosidekick
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falcosidekick") }}
+        command:
+        - /falcosidekick
         env:
         - name: LISTENADDRESS
           value: "127.0.0.1"
@@ -160,24 +143,27 @@ spec:
         - name: DEBUG
           value: "true"
         {{- end }}
+        ports:
+        - name: webhook
+          containerPort: 4227
         livenessProbe:
           httpGet:
             path: /sidekick/ping
-            port: 8766
+            port: 4212
             scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 5
         readinessProbe:
           httpGet:
             path: /sidekick/ping
-            port: 8766
+            port: 4212
             scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 5
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "falcosidekick_resources" . | nindent 14 }}
           {{- end }}
 
@@ -193,12 +179,14 @@ spec:
           value: d8-runtime-audit-engine.deckhouse.io
         - name: VALIDATING_WEBHOOK_SERVICE_NAME
           value: {{ .Chart.Name }}-webhook
+        - name: VALIDATING_WEBHOOK_LISTEN_PORT
+          value: "4227"
         - name: DEBUG_UNIX_SOCKET
           value: /tmp/shell-operator-debug.socket
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "falco_rules_loader" . | nindent 12 }}
 {{- end }}
         volumeMounts:
@@ -206,6 +194,8 @@ spec:
           name: webhook-tls
         - name: rules-data
           mountPath: /etc/falco/rules.d
+        - name: proc-fs
+          mountPath: /host/proc
         - name: tmp
           mountPath: /tmp
         - mountPath: /etc/falco
@@ -224,7 +214,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8766"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4212"
         - "--client-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
         - "--v=2"
         - "--logtostderr=true"
@@ -251,22 +241,22 @@ spec:
                   subresource: prometheus-metrics
                   name: {{ $.Chart.Name }}
         ports:
-        - containerPort: 8766
+        - containerPort: 4212
           name: https-metrics
         livenessProbe:
           httpGet:
             path: /livez
-            port: 8766
+            port: 4212
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 8766
+            port: 4212
             scheme: HTTPS
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
           {{- end }}
 
@@ -279,29 +269,14 @@ spec:
       - emptyDir: {}
         name: tmp
       - hostPath:
-          path: /boot
-        name: boot-fs
-      - hostPath:
-          path: /lib/modules
-        name: lib-modules
-      - hostPath:
-          path: /usr
-        name: usr-fs
-      - hostPath:
           path: /run/containerd/containerd.sock
         name: containerdsock
-      - hostPath:
-          path: /etc
-        name: etc-fs
       - hostPath:
           path: /dev
         name: dev-fs
       - hostPath:
           path: /proc
         name: proc-fs
-      - hostPath:
-          path: /sys/kernel/debug
-        name: debug-fs
       - name: config-volume
         configMap:
           defaultMode: 420

@@ -186,7 +186,8 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 
 	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
 	if err != nil {
-		return authn.AuthConfig{}, err
+		// if base64 decoding failed, try to use input as it is
+		dockerCfg = []byte(dockerCfgBase64)
 	}
 	auths := gjson.Get(string(dockerCfg), "auths").Map()
 	authConfig := authn.AuthConfig{}
@@ -261,17 +262,14 @@ func WithInsecureSchema(insecure bool) Option {
 	}
 }
 
-// WithDisabledAuth don't use authConfig
-func WithDisabledAuth() Option {
-	return func(options *registryOptions) {
-		options.withoutAuth = true
-	}
-}
-
 // WithAuth use docker config base64 as authConfig
+// if dockerCfg is empty - will use client without auth
 func WithAuth(dockerCfg string) Option {
 	return func(options *registryOptions) {
 		options.dockerCfg = dockerCfg
+		if dockerCfg == "" {
+			options.withoutAuth = true
+		}
 	}
 }
 

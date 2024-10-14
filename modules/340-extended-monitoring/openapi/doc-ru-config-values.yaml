@@ -26,6 +26,15 @@ properties:
               ca:
                 description: |
                   Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+      mirrors:
+        type: array
+        description: |
+          Список зеркал для container registry.
+      forceCheckDisabledControllers:
+        description: |
+          Список контроллеров, которые необходимо проверять, даже если количество реплик подов равняется 0 или контроллер находится в статусе `suspend` (приостановленный).
+
+          Укажите `All`, для проверки всех типов контроллеров.
   events:
     description: |
       Настройки для мониторинга event'ов в кластере Kubernetes.
@@ -49,9 +58,9 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

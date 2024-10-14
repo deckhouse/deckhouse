@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Usage: $0 <BASE_IMAGE_NAME(optional)>
+# if run without arguments, creates dev images all base images
 set -Eeo pipefail
 
 VERSION_FILE="../../candi/image_versions.yml"
@@ -23,6 +25,11 @@ WRITE_REGISTRY="registry-write.deckhouse.io/base_images/"
 to_add=""
 
 list=$(grep -E "^BASE_" ${VERSION_FILE} | grep -vE "_DEV:")
+
+if [ -n "$1" ]; then
+  list=$(grep "$1" <<< "$list")
+fi
+
 while IFS=: read -r var_name image_with_hash
 do
   image_name="$(sed "s/\"//g" <<< "${image_with_hash}" | sed "s/ //g")"

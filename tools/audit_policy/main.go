@@ -137,6 +137,12 @@ metadata:
 					return err
 				}
 
+				// ServiceAccounts for istiod will be added to audit rules in
+				// modules/040-control-plane-manager/hooks/audit_policy.go
+				if strings.HasPrefix(saName, "istiod-") {
+					continue
+				}
+
 				saNames[modulePath] = append(
 					saNames[modulePath],
 					fmt.Sprintf("system:serviceaccount:%s:%s", namespace, saName),

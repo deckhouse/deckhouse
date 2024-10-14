@@ -7,7 +7,7 @@ Below is an example configuration for a VMware Cloud Director cloud provider.
 ## An example of the `VCDInstanceClass` custom resource
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: VCDInstanceClass
 metadata:
   name: test

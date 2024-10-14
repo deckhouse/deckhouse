@@ -76,6 +76,9 @@ data:
   {{- if $crd.spec.disableHTTP2 }}
   use-http2: "false"
   {{- end }}
+  {{- if $crd.spec.enableHTTP3 }}
+  use-http3: "true"
+  {{- end}}
   {{- if $crd.spec.legacySSL }}
   ssl-protocols: "TLSv1 TLSv1.1 TLSv1.2"
   ssl-ciphers: "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:\
@@ -162,7 +165,7 @@ data:
     "referrer": "$http_referer",
     "user_agent": "$http_user_agent",
     "request_time": $request_time,
-    "status": $status,
+    "status": $formatted_status,
     "content_kind": "$content_kind",
     "upstream_response_time": $total_upstream_response_time,
     "upstream_retries": $upstream_retries,
@@ -195,6 +198,10 @@ data:
 
   {{- if $crd.spec.customErrors }}
   custom-http-errors: {{ $crd.spec.customErrors.codes | join "," | quote }}
+  {{- end }}
+
+  {{- if $crd.spec.underscoresInHeaders }}
+  enable-underscores-in-headers: {{ $crd.spec.underscoresInHeaders  | quote }}
   {{- end }}
 
   {{- if $crd.spec.config }}

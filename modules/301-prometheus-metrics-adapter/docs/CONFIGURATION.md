@@ -3,6 +3,8 @@ title: "The prometheus-metrics-adapter module: configuration"
 search: autoscaler, HorizontalPodAutoscaler 
 ---
 
+{% include module-alerts.liquid %}
+
 {% include module-bundle.liquid %}
 
 The module works if the `prometheus` module is enabled. Generally, no configuration is required.

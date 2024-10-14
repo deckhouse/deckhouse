@@ -62,7 +62,7 @@ bb-event-fire() {
     fi
     if [[ -f "$BB_EVENT_DIR/$EVENT.handlers" ]]
     then
-        bb-log-debug "Run handlers for event '$EVENT'"
+        bb-log-info "Run handlers for event '$EVENT'"
         while read -r HANDLER
         do
             eval "$HANDLER $@"

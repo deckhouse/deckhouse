@@ -7,9 +7,9 @@ cloudDataCrdEnabled: true
 containerizedDataImporterEnabled: true
 controlPlaneManagerEnabled: true
 dashboardEnabled: true
-externalModuleManagerEnabled: true
 deckhouseEnabled: true
 documentationEnabled: true
+deckhouseToolsEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
 flowSchemaEnabled: true
@@ -19,12 +19,14 @@ kubeDnsEnabled: true
 kubeProxyEnabled: true
 localPathProvisionerEnabled: true
 logShipperEnabled: true
+metallbCrdEnabled: true
 monitoringCustomEnabled: true
 monitoringDeckhouseEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
 monitoringKubernetesEnabled: true
 monitoringPingEnabled: true
 namespaceConfiguratorEnabled: true
+registryPackagesProxyEnabled: true
 nodeManagerEnabled: true
 operatorPrometheusCrdEnabled: true
 operatorPrometheusEnabled: true
@@ -44,3 +46,4 @@ userAuthnEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerCrdEnabled: true
 verticalPodAutoscalerEnabled: true
+

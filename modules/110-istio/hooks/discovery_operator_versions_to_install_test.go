@@ -53,7 +53,7 @@ internal:
 
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.1.0"))
+			Expect(value).To(BeEquivalentTo("1.1"))
 		})
 	})
 
@@ -102,7 +102,7 @@ spec:
 
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.2.0"))
+			Expect(value).To(BeEquivalentTo("1.2"))
 		})
 	})
 
@@ -160,7 +160,7 @@ spec:
 
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.2.0"))
+			Expect(value).To(BeEquivalentTo("1.2"))
 		})
 	})
 })

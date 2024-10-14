@@ -10,7 +10,7 @@ metadata:
 data:
   config.yaml: |
     auth:
-      strategy: anonymous
+      strategy: header
     deployment:
       namespace: d8-{{ $.Chart.Name }}
       accessible_namespaces:
@@ -67,7 +67,7 @@ data:
       metrics_enabled: true
       metrics_port: 9090
       port: 20001
-      web_root: /kiali
+      web_root: /
     kiali_feature_flags:
       istio_annotation_action: false
       istio_injection_action: false

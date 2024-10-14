@@ -1,0 +1,25 @@
+candi:
+  fixes:
+    - summary: Fix home directory permission for NodeUser.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9030
+      impact: default
+cloud-provider-aws:
+  fixes:
+    - summary: Clarification of the documentation on the zones.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9029
+docs:
+  fixes:
+    - summary: >-
+        Updated documentation for the 402-ingress-nginx module. Cloud providers that use the
+        `sourceRanges` specification are described.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9012
+    - summary: Fix links in documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9007
+    - summary: Added documentation improvements regarding Deckhouse task queues.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8939
+monitoring-kubernetes:
+  fixes:
+    - summary: Fix node exporter NTP address.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9016
+      impact: node-exporter will restart.
+

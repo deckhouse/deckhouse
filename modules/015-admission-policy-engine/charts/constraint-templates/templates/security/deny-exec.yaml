@@ -1,0 +1,49 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8denyexec
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Deny Exec"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Defines an allow-list of commands that could be executed via the pod/exec action.
+      Interactive exec is not permitted.
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8DenyExec
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Defines an allow-list of commands that could be executed via the pod/exec action.
+                  Interactive exec is not permitted.
+          properties:
+            allowedCommands:
+              type: array
+              description: "An allow-list of exec commands."
+              items:
+                type: string
+                description: "Shell command."
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.security_policies
+
+        import future.keywords.every
+        violation[{"msg": msg}] {
+          input.review.object.stdin == true
+          msg :=  "Interactive exec is not permitted."
+        }
+
+        violation[{"msg": msg}] {
+          some command in input.review.object.command
+            not command in input.parameters.allowedCommands
+          msg := sprintf("Only %v commands are allowed.", [input.parameters.allowedCommands])
+        }

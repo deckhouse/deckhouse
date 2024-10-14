@@ -25,6 +25,7 @@ const labels = {
   'skip/grafana-dashboard': { type: 'skip-validation', validation_name: 'grafana_dashboard' },
   'skip/markdown-validation': { type: 'skip-validation', validation_name: 'markdown' },
   'skip/actionlint': { type: 'skip-validation', validation_name: 'actionlint' },
+  'skip/release-requirements': { type: 'skip-validation', validation_name: 'release_requirements' },
 
   // E2E
   'e2e/run/aws': { type: 'e2e-run', provider: 'aws' },
@@ -33,19 +34,21 @@ const labels = {
   'e2e/run/gcp': { type: 'e2e-run', provider: 'gcp' },
   'e2e/run/openstack': { type: 'e2e-run', provider: 'openstack' },
   'e2e/run/vsphere': { type: 'e2e-run', provider: 'vsphere' },
+  'e2e/run/vcd': { type: 'e2e-run', provider: 'vcd' },
   'e2e/run/yandex-cloud': { type: 'e2e-run', provider: 'yandex-cloud' },
   'e2e/run/static': { type: 'e2e-run', provider: 'static' },
 
-  // E2E: use CRI
-  'e2e/use/cri/docker': { type: 'e2e-use', cri: 'Docker' },
-  'e2e/use/cri/containerd': { type: 'e2e-use', cri: 'Containerd' },
-
   // E2E: use Kubernetes version
-  'e2e/use/k8s/1.25': { type: 'e2e-use', ver: '1.25' },
   'e2e/use/k8s/1.26': { type: 'e2e-use', ver: '1.26' },
   'e2e/use/k8s/1.27': { type: 'e2e-use', ver: '1.27' },
   'e2e/use/k8s/1.28': { type: 'e2e-use', ver: '1.28' },
   'e2e/use/k8s/1.29': { type: 'e2e-use', ver: '1.29' },
+  'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
+  'e2e/use/k8s/1.31': { type: 'e2e-use', ver: '1.31' },	
+  'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
+
+  // E2E: use multimaster configuration
+  'e2e/use/multimaster': { type: 'e2e-use', multimaster: true },
 
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
@@ -57,7 +60,8 @@ const labels = {
   // Edition for build-and-test workflow
   'edition/ce': { type: 'edition', edition: 'CE' },
   'edition/ee': { type: 'edition', edition: 'EE' },
-  'edition/be': { type: 'edition', edition: 'BE' }
+  'edition/be': { type: 'edition', edition: 'BE' },
+  'edition/se': { type: 'edition', edition: 'SE' }
 };
 module.exports.knownLabels = labels;
 
@@ -144,13 +148,14 @@ module.exports.knownKubernetesVersions = kubernetesVersions;
 
 module.exports.e2eDefaults = {
   criName: 'Containerd',
-  kubernetesVersion: '1.25',
+  multimaster: false,
 }
 
 const editions = [
   'CE',
   'EE',
   'FE',
-  'BE'
+  'BE',
+  'SE'
 ];
 module.exports.knownEditions = editions;

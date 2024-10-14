@@ -3,7 +3,7 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -65,6 +65,9 @@ spec:
         - --secure-port=6443
         - --tls-cert-file=/certs/tls.crt
         - --tls-private-key-file=/certs/tls.key
+        ports:
+        - name: webhook
+          containerPort: 6443
         env:
         - name: POD_NAMESPACE
           valueFrom:
@@ -88,7 +91,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "webhook_resources" . | nindent 12 }}
 {{- end }}
       volumes:

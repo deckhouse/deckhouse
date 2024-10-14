@@ -60,6 +60,9 @@ data:
   {{- if hasKey $internal "externalNetworkNames" }}
     {{- $_ := set $openstackValues "externalNetworkNames" $internal.externalNetworkNames }}
   {{- end }}
+  {{- if hasKey $internal "externalNetworkDHCP" }}
+    {{- $_ := set $openstackValues "externalNetworkDHCP" $internal.externalNetworkDHCP }}
+  {{- end }}
   {{- if hasKey $internal "internalNetworkNames" }}
     {{- $_ := set $openstackValues "internalNetworkNames" $internal.internalNetworkNames }}
   {{- else }}

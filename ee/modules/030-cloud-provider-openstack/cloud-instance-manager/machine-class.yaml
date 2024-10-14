@@ -7,6 +7,9 @@ metadata:
 spec:
   region: {{ .Values.nodeManager.internal.cloudProvider.openstack.connection.region | quote }}
   availabilityZone: {{ .zoneName }}
+  {{- if not .Values.nodeManager.internal.cloudProvider.openstack.externalNetworkDHCP }}
+  useConfigDrive: true
+  {{- end }}
   flavorName: {{ .nodeGroup.instanceClass.flavorName }}
   {{- if hasKey .nodeGroup.instanceClass "imageName" }}
   imageName: {{ .nodeGroup.instanceClass.imageName }}

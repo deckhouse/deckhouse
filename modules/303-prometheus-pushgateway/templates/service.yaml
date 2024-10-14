@@ -12,6 +12,7 @@ spec:
   ports:
   - name: http-metrics
     port: 9091
+    targetPort: http-metrics
   selector:
     app: {{ $instance }}
 {{- end }}

@@ -20,7 +20,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -106,7 +106,7 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 				Name:   "d8_istio_deprecated_version_installed",
 				Group:  versionsMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"version":        "1.1",
 					"alert_severity": "4",
@@ -141,7 +141,7 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 				Name:   "d8_istio_deprecated_version_installed",
 				Group:  versionsMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"version":        "1.2",
 					"alert_severity": "8",
@@ -151,7 +151,7 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 				Name:   "d8_istio_deprecated_version_installed",
 				Group:  versionsMonitoringMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"version":        "1.3",
 					"alert_severity": "9",

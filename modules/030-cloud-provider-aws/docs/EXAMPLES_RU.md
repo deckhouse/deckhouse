@@ -22,7 +22,7 @@ spec:
 
 ### Аннотации объекта Service
 
-Поддерживаются следующие параметры в дополнение к существующим в upstream:
+Поддерживаются следующие параметры в дополнение к существующим в [upstream](https://cloud-provider-aws.sigs.k8s.io/service_controller/):
 
 1. `service.beta.kubernetes.io/aws-load-balancer-type` — может иметь значение `none`, что приведет к созданию **только** Target Group, без какого-либо LoadBalanacer'а.
 2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — используется в связке с `service.beta.kubernetes.io/aws-load-balancer-type: none`:
@@ -62,6 +62,6 @@ spec:
 Чтобы получить список текущих подсетей, используемых для конкретной установки, выполните следующую команду:
 
 ```bash
-kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module values cloud-provider-aws -o json \
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values cloud-provider-aws -o json \
 | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
 ```

@@ -85,9 +85,6 @@ func searchHooks(hookModules *[]string, dir, workDir string) error {
 			if f.Name() == "testdata" {
 				return filepath.SkipDir
 			}
-			if f.Name() == "settings-conversion" {
-				return filepath.SkipDir
-			}
 			return nil
 		}
 		if filepath.Ext(path) != ".go" {

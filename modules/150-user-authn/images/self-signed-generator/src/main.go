@@ -38,7 +38,7 @@ const (
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "generate-crowd-proxy-certs" {
+	if len(os.Args) > 1 && os.Args[1] == "generate-proxy-certs" {
 		cert, err := generateSelfSignedCertFromFrontProxyCA()
 		if err != nil {
 			log.Fatal(err)

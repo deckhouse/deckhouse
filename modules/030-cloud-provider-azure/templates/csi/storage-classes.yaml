@@ -19,6 +19,9 @@ parameters:
   {{- if hasKey $storageClass "diskMBpsReadWrite" }}
   diskMbpsReadWrite: {{ $storageClass.diskMBpsReadWrite | quote }}
   {{- end }}
+  {{- if hasKey $storageClass "tags" }}
+  tags: {{ $storageClass.tags | quote }}
+  {{- end }}
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 {{- end }}

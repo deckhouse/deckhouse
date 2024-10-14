@@ -28,26 +28,41 @@ case "$ID" in
     name_is_not_supported
   ;;
   redos)
-    case "$VERSION_ID" in 7|7.*)
+    case "$VERSION_ID" in 7|7.*|8|8.*)
       echo "redos" && exit 0 ;;
     esac
     name_is_not_supported
   ;;
+  rels|rosa)
+    case "$VERSION_ID" in 7.9)
+        echo "rosa" && exit 0 ;;
+    esac
+    case "$VERSION" in 12.4|12.5.*)
+        echo "rosa" && exit 0 ;;
+    esac
+    name_is_not_supported
+  ;;
+  mosos-arbat|opensuse-leap)
+    case "$VERSION" in 15.*)
+        echo "opensuse" && exit 0 ;;
+    esac
+    name_is_not_supported
+  ;;
   ubuntu)
-    case "$VERSION_ID" in 18.04|20.04|22.04)
+    case "$VERSION_ID" in 18.04|20.04|22.04|24.04)
       echo "ubuntu-lts" && exit 0 ;;
     esac
     name_is_not_supported
   ;;
   debian)
-    case "$VERSION_ID" in 9|10|11)
+    case "$VERSION_ID" in 10|11|12)
       echo "debian" && exit 0 ;;
     esac
     name_is_not_supported
   ;;
   astra)
     case "$VERSION_ID" in
-      1.7|1.7*)
+      1.7|1.7*|1.8|1.8*)
         echo "astra" && exit 0 ;;
       2.12|2.12.*)
         echo "debian" && exit 0 ;;
@@ -55,7 +70,7 @@ case "$ID" in
     name_is_not_supported
   ;;
   altlinux)
-    case "$VERSION_ID" in p10|10|10.0|10.1|10.2)
+    case "$VERSION_ID" in p10|10|10.0|10.1|10.2|11)
       echo "altlinux" && exit 0 ;;
     esac
     name_is_not_supported
@@ -85,5 +100,8 @@ done
 bundle="debian"
 if yum -q --version >/dev/null 2>/dev/null; then
   bundle="centos"
+fi
+if zypper --version >/dev/null 2>/dev/null; then
+  bundle="opensuse"
 fi
 try_bundle "${bundle}"

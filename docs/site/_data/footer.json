@@ -5,23 +5,58 @@
         "title": "Products",
         "items": [
           {
-            "title": "Deckhouse Kubernetes Platform EE",
-            "url": "/products/enterprise-edition/",
+            "title": "Kubernetes Platform",
+            "url": "/products/kubernetes-platform/",
             "target": ""
           },
           {
-            "title": "Deckhouse Kubernetes Platform CE",
-            "url": "/community/community-edition/",
+            "title": "Virtualization Platform",
+            "url": "/products/virtualization-platform/",
+            "target": ""
+          },
+          {
+            "title": "Observability Platform",
+            "url": "/products/observability-platform/",
+            "target": ""
+          },
+          {
+            "title": "Commander",
+            "url": "/products/commander/",
+            "target": ""
+          },
+          {
+            "title": "Stronghold",
+            "url": "/products/stronghold/",
+            "target": ""
+          },
+          {
+            "title": "Delivery",
+            "url": "/products/delivery/",
             "target": ""
           }
         ]
       },
       {
-        "title": "Services",
+        "title": "Solutions",
         "items": [
           {
+            "title": "Technical Support",
+            "url": "/tech-support/",
+            "target": ""
+          },
+          {
+            "title": "Security",
+            "url": "/security/",
+            "target": ""
+          },
+          {
             "title": "Training &amp; Consulting",
-            "url": "/services/education/",
+            "url": "/services/training-and-consulting/",
+            "target": ""
+          },
+          {
+            "title": "Deckhouse vs KaaS",
+            "url": "/deckhouse-vs-kaas/",
             "target": ""
           }
         ]
@@ -30,24 +65,9 @@
         "title": "Resources",
         "items": [
           {
-            "title": "Deckhouse Security",
-            "url": "/security/",
-            "target": ""
-          },
-          {
-            "title": "Deckhouse vs KaaS",
-            "url": "/deckhouse-vs-kaas/",
-            "target": ""
-          },
-          {
             "title": "Success stories",
             "url": "/success-stories/",
             "target": ""
-          },
-          {
-            "title": "Blog",
-            "url": "https://blog.deckhouse.io/",
-            "target": "_blank"
           }
         ]
       }
@@ -57,33 +77,63 @@
         "title": "Продукты",
         "items": [
           {
-            "title": "Deckhouse Kubernetes Platform EE",
-            "url": "/products/enterprise-edition/",
+            "title": "Kubernetes Platform",
+            "url": "/products/kubernetes-platform/",
             "target": ""
           },
           {
-            "title": "Deckhouse Kubernetes Platform CE",
-            "url": "/community/community-edition/",
+            "title": "Virtualization Platform",
+            "url": "/products/virtualization-platform/",
             "target": ""
           },
           {
-            "title": "Как купить",
-            "url": "/how-to-buy/",
+            "title": "Observability Platform",
+            "url": "/products/observability-platform/",
+            "target": ""
+          },
+          {
+            "title": "Commander",
+            "url": "/products/commander/",
+            "target": ""
+          },
+          {
+            "title": "Stronghold",
+            "url": "/products/stronghold/",
+            "target": ""
+          },
+          {
+            "title": "Delivery",
+            "url": "/products/delivery/",
             "target": ""
           }
         ]
       },
       {
-        "title": "Услуги",
+        "title": "Решения",
         "items": [
           {
-            "title": "Обучение",
-            "url": "/services/education/",
+            "title": "Техническая поддержка",
+            "url": "/tech-support/",
+            "target": ""
+          },
+          {
+            "title": "Технологические партнёры",
+            "url": "/partnership-products/",
             "target": ""
           },
           {
             "title": "Переезд с OpenShift",
             "url": "/moving-from-openshift/",
+            "target": ""
+          },
+          {
+            "title": "Безопасность",
+            "url": "/security/",
+            "target": ""
+          },
+          {
+            "title": "Сравнение с KaaS",
+            "url": "/deckhouse-vs-kaas/",
             "target": ""
           }
         ]
@@ -92,7 +142,7 @@
         "title": "Информация",
         "items": [
           {
-            "title": "Партнёры",
+            "title": "Стать партнёром",
             "url": "/how-to-buy/#partners",
             "target": ""
           },
@@ -102,18 +152,38 @@
             "target": "_blank"
           },
           {
-            "title": "Импортозамещение",
-            "url": "/substitution/",
+            "title": "Образовательная деятельность",
+            "url": "/education-licence/",
             "target": ""
           },
           {
-            "title": "Безопасность Deckhouse",
-            "url": "/security/",
+            "title": "Истории успеха",
+            "url": "/success-stories/",
             "target": ""
           },
           {
-            "title": "Сравнение с KaaS",
-            "url": "/deckhouse-vs-kaas/",
+            "title": "Вакансии",
+            "url": "https://job.flant.ru/",
+            "target": "_blank"
+          },
+          {
+            "title": "Блог",
+            "url": "https://blog.deckhouse.ru/",
+            "target": "_blank"
+          },
+          {
+            "title": "Новости",
+            "url": "/news/",
+            "target": ""
+          },
+          {
+            "title": "Вебинары",
+            "url": "/webinars/",
+            "target": ""
+          },
+          {
+            "title": "Сообщество",
+            "url": "/community/",
             "target": ""
           }
         ]

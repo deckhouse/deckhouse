@@ -14,6 +14,8 @@
 
 # shellcheck disable=SC2211,SC2153
 
+# TODO remove this file in the release after 1.59 after migrate to use bb-package-* functions in the all external modules
+
 bb-var BB_RP_INSTALLED_PACKAGES_STORE "/var/cache/registrypackages"
 bb-var BB_RP_FETCHED_PACKAGES_STORE "${TMPDIR}/registrypackages"
 
@@ -35,6 +37,7 @@ bb-rp-curl() {
 # check if package installed
 # bb-rp-is-installed? package digest
 bb-rp-is-installed?() {
+  bb-log-deprecated "bb-package-is-installed?"
   if [[ -d "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}" ]]; then
     local INSTALLED_DIGEST=""
     INSTALLED_DIGEST="$(cat "${BB_RP_INSTALLED_PACKAGES_STORE}/${1}/digest")"
@@ -48,6 +51,7 @@ bb-rp-is-installed?() {
 # Check if package fetched
 # bb-rp-is-fetched? package digest
 bb-rp-is-fetched?() {
+  bb-log-deprecated "bb-rp-is-fetched?"
   if [[ -d "${BB_RP_FETCHED_PACKAGES_STORE}/${1}" ]]; then
     if [[ -f "${BB_RP_FETCHED_PACKAGES_STORE}/${1}/${2}.tar.gz" ]]; then
       return 0
@@ -131,6 +135,7 @@ bb-rp-fetch-blobs() {
 # Fetch packages by digest
 # bb-rp-fetch package1:digest1 [package2:digest2 ...]
 bb-rp-fetch() {
+  bb-log-deprecated "bb-package-fetch"
   mkdir -p "${BB_RP_FETCHED_PACKAGES_STORE}"
 
   declare -A PACKAGES_MAP
@@ -159,11 +164,9 @@ bb-rp-fetch() {
   fi
 
   bb-log-info "Fetching manifests: ${PACKAGES_MAP[*]}"
+  trap 'bb-log-error "Failed to fetch manifests"' ERR
   bb-rp-fetch-manifests PACKAGES_MAP
-  if bb-error?; then
-    bb-log-error "Failed to fetch manifests"
-    return "${BB_ERROR}"
-  fi
+  trap - ERR
 
   declare -A BLOB_FILES_MAP
   local PACKAGE_DIGEST
@@ -174,11 +177,9 @@ bb-rp-fetch() {
   done
 
   bb-log-info "Fetching packages: ${PACKAGES_MAP[*]}"
+  trap 'bb-log-error "Failed to fetch packages"' ERR
   bb-rp-fetch-blobs BLOB_FILES_MAP
-  if bb-error?; then
-    bb-log-error "Failed to fetch packages"
-    return "${BB_ERROR}"
-  fi
+  trap - ERR
   bb-log-info "Packages saved under ${BB_RP_FETCHED_PACKAGES_STORE}"
 }
 
@@ -186,6 +187,7 @@ bb-rp-fetch() {
 # Unpack packages and run install script
 # bb-rp-install package:digest
 bb-rp-install() {
+  bb-log-deprecated "bb-rp-install"
   local PACKAGE_WITH_DIGEST
   for PACKAGE_WITH_DIGEST in "$@"; do
     local PACKAGE=""
@@ -206,25 +208,23 @@ bb-rp-install() {
     bb-log-info "Unpacking package '${PACKAGE}'"
     local TMP_DIR=""
     TMP_DIR="$(mktemp -d)"
+    trap '
+      rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
+      bb-log-error "Failed to unpack package "${PACKAGE}", it may be corrupted. The package will be refetched on the next attempt"
+    ' ERR
     tar -xf "${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGE}/${DIGEST}.tar.gz" -C "${TMP_DIR}"
-    if bb-error?
-    then
-        rm -rf "${TMP_DIR}" "${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
-        bb-log-error "Failed to unpack package '${PACKAGE}', it may be corrupted. The package will be refetched on the next attempt"
-        return "${BB_ERROR}"
-    fi
+    trap - ERR
 
     bb-log-info "Installing package '${PACKAGE}'"
     # shellcheck disable=SC2164
     pushd "${TMP_DIR}" >/dev/null
+    trap '
+      popd >/dev/null
+      rm -rf "${TMP_DIR}"
+      bb-log-error "Failed to install package "${PACKAGE}""
+    ' ERR
     ./install
-    if bb-error?
-    then
-        popd >/dev/null
-        rm -rf "${TMP_DIR}"
-        bb-log-error "Failed to install package '${PACKAGE}'"
-        return "${BB_ERROR}"
-    fi
+    trap - ERR
     popd >/dev/null
 
     # Write digest to hold file
@@ -244,6 +244,7 @@ bb-rp-install() {
 # Unpack package from module image and run install script
 # bb-rp-module-install package:digest registry_auth scheme registry_address registry_path
 bb-rp-module-install() {
+  bb-log-deprecated "bb-package-module-install"
   local MODULE_PACKAGE=$1
   local REGISTRY_AUTH=$2
   local SCHEME=$3
@@ -256,6 +257,7 @@ bb-rp-module-install() {
 # run uninstall script from hold dir
 # bb-rp-remove package
 bb-rp-remove() {
+  bb-log-deprecated "bb-package-remove"
   for PACKAGE in "$@"; do
     if [[ -f "${BB_RP_INSTALLED_PACKAGES_STORE:?}/${PACKAGE:?}/uninstall" ]]; then
       bb-log-info "Removing package '${PACKAGE}'"

@@ -48,11 +48,3 @@ if [ ! -f /root/.kube/config ]; then
   ln -s /etc/kubernetes/admin.conf /root/.kube/config
 fi
 
-{{- if semverCompare "<1.25" .kubernetesVersion }}
-# remove node-role.kubernetes.io/master taint because we start use node-role.kubernetes.io/control-plane
-# and node-role.kubernetes.io/master keeps only first master node
-if ! bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$(hostname)" node-role.kubernetes.io/master-; then
-  echo "Cannot remove 'node-role.kubernetes.io/master' taint from node" 1>&2
-  exit 1
-fi
-{{- end }}

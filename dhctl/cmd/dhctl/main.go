@@ -15,11 +15,14 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
+	"path"
+	"path/filepath"
+	"runtime/pprof"
 	"runtime/trace"
+	"strings"
+	"time"
 
 	terminal "golang.org/x/term"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -27,14 +30,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 func main() {
 	_ = os.Mkdir(app.TmpDirName, 0o755)
+
+	initGlobalVars()
 
 	tomb.RegisterOnShutdown("Trace", EnableTrace())
 	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
@@ -53,19 +62,8 @@ func main() {
 		return nil
 	})
 
-	runningInContainer, err := isRunningInContainer()
-	if err != nil {
-		log.ErrorLn(err.Error())
-		return
-	}
-
-	commands.DefineMirrorCommand(kpApp)
-	commands.DefineMirrorModulesCommand(kpApp)
-	if !runningInContainer {
-		// We only allow mirror functions to be used outside of container environments.
-		runApplication(kpApp)
-		return
-	}
+	commands.DefineServerCommand(kpApp)
+	commands.DefineSingleThreadedServerCommand(kpApp)
 
 	bootstrap.DefineBootstrapCommand(kpApp)
 	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
@@ -143,6 +141,41 @@ func main() {
 func runApplication(kpApp *kingpin.Application) {
 	kpApp.Action(func(c *kingpin.ParseContext) error {
 		log.InitLogger(app.LoggerType)
+		if app.DoNotWriteDebugLogFile {
+			return nil
+		}
+
+		if c.SelectedCommand == nil {
+			return nil
+		}
+
+		logPath := app.DebugLogFilePath
+
+		if logPath == "" {
+			cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
+			logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
+			logPath = path.Join(app.TmpDirName, logFile)
+		}
+
+		outFile, err := os.Create(logPath)
+		if err != nil {
+			return err
+		}
+
+		err = log.WrapWithTeeLogger(outFile, 1024)
+		if err != nil {
+			return err
+		}
+
+		log.InfoF("Debug log file: %s\n", logPath)
+
+		tomb.RegisterOnShutdown("Finalize logger", func() {
+			if err := log.FlushAndClose(); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
+				return
+			}
+		})
+
 		return nil
 	})
 
@@ -164,52 +197,65 @@ func runApplication(kpApp *kingpin.Application) {
 	os.Exit(exitCode)
 }
 
-func isRunningInContainer() (bool, error) {
-	_, err := os.Stat(app.VersionFile)
-	_, inClusterEnvExists := os.LookupEnv("DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER")
-	switch {
-	case inClusterEnvExists:
-		return true, nil
-	case errors.Is(err, fs.ErrNotExist):
-		return false, nil
-	case err != nil:
-		return false, err
-	default:
-		return true, nil
-	}
-}
-
 func EnableTrace() func() {
-	fName := os.Getenv("DHCTL_TRACE")
-	if fName == "" || fName == "0" || fName == "no" {
+	traceFileName := os.Getenv("DHCTL_TRACE")
+	cpuProfileFileName := traceFileName + ".prof.cpu"
+
+	if traceFileName == "" || traceFileName == "0" || traceFileName == "no" {
 		return func() {}
 	}
-	if fName == "1" || fName == "yes" {
-		fName = "trace.out"
+	if traceFileName == "1" || traceFileName == "yes" {
+		traceFileName = "trace.out"
+		cpuProfileFileName = "pprof.cpu"
 	}
 
 	fns := make([]func(), 0)
 
-	f, err := os.Create(fName)
+	traceF, err := os.Create(traceFileName)
 	if err != nil {
-		log.InfoF("failed to create trace output file '%s': %v", fName, err)
+		log.InfoF("failed to create trace output file '%s': %v", traceFileName, err)
 		os.Exit(1)
 	}
+
 	fns = append([]func(){
 		func() {
-			if err := f.Close(); err != nil {
-				log.InfoF("failed to close trace file '%s': %v", fName, err)
+			if err := traceF.Close(); err != nil {
+				log.InfoF("failed to close trace file '%s': %v", traceFileName, err)
 				os.Exit(1)
 			}
 		},
 	}, fns...)
 
-	if err := trace.Start(f); err != nil {
-		log.InfoF("failed to start trace to '%s': %v", fName, err)
+	profCPU, err := os.Create(cpuProfileFileName)
+	if err != nil {
+		log.InfoF("failed to create pprof cpu file '%s': %v", cpuProfileFileName, err)
+		os.Exit(1)
+	}
+
+	fns = append([]func(){
+		func() {
+			if err := profCPU.Close(); err != nil {
+				log.InfoF("failed to close pprof cpu file '%s': %v", cpuProfileFileName, err)
+				os.Exit(1)
+			}
+		},
+	}, fns...)
+
+	if err := trace.Start(traceF); err != nil {
+		log.InfoF("failed to start trace to '%s': %v", traceFileName, err)
 		os.Exit(1)
 	}
 	fns = append([]func(){
 		trace.Stop,
+	}, fns...)
+
+	if err := pprof.StartCPUProfile(profCPU); err != nil {
+		log.InfoF("failed to start profile cpu to '%s': %v", cpuProfileFileName, err)
+		os.Exit(1)
+	}
+
+	fns = append([]func(){
+		pprof.StopCPUProfile,
 	}, fns...)
 
 	return func() {
@@ -231,4 +277,29 @@ func restoreTerminal() func() {
 	}
 
 	return func() { _ = terminal.Restore(fd, state) }
+}
+
+func initGlobalVars() {
+	// get current location of called binary
+	dhctlPath, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", os.Getpid()))
+	if err != nil {
+		panic(err)
+	}
+	dhctlPath = filepath.Dir(dhctlPath)
+	if dhctlPath == "/" {
+		dhctlPath = "" // All our paths are already absolute by themselves
+	}
+
+	// set path to ssh and terraform binaries
+	if err = os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", dhctlPath, os.Getenv("PATH"))); err != nil {
+		panic(err)
+	}
+
+	// set relative path to config and template files
+	config.InitGlobalVars(dhctlPath)
+	commands.InitGlobalVars(dhctlPath)
+	app.InitGlobalVars(dhctlPath)
+	terraform.InitGlobalVars(dhctlPath)
+	manifests.InitGlobalVars(dhctlPath)
+	template.InitGlobalVars(dhctlPath)
 }

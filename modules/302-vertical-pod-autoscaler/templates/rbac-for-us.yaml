@@ -6,9 +6,9 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 - apiGroups:
-  - '*'
+  - '*' # VPA can scale not only the built-in resources like Deployment or StatefulSet, but also Custom Resources.
   resources:
-  - '*/scale'
+  - '*/scale' # VPA use the `/scale` subresource for identify the Pods managed by a Custom Resource: https://github.com/kubernetes/autoscaler/blob/c8e47217692c1fe70f53f4841a3b83b70cc0e878/vertical-pod-autoscaler/FAQ.md?plain=1#L113 
   verbs:
   - get
   - watch

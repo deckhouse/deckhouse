@@ -7,8 +7,8 @@ variable "region" {
 terraform {
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.47.0"
+      source = "hashicorp/aws"
+      version = "4.50.0"
     }
 
     random = {
@@ -27,7 +27,7 @@ terraform {
     }
   }
 
-  required_version = "~> 1.3"
+  required_version = ">= 0.13"
 }
 
 provider "aws" {
@@ -140,7 +140,7 @@ module "eks" {
     system = {
       name = "system-node-group"
 
-      instance_types = ["m5a.large"]
+      instance_types = ["m5a.xlarge"]
 
       min_size     = 1
       max_size     = 3

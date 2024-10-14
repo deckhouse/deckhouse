@@ -54,6 +54,7 @@ type MetaConfig struct {
 	Registry         RegistryData           `json:"-"`
 	UUID             string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion string                 `json:"-"`
+	ResourcesYAML    string                 `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -88,18 +89,19 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
 		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
 
-		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg); err != nil {
+		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
+		m.Registry.Address = parts[0]
+		if len(parts) == 2 {
+			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
+		}
+
+		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg, m.Registry.Address); err != nil {
 			return nil, err
 		}
 		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
 		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
 		m.Registry.CA = m.DeckhouseConfig.RegistryCA
 
-		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-		m.Registry.Address = parts[0]
-		if len(parts) == 2 {
-			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
-		}
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -124,6 +126,39 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
+	if cloud.Provider == "Yandex" {
+		if err := ValidateClusterConfigurationPrefix(cloud.Prefix, cloud.Provider); err != nil {
+			return nil, err
+		}
+
+		var masterNodeGroup YandexMasterNodeGroupSpec
+		if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
+		}
+
+		if masterNodeGroup.Replicas > 0 &&
+			len(masterNodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
+			masterNodeGroup.Replicas > len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
+			return nil, fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
+		}
+
+		nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
+		if ok {
+			var yandexNodeGroups []YandexNodeGroupSpec
+			if err := json.Unmarshal(nodeGroups, &yandexNodeGroups); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal node groups from provider cluster configuration: %v", err)
+			}
+
+			for _, nodeGroup := range yandexNodeGroups {
+				if nodeGroup.Replicas > 0 &&
+					len(nodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
+					nodeGroup.Replicas > len(nodeGroup.InstanceClass.ExternalIPAddresses) {
+					return nil, fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
+				}
+			}
+		}
+	}
+
 	m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
 	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
 	if ok {
@@ -145,10 +180,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	return m, nil
 }
 
-func validateRegistryDockerCfg(cfg string) error {
-	// cause CE version might have empty registryDockerCfg field
+func validateRegistryDockerCfg(cfg string, repo string) error {
 	if cfg == "" {
-		return nil
+		return fmt.Errorf("can't be empty")
 	}
 
 	regcrd, err := base64.StdEncoding.DecodeString(cfg)
@@ -182,7 +216,12 @@ func validateRegistryDockerCfg(cfg string) error {
 		}
 	}
 
-	return nil
+	for k := range creds.Auths {
+		if k == repo {
+			return nil
+		}
+	}
+	return fmt.Errorf("incorrect registryDockerCfg. It must contain auths host {\"auths\": { \"%s\": {}}}", repo)
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -202,6 +241,10 @@ func (m *MetaConfig) FindTerraNodeGroup(nodeGroupName string) []byte {
 		}
 	}
 	return nil
+}
+
+func (m *MetaConfig) IsStatic() bool {
+	return m.ClusterType == "Static"
 }
 
 func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface{} {
@@ -373,6 +416,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	}
 
 	configForBashibleBundleTemplate["runType"] = "ClusterBootstrap"
+
+	if m.ClusterType == CloudClusterType {
+		configForBashibleBundleTemplate["provider"] = m.ProviderName
+	}
+
 	configForBashibleBundleTemplate["bundle"] = bundle
 	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
@@ -393,6 +441,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
 
+	configForBashibleBundleTemplate["packagesProxy"] = map[string]interface{}{"addresses": []string{"127.0.0.1:5444"}}
 	return configForBashibleBundleTemplate, nil
 }
 
@@ -422,7 +471,7 @@ func (m *MetaConfig) CachePath() string {
 }
 
 func (m *MetaConfig) DeepCopy() *MetaConfig {
-	out := MetaConfig{}
+	out := &MetaConfig{}
 
 	if m.ClusterConfig != nil {
 		config := make(map[string]json.RawMessage, len(m.ClusterConfig))
@@ -482,7 +531,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.UUID = m.UUID
 	}
 
-	return m
+	return out
 }
 
 func (m *MetaConfig) LoadVersionMap(filename string) error {
@@ -504,48 +553,18 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 }
 
 func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
-	type dockerCfg struct {
-		Auths map[string]struct {
-			Auth     string `json:"auth"`
-			Username string `json:"username"`
-			Password string `json:"password"`
-		} `json:"auths"`
-	}
-
-	var (
-		registryAuth string
-		dc           dockerCfg
-	)
-
 	log.DebugF("registry data: %v\n", m.Registry)
 
-	if m.Registry.DockerCfg != "" {
-		bytes, err := base64.StdEncoding.DecodeString(m.Registry.DockerCfg)
-		if err != nil {
-			return nil, fmt.Errorf("cannot base64 decode docker cfg: %v", err)
-		}
-
-		log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
-		err = json.Unmarshal(bytes, &dc)
-		if err != nil {
-			return nil, fmt.Errorf("cannot unmarshal docker cfg: %v", err)
-		}
-
-		if registry, ok := dc.Auths[m.Registry.Address]; ok {
-			switch {
-			case registry.Auth != "":
-				registryAuth = registry.Auth
-			case registry.Username != "" && registry.Password != "":
-				auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
-				registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
-			default:
-				log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, m.Registry.Address)
-			}
-		}
-	}
-
 	ret := m.Registry.ConvertToMap()
-	ret["auth"] = registryAuth
+
+	if m.Registry.DockerCfg != "" {
+		auth, err := m.Registry.Auth()
+		if err != nil {
+			return nil, err
+		}
+
+		ret["auth"] = auth
+	}
 
 	return ret, nil
 }
@@ -637,6 +656,46 @@ func (r *RegistryData) ConvertToMap() map[string]interface{} {
 		"ca":        r.CA,
 		"dockerCfg": r.DockerCfg,
 	}
+}
+
+func (r *RegistryData) Auth() (string, error) {
+	type dockerCfg struct {
+		Auths map[string]struct {
+			Auth     string `json:"auth"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+		} `json:"auths"`
+	}
+
+	var (
+		registryAuth string
+		dc           dockerCfg
+	)
+
+	bytes, err := base64.StdEncoding.DecodeString(r.DockerCfg)
+	if err != nil {
+		return "", fmt.Errorf("cannot base64 decode docker cfg: %v", err)
+	}
+
+	log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
+	err = json.Unmarshal(bytes, &dc)
+	if err != nil {
+		return "", fmt.Errorf("cannot unmarshal docker cfg: %v", err)
+	}
+
+	if registry, ok := dc.Auths[r.Address]; ok {
+		switch {
+		case registry.Auth != "":
+			registryAuth = registry.Auth
+		case registry.Username != "" && registry.Password != "":
+			auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
+			registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
+		default:
+			log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, r.Address)
+		}
+	}
+
+	return registryAuth, nil
 }
 
 func getDNSAddress(serviceCIDR string) string {

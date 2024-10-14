@@ -23,7 +23,6 @@ test('knownProviders', () => {
 
 test('knownCRINames', () => {
   expect(knownCRINames).toContain('Containerd')
-  expect(knownCRINames).toContain('Docker')
 })
 
 test('knownKubernetesVersions', () => {

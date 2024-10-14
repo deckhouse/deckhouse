@@ -15,25 +15,35 @@
 package destroy
 
 import (
+	"github.com/google/uuid"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
+
+type DeckhouseDestroyerOptions struct {
+	CommanderMode bool
+	CommanderUUID uuid.UUID
+}
 
 type DeckhouseDestroyer struct {
 	convergeUnlocker func(fullUnlock bool)
 	sshClient        *ssh.Client
 	kubeCl           *client.KubernetesClient
 	state            *State
+
+	DeckhouseDestroyerOptions
 }
 
-func NewDeckhouseDestroyer(sshClient *ssh.Client, state *State) *DeckhouseDestroyer {
+func NewDeckhouseDestroyer(sshClient *ssh.Client, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
 	return &DeckhouseDestroyer{
-		sshClient: sshClient,
-		state:     state,
+		sshClient:                 sshClient,
+		state:                     state,
+		DeckhouseDestroyerOptions: opts,
 	}
 }
 
@@ -58,18 +68,19 @@ func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
 		return g.kubeCl, nil
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(g.sshClient)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(g.sshClient))
 	if err != nil {
 		return nil, err
 	}
-
-	unlockConverge, err := converge.LockConvergeFromLocal(kubeCl, "local-destroyer")
-	if err != nil {
-		return nil, err
-	}
-
 	g.kubeCl = kubeCl
-	g.convergeUnlocker = unlockConverge
+
+	if !g.CommanderMode {
+		unlockConverge, err := converge.LockConvergeFromLocal(kubeCl, "local-destroyer")
+		if err != nil {
+			return nil, err
+		}
+		g.convergeUnlocker = unlockConverge
+	}
 
 	return kubeCl, err
 }
@@ -112,6 +123,11 @@ func (g *DeckhouseDestroyer) deleteEntities(kubeCl *client.KubernetesClient) err
 	}
 
 	err = deckhouse.WaitForServicesDeletion(kubeCl)
+	if err != nil {
+		return err
+	}
+
+	err = deckhouse.DeleteAllD8StorageResources(kubeCl)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,5 @@
+istio:
+  fixes:
+    - summary: Fixed Istio module release requirements checker.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8705
+

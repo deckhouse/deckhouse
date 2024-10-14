@@ -1,0 +1,12 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    app: controller
+    class: test
+    heritage: deckhouse
+    module: ingress-nginx
+  name: test
+spec:
+  controller: ingress-nginx.deckhouse.io/test

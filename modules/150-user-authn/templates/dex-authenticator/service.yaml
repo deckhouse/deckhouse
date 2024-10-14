@@ -11,7 +11,7 @@ spec:
   ports:
   - name: https
     port: 443
-    targetPort: 8443
+    targetPort: dex-https
   selector:
     app: dex-authenticator
     name: {{ $crd.name }}

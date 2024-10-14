@@ -35,7 +35,7 @@ import (
 const (
 	waitingApprovalAnnotation = `control-plane-manager.deckhouse.io/waiting-for-approval`
 	approvedAnnotation        = `control-plane-manager.deckhouse.io/approved`
-	maxRetries                = 42
+	maxRetries                = 120
 	namespace                 = `kube-system`
 	kubernetesConfigPath      = `/etc/kubernetes`
 	manifestsPath             = kubernetesConfigPath + `/manifests`
@@ -212,5 +212,5 @@ func (c *Config) getLastAppliedConfigurationChecksum() error {
 }
 
 func (c *Config) writeLastAppliedConfigurationChecksum() error {
-	return os.WriteFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"), []byte(c.LastAppliedConfigurationChecksum), 0644)
+	return os.WriteFile(filepath.Join(deckhousePath, "last_applied_configuration_checksum"), []byte(c.LastAppliedConfigurationChecksum), 0600)
 }

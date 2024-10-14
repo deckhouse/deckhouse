@@ -37,7 +37,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 modules:
   placement: {}
 discovery:
@@ -52,7 +52,7 @@ clusterConfiguration:
     provider: vSphere
   clusterDomain: cluster.local
   clusterType: Cloud
-  defaultCRI: Docker
+  defaultCRI: Containerd
   kind: ClusterConfiguration
   kubernetesVersion: "1.29"
   podSubnetCIDR: 10.111.0.0/16
@@ -72,11 +72,11 @@ allowedBundles:
   - "centos"
   - "debian"
 allowedKubernetesVersions:
-  - "1.25"
   - "1.26"
   - "1.27"
   - "1.28"
   - "1.29"
+  - "1.30"
 mcmEmergencyBrake: false
 `
 
@@ -199,7 +199,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: AzureInstanceClass
@@ -336,7 +336,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -422,7 +422,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -573,7 +573,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: YandexInstanceClass
@@ -667,6 +667,7 @@ metadata:
   namespace: d8-cloud-instance-manager
   name: worker
   labels:
+    app: caps-controller
     heritage: deckhouse
     module: node-manager
     node-group: worker
@@ -723,7 +724,9 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerValues)
 			setBashibleAPIServerTLSValues(f)
-			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
+			// fake *-crd modules are required for backward compatibility with lib_helm library
+			// TODO: remove fake crd modules
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "operator-prometheus", "vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
 		})
 
 		assertSpecDotGroupsArray := func(rule object_store.KubeObject, shouldEmpty bool) {
@@ -827,7 +830,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -868,7 +870,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -919,7 +920,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -960,7 +960,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -1024,7 +1023,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -1068,7 +1066,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -1153,7 +1150,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -1201,7 +1197,6 @@ ccc: ddd
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -1268,7 +1263,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -1309,7 +1303,6 @@ ccc: ddd
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -1360,7 +1353,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -1402,7 +1394,6 @@ ccc: ddd
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -1455,7 +1446,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
 			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -1500,7 +1490,6 @@ ccc: ddd
 			staticMachineTemplate := f.KubernetesResource("StaticMachineTemplate", "d8-cloud-instance-manager", "worker")
 			staticMachineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "worker")
 
-			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
@@ -1788,7 +1777,7 @@ internal:
     machineClassKind: ""
     capiClusterKind: "VCDCluster"
     capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
-    capiClusterName: "vcd"
+    capiClusterName: "app"
     capiMachineTemplateKind: "VCDMachineTemplate"
     capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
     vcd:
@@ -1814,7 +1803,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.24"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass
@@ -1824,6 +1813,28 @@ internal:
       zones:
       - zonea
       - zoneb
+  - name: worker-big
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: catalog/Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
   machineControllerManagerEnabled: false
 `
 			BeforeEach(func() {
@@ -1865,8 +1876,8 @@ internal:
 					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
 					Expect(md.Exists()).To(BeTrue())
 
-					Expect(md.Field("spec.clusterName").String()).To(Equal("vcd"))
-					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("vcd"))
+					Expect(md.Field("spec.clusterName").String()).To(Equal("app"))
+					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("app"))
 					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
 					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
 
@@ -1892,13 +1903,10 @@ internal:
 					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
 				}
 
-				namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-instance-manager")
-				Expect(namespace.Exists()).To(BeTrue())
-
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 				Expect(registrySecret.Exists()).To(BeTrue())
 
-				assertClusterResources(f, "vcd")
+				assertClusterResources(f, "app")
 
 				assertVCDCluster(f)
 
@@ -1913,6 +1921,11 @@ internal:
 					name:         "myprefix-worker-6bdb5b0d",
 					templateName: "worker-d30762c9",
 				})
+
+				vcdTemplateWithCatalog := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", "worker-big-c10b569f")
+				Expect(vcdTemplateWithCatalog.Exists()).To(BeTrue())
+				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
+				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.catalog").String()).To(Equal("catalog"))
 			})
 		})
 	})

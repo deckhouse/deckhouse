@@ -15,6 +15,7 @@
 package retry
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -53,6 +54,7 @@ type Loop struct {
 	logger           log.Logger
 	interruptable    bool
 	showError        bool
+	ctx              context.Context
 }
 
 // NewLoop create Loop with features:
@@ -94,6 +96,11 @@ func (l *Loop) WithInterruptable(flag bool) *Loop {
 	return l
 }
 
+func (l *Loop) WithContext(ctx context.Context) *Loop {
+	l.ctx = ctx
+	return l
+}
+
 func (l *Loop) WithShowError(flag bool) *Loop {
 	l.showError = flag
 	return l
@@ -108,7 +115,7 @@ func (l *Loop) Run(task func() error) error {
 		for i := 1; i <= l.attemptsQuantity; i++ {
 			// Check if process is interrupted.
 			if l.interruptable && tomb.IsInterrupted() {
-				return fmt.Errorf("loop was canceled: graceful shutdown")
+				return fmt.Errorf("Loop was canceled: graceful shutdown")
 			}
 
 			// Run task and return if everything is ok.
@@ -132,11 +139,19 @@ func (l *Loop) Run(task func() error) error {
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {
-				time.Sleep(l.waitTime)
+				if l.ctx != nil {
+					select {
+					case <-l.ctx.Done():
+						return fmt.Errorf("timeout while %q: last error: %v", l.name, l.ctx.Err())
+					case <-time.After(l.waitTime):
+					}
+				} else {
+					time.Sleep(l.waitTime)
+				}
 			}
 		}
 
-		return fmt.Errorf("timeout while %q: last error: %v", l.name, err)
+		return fmt.Errorf("Timeout while %q: last error: %v", l.name, err)
 	}
 
 	return l.logger.LogProcess("default", l.name, loopBody)

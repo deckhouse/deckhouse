@@ -399,7 +399,8 @@ module Jekyll
             ancestorsPathString = ancestors.slice(1, ancestors.length-1).join('.') + '.' if ancestors.length > 1
         end
 
-        linkAnchor = fullPath.join('-').downcase
+        # The replacement with sub is for preserving anchor links for ModuleConfig parameters
+        linkAnchor = fullPath.join('-').downcase.sub(/^parameters-settings-/, 'parameters-')
         pathString = fullPath.slice(1,fullPath.length-1).join('.')
         if resourceName.nil? or resourceName.length < 1
            resourceName = @context.registers[:page]["title"]
@@ -446,6 +447,7 @@ module Jekyll
         if parameterTitle != ''
             parameterTextContent = ''
             result.push('<li>')
+            result.push('<div class="resources__prop_wrap">')
             attributesType = ''
             if attributes.is_a?(Hash)
               if attributes.has_key?('type')
@@ -456,9 +458,15 @@ module Jekyll
             end
 
             if ( get_hash_value(attributes, 'x-doc-deprecated') or get_hash_value(attributes, 'deprecated') )
-                parameterTextContent = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_title anchored"><span class="ancestors">%s</span><span>%s</span><span data-tippy-content="%s" class="resources__prop_is_deprecated">%s</span></span>), linkAnchor, linkAnchor, ancestorsPathString, parameterTitle,get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
+                parameterTextContent = sprintf(%q(<div id="%s" data-anchor-id="%s" class="resources__prop_name anchored">
+                    <span class="plus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5.00005 1.5V4.99995M5.00005 4.99995V8.5M5.00005 4.99995H1.5M5.00005 4.99995H8.5" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span  class="minus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 3.99982L8.5 3.99982" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <div><span class="ancestors">%s</span><span>%s</span></div><span data-tippy-content="%s" class="resources__prop_is_deprecated">%s</span></div>), linkAnchor, linkAnchor, ancestorsPathString, parameterTitle,get_i18n_term('deprecated_parameter_hint'), get_i18n_term('deprecated_parameter') )
             else
-                parameterTextContent = sprintf(%q(<span id="%s" data-anchor-id="%s" class="resources__prop_name anchored"><span class="ancestors">%s</span><span>%s</span></span>), linkAnchor, linkAnchor, ancestorsPathString, parameterTitle)
+                parameterTextContent = sprintf(%q(<div id="%s" data-anchor-id="%s" class="resources__prop_name anchored">
+                    <span class="plus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5.00005 1.5V4.99995M5.00005 4.99995V8.5M5.00005 4.99995H1.5M5.00005 4.99995H8.5" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <span  class="minus-icon"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1.5 3.99982L8.5 3.99982" stroke="#0D69F2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                    <div><span class="ancestors">%s</span><span>%s</span></div></div>), linkAnchor, linkAnchor, ancestorsPathString, parameterTitle)
             end
 
             if attributesType != ''
@@ -481,6 +489,7 @@ module Jekyll
           end
         end
 
+        result.push('</div>')
 
         if attributes.is_a?(Hash) and attributes.has_key?("properties")
             result.push('<ul>')
@@ -765,6 +774,15 @@ module Jekyll
             result.push('<p><font size="-1">')
             result.push(%Q(#{get_i18n_term("version_of_schema")}: #{configVersion}))
             result.push('</font></p>')
+            if !( get_hash_value(input, 'properties', 'settings' ) )
+               input['properties'] = { "settings" => { "type" => "object", "properties" => input['properties'] } }
+            end
+            if !( get_hash_value(input, 'i18n', 'en', 'properties', 'settings' ) )
+               input['i18n']['en']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['en']['properties'] } }
+            end
+            if !( get_hash_value(input, 'i18n', 'ru', 'properties', 'settings' ) )
+               input['i18n']['ru']['properties'] = { "settings" => { "type" => "object", "properties" => input['i18n']['ru']['properties'] } }
+            end
         end
 
         if input.has_key?('x-doc-examples') or input.has_key?('x-doc-example') or

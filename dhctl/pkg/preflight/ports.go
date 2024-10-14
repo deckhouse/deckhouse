@@ -15,6 +15,7 @@
 package preflight
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -37,11 +38,12 @@ func (pc *Checker) CheckAvailabilityPorts() error {
 		return err
 	}
 
-	scriptCmd := pc.sshClient.UploadScript(file)
+	scriptCmd := pc.nodeInterface.UploadScript(file)
 	out, err := scriptCmd.Execute()
 	if err != nil {
 		log.ErrorLn(strings.Trim(string(out), "\n"))
-		if ee, ok := err.(*exec.ExitError); ok {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
 			return fmt.Errorf("Required ports check failed: %w, %s", err, string(ee.Stderr))
 		}
 		return fmt.Errorf("Could not execute a script to check if all necessary ports are open on the node: %w", err)

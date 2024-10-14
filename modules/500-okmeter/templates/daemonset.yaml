@@ -3,7 +3,7 @@ cpu: 25m
 memory: 25Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -42,17 +42,24 @@ spec:
     metadata:
       labels:
         name: okmeter
+      annotations:
+        apiTokenChecksum: {{ .Values.okmeter.apiKey | sha256sum }}
     spec:
       serviceAccountName: okmeter
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
-      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-{{- with .Values.okmeter.nodeSelector }}
+      {{- with .Values.okmeter.nodeSelector }}
       nodeSelector:
-{{ . | toYaml | nindent 8 }}
-{{- end }}
+      {{ . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with .Values.okmeter.tolerations }}
+      tolerations:
+      {{- . | toYaml | nindent 6 }}
+      {{- else }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- end }}
       containers:
       - name: okagent
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
@@ -87,7 +94,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 200 | nindent 12 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "okagent_resources" . | nindent 12 }}
   {{- end }}
       volumes:

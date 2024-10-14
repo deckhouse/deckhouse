@@ -1,0 +1,15 @@
+candi:
+  fixes:
+    - summary: Keep `admissionregistration.k8s.io/v1alpha1` API support for K8s 1.28+.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9223
+    - summary: Fix network configuration in OpenStack when using DirectRoutingWithPortSecurityEnabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9196
+cloud-provider-vcd:
+  fixes:
+    - summary: Fix impossibility to use 0 as value of Max IOPS in storage policy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9232
+cni-cilium:
+  fixes:
+    - summary: Fix missing datasource variable and dashboard rendering (for DKP EE).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9244
+

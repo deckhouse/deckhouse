@@ -27,7 +27,6 @@ apiVersions:
         items:
           type: string
           minLength: 1
-        minItems: 1
         uniqueItems: true
       podNetworkMode:
         type: string
@@ -43,7 +42,6 @@ apiVersions:
         type: object
       loadBalancer:
         type: object
-        required: [subnetID, floatingNetworkID]
         additionalProperties: false
         properties:
           subnetID:
@@ -58,6 +56,8 @@ apiVersions:
         layout:
           enum: [Standard]
           type: string
+        externalNetworkNames:
+          minItems: 1
         instances:
           type: object
           required: [sshKeyPairName, imageName, mainNetwork, securityGroups]
@@ -76,11 +76,15 @@ apiVersions:
               type: array
               items:
                 type: string
+        loadBalancer:
+          required: [subnetID, floatingNetworkID]
     - required: [externalNetworkNames]
       properties:
         layout:
           enum: [StandardWithNoRouter]
           type: string
+        externalNetworkNames:
+          minItems: 1
         instances:
           type: object
           required: [sshKeyPairName, imageName, mainNetwork, additionalNetworks, securityGroups]

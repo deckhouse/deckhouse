@@ -107,7 +107,7 @@ EOF
       LoadBalancer)
         if ingress_service="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson 2>/dev/null)"; then
           if ingress_lb_addr="$(jq -re '.status.loadBalancer.ingress | if .[0].hostname then .[0].hostname else .[0].ip end' <<< "$ingress_service")"; then
-            if ingress_lb_code="$(curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_addr")"; then
+            if ingress_lb_code="$(d8-curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_addr")"; then
               if [[ "$ingress_lb_code" == "404" ]]; then
                 ingress="ok"
               else
@@ -125,7 +125,7 @@ EOF
         ;;
       HostPort|HostWithFailover)
         if master_ip="$(kubectl get node -o json | jq -r '[ .items[] | select(.metadata.labels."node-role.kubernetes.io/master"!=null) | .status.addresses[] | select(.type=="ExternalIP") | .address ] | .[0]')"; then
-          if ingress_hp_code="$(curl -o /dev/null -s -w "%{http_code}" "$master_ip")"; then
+          if ingress_hp_code="$(d8-curl -o /dev/null -s -w "%{http_code}" "$master_ip")"; then
             if [[ "$ingress_hp_code" == "404" ]]; then
               ingress="ok"
             else
@@ -149,7 +149,17 @@ Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo
 EOF
   fi
 
-  if [[ "$availability:$ingress" == "ok:ok" ]]; then
+  if kubectl -n d8-istio get po | grep istiod | grep -q Running; then
+    istio="ok"
+  else
+    istio=""
+  fi
+
+    cat <<EOF
+Istio operator check: $([ "$istio" == "ok" ] && echo "success" || echo "failed")
+EOF
+
+  if [[ "$availability:$ingress:$istio" == "ok:ok:ok" ]]; then
     exit 0
   fi
 done

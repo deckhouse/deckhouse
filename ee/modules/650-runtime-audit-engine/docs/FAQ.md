@@ -71,7 +71,7 @@ The script for converting a Falco rules file into a [FalcoAuditRules](cr.html#fa
 
 ```shell
 git clone github.com/deckhouse/deckhouse
-cd deckhouse/ee/modules/650-runtime-audit-engine/hack/fav-converter
+cd deckhouse/ee/modules/650-runtime-audit-engine/hack/far-converter
 go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 ```
 
@@ -79,6 +79,9 @@ Example of a script output:
 
 ```yaml
 # /path/to/falco/rule_example.yaml
+- macro: spawned_process
+  condition: (evt.type in (execve, execveat) and evt.dir=<)
+
 - rule: Linux Cgroup Container Escape Vulnerability (CVE-2022-0492)
   desc: "This rule detects an attempt to exploit a container escape vulnerability in the Linux Kernel."
   condition: container.id != "" and proc.name = "unshare" and spawned_process and evt.args contains "mount" and evt.args contains "-o rdma" and evt.args contains "/release_agent"
@@ -94,7 +97,7 @@ kind: FalcoAuditRules
 metadata:
   name: rule-example
 spec:
-    rules:
+  rules:
     - macro:
         name: spawned_process
         condition: (evt.type in (execve, execveat) and evt.dir=<)
@@ -105,6 +108,6 @@ spec:
         output: Detect Linux Cgroup Container Escape Vulnerability (CVE-2022-0492) (user=%user.loginname uid=%user.loginuid command=%proc.cmdline args=%proc.args)
         priority: Critical
         tags:
-        - process
-        - mitre_privilege_escalation
+          - process
+          - mitre_privilege_escalation
 ```

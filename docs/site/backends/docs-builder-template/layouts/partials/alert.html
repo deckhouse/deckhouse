@@ -4,9 +4,11 @@
 {{- if and .level (in $levels (lower .level) ) }}{{ $level = lower .level }}{{ end }}
 {{- if eq $level "warn" }}{{ $level = "warning" }}{{ end }}
 
+{{- if $content }}
 <div class="{{ $level }} alert__wrap">
   <svg class="alert__icon icon--{{ $level }}">
     <use xlink:href="/images/sprite.svg#{{ $level }}-icon"></use>
   </svg>
   <div><p>{{ $content }}</p></div>
 </div>
+{{ end }}

@@ -13,11 +13,13 @@ docker:
   ENTRYPOINT: ["/bin/openstack-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.29" $version }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_BULLSEYE }}
+    {{- else if semverCompare "=1.29" $version }}
 from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
     {{- else if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
-    {{- else if semverCompare ">=1.25" $version }}
+    {{- else if semverCompare "=1.26" $version }}
 from: {{ $.Images.BASE_GOLANG_19_BUSTER }}
     {{- end }}
 git:
@@ -37,7 +39,7 @@ shell:
   - mkdir /src
   - wget https://github.com/kubernetes/cloud-provider-openstack/archive/{{ $value.ccm.openstack }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
   - cd /src
-  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - git apply /patches/{{ $version }}/*.patch --verbose
   - make VERSION={{ $value.ccm.openstack }} GIT_VERSION={{ $value.ccm.openstack }} openstack-cloud-controller-manager
   {{- if semverCompare "<1.27" $version }}
   - mv /src/openstack-cloud-controller-manager-amd64 /src/openstack-cloud-controller-manager

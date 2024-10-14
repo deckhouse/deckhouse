@@ -42,7 +42,7 @@ func CreateParseDataTransforms() *DynamicTransform {
 type mutateFilter func(*v1alpha1.Filter, *vrl.Rule)
 
 func CreateLogFilterTransforms(filters []v1alpha1.Filter) ([]apis.LogTransform, error) {
-	transforms, err := createFilterTransform("log_filter", filters, func(filter *v1alpha1.Filter, rule *vrl.Rule) {
+	transforms, err := createFilterTransform("log_filter", filters, func(filter *v1alpha1.Filter, _ *vrl.Rule) {
 		// parsed_data is a key for parsed json data from a message, we use it to quickly filter inputs
 		// "filter_field" -> "parsed_data.filter_field", "" -> "parsed_data"
 		if filter.Field == "" {

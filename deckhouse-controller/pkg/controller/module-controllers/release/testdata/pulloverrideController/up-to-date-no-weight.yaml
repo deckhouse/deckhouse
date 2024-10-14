@@ -1,0 +1,49 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: dbc8d54ec27b3bb6ad2a1f02210e0489
+  creationTimestamp: "2024-01-25T08:24:23Z"
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  generation: 73
+  name: losev-test
+  resourceVersion: "359254028"
+  uid: d4b66e73-a936-4ef0-9325-e940ec37af06
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/losev/external-modules
+    scheme: HTTP
+  releaseChannel: alpha
+status:
+  message: ""
+  moduleErrors: []
+  modules:
+  - name: echo
+    overridden: true
+  modulesCount: 1
+  syncTime: "2024-05-22T10:08:46Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePullOverride
+metadata:
+  annotations:
+    modules.deckhouse.io/deployed-on: dev-master-0
+  creationTimestamp: "2024-05-22T10:05:44Z"
+  generation: 1
+  labels:
+    module: echo
+    source: losev-test
+  name: echo
+  resourceVersion: "359251643"
+  uid: b4b7a3d8-3d3a-42b6-b40e-f628d9ff7f39
+spec:
+  imageTag: v0.4.52
+  scanInterval: "15s"
+  source: losev-test
+status:
+  imageDigest: sha256:379b341598e85104ffe01643af6eeff5e1022ca60b4cc90be639b8ec59c61a47
+  message: ""
+  updatedAt: "2024-05-22T10:05:45Z"

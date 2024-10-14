@@ -11,7 +11,7 @@ Attach the `extended-monitoring.deckhouse.io/enabled` label to the Namespace to 
 - adding the appropriate helm-chart to the project (recommended method);
 - adding it to `.gitlab-ci.yml` (kubectl patch/create);
 - attaching it manually (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`).
-- configuring via [namespace-configurator](/documentation/v1/modules/600-namespace-configurator/) module.
+- configuring via [namespace-configurator](/products/kubernetes-platform/documentation/v1/modules/600-namespace-configurator/) module.
 
 Any of the methods above would result in the emergence of the default metrics (+ any custom metrics with the `threshold.extended-monitoring.deckhouse.io/` prefix) for all supported Kubernetes objects in the target namespace. Note that monitoring is enabled automatically for a number of [non-namespaced](#non-namespaced-kubernetes-objects) Kubernetes objects described below.
 
@@ -73,7 +73,7 @@ The default values are available [here](https://github.com/kubernetes/kubernetes
 
 The threshold implies the number of unavailable replicas **in addition** to [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). This threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable` by the amount specified. Suppose `replicas-not-ready` is 0. In this case, the threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable`. If `replicas-not-ready` is set to 1, then the threshold will be triggered if the number of unavailable replicas is greater than `maxUnavailable` + 1. This way, you can fine-tune this parameter for specific Deployments (that may be unavailable) in the namespace with the extended monitoring enabled to avoid getting excessive alerts.
 
-##### Statefulset
+##### StatefulSet
 
 | Label                  | Type          | Default value |
 |------------------------|---------------|---------------|

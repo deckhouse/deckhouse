@@ -41,7 +41,7 @@ func (c *Command) Save(tarWriter *tar.Writer) error {
 
 	header := &tar.Header{
 		Name: c.File,
-		Mode: 0600,
+		Mode: 0o600,
 		Size: int64(len(fileContent)),
 	}
 
@@ -76,7 +76,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "global-values.json",
 			Cmd:  "bash",
-			Args: []string{"-c", `deckhouse-controller global values -o json | jq .`},
+			Args: []string{"-c", `deckhouse-controller global values -o json | jq '.internal.modules.kubeRBACProxyCA = "REDACTED" | .modulesImages.registry.dockercfg = "REDACTED"'`},
 		},
 		{
 			File: "deckhouse-enabled-modules.json",
@@ -106,7 +106,17 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "machines.json",
 			Cmd:  "kubectl",
-			Args: []string{"get", "machines", "-A", "-o", "json"},
+			Args: []string{"get", "machines.machine.sapcloud.io", "-A", "-o", "json"},
+		},
+		{
+			File: "instances.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "instances.deckhouse.io", "-o", "json"},
+		},
+		{
+			File: "staticinstances.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "staticinstances.deckhouse.io", "-o", "json"},
 		},
 		{
 			File: "deckhouse-version.json",
@@ -160,13 +170,33 @@ func createTarball() *bytes.Buffer {
 		},
 		{
 			File: "terraform-check.json",
-			Cmd:  "kubectl",
-			Args: []string{"exec", "deploy/terraform-state-exporter", "--", "dhctl", "terraform", "check", "--logger-type", "json", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl exec deploy/terraform-state-exporter -- dhctl terraform check --logger-type json -o json | jq -c '.terraform_plan[]?.variables.providerClusterConfiguration.value.provider = "REDACTED"'`},
 		},
 		{
 			File: "alerts.json",
 			Cmd:  "bash",
 			Args: []string{"-c", `kubectl get clusteralerts.deckhouse.io -o json | jq '.items[]'`},
+		},
+		{
+			File: "pods.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get pod -A -owide | grep -Pv '\s+([1-9]+[\d]*)\/\1\s+' | grep -v 'Completed\|Evicted' | grep -E "^(d8-|kube-system)"`},
+		},
+		{
+			File: "cluster-authorization-rules.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "clusterauthorizationrules", "-o", "json"},
+		},
+		{
+			File: "authorization-rules.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "authorizationrules", "-o", "json"},
+		},
+		{
+			File: "module-configs.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "moduleconfig", "-o", "json"},
 		},
 	}
 
@@ -181,7 +211,7 @@ func createTarball() *bytes.Buffer {
 
 func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 	collectDebug := kpApp.Command("collect-debug-info", "Collect debug info from your cluster.")
-	collectDebug.Action(func(c *kingpin.ParseContext) error {
+	collectDebug.Action(func(_ *kingpin.ParseContext) error {
 		res := createTarball()
 		_, err := io.Copy(os.Stdout, res)
 		return err

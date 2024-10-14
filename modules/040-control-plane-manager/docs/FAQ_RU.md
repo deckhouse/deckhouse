@@ -19,6 +19,7 @@ title: "Управление control plane: FAQ"
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-etcd-и-восстановление) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../300-prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
+1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
@@ -73,6 +74,7 @@ title: "Управление control plane: FAQ"
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-etcd-и-восстановление) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../300-prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
+1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
@@ -140,6 +142,7 @@ title: "Управление control plane: FAQ"
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-etcd-и-восстановление) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../300-prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
+1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
 1. Снимите лейблы `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.
 1. Убедитесь, что удаляемый master-узел пропал из списка членов кластера etcd:
 
@@ -167,6 +170,7 @@ title: "Управление control plane: FAQ"
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-etcd-и-восстановление) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../300-prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
+1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
@@ -321,6 +325,45 @@ https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 40
 
 > **Внимание!** Операция деструктивна, она полностью уничтожает консенсус и запускает etcd-кластер с состояния, которое сохранилось на узле. Любые pending-записи пропадут.
 
+### Что делать, если etcd постоянно перезапускается с ошибкой?
+
+Данный вариант может понадобиться, если `--force-new-cluster` не восстанавливает работу etcd. Такое может случиться при неудачном converge master-узлов, когда новый master-узел был создан со старым диском etcd, поменял свой адрес из локальной сети, и другие master-узлы отсутствуют. Симптомы, при которых стоит использовать данный способ: контейнер etcd в бесконечном рестарте, в его логе ошибка: `panic: unexpected removal of unknown remote peer`.
+
+1. Установите утилиту [etcdutl](https://github.com/etcd-io/etcd/releases).
+1. С текущего локального снапшота базы etcd (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота:
+
+   ```shell
+   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   --skip-hash-check=true --data-dir /var/lib/etcdtest
+   ```
+
+   , где:
+   - `<HOSTNAME>` — название master-узла;
+   - `<ADDRESS>` — адрес master-узла.
+
+1. Выполните команды, для использования нового снапшота:
+
+   ```shell
+   cp -r /var/lib/etcd /tmp/etcd-backup
+   rm -rf /var/lib/etcd
+   mv /var/lib/etcdtest /var/lib/etcd
+   ```
+
+1. Найдите контейнеры `etcd` и `api-server`:
+
+   ```shell
+   crictl ps -a | egrep "etcd|apiserver"
+   ```
+
+1. Удалите найденные контейнеры `etcd` и `api-server`:
+
+   ```shell
+   crictl rm <CONTAINER-ID>
+   ```
+
+1. Перезапустите master-узел.
+
 ## Как настроить дополнительные политики аудита?
 
 1. Включите параметр [auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) в настройках модуля:
@@ -469,9 +512,23 @@ spec:
 
 В процессе подбора подходящих вам значений обращайте внимание на графики потребления ресурсов управляющих узлов. Будьте готовы к тому, что чем меньшие значения параметров вы выбираете, тем больше ресурсов может потребоваться для выделения на эти узлы.
 
-## Резервное копирование etcd и восстановление
+## Резервное копирование и восстановление etcd
 
-### Как сделать бэкап etcd?
+### Что делается автоматически
+
+Автоматически запускаются CronJob `kube-system/d8-etcd-backup-*` в 00:00 по UTC+0. Результат сохраняется в `/var/lib/etcd/etcd-backup.snapshot` на всех узлах с `control-plane` в кластере (мастер-узлы).
+
+### Как сделать бэкап etcd вручную
+
+#### Используя Deckhouse CLI (Deckhouse Kubernetes Platform v1.65+)
+
+Начиная с релиза Deckhouse Kubernetes Platform v1.65 стала доступна утилита `d8 backup etcd`, которая предназначена для быстрого создания снимков состояния etcd.
+
+```bash
+d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
+```
+
+#### Используя bash (Deckhouse Kubernetes Platform v1.64 и старше)
 
 Войдите на любой control-plane-узел под пользователем `root` и используйте следующий bash-скрипт:
 
@@ -499,6 +556,86 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т. д.
 
 О возможных вариантах восстановления состояния кластера из снимка etcd вы можете узнать [здесь](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md).
+
+### Как выполнить полное восстановление состояния кластера из резервной копии etcd?
+
+Далее будут описаны шаги по восстановлению кластера до предыдущего состояния из резервной копии при полной потере данных.
+
+#### Восстановление кластера single-master
+
+Для корректного восстановления кластера single-master выполните следующие шаги:
+
+1. Загрузите утилиту [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно чтобы её версия была такая же, как и версия etcd в кластере).
+
+   ```shell
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   ```
+
+   Посмотреть версию etcd в кластере можно выполнив следующую команду:
+
+   ```shell
+   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   ```
+
+1. Остановите etcd.
+
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
+
+1. Сохраните текущие данные etcd.
+
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
+
+1. Очистите директорию etcd.
+
+   ```shell
+   rm -rf /var/lib/etcd/member/
+   ```
+
+1. Перенесите и переименуйте резервную копию в `~/etcd-backup.snapshot`.
+
+1. Восстановите базу данных etcd.
+
+   ```shell
+   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
+   ```
+
+1. Запустите etcd.
+
+   ```shell
+   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   ```
+
+#### Восстановление кластерa multi-master
+
+Для корректного восстановления кластера multi-master выполните следующие шаги:
+
+1. Явно включите режим High Availability (HA) с помощью глобального параметра [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме single-master HA отключен по умолчанию.
+
+1. Переведите кластер в режим single-master, в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
+
+1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-single-master) для single-master.
+
+1. Когда работа etcd будет восстановлена, удалите из кластера информацию об уже удаленных в п.1 master-узлах, воспользовавшись следующей командой (укажите название узла):
+
+   ```shell
+   kubectl delete node <MASTER_NODE_I>
+   ```
+
+1. Перезапустите все узлы кластера.
+
+1. Дождитесь выполнения заданий из очереди Deckhouse:
+
+   ```shell
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+   ```
+
+1. Переведите кластер обратно в режим multi-master в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
 
 ### Как восстановить объект Kubernetes из резервной копии etcd?
 
@@ -645,3 +782,19 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 - [Система плагинов](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins)
 - [Подробности фильтрации узлов](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)
 - [Исходный код scheduler](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler)
+
+### Как изменить/расширить логику работы планировщика
+
+Для изменения логики работы планировщика можно использовать [механизм плагинов расширения](https://github.com/kubernetes/enhancements/blob/master/keps/sig-scheduling/624-scheduling-framework/README.md).
+
+Каждый плагин представляет собой вебхук, отвечающий следующим требованиям:
+* Использование TLS.
+* Доступность через сервис внутри кластера.
+* Поддержка стандартных *Verbs* (filterVerb = filter, prioritizeVerb = prioritize).
+* Также, предполагается что все подключаемые плагины могут кэшировать информацию об узле (`nodeCacheCapable: true`).
+
+Подключить extender можно при помощи ресурса [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration).
+
+{% alert level="danger" %}
+При использовании опции `failurePolicy: Fail`, в случе ошибки в работе вебхука, планировщик прекратит работу и новые поды не смогут запуститься.
+{% endalert %}

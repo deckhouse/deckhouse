@@ -22,9 +22,9 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
-  - git clone --depth 1 --branch v1.3.0 {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
+  - git clone --depth 1 --branch v1.28.0 {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
   - cd /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
-  - make linux/amd64
+  - make default
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

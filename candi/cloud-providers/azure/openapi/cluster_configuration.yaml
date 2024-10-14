@@ -11,7 +11,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -22,6 +22,10 @@ apiVersions:
         layout: Standard
         sshPublicKey: "<SSH_PUBLIC_KEY>"
         vNetCIDR: 10.0.0.0/16
+        nameservers:
+          addresses:
+          - 8.8.8.8
+          - 8.8.4.4
         subnetCIDR: 10.0.0.0/24
         masterNodeGroup:
           replicas: 1
@@ -48,13 +52,13 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/layouts.html) about possible provider layouts.
         type: string
         enum: [Standard]
         x-unsafe: true
       standard:
         description: |
-          Settings for the [`Standard`](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard) layout.
+          Settings for the [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard) layout.
         type: object
         properties:
           natGatewayPublicIpCount:
@@ -86,6 +90,20 @@ apiVersions:
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         example: 10.0.0.0/16
         x-unsafe: true
+      nameservers:
+        type: object
+        description: |
+          DNS server configuration for the Azure virtual network used by the cluster nodes.
+        properties:
+          addresses:
+            type: array
+            description: A list of DNS servers.
+            x-examples:
+              - - 8.8.8.8
+                - 8.8.4.4
+            items:
+              type: string
+              pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
       subnetCIDR:
         description: |
           A [subnet](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-vnet-plan-design-arm#subnets) from the `vNetCIDR` address space for cluster nodes.
@@ -121,13 +139,14 @@ apiVersions:
         type: array
         items:
           type: string
-          enum: [Microsoft.AzureActiveDirectory, Microsoft.AzureCosmosDB, Microsoft.ContainerRegistry, Microsoft.EventHub, Microsoft.KeyVault, Microsoft.ServiceBus, Microsoft.Sql, Microsoft.Storage, Microsoft.Storage.Global, Microsoft.Web]
+          enum: [Microsoft.AzureActiveDirectory, Microsoft.AzureCosmosDB, Microsoft.ContainerRegistry, Microsoft.CognitiveServices, Microsoft.EventHub, Microsoft.KeyVault, Microsoft.ServiceBus, Microsoft.Sql, Microsoft.Storage, Microsoft.Storage.Global, Microsoft.Web]
       masterNodeGroup:
         description: |
           The definition of the master's NodeGroup.
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         required: [replicas, instanceClass]
+        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             description: |
@@ -154,7 +173,7 @@ apiVersions:
             uniqueItems: true
           instanceClass:
             description: |
-              Partial contents of the [AzureInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass) fields.
+              Partial contents of the [AzureInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass) fields.
             type: object
             required: [machineSize, urn]
             properties:
@@ -183,7 +202,7 @@ apiVersions:
 
                   By default, the image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
-                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
                 type: string
               enableExternalIP: &instanceClassEnableExternalIP
                 description: |
@@ -320,7 +339,7 @@ apiVersions:
                         type: string
             instanceClass:
               description: |
-                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
+                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
               required: [machineSize, urn]
               type: object
               properties:
@@ -341,7 +360,7 @@ apiVersions:
           type: string
       provider:
         description: |
-          [Parameters](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-azure/environment.html) for connecting to the Azure API.
+          [Parameters](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/environment.html) for connecting to the Azure API.
         type: object
         additionalProperties: false
         required: [subscriptionId, clientId, clientSecret, tenantId, location]
@@ -366,6 +385,8 @@ apiVersions:
           clientSecret:
             description: |
               The client's secret.
+
+              Keep in mind the expiration date of the secret. By default, it is valid for one year. Refer to the [official documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate) to create a service account with a longer secret expiration date.
             type: string
           tenantId:
             description: |

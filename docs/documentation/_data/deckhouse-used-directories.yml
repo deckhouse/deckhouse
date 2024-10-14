@@ -8,8 +8,8 @@ directories:
   - path: /mnt/kubernetes-data
     node: master
     description:
-      en: exists only in cloud installations, when a separate disk is used for etcd database.
-      ru: существует только в кластерах развернутых в облаке, когда используется отдельный диск для базы данных etcd.
+      en: only exists in clusters deployed in the cloud when a separate disk is used for the etcd database.
+      ru: существует только в кластерах, развернутых в облаке, когда используется отдельный диск для базы данных etcd.
   - path: /var/lib/etcd
     node: master
     description:
@@ -39,8 +39,8 @@ directories:
   - path: /var/lib/containerd
     node: any
     description:
-      en: files of container images and containers running on the node.
-      ru: файлы образов контейнеров и контейнеров, запущенных на узле.
+      en: used to store data related to CRI operation (e.g., containerd); contains container image layers, container file system snapshots, meta information, logs, and other container information.
+      ru: используется для хранения данных, связанных с работой CRI (например, containerd). Содержит слои образов контейнеров, снапшоты файловых систем контейнеров, метаинформацию, логи и другую информацию контейнеров.
   - path: /mnt/vector-data
     node: any
     module: log-shipper

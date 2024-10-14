@@ -8,7 +8,7 @@ toc: false
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 
 <div class="docs__information warning active">
-For information on which versions of Deckhouse are available on which release channels as well as the planned date of the version update for a particular release channel, visit  <a href="https://flow.deckhouse.io" target="_blank">flow.deckhouse.io</a> website.
+For information on which versions of Deckhouse are available on which release channels as well as the planned date of the version update for a particular release channel, visit  <a href="https://releases.deckhouse.io" target="_blank">releases.deckhouse.io</a> website.
 </div>  
 
 Clusters, as infrastructure elements, usually have to meet various requirements.

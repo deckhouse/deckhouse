@@ -34,7 +34,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -712,7 +712,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -795,7 +795,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "elasticsearch_cluster_health_active_primary_shards{namespace=\"$namespace\",cluster=\"$cluster\"}",
           "format": "time_series",
@@ -1204,7 +1204,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1272,7 +1272,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_jvm_gc_collection_seconds_count{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -1376,7 +1376,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_jvm_gc_collection_seconds_sum{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -1430,7 +1430,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1490,7 +1490,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_translog_operations{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -1581,7 +1581,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_translog_size_in_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -1630,7 +1630,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1690,7 +1690,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "elasticsearch_breakers_tripped{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
               "format": "time_series",
@@ -1781,7 +1781,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "elasticsearch_breakers_estimated_size_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
               "format": "time_series",
@@ -1792,7 +1792,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "elasticsearch_breakers_limit_size_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
               "format": "time_series",
@@ -1841,7 +1841,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -1912,7 +1912,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "exemplar": true,
           "expr": "elasticsearch_os_load1{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
@@ -1928,7 +1928,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "elasticsearch_os_load5{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
           "format": "time_series",
@@ -1943,7 +1943,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "elasticsearch_os_load15{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
           "format": "time_series",
@@ -2050,7 +2050,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "elasticsearch_process_cpu_percent{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
           "format": "time_series",
@@ -2157,7 +2157,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "elasticsearch_jvm_memory_used_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
           "format": "time_series",
@@ -2171,7 +2171,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "elasticsearch_jvm_memory_max_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
           "format": "time_series",
@@ -2183,7 +2183,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "elasticsearch_jvm_memory_pool_peak_used_bytes{namespace=\"$namespace\",cluster=\"$cluster\"}",
           "format": "time_series",
@@ -2286,7 +2286,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "elasticsearch_jvm_memory_committed_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
           "format": "time_series",
@@ -2298,7 +2298,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "elasticsearch_jvm_memory_max_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
           "format": "time_series",
@@ -2347,7 +2347,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -2415,7 +2415,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "1-(elasticsearch_filesystem_data_available_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}/elasticsearch_filesystem_data_size_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"})",
               "format": "time_series",
@@ -2546,7 +2546,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_transport_tx_size_bytes_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -2559,7 +2559,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "-irate(elasticsearch_transport_rx_size_bytes_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -2612,7 +2612,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -2681,7 +2681,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "elasticsearch_indices_docs{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
               "format": "time_series",
@@ -2784,7 +2784,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_indexing_index_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -2889,7 +2889,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_docs_deleted{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -2992,7 +2992,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_merges_docs_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3095,7 +3095,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_merges_total_size_bytes_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3149,7 +3149,7 @@
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -3218,7 +3218,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "exemplar": true,
           "expr": "irate(elasticsearch_indices_search_query_time_seconds{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval]) ",
@@ -3321,7 +3321,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "irate(elasticsearch_indices_indexing_index_time_seconds_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
@@ -3425,7 +3425,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "irate(elasticsearch_indices_merges_total_time_seconds_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
@@ -3529,7 +3529,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "expr": "irate(elasticsearch_indices_store_throttle_time_seconds_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
           "format": "time_series",
@@ -3579,7 +3579,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -3647,7 +3647,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_indexing_index_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3661,7 +3661,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_search_query_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3673,7 +3673,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_search_fetch_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3685,7 +3685,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_merges_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3697,7 +3697,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_refresh_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3709,7 +3709,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_flush_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3721,7 +3721,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_get_exists_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3733,7 +3733,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_get_missing_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3745,7 +3745,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_get_tota{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3757,7 +3757,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_indexing_delete_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3859,7 +3859,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_indexing_index_time_seconds_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3873,7 +3873,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_search_query_time_seconds{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3885,7 +3885,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_search_fetch_time_seconds{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3897,7 +3897,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_merges_total_time_seconds_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3909,7 +3909,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_refresh_time_seconds_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3921,7 +3921,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_flush_time_seconds{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3933,7 +3933,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_get_exists_time_seconds{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3945,7 +3945,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_get_time_seconds{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3957,7 +3957,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_get_missing_time_seconds{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3969,7 +3969,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_indexing_delete_time_seconds_total{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -3981,7 +3981,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_indices_get_time_seconds{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -4033,7 +4033,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -4095,7 +4095,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_thread_pool_rejected_count{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -4192,7 +4192,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "elasticsearch_thread_pool_active_count{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
               "format": "time_series",
@@ -4290,7 +4290,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "elasticsearch_thread_pool_active_count{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
               "format": "time_series",
@@ -4387,7 +4387,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "irate(elasticsearch_thread_pool_completed_count{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -4438,7 +4438,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -4506,7 +4506,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "elasticsearch_indices_fielddata_memory_size_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
               "format": "time_series",
@@ -4610,7 +4610,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_fielddata_evictions{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -4811,7 +4811,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "rate(elasticsearch_indices_query_cache_evictions{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}[$__rate_interval])",
               "format": "time_series",
@@ -4962,7 +4962,7 @@
       "collapsed": true,
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "gridPos": {
         "h": 1,
@@ -5024,7 +5024,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "elasticsearch_indices_segments_count{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
               "format": "time_series",
@@ -5117,7 +5117,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "expr": "elasticsearch_indices_segments_memory_bytes{namespace=\"$namespace\",cluster=\"$cluster\",name=~\"$node\"}",
               "format": "time_series",

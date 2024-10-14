@@ -12,7 +12,7 @@ apiVersions:
         Run the following command to change the configuration in a running cluster:
 
         ```shell
-        kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
         ```
       x-doc-search: |
         ProviderClusterConfiguration
@@ -38,7 +38,7 @@ apiVersions:
             - name: worker
               replicas: 1
               instanceClass:
-                template: Templates/ubuntu-focal-20.04
+                template: Org/Templates/ubuntu-focal-20.04
                 sizingPolicy: 16cpu32ram
                 storageProfile: ssd
           provider:
@@ -46,6 +46,7 @@ apiVersions:
             username: '<USERNAME>'
             password: '<PASSWORD>'
             insecure: true
+      x-unsafe-rules: [deleteZones]
       required: [apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider, organization, virtualDataCenter, virtualApplicationName, mainNetwork]
       properties:
         apiVersion:
@@ -62,24 +63,26 @@ apiVersions:
             The definition of the master's NodeGroup.
 
             > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+          x-unsafe-rules: [updateMasterImage]
           properties:
             replicas:
               type: integer
               minimum: 1
               description: |
                 The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
+              x-unsafe-rules: [updateReplicas]
             instanceClass:
               type: object
               additionalProperties: false
               required: [template, storageProfile, sizingPolicy]
               description: |
-                Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-VCD/cr.html#VCDinstanceclass).
+                Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
               properties:
                 rootDiskSizeGb:
                   description: |
                     root disk size in gigabytes.
-                  example: 20
-                  default: 20
+                  example: 50
+                  default: 50
                   type: integer
                 etcdDiskSizeGb:
                   description: |
@@ -90,12 +93,14 @@ apiVersions:
                 placementPolicy:
                   description: |
                     PlacementPolicy is the placement policy to be used on this machine.
+
                     If no placement policy is specified, default placement policy will be used to create the nodes.
                   type: string
                   example: Hypervisor1
                 sizingPolicy:
                   description: |
                     SizingPolicy is the sizing policy to be used on this machine.
+
                     If no sizing policy is specified, default sizing policy will be used to create the nodes.
                   type: string
                   example: 4Cpu8Memory
@@ -106,7 +111,9 @@ apiVersions:
                   example: ssd
                 template:
                   description: |
-                    Path of the template OVA that is to be used. Consists of catalog and template path.
+                    Path of the template OVA that is to be used.
+                    
+                    Consists of organization (optional), catalog, template path. Organization may not match with provider.organization (in case of shared templates).
                   type: string
                   example: Linux/ubuntu2204-cloud-ova
                 mainNetworkIPAddresses:
@@ -185,23 +192,25 @@ apiVersions:
                 additionalProperties: false
                 required: [template, storageProfile, sizingPolicy]
                 description: |
-                  Partial contents of the fields of the [VCDInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/cr.html#VCDinstanceclass).
+                  Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
                 properties:
                   rootDiskSizeGb:
                     description: |
                       root disk size in gigabytes.
-                    example: 20
-                    default: 20
+                    example: 50
+                    default: 50
                     type: integer
                   placementPolicy:
                     description: |
                       PlacementPolicy is the placement policy to be used on this machine.
+
                       If no placement policy is specified, default placement policy will be used to create the nodes.
                     type: string
                     example: Hypervisor1
                   sizingPolicy:
                     description: |
                       SizingPolicy is the sizing policy to be used on this machine.
+
                       If no sizing policy is specified, default sizing policy will be used to create the nodes.
                     type: string
                     example: 4Cpu8Memory
@@ -212,7 +221,9 @@ apiVersions:
                     example: ssd
                   template:
                     description: |
-                      Path of the template OVA that is to be used. Consists of catalog and template path.
+                      Path of the template OVA that is to be used.
+                      
+                      Consists of organization (optional), catalog, template path. Organization may not match with provider.organization (in case of shared templates).
                     type: string
                     example: Linux/ubuntu2204-cloud-ova
                   mainNetworkIPAddresses:
@@ -234,15 +245,18 @@ apiVersions:
         organization:
           type: string
           description: |
-            Vcloud Director Organization name.
+            VMware Cloud Director Organization name.
         virtualDataCenter:
           type: string
           description: |
-            Vcloud Director Virtual Data Center name (belongs to Organization).
+            VMware Cloud Director Virtual Data Center name (belongs to Organization).
         virtualApplicationName:
           type: string
+          # cluster api getting app by VCDCluster name and we should create app with kubernetes resources name restrictions
+          # base on this answer https://stackoverflow.com/a/67387967
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
           description: |
-            Vcloud Director Virtual Application name (belongs to Virtual Data Center).
+            VMware Cloud Director Virtual Application name (belongs to Virtual Data Center).
         mainNetwork:
           description: |
             Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
@@ -255,12 +269,13 @@ apiVersions:
 
             Addresses are allocated starting with the tenth address. E.g., if you have the `192.168.199.0/24` subnet, addresses will be allocated starting with `192.168.199.10`.
           pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+          x-unsafe: true
         layout:
           type: string
           description: |
             The way resources are located in the cloud.
 
-            Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/layouts.html) about possible provider layouts.
+            Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vcd/layouts.html) about possible provider layouts.
         provider:
           type: object
           additionalProperties: false
@@ -275,18 +290,46 @@ apiVersions:
             password:
               type: string
               description: The user's password.
+            apiToken:
+              type: string
+              description: |
+                The token for authentication.
+
+                > **Caution!** When using `apiToken`, leave `username` and `password` empty.
             insecure:
               type: boolean
               description:  Set to `true` if VCD has a self-signed certificate.
               x-doc-default: false
           required:
             - server
-            - username
-            - password
-      oneOf:
+      allOf:
+      - oneOf:
         - required: [layout]
           properties:
             layout:
               enum:
                 - Standard
               type: string
+      - oneOf:
+        - properties:
+            provider:
+              required: [apiToken]
+              type: object
+              properties:
+                username:
+                  not: {}
+                password:
+                  not: {}
+                apiToken:
+                  type: string
+        - properties:
+            provider:
+              required: [username, password]
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                apiToken:
+                  not: {}

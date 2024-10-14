@@ -21,17 +21,20 @@ import (
 	"strings"
 	"time"
 
+	addonOpUtils "github.com/flant/addon-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
+
+var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
 const (
 	deckhouseRegistrySecretName = "deckhouse-registry"
@@ -42,8 +45,6 @@ const (
 	deployTimeEnvVarFormat      = time.RFC3339
 
 	ConvergeLabel = "dhctl.deckhouse.io/node-for-converge"
-
-	imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 )
 
 type DeckhouseDeploymentParams struct {
@@ -190,7 +191,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: pointer.Int32(2),
+			RevisionHistoryLimit: ptr.To(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "deckhouse",
@@ -212,6 +213,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			HostNetwork:        true,
 			DNSPolicy:          apiv1.DNSDefault,
 			ServiceAccountName: "deckhouse",
+			SecurityContext: &apiv1.PodSecurityContext{
+				RunAsUser:    ptr.To(int64(0)),
+				RunAsNonRoot: ptr.To(false),
+			},
 			Tolerations: []apiv1.Toleration{
 				{Operator: apiv1.TolerationOpExists},
 			},
@@ -229,27 +234,20 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					},
 				},
 				{
-					Name: "external-modules",
+					Name: "downloaded",
 					VolumeSource: apiv1.VolumeSource{
 						HostPath: &apiv1.HostPathVolumeSource{
-							Path: "/var/lib/deckhouse/external-modules",
+							Path: "/var/lib/deckhouse/downloaded",
 							Type: &hostPathDirectory,
 						},
 					},
 				},
-			},
-			Affinity: &apiv1.Affinity{
-				NodeAffinity: &apiv1.NodeAffinity{
-					RequiredDuringSchedulingIgnoredDuringExecution: &apiv1.NodeSelector{
-						NodeSelectorTerms: []apiv1.NodeSelectorTerm{
-							{
-								MatchExpressions: []apiv1.NodeSelectorRequirement{
-									{
-										Key:      ConvergeLabel,
-										Operator: apiv1.NodeSelectorOpDoesNotExist,
-									},
-								},
-							},
+				{
+					Name: "deckhouse",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/var/lib/deckhouse",
+							Type: &hostPathDirectory,
 						},
 					},
 				},
@@ -272,13 +270,13 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			ProbeHandler: apiv1.ProbeHandler{
 				HTTPGet: &apiv1.HTTPGetAction{
 					Path: "/ready",
-					Port: intstr.FromInt(9650),
+					Port: intstr.FromInt(4222),
 				},
 			},
 		},
 		Ports: []apiv1.ContainerPort{
-			{Name: "self", ContainerPort: 9650},
-			{Name: "custom", ContainerPort: 9651},
+			{Name: "self", ContainerPort: 4222},
+			{Name: "custom", ContainerPort: 4223},
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
@@ -292,25 +290,25 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				MountPath: "/.kube",
 			},
 			{
-				Name:      "external-modules",
+				Name:      "downloaded",
 				ReadOnly:  false,
-				MountPath: "/deckhouse/external-modules",
+				MountPath: "/deckhouse/downloaded",
 			},
 		},
 	}
 
 	deckhouseInitContainer := apiv1.Container{
-		Name:            "init-external-modules",
+		Name:            "init-downloaded-modules",
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", "mkdir -p /deckhouse/external-modules/modules && chown -hR 64535 /deckhouse/external-modules /deckhouse/external-modules/modules && chmod 0700 /deckhouse/external-modules /deckhouse/external-modules/modules",
+			"sh", "-c", `if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
-				Name:      "external-modules",
+				Name:      "deckhouse",
 				ReadOnly:  false,
-				MountPath: "/deckhouse/external-modules",
+				MountPath: "/deckhouse",
 			},
 		},
 	}
@@ -333,20 +331,24 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "127.0.0.1:44434",
 		},
 		{
+			Name:  "ADDON_OPERATOR_LISTEN_PORT",
+			Value: "4222",
+		},
+		{
+			Name:  "ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT",
+			Value: "4223",
+		},
+		{
+			Name:  "ADDON_OPERATOR_CRD_EXTRA_LABELS",
+			Value: "heritage=deckhouse",
+		},
+		{
 			Name:  "HELM3LIB",
 			Value: "yes",
 		},
 		{
 			Name:  "HELM_HISTORY_MAX",
 			Value: "3",
-		},
-		{
-			Name:  "MODULES_DIR",
-			Value: "/deckhouse/modules:/deckhouse/external-modules/modules",
-		},
-		{
-			Name:  "EXTERNAL_MODULES_DIR",
-			Value: "/deckhouse/external-modules/",
 		},
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
@@ -384,13 +386,37 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Name:  "DEBUG_HTTP_SERVER_ADDR",
 			Value: "127.0.0.1:9652",
 		},
+		{
+			Name:  "ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS",
+			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled",
+		},
 	}
 
 	// Deployment composition
 	deckhouseContainer.Env = deckhouseContainerEnv
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
-	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
 	deckhouseDeployment.Spec.Template = deckhousePodTemplate
+
+	modulesDirs := []string{
+		"/deckhouse/modules",
+	}
+
+	const downloadedModulesDir = "/deckhouse/downloaded/modules"
+	modulesDirs = append(modulesDirs, downloadedModulesDir)
+	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
+	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+		Name:  "DOWNLOADED_MODULES_DIR",
+		Value: downloadedModulesDir,
+	})
+	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+		Name:  "EXTERNAL_MODULES_DIR",
+		Value: downloadedModulesDir,
+	})
+
+	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
+		Name:  "MODULES_DIR",
+		Value: strings.Join(modulesDirs, addonOpUtils.PathsSeparator),
+	})
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
 }
@@ -508,7 +534,7 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 }
 
 func generateSecret(name, namespace string, data map[string][]byte, labels map[string]string) *apiv1.Secret {
-	preparedLabels := map[string]string{"heritage": "deckhouse", "name": name}
+	preparedLabels := map[string]string{"heritage": "deckhouse"}
 	for key, value := range labels {
 		preparedLabels[key] = value
 	}
@@ -614,6 +640,17 @@ func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 	)
 }
 
+func SecretConvergeState(state []byte) *apiv1.Secret {
+	return generateSecret(
+		"d8-dhctl-converge-state",
+		"d8-system",
+		map[string][]byte{
+			"state.json": state,
+		},
+		map[string]string{},
+	)
+}
+
 const (
 	ClusterUUIDCmKey       = "cluster-uuid"
 	ClusterUUIDCm          = "d8-cluster-uuid"
@@ -627,6 +664,22 @@ func ClusterUUIDConfigMap(uuid string) *apiv1.ConfigMap {
 			Namespace: ClusterUUIDCmNamespace,
 		},
 		Data: map[string]string{ClusterUUIDCmKey: uuid},
+	}
+}
+
+const (
+	CommanderUUIDCmKey       = "commander-uuid"
+	CommanderUUIDCm          = "d8-commander-uuid"
+	CommanderUUIDCmNamespace = "kube-system"
+)
+
+func CommanderUUIDConfigMap(uuid string) *apiv1.ConfigMap {
+	return &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      CommanderUUIDCm,
+			Namespace: CommanderUUIDCmNamespace,
+		},
+		Data: map[string]string{CommanderUUIDCmKey: uuid},
 	}
 }
 
@@ -659,4 +712,8 @@ func KubeDNSService(ipAddress string) *apiv1.Service {
 			},
 		},
 	}
+}
+
+func InitGlobalVars(pwd string) {
+	imagesDigestsJSON = pwd + "/deckhouse/candi/images_digests.json"
 }

@@ -17,7 +17,7 @@ In Deckhouse, this module sets up:
 
   Deckhouse supports **manual** and **automatic** update modes.
 
-  In the manual upgrade mode, only critical fixes (patch releases) are automatically applied, and upgrading to a more current Deckhouse release requires [manual confirmation](cr.html#deckhouserelease-v1alpha1-approved).
+  In the manual upgrade mode, only critical fixes (patch releases) are automatically applied, and upgrading to a more current Deckhouse release requires [manual confirmation](../../cr.html#deckhouserelease-v1alpha1-approved).
 
   In the automatic update mode, Deckhouse switches to a newer release as soon as it is available in the corresponding release channel unless [update windows](configuration.html#parameters-update-windows) are **configured** for the cluster. If update windows are **configured** for the cluster, Deckhouse will upgrade to a newer release during the next available update window.
 

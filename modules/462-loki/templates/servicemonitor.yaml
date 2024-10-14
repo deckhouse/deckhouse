@@ -10,8 +10,13 @@ spec:
   sampleLimit: 10000
   endpoints:
   - port: loki
-    scheme: http
+    scheme: https
     path: /metrics
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
   selector:
     matchLabels:
       app: loki

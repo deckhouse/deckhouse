@@ -21,6 +21,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -45,6 +46,11 @@ type cTemplate struct {
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:        "/modules/admission-policy-engine/bootstrap",
+	Settings: &go_hook.HookConfigSettings{
+		ExecutionMinInterval: 3 * time.Second,
+		ExecutionBurst:       1,
+	},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "gatekeeper_templates",

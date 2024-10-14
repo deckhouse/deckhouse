@@ -426,13 +426,16 @@ const removeLabel = async ({ github, context, core, issue_number, label }) => {
  * @param {object} inputs
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
+ * @param {object} inputs.kubernetesDefaultVersion - Kubernetes default version.
  */
-const setCRIAndVersionsFromInputs = ({ context, core }) => {
+const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }) => {
   const defaultCRI = e2eDefaults.criName.toLowerCase();
-  const defaultVersion = e2eDefaults.kubernetesVersion.replace(/\./g, '_');
+  const defaultVersion = kubernetesDefaultVersion.replace(/\./g, '_');
+  const defaultMultimaster = e2eDefaults.multimaster
 
   let cri = [defaultCRI];
   let ver = [defaultVersion];
+  let multimaster = [defaultMultimaster];
 
   if (!!context.payload.inputs.cri) {
     const requested_cri = context.payload.inputs.cri.toLowerCase();
@@ -442,9 +445,13 @@ const setCRIAndVersionsFromInputs = ({ context, core }) => {
     const requested_ver = context.payload.inputs.ver.replace(/\./g, '_');
     ver = requested_ver.split(',');
   }
+  if (!!context.payload.inputs.multimaster) {
+    const requested_multimaster = context.payload.inputs.multimaster;
+    multimaster = requested_multimaster;
+  }
 
-  core.info(`workflow_dispatch is release related. e2e inputs: cri='${context.payload.inputs.cri}' and version='${context.payload.inputs.ver}'.`);
-
+  core.info(`workflow_dispatch is release related. e2e inputs: cri='${context.payload.inputs.cri}', multimaster='${context.payload.inputs.multimaster}' and version='${context.payload.inputs.ver}'.`);
+  core.setOutput(`multimaster`, `${multimaster}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.info(`run_${out_cri}_${out_ver}: true`);
@@ -459,12 +466,14 @@ const setCRIAndVersionsFromInputs = ({ context, core }) => {
  * @param {object} inputs
  * @param {object} inputs.core - A reference to the '@actions/core' package.
  * @param {object[]} inputs.labels - Array for labels on pull request.
+ * @param {object} inputs.kubernetesDefaultVersion - Kubernetes default version.
  */
-const setCRIAndVersionsFromLabels = ({ core, labels }) => {
+const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion }) => {
   core.startGroup(`Detect e2e/use labels ...`);
   core.info(`Input labels: ${JSON.stringify(labels.map((l) => l.name), null, '  ')}`);
   let ver = [];
   let cri = [];
+  let multimaster = e2eDefaults.multimaster;
 
   for (const label of labels) {
     const info = knownLabels[label.name];
@@ -479,22 +488,27 @@ const setCRIAndVersionsFromLabels = ({ core, labels }) => {
       core.info(`Detect '${label.name}': use Kubernetes version '${info.ver}'`);
       ver.push(info.ver.replace(/\./g, '_'));
     }
+    if (info.multimaster) {
+      core.info(`Detect '${label.name}': use Kubernetes multimaster configuration`);
+      multimaster = true;
+    }
   }
 
   if (ver.length === 0) {
-    const defaultVersion = e2eDefaults.kubernetesVersion.replace(/\./g, '_');
+    const defaultVersion = kubernetesDefaultVersion.replace(/\./g, '_');
     core.info(`No 'e2e/use/k8s' labels found. Will run e2e with default version=${defaultVersion}.`);
     ver = [defaultVersion];
   }
   if (cri.length === 0) {
     const defaultCRI = e2eDefaults.criName.toLowerCase();
-    core.info(`No 'e2e/use/cri' labels found. Will run e2e with default cri=${defaultCRI}.`);
+    core.info(`Will run e2e with default cri=${defaultCRI}.`);
     cri = [defaultCRI];
   }
   core.endGroup();
 
   core.startGroup(`Set outputs`);
   core.setCommandEcho(true);
+  core.setOutput(`multimaster`, `${multimaster}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
@@ -514,12 +528,13 @@ const setCRIAndVersionsFromLabels = ({ core, labels }) => {
  * @param {object} inputs.context - An object containing the context of the workflow run.
  * @param {object} inputs.core - A reference to the '@actions/core' package.
  * @param {string} inputs.provider - A slug of the provider.
+ * @param {object} inputs.kubernetesDefaultVersion - Kubernetes default version.
  * @returns {Promise<void>}
  */
-module.exports.checkE2ELabels = async ({ github, context, core, provider }) => {
+module.exports.checkE2ELabels = async ({ github, context, core, provider, kubernetesDefaultVersion }) => {
   // Use workflow_dispatch inputs to enable e2e jobs if run for non-PR ref.
   if (!context.payload.inputs.pull_request_ref) {
-    return setCRIAndVersionsFromInputs({ context, core });
+    return setCRIAndVersionsFromInputs({ context, core, kubernetesDefaultVersion });
   }
 
   // Run for PR: get PR labels to detect CRI and K8s versions and remove trigger label.
@@ -541,7 +556,7 @@ module.exports.checkE2ELabels = async ({ github, context, core, provider }) => {
     return core.notice(`No e2e label for provider '${provider}'. Stop running next jobs.`);
   }
 
-  return setCRIAndVersionsFromLabels({ core, labels: issueLabels });
+  return setCRIAndVersionsFromLabels({ core, labels: issueLabels, kubernetesDefaultVersion });
 };
 
 /**
@@ -639,8 +654,6 @@ const parseCommandArgumentAsRef = (cmdArg) => {
  *   /build release-1.30
  *   /e2e/run/aws v1.31.0-alpha.0
  *   /e2e/use/k8s/1.22
- *   /e2e/use/cri/docker
- *   /e2e/use/cri/containerd
  *   /deploy/web/stage v1.3.2
  *   /deploy/alpha - to deploy all editions
  *   /deploy/alpha/ce,ee,fe
@@ -707,6 +720,7 @@ const detectSlashCommand = ({ comment , context, core}) => {
     if (workflow_id) {
       let ver = [];
       let cri = [];
+      let multimaster;
       for (const line of lines) {
         let useParts = line.split('/e2e/use/cri/');
         if (useParts[1]) {
@@ -716,11 +730,16 @@ const detectSlashCommand = ({ comment , context, core}) => {
         if (useParts[1]) {
           ver.push(useParts[1]);
         }
+        useParts = line.split('/e2e/use/multimaster/');
+        if (useParts[1]) {
+          multimaster.push(true);
+        }
       }
 
       inputs = {
         cri: cri.join(','),
         ver: ver.join(','),
+        multimaster: multimaster,
       }
 
       // Add initial_ref_slug input when e2e command has two args.
@@ -1186,8 +1205,6 @@ You can trigger release related actions by commenting on this issue:
   - \`provider\` is one of \`${availableProviders}\`
   - \`git_ref_1\` is a release-* or main branch
   - \`git_ref_2\` is a release-* or main branch
-- \`/e2e/use/cri/<cri_name>\` specifies which CRI to use for e2e test.
-  - \`cri_name\` is one of \`${availableCRI}\`
 - \`/e2e/use/k8s/<version>\` specifies which Kubernetes version to use for e2e test.
   - \`version\` is one of \`${availableKubernetesVersions}\`
 - \`/build git_ref\` will run build for release related refs.
@@ -1195,24 +1212,21 @@ You can trigger release related actions by commenting on this issue:
 
 
 **Note 1:**
-A single command \`/e2e/run/<provider>\` will run e2e with default CRI 'containerd' and Kubernetes version '1.25'.
+A single command \`/e2e/run/<provider>\` will run e2e with default CRI 'containerd' and Kubernetes version '1.27'.
 Put \`/e2e/use\` options below \`/e2e/run\` command to set specific CRI and Kubernetes version. E.g.:
 
 \`\`\`
 /e2e/run/aws main
-/e2e/use/cri/docker
-/e2e/use/cri/containerd
-/e2e/use/k8s/1.20
-/e2e/use/k8s/1.23
+/e2e/use/k8s/1.27
+/e2e/use/k8s/1.29
 
-This comment will run 4 e2e jobs on AWS with Docker and containerd
+This comment will run 2 e2e jobs on AWS with containerd
 and with Kubernetes version 1.20 and 1.23 using image built from main branch.
 \`\`\`
 
 \`\`\`
 /e2e/run/aws release-1.35 release-1.36
-/e2e/use/cri/containerd
-/e2e/use/k8s/1.23
+/e2e/use/k8s/1.27
 
 This comment will create cluster in AWS using Deckhouse built from release-1.35 branch
 and then switch to images built from release-1.36 branch.

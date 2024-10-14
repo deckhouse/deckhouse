@@ -45,7 +45,7 @@ func isExist(baseDir, filename string) bool {
 func Run(tmpDir string, m utils.Module) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("panic on linter run occurred:\n\n%v", string(debug.Stack()))
+			err = fmt.Errorf("panic on linter run occurred:\n%s\n\n%v", r, string(debug.Stack()))
 		}
 	}()
 

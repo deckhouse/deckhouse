@@ -9,7 +9,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -18,10 +18,10 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/layouts.html) о возможных схемах размещения провайдера.
       standard:
         description: |
-          Настройки для схемы размещения [`Standard`](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard).
+          Настройки для схемы размещения [`Standard`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/layouts.html#standard).
         properties:
           natGatewayPublicIpCount:
             description: |
@@ -43,6 +43,12 @@ apiVersions:
           Виртуальная сеть — это виртуальная изолированная часть общедоступной сети Azure. Каждая виртуальная сеть выделена для вашей подписки.
 
           **Важно!** Нужно учитывать, что в случае настройки пиринга, использования VPN или связывания сетей других кластеров, адресное пространство сетей не должно пересекаться.
+      nameservers:
+        description: |
+          Конфигурация DNS серверов для виртуальной сети Azure, которая используется для узлов кластера.
+        properties:
+          addresses:
+            description: Список DNS серверов.
       subnetCIDR:
         description: |
           [Подсеть](https://learn.microsoft.com/ru-ru/azure/virtual-network/virtual-network-vnet-plan-design-arm#subnets) из адресного пространства `vNetCIDR`, в которой будут работать узлы кластера.
@@ -87,7 +93,7 @@ apiVersions:
               ```
           instanceClass:
             description: |
-              Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
+              Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
             properties: &instanceClassProperties_ru
               machineSize:
                 description: |
@@ -112,7 +118,7 @@ apiVersions:
 
                   По умолчанию используется образ из `AzureCloudDiscoveryData` (образ, из которого был создан мастер-узел при развертывании кластера).
 
-                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
               enableExternalIP:
                 description: |
                   Разрешение назначения внешнего IP-адреса для инстанса.
@@ -181,7 +187,7 @@ apiVersions:
                     > **Внимание!** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
+                Частичное содержимое полей [AzureInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/cr.html#azureinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
       tags:
@@ -191,7 +197,7 @@ apiVersions:
           Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-azure/environment.html) к API Azure.
+          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-azure/environment.html) к API Azure.
         properties:
           location:
             description: |
@@ -208,7 +214,9 @@ apiVersions:
               Идентификатор клиента.
           clientSecret:
             description: |
-              Secret клиента.
+              Секрет (secret) клиента.
+
+              Помните о сроке действия секрета. По умолчанию он действителен один год. Чтобы создать service account с большим сроком действия секрета обратитесь к [официальной документации](https://learn.microsoft.com/en-us/azure/app-service/configure-ssl-app-service-certificate?tabs=portal#renew-an-app-service-certificate).
           tenantId:
             description: |
               Идентификатор tenant'а.

@@ -38,6 +38,7 @@ Name                  Description
 \$LAYOUT               Layout for provider: WithoutNAT, Standard or Static.
                       See available layouts inside the provider directory.
 \$PREFIX               A unique prefix to run several tests simultaneously.
+\$MASTERS_COUNT         Number of master nodes in the cluster.
 \$KUBERNETES_VERSION   A version of Kubernetes to install.
 \$CRI                  Containerd.
 \$DECKHOUSE_DOCKERCFG  Base64 encoded docker registry credentials.
@@ -79,6 +80,10 @@ Provider specific environment variables:
   vSphere:
 
 \$LAYOUT_VSPHERE_PASSWORD
+
+  VCD:
+
+\$LAYOUT_VCD_PASSWORD
 
   Static:
 
@@ -125,32 +130,32 @@ EOF
 
 function abort_bootstrap_from_cache() {
   >&2 echo "Run abort_bootstrap_from_cache"
-  dhctl bootstrap-phase abort \
+  dhctl --do-not-write-debug-log-file bootstrap-phase abort \
     --force-abort-from-cache \
     --config "$cwd/configuration.yaml" \
-    --yes-i-am-sane-and-i-understand-what-i-am-doing
+    --yes-i-am-sane-and-i-understand-what-i-am-doing $ssh_bastion_params
 
   return $?
 }
 
 function abort_bootstrap() {
   >&2 echo "Run abort_bootstrap"
-  dhctl bootstrap-phase abort \
+  dhctl --do-not-write-debug-log-file bootstrap-phase abort \
     --ssh-user "$ssh_user" \
     --ssh-agent-private-keys "$ssh_private_key_path" \
     --config "$cwd/configuration.yaml" \
-    --yes-i-am-sane-and-i-understand-what-i-am-doing
+    --yes-i-am-sane-and-i-understand-what-i-am-doing $ssh_bastion_params
 
   return $?
 }
 
 function destroy_cluster() {
   >&2 echo "Run destroy_cluster"
-  dhctl destroy \
+  dhctl --do-not-write-debug-log-file destroy \
     --ssh-agent-private-keys "$ssh_private_key_path" \
     --ssh-user "$ssh_user" \
     --ssh-host "$master_ip" \
-    --yes-i-am-sane-and-i-understand-what-i-am-doing
+    --yes-i-am-sane-and-i-understand-what-i-am-doing $ssh_bastion_params
 
   return $?
 }
@@ -159,7 +164,7 @@ function destroy_static_infra() {
   >&2 echo "Run destroy_static_infra from ${terraform_state_file}"
 
   pushd "$cwd"
-  terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  terraform init -input=false -plugin-dir=/plugins || return $?
   terraform destroy -state="${terraform_state_file}" -input=false -auto-approve || exitCode=$?
   popd
 
@@ -194,6 +199,14 @@ function cleanup() {
       fi
   fi
 
+  # Check if LAYOUT_STATIC_BASTION_IP is set and not empty
+  if [[ -n "$LAYOUT_STATIC_BASTION_IP" ]]; then
+    ssh_bastion_params="--ssh-bastion-host $LAYOUT_STATIC_BASTION_IP --ssh-bastion-user $ssh_user"
+    >&2 echo "Using static bastion at $LAYOUT_STATIC_BASTION_IP"
+  else
+    ssh_bastion_params=""
+  fi
+
   >&2 echo "Run cleanup ..."
   if [[ -z "$master_ip" ]] ; then
     >&2 echo "No master IP: try to abort without cache, then abort from cache"
@@ -205,7 +218,7 @@ function cleanup() {
 }
 
 function prepare_environment() {
-  root_wd="$(pwd)/testing/cloud_layouts"
+  root_wd="/deckhouse/testing/cloud_layouts"
 
   if [[ -z "$PROVIDER" || ! -d "$root_wd/$PROVIDER" ]]; then
     >&2 echo "ERROR: Unknown provider \"$PROVIDER\""
@@ -268,18 +281,18 @@ function prepare_environment() {
     # shellcheck disable=SC2016
     env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
         SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON}' \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON} ${MASTERS_COUNT}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="cloud-user"
+    ssh_user="redos"
     ;;
 
   "GCP")
     # shellcheck disable=SC2016
     env SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SERVICE_ACCOUNT_JSON}' \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${SERVICE_ACCOUNT_JSON} ${MASTERS_COUNT}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="user"
@@ -288,19 +301,19 @@ function prepare_environment() {
   "AWS")
     # shellcheck disable=SC2016
     env AWS_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_ACCESS_KEY")" AWS_SECRET_ACCESS_KEY="$(base64 -d <<< "$LAYOUT_AWS_SECRET_ACCESS_KEY")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${AWS_ACCESS_KEY} ${AWS_SECRET_ACCESS_KEY}' \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${AWS_ACCESS_KEY} ${AWS_SECRET_ACCESS_KEY} ${MASTERS_COUNT}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="centos"
+    ssh_user="ec2-user"
     ;;
 
   "Azure")
     # shellcheck disable=SC2016
     env SUBSCRIPTION_ID="$LAYOUT_AZURE_SUBSCRIPTION_ID" CLIENT_ID="$LAYOUT_AZURE_CLIENT_ID" \
         CLIENT_SECRET="$LAYOUT_AZURE_CLIENT_SECRET"  TENANT_ID="$LAYOUT_AZURE_TENANT_ID" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${TENANT_ID} ${CLIENT_SECRET} ${CLIENT_ID} ${SUBSCRIPTION_ID}' \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${TENANT_ID} ${CLIENT_SECRET} ${CLIENT_ID} ${SUBSCRIPTION_ID} ${MASTERS_COUNT}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="azureuser"
@@ -309,19 +322,42 @@ function prepare_environment() {
   "OpenStack")
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD}' \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${OS_PASSWORD} ${MASTERS_COUNT}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-    ssh_user="debian"
+    ssh_user="redos"
     ;;
 
   "vSphere")
     # shellcheck disable=SC2016
     env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" \
-        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD} ${VSPHERE_BASE_DOMAIN}' \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VSPHERE_PASSWORD} ${VSPHERE_BASE_DOMAIN} ${MASTERS_COUNT}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
+    ssh_user="ubuntu"
+    ;;
+
+"VCD")
+    # shellcheck disable=SC2016
+    env VCD_PASSWORD="$(base64 -d <<<"$LAYOUT_VCD_PASSWORD")" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
+        CRI="$CRI" \
+        DEV_BRANCH="$DEV_BRANCH" \
+        PREFIX="$PREFIX" \
+        MASTERS_COUNT="$MASTERS_COUNT" \
+        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        VCD_SERVER="$LAYOUT_VCD_SERVER" \
+        VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
+        VCD_ORG="$LAYOUT_VCD_ORG" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG} ${MASTERS_COUNT}' \
+        <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
+
+    [ -f "$cwd/resources.tpl.yaml" ] && \
+        env VCD_ORG="$LAYOUT_VCD_ORG" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${VCD_PASSWORD} ${VCD_SERVER} ${VCD_USERNAME} ${VCD_ORG}' \
+        <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
     ssh_user="ubuntu"
     ;;
@@ -343,7 +379,8 @@ function prepare_environment() {
     # use different users for different OSs
     ssh_user="astra"
     ssh_user_system="altlinux"
-    ssh_user_worker="redos"
+    ssh_user_worker_0="redos"
+    ssh_user_worker_1="opensuse"
     ;;
   esac
 
@@ -401,32 +438,128 @@ function run-test() {
   wait_cluster_ready || return $?
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
+    test_requirements || return $?
     change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
 }
 
+function test_requirements() {
+  >&2 echo "Start check requirements ..."
+  if [ ! -f /deckhouse/release.yaml ]; then
+      >&2 echo "File /deckhouse/release.yaml not found"
+      return 1
+  fi
+
+  release=$(< /deckhouse/release.yaml)
+  if [ -z "${release:-}" ]; then return 1; fi
+  release=${release//\"/\\\"}
+
+  >&2 echo "Run script ... "
+
+  testScript=$(cat <<ENDSC
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+
+>&2 echo "Download yq..."
+
+/opt/deckhouse/bin/d8-curl -sSLf -o /opt/deckhouse/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+
+>&2 echo "chmod yq..."
+
+chmod +x /opt/deckhouse/bin/yq
+
+>&2 echo "Create release file ..."
+
+echo "$release" > /tmp/releaseFile.yaml
+
+>&2 echo "Release file ..."
+
+cat /tmp/releaseFile.yaml
+
+>&2 echo "Apply module config ..."
+
+echo 'apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  settings:
+    releaseChannel: Stable
+    update:
+      mode: Auto' | kubectl apply -f -
+
+>&2 echo "Apply deckhousereleases ..."
+
+echo 'apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    dryrun: "true"
+  name: v1.96.3
+spec:
+  version: v1.96.3
+  requirements: {}
+' | /opt/deckhouse/bin/yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+
+>&2 echo "Remove release file ..."
+
+rm /tmp/releaseFile.yaml
+
+>&2 echo "Sleep 5 seconds before check..."
+
+sleep 5
+
+>&2 echo "Release status: \$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')"
+if [ ! -z "\$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.message}')" ]; then
+  >&2 echo "Error message: \$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.message}')"
+fi
+
+[[ "\$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')" == "Deployed" ]]
+ENDSC
+)
+
+  testRequirementsAttempts=10
+  for ((i=1; i<=$testRequirementsAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su - -c /bin/bash <<<$testScript; then
+        return 0
+    else
+      >&2 echo "Test requirements $i/$testRequirementsAttempts failed. Sleeping 5 seconds..."
+      sleep 5
+    fi
+  done
+
+  write_deckhouse_logs
+  return 1
+}
+
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
   pushd "$cwd"
-  terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  terraform init -input=false -plugin-dir=/plugins || return $?
   terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   popd
 
-  if ! master_ip="$(grep "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+  if ! master_ip="$(grep -m1 "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse master_ip from terraform.log"
     return 1
   fi
-  if ! system_ip="$(grep "system_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+  if ! system_ip="$(grep -m1 "system_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse system_ip from terraform.log"
     return 1
   fi
-  if ! worker_ip="$(grep "worker_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
-    >&2 echo "ERROR: can't parse worker_ip from terraform.log"
+  if ! worker_0_ip="$(grep -m1 "worker_0_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+    >&2 echo "ERROR: can't parse worker_0_ip from terraform.log"
     return 1
   fi
-  if ! bastion_ip="$(grep "bastion_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
+  if ! worker_1_ip="$(grep -m1 "worker_1_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
+    >&2 echo "ERROR: can't parse worker_1_ip from terraform.log"
+    return 1
+  fi
+  if ! bastion_ip="$(grep -m1 "bastion_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d "\" ")" ; then
     >&2 echo "ERROR: can't parse bastion_ip from terraform.log"
     return 1
   fi
@@ -463,7 +596,18 @@ function bootstrap_static() {
   done
 
   attempt=0
-  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker@$worker_ip" /usr/local/bin/is-instance-bootstrapped; do
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_0@$worker_0_ip" /usr/local/bin/is-instance-bootstrapped; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: worker instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
+  until $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_1@$worker_1_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
       >&2 echo "ERROR: worker instance couldn't get bootstrapped"
@@ -480,7 +624,7 @@ function bootstrap_static() {
     if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
        apt-get update
        apt-get install -y docker.io
-       docker run -d --name='tinyproxy' -p 8888:8888 monokal/tinyproxy:latest ANY
+       docker run -d --name='tinyproxy' -p 8888:8888 -e ALLOWED_NETWORKS="127.0.0.1/8 10.0.0.0/8 192.168.0.1/8" mirror.gcr.io/kalaksi/tinyproxy:latest@sha256:561ef49fa0f0a9747db12abdfed9ab3d7de17e95c811126f11e026b3b1754e54
 ENDSSH
       initial_setup_failed=""
       break
@@ -528,6 +672,9 @@ ENDSSH
        ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
+
+       #hack for relosve: 'error reading from /var/lib/apt/lists/partial/ftp.altlinux.org_pub_distributions_ALTLinux_p11_branch_x86%5f64-i586_base_release - fgets (0 Success)'
+       rm -f /var/lib/apt/lists/partial/ftp.altlinux.org_pub_distributions_ALTLinux_p11_branch_x86%5f64-i586_base_release
 ENDSSH
       initial_setup_failed=""
       break
@@ -542,7 +689,30 @@ ENDSSH
   fi
 
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker@$worker_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_0@$worker_0_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+       ip route del default
+       ip route add 10.111.0.0/16 dev lo
+       ip route add 10.222.0.0/16 dev lo
+ENDSSH
+      initial_setup_failed=""
+      break
+    else
+      initial_setup_failed="true"
+      >&2 echo "Initial setup of worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+      sleep 5
+    fi
+  done
+  if [[ $initial_setup_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_worker_1@$worker_1_ip" sudo su -c /bin/bash <<ENDSSH; then
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
@@ -566,14 +736,15 @@ ENDSSH
 
   # Prepare resources.yaml for starting working node with CAPS
   # shellcheck disable=SC2016
-  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" WORKER_USER="$ssh_user_worker" WORKER_IP="$worker_ip" \
-      envsubst '${b64_SSH_KEY} ${WORKER_USER} ${WORKER_IP}' \
+  env b64_SSH_KEY="$(base64 -w0 "$ssh_private_key_path")" WORKER_0_USER="$ssh_user_worker_0" WORKER_0_IP="$worker_0_ip" \
+      WORKER_1_USER="$ssh_user_worker_1" WORKER_1_IP="$worker_1_ip" \
+      envsubst '${b64_SSH_KEY} ${WORKER_0_USER} ${WORKER_0_IP} ${WORKER_1_USER} ${WORKER_1_IP}' \
       <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
-  dhctl bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
-  --config "$cwd/configuration.yaml" --resources "$cwd/resources.yaml" | tee -a "$bootstrap_log" || return $?
+  dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-bastion-host "$bastion_ip" --ssh-bastion-user="$ssh_user" --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
+  --config "$cwd/configuration.yaml" --config "$cwd/resources.yaml" | tee -a "$bootstrap_log" || return $?
 
   >&2 echo "==============================================================
 
@@ -620,14 +791,14 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl get nodes -o wide
-kubectl get nodes -o json | jq -re '.items | length == 3' >/dev/null
+kubectl get nodes -o json | jq -re '.items | length == 4' >/dev/null
 kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all' >/dev/null
 ENDSSH
       registration_failed=""
       break
     else
       registration_failed="true"
-      >&2 echo "Node registration is still in progress (attempt #$i of 10). Sleeping 60 seconds ..."
+      >&2 echo "Node registration is still in progress (attempt #$i of 20). Sleeping 60 seconds ..."
       sleep 60
     fi
   done
@@ -639,8 +810,28 @@ ENDSSH
 
 function bootstrap() {
   >&2 echo "Run dhctl bootstrap ..."
-  dhctl bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
-  --resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log"
+
+  # Start ssh-agent and add the private key
+  eval "$(ssh-agent -s)"
+  ssh-add "$ssh_private_key_path"
+
+  # Check if LAYOUT_STATIC_BASTION_IP is set and not empty
+  if [[ -n "$LAYOUT_STATIC_BASTION_IP" ]]; then
+    ssh_bastion="-J $ssh_user@$LAYOUT_STATIC_BASTION_IP"
+    ssh_bastion_params="--ssh-bastion-host $LAYOUT_STATIC_BASTION_IP --ssh-bastion-user $ssh_user"
+    >&2 echo "Using static bastion at $LAYOUT_STATIC_BASTION_IP"
+
+    echo "bastion_ip_address_for_ssh = \"$LAYOUT_STATIC_BASTION_IP\"" >> "$bootstrap_log"
+    echo "bastion_user_name_for_ssh = \"$ssh_user\"" >> "$bootstrap_log"
+
+  else
+    ssh_bastion=""
+    ssh_bastion_params=""
+  fi
+
+  dhctl --do-not-write-debug-log-file bootstrap --resources-timeout="30m" --yes-i-want-to-drop-cache $ssh_bastion_params \
+        --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
+        --config "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log"
 
   dhctl_exit_code=$?
 
@@ -670,9 +861,9 @@ function bootstrap() {
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
-kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io
-kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -o json | jq -re '.items | length > 0' >/dev/null
-kubectl -n d8-cloud-instance-manager get machines.machine.sapcloud.io -o json|jq -re '.items | map(.status.currentStatus.phase == "Running") | all' >/dev/null
+kubectl get instance -o json >/dev/null
+kubectl get instance -o json | jq -re '.items | length > 0' >/dev/null
+kubectl get instance -o json | jq -re '.items | map(.status.currentStatus.phase == "Running") | all' >/dev/null
 ENDSSH
       provisioning_failed=""
       break
@@ -748,22 +939,46 @@ END_SCRIPT
 #  - master_ip
 function wait_cluster_ready() {
   # Print deckhouse info and enabled modules.
-  infoScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/info_script.sh")
+  infoScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/info_script.sh")
   $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${infoScript}";
-
-#  if [[ "$PROVIDER" == "Static" ]]; then
-#    if ! run_linstor_tests; then
-#      >&2 echo -n "Linstor tests failed"
-#      >&2 echo -n "Fetch Deckhouse logs after test ..."
-#      $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash > "$logs/deckhouse.json.log" <<<"${testLog}"
-#      return 1
-#    fi
-#  fi
-#  echo "Linstor test suite: success"
 
   test_failed=
 
-  testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
+  testNodeUserScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_nodeuser.sh")
+
+  testRunAttempts=5
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testNodeUserScript}"; then
+        test_failed=""
+        break
+    else
+      test_failed="true"
+      >&2 echo "Run test NodeUser script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds.."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "user-e2e@$master_ip" whoami; then
+        >&2 echo "Connection via NodeUser SSH successful."
+        test_failed=""
+        break
+    else
+      test_failed="true"
+      >&2 echo "Connection via NodeUser SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds.."
+      sleep 30
+    fi
+  done
+
+  if [[ $test_failed == "true" ]] ; then
+    return 1
+  fi
+
+  testScript=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 
   testRunAttempts=5
   for ((i=1; i<=$testRunAttempts; i++)); do
@@ -781,7 +996,7 @@ function wait_cluster_ready() {
     return 1
   fi
 
-  testAlerts=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")
+  testAlerts=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")
 
   test_failed="true"
   if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAlerts}"; then
@@ -799,61 +1014,33 @@ function wait_cluster_ready() {
   write_deckhouse_logs
 }
 
-# run_linstor_tests executes helm test for linstor module
-#
-# Arguments:
-#  - ssh_private_key_path
-#  - ssh_user
-#  - master_ip
-#
-# TODO: replace with testing framework: https://github.com/deckhouse/deckhouse/issues/2380
-function run_linstor_tests() {
-  test_failed=
-
-  testScript=$(cat <<"END_SCRIPT"
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
->&2 echo "Linstor test suite"
-set -x
->&2 echo "Download helm3 binary..."
->&2 kubectl -n d8-system exec deploy/deckhouse -- curl https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz -o /tmp/helm.tar.gz
->&2 echo "Extract helm3 binary..."
->&2 kubectl -n d8-system exec deploy/deckhouse -- tar -xzvf /tmp/helm.tar.gz -C /tmp
->&2 echo "Running linstor test suite ..."
->&2 kubectl -n d8-system exec deploy/deckhouse -- /tmp/linux-amd64/helm test -n d8-system linstor
-END_SCRIPT
-)
-
-  testRunAttempts=5
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
-      test_failed=""
-      break
-    else
-      test_failed="true"
-      >&2 echo "Run test script via SSH: attempt $i/$testRunAttempts failed. Sleeping 30 seconds..."
-      sleep 30
-    fi
-  done
-
-  if [[ $test_failed == "true" ]] ; then
-    return 1
-  fi
-
-}
-
 function parse_master_ip_from_log() {
   >&2 echo "  Detect master_ip from bootstrap.log ..."
-  if ! master_ip="$(grep -Po '(?<=master_ip_address_for_ssh = ).+$' "$bootstrap_log")"; then
+  if ! master_ip="$(grep -m1 -Po '(?<=master_ip_address_for_ssh = ")((\d{1,3}\.){3}\d{1,3})(?=")' "$bootstrap_log")"; then
     >&2 echo "    ERROR: can't parse master_ip from bootstrap.log"
     return 1
   fi
   echo "${master_ip}"
 }
 
+function chmod_dirs_for_cleanup() {
+  if [ -n "$USER_RUNNER_ID" ]; then
+    echo "Fix temp directories owner before cleanup ..."
+    chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+    chown -R $USER_RUNNER_ID /tmp || true
+  else
+    echo "Fix temp directories permissions before cleanup ..."
+    chmod -f -R 777 "/deckhouse/testing" || true
+    chmod -f -R 777 /tmp || true
+  fi
+}
+
+
 function main() {
   >&2 echo "Start cloud test script"
+  # switch to the / folder to dhctl proper work
+  cd /
+
   if ! prepare_environment ; then
     exit 2
   fi
@@ -887,6 +1074,8 @@ function main() {
   else
     echo "E2E test: fail."
   fi
+
+  chmod_dirs_for_cleanup
   exit $exitCode
 }
 

@@ -179,7 +179,7 @@
         To converge state of Kubernetes cluster, use `dhctl converge` command.
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
-        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
 {{- end }}
@@ -207,7 +207,7 @@
         To converge state of Kubernetes cluster, use `dhctl converge` command.
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
-        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
 {{- end }}

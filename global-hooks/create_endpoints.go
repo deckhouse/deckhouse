@@ -26,7 +26,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	discv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -69,6 +69,9 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      d8Name,
 			Namespace: d8Namespace,
+			Annotations: map[string]string{
+				"created-by": podName,
+			},
 			Labels: map[string]string{
 				"app":                        d8Name,
 				"module":                     d8Name,
@@ -81,7 +84,7 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 				Addresses: []v1.EndpointAddress{
 					{
 						IP:       address,
-						NodeName: pointer.String(nodeName),
+						NodeName: ptr.To(nodeName),
 						TargetRef: &v1.ObjectReference{
 							Kind:       "Pod",
 							Namespace:  d8Namespace,
@@ -93,12 +96,12 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 				Ports: []v1.EndpointPort{
 					{
 						Name:     "self",
-						Port:     9650,
+						Port:     4222,
 						Protocol: v1.ProtocolTCP,
 					},
 					{
 						Name:     "webhook",
-						Port:     9651,
+						Port:     4223,
 						Protocol: v1.ProtocolTCP,
 					},
 					{
@@ -119,6 +122,9 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      d8Name,
 			Namespace: d8Namespace,
+			Annotations: map[string]string{
+				"created-by": podName,
+			},
 			Labels: map[string]string{
 				"app":                        d8Name,
 				"module":                     d8Name,
@@ -131,32 +137,32 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 			{
 				Addresses: []string{address},
 				Conditions: discv1.EndpointConditions{
-					Ready:       pointer.Bool(true),
-					Serving:     pointer.Bool(true),
-					Terminating: pointer.Bool(false),
+					Ready:       ptr.To(true),
+					Serving:     ptr.To(true),
+					Terminating: ptr.To(false),
 				},
 				TargetRef: &v1.ObjectReference{
 					Kind:      "Pod",
 					Namespace: d8Namespace,
 					Name:      podName,
 				},
-				NodeName: pointer.String(nodeName),
+				NodeName: ptr.To(nodeName),
 				Zone:     nil,
 				Hints:    nil,
 			},
 		},
 		Ports: []discv1.EndpointPort{
 			{
-				Name: pointer.String("self"),
-				Port: pointer.Int32(9650),
+				Name: ptr.To("self"),
+				Port: ptr.To(int32(4222)),
 			},
 			{
-				Name: pointer.String("webhook"),
-				Port: pointer.Int32(9651),
+				Name: ptr.To("webhook"),
+				Port: ptr.To(int32(4223)),
 			},
 			{
-				Name: pointer.String("debug-server"),
-				Port: pointer.Int32(9652),
+				Name: ptr.To("debug-server"),
+				Port: ptr.To(int32(9652)),
 			},
 		},
 	}

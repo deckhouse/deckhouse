@@ -39,14 +39,20 @@ case "$ID" in
     name_is_not_supported
   ;;
   ubuntu)
-    case "$VERSION_ID" in 18.04|20.04|22.04)
+    case "$VERSION_ID" in 18.04|20.04|22.04|24.04)
       echo "ubuntu-lts" && exit 0 ;;
     esac
     name_is_not_supported
   ;;
   debian)
-    case "$VERSION_ID" in 9|10|11)
+    case "$VERSION_ID" in 10|11|12)
       echo "debian" && exit 0 ;;
+    esac
+    name_is_not_supported
+  ;;
+  opensuse-leap)
+    case "$VERSION" in 15.*)
+        echo "opensuse" && exit 0 ;;
     esac
     name_is_not_supported
   ;;
@@ -73,5 +79,8 @@ done
 bundle="debian"
 if yum -q --version >/dev/null 2>/dev/null; then
   bundle="centos"
+fi
+if zypper --version >/dev/null 2>/dev/null; then
+  bundle="opensuse"
 fi
 try_bundle "${bundle}"

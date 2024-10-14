@@ -12,3 +12,6 @@ data:
 {{- if .Values.deckhouse.update }}
   updateSettings.json: {{ .Values.deckhouse.update | toJson | b64enc }}
 {{- end }}
+{{- if $.Values.global.discovery.clusterUUID }}
+  clusterUUID: {{ $.Values.global.discovery.clusterUUID | b64enc }}
+{{- end }}

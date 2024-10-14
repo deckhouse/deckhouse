@@ -25,12 +25,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("remove-deployment", "Delete deckhouse deployment.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -38,7 +38,10 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 		sshClient, err := ssh.NewInitClientFromFlags(true)
 
 		err = log.Process("default", "Remove Deckhouse️", func() error {
-			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+			kubeCl := client.NewKubernetesClient().
+				WithNodeInterface(
+					ssh.NewNodeInterfaceWrapper(sshClient),
+				)
 			// auto init
 			err = kubeCl.Init(client.AppKubernetesInitParams())
 			if err != nil {
@@ -63,7 +66,7 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("create-deployment", "Install deckhouse after terraform is applied successful.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -74,7 +77,7 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		// Load deckhouse config
-		metaConfig, err := config.ParseConfig(app.ConfigPath)
+		metaConfig, err := config.ParseConfig(app.ConfigPaths)
 		if err != nil {
 			return err
 		}
@@ -101,7 +104,10 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 		}
 
 		err = log.Process("bootstrap", "Create Deckhouse Deployment", func() error {
-			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+			kubeCl := client.NewKubernetesClient().
+				WithNodeInterface(
+					ssh.NewNodeInterfaceWrapper(sshClient),
+				)
 			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}

@@ -132,6 +132,8 @@ properties:
             type: string
           vmFolderPath:
             type: string
+          vmFolderExists:
+            type: boolean
           externalNetworkNames:
             type: array
             items:

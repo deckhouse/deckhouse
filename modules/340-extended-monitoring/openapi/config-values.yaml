@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 properties:
   imageAvailability:
@@ -46,6 +47,41 @@ properties:
                 type: string
                 description: |
                   Root CA certificate to validate the container registry's HTTPS certificate (if self-signed certificates are used).
+      mirrors:
+        type: array
+        description: |
+          List of mirrors for container registries.
+        x-examples:
+        - - original: docker.io
+            mirror: mirror.gcr.io
+          - original: internal-registry.com
+            mirror: mirror.internal-registry.com
+        items:
+          type: object
+          required:
+          - original
+          - mirror
+          properties:
+            original:
+              type: string
+            mirror:
+              type: string
+      forceCheckDisabledControllers:
+        type: array
+        x-examples:
+          - ["Deployment", "StatefulSet"]
+        description: |
+          A list of controller kinds for which image is forcibly checked, even when workloads are disabled or suspended.
+
+          Specify `All` to check all controller kinds.
+        items:
+          type: string
+          enum:
+            - Deployment
+            - StatefulSet
+            - DaemonSet
+            - CronJob
+            - All
   events:
     type: object
     default: {}
@@ -60,7 +96,7 @@ properties:
       severityLevel:
         type: string
         description: |
-          Whether to expose only crutial events.
+          Whether to expose only crucial events.
         enum: ["All", "OnlyWarnings"]
         default: "OnlyWarnings"
   certificates:
@@ -81,13 +117,13 @@ properties:
     description: |
       The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
       The same as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:

@@ -21,6 +21,7 @@
 .settings
 .idea/
 .vscode
+__debug_bin*
 venv/
 out/
 
@@ -47,6 +48,7 @@ layouts-tests-tmp/
 
 # Dev environment
 bin/
+include/
 
 # Python dev environment
 __pycache__/

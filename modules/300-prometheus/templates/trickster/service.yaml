@@ -11,6 +11,6 @@ spec:
   ports:
   - port: 443
     name: https
-    targetPort: 8443
+    targetPort: https
   selector:
     app: trickster

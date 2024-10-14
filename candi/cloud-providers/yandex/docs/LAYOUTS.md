@@ -7,7 +7,9 @@ Three layouts are supported. Below is more information about each of them.
 
 ## Standard
 
+{% alert level="danger" %}
 In this placement strategy, nodes do not have public IP addresses allocated to them; they use NAT gateway service in Yandex Cloud to connect to the Internet.
+{% endalert %}
 
 ![Yandex Cloud Standard Layout scheme](../../images/030-cloud-provider-yandex/layout-standard.png)
 <!--- Source: https://docs.google.com/drawings/d/1WI8tu-QZYcz3DvYBNlZG4s5OKQ9JKyna7ESHjnjuCVQ/edit --->

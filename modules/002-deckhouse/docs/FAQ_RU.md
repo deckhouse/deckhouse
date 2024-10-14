@@ -7,7 +7,7 @@ title: "Модуль deckhouse: FAQ"
 Вначале необходимо зайти внутрь пода Deckhouse:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -- bash
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- bash
 ```
 
 Далее необходимо выбрать, на каком узле запустить kube-bench.
@@ -21,7 +21,7 @@ kubectl -n d8-system exec -ti deploy/deckhouse -- bash
 * Запуск на конкретном узле, например на control-plane:
 
   ```shell
-  curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | yq r - -j | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | kubectl create -f -
+  curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | kubectl apply -f - --dry-run=client -o json | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | kubectl create -f -
   ```
 
 Далее можно проверить результат выполнения:
@@ -37,7 +37,7 @@ kubectl logs job.batch/kube-bench
 1. Выполните следующую команду, чтобы собрать необходимые данные:
 
    ```sh
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse \
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
      -- deckhouse-controller collect-debug-info \
      > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
@@ -46,13 +46,15 @@ kubectl logs job.batch/kube-bench
 
 Данные, которые будут собраны:
 * состояние очереди Deckhouse;
-* Deckhouse values (без каких-либо конфиденциальных данных);
+* Deckhouse values. За исключением значений `kubeRBACProxyCA` и `registry.dockercfg`;
 * список включенных модулей;
 * `events` из всех пространств имен;
 * манифесты controller'ов и подов из всех пространств имен Deckhouse;
 * все объекты `nodegroups`;
 * все объекты `nodes`;
 * все объекты `machines`;
+* все объекты `instances`;
+* все объекты `staticinstances`;
 * данные о текущей версии пода deckhouse;
 * все объекты `deckhousereleases`;
 * логи Deckhouse;
@@ -63,7 +65,7 @@ kubectl logs job.batch/kube-bench
 * логи Vertical Pod Autoscaler recommender;
 * логи Vertical Pod Autoscaler updater;
 * логи Prometheus;
-* метрики terraform-state-exporter;
+* метрики terraform-state-exporter. За исключением значений в `provider` из `providerClusterConfiguration`;
 * все горящие уведомления в Prometheus.
 
 ## Как отлаживать проблемы в подах с помощью ephemeral containers?

@@ -13,7 +13,7 @@
 При написании нового модуля необходимо соблюдать следующие правила:
 
 * Для любого deployment'а, statefulset'а или daemonset'а должен существовать соответствующий ресурс VPA, в котором должны быть описаны ресурсы по всем контейнерам, используемым в контроллере.  
-* Описание VPA-ресурса должно находиться в отдельном файле `vpa.yaml`, который находится в папке с темплейтами модуля.
+* Описание VPA-ресурса должно находиться в отдельном файле `vpa.yaml`, который находится в папке с шаблонами модуля.
 * `minAllowed`-ресурсы контейнера описываются при помощи helm-функции, которая находится в начале файла `vpa.yaml`.
 * Для `maxAllowed`-ресурсов helm-функция необязательна.
 
@@ -78,13 +78,13 @@ spec:
       - name: speaker
         resources:
           requests:
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "speaker_resources" . | nindent 14 }}
           {{- end }}
       - name: kube-rbac-proxy
         resources:
           requests:
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
 ```

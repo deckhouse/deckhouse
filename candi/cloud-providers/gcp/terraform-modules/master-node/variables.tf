@@ -42,7 +42,7 @@ locals {
   prefix                       = var.clusterConfiguration.cloud.prefix
   machine_type                 = var.providerClusterConfiguration.masterNodeGroup.instanceClass.machineType
   image                        = var.providerClusterConfiguration.masterNodeGroup.instanceClass.image
-  disk_size_gb                 = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskSizeGb", 20)
+  disk_size_gb                 = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskSizeGb", 50)
   etcd_disk_size_gb            = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   ssh_key                      = var.providerClusterConfiguration.sshKey
   ssh_user                     = "user"

@@ -1,4 +1,4 @@
-{{- if and (.Values.userAuthn.publishAPI.enable) (eq .Values.userAuthn.publishAPI.https.mode "SelfSigned") (.Values.global.enabledModules | has "cert-manager") }}
+{{- if and (.Values.userAuthn.publishAPI.enabled) (eq .Values.userAuthn.publishAPI.https.mode "SelfSigned") (.Values.global.enabledModules | has "cert-manager") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer

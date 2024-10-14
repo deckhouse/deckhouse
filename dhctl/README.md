@@ -27,7 +27,7 @@ Basic features:
 ### Preparations
 
 The first step is setting up a host.
-Only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 9`, `Debian 10`, `Debian 11` OS are supported.
+Only `Ubuntu 18.04`, `Ubuntu 20.04`, `Ubuntu 22.04`, `Centos 7`, `Centos 8`, `Centos 9`, `Debian 10`, `Debian 11`, `Debian 12` OS are supported.
 
 * **Bare metal** - provide SSH access to the host and sudo access.
 * **Cloud provider** - ensure that Deckhouse supports your cloud.
@@ -61,10 +61,6 @@ deckhouse:
   registryDockerCfg: | # Base64-encoded section of docker.auths {"auths":{"registry.example.com":{"username":"oauth2","password":"token"}}}
     eyJhdXRocyI6eyJyZWdpc3RyeS5leGFtcGxlLmNvbSI6eyJ1c2VybmFtZSI6Im9hdXRoMiIsInBhc3N3b3JkIjoidG9rZW4ifX19Cg==
   releaseChannel: Stable
-  configOverrides:
-    global:
-    nginxIngressEnabled: false
-    flantIntegrationEnabled: false
 ```
 
 #### Cloud cluster
@@ -102,7 +98,7 @@ provider:
   tenantName: xxx
   username: xxx
   password: xxx
-  region: HetznerFinland
+  region: SomeRegion
 ```
 
 ### Bootstrap Kubernetes cluster
@@ -130,7 +126,7 @@ For example, use a docker image from the Flant docker registry:
        bash
      ```
 
-     > MacOS users do not need to mount the .ssh folder to the `/tmp`.
+     > macOS users do not need to mount the .ssh folder to the `/tmp`.
      > Because of Docker for MAc specific features it is more convenient to mount it to the `/root`.
 3. Execute cluster bootstrap:
 

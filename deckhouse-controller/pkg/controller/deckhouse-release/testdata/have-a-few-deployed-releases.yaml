@@ -1,0 +1,39 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.28.0
+spec:
+  version: "v1.28.0"
+status:
+  phase: Deployed
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.28.1
+spec:
+  version: "v1.28.1"
+status:
+  phase: Deployed
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.28.2
+spec:
+  version: "v1.28.2"
+status:
+  phase: Deployed
+
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.28.3
+spec:
+  version: "v1.28.3"
+status:
+  phase: Deployed

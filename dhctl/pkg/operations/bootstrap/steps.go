@@ -18,8 +18,16 @@
 package bootstrap
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,6 +35,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -37,57 +46,53 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
 const (
-	ManifestCreatedInClusterCacheKey = "tf-state-and-manifests-in-cluster"
-	MasterHostsCacheKey              = "cluster-hosts"
-	BastionHostCacheKey              = "bastion-hosts"
+	ManifestCreatedInClusterCacheKey  = "tf-state-and-manifests-in-cluster"
+	MasterHostsCacheKey               = "cluster-hosts"
+	BastionHostCacheKey               = "bastion-hosts"
+	DHCTLEndBootstrapBashiblePipeline = app.NodeDeckhouseDirectoryPath + "/first-control-plane-bashible-ran"
 )
 
-func BootstrapMaster(sshClient *ssh.Client, bundleName, nodeIP string, metaConfig *config.MetaConfig, controller *template.Controller) error {
+func BootstrapMaster(nodeInterface node.Interface, controller *template.Controller) error {
 	return log.Process("bootstrap", "Initial bootstrap", func() error {
-		if err := template.PrepareBootstrap(controller, nodeIP, bundleName, metaConfig); err != nil {
-			return fmt.Errorf("prepare bootstrap: %v", err)
-		}
-
-		err := log.Process("bootstrap", fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), func() error {
-			if err := sshClient.Command("mkdir", "-p", app.DeckhouseNodeBinPath).Sudo().Run(); err != nil {
-				return fmt.Errorf("ssh: mkdir -p %s: %w", app.DeckhouseNodeBinPath, err)
-			}
-			if err := sshClient.Command("mkdir", "-p", "-m", "1777", app.DeckhouseNodeTmpPath).Sudo().Run(); err != nil {
-				return fmt.Errorf("ssh: mkdir -p -m 1777 %s: %w", app.DeckhouseNodeTmpPath, err)
-			}
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("cannot create %s directories: %w", app.NodeDeckhouseDirectoryPath, err)
-		}
-
-		for _, bootstrapScript := range []string{"bootstrap.sh", "bootstrap-networks.sh"} {
+		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
-			err := log.Process("default", bootstrapScript, func() error {
-				if _, err := os.Stat(scriptPath); err != nil {
-					if os.IsNotExist(err) {
-						log.InfoF("Script %s wasn't found\n", scriptPath)
-						return nil
-					}
-					return fmt.Errorf("script path: %v", err)
-				}
-				cmd := sshClient.UploadScript(scriptPath).
-					WithStdoutHandler(func(l string) { log.InfoLn(l) }).
-					Sudo()
 
-				_, err := cmd.Execute()
-				if err != nil {
-					return fmt.Errorf("run %s: %w", scriptPath, err)
-				}
-				return nil
-			})
+			err := retry.NewLoop(fmt.Sprintf("Execute %s", bootstrapScript), 30, 5*time.Second).
+				Run(func() error {
+					if _, err := os.Stat(scriptPath); err != nil {
+						if os.IsNotExist(err) {
+							log.InfoF("Script %s wasn't found\n", scriptPath)
+							return nil
+						}
+						return fmt.Errorf("script path: %v", err)
+					}
+					logs := make([]string, 0)
+					cmd := nodeInterface.UploadScript(scriptPath)
+					cmd.WithStdoutHandler(func(l string) {
+						logs = append(logs, l)
+						log.DebugLn(l)
+					})
+					cmd.Sudo()
+
+					_, err := cmd.Execute()
+					if err != nil {
+						log.ErrorLn(strings.Join(logs, "\n"))
+						return fmt.Errorf("run %s: %w", scriptPath, err)
+					}
+					return nil
+				})
 			if err != nil {
 				return err
 			}
@@ -102,85 +107,377 @@ func PrepareBashibleBundle(bundleName, nodeIP, devicePath string, metaConfig *co
 	})
 }
 
-func ExecuteBashibleBundle(sshClient *ssh.Client, tmpDir string) error {
-	return log.Process("bootstrap", "Execute Bashible Bundle", func() error {
-		bundleCmd := sshClient.UploadScript("bashible.sh", "--local").Sudo()
-		parentDir := tmpDir + "/var/lib"
-		bundleDir := "bashible"
+func ExecuteBashibleBundle(nodeInterface node.Interface, tmpDir string) error {
+	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
+	bundleCmd.WithCleanupAfterExec(false)
+	bundleCmd.Sudo()
+	parentDir := tmpDir + "/var/lib"
+	bundleDir := "bashible"
 
-		_, err := bundleCmd.ExecuteBundle(parentDir, bundleDir)
-		if err != nil {
-			if ee, ok := err.(*exec.ExitError); ok {
-				return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
-			}
-			return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
+	_, err := bundleCmd.ExecuteBundle(parentDir, bundleDir)
+	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
 		}
-		return nil
-	})
+
+		if errors.Is(err, frontend.ErrBashibleTimeout) {
+			return frontend.ErrBashibleTimeout
+		}
+
+		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
+	}
+	return nil
 }
 
-const (
-	bashibleInstalledMessage = `Bashible is already installed and healthy!
-	%s
-`
-	bashibleIsNotReadyMessage = `Bashible is not ready! Let's try to install it ...
-	Reason: %s
-`
-)
-
-func CheckBashibleBundle(sshClient *ssh.Client) bool {
-	var bashibleUpToDate bool
-	_ = log.Process("bootstrap", "Check Bashible", func() error {
-		bashibleCmd := sshClient.Command("/var/lib/bashible/bashible.sh", "--local").
-			Sudo().WithTimeout(20 * time.Second)
-		var output string
-
-		err := bashibleCmd.WithStdoutHandler(func(l string) {
-			if output == "" {
-				output = l
-			} else {
-				return
-			}
-			switch {
-			case strings.Contains(output, "Can't acquire lockfile /var/lock/bashible."):
-				fallthrough
-			case strings.Contains(output, "Configuration is in sync, nothing to do."):
-				log.InfoF(bashibleInstalledMessage, output)
-				bashibleUpToDate = true
-			default:
-				log.InfoF(bashibleIsNotReadyMessage, output)
-			}
-		}).Run()
-		if err != nil {
-			log.DebugLn(err.Error())
+func checkBashibleAlreadyRun(nodeInterface node.Interface) (bool, error) {
+	isReady := false
+	err := log.Process("bootstrap", "Checking bashible is ready", func() error {
+		cmd := nodeInterface.Command("cat", DHCTLEndBootstrapBashiblePipeline)
+		cmd.Sudo()
+		cmd.WithTimeout(10 * time.Second)
+		if err := cmd.Run(); err != nil {
+			isReady = false
+			return err
 		}
+
+		stdout := string(cmd.StdoutBytes())
+		log.DebugF("cat %s stdout: '%s'\n", DHCTLEndBootstrapBashiblePipeline, stdout)
+
+		isReady = strings.TrimSpace(stdout) == "OK"
+
 		return nil
 	})
-	return bashibleUpToDate
+
+	return isReady, err
 }
 
-func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, devicePath string) error {
-	if err := CheckDHCTLDependencies(sshClient); err != nil {
+func getBashiblePIDs(nodeInterface node.Interface) ([]string, error) {
+	var psStrings []string
+	h := func(l string) {
+		psStrings = append(psStrings, l)
+	}
+	cmd := nodeInterface.Command("bash", "-c", `ps a --no-headers -o args:64 -o "|%p"`)
+	cmd.Sudo()
+	cmd.WithTimeout(10 * time.Second)
+	cmd.WithStdoutHandler(h)
+	if err := cmd.Run(); err != nil {
+		var ee *exec.ExitError
+		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
+		if errors.As(err, &ee) {
+			log.DebugF("'ps a --no-headers -o args:64 -o \"|%%p\"' got exit code: %d and stderr %s", ee.ExitCode(), string(ee.Stderr))
+			if ee.ExitCode() == 255 {
+				return nil, err
+			}
+		}
+
+		return nil, err
+	}
+
+	var res []string
+	for _, l := range psStrings {
+		log.DebugF("ps string: '%s'\n", l)
+
+		parts := strings.SplitN(l, "|", 2)
+		if len(parts) < 2 {
+			log.DebugLn("Skip ps string without pid")
+			continue
+		}
+
+		if !strings.Contains(parts[0], "bashible.sh") {
+			continue
+		}
+
+		pid := strings.TrimSpace(parts[1])
+		log.DebugF("Found bashible PID: %s\n", pid)
+
+		res = append(res, pid)
+	}
+
+	return res, nil
+}
+
+func killBashible(nodeInterface node.Interface, pids []string) error {
+	cmd := nodeInterface.Command("kill", pids...)
+	cmd.Sudo()
+	cmd.WithTimeout(10 * time.Second)
+	if err := cmd.Run(); err != nil {
+		var ee *exec.ExitError
+		// ssh exits with the exit status of the remote command or with 255 if an error occurred.
+		if errors.As(err, &ee) {
+			log.DebugF("'kill %v' got exit code: %d and stderr %s", pids, ee.ExitCode(), string(ee.Stderr))
+			if ee.ExitCode() == 255 {
+				return err
+			}
+
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func unlockBashible(NodeInterface node.Interface) error {
+	cmd := NodeInterface.Command("rm", "-f", "/var/lock/bashible")
+	cmd.Sudo()
+	cmd.WithTimeout(10 * time.Second)
+	if err := cmd.Run(); err != nil {
 		return err
 	}
 
-	bundleName, err := DetermineBundleName(sshClient)
+	return nil
+}
+
+func cleanupPreviousBashibleRunIfNeed(nodeInterface node.Interface) error {
+	return log.Process("bootstrap", "Cleanup previous bashible run if need", func() error {
+		log.DebugF("Gettting bashible pids")
+		pids, err := getBashiblePIDs(nodeInterface)
+		if err != nil {
+			return err
+		}
+
+		log.DebugLn("Got bashible pids: %v", pids)
+		if len(pids) == 0 {
+			log.InfoLn("Bashible instance not found. Start it!")
+			return nil
+		}
+
+		if err := killBashible(nodeInterface, pids); err != nil {
+			return err
+		}
+
+		return unlockBashible(nodeInterface)
+	})
+}
+
+func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.ReverseTunnel, error) {
+	port := "5444"
+	listenAddress := "127.0.0.1"
+
+	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(
+		fmt.Sprintf("https://localhost:%s/healthz", port))
+	if err != nil {
+		return nil, fmt.Errorf("Cannot render reverse tunnel checking script: %v", err)
+	}
+
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(
+		listenAddress, port)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
+	}
+
+	checker := ssh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
+	killer := ssh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
+
+	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
+	err = tun.Up()
+	if err != nil {
+		return nil, err
+	}
+
+	tun.StartHealthMonitor(checker, killer)
+
+	return tun, nil
+}
+
+type registryClientConfigGetter struct {
+	registry.ClientConfig
+}
+
+func newRegistryClientConfigGetter(config config.RegistryData) (*registryClientConfigGetter, error) {
+	auth, err := config.Auth()
+	if err != nil {
+		return nil, fmt.Errorf("registry auth: %v", err)
+	}
+
+	repo := fmt.Sprintf("%s/%s", strings.Trim(config.Address, "/"), strings.Trim(config.Path, "/"))
+
+	return &registryClientConfigGetter{
+		ClientConfig: registry.ClientConfig{
+			Repository: repo,
+			Scheme:     config.Scheme,
+			CA:         config.CA,
+			Auth:       auth,
+		},
+	}, nil
+}
+
+func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, error) {
+	return &r.ClientConfig, nil
+}
+
+func StartRegistryPackagesProxy(config config.RegistryData, clusterDomain string) error {
+	cert, err := generateTLSCertificate(clusterDomain)
+	if err != nil {
+		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
+	}
+
+	listener, err := tls.Listen("tcp", "127.0.0.1:5444", &tls.Config{
+		Certificates: []tls.Certificate{*cert},
+	})
+	if err != nil {
+		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
+	}
+
+	clientConfigGetter, err := newRegistryClientConfigGetter(config)
+	if err != nil {
+		return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
+	}
+	srv := &http.Server{}
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
+	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
+
+	go proxy.Serve()
+
+	return nil
+}
+
+type registryPackagesProxyLogger struct{}
+
+func (r registryPackagesProxyLogger) Errorf(format string, args ...interface{}) {
+	log.ErrorF(format+"\n", args...)
+}
+
+func (r registryPackagesProxyLogger) Infof(format string, args ...interface{}) {
+	log.InfoF(format+"\n", args...)
+}
+
+func (r registryPackagesProxyLogger) Warnf(format string, args ...interface{}) {
+	log.WarnF(format+"\n", args...)
+}
+
+func (r registryPackagesProxyLogger) Debugf(format string, args ...interface{}) {
+	log.DebugF(format+"\n", args...)
+}
+
+func (r registryPackagesProxyLogger) Error(args ...interface{}) {
+	log.ErrorLn(args...)
+}
+
+func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
+	now := time.Now()
+
+	subjectKeyId := make([]byte, 10)
+
+	_, err := rand.Read(subjectKeyId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate subject key id: %v", err)
+	}
+
+	certTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(now.Unix()),
+		Subject: pkix.Name{
+			CommonName:         fmt.Sprintf("registry-packages-proxy.%s", clusterDomain),
+			Country:            []string{"Unknown"},
+			Organization:       []string{clusterDomain},
+			OrganizationalUnit: []string{"registry-packages-proxy"},
+		},
+		NotBefore:             now,
+		NotAfter:              now.AddDate(0, 0, 1), // Valid for one day
+		SubjectKeyId:          subjectKeyId,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage: x509.KeyUsageKeyEncipherment |
+			x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+	}
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate private key: %v", err)
+	}
+
+	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate,
+		priv.Public(), priv)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create certificate: %v", err)
+	}
+
+	tlsCert := &tls.Certificate{
+		Certificate: [][]byte{cert},
+		PrivateKey:  priv,
+	}
+
+	return tlsCert, nil
+}
+
+func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP, devicePath string) error {
+	var clusterDomain string
+	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
+	if err != nil {
+		return err
+	}
+
+	log.DebugF("Got cluster domain: %s", clusterDomain)
+	log.DebugLn("Starting registry packages proxy")
+
+	// we need clusterDomain to generate proper certificate for packages proxy
+	err = StartRegistryPackagesProxy(cfg.Registry, clusterDomain)
+	if err != nil {
+		return fmt.Errorf("failed to start registry packages proxy: %v", err)
+	}
+
+	if err := CheckDHCTLDependencies(nodeInterface); err != nil {
+		return err
+	}
+
+	bundleName, err := DetermineBundleName(nodeInterface)
 	if err != nil {
 		return err
 	}
 
 	templateController := template.NewTemplateController("")
-	_ = log.Process("bootstrap", "Rendered templates directory", func() error {
-		log.InfoLn(templateController.TmpDir)
-		return nil
+	log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
+
+	err = log.Process("bootstrap", "Preparing bootstrap", func() error {
+		if err := template.PrepareBootstrap(templateController, nodeIP, bundleName, cfg); err != nil {
+			return fmt.Errorf("prepare bootstrap: %v", err)
+		}
+
+		err := retry.NewLoop(fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), 30, 10*time.Second).Run(func() error {
+			cmd := nodeInterface.Command("mkdir", "-p", "-m", "0755", app.DeckhouseNodeBinPath)
+			cmd.Sudo()
+			if err = cmd.Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p %s -m 0755: %w", app.DeckhouseNodeBinPath, err)
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return fmt.Errorf("cannot create %s directories: %w", app.NodeDeckhouseDirectoryPath, err)
+		}
+
+		err = retry.NewLoop(fmt.Sprintf("Prepare %s", app.DeckhouseNodeTmpPath), 30, 10*time.Second).Run(func() error {
+			cmd := nodeInterface.Command("mkdir", "-p", "-m", "1777", app.DeckhouseNodeTmpPath)
+			cmd.Sudo()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("ssh: mkdir -p -m 1777 %s: %w", app.DeckhouseNodeTmpPath, err)
+			}
+
+			return nil
+		})
+
+		// in end of pipeline steps bashible write "OK" to this file
+		// we need creating it before because we do not want handle errors from cat
+		return retry.NewLoop(fmt.Sprintf("Prepare %s", DHCTLEndBootstrapBashiblePipeline), 30, 10*time.Second).Run(func() error {
+			cmd := nodeInterface.Command("touch", DHCTLEndBootstrapBashiblePipeline)
+			cmd.Sudo()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("touch error %s: %w", DHCTLEndBootstrapBashiblePipeline, err)
+			}
+
+			return nil
+		})
 	})
 
-	if err := BootstrapMaster(sshClient, bundleName, nodeIP, cfg, templateController); err != nil {
-		return err
-	}
+	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		cleanUpTunnel, err := setupRPPTunnel(wrapper.Client())
+		if err != nil {
+			return err
+		}
 
-	if ok := CheckBashibleBundle(sshClient); ok {
-		return nil
+		defer cleanUpTunnel()
 	}
 
 	if err = PrepareBashibleBundle(bundleName, nodeIP, devicePath, cfg, templateController); err != nil {
@@ -192,34 +489,156 @@ func RunBashiblePipeline(sshClient *ssh.Client, cfg *config.MetaConfig, nodeIP, 
 		}
 	})
 
-	if err := ExecuteBashibleBundle(sshClient, templateController.TmpDir); err != nil {
+	if err := BootstrapMaster(nodeInterface, templateController); err != nil {
 		return err
 	}
 
-	return RebootMaster(sshClient)
+	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
+		BreakIf(func(err error) bool { return errors.Is(err, frontend.ErrBashibleTimeout) }).
+		Run(func() error {
+			// we do not need to restart tunnel because we have HealthMonitor
+
+			log.DebugLn("Check bundle routine start")
+			ready, err := checkBashibleAlreadyRun(nodeInterface)
+			if err != nil {
+				return err
+			}
+
+			if ready {
+				log.Success("Bashible already run!\n")
+				return nil
+			}
+
+			if err := cleanupPreviousBashibleRunIfNeed(nodeInterface); err != nil {
+				return err
+			}
+
+			log.DebugLn("Start execute bashible bundle routine")
+
+			return ExecuteBashibleBundle(nodeInterface, templateController.TmpDir)
+		})
 }
 
-const dependencyCmd = "type"
+func setupRPPTunnel(sshClient *ssh.Client) (func(), error) {
+	var tun *frontend.ReverseTunnel
+	log.DebugLn("Starting reverse tunnel routine")
+	tun, err := SetupSSHTunnelToRegistryPackagesProxy(sshClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup SSH tunnel to registry packages proxy: %v", err)
+	}
 
-func CheckDHCTLDependencies(sshClient *ssh.Client) error {
-	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
-		dependencyArgs := []string{"sudo", "rm", "tar", "mount", "awk", "grep", "cut", "sed", "shopt",
-			"mkdir", "cp", "join"}
+	cleanUpTunnel := func() {
+		if tun == nil {
+			log.DebugLn("tun == nil. Skip cleanup tunnel")
+			return
+		}
 
-		for _, args := range dependencyArgs {
-			output, err := sshClient.Command(dependencyCmd, args).CombinedOutput()
+		tun.Stop()
+		tun = nil
+	}
+	return cleanUpTunnel, nil
+}
+
+func CheckDHCTLDependencies(nodeInteface node.Interface) error {
+
+	type checkResult struct {
+		name string
+		err  error
+	}
+
+	checkDependency := func(dep string, resultsChan chan checkResult) error {
+		breakPredicate := func(err error) bool {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) {
+				if ee.ExitCode() == 255 {
+					return false
+				}
+			}
+			return true
+		}
+
+		return retry.NewSilentLoop(fmt.Sprintf("Check dependency %s", dep), 30, 5*time.Second).BreakIf(breakPredicate).Run(func() error {
+			output, err := nodeInteface.Command("command", "-v", dep).CombinedOutput()
+
 			if err != nil {
-				return fmt.Errorf("bashible dependency error: %s",
+				var ee *exec.ExitError
+				if errors.As(err, &ee) {
+					log.DebugF("exit code: %v", ee)
+				}
+				e := fmt.Errorf("bashible dependency %s error: %v - %s",
+					dep,
+					err,
 					string(output),
 				)
+				resultsChan <- checkResult{
+					name: dep,
+					err:  e,
+				}
+				log.DebugF("Dependency check error: %v\n", e)
+				return e
 			}
+			return nil
+		})
+	}
+
+	return log.Process("bootstrap", "Check DHCTL Dependencies", func() error {
+		dependencyCommands := [][]string{
+			{"sudo", "rm", "tar", "mount", "awk"},
+			{"grep", "cut", "sed", "shopt", "mkdir"},
+			{"cp", "join", "cat", "ps", "kill"},
 		}
+
+		resultsChan := make(chan checkResult)
+
+		exceedDependency := errors.New("All dependency checks was exceed")
+
+		go func() {
+			wg := sync.WaitGroup{}
+			for _, deps := range dependencyCommands {
+				for _, dep := range deps {
+					wg.Add(1)
+					dep := dep
+					log.InfoF("Check '%s' dependency\n", dep)
+					go func() {
+						defer wg.Done()
+						err := checkDependency(dep, resultsChan)
+
+						if err != nil {
+							err = errors.Join(exceedDependency, err)
+						}
+
+						resultsChan <- checkResult{
+							name: dep,
+							err:  err,
+						}
+					}()
+				}
+				time.Sleep(1 * time.Second)
+			}
+			log.DebugLn("Wait all dependency checks successful")
+			wg.Wait()
+			log.DebugLn("Close result chan")
+			close(resultsChan)
+		}()
+
+		for res := range resultsChan {
+			if res.err != nil {
+				if errors.Is(res.err, exceedDependency) {
+					return res.err
+				}
+				log.WarnLn(res.err)
+				continue
+			}
+			log.Success(fmt.Sprintf("Dependency '%s' check success\n", res.name))
+		}
+
 		log.InfoLn("OK!")
 		return nil
+
 	})
 }
 
-func DetermineBundleName(sshClient *ssh.Client) (string, error) {
+func DetermineBundleName(nodeInterface node.Interface) (string, error) {
 	var bundleName string
 	err := log.Process("bootstrap", "Detect Bashible Bundle", func() error {
 		file, err := template.RenderAndSaveDetectBundle(make(map[string]interface{}))
@@ -227,12 +646,13 @@ func DetermineBundleName(sshClient *ssh.Client) (string, error) {
 			return err
 		}
 
-		return retry.NewSilentLoop("Get bundle", 3, 1*time.Second).Run(func() error {
+		return retry.NewSilentLoop("Get bundle", 30, 10*time.Second).Run(func() error {
 			// run detect bundle type
-			detectCmd := sshClient.UploadScript(file)
+			detectCmd := nodeInterface.UploadScript(file)
 			stdout, err := detectCmd.Execute()
 			if err != nil {
-				if ee, ok := err.(*exec.ExitError); ok {
+				var ee *exec.ExitError
+				if errors.As(err, &ee) {
 					return fmt.Errorf("detect_bundle.sh: %v, %s", err, string(ee.Stderr))
 				}
 				return fmt.Errorf("detect_bundle.sh: %v", err)
@@ -290,32 +710,7 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 	})
 }
 
-const rebootExitCode = 255
-
-func RebootMaster(sshClient *ssh.Client) error {
-	return log.Process("bootstrap", "Reboot Master️", func() error {
-		rebootCmd := sshClient.Command("reboot").Sudo().
-			WithSSHArgs("-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=2")
-		if err := rebootCmd.Run(); err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				if ee.ExitCode() == rebootExitCode {
-					return nil
-				}
-			}
-			return fmt.Errorf("shutdown error: exit_code: %v stdout: %s stderr: %s %v",
-				ee.ExitCode(),
-				rebootCmd.StdoutBuffer.String(),
-				rebootCmd.StderrBuffer.String(),
-				err,
-			)
-		}
-		log.InfoLn("OK!")
-		return nil
-	})
-}
-
-func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec) error {
+func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
 	for _, ng := range terraNodeGroups {
 		err := log.Process("bootstrap", fmt.Sprintf("Create %s NodeGroup", ng.Name), func() error {
 			err := converge.CreateNodeGroup(kubeCl, ng.Name, metaConfig.NodeGroupManifest(ng))
@@ -329,7 +724,7 @@ func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.Met
 			}
 
 			for i := 0; i < ng.Replicas; i++ {
-				err = converge.BootstrapAdditionalNode(kubeCl, metaConfig, i, "static-node", ng.Name, cloudConfig, false)
+				err = converge.BootstrapAdditionalNode(kubeCl, metaConfig, i, "static-node", ng.Name, cloudConfig, false, terraformContext)
 				if err != nil {
 					return err
 				}
@@ -389,7 +784,7 @@ func GetBastionHostFromCache() (string, error) {
 	return string(host), nil
 }
 
-func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string) error {
+func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, addressTracker map[string]string, terraformContext *terraform.TerraformContext) error {
 	if metaConfig.MasterNodeGroupSpec.Replicas == 1 {
 		log.DebugF("Skip bootstrap additional master nodes because replicas == 1")
 		return nil
@@ -402,7 +797,7 @@ func BootstrapAdditionalMasterNodes(kubeCl *client.KubernetesClient, metaConfig 
 		}
 
 		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := converge.BootstrapAdditionalMasterNode(kubeCl, metaConfig, i, masterCloudConfig, false)
+			outputs, err := converge.BootstrapAdditionalMasterNode(kubeCl, metaConfig, i, masterCloudConfig, false, terraformContext)
 			if err != nil {
 				return err
 			}

@@ -21,7 +21,7 @@ function get_data_device_secret() {
   if [ -f /var/lib/bashible/bootstrap-token ]; then
     while true; do
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        if curl -s -f -X GET "https://$server/api/v1/namespaces/d8-system/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
+        if d8-curl -s -f -X GET "https://$server/api/v1/namespaces/d8-system/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
           return 0
         else
@@ -47,14 +47,59 @@ fi
 if [ -f /var/lib/bashible/kubernetes_data_device_path ]; then
   DATA_DEVICE="$(</var/lib/bashible/kubernetes_data_device_path)"
 else
-  DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname]' | base64 -d)"
+  DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d)"
+  if [ -z "$DATA_DEVICE" ]; then
+    >&2 echo "failed to get data device path"
+    exit 1
+  fi
+fi
+
+{{- /*
+# Sometimes the `device_path` output from terraform points to a non-existent device.
+# In such situation we want to find an unpartitioned unused disk
+# with no file system, assuming it is the correct one.
+#
+# Example of this situation (lsblk -o path,type,mountpoint,fstype --tree --json):
+#         {
+#          "path": "/dev/vda",
+#          "type": "disk",
+#          "mountpoint": null,
+#          "fstype": null,
+#          "children": [
+#             {
+#                "path": "/dev/vda1",
+#                "type": "part",
+#                "mountpoint": "/",
+#                "fstype": "ext4"
+#             },{
+#                "path": "/dev/vda15",
+#                "type": "part",
+#                "mountpoint": "/boot/efi",
+#                "fstype": "vfat"
+#             }
+#          ]
+#       },{
+#          "path": "/dev/vdb",
+#          "type": "disk",
+#          "mountpoint": null,
+#          "fstype": null
+#       }
+*/}}
+if ! [ -b "$DATA_DEVICE" ]; then
+  >&2 echo "failed to find $DATA_DEVICE disk. Trying to detect the correct one"
+  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '[ .blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path ] | last')
+fi
+
+if [ $(wc -l <<< $DATA_DEVICE) -ne 1 ]; then
+  >&2 echo "failed to detect the correct disk: more than one or no matching disks found: $DATA_DEVICE"
+  return 1
 fi
 
 mkdir -p /mnt/kubernetes-data
 
-if ! file -s $DATA_DEVICE | grep -q ext4; then
-  mkfs.ext4 -F -L kubernetes-data $DATA_DEVICE
-fi
+# always format the device to ensure it's clean, because etcd will not join the cluster if the device
+# contains a filesystem with etcd database from a previous installation
+mkfs.ext4 -F -L kubernetes-data $DATA_DEVICE
 
 if grep -qv kubernetes-data /etc/fstab; then
   cat >> /etc/fstab << EOF

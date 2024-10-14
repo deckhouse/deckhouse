@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
+            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module).
 
             The `NodeGroup` resource of the `node-manager` module [refers](../040-node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) to this resource.
           required:
@@ -135,7 +135,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
+            Parameters of a group of Yandex Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module).
 
             The `NodeGroup` resource of the `node-manager` module [refers](../040-node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) to this resource.
           required:
@@ -192,6 +192,8 @@ spec:
                 diskType:
                   description: |
                     Instance [disk type](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
+
+                    Size of `network-ssd-nonreplicated` and `network-ssd-io-m3` disks must be a multiple of 93 GB.
                   x-doc-examples: ["network-hdd"]
                   x-doc-default: "network-hdd"
                   type: string
@@ -199,6 +201,7 @@ spec:
                     - "network-ssd"
                     - "network-hdd"
                     - "network-ssd-nonreplicated"
+                    - "network-ssd-io-m3"
                 diskSizeGB:
                   description: |
                     Yandex Compute Instance disk size in gibibytes.

@@ -32,6 +32,11 @@ const (
 	configEveryNodeMemory   = 512 * 1024 * 1024      // 512Mb
 	hardLimitMilliCPU       = 4 * 1000               // 4 Cpu
 	hardLimitMemory         = 8 * 1024 * 1024 * 1024 // 8G ram
+
+	// it needs for prevent multiple restarts control-plane manager on cluster bootstrap
+	// for 8x4 installations
+	kubeletResourceReservationMemory = 900 * 1024 * 1024 // 900 mb
+	kubeletResourceReservationCPU    = 100               // 0.1 cpu
 )
 
 type Node struct {
@@ -97,10 +102,11 @@ func calculateResourcesRequests(input *go_hook.HookInput) error {
 	discoveryMasterNodeMemory = hardLimitMemory
 	for _, snapshot := range snapshots {
 		n := snapshot.(*Node)
-		if n.AllocatableMilliCPU < discoveryMasterNodeMilliCPU {
+		if n.AllocatableMilliCPU < discoveryMasterNodeMilliCPU && absDiff(n.AllocatableMilliCPU, discoveryMasterNodeMilliCPU) > kubeletResourceReservationCPU {
 			discoveryMasterNodeMilliCPU = n.AllocatableMilliCPU
 		}
-		if n.AllocatableMemory < discoveryMasterNodeMemory {
+
+		if n.AllocatableMemory < discoveryMasterNodeMemory && absDiff(n.AllocatableMemory, discoveryMasterNodeMemory) > kubeletResourceReservationMemory {
 			discoveryMasterNodeMemory = n.AllocatableMemory
 		}
 	}
@@ -153,4 +159,12 @@ func getAndParseResourceQuantity(input gjson.Result) (resource.Quantity, error) 
 	}
 
 	return quantity, nil
+}
+
+func absDiff(a, b int64) int64 {
+	d := a - b
+	if d > 0 {
+		return d
+	}
+	return b - a
 }

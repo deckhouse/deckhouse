@@ -15,8 +15,9 @@ RUN mkdir -p /src/kube-state-metrics && \
   git clone --depth 1 --branch v2.7.0 ${SOURCE_REPO}/kubernetes/kube-state-metrics/ /src/kube-state-metrics
 WORKDIR /src/kube-state-metrics
 RUN go mod edit -go 1.20 \
-    && go get -u golang.org/x/net@v0.17.0 \
-    && go get -u github.com/emicklei/go-restful@v2.16.0 \
+    && go get golang.org/x/net@v0.17.0 \
+    && go get github.com/emicklei/go-restful@v2.16.0+incompatible \
+    && go mod tidy \
     && make build-local && \
     chown -R 64535:64535 /src/kube-state-metrics && \
     chmod 0700 /src/kube-state-metrics/kube-state-metrics

@@ -127,7 +127,7 @@ On the selected node do the following:
    ```
 
 1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest after successful up etcd.
-1. Set [HA-mode](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
@@ -193,7 +193,7 @@ Perform the following steps to restore the quorum in the etcd cluster:
 1. Add the `--force-new-cluster` flag to the `/etc/kubernetes/manifests/etcd.yaml` manifest on the running node.
 1. Wait for etcd to start.
 1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest.
-1. Set [HA-mode](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
@@ -340,22 +340,22 @@ The solution is based on this [issue](https://github.com/etcd-io/etcd/issues/119
 1. If no error message appears, check the status:
 
    ```shell
-   kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ 
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ endpoint status -w table'
+   kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \ 
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ endpoint status -w table
    ```
 
 1. If there is an `alarm:NOSPACE`, run the following command:
 
    ```shell
-   kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ alarm disarm'
+   kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ alarm disarm
    ```
 
 1. Defragment etcd (if necessary):
 
    ```shell
-   kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s'
+   kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s
    ```
 
 ### Second method
@@ -433,8 +433,8 @@ Do the following:
 1. Defragment etcd on another (two) nodes (if necessary).
 
    ```shell
-   kubectl -n kube-system exec -ti ETCD_POD_NOT_AFFECTED_HOST -- /bin/sh -c 'ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s'
+   kubectl -n kube-system exec -ti ETCD_POD_NOT_AFFECTED_HOST -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s
    ```
 
 1. Remove control-plane role label from affected node.
@@ -576,7 +576,7 @@ On the selected node do the following:
      --endpoints https://127.0.0.1:2379/ defrag --command-timeout=60s
    ```
 
-1. Set [HA-mode](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell

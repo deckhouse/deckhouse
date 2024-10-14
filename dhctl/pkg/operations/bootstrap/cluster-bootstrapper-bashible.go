@@ -16,10 +16,10 @@ package bootstrap
 
 import (
 	"fmt"
-	
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -30,21 +30,9 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		defer restore()
 	}
 
-	metaConfig, err := config.ParseConfig(app.ConfigPath)
+	metaConfig, err := config.ParseConfig(app.ConfigPaths)
 	if err != nil {
 		return err
-	}
-
-	sshClient, err := ssh.NewClientFromFlagsWithHosts()
-	if err != nil {
-		return err
-	}
-	sshClient.InitializeNewAgent = b.initializeNewAgent
-	if _, err := sshClient.Start(); err != nil {
-		return fmt.Errorf("unable to start ssh client: %w", err)
-	}
-	if b.initializeNewAgent {
-		defer sshClient.Stop()
 	}
 
 	err = terminal.AskBecomePassword()
@@ -52,9 +40,18 @@ func (b *ClusterBootstrapper) ExecuteBashible() error {
 		return err
 	}
 
-	if err := WaitForSSHConnectionOnMaster(sshClient); err != nil {
+	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		if _, err = wrapper.Client().Start(); err != nil {
+			return fmt.Errorf("unable to start ssh client: %w", err)
+		}
+		if err = WaitForSSHConnectionOnMaster(wrapper.Client()); err != nil {
+			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
+		}
+	}
+
+	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath); err != nil {
 		return err
 	}
 
-	return RunBashiblePipeline(sshClient, metaConfig, app.InternalNodeIP, app.DevicePath)
+	return nil
 }

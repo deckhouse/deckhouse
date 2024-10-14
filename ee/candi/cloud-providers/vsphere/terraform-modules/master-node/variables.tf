@@ -34,6 +34,7 @@ variable "clusterUUID" {
   type = string
 }
 
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
 

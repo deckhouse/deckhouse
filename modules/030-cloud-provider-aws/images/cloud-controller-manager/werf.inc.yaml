@@ -13,11 +13,13 @@ docker:
   ENTRYPOINT: ["/usr/local/bin/aws-cloud-controller-manager"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.29" $version }}
+    {{- if semverCompare ">=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE }}
+    {{- else if semverCompare "=1.29" $version }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
     {{- else if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-    {{- else if semverCompare ">=1.25" $version }}
+    {{- else if semverCompare "=1.26" $version }}
 from: {{ $.Images.BASE_GOLANG_19_ALPINE }}
     {{- end }}
 git:
@@ -36,7 +38,7 @@ shell:
   - mkdir /src
   - wget https://github.com/kubernetes/cloud-provider-aws/archive/refs/tags/{{ $value.ccm.aws }}.tar.gz -O - | tar -xz --strip-components=1 -C /src/
   - cd /src
-  - test -d /patches/{{ $version }} && for patchfile in /patches/{{ $version }}/*.patch ; do patch -p1 < ${patchfile}; done
+  - git apply /patches/{{ $version }}/*.patch --verbose
   - export VERSION={{ $value.ccm.aws }}
   - make aws-cloud-controller-manager
   - chown 64535:64535 /src/aws-cloud-controller-manager

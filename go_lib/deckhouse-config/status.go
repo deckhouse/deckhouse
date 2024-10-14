@@ -22,9 +22,17 @@ import (
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
+	dynamic_extender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/dynamically_enabled"
+	kube_config_extender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
+	script_extender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
+	static_extender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	bootstrapped_extender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
+	d7s_version_extender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	k8s_version_extender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -34,7 +42,9 @@ type ModuleConfigStatus struct {
 }
 
 type ModuleStatus struct {
-	Status string
+	Status     string
+	Message    string
+	HooksState string
 }
 
 type StatusReporter struct {
@@ -52,6 +62,8 @@ func NewModuleInfo(mm ModuleManager, possibleNames set.Set) *StatusReporter {
 func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.ModuleConfig, bundleName string) ModuleStatus {
 	// Figure out additional statuses for known modules.
 	statusMsgs := make([]string, 0)
+	msgs := make([]string, 0)
+	moduleName := module.GetName()
 
 	mod := s.moduleManager.GetModule(module.GetName())
 	// return error if module manager doesn't have such a module
@@ -61,8 +73,11 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 		}
 	}
 
+	moduleEnabled := s.moduleManager.IsModuleEnabled(moduleName)
+	modeDescriptor := "off"
 	// Calculate state and status.
-	if s.moduleManager.IsModuleEnabled(module.GetName()) {
+	if moduleEnabled {
+		modeDescriptor = "on"
 		lastHookErr := mod.GetLastHookError()
 		if lastHookErr != nil {
 			statusMsgs = append(statusMsgs, fmt.Sprintf("HookError: %v", lastHookErr))
@@ -79,50 +94,79 @@ func (s *StatusReporter) ForModule(module *v1alpha1.Module, cfg *v1alpha1.Module
 			// However, there are too many addon-operator internals involved.
 			// We should consider moving these statuses to the `Module` resource,
 			// which is directly controlled by addon-operator.
-			if mod.GetPhase() == modules.CanRunHelm {
+			switch mod.GetPhase() {
+			case modules.CanRunHelm:
 				statusMsgs = append(statusMsgs, "Ready")
-				// enrich status message with a notification that module config has something to say
+				// enrich the status message with a notification from the related module config
 				if cfg != nil {
 					cfgStatus := s.ForConfig(cfg)
 					if len(cfgStatus.Message) > 0 {
-						statusMsgs = append(statusMsgs, "Info: module configuration reports some remarks")
+						msgs = append(msgs, "check module configuration status")
 					}
 				}
-			} else {
-				statusMsgs = append(statusMsgs, "Converging: module is waiting for the first run")
-			}
-		}
-	} else {
-		// Special case: no enabled flag in ModuleConfig, module disabled by bundle.
-		if cfg == nil || (cfg != nil && cfg.Spec.Enabled == nil) {
-			// for external modules it makes sense to notify that they must be explicitly enabled via module configs
-			if module.Properties.Source != "Embedded" {
-				statusMsgs = append(statusMsgs, "Info: apply module config to enable")
-			} else {
-				// Consider merged static enabled flags as '*Enabled flags from the bundle'.
-				enabledMsg := "disabled"
-				// TODO(yalosev): think about it
-				if s.moduleManager.IsModuleEnabled(mod.GetName()) {
-					enabledMsg = "enabled"
-				}
-				statusMsgs = append(statusMsgs, fmt.Sprintf("Info: %s by %s bundle", enabledMsg, bundleName))
-			}
-		}
 
-		// Special case: explicitly enabled by the config but effectively disabled by the ModuleManager.
-		if cfg != nil {
-			if cfg.Spec.Enabled != nil {
-				if *cfg.Spec.Enabled {
-					statusMsgs = append(statusMsgs, "Info: turned off by 'enabled'-script, refer to the module documentation")
-				} else {
-					statusMsgs = append(statusMsgs, "Info: disabled by module config")
-				}
+			case modules.Startup:
+				statusMsgs = append(statusMsgs, "Enqueued")
+
+			case modules.OnStartupDone:
+				statusMsgs = append(statusMsgs, "OnStartUp hooks are completed")
+
+			case modules.WaitForSynchronization:
+				statusMsgs = append(statusMsgs, "Synchronization tasks are running")
+
+			case modules.HooksDisabled:
+				statusMsgs = append(statusMsgs, "Pending: hooks are disabled")
 			}
 		}
 	}
 
+	updatedBy, updatedByErr := s.moduleManager.GetUpdatedByExtender(moduleName)
+	var actor, additionalInfo string
+
+	switch extenders.ExtenderName(updatedBy) {
+	case "", static_extender.Name:
+		actor = fmt.Sprintf("%s bundle", bundleName)
+		if !moduleEnabled && module.Properties.Source != "Embedded" {
+			additionalInfo = ", apply module config to enable"
+		}
+
+	case dynamic_extender.Name:
+		actor = "dynamic global hook"
+
+	case kube_config_extender.Name:
+		actor = "module config"
+
+	case script_extender.Name:
+		actor = "'enabled'-script"
+		additionalInfo = ", refer to the module's documentation"
+
+	case d7s_version_extender.Name:
+		actor = "DechouseVersion constraint"
+		_, errMsg := d7s_version_extender.Instance().Filter(moduleName, map[string]string{})
+		additionalInfo = fmt.Sprintf(", %s", errMsg)
+
+	case bootstrapped_extender.Name:
+		actor = "ClusterBoostrapped constraint"
+		additionalInfo = ", the cluster isn't bootstrapped yet"
+
+	case k8s_version_extender.Name:
+		actor = "KubernetesVersion constraint"
+		_, errMsg := k8s_version_extender.Instance().Filter(moduleName, map[string]string{})
+		additionalInfo = fmt.Sprintf(", %s", errMsg)
+	default:
+		actor = updatedBy
+	}
+
+	if updatedByErr != nil {
+		msgs = append(msgs, fmt.Sprintf("couldn't get the module's additional info: %s", updatedByErr))
+	} else {
+		msgs = append(msgs, fmt.Sprintf("turned %s by %s%s", modeDescriptor, actor, additionalInfo))
+	}
+
 	return ModuleStatus{
-		Status: strings.Join(statusMsgs, ", "),
+		Status:     strings.Join(statusMsgs, ", "),
+		Message:    fmt.Sprintf("Info: %s", strings.Join(msgs, ", ")),
+		HooksState: mod.GetHookErrorsSummary(),
 	}
 }
 
@@ -137,23 +181,11 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig) ModuleConfigStatu
 		}
 	}
 
-	chain := conversion.Registry().Chain(cfg.GetName())
-
-	// Run conversions and validate versioned settings to warn about invalid spec.settings.
-	// TODO(future): add cache for these errors, for example in internal values.
-	if chain.IsKnownVersion(cfg.Spec.Version) && hasVersionedSettings(cfg) {
-		res := Service().ConfigValidator().Validate(cfg)
-		if res.HasError() {
-			var prefix = "Ignored"
-			if s.moduleManager.IsModuleEnabled(cfg.GetName()) {
-				prefix = "Error"
-			}
-
-			invalidMsg := fmt.Sprintf("%s: %s", prefix, res.Error)
-			return ModuleConfigStatus{
-				Version: "",
-				Message: invalidMsg,
-			}
+	res := Service().ConfigValidator().Validate(cfg)
+	if res.HasError() {
+		return ModuleConfigStatus{
+			Version: "",
+			Message: fmt.Sprintf("Error: %s", res.Error),
 		}
 	}
 
@@ -161,17 +193,18 @@ func (s *StatusReporter) ForConfig(cfg *v1alpha1.ModuleConfig) ModuleConfigStatu
 	// Also create warning if version is unknown or outdated.
 	versionWarning := ""
 	version := ""
+	converter := conversion.Store().Get(cfg.GetName())
 	if cfg.Spec.Version == 0 {
 		// Use latest version if spec.version is empty.
-		version = strconv.Itoa(chain.LatestVersion())
+		version = strconv.Itoa(converter.LatestVersion())
 	}
 	if cfg.Spec.Version > 0 {
 		version = strconv.Itoa(cfg.Spec.Version)
-		if !chain.IsKnownVersion(cfg.Spec.Version) {
-			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", chain.LatestVersion())
-		} else if chain.Conversion(cfg.Spec.Version) != nil {
+		if !converter.IsKnownVersion(cfg.Spec.Version) {
+			versionWarning = fmt.Sprintf("Error: invalid spec.version, use version %d", converter.LatestVersion())
+		} else if cfg.Spec.Version < converter.LatestVersion() {
 			// Warn about obsolete version if there is conversion for spec.version.
-			versionWarning = fmt.Sprintf("Update available, latest spec.settings schema version is %d", chain.LatestVersion())
+			versionWarning = fmt.Sprintf("Update available, latest spec.settings schema version is %d", converter.LatestVersion())
 		}
 	}
 

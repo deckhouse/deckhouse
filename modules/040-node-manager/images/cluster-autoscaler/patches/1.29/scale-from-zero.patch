@@ -1,0 +1,33 @@
+diff --git a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
+index b6dfeb84d..2f3b18d05 100644
+--- a/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
++++ b/cluster-autoscaler/cloudprovider/mcm/mcm_manager.go
+@@ -836,7 +836,27 @@ func (m *McmManager) GetMachineDeploymentNodeTemplate(machinedeployment *Machine
+ 			return nil, cloudprovider.ErrNotImplemented
+ 		}
+ 	default:
+-		return nil, cloudprovider.ErrNotImplemented
++		scaleFromZero, ok := md.Annotations["cluster-autoscaler.kubernetes.io/scale-from-zero"]
++		if ok && scaleFromZero == "true" {
++			cpu := md.Annotations["cluster-autoscaler.kubernetes.io/node-cpu"]
++			memory := md.Annotations["cluster-autoscaler.kubernetes.io/node-memory"]
++			region = md.Annotations["cluster-autoscaler.kubernetes.io/node-region"]
++			zone = md.Annotations["cluster-autoscaler.kubernetes.io/node-zone"]
++
++			if len(strings.Join([]string{cpu, memory, region, zone}, "")) == 0 {
++				return nil, cloudprovider.ErrNotImplemented
++			}
++
++			instance = instanceType{
++				VCPU:             resource.MustParse(cpu),
++				Memory:           resource.MustParse(memory),
++				GPU:              resource.MustParse("0"),
++				PodCount:         resource.MustParse("110"),
++				EphemeralStorage: resource.MustParse("50378260Ki"),
++			}
++		} else {
++			return nil, cloudprovider.ErrNotImplemented
++		}
+ 	}
+ 
+ 	labels := make(map[string]string)

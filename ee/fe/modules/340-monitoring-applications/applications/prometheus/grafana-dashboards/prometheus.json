@@ -886,7 +886,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(increase(net_conntrack_dialer_conn_failed_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(net_conntrack_dialer_conn_failed_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Failed Connections",
@@ -894,7 +894,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_evaluator_iterations_missed_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_evaluator_iterations_missed_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Missed Iterations",
@@ -902,7 +902,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_evaluator_iterations_skipped_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_evaluator_iterations_skipped_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Skipped Iterations",
@@ -910,7 +910,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_rule_evaluation_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_rule_evaluation_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Evaluation",
@@ -918,7 +918,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_azure_refresh_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_sd_azure_refresh_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Azure Refresh",
@@ -926,7 +926,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_consul_rpc_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_sd_consul_rpc_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Consul RPC",
@@ -934,7 +934,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_dns_lookup_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_sd_dns_lookup_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "DNS Lookup",
@@ -942,7 +942,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_ec2_refresh_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_sd_ec2_refresh_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "EC2 Refresh",
@@ -950,7 +950,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_gce_refresh_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_sd_gce_refresh_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "GCE Refresh",
@@ -958,7 +958,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_marathon_refresh_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_sd_marathon_refresh_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Marathon Refresh",
@@ -966,7 +966,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_openstack_refresh_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_sd_openstack_refresh_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Openstack Refresh",
@@ -974,7 +974,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_sd_triton_refresh_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_sd_triton_refresh_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Triton Refresh",
@@ -982,7 +982,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_target_scrapes_exceeded_sample_limit_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_target_scrapes_exceeded_sample_limit_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Sample Limit",
@@ -990,7 +990,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_target_scrapes_sample_duplicate_timestamp_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_target_scrapes_sample_duplicate_timestamp_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Duplicate Timestamp",
@@ -998,7 +998,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_target_scrapes_sample_out_of_bounds_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_target_scrapes_sample_out_of_bounds_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Timestamp Out of Bounds",
@@ -1006,7 +1006,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_target_scrapes_sample_out_of_order_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_target_scrapes_sample_out_of_order_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Sample Out of Order",
@@ -1014,7 +1014,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_treecache_zookeeper_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_treecache_zookeeper_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Zookeeper",
@@ -1022,7 +1022,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_tsdb_compactions_failed_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_tsdb_compactions_failed_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "TSDB Compactions",
@@ -1030,7 +1030,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_tsdb_head_series_not_found{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_tsdb_head_series_not_found{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Series Not Found",
@@ -1038,7 +1038,7 @@
           "step": 2
         },
         {
-          "expr": "sum(increase(prometheus_tsdb_reloads_failures_total{pod=~\"$pod\"}[$__interval_sx4])) > 0",
+          "expr": "sum(increase(prometheus_tsdb_reloads_failures_total{pod=~\"$pod\"}[$__rate_interval])) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Reload",
@@ -1397,7 +1397,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum( increase(prometheus_tsdb_head_series_created_total{pod=~\"$pod\"}[$__interval_sx4]) )",
+          "expr": "sum( increase(prometheus_tsdb_head_series_created_total{pod=~\"$pod\"}[$__rate_interval]) )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "created",
@@ -1405,7 +1405,7 @@
           "step": 4
         },
         {
-          "expr": "sum( increase(prometheus_tsdb_head_series_removed_total{pod=~\"$pod\"}[$__interval_sx4]) )",
+          "expr": "sum( increase(prometheus_tsdb_head_series_removed_total{pod=~\"$pod\"}[$__rate_interval]) )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "removed",
@@ -1503,7 +1503,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(prometheus_tsdb_head_samples_appended_total{job=\"prometheus\",pod=~\"$pod\"}[$__interval_sx4])",
+          "expr": "rate(prometheus_tsdb_head_samples_appended_total{job=\"prometheus\",pod=~\"$pod\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -1682,7 +1682,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(prometheus_target_sync_length_seconds_sum{job=\"prometheus\",pod=~\"$pod\"}[$__interval_sx4])) by (scrape_job) * 1000",
+          "expr": "sum(rate(prometheus_target_sync_length_seconds_sum{job=\"prometheus\",pod=~\"$pod\"}[$__rate_interval])) by (scrape_job) * 1000",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{scrape_job}}",
@@ -1983,7 +1983,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "1000 * rate(prometheus_evaluator_duration_seconds_sum{job=\"prometheus\", pod=~\"$pod\"}[$__interval_sx4]) / rate(prometheus_evaluator_duration_seconds_count{job=\"prometheus\", pod=~\"$pod\"}[$__interval_sx4])",
+          "expr": "1000 * rate(prometheus_evaluator_duration_seconds_sum{job=\"prometheus\", pod=~\"$pod\"}[$__rate_interval]) / rate(prometheus_evaluator_duration_seconds_count{job=\"prometheus\", pod=~\"$pod\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -2064,7 +2064,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(http_request_duration_microseconds_count{job=\"prometheus\",pod=~\"$pod\"}[$__interval_sx4])) by (handler) > 0",
+          "expr": "sum(rate(http_request_duration_microseconds_count{job=\"prometheus\",pod=~\"$pod\"}[$__rate_interval])) by (handler) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{handler}}",
@@ -2227,7 +2227,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(prometheus_evaluator_iterations_total{job=\"prometheus\", pod=~\"$pod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(prometheus_evaluator_iterations_total{job=\"prometheus\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -2235,7 +2235,7 @@
           "step": 4
         },
         {
-          "expr": "sum(rate(prometheus_evaluator_iterations_missed_total{job=\"prometheus\", pod=~\"$pod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(prometheus_evaluator_iterations_missed_total{job=\"prometheus\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Missed",
@@ -2243,7 +2243,7 @@
           "step": 4
         },
         {
-          "expr": "sum(rate(prometheus_evaluator_iterations_skipped_total{job=\"prometheus\", pod=~\"$pod\"}[$__interval_sx4]))",
+          "expr": "sum(rate(prometheus_evaluator_iterations_skipped_total{job=\"prometheus\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Skipped",
@@ -2338,7 +2338,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(prometheus_notifications_sent_total[$__interval_sx4])",
+          "expr": "rate(prometheus_notifications_sent_total[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -2611,7 +2611,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(go_gc_duration_seconds_sum{pod=~\"$pod\",job=\"prometheus\"}[$__interval_sx4])) by (pod)",
+          "expr": "sum(rate(go_gc_duration_seconds_sum{pod=~\"$pod\",job=\"prometheus\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -3008,7 +3008,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(rate(prometheus_target_interval_length_seconds_count{job=\"prometheus\",pod=~\"$pod\"}[$__interval_sx4])) by (interval)",
+              "expr": "sum(rate(prometheus_target_interval_length_seconds_count{job=\"prometheus\",pod=~\"$pod\"}[$__rate_interval])) by (interval)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{interval}}",

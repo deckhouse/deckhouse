@@ -171,7 +171,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "avg_over_time(redis_connected_clients{pod=\"$pod\",alias=\"$alias\",namespace=\"$namespace\"}[$__interval_sx3])",
+          "expr": "avg_over_time(redis_connected_clients{pod=\"$pod\",alias=\"$alias\",namespace=\"$namespace\"}[$__rate_interval])",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -261,7 +261,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "100 \n* \n  (\n    avg_over_time(redis_memory_used_bytes{namespace=\"$namespace\", pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3]) \n    / \n    avg_over_time(redis_memory_max_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])\n  )",
+          "expr": "100 \n* \n  (\n    avg_over_time(redis_memory_used_bytes{namespace=\"$namespace\", pod=\"$pod\",alias=\"$alias\"}[$__rate_interval]) \n    / \n    avg_over_time(redis_memory_max_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])\n  )",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -682,7 +682,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(redis_commands_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"} [$__interval_sx4])) by (cmd)",
+          "expr": "sum(rate(redis_commands_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"} [$__rate_interval])) by (cmd)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -776,7 +776,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_keyspace_hits_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])",
+          "expr": "rate(redis_keyspace_hits_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -788,7 +788,7 @@
           "target": ""
         },
         {
-          "expr": "rate(redis_keyspace_misses_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])",
+          "expr": "rate(redis_keyspace_misses_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -886,7 +886,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "avg_over_time(redis_memory_used_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])",
+          "expr": "avg_over_time(redis_memory_used_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "used",
@@ -896,7 +896,7 @@
           "target": ""
         },
         {
-          "expr": "avg_over_time(redis_memory_max_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])",
+          "expr": "avg_over_time(redis_memory_max_bytes{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -987,7 +987,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(redis_net_input_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])",
+          "expr": "rate(redis_net_input_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "input",
@@ -995,7 +995,7 @@
           "step": 2
         },
         {
-          "expr": "rate(redis_net_output_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])",
+          "expr": "rate(redis_net_output_bytes_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1088,7 +1088,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum (avg_over_time(redis_db_keys{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])) by (db)",
+          "expr": "sum (avg_over_time(redis_db_keys{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])) by (db)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1180,7 +1180,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum (avg_over_time(redis_db_keys{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])) - sum (avg_over_time(redis_db_keys_expiring{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])) ",
+          "expr": "sum (avg_over_time(redis_db_keys{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])) - sum (avg_over_time(redis_db_keys_expiring{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])) ",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1190,7 +1190,7 @@
           "target": ""
         },
         {
-          "expr": "sum (avg_over_time(redis_db_keys_expiring{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx3])) ",
+          "expr": "sum (avg_over_time(redis_db_keys_expiring{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])) ",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1289,7 +1289,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(redis_expired_keys_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])) by (addr)",
+          "expr": "sum(rate(redis_expired_keys_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])) by (addr)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1300,7 +1300,7 @@
           "target": ""
         },
         {
-          "expr": "sum(rate(redis_evicted_keys_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])) by (addr)",
+          "expr": "sum(rate(redis_evicted_keys_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])) by (addr)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1500,7 +1500,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(redis_commands_duration_seconds_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])) by (cmd)\n  /\nsum(irate(redis_commands_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])) by (cmd)\n",
+          "expr": "sum(irate(redis_commands_duration_seconds_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])) by (cmd)\n  /\nsum(irate(redis_commands_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])) by (cmd)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1583,7 +1583,7 @@
       "stack": true,
       "targets": [
         {
-          "expr": "sum(irate(redis_commands_duration_seconds_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__interval_sx4])) by (cmd) != 0",
+          "expr": "sum(irate(redis_commands_duration_seconds_total{namespace=\"$namespace\",pod=\"$pod\",alias=\"$alias\"}[$__rate_interval])) by (cmd) != 0",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,

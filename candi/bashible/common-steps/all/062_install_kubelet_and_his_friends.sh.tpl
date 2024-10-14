@@ -14,14 +14,14 @@
 
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesCniVersion := "1.4.0" | replace "." "" }}
-bb-rp-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}" "kubectl:{{ index .images.registrypackages (printf "kubectl%s" $kubernetesVersion) | toString }}"
+bb-package-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}" "kubectl:{{ index .images.registrypackages (printf "kubectl%s" $kubernetesVersion) | toString }}"
 
 old_kubelet_hash=""
 if [ -f "${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest" ]; then
   old_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest")
 fi
 
-bb-rp-install "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}"
+bb-package-install "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}"
 
 new_kubelet_hash=$(<"${BB_RP_INSTALLED_PACKAGES_STORE}/kubelet/digest")
 if [[ "${old_kubelet_hash}" != "${new_kubelet_hash}" ]]; then
@@ -51,4 +51,12 @@ fi
 completion="if [ -f /etc/bash_completion ] && ! shopt -oq posix; then . /etc/bash_completion ; fi"
 if ! grep -qF -- "$completion"  /root/.bashrc; then
   echo "$completion" >> /root/.bashrc
+fi
+
+# Install d8 with completion
+bb-package-install "d8:{{ .images.registrypackages.d8 }}"
+
+if [ ! -f "/etc/bash_completion.d/d8" ]; then
+  mkdir -p /etc/bash_completion.d
+  d8 completion bash > /etc/bash_completion.d/d8
 fi

@@ -1,7 +1,7 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_20_ALPINE_DEV
+ARG BASE_GOLANG_22_ALPINE_DEV
 
-FROM $BASE_GOLANG_20_ALPINE_DEV as artifact
+FROM $BASE_GOLANG_22_ALPINE_DEV as artifact
 
 ARG GOPROXY
 ARG SOURCE_REPO
@@ -12,7 +12,7 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
-RUN git clone --depth 1 --branch v1.7.0 ${SOURCE_REPO}/prometheus/node_exporter.git /node_exporter
+RUN git clone --depth 1 --branch v1.8.1 ${SOURCE_REPO}/prometheus/node_exporter.git /node_exporter
 WORKDIR /node_exporter/
 
 RUN go mod tidy

@@ -1,7 +1,7 @@
-ARG BASE_GOLANG_20_ALPINE
+ARG BASE_GOLANG_22_ALPINE
 ARG BASE_DISTROLESS
 
-FROM $BASE_GOLANG_20_ALPINE as artifact
+FROM $BASE_GOLANG_22_ALPINE as artifact
 WORKDIR /src/
 COPY main.go go.mod go.sum /src/
 COPY validators /src/validators/

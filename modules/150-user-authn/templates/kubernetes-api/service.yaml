@@ -1,4 +1,4 @@
-{{- if .Values.userAuthn.publishAPI.enable }}
+{{- if .Values.userAuthn.publishAPI.enabled }}
 ---
 apiVersion: v1
 kind: Service

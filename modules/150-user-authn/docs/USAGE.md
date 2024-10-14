@@ -4,6 +4,8 @@ title: "The user-authn module: usage"
 
 ## An example of the module configuration
 
+The example shows the configuration of the 'user-authn` module in the Deckhouse Kubernetes Platform.
+
 {% raw %}
 
 ```yaml
@@ -12,7 +14,7 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
     kubeconfigGenerator:
@@ -20,7 +22,7 @@ spec:
       masterURI: https://159.89.5.247:6443
       description: "Direct access to kubernetes API"
     publishAPI:
-      enable: true
+      enabled: true
 ```
 
 {% endraw %}
@@ -28,6 +30,8 @@ spec:
 ## Configuring a provider
 
 ### GitHub
+
+The example shows the provider's settings for integration with GitHub.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -51,6 +55,8 @@ Paste the generated `Client ID` and `Client Secret` into the [DexProvider](cr.ht
 If the GitHub organization is managed by the client, go to `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` and request confirmation by clicking on `Send Request`. Then ask the client to confirm the request that will be sent to him by email.
 
 ### GitLab
+
+The example shows the provider's settings for integration with GitLab.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -80,6 +86,8 @@ Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html
 
 ### Atlassian Crowd
 
+The example shows the provider's settings for integration with Atlassian Crowd.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -108,6 +116,8 @@ CROWD groups are specified in the lowercase format for the custom resource `DexP
 
 ### Bitbucket Cloud
 
+The example shows the provider's settings for integration with Bitbucket Cloud.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -133,6 +143,14 @@ Paste the generated `Key` and `Secret` into the [DexProvider](cr.html#dexprovide
 
 ### OIDC (OpenID Connect)
 
+Authentication through the OIDC provider requires registering a client (or "creating an application"). Please refer to the provider's documentation on how to do it (e.g., [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration)).
+
+Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html#dexprovider) custom resource.
+
+#### Okta
+
+The example shows the provider's settings for integration with Okta.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: DexProvider
@@ -149,11 +167,65 @@ spec:
     getUserInfo: true
 ```
 
-Authentication through the OIDC provider requires registering a client (or "creating an application"). Please refer to the provider's documentation on how to do it (e.g., [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration)).
+#### Blitz Identity Provider
 
-Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html#dexprovider) custom resource.
+Note that you must specify a URL to redirect the user after authorization when [registering the application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with the Blitz Identity Provider.  When using `DexProvider`, you must specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster's DNS name template as [defined](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) in the `global` module.
+
+The example below shows the provider settings for integration with Blitz Identity Provider.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: blitz
+spec:
+  displayName: Blitz Identity Provider
+  oidc:
+    basicAuthUnsupported: false
+    claimMapping:
+      email: email
+      groups: your_claim # Claim for getting user groups, configured on the Blitz
+    clientID: clientID
+    clientSecret: clientSecret
+    getUserInfo: true
+    insecureSkipEmailVerified: true # Set to true if there is no need to verify the user's email
+    insecureSkipVerify: false
+    issuer: https://yourdomain.idblitz.ru/blitz
+    promptType: consent 
+    scopes:
+    - profile
+    - openid
+    userIDKey: sub
+    userNameKey: email
+  type: OIDC
+```
+
+For the application logout to work correctly (the token being revoked so that re-authorization is required), set `login` as the value of the 'promptType` parameter.
+
+To ensure granular user access to applications, you have to:
+
+* Add the `allowedUserGroups` parameter to the `ModuleConfig` of the target application.
+* Add the user to the groups (group names should be the same for Blitz and Deckhouse).
+
+Below is an example for prometheus:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  settings:
+    auth:
+      allowedUserGroups:
+        - adm-grafana-access
+        - grafana-access
+```
 
 ### LDAP
+
+The example shows the provider's settings for integration with Active Directory.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -246,7 +318,7 @@ Create a password and enter its hash in the `password` field.
 Use the command below to calculate the password hash:
 
 ```shell
-echo "$password" | htpasswd -inBC 10 "" | tr -d ':\n' | sed 's/$2y/$2a/'
+echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
@@ -261,9 +333,6 @@ metadata:
 spec:
   email: admin@yourcompany.com
   password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
-  groups:
-  - Everyone
-  - admins
   ttl: 24h
 ```
 
@@ -286,3 +355,7 @@ spec:
 ```
 
 {% endraw %}
+
+## How to set permissions for a user or group
+
+Parameters in the custom resource [`ClusterAuthorizationRule`](../../modules/140-user-authz/cr.html#clusterauthorizationrule) are used for configuration.

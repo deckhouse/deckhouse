@@ -16,6 +16,7 @@ package commander
 
 import (
 	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
@@ -28,7 +29,12 @@ func ParseMetaConfig(stateCache state.Cache, params *CommanderModeParams) (*conf
 	clusterUUID := string(clusterUUIDBytes)
 
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
-	metaConfig, err := config.ParseConfigFromData(configData)
+	metaConfig, err := config.ParseConfigFromData(
+		configData,
+		config.ValidateOptionCommanderMode(true),
+		config.ValidateOptionStrictUnmarshal(true),
+		config.ValidateOptionValidateExtensions(true),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse config: %w", err)
 	}

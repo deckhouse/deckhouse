@@ -45,9 +45,9 @@ data:
     {{- fail (printf "unknown mode %s" .Values.cniCilium.internal.mode) }}
   {{- end }}
 
+  tunnel-port: {{ .Values.cniCilium.internal.tunnelPortVXLAN | quote }}
+
   {{- if has "virtualization" .Values.global.enabledModules }}
-  # Preserve default tunnel port 8472 for virtualization workloads
-  tunnel-port: "8469"
   enable-ip-masq-agent: "true"
   ip-masq-agent-config-path: /etc/config/ip-masq-agent
   # Use stable MAC addresses for pods
@@ -146,6 +146,6 @@ data:
   procfs: "/host/proc"
 
   write-cni-conf-when-ready: /host/etc/cni/net.d/05-cilium.conflist
-  cni-exclusive: "true"
+  cni-exclusive: {{ .Values.cniCilium.internal.isIstioCNIEnabled | not | quote }}
 
   skip-crd-creation: "true"

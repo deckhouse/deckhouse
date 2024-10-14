@@ -37,11 +37,45 @@ import (
 type SchemaStore struct {
 	cache              map[SchemaIndex]*spec.Schema
 	moduleConfigsCache map[string]*spec.Schema
+	modulesCache       map[string]struct{}
 }
 
 var once sync.Once
 
 var store *SchemaStore
+
+type validateOptions struct {
+	commanderMode      bool
+	strictUnmarshal    bool
+	validateExtensions bool
+	requiredSSHHost    bool
+}
+
+type ValidateOption func(o *validateOptions)
+
+func ValidateOptionCommanderMode(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.commanderMode = v
+	}
+}
+
+func ValidateOptionStrictUnmarshal(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.strictUnmarshal = v
+	}
+}
+
+func ValidateOptionValidateExtensions(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.validateExtensions = v
+	}
+}
+
+func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
+	return func(o *validateOptions) {
+		o.requiredSSHHost = v
+	}
+}
 
 func NewSchemaStore(paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
@@ -61,6 +95,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
+		modulesCache:       make(map[string]struct{}),
 	}
 
 	walkFunc := func(path string, info os.FileInfo, err error) error {
@@ -69,7 +104,13 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		}
 
 		switch info.Name() {
-		case "init_configuration.yaml", "cluster_configuration.yaml", "static_cluster_configuration.yaml", "cloud_discovery_data.yaml", "cloud_provider_discovery_data.yaml":
+		case "init_configuration.yaml",
+			"cluster_configuration.yaml",
+			"static_cluster_configuration.yaml",
+			"cloud_discovery_data.yaml",
+			"cloud_provider_discovery_data.yaml",
+			"ssh_configuration.yaml",
+			"ssh_host_configuration.yaml":
 			uploadError := st.UploadByPath(path)
 			if uploadError != nil {
 				return uploadError
@@ -89,7 +130,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	entries, err := os.ReadDir(modulesDir)
 	if err != nil {
 		// autoconverger and state exporter do not contains module dir
-		log.WarnF("Modules dir not found")
+		log.WarnF("Modules dir not found\n")
 		return st
 	}
 
@@ -108,7 +149,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			}
 			st.moduleConfigsCache[moduleName] = schema
 		} else if errors.Is(err, os.ErrNotExist) {
-			log.DebugF("openapi spec not found for module %s", moduleName)
+			log.DebugF("Openapi spec not found for module %s\n", moduleName)
 		} else {
 			return err
 		}
@@ -122,6 +163,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		}
 		name := e.Name()
 		moduleName := strings.TrimLeft(name, "01234567890-")
+		st.modulesCache[moduleName] = struct{}{}
 		p := path.Join(modulesDir, name, "openapi", "config-values.yaml")
 		if err := loadConfigValuesSchema(p, moduleName); err != nil {
 			// We don't expect panic here our logger does not support log.Fatal
@@ -169,15 +211,15 @@ func (s *SchemaStore) GetModuleConfigVersion(name string) int {
 	return 1
 }
 
-func (s *SchemaStore) Validate(doc *[]byte) (*SchemaIndex, error) {
+func (s *SchemaStore) Validate(doc *[]byte, opts ...ValidateOption) (*SchemaIndex, error) {
 	var index SchemaIndex
 
 	err := yaml.Unmarshal(*doc, &index)
 	if err != nil {
-		return nil, fmt.Errorf("yaml unmarshal: %w", err)
+		return nil, fmt.Errorf("Schema index unmarshal failed: %w", err)
 	}
 
-	err = s.ValidateWithIndex(&index, doc)
+	err = s.ValidateWithIndex(&index, doc, opts...)
 	return &index, err
 }
 
@@ -192,7 +234,13 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 	return schema
 }
 
-func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
+// ValidateWithIndex
+// validate one document with schema
+// two separated kinds will validate: ModuleConfig and another kinds with schema eg InitConfiguration
+// if schema not fount then return ErrSchemaNotFound
+// if schema not found for ModuleConfig then return ErrSchemaNotFound also
+func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
+	options := applyOptions(opts...)
 	if !index.IsValid() {
 		return fmt.Errorf(
 			"document must contain \"kind\" and \"apiVersion\" fields:\n\tapiVersion: %s\n\tkind: %s\n\n%s",
@@ -211,15 +259,25 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 		}
 		mcName := mc.GetName()
 		if mc.Spec.Enabled == nil && mcName != "global" {
+			// we need return error because on top level we want filter module configs from modulesources and move into resources
+			// global is special mc without module
 			return fmt.Errorf("Enabled field for module config %s shoud set to true or false", mcName)
 		}
+
+		if _, ok := s.modulesCache[mcName]; !ok && mcName != "global" {
+			log.DebugF("Module %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			return ErrSchemaNotFound
+		}
+
 		if len(mc.Spec.Settings) == 0 {
 			return nil
 		}
+
 		var ok bool
 		schema, ok = s.moduleConfigsCache[mcName]
 		if !ok {
-			return fmt.Errorf("Schema for module config %s wasn't found. Check module name or use resources file for modules from sources", mc.GetName())
+			log.DebugF("Schema for module config %s wasn't found. Probably it is module from modulesources. Skip it\n", mc.GetName())
+			return fmt.Errorf("Schema for module config %s not found", mcName)
 		}
 
 		if mc.Spec.Version == 0 {
@@ -236,11 +294,16 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte) error {
 	}
 
 	if schema == nil {
-		return fmt.Errorf("%w: no schema for index %s", ErrSchemaNotFound, index.String())
+		log.DebugF("No schema for index %s. Skip it\n", index.String())
+		// we need return error because on top level we want filter documents without index and move into resources
+		return ErrSchemaNotFound
 	}
 
-	isValid, err := openAPIValidate(&docForValidate, schema)
+	isValid, err := openAPIValidate(&docForValidate, schema, options)
 	if !isValid {
+		if options.commanderMode {
+			return fmt.Errorf("%q document validation failed: %w", index.String(), err)
+		}
 		return fmt.Errorf("Document validation failed:\n---\n%s\n\n%w", string(*doc), err)
 	}
 
@@ -287,38 +350,59 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 	return nil
 }
 
-func openAPIValidate(dataObj *[]byte, schema *spec.Schema) (isValid bool, multiErr error) {
+func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (isValid bool, multiErr error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
 	var blank map[string]interface{}
 
-	err := yaml.Unmarshal(*dataObj, &blank)
-	if err != nil {
-		return false, fmt.Errorf("openAPIValidate json unmarshal: %v", err)
+	if options.strictUnmarshal {
+		err := yaml.UnmarshalStrict(*dataObj, &blank)
+		if err != nil {
+			return false, fmt.Errorf("openAPIValidate json unmarshal strict: %v", err)
+		}
+	} else {
+		err := yaml.Unmarshal(*dataObj, &blank)
+		if err != nil {
+			return false, fmt.Errorf("openAPIValidate json unmarshal: %v", err)
+		}
 	}
 
 	result := validator.Validate(blank)
-	if result.IsValid() {
-		// Add default values from openAPISpec
-		post.ApplyDefaults(result)
-		*dataObj, _ = json.Marshal(result.Data())
+	if !result.IsValid() {
+		var allErrs *multierror.Error
+		allErrs = multierror.Append(allErrs, result.Errors...)
 
-		return true, nil
+		return false, allErrs.ErrorOrNil()
 	}
 
-	var allErrs *multierror.Error
-	allErrs = multierror.Append(allErrs, result.Errors...)
+	if options.validateExtensions {
+		if err := validateExtensions(*dataObj, *schema); err != nil {
+			return false, err
+		}
+	}
 
-	return false, allErrs.ErrorOrNil()
+	// Add default values from openAPISpec
+	post.ApplyDefaults(result)
+	*dataObj, _ = json.Marshal(result.Data())
+
+	return true, nil
 }
 
-func ValidateDiscoveryData(config *[]byte, paths ...string) (bool, error) {
+func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOption) (bool, error) {
 	schemaStore := NewSchemaStore(paths...)
 
-	_, err := schemaStore.Validate(config)
+	_, err := schemaStore.Validate(config, opts...)
 	if err != nil {
 		return false, fmt.Errorf("Loading schema file: %v", err)
 	}
 
 	return true, nil
+}
+
+func applyOptions(opts ...ValidateOption) validateOptions {
+	options := validateOptions{}
+	for _, opt := range opts {
+		opt(&options)
+	}
+	return options
 }

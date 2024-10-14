@@ -142,12 +142,12 @@ spec:
 			f.RunHook()
 		})
 
-		It("must be executed successfully; main disk size must be 40, retention must be 32; longterm disk size must be 40, retention must be 32", func() {
+		It("must be executed successfully; main disk size must be 40, retention must be 34; longterm disk size must be 40, retention must be 34", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.prometheusMain.diskSizeGigabytes").String()).To(Equal("40"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("32"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("34"))
 			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.diskSizeGigabytes").String()).To(Equal("40"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("32"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("34"))
 		})
 	})
 
@@ -157,12 +157,12 @@ spec:
 			f.RunHook()
 		})
 
-		It("must be executed successfully; main disk size must be 70, retention must be 56; longterm disk size must be 50, retention must be 40", func() {
+		It("must be executed successfully; main disk size must be 70, retention must be 60; longterm disk size must be 50, retention must be 43", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.prometheusMain.diskSizeGigabytes").String()).To(Equal("70"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("56"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("60"))
 			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.diskSizeGigabytes").String()).To(Equal("50"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("40"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("43"))
 		})
 	})
 
@@ -172,12 +172,12 @@ spec:
 			f.RunHook()
 		})
 
-		It("must be executed successfully; main disk size must be 300, retention must be 250; longterm disk size must be 300, retention must be 250", func() {
+		It("must be executed successfully; main disk size must be 300, retention must be 255; longterm disk size must be 300, retention must be 255", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.prometheusMain.diskSizeGigabytes").String()).To(Equal("300"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("250"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("255"))
 			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.diskSizeGigabytes").String()).To(Equal("300"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("250"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusLongterm.retentionGigabytes").String()).To(Equal("255"))
 		})
 	})
 
@@ -187,10 +187,10 @@ spec:
 			f.RunHook()
 		})
 
-		It("must be executed successfully; main disk size must be 15, retention must be 12", func() {
+		It("must be executed successfully; main disk size must be 15, retention must be 13", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("prometheus.internal.prometheusMain.diskSizeGigabytes").String()).To(Equal("15"))
-			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("12"))
+			Expect(f.ValuesGet("prometheus.internal.prometheusMain.retentionGigabytes").String()).To(Equal("13"))
 		})
 	})
 })

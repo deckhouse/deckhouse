@@ -1,4 +1,19 @@
 type: object
+x-doc-example:
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: control-plane-manager
+  spec:
+    version: 1
+    enabled: true
+    settings:
+      apiserver:
+        bindToWildcard: true
+        certSANs:
+          - bakery.infra
+          - devs.infra
+        loadBalancer: { }
 properties:
   apiserver:
     type: object
@@ -15,6 +30,14 @@ properties:
         description: |
           ServiceAccount issuing settings.
         properties:
+          issuer:
+            type: string
+            description: |
+              ServiceAccount issuer. This is the URL of the API server. The values of this field are used as the `iss` claim of the token and to verify Service Account JWT tokens.
+
+              **Note**, all pods in the cluster using ServiceAccount tokens must be restarted upon changing this option.
+            x-examples:
+              - "https://api.example.com"
           additionalAPIAudiences:
             type: array
             description: |
@@ -85,7 +108,7 @@ properties:
         description: |
           Optional authentication parameters for Kubernetes API clients.
 
-          By default, they are taken from [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module ConfigMap.
+          By default, they are taken from [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module ConfigMap.
         properties:
           oidcIssuerURL:
             type: string
@@ -129,7 +152,7 @@ properties:
         description: |
           Optional authorization parameters for Kubernetes API clients.
 
-          By default, they are taken from [user-authz](https://deckhouse.io/documentation/v1/modules/140-user-authz/) module ConfigMap.
+          By default, they are taken from [user-authz](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/140-user-authz/) module ConfigMap.
         properties:
           webhookURL:
             type: string

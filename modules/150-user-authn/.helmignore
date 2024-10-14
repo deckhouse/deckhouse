@@ -6,3 +6,4 @@ images
 template_tests
 openapi
 README.md
+Makefile

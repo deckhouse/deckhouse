@@ -22,8 +22,13 @@ import (
 	deckhouse_io "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io"
 )
 
+const (
+	Version              = "v1alpha1"
+	DeckhouseReleaseKind = "DeckhouseRelease"
+)
+
 // SchemeGroupVersion is group version used to register these objects
-var SchemeGroupVersion = schema.GroupVersion{Group: deckhouse_io.GroupName, Version: "v1alpha1"}
+var SchemeGroupVersion = schema.GroupVersion{Group: deckhouse_io.GroupName, Version: Version}
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource
 func Resource(resource string) schema.GroupResource {
@@ -59,6 +64,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ModuleUpdatePolicyList{},
 		&ModulePullOverride{},
 		&ModulePullOverrideList{},
+		&ModuleDocumentation{},
+		&ModuleDocumentationList{},
+		&DeckhouseRelease{},
+		&DeckhouseReleaseList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

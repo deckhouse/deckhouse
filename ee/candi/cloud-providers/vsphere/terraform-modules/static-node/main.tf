@@ -140,7 +140,7 @@ resource "vsphere_virtual_machine" "node" {
   disk {
     label            = "disk0"
     unit_number      = 0
-    size             = lookup(local.instance_class, "rootDiskSize", 30)
+    size             = lookup(local.instance_class, "rootDiskSize", 50)
     eagerly_scrub    = false
     thin_provisioned = false
   }
@@ -173,4 +173,5 @@ resource "vsphere_virtual_machine" "node" {
       firmware,
     ]
   }
+  wait_for_guest_net_routable = false
 }

@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
 var (
@@ -55,15 +57,16 @@ type ModulePullOverride struct {
 }
 
 type ModulePullOverrideSpec struct {
-	Source       string   `json:"source"`
-	ImageTag     string   `json:"imageTag"`
-	ScanInterval Duration `json:"scanInterval"`
+	Source       string          `json:"source"`
+	ImageTag     string          `json:"imageTag"`
+	ScanInterval libapi.Duration `json:"scanInterval"`
 }
 
 type ModulePullOverrideStatus struct {
 	UpdatedAt   metav1.Time `json:"updatedAt"`
 	Message     string      `json:"message"`
 	ImageDigest string      `json:"imageDigest"`
+	Weight      uint32      `json:"weight,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
@@ -86,4 +89,24 @@ func (in *ModulePullOverrideStatus) GetObjectKind() schema.ObjectKind {
 func (f *ModulePullOverrideKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
 func (f *ModulePullOverrideKind) GroupVersionKind() schema.GroupVersionKind {
 	return ModulePullOverrideGVK
+}
+
+// GetModuleSource returns the module source of the related module
+func (mo *ModulePullOverride) GetModuleSource() string {
+	return mo.Spec.Source
+}
+
+// GetModuleName returns the module's name of the module pull override
+func (mo *ModulePullOverride) GetModuleName() string {
+	return mo.Name
+}
+
+// GetReleaseVersion returns the version of the related module
+func (mo *ModulePullOverride) GetReleaseVersion() string {
+	return mo.Spec.ImageTag
+}
+
+// GetWeight returns the weight of the module
+func (mo *ModulePullOverride) GetWeight() uint32 {
+	return mo.Status.Weight
 }

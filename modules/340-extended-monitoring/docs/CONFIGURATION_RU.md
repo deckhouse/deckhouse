@@ -11,7 +11,7 @@ force_searchable: true
 - добавить в проект соответствующий helm-чарт (рекомендуемый);
 - добавить в описание `.gitlab-ci.yml` (kubectl patch/create);
 - поставить руками (`kubectl label namespace my-app-production extended-monitoring.deckhouse.io/enabled=""`);
-- настроить через [namespace-configurator](/documentation/v1/modules/600-namespace-configurator/) модуль.
+- настроить через [namespace-configurator](/products/kubernetes-platform/documentation/v1/modules/600-namespace-configurator/) модуль.
 
 Сразу же после этого для всех поддерживаемых Kubernetes-объектов в данном namespace в Prometheus появятся default-метрики + любые кастомные с префиксом `threshold.extended-monitoring.deckhouse.io/`. Для ряда [non-namespaced](#non-namespaced-kubernetes-объекты) Kubernetes-объектов, описанных ниже, мониторинг включается автоматически.
 
@@ -73,7 +73,7 @@ Non-namespaced Kubernetes-объекты не нуждаются в лейбла
 
 Порог подразумевает количество недоступных реплик **сверх** [maxUnavailable](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#max-unavailable). Сработает, если недоступно реплик больше на указанное значение, чем разрешено в `maxUnavailable`. То есть при нуле сработает, если недоступно больше, чем указано в `maxUnavailable`, а при единице сработает, если недоступно больше, чем указано в `maxUnavailable`, плюс 1. Таким образом, у конкретных Deployment, которые находятся в namespace со включенным расширенным мониторингом и которым допустимо быть недоступными, можно подкрутить этот параметр, чтобы не получать ненужные алерты.
 
-##### Statefulset
+##### StatefulSet
 
 | Label                  | Type          | Default value |
 |------------------------|---------------|---------------|

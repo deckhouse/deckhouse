@@ -38,12 +38,79 @@ const (
 	deckhouseDeploymentName      = "deckhouse"
 )
 
+var d8storageConfig = []schema.GroupVersionResource{
+	{
+		Group:    "storage.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "localstorageclasses",
+	},
+	{
+		Group:    "storage.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "replicatedstorageclasses",
+	},
+	{
+		Group:    "storage.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "nfsstorageclasses",
+	},
+	{
+		Group:    "storage.deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "cephstorageclasses",
+	},
+}
+
 func DeleteDeckhouseDeployment(kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete Deckhouse", 45, 5*time.Second).WithShowError(false).Run(func() error {
 		foregroundPolicy := metav1.DeletePropagationForeground
 		err := kubeCl.AppsV1().Deployments(deckhouseDeploymentNamespace).Delete(context.TODO(), deckhouseDeploymentName, metav1.DeleteOptions{PropagationPolicy: &foregroundPolicy})
 		if err != nil && !errors.IsNotFound(err) {
 			return err
+		}
+		return nil
+	})
+}
+
+func ListD8StorageResources(kubeCl *client.KubernetesClient, cr schema.GroupVersionResource) (*unstructured.UnstructuredList, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	storageCR, err := kubeCl.Dynamic().Resource(cr).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return storageCR, err
+}
+
+func DeleteD8StorageResources(kubeCl *client.KubernetesClient, obj unstructured.Unstructured, cr schema.GroupVersionResource) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := kubeCl.Dynamic().Resource(cr).Namespace(obj.GetNamespace()).Delete(ctx, obj.GetName(), metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("delete %s %s: %v", cr, obj.GetName(), err)
+	}
+	log.InfoF("%s/%s\n", obj.GetKind(), obj.GetName())
+	return nil
+}
+
+func DeleteAllD8StorageResources(kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete Deckhouse Storage CRs", 45, 5*time.Second).WithShowError(false).Run(func() error {
+		for _, cr := range d8storageConfig {
+			storageCRs, err := ListD8StorageResources(kubeCl, cr)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					log.InfoF("Resources kind of %s not found, skipping...\n", cr)
+					continue
+				}
+				return fmt.Errorf("get %s: %v", cr, err)
+			}
+			for _, obj := range storageCRs.Items {
+				err = DeleteD8StorageResources(kubeCl, obj, cr)
+				if err != nil {
+					return err
+				}
+			}
 		}
 		return nil
 	})

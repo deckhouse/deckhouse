@@ -4,3 +4,4 @@ metadata:
   name: testns
   labels:
     security.deckhouse.io/pod-policy: restricted
+    enforce: mypolicy

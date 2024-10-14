@@ -146,18 +146,54 @@ $(document).ready(function(){
 // GDPR
 
 $(document).ready(function(){
-    var $gdpr = $('.gdpr');
-    var $gdpr_button = $('.gdpr__button');
-    var gdpr_status = $.cookie('gdpr-status');
+    const $gdpr = $('.gdpr');
+    const $gdpr_button = $('.gdpr__button');
+    const gdpr_status = $.cookie('gdpr-status');
+    const cmplz_banner_status = $.cookie('cmplz_banner-status');
 
-    if (!gdpr_status || gdpr_status != 'accepted') {
-        $gdpr.show();
+    if ((!gdpr_status || gdpr_status !== 'accepted') && cmplz_banner_status !== 'dismissed') {
+        $gdpr.css('display', 'flex');
     }
 
     $gdpr_button.on('click', function() {
         $gdpr.hide();
         $.cookie('gdpr-status', 'accepted', {path: '/' ,  expires: 3650 });
     })
+});
+
+$(document).ready(function(){
+  const tables = $('table');
+
+  if (tables.length === 0) {
+    return;
+  }
+
+  tables.each((_, table) => {
+    $(table).wrap("<div class='table-wrapper'></div>")
+  })
+});
+
+$(document).ready(function(){
+  const titles = $('.resources__prop_name');
+  const links = $('.resources__prop_wrap .anchorjs-link');
+
+  links.each((i, link) => {
+    $(link).click((e) => {
+      e.stopPropagation();
+    })
+  })
+
+  titles.each((i, title) => {
+    $(title).click(() => {
+      const firstList = $(title).parent('.resources__prop_wrap').parent('li').parent('ul');
+
+      if (firstList.hasClass('resources')) return;
+
+      const parentElem = $(title).parent('.resources__prop_wrap').parent('li');
+
+      parentElem.toggleClass('closed');
+    })
+  })
 });
 
 const openDiagram = function () {
@@ -191,20 +227,22 @@ function changeHandler(e) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  let top;
   let header = document.querySelector('header');
   let lastScrollTop = 0;
   let topOffsetToTransform = 25;
 
-  const headerTransforms = () => {
-    let top = window.scrollY
-
-    changeShadow(top)
-    changeOffset(top)
-
+  const calcScroll = () => {
+    top = window.scrollY
     lastScrollTop = top
   }
 
-  window.onscroll = headerTransforms
+  window.onscroll = calcScroll
+  window.addEventListener('scroll', () => changeOffset(top))
+
+  if (!header.classList.contains('header_float')) {
+    window.addEventListener('scroll', () => changeShadow(top))
+  }
 
   const changeShadow = (top) => {
     if (!header.classList.contains('header_float') && top >=

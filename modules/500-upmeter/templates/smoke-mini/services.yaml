@@ -33,6 +33,7 @@ spec:
   - name: http
     port: 8080
     protocol: TCP
+    targetPort: http
   selector:
     app: smoke-mini
 ---
@@ -48,6 +49,7 @@ spec:
   - name: http
     port: 8080
     protocol: TCP
+    targetPort: http
   selector:
     app: smoke-mini
 {{- end }}

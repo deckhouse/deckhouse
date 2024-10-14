@@ -17,11 +17,11 @@ limitations under the License.
 package models
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -31,11 +31,15 @@ type DeckhouseModule struct {
 	basic *modules.BasicModule
 
 	description string
+	stage       string
 	labels      map[string]string
 }
 
-func NewDeckhouseModule(def DeckhouseModuleDefinition, staticValues utils.Values, vv *validation.ValuesValidator) *DeckhouseModule {
-	basic := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, vv)
+func NewDeckhouseModule(def DeckhouseModuleDefinition, staticValues utils.Values, configBytes, valuesBytes []byte) (*DeckhouseModule, error) {
+	basic, err := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, configBytes, valuesBytes)
+	if err != nil {
+		return nil, fmt.Errorf("new basic module: %w", err)
+	}
 
 	labels := make(map[string]string, len(def.Tags))
 	for _, tag := range def.Tags {
@@ -50,7 +54,8 @@ func NewDeckhouseModule(def DeckhouseModuleDefinition, staticValues utils.Values
 		basic:       basic,
 		labels:      labels,
 		description: def.Description,
-	}
+		stage:       def.Stage,
+	}, nil
 }
 
 func (dm DeckhouseModule) GetBasicModule() *modules.BasicModule {
@@ -74,6 +79,7 @@ func (dm DeckhouseModule) AsKubeObject(source string) *v1alpha1.Module {
 			Weight:      dm.basic.Order,
 			Source:      source,
 			State:       "Disabled",
+			Stage:       dm.stage,
 			Description: dm.description,
 		},
 	}

@@ -11,7 +11,7 @@ This module is responsible for providing a network between multiple nodes in a c
 2. `HostPort` Pods will bind only to [one interface IP](https://github.com/deckhouse/deckhouse/issues/3035). If there are multiple interfaces/IPs present, Cilium will select only one of them, preferring private IP space.
 3. Kernel requirements.
    * The `cni-cilium` module requires a Linux kernel version >= `5.7`.
-   * For the `cni-cilium` module to work together with the [istio](../110-istio/), [openvpn](../500-openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/documentation/v1/modules/{% else %}..{% endif %}/350-node-local-dns/) module, a Linux kernel version >= `5.7` is required.
+   * For the `cni-cilium` module to work together with the [istio](../110-istio/), [openvpn](../500-openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/350-node-local-dns/) module, a Linux kernel version >= `5.7` is required.
 4. OS compatibility issues:
     * Ubuntu:
       * not working on 18.04
@@ -48,3 +48,21 @@ If you change the Cilium operating mode (the [tunnelMode](configuration.html#par
 ## A note about disabling the kube-proxy module
 
 Cilium has the same functionality as the `kube-proxy` module, so the latter is automatically disabled when the `cni-cilium` module is enabled.
+
+## A note about fault-tolerant Egress Gateway
+
+{% alert level="warning" %} Feature is only available in Enterprise Edition {% endalert %}
+
+### Basic mode
+
+Using pre-configured public IPs of egress-gateway nodes.
+
+<div data-presentation="../../presentations/021-cni-cilium/egressgateway_base_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1Gp8b82WQQnYr6te_zBROKnKmBicdhtX4SXNXDh3lB6Q/ --->
+
+### Virtual IP mode
+
+Allows you to dynamically assign additional IP addresses to nodes.
+
+<div data-presentation="../../presentations/021-cni-cilium/egressgateway_virtualip_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1jdn39uDFSraQIXVdrREBsRv-Lp4kPidhx4C-gvv1DVk/ --->

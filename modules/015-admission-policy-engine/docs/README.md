@@ -9,8 +9,6 @@ The Pod Security Standards define three different policies to broadly cover the 
 
 {% alert level="info" %}
 The module does not apply policies to system namespaces.
-
-When using Deckhouse version >= 1.55, the module works in `Baseline` mode by default. In this regard, Istio's init-containers can't configure rules for application's traffic interception, so the Pod's can't start. The solution is either configure the module to work in `Restricted` mode or add a label `security.deckhouse.io/pod-policy=privileged` to application's Namespace.
 {% endalert %}
 
 List of policies available for use:

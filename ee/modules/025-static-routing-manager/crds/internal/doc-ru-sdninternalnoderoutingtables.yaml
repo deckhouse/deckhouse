@@ -1,0 +1,32 @@
+spec:
+  versions:
+  - name: v1alpha1
+    schema: &schema
+      openAPIV3Schema:
+        description: |
+          Ресурс, описывающий желаемую таблицу маршрутизации и содержащиеся в ней маршруты.
+        properties:
+          spec:
+            properties:
+              nodeName:
+                description: |
+                  Имя узла, для которого предназначен данный ресурс.
+              ipRoutingTableID:
+                description: |
+                  ID желаемой таблицы маршрутизации.
+
+                  Если значение не указано явно, то оно сгенерируется автоматически и будет добавлено в поле status.
+
+                  После создания ресурса изменить ID таблицы маршрутизации можно только пересоздав ресурс.
+              routes:
+                type: array
+                items:
+                  description: |
+                    Желаемые маршруты.
+                  properties:
+                    destination:
+                      description: |
+                        Целевая подсеть.
+                    gateway:
+                      description: |
+                        Шлюз, через который достижима целевая подсеть.

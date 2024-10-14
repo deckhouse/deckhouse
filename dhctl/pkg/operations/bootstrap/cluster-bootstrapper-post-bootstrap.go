@@ -19,7 +19,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func (b *ClusterBootstrapper) ExecPostBootstrap() error {
@@ -29,18 +30,26 @@ func (b *ClusterBootstrapper) ExecPostBootstrap() error {
 		defer restore()
 	}
 
-	sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
-	if err != nil {
-		return nil
+	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		return fmt.Errorf("post bootstrap executor is not supported for local execution contexts")
 	}
 
-	if err = cache.InitWithOptions(sshClient.Check().String(), cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
+	if _, err := wrapper.Client().Start(); err != nil {
+		return fmt.Errorf("unable to start ssh client: %w", err)
+	}
+
+	if err := terminal.AskBecomePassword(); err != nil {
+		return err
+	}
+
+	if err := cache.InitWithOptions(wrapper.Client().Check().String(), cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		return fmt.Errorf("Can not init cache: %v", err)
 	}
 
 	bootstrapState := NewBootstrapState(cache.Global())
 
-	postScriptExecutor := NewPostBootstrapScriptExecutor(sshClient, app.PostBootstrapScriptPath, bootstrapState).
+	postScriptExecutor := NewPostBootstrapScriptExecutor(wrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
 		WithTimeout(app.PostBootstrapScriptTimeout)
 
 	if err := postScriptExecutor.Execute(); err != nil {

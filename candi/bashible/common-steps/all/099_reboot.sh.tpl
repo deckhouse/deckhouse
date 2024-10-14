@@ -22,21 +22,6 @@ fi
 exit 0
 {{- end }}
 
-# Reboot on cluster bootstrap
-{{- if eq .runType "ClusterBootstrap" }}
-bb-flag-unset disruption
-# to prevent extra reboot during first "Normal" run.
-bb-flag-unset reboot
-  {{- if eq .cri "Containerd" }}
-systemctl stop kubelet
-# to speed up reboot process, we manually stop containers and kill appropriate containerd-shim processes with SIGKILL
-# https://github.com/containerd/containerd/issues/386
-crictl stop $(crictl ps -q)
-kill -KILL $(ps ax | grep containerd-shim | grep -v grep |awk '{print $1}')
-  {{- end }}
-exit 0
-{{- end }}
-
 bb-deckhouse-get-disruptive-update-approval
 bb-log-info "Rebooting machine after bootstrap process completed"
 bb-flag-unset reboot
@@ -86,7 +71,7 @@ while true; do
 
   bb-log-info "Setting node status to NotReady..."
 
-  url="https://127.0.0.1:6445/api/v1/nodes/$(hostname -s)"
+  url="https://127.0.0.1:6445/api/v1/nodes/${D8_NODE_HOSTNAME}"
   ready_condition_key=""
   if ! ready_condition_key="$(d8-curl -s -f -X GET "$url" --cacert /etc/kubernetes/pki/ca.crt \
        --cert /var/lib/kubelet/pki/kubelet-client-current.pem |

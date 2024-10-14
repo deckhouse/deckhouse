@@ -15,10 +15,13 @@
 package bootstrap
 
 import (
+	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func (b *ClusterBootstrapper) InstallDeckhouse() error {
@@ -28,7 +31,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 		defer restore()
 	}
 
-	metaConfig, err := config.ParseConfig(app.ConfigPath)
+	metaConfig, err := config.ParseConfig(app.ConfigPaths)
 	if err != nil {
 		return err
 	}
@@ -46,12 +49,21 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 	installConfig.KubeadmBootstrap = app.KubeadmBootstrap
 	installConfig.MasterNodeSelector = app.MasterNodeSelector
 
-	sshClient, err := ssh.NewInitClientFromFlags(true)
+	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
+		sshClient := wrapper.Client()
+		if sshClient != nil {
+			if _, err = sshClient.Start(); err != nil {
+				return fmt.Errorf("unable to start ssh-client: %w", err)
+			}
+		}
+	}
+
+	err = terminal.AskBecomePassword()
 	if err != nil {
 		return err
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
 	if err != nil {
 		return err
 	}

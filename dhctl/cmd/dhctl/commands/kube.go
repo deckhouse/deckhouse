@@ -19,20 +19,21 @@ import (
 	"os"
 	"time"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("kubernetes-api-connection", "Test connection to kubernetes api via ssh or directly.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -75,7 +76,7 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 
 func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd := parent.Command("deployment-ready", "Wait while deployment is ready.")
-	app.DefineSSHFlags(cmd)
+	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -94,7 +95,10 @@ func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 		}
 
 		err = log.Process("bootstrap", "Wait for Deckhouse to become Ready", func() error {
-			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+			kubeCl := client.NewKubernetesClient().
+				WithNodeInterface(
+					ssh.NewNodeInterfaceWrapper(sshClient),
+				)
 			// auto init
 			err = kubeCl.Init(client.AppKubernetesInitParams())
 			if err != nil {

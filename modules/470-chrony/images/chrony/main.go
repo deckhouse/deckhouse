@@ -29,12 +29,10 @@ import (
 )
 
 const (
-	chronyRuntimeDir    = "/var/run/chrony"
-	chronyConfPath      = "/var/run/chrony/chrony.conf"
-	chronyConfTplPath   = "/var/run/chrony/chrony.conf.tpl"
-	chronyDriftFilePath = "/var/run/chrony/chrony.drift"
-	chronydPidFilePath  = "/var/run/chrony/chronyd.pid"
-	chronydPath         = "/opt/chrony-static/sbin/chronyd"
+	chronyConfPath     = "/etc/chrony/chrony.conf"
+	chronyConfTplPath  = "/etc/chrony/chrony.conf.tpl"
+	chronydPidFilePath = "/var/run/chrony/chronyd.pid"
+	chronydPath        = "/opt/chrony-static/sbin/chronyd"
 )
 
 type ChronyConfigTemplateData struct {
@@ -45,21 +43,6 @@ type ChronyConfigTemplateData struct {
 }
 
 func main() {
-	err := os.Chown(chronyRuntimeDir, 64535, 64535)
-	if err != nil {
-		log.Fatal(errors.Wrapf(err, "failed to chown %s", chronyRuntimeDir))
-	}
-
-	err = os.Chmod(chronyRuntimeDir, 0700)
-	if err != nil {
-		log.Fatal(errors.Wrapf(err, "failed to chmod %s", chronyRuntimeDir))
-	}
-
-	_, err = os.OpenFile(chronyDriftFilePath, os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		log.Fatal(errors.Wrapf(err, "failed to create %s file", chronyDriftFilePath))
-	}
-
 	ntpServers := os.Getenv("NTP_SERVERS")
 
 	var ntpServersList []string
@@ -76,7 +59,7 @@ func main() {
 
 	configBuffer := &bytes.Buffer{}
 
-	err = template.Must(template.New(path.Base(chronyConfTplPath)).ParseFiles(chronyConfTplPath)).Execute(configBuffer, configTemplateData)
+	err := template.Must(template.New(path.Base(chronyConfTplPath)).ParseFiles(chronyConfTplPath)).Execute(configBuffer, configTemplateData)
 	if err != nil {
 		log.Fatal(errors.Wrapf(err, "failed to execute %s template", chronyConfTplPath))
 	}

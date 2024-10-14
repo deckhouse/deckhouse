@@ -8,7 +8,7 @@ locals {
   zone = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
   volume_type = local.volume_type_map[local.zone]
   flavor_name = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
-  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "")
+  root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "") # Openstack can have disks predefined within vm flavours, so we do not set any defaults here
   etcd_volume_size = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   additional_tags = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
 }

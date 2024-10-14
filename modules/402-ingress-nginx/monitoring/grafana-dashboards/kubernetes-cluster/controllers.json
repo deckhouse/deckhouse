@@ -92,7 +92,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n)",
+              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__rate_interval])\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -100,7 +100,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) $cadvisor_by",
+              "expr": "sum(\n  rate(container_cpu_usage_seconds_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__rate_interval])\n) $cadvisor_by",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$cadvisor_legend_format",
@@ -202,7 +202,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__rate_interval])\n) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -210,7 +210,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) $cadvisor_by * 8",
+              "expr": "sum(\n  rate(container_network_receive_bytes_total{pod=~\"controller-$controller.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__rate_interval])\n) $cadvisor_by * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$cadvisor_legend_format",
@@ -422,7 +422,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__rate_interval])\n) * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -430,7 +430,7 @@
               "step": 10
             },
             {
-              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__interval_sx4])\n) $cadvisor_by * 8",
+              "expr": "sum(\n  rate(container_network_transmit_bytes_total{pod=~\"controller-.*\", node=~\"$node\", namespace=\"d8-ingress-nginx\"}[$__rate_interval])\n) $cadvisor_by * 8",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$cadvisor_legend_format",
@@ -662,7 +662,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum(rate(nginx_ingress_controller_nginx_process_connections_total{state=\"accepted\", controller=~\"$controller-failover\", node=~\"$node\", job=\"nginx-ingress-controller\"}[$__interval_sx4]))",
+              "expr": "sum(rate(nginx_ingress_controller_nginx_process_connections_total{state=\"accepted\", controller=~\"$controller-failover\", node=~\"$node\", job=\"nginx-ingress-controller\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -670,7 +670,7 @@
               "step": 10
             },
             {
-              "expr": "sum(rate(nginx_ingress_controller_nginx_process_connections_total{state=\"accepted\", controller=~\"$controller-failover\", node=~\"$node\", job=\"nginx-ingress-controller\"}[$__interval_sx4])) $by",
+              "expr": "sum(rate(nginx_ingress_controller_nginx_process_connections_total{state=\"accepted\", controller=~\"$controller-failover\", node=~\"$node\", job=\"nginx-ingress-controller\"}[$__rate_interval])) $by",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -1008,7 +1008,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1016,7 +1016,7 @@
           "step": 10
         },
         {
-          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__interval_sx4])) $by",
+          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__rate_interval])) $by",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -1120,7 +1120,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__interval_sx4])) $by\n/ scalar(sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__interval_sx4])))",
+          "expr": "sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__rate_interval])) $by\n/ scalar(sum(rate(ingress_nginx_detail_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", vhost=~\"_\"}[$__rate_interval])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -1771,7 +1771,7 @@
       "pluginVersion": "8.2.6",
       "targets": [
         {
-          "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", scheme=\"https\"}[$__interval_sx4]))\n  / (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) > 0)",
+          "expr": "sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", scheme=\"https\"}[$__rate_interval]))\n  / (sum(increase(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) > 0)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -2691,7 +2691,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -2699,7 +2699,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -2797,7 +2797,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by\n  / scalar(sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))) > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by\n  / scalar(sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -2906,14 +2906,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "sum(label_replace(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]), \"status_group\", \"${1}xx\", \"status\", \"([0-9])..\")) by (status_group) > 0",
+          "expr": "sum(label_replace(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]), \"status_group\", \"${1}xx\", \"status\", \"([0-9])..\")) by (status_group) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ status_group }}",
@@ -3013,7 +3013,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(label_replace(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]), \"status_group\", \"${1}xx\", \"status\", \"([0-9])..\")) by (status_group)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))) > 0",
+          "expr": "sum(label_replace(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]), \"status_group\", \"${1}xx\", \"status\", \"([0-9])..\")) by (status_group)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))) > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ status_group }}",
@@ -3198,7 +3198,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_lowres_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)",
+          "expr": "sum(rate(ingress_nginx_${metric}_lowres_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{le}}",
@@ -3386,7 +3386,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_lowres_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)\n  / scalar(sum(rate(ingress_nginx_${metric}_lowres_upstream_response_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])))",
+          "expr": "sum(rate(ingress_nginx_${metric}_lowres_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)\n  / scalar(sum(rate(ingress_nginx_${metric}_lowres_upstream_response_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])))",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{le}}",
@@ -3494,14 +3494,14 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_upstream_retries_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_${metric}_upstream_retries_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_upstream_retries_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_upstream_retries_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -3609,7 +3609,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_upstream_retries_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by\n/ sum(rate(ingress_nginx_${metric}_upstream_retries_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by\n> 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_upstream_retries_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by\n/ sum(rate(ingress_nginx_${metric}_upstream_retries_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by\n> 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -3716,14 +3716,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"1..\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"1..\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"1..\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"1..\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -3829,14 +3829,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"2..\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"2..\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"2..\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"2..\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -3937,7 +3937,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_request_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by\n  / sum(rate(ingress_nginx_${metric}_request_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_request_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by\n  / sum(rate(ingress_nginx_${metric}_request_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -4039,7 +4039,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_upstream_response_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by\n  / sum(rate(ingress_nginx_${metric}_upstream_response_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_upstream_response_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by\n  / sum(rate(ingress_nginx_${metric}_upstream_response_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -4146,14 +4146,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"3..\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"3..\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"3..\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"3..\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -4254,7 +4254,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by\n  / sum(rate(ingress_nginx_${metric}_received_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by\n  / sum(rate(ingress_nginx_${metric}_received_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -4356,7 +4356,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by\n  / sum(rate(ingress_nginx_${metric}_sent_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by\n  / sum(rate(ingress_nginx_${metric}_sent_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -4463,14 +4463,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"4..\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"4..\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"4..\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"4..\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -4572,7 +4572,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) * 8",
+          "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) * 8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -4580,7 +4580,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by * 8 > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by * 8 > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -4682,7 +4682,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) * 8",
+          "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) * 8",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -4690,7 +4690,7 @@
           "step": 20
         },
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $by * 8 > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $by * 8 > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -4795,14 +4795,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"5..\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"5..\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"5..\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"5..\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -4922,7 +4922,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"1..\"}[$__interval_sx4])) by (status)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"1..\"}[$__interval_sx4])))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"1..\"}[$__rate_interval])) by (status)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"1..\"}[$__rate_interval])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{status}}",
@@ -5028,7 +5028,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"2..\"}[$__interval_sx4])) by (status)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"2..\"}[$__interval_sx4])))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"2..\"}[$__rate_interval])) by (status)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"2..\"}[$__rate_interval])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{status}}",
@@ -5134,7 +5134,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"3..\"}[$__interval_sx4])) by (status)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"3..\"}[$__interval_sx4])))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"3..\"}[$__rate_interval])) by (status)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"3..\"}[$__rate_interval])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{status}}",
@@ -5240,7 +5240,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"4..\"}[$__interval_sx4])) by (status)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"4..\"}[$__interval_sx4])))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"4..\"}[$__rate_interval])) by (status)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"4..\"}[$__rate_interval])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{status}}",
@@ -5346,7 +5346,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"5..\"}[$__interval_sx4])) by (status)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"5..\"}[$__interval_sx4])))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"5..\"}[$__rate_interval])) by (status)\n  / scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=~\"5..\"}[$__rate_interval])))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{status}}",
@@ -5455,14 +5455,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_sx4]))",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__interval_sx4])) $by > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", status=\"$status\"}[$__rate_interval])) $by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$legend_format",
@@ -5586,7 +5586,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_request_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  / sum(rate(ingress_nginx_${metric}_request_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  * 1000",
+              "expr": "sum(rate(ingress_nginx_${metric}_request_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  / sum(rate(ingress_nginx_${metric}_request_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -5659,7 +5659,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -5732,7 +5732,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -5805,7 +5805,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -5878,7 +5878,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_upstream_response_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  / sum(rate(ingress_nginx_${metric}_upstream_response_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  * 1000",
+              "expr": "sum(rate(ingress_nginx_${metric}_upstream_response_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  / sum(rate(ingress_nginx_${metric}_upstream_response_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -5951,7 +5951,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -6024,7 +6024,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -6097,7 +6097,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -6164,28 +6164,28 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "99th",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "90th",
               "refId": "B"
             },
             {
-              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "50th",
               "refId": "C"
             },
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_request_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  / sum(rate(ingress_nginx_${metric}_request_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  * 1000",
+              "expr": "sum(rate(ingress_nginx_${metric}_request_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  / sum(rate(ingress_nginx_${metric}_request_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Avg",
@@ -6293,28 +6293,28 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "99th",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "90th",
               "refId": "B"
             },
             {
-              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)) * 1000",
+              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)) * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "50th",
               "refId": "C"
             },
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_upstream_response_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  / sum(rate(ingress_nginx_${metric}_upstream_response_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  * 1000",
+              "expr": "sum(rate(ingress_nginx_${metric}_upstream_response_seconds_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  / sum(rate(ingress_nginx_${metric}_upstream_response_seconds_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  * 1000",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Avg",
@@ -6412,7 +6412,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le) > 0",
+              "expr": "sum(increase(ingress_nginx_${metric}_request_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le) > 0",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -6476,7 +6476,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le) > 0",
+              "expr": "sum(increase(ingress_nginx_${metric}_upstream_response_seconds_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le) > 0",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -6586,7 +6586,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  / sum(rate(ingress_nginx_${metric}_received_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))",
+              "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  / sum(rate(ingress_nginx_${metric}_received_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -6659,7 +6659,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -6732,7 +6732,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -6805,7 +6805,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -6878,7 +6878,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  / sum(rate(ingress_nginx_${metric}_sent_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))",
+              "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  / sum(rate(ingress_nginx_${metric}_sent_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -6951,7 +6951,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -7024,7 +7024,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -7097,7 +7097,7 @@
           "pluginVersion": "8.2.6",
           "targets": [
             {
-              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -7164,28 +7164,28 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "99th",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "90th",
               "refId": "B"
             },
             {
-              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "50th",
               "refId": "C"
             },
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  / sum(rate(ingress_nginx_${metric}_received_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))",
+              "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  / sum(rate(ingress_nginx_${metric}_received_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Avg",
@@ -7293,28 +7293,28 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "99th",
               "refId": "A"
             },
             {
-              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.9, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "90th",
               "refId": "B"
             },
             {
-              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le))",
+              "expr": "histogram_quantile(0.5, sum(rate(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "50th",
               "refId": "C"
             },
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))\n  / sum(rate(ingress_nginx_${metric}_sent_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4]))",
+              "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))\n  / sum(rate(ingress_nginx_${metric}_sent_bytes_count{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Avg",
@@ -7412,7 +7412,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(increase(ingress_nginx_${metric}_received_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -7476,7 +7476,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(increase(ingress_nginx_${metric}_sent_bytes_bucket{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -7578,7 +7578,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) by (method)\n  / scalar(sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])))",
+              "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) by (method)\n  / scalar(sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{method}}",
@@ -7676,7 +7676,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\"}[$__interval_sx4])) by (content_kind)\n/ scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\"}[$__interval_sx4])))",
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\"}[$__rate_interval])) by (content_kind)\n/ scalar(sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\"}[$__rate_interval])))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{content_kind}}",
@@ -7782,14 +7782,14 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"$method\"}[$__interval_sx4]))",
+              "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"$method\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"$method\"}[$__interval_sx4])) $by > 0",
+              "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\", method=\"$method\"}[$__rate_interval])) $by > 0",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -7895,14 +7895,14 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=\"$content_kind\"}[$__interval_sx4]))",
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=\"$content_kind\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=\"$content_kind\"}[$__interval_sx4])) $by > 0",
+              "expr": "sum(rate(ingress_nginx_${metric}_responses_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=\"$content_kind\"}[$__rate_interval])) $by > 0",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$legend_format",
@@ -8922,7 +8922,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $alt_by > 0",
+              "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $alt_by > 0",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$alt_legend_format",
@@ -9018,7 +9018,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $alt_by * 8 > 0",
+              "expr": "sum(rate(ingress_nginx_${metric}_received_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $alt_by * 8 > 0",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$alt_legend_format",
@@ -9115,7 +9115,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__interval_sx4])) $alt_by * 8 > 0",
+              "expr": "sum(rate(ingress_nginx_${metric}_sent_bytes_sum{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $alt_by * 8 > 0",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "$alt_legend_format",

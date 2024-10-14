@@ -17,7 +17,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
+var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, _ bool) error {
 	p := make(map[string]json.RawMessage)
 	if metaCfg != nil {
 		p = metaCfg.ProviderClusterConfig
@@ -45,9 +45,26 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	providerClusterConfiguration.PatchWithModuleConfig(moduleConfiguration)
 	discoveryData.PathWithDiscoveryData(moduleConfiguration)
 
+	externalNetworkDHCP := true
+	switch providerClusterConfiguration.Layout {
+	case "Simple":
+		if v := providerClusterConfiguration.Simple.ExternalNetworkDHCP; v != nil {
+			externalNetworkDHCP = *v
+		}
+	case "SimpleWithInternalNetwork":
+		if v := providerClusterConfiguration.SimpleWithInternalNetwork.ExternalNetworkDHCP; v != nil {
+			externalNetworkDHCP = *v
+		}
+	case "StandardWithNoRouter":
+		if v := providerClusterConfiguration.StandardWithNoRouter.ExternalNetworkDHCP; v != nil {
+			externalNetworkDHCP = *v
+		}
+	}
+
 	input.Values.Set("cloudProviderOpenstack.internal.connection", providerClusterConfiguration.Provider)
 	input.Values.Set("cloudProviderOpenstack.internal.internalNetworkNames", discoveryData.InternalNetworkNames)
 	input.Values.Set("cloudProviderOpenstack.internal.externalNetworkNames", discoveryData.ExternalNetworkNames)
+	input.Values.Set("cloudProviderOpenstack.internal.externalNetworkDHCP", externalNetworkDHCP)
 	input.Values.Set("cloudProviderOpenstack.internal.zones", discoveryData.Zones)
 	input.Values.Set("cloudProviderOpenstack.internal.instances", discoveryData.Instances)
 	input.Values.Set("cloudProviderOpenstack.internal.podNetworkMode", discoveryData.PodNetworkMode)

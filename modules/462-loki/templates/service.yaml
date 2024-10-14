@@ -11,6 +11,6 @@ spec:
   - name: loki
     port: 3100
     protocol: TCP
-    targetPort: 3100
+    targetPort: https-metrics
   selector:
     app: {{ .Chart.Name }}

@@ -29,7 +29,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/shared"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -50,14 +50,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		shared.ConfigurationChecksumHookConfig(),
 		{
 			Name:                   "ngs",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			ApiVersion:             "deckhouse.io/v1",
 			Kind:                   "NodeGroup",
 			FilterFunc:             updateApprovalNodeGroupFilter,
 		},
 		{
 			Name:                   "nodes",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -490,7 +490,7 @@ func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.Filt
 		if ng.Spec.Disruptions.Automatic.DrainBeforeApproval != nil {
 			ung.Disruptions.Automatic.DrainBeforeApproval = ng.Spec.Disruptions.Automatic.DrainBeforeApproval
 		} else {
-			ung.Disruptions.Automatic.DrainBeforeApproval = pointer.Bool(true)
+			ung.Disruptions.Automatic.DrainBeforeApproval = ptr.To(true)
 		}
 	}
 
@@ -519,7 +519,8 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-required"]; ok {
 		isDisruptionRequired = true
 	}
-	if _, ok := node.Annotations[drainingAnnotationKey]; ok {
+	// This annotation is now only used by bashible, there are other means to drain the node manually.
+	if v, ok := node.Annotations[drainingAnnotationKey]; ok && v == "bashible" {
 		isDraining = true
 	}
 	if _, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok {
@@ -533,7 +534,8 @@ func updateApprovalFilterNode(obj *unstructured.Unstructured) (go_hook.FilterRes
 	if !ok {
 		nodeGroup = ""
 	}
-	if _, ok := node.Annotations[drainedAnnotationKey]; ok {
+	// This annotation is now only used by bashible, there are other means to drain the node manually.
+	if v, ok := node.Annotations[drainedAnnotationKey]; ok && v == "bashible" {
 		isDrained = true
 	}
 

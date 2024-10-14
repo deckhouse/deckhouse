@@ -4,7 +4,7 @@ memory: 100Mi
 {{- end }}
 
 {{- if .Values.extendedMonitoring.imageAvailability.exporterEnabled }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -85,12 +85,20 @@ spec:
         {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.ca }}
         - --capath=/registry-root-ca/ca.crt
         {{- end }}
+        {{- if .Values.extendedMonitoring.imageAvailability.forceCheckDisabledControllers }}
+        - '--force-check-disabled-controllers={{ .Values.extendedMonitoring.imageAvailability.forceCheckDisabledControllers | join "," | replace "All" "*" }}'
+        {{- end }}
+        {{- if .Values.extendedMonitoring.imageAvailability.mirrors }}
+        {{- range $mirror := .Values.extendedMonitoring.imageAvailability.mirrors }}
+        - '--image-mirror={{ printf "%s=%s" $mirror.original $mirror.mirror }}'
+        {{- end }}
+        {{- end }}
         env:
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "image_availability_exporter_resources" . | nindent 12 }}
             {{- end }}
         readinessProbe:
@@ -146,7 +154,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
   {{- end }}
       volumes:

@@ -45,6 +45,8 @@ properties:
         default: []
         items:
           type: string
+      externalNetworkDHCP:
+        type: boolean
       zones:
         type: array
         default: []

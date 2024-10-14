@@ -93,6 +93,7 @@ provider:
   password: test
   insecure: true
 vmFolderPath: test
+vmFolderExists: false
 regionTagCategory: test
 zoneTagCategory: test
 region: test
@@ -140,6 +141,7 @@ region: override
 regionTagCategory: override
 sshPublicKey: override1
 vmFolderPath: override
+vmFolderExists: false
 zoneTagCategory: override
 zones:
 - override1
@@ -187,6 +189,7 @@ region: override
 regionTagCategory: override
 sshPublicKey: override1
 vmFolderPath: override
+vmFolderExists: false
 zoneTagCategory: override
 zones:
 - override1
@@ -209,6 +212,7 @@ region: override
 regionTagCategory: k8s-region
 sshPublicKey: override1
 vmFolderPath: override
+vmFolderExists: false
 zoneTagCategory: k8s-zone
 zones:
 - test

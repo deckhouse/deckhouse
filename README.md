@@ -7,7 +7,7 @@
   <a href="https://twitter.com/deckhouseio"><img src="https://img.shields.io/twitter/follow/deckhouseio?label=%40deckhouseio&style=flat-square" alt="Twitter"></a>
   <a href="https://github.com/deckhouse/deckhouse/discussions"><img src="https://img.shields.io/github/discussions/deckhouse/deckhouse" alt="GH Discussions"/></a>
   <a href="CODE_OF_CONDUCT.md"><img src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg" alt="Contributor Covenant"></a>
-  <a href="https://flow.deckhouse.io"><img src="https://img.shields.io/badge/releases-flow.deckhouse.io-blueviolet" alt="Releases"></a>
+  <a href="https://releases.deckhouse.io"><img src="https://img.shields.io/badge/releases-releases.deckhouse.io-blueviolet" alt="Releases"></a>
 </p>
 
 [Deckhouse](https://deckhouse.io/) is an Open Source platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all the add-ons you need for auto-scaling, observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE).
@@ -23,7 +23,7 @@
 - Easy to start: you need a couple of CLI commands and 8 minutes to get production-ready Kubernetes.
 - A fully-featured platform. Many features *(check the diagram below)* — carefully configured & integrated — are available right out of the box.
 
-_Deckhouse Platform [has passed](https://landscape.cncf.io/card-mode?category=certified-kubernetes-distribution,certified-kubernetes-hosted,certified-kubernetes-installer&grouping=category&selected=flant-deckhouse) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.23—1.27._
+_Deckhouse Platform [has passed](https://landscape.cncf.io/?view-mode=card&item=platform--certified-kubernetes-distribution--flant-deckhouse#app-definition-and-development--application-definition-image-build) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.26—1.30._
 
 A brief overview of essential Deckhouse Platform features, from infrastructure level to the platform:
 

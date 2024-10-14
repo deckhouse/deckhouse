@@ -1,0 +1,12 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    app: controller
+    class: solid
+    heritage: deckhouse
+    module: ingress-nginx
+  name: solid
+spec:
+  controller: ingress-nginx.deckhouse.io/solid

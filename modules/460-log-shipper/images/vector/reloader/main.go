@@ -87,6 +87,7 @@ func reloadOnce() {
 		return
 	}
 
+	cleanLocks()
 	if err := sendReloadSignal(); err != nil {
 		log.Println(err)
 		return

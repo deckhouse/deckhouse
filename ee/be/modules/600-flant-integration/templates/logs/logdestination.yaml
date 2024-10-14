@@ -7,6 +7,11 @@ metadata:
   name: flant-integration-loki-storage
   {{- include "helm_lib_module_labels" (list . (dict "app" "flant-integration")) | nindent 2 }}
 spec:
+  buffer:
+    memory:
+      maxEvents: 10240
+    type: Memory
+    whenFull: DropNewest
   loki:
     # We need / in the end of storage endpoint. Vector concat URI without /
     endpoint: {{ trimSuffix "/" .Values.flantIntegration.logs.url }}/

@@ -9,7 +9,7 @@
 
 
 {{- define "publish_api_deploy_certificate" }}
-  {{- if .Values.userAuthn.publishAPI.enable }}
+  {{- if .Values.userAuthn.publishAPI.enabled }}
     {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" -}}
       {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
       "not empty string"

@@ -1,0 +1,25 @@
+{{- range $nrt := .Values.staticRoutingManager.internal.nodeRoutingTables }}
+---
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalNodeRoutingTable
+metadata:
+  finalizers:
+    - routing-tables-manager.network.deckhouse.io
+  {{ include "helm_lib_module_labels" (list $ (dict "routing-manager.network.deckhouse.io/node-name" $nrt.nodeName)) | nindent 2 }}
+  name: {{ $nrt.name }}
+  ownerReferences:
+    - apiVersion: network.deckhouse.io/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: RoutingTable
+      name: {{ $nrt.ownerRTName }}
+      uid: {{ $nrt.ownerRTUID }}
+spec:
+  ipRoutingTableID: {{ $nrt.ipRoutingTableID }}
+  nodeName: {{ $nrt.nodeName }}
+  routes:
+  {{- range $route := $nrt.routes }}
+    - destination: {{ $route.destination }}
+      gateway: {{ $route.gateway }}
+  {{- end }}
+{{- end }}

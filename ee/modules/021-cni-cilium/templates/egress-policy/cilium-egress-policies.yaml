@@ -1,0 +1,29 @@
+{{- range $egp := $.Values.cniCilium.internal.egressGatewayPolicies }}
+  {{- if hasKey $.Values.cniCilium.internal.egressGatewaysMap $egp.egressGatewayName }}
+  {{- $eg := (get $.Values.cniCilium.internal.egressGatewaysMap $egp.egressGatewayName) }}
+---
+apiVersion: cilium.io/v2
+kind: CiliumEgressGatewayPolicy
+metadata:
+  name: d8.{{ $egp.egressGatewayName }}
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  selectors:
+  {{- $egp.selectors | toYaml | nindent 2 }}
+  destinationCIDRs:
+    {{- $egp.destinationCIDRs | toYaml | nindent 2 }}
+  {{- if $egp.excludedCIDRs }}
+  excludedCIDRs:
+    {{- $egp.destinationCIDRs | toYaml | nindent 2 }}
+  {{- end }}
+  egressGateway:
+    nodeSelector:
+      matchLabels:
+        egress-gateway.network.deckhouse.io/active-for-{{ $egp.egressGatewayName }}: ""
+  {{- if eq $eg.sourceIP.mode "VirtualIPAddress" }}
+    egressIP: {{ $eg.sourceIP.virtualIPAddress.ip }}
+  {{- else }}
+    interface: {{ $eg.sourceIP.primaryIPFromEgressGatewayNodeInterface.interfaceName }}
+  {{- end }}
+  {{- end }}
+{{- end }}

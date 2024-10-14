@@ -49,7 +49,7 @@ metadata:
   name: "d8:admission-policy-engine:gatekeeper"
 rules:
   - apiGroups:
-      - '*'
+      - '*' # Gatekeeper have to have read access to all resources because of audit periodical checks
     resources:
       - '*'
     verbs:
@@ -103,7 +103,7 @@ rules:
   - apiGroups:
       - constraints.gatekeeper.sh
     resources:
-      - '*'
+      - '*' # We couldn't use explicit set of resources because they are created dynamically (see Gatekeeper ConstraintTemplate)
     verbs:
       - create
       - delete
@@ -127,7 +127,10 @@ rules:
   - apiGroups:
       - mutations.gatekeeper.sh
     resources:
-      - '*'
+      - assign
+      - assignimage
+      - assignmetadata
+      - modifyset
     verbs:
       - create
       - delete
@@ -147,7 +150,10 @@ rules:
   - apiGroups:
       - status.gatekeeper.sh
     resources:
-      - '*'
+      - constraintpodstatuses
+      - constrainttemplatepodstatuses
+      - expansiontemplatepodstatuses
+      - mutatorpodstatuses
     verbs:
       - create
       - delete

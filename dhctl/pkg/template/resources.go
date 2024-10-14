@@ -22,12 +22,12 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 var kindOrderMap map[string]int
@@ -77,6 +77,10 @@ type KubernetesResourceVersion struct {
 type Resource struct {
 	GVK    schema.GroupVersionKind
 	Object unstructured.Unstructured
+}
+
+func (r *Resource) String() string {
+	return fmt.Sprintf("%s - %s/%s", r.GVK.String(), r.Object.GetNamespace(), r.Object.GetName())
 }
 
 type Resources []*Resource
@@ -152,6 +156,11 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 
 		gvk := schema.FromAPIVersionAndKind(kubernetesResource.GetAPIVersion(), kubernetesResource.GetKind())
 
+		if gvk.Empty() || gvk.GroupVersion().Empty() || gvk.GroupKind().Empty() {
+			log.DebugF("Empty gvr for resource:\n%s\n", doc)
+			continue
+		}
+
 		resources = append(resources, &Resource{
 			GVK:    gvk,
 			Object: kubernetesResource,
@@ -161,6 +170,15 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 	sort.Stable(resources)
 
 	return resources, nil
+}
+
+func (r Resources) String() string {
+	s := make([]string, 0)
+	for _, rr := range r {
+		s = append(s, fmt.Sprintf("%v", rr.Object.Object))
+	}
+
+	return strings.Join(s, ";")
 }
 
 func loadResources(path string, data map[string]interface{}) (Resources, error) {
@@ -174,36 +192,9 @@ func loadResources(path string, data map[string]interface{}) (Resources, error) 
 	return ParseResourcesContent(content, data)
 }
 
-func validateModuleConfigs(resources Resources) error {
-	store := config.NewSchemaStore()
-	for _, r := range resources {
-		if r.GVK.Kind == config.ModuleConfigKind && r.GVK.Group == config.ModuleConfigGroup {
-			// in resources should be none build in modules only
-			if store.HasSchemaForModuleConfig(r.Object.GetName()) {
-				return fmt.Errorf("Deny using build-in ModuleConfig in the resources config. Using config file for build-in ModuleConfig's")
-			}
-		}
-	}
-
-	return nil
-}
-
-func OnlyModulesFromSourcesConfigsInResources(path string) error {
-	resources, err := loadResources(path, nil)
-	if err != nil {
-		return err
-	}
-
-	return validateModuleConfigs(resources)
-}
-
 func ParseResources(path string, data map[string]interface{}) (Resources, error) {
 	resources, err := loadResources(path, data)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := validateModuleConfigs(resources); err != nil {
 		return nil, err
 	}
 

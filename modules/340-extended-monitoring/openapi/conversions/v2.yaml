@@ -1,0 +1,5 @@
+version: 2
+conversions:
+  - if .imageAvailability.skipRegistryCertVerification == true then .imageAvailability.registry.tlsConfig.insecureSkipVerify=true end
+  - del(.imageAvailability.skipRegistryCertVerification) | if .imageAvailability == {} then del(.imageAvailability) end
+

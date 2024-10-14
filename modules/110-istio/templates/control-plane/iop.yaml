@@ -1,6 +1,45 @@
+{{- define "check_linux_kernel_resources" }}
+cpu: 25m
+memory: 32Mi
+{{- end }}
+
+
+# TODO: remove after closing issue https://github.com/deckhouse/deckhouse/issues/7680
+{{- define "module_pod_security_context_run_as_user_deckhouse" -}}
+{{- /* Template context with .Values, .Chart, etc */ -}}
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - all
+  runAsNonRoot: true
+  runAsUser: 64535
+  runAsGroup: 64535
+  seccompProfile:
+    type: RuntimeDefault
+{{- end }}
+
+# TODO: remove after closing issue https://github.com/deckhouse/deckhouse/issues/7680
+{{- define "module_init_container_check_linux_kernel" }}
+  {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $semver_constraint := index . 1  -}} {{- /* Semver constraint */ -}}
+- name: check-linux-kernel
+  image: {{ include "helm_lib_module_common_image" (list $context "checkKernelVersion") }}
+  {{- include "module_pod_security_context_run_as_user_deckhouse" . | nindent 2 }}
+  env:
+    - name: KERNEL_CONSTRAINT
+      value: {{ $semver_constraint | quote }}
+  resources:
+    requests:
+      {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 6 }}
+      {{- include "check_linux_kernel_resources" $context | indent 6 }}
+    limits:
+      {{- include "check_linux_kernel_resources" $context | indent 6 }}
+{{- end }}
+
 {{ $supportedProviders := list "aws" "gcp" "azure" }}
 {{ $cloudPlatform := "none" }}
-{{ if hasKey .Values.global.clusterConfiguration "cloud" }}
+{{ if and (.Values.global.clusterConfiguration) (hasKey .Values.global.clusterConfiguration "cloud") }}
   {{ $currentProvider := .Values.global.clusterConfiguration.cloud.provider | lower }}
   {{ if has $currentProvider $supportedProviders }}
     {{ $cloudPlatform = $currentProvider }}
@@ -12,7 +51,7 @@
   {{- $revision := get $versionInfo "revision"}}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
-  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -59,6 +98,7 @@ spec:
     - name: istio-egressgateway
       enabled: false
 
+    # We're deploying the istio-cni DS with module templates.
     cni:
       enabled: false
 
@@ -143,8 +183,12 @@ spec:
         image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
         clusterDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
   {{- if $.Values.istio.sidecar.resourcesManagement }}
+    {{- if and (eq $.Values.istio.sidecar.resourcesManagement.mode "Static") ($.Values.istio.sidecar.resourcesManagement.static) }}
         resources:
           {{- include "helm_lib_resources_management_original_pod_resources" $.Values.istio.sidecar.resourcesManagement | nindent 10 }}
+    {{- else }}
+        resources: {}
+    {{- end }}
   {{- else }}
         resources: {}
   {{- end }}
@@ -159,16 +203,21 @@ spec:
         image: {{ include "helm_lib_module_image" (list $ (printf "proxyv2%s" $imageSuffix )) }}
         resources:
           limits:
-            cpu: 2000m
-            memory: 1024Mi
+            cpu: 100m
+            memory: 50Mi
           requests:
             cpu: 10m
             memory: 10Mi
 
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
 
+    istio_cni:
+      enabled: {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+
     pilot:
       autoscaleEnabled: false
+      podAnnotations:
+        istio-mtls-ca-bundle-checksum: {{ $.Values.istio.internal.ca | toYaml | sha256sum }}
   {{- if eq $.Values.istio.controlPlane.replicasManagement.mode "Standard" }}
       replicaCount: {{ include "helm_lib_is_ha_to_value" (list $ 2 1) }}
   {{- else if eq $.Values.istio.controlPlane.replicasManagement.mode "Static" }}
@@ -200,14 +249,31 @@ spec:
       injectedAnnotations:
         istio.deckhouse.io/full-version: "{{ $fullVersion }}"
 {{- if ($.Values.global.enabledModules | has "cni-cilium") }}
-      defaultTemplates: ["sidecar", "d8-check-kernel-version"]
+      defaultTemplates: ["sidecar", "d8-seccomp", "d8-check-kernel-version"]
+{{ else }}
+      defaultTemplates: ["sidecar", "d8-seccomp"]
 {{- end }}
       templates:
+        d8-seccomp: |
+          spec:
+            {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
+            initContainers:
+            - name: istio-validation
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
+            {{- end }}
+            containers:
+            - name: istio-proxy
+              securityContext:
+                seccompProfile:
+                  type: RuntimeDefault
 {{- if ($.Values.global.enabledModules | has "cni-cilium") }}
         d8-check-kernel-version: |
           spec:
             initContainers:
-            {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple $ ">= 5.7") | nindent 12 }}
+            # TODO: change to helm_lib_module_init_container_check_linux_kernel after closing issue https://github.com/deckhouse/deckhouse/issues/7680
+            {{- include "module_init_container_check_linux_kernel" (tuple $ ">= 5.7") | nindent 12 }}
 {{- end }}
         d8-hold-istio-proxy-termination-until-application-stops: |
           spec:

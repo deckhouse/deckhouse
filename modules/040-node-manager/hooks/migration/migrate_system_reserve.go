@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -44,8 +44,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "NodeGroup",
 			FilterFunc:                   ngFilter,
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 		{
 			Name:                         "cm",
@@ -53,8 +53,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:                         "ConfigMap",
 			NameSelector:                 &types.NameSelector{MatchNames: []string{systemReserveMigrationCM}},
 			FilterFunc:                   configMapName,
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 		{
 			Name:                         "cmNew",
@@ -62,14 +62,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:                         "ConfigMap",
 			NameSelector:                 &types.NameSelector{MatchNames: []string{systemReserveMigrationCMNew}},
 			FilterFunc:                   configMapName,
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 	},
 }, systemReserve)
 
 type NodeGroup struct {
-	Name string
+	Name                    string
+	ResourceReservationMode string
 }
 
 func ngFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -80,7 +81,8 @@ func ngFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}
 
 	return &NodeGroup{
-		Name: ng.Name,
+		Name:                    ng.Name,
+		ResourceReservationMode: string(ng.Spec.Kubelet.ResourceReservation.Mode),
 	}, nil
 }
 
@@ -107,6 +109,11 @@ func systemReserve(input *go_hook.HookInput) error {
 	ngsSnapshot := input.Snapshots["ngs"]
 	for _, ngRaw := range ngsSnapshot {
 		ng := ngRaw.(*NodeGroup)
+		skipMigration := ng.ResourceReservationMode != ""
+		input.LogEntry.Printf("NodeGroupName: %s, KubeletResourceReservationMode: %s, skipMigration: %t", ng.Name, ng.ResourceReservationMode, skipMigration)
+		if skipMigration {
+			continue
+		}
 		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			objCopy := u.DeepCopy()
 			err := unstructured.SetNestedField(objCopy.Object, "Off", "spec", "kubelet", "resourceReservation", "mode")

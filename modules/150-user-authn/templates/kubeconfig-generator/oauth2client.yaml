@@ -1,5 +1,5 @@
 {{- $context := . }}
-{{- if $context.Values.userAuthn.publishAPI.enable }}
+{{- if $context.Values.userAuthn.publishAPI.enabled }}
 ---
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client

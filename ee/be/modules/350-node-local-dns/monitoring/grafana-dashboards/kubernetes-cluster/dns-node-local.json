@@ -84,7 +84,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_panics_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node)",
+          "expr": "sum(rate(coredns_panics_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -92,7 +92,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(coredns_panics_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+          "expr": "sum(rate(coredns_panics_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -187,7 +187,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node)",
+          "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -195,7 +195,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+          "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -286,7 +286,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node) / sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node)",
+          "expr": "sum(rate(coredns_dns_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node) / sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -364,7 +364,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (le)",
+          "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{le}}",
@@ -445,7 +445,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node)",
+          "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -454,7 +454,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+          "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -545,7 +545,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node) / sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node)",
+          "expr": "sum(rate(coredns_forward_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node) / sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -622,7 +622,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (le)",
+          "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{le}}",
@@ -705,7 +705,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_sx4])) by (node)",
+          "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -713,7 +713,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_sx4]))",
+          "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -800,7 +800,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node)\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node) \n)",
+          "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node) \n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -890,7 +890,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (node)",
+          "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -996,7 +996,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_responses_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_sx4])) by (node)",
+          "expr": "sum(rate(coredns_dns_responses_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -1004,7 +1004,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(coredns_dns_responses_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_sx4]))",
+          "expr": "sum(rate(coredns_dns_responses_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1111,7 +1111,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_responses_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_sx4])) by (node)",
+          "expr": "sum(rate(coredns_dns_responses_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -1119,7 +1119,7 @@
           "step": 40
         },
         {
-          "expr": "sum(rate(coredns_dns_responses_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__interval_sx4]))",
+          "expr": "sum(rate(coredns_dns_responses_total{node=~\"$node\", rcode=~\"$rcode\", job=\"node-local-dns\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1208,7 +1208,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+          "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__rate_interval]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "TCP",
@@ -1216,7 +1216,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+          "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__rate_interval]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "UDP",
@@ -1323,7 +1323,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (type)",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -1524,7 +1524,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (to)",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (to)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1533,7 +1533,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1636,7 +1636,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1645,7 +1645,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1750,7 +1750,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_sx4])) by (upstream)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval])) by (upstream)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -1758,7 +1758,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1854,7 +1854,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__rate_interval]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCP",
@@ -1862,7 +1862,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__rate_interval]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "UDP",
@@ -1956,7 +1956,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))\n)",
+              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Hit",
@@ -2059,7 +2059,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (type)",
+              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -2067,7 +2067,7 @@
               "step": 40
             },
             {
-              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -2167,7 +2167,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (zone)",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (zone)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{zone}}",
@@ -2175,7 +2175,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -2260,7 +2260,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -2328,7 +2328,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -2435,7 +2435,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (type)",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -2642,7 +2642,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (to)",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (to)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2651,7 +2651,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -2757,7 +2757,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2766,7 +2766,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -2874,7 +2874,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_sx4])) by (upstream)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval])) by (upstream)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -2882,7 +2882,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -2981,7 +2981,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__rate_interval]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCP",
@@ -2989,7 +2989,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__rate_interval]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "UDP",
@@ -3086,7 +3086,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))\n)",
+              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Hit",
@@ -3192,7 +3192,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (type)",
+              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -3200,7 +3200,7 @@
               "step": 40
             },
             {
-              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3303,7 +3303,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (zone)",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (zone)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{zone}}",
@@ -3311,7 +3311,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3399,7 +3399,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -3470,7 +3470,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -3579,7 +3579,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (type)",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -3786,7 +3786,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (to)",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (to)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3795,7 +3795,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3901,7 +3901,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3910,7 +3910,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4018,7 +4018,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_sx4])) by (upstream)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval])) by (upstream)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -4026,7 +4026,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4125,7 +4125,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"tcp\", job=\"node-local-dns\"}[$__rate_interval]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "TCP",
@@ -4133,7 +4133,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\",proto=\"udp\", job=\"node-local-dns\"}[$__rate_interval]))\n/\nsum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "UDP",
@@ -4230,7 +4230,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))\n)",
+              "expr": "sum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))\n/\n(\nsum(rate(coredns_cache_hits_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) +\nsum(rate(coredns_cache_misses_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Hit",
@@ -4336,7 +4336,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (type)",
+              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (type)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{type}}",
@@ -4344,7 +4344,7 @@
               "step": 40
             },
             {
-              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(max_over_time(coredns_cache_entries{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4447,7 +4447,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (zone)",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (zone)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{zone}}",
@@ -4455,7 +4455,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_dns_requests_total{node=~\"node\", job=\"node-local-dns\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_dns_requests_total{node=~\"node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4543,7 +4543,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(rate(coredns_dns_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -4614,7 +4614,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -4725,7 +4725,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4733,7 +4733,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (node)",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{node}}",
@@ -4835,7 +4835,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -4844,7 +4844,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -4927,7 +4927,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -5017,7 +5017,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (node)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -5025,7 +5025,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5152,7 +5152,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5160,7 +5160,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (node)",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{node}}",
@@ -5265,7 +5265,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -5274,7 +5274,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5360,7 +5360,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -5453,7 +5453,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (node)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -5461,7 +5461,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5590,7 +5590,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5598,7 +5598,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (node)",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{node}}",
@@ -5703,7 +5703,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -5712,7 +5712,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -5798,7 +5798,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -5891,7 +5891,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (node)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -5899,7 +5899,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -6028,7 +6028,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -6036,7 +6036,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (node)",
+              "expr": "sum(rate(coredns_forward_requests_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{node}}",
@@ -6141,7 +6141,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (rcode)",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -6150,7 +6150,7 @@
               "step": 60
             },
             {
-              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_responses_total{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -6236,7 +6236,7 @@
           },
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (le)",
+              "expr": "sum(rate(coredns_forward_request_duration_seconds_bucket{node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -6329,7 +6329,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4])) by (node)",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -6337,7 +6337,7 @@
               "step": 40
             },
             {
-              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__interval_sx4]))",
+              "expr": "sum(rate(coredns_forward_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",

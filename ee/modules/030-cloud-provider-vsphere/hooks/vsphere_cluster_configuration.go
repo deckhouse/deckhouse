@@ -12,14 +12,14 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks/internal/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
+var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, _ bool) error {
 
 	p := make(map[string]json.RawMessage)
 	if metaCfg != nil {
@@ -102,7 +102,7 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 	}
 
 	if p.RegionTagCategory == nil {
-		p.RegionTagCategory = pointer.String("k8s-region")
+		p.RegionTagCategory = ptr.To("k8s-region")
 	}
 
 	if m.ZoneTagCategory != nil {
@@ -110,7 +110,7 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 	}
 
 	if p.ZoneTagCategory == nil {
-		p.ZoneTagCategory = pointer.String("k8s-zone")
+		p.ZoneTagCategory = ptr.To("k8s-zone")
 	}
 
 	if m.DisableTimesync != nil {
@@ -118,7 +118,7 @@ func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModu
 	}
 
 	if p.DisableTimesync == nil {
-		p.DisableTimesync = pointer.Bool(true)
+		p.DisableTimesync = ptr.To(true)
 	}
 
 	if m.ExternalNetworkNames != nil {

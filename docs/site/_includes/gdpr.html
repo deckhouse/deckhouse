@@ -1,21 +1,12 @@
 <div class="gdpr">
-  <div class="text text_h3 gdpr__title">
-    {%- if page.lang == "en" %}
-      We use cookies
-    {% else %}
-      Мы используем cookies
-    {% endif %}
-  </div>
   <div class="text gdpr__message">
     {%- if page.lang == "en" %}
-      We use cookies to enhance your experience. By continuing to visit this site you agree to our use of cookies.
-      <a href="/cookie-policy.html">More info</a>
+      We use cookies to make your browsing experience more convenient. Please refer to our <a href="https://deckhouse.io/privacy-policy/" class="gdpr__link">Privacy Policy</a> for details.
     {% else %}
-      Продолжая использовать наш сайт, вы даете согласие на обработку файлов cookie.
-      <a href="/security-policy.html">Подробнее</a>
+      Мы используем файлы cookie, чтобы сделать работу с&nbsp;сайтом удобнее. Подробнее — в&nbsp;<a href="https://deckhouse.ru/security-policy/" class="gdpr__link">Политике конфиденциальности</a>.
     {% endif %}
   </div>
-  <button class="button button_alt gdpr__button">
+  <button class="button gdpr__button">
     {%- if page.lang == "en" %}
       Accept
     {% else %}

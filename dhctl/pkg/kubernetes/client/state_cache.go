@@ -310,3 +310,7 @@ func (c *StateCache) NeedIntermediateSave() bool {
 	// cache store in k8s secret, need sync every intermediate states
 	return true
 }
+
+func (c *StateCache) Dir() string {
+	return c.tmpDir
+}

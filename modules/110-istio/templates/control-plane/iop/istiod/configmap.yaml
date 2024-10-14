@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istiod-service-accounts
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "istiod" "control-plane-manager.deckhouse.io/extra-audit-policy-config" "")) | nindent 2 }}
+data:
+  basicAuditPolicy: |
+    serviceAccounts:
+{{- range $version := .Values.istio.internal.versionsToInstall }}
+  {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+  {{- $revision := get $versionInfo "revision"}}
+    - system:serviceaccount:d8-{{ $.Chart.Name }}:istiod-{{ $revision }}
+{{- end }}

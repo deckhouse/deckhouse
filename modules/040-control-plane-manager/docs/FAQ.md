@@ -19,6 +19,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the creation of new master nodes.
+1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -73,6 +74,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
+1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -148,6 +150,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
+1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
 1. Remove the `node.deckhouse.io/group: master` and `node-role.kubernetes.io/control-plane: ""` labels.
 1. Make sure that the master node to be deleted is no longer listed as a member of the etcd cluster:
 
@@ -175,6 +178,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 1. Make a [backup of `etcd`](faq.html#etc-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
+1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
@@ -304,7 +308,7 @@ Warning! The last parameter in the output table shows etcd member is in [**learn
 
 ### Option 2
 
-Use the `etcdctl endpoint status` command. The fith parameter in the output table will be `true` for the leader.
+Use the `etcdctl endpoint status` command. The fifth parameter in the output table will be `true` for the leader.
 
 Example:
 
@@ -328,6 +332,45 @@ The control-plane-manager saves backups to `/etc/kubernetes/deckhouse/backup`. T
 3. After the new cluster is ready, remove the `--force-new-cluster` parameter.
 
 > **Caution!** This operation is unsafe and breaks the guarantees given by the consensus protocol. Note that it brings the cluster to the state that was saved on the node. Any pending entries will be lost.
+
+### What if etcd restarts with an error?
+
+This method may be necessary if the `--force-new-cluster` option doesn't restore etcd work. Such a scenario can occur during an unsuccessful converge of master nodes, where a new master node was created with an old etcd disk, changed its internal address, and other master nodes are absent. Symptoms indicating the need for this method include: the etcd container being stuck in an endless restart with the log showing the error: `panic: unexpected removal of unknown remote peer`.
+
+1. Install the [etcdutl](https://github.com/etcd-io/etcd/releases) utility.
+1. Create a new etcd database snapshot from the current local snapshot (`/var/lib/etcd/member/snap/db`):
+
+   ```shell
+   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   --skip-hash-check=true --data-dir /var/lib/etcdtest
+   ```
+
+   where:
+   - `<HOSTNAME>` — the name of the master node,
+   - `<ADDRESS>` — the address of the master node.
+
+1. Execute the following commands to use the new snapshot:
+
+   ```shell
+   cp -r /var/lib/etcd /tmp/etcd-backup
+   rm -rf /var/lib/etcd
+   mv /var/lib/etcdtest /var/lib/etcd
+   ```
+
+1. Locate the `etcd` and `api-server` containers:
+
+   ```shell
+   crictl ps -a | egrep "etcd|apiserver"
+   ```
+
+1. Remove the `etcd` and `api-server` containers:
+
+   ```shell
+   crictl rm <CONTAINER-ID>
+   ```
+
+1. Restart the master node.
 
 ## How do I configure additional audit policies?
 
@@ -476,9 +519,23 @@ Both these parameters directly impact the CPU and memory resources consumed by t
 
 When deciding on the appropriate threshold values, consider resources consumed by the control nodes (graphs can help you with this). Note that the lower parameters are, the more resources you may need to allocate to these nodes.
 
-## etc backup and restore
+## etcd backup and restore
 
-### How do make etcd backup?
+### What is done automatically
+
+CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. The result is saved in `/var/lib/etcd/etcd-backup.snapshot` on all nodes with `control-plane` in the cluster (master nodes).
+
+### How to manually backup etcd
+
+#### Using Deckhouse CLI (Deckhouse Kubernetes Platform v1.65+)
+
+Starting with Deckhouse Kubernetes Platform v1.65, a new `d8 backup etcd` tool is available for taking snapshots of etcd state.
+
+```bash
+d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
+```
+
+#### Using bash (Deckhouse Kubernetes Platform v1.64 and older)
 
 Login into any control-plane node with `root` user and use next script:
 
@@ -506,6 +563,86 @@ We recommend encrypting etcd snapshot backups as well as backup of the directory
 You can use one of third-party files backup tools, for example: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/), etc.
 
 You can see [here](https://github.com/deckhouse/deckhouse/blob/main/modules/040-control-plane-manager/docs/internal/ETCD_RECOVERY.md) for learn about etcd disaster recovery procedures from snapshots.
+
+### How do perform a full recovery of the cluster state from an etcd backup?
+
+The following steps will be described to restore to the previous state of the cluster from a backup in case of complete data loss.
+
+#### Restoring a single-master cluster
+
+Follow these steps to restore a single-master cluster:
+
+1. Download the [etcdctl](https://github.com/etcd-io/etcd/releases) utility to the server (preferably its version is the same as the etcd version in the cluster).
+
+   ```shell
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   ```
+
+   Use the following command to view the etcd version in the cluster:
+
+   ```shell
+   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   ```
+
+1. Stop the etcd.
+
+   ```shell
+   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
+   ```
+
+1. Save the current etcd data.
+
+   ```shell
+   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
+   ```
+
+1. Clean the etcd directory.
+
+   ```shell
+   rm -rf /var/lib/etcd/member/
+   ```
+
+1. Transfer and rename the backup to `~/etcd-backup.snapshot`.
+
+1. Restore the etcd database.
+
+   ```shell
+   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ --data-dir=/var/lib/etcd
+   ```
+
+1. Run etcd.
+
+   ```shell
+   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   ```
+
+#### Restorige a multi-master cluster
+
+Follow these steps to restore a multi-master cluster:
+
+1. Explicitly set the High Availability (HA) mode by specifying the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
+
+1. Switch the cluster to single-master mode according to [instruction](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master) for cloud clusters or independently remove static master-node from the cluster.
+
+1. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions](#restoring-a-single-master-cluster) for a single-master cluster.
+
+1. When etcd operation is restored, delete the information about the master nodes already deleted in step 1 from the cluster:
+
+   ```shell
+   kubectl delete node MASTER_NODE_I
+   ```
+
+1. Restart all nodes of the cluster.
+
+1. Wait for the deckhouse queue to complete:
+
+   ```shell
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+   ```
+
+1. Switch the cluster back to multi-master mode according to [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) for cloud clusters or [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) for static or hybrid clusters.
 
 ### How do I restore a Kubernetes object from an etcd backup?
 
@@ -655,3 +792,19 @@ Finally, the scheduler assigns the Pod to the node with the highest ranking.
 - [Plugin system](https://kubernetes.io/docs/reference/scheduling/config/#scheduling-plugins)
 - [Node Filtering Details](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduler-perf-tuning/)
 - [Scheduler source code](https://github.com/kubernetes/kubernetes/tree/master/cmd/kube-scheduler)
+
+### How to change/extend the scheduler logic
+
+To change the logic of the scheduler it is possible to use the extension mechanism [Extenders](https://github.com/kubernetes/enhancements/blob/master/keps/sig-scheduling/624-scheduling-framework/README.md).
+
+Each plugin is a webhook that must satisfy the following requirements:
+* Use of TLS.
+* Accessibility through a service within the cluster.
+* Support for standard *Verbs* (filterVerb = filter, prioritizeVerb = prioritize).
+* It is also assumed that all plugins can cache node information (`nodeCacheCapable: true`).
+
+You can connect an extender using [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration) resource.
+
+{% alert level="danger" %}
+When using the `failurePolicy: Fail` option, in case of an error in the webhook's operation, the scheduler will stop working and new pods will not be able to start.
+{% endalert %}

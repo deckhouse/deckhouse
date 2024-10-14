@@ -10,12 +10,21 @@ url: https://deckhouse.io
 urls:
   ru: https://deckhouse.ru
   en: https://deckhouse.io
-canonical_url_prefix: /documentation/v1
+canonical_url_prefix_documentation: /products/kubernetes-platform/documentation/v1
+canonical_url_prefix: /products/kubernetes-platform
 site_description:
   en: "Deckhouse. An operator which creates homogeneous Kubernetes clusters anywhere and fully manages them. Manages all necessary addons to provide observability, security and service mesh."
   ru: "Deckhouse. Позволяет создавать идентичные Kubernetes-кластеры в любой инфраструктуре и полностью, «автомагически» управляет ими."
 github_repo_path: /deckhouse/deckhouse
 d8Revision: FE
+
+metrics:
+  google: G-4X28CEP7W2
+  yandex: 78422802
+
+chat_script_url:
+  en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"
+  ru: "https://crm.flant.ru/upload/crm/site_button/loader_3_20bbbd.js"
 
 assets:
   precompile: ['**/*.*']
@@ -119,7 +128,18 @@ defaults:
       type: "pages"
     values:
       d8Revision: ee
-      featureStatus: experimental
+      featureStatus: deprecated
+  - scope:
+      path: "*/031-ceph-csi"
+      type: "pages"
+    values:
+      featureStatus: deprecated    
+  - scope:
+      path: "*/381-l2-load-balancer"
+      type: "pages"
+    values:
+      d8Revision: ee
+      featureStatus: deprecated
   - scope:
       path: "*/500-operator-trivy"
       type: "pages"
@@ -174,3 +194,4 @@ defaults:
       d8Revision: ee
       featureStatus: experimental
 timezone: Europe/Moscow
+

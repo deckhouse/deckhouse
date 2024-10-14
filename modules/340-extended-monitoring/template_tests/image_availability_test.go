@@ -45,7 +45,7 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: image availab
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
 		hec.ValuesSet("global.modulesImages.registry.base", "registry.example.com")
-		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd", "operator-prometheus-crd"})
+		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler", "operator-prometheus"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 		hec.ValuesSetFromYaml("global.clusterConfiguration", `
 apiVersion: deckhouse.io/v1
@@ -207,6 +207,70 @@ serviceSubnetCIDR: 10.222.0.0/16
 				insecureSkipVerifyArg := deploy.Field("spec.template.spec.containers.0.args.3").String()
 
 				Expect(insecureSkipVerifyArg).To(BeEmpty())
+			})
+		})
+	})
+
+	Context("imageAvailability.forceCheckDisabledControllers", func() {
+		Context("Absent", func() {
+			BeforeEach(func() {
+				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+				hec.ValuesSet("extendedMonitoring.certificates.exporterEnabled", false)
+				hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.registry.tlsConfig", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
+				hec.HelmRender()
+			})
+			It("Should not contain --force-check-disabled-controllers flag", func() {
+				Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
+				forceCheckDisabledControllers := deploy.Field("spec.template.spec.containers.0.args.3").String()
+
+				Expect(forceCheckDisabledControllers).To(BeEmpty())
+			})
+		})
+
+		Context("Filled", func() {
+			BeforeEach(func() {
+				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+				hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.registry.tlsConfig", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
+				hec.ValuesSet("extendedMonitoring.imageAvailability.forceCheckDisabledControllers", []string{
+					"Deployment",
+					"DaemonSet",
+				})
+				hec.HelmRender()
+			})
+			It("Should contain deployment and daemonset controller kinds", func() {
+				Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
+				forceCheckDisabledControllers := deploy.Field("spec.template.spec.containers.0.args.3").String()
+
+				Expect(forceCheckDisabledControllers).To(Equal("--force-check-disabled-controllers=Deployment,DaemonSet"))
+			})
+		})
+
+		Context("All", func() {
+			BeforeEach(func() {
+				hec.ValuesSet("extendedMonitoring.imageAvailability.exporterEnabled", true)
+				hec.ValuesSetFromYaml("extendedMonitoring.imageAvailability.registry.tlsConfig", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.certificates", `{}`)
+				hec.ValuesSetFromYaml("extendedMonitoring.events", `{}`)
+				hec.ValuesSet("extendedMonitoring.imageAvailability.forceCheckDisabledControllers", []string{
+					"All",
+				})
+				hec.HelmRender()
+			})
+			It("Should be equal to '*'", func() {
+				Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
+				forceCheckDisabledControllers := deploy.Field("spec.template.spec.containers.0.args.3").String()
+
+				Expect(forceCheckDisabledControllers).To(Equal("--force-check-disabled-controllers=*"))
 			})
 		})
 	})

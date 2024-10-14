@@ -31,6 +31,7 @@ const (
 	UserAuthzClusterRolePath    = "templates/user-authz-cluster-roles.yaml"
 	RootRBACForUsPath           = "templates/rbac-for-us.yaml"
 	RootRBACToUsPath            = "templates/rbac-to-us.yaml"
+	RBACv2Path                  = "templates/rbac"
 )
 
 func isSystemNamespace(actual string) bool {
@@ -44,15 +45,15 @@ func isDeckhouseSystemNamespace(actual string) bool {
 		// TODO: remove next lines after RBAC objects naming fixes
 		actual == "d8-admission-policy-engine" ||
 		actual == "d8-operator-trivy" ||
-		actual == "d8-log-shipper"
+		actual == "d8-log-shipper" ||
+		actual == "d8-local-path-provisioner"
 }
 
 func ObjectRBACPlacement(m utils.Module, object storage.StoreObject) errors.LintRuleError {
 	if m.Name == "user-authz" || m.Name == "deckhouse" {
 		return errors.EmptyRuleError
 	}
-
-	if object.ShortPath() == UserAuthzClusterRolePath {
+	if object.ShortPath() == UserAuthzClusterRolePath || strings.HasPrefix(object.ShortPath(), RBACv2Path) {
 		return errors.EmptyRuleError
 	}
 
@@ -156,6 +157,15 @@ func objectRBACPlacementServiceAccount(m utils.Module, object storage.StoreObjec
 			}
 			return errors.EmptyRuleError
 		}
+
+		if strings.HasPrefix(objectName, "istiod") && namespace == "d8-istio" {
+			// istiod Deployment is rendered by istio-operator with serviceAccountName according to its
+			// naming conventions we can't change (i.e. istiod-v1x19).
+			// In our convention it has to be named as "iop" according to template folder, but within the folder we render
+			// not a single istiod instance, but several for different versions and can't use the shared ServiceAccount for them.
+			return errors.EmptyRuleError
+		}
+
 		return errors.NewLintRuleError(
 			"MANIFEST053",
 			object.Identity(),

@@ -37,9 +37,13 @@ env:
   # </template: werf_envs>
 
   # <template: git_source_envs>
-  # source repo contains should creds for repo for ex https://user:password@my-repo.com/group
+  # source repo should contain creds for repo for ex https://user:password@my-repo.com/group
   SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
+  # cloud providers source repo should contain creds for repo for ex https://user:password@my-repo.com/group
+  CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
   GOPROXY: "${{secrets.GOPROXY}}"
+  # observability source repo should contain creds for repo for ex https://user:password@my-repo.com/group
+  OBSERVABILITY_SOURCE_REPO: "${{secrets.OBSERVABILITY_SOURCE_REPO}}"
   # </template: git_source_envs>
 
 # Cancel in-progress jobs for the same branch.
@@ -177,10 +181,10 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: Set up Go 1.21
+      - name: Set up Go 1.22
         uses: actions/setup-go@v3
         with:
-          go-version: '1.21'
+          go-version: '1.22'
 
       - name: Run go generate
         run: |
@@ -257,7 +261,7 @@ jobs:
     env:
       WERF_ENV: "FE"
     # <template: build_template>
-    runs-on: [self-hosted, regular]
+    runs-on: [self-hosted, regular, selectel]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
@@ -405,7 +409,7 @@ jobs:
             # Build using dev-registry as primary repo and prod registry as secondary (ro) repo.
             # This build will put stages to "dev" registry. If "dev" registry is empty, existing stages are copied from prod registry.
 
-            SECONDARY_REPO="--secondary-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+            SECONDARY_REPO="--cache-repo ${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
 
             if [[ -n "${CI_COMMIT_BRANCH}" && ! "${CI_COMMIT_BRANCH}" =~ ^(main|release-.+)$ ]]; then
               SECONDARY_REPO=
@@ -414,7 +418,8 @@ jobs:
             werf build \
               ${SECONDARY_REPO} \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
@@ -424,7 +429,8 @@ jobs:
             # - semver tags to Github Container Registry for testing release process.
             werf build \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
             echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
@@ -447,6 +453,11 @@ jobs:
             INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json)"
             INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
             pull_push_rmi 'dev/install' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
+
+            echo "⚓️ 💫 [$(date -u)] Publish 'dev/install-standalone' image to dev-registry using tag ${IMAGE_TAG}".
+            INSTALL_IMAGE_SRC="$(jq -r '.Images."dev/install-standalone".DockerImageName' images_tags_werf.json)"
+            INSTALL_IMAGE=${BRANCH_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}
+            pull_push_rmi 'dev/install-standalone' ${INSTALL_IMAGE_SRC} ${INSTALL_IMAGE}
 
             echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag ${IMAGE_TAG}".
             INSTALL_IMAGE_SRC="$(jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)"
@@ -473,6 +484,7 @@ jobs:
   doc_web_build:
     name: Doc web build
     # Wait for success build of modules.
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
     # <template: web_build_template>
@@ -551,6 +563,7 @@ jobs:
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
+          WERF_ENV: "EE"
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
           WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 
@@ -558,6 +571,7 @@ jobs:
 
   main_web_build:
     name: Main web build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
@@ -608,6 +622,7 @@ jobs:
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
+          WERF_ENV: "EE"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
@@ -687,7 +702,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.21.6-bullseye@sha256:a363973b58d4d5a91d6e8f700c847e87c1143459e55464fefca9e6135358af98"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.22.6-bullseye@sha256:260918a3795372a6d33225d361fe5349723be9667de865a23411b50fbcc76c5a"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -770,7 +785,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.21.6-bullseye@sha256:a363973b58d4d5a91d6e8f700c847e87c1143459e55464fefca9e6135358af98"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.22.6-bullseye@sha256:260918a3795372a6d33225d361fe5349723be9667de865a23411b50fbcc76c5a"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -1058,7 +1073,7 @@ jobs:
 
   web_links_test:
     name: Web links test
-    if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
@@ -1123,6 +1138,7 @@ jobs:
         env:
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
+          WERF_ENV: "EE"
 
           WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
         run: |
@@ -1194,8 +1210,8 @@ jobs:
           # Checking EN site
           docker run --rm -v "${_TMPDIR}/site_en:/src:ro" klakegg/html-proofer:3.19.2 \
             --allow-hash-href --check-html --empty-alt-ignore \
-            --url-ignore "/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-            --url-swap "https\:\/\/deckhouse.io\/:/,\/documentation\/v1\/:/documentation/,\/documentation\/latest\/:/documentation/" \
+            --url-ignore "/alerts.html/,/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+            --url-swap "https\:\/\/deckhouse.io\/:/,\/products\/kubernetes-platform\/documentation\/v1\/:/documentation/,\/products\/kubernetes-platform\/documentation\/latest\/:/documentation/" \
             --file_ignore "404.html" \
             --http-status-ignore "0,429" ${1}
           # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
@@ -1208,8 +1224,8 @@ jobs:
           # Checking RU site
           docker run --rm -v "${_TMPDIR}/site_ru:/src:ro" klakegg/html-proofer:3.19.2 \
             --allow-hash-href --check-html --empty-alt-ignore \
-            --url-ignore "/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-            --url-swap "https\:\/\/deckhouse.io\/:/,\/documentation\/v1\/:/documentation/,\/documentation\/latest\/:/documentation/" \
+            --url-ignore "/alerts.html/,/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+            --url-swap "https\:\/\/deckhouse.io\/:/,\/products\/kubernetes-platform\/documentation\/v1\/:/documentation/,\/products\/kubernetes-platform\/documentation\/latest\/:/documentation/" \
             --file_ignore "404.html" \
             --http-status-ignore "0,429" ${1}
           # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.

@@ -1,0 +1,27 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: common/kube-rbac-proxy
+  add: /kube-rbac-proxy
+  to: /kube-rbac-proxy
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate/bin/true
+  to: /bin/true
+  before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
+docker:
+  ENTRYPOINT: ["/kube-rbac-proxy", "--tls-cipher-suites", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"]
+  EXPOSE: "8080"
+---
+{{- $binaries := "/bin/true" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+ setup:
+   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate

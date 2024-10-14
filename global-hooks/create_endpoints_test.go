@@ -49,11 +49,11 @@ spec:
   - name: self
     port: 8080
     protocol: TCP
-    targetPort: 9650
+    targetPort: 4222
   - name: webhook
-    port: 9651
+    port: 4223
     protocol: TCP
-    targetPort: 9651
+    targetPort: 4223
   selector:
     app: deckhouse
 `)
@@ -113,10 +113,10 @@ subsets:
       uid: fac9948d-d350-420d-8075-78b9e1fa66c8
   ports:
   - name: self
-    port: 9650
+    port: 4222
     protocol: TCP
   - name: webhook
-    port: 9651
+    port: 4223
     protocol: TCP
   - name: debug-server
     port: 9652
@@ -164,10 +164,10 @@ metadata:
     uid: 5546653a-64ef-4d32-9bf2-c0cc7b0deded
 ports:
 - name: self
-  port: 9650
+  port: 4222
   protocol: TCP
 - name: webhook
-  port: 9651
+  port: 4223
   protocol: TCP
 `
 

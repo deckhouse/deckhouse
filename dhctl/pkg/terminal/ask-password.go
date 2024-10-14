@@ -16,6 +16,7 @@ package terminal
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	terminal "golang.org/x/term"
@@ -32,13 +33,14 @@ func AskBecomePassword() (err error) {
 	fd := int(os.Stdin.Fd())
 
 	var data []byte
+
 	if !terminal.IsTerminal(fd) {
-		return fmt.Errorf("stdin is not a terminal, error reading password")
+		data, err = io.ReadAll(os.Stdin)
+	} else {
+		log.InfoF("[sudo] Password: ")
+		data, err = terminal.ReadPassword(fd)
 	}
 
-	log.InfoF("[sudo] Password: ")
-
-	data, err = terminal.ReadPassword(fd)
 	log.InfoLn()
 
 	if err != nil {
@@ -47,4 +49,22 @@ func AskBecomePassword() (err error) {
 
 	app.BecomePass = string(data)
 	return nil
+}
+
+func AskPassword(prompt string) ([]byte, error) {
+	fd := int(os.Stdin.Fd())
+
+	if !terminal.IsTerminal(fd) {
+		return nil, fmt.Errorf("stdin is not a terminal, error reading password")
+	}
+
+	log.InfoF(prompt)
+	data, err := terminal.ReadPassword(fd)
+	log.InfoLn()
+
+	if err != nil {
+		return nil, fmt.Errorf("read secret: %w", err)
+	}
+
+	return data, nil
 }

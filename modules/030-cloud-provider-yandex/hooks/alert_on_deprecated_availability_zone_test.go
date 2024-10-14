@@ -20,13 +20,20 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: alert_on_deprecated_availability_zone ::", func() {
-	f := HookExecutionConfigInit(`{}`, `{}`)
+	const initValuesString = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+`
+	f := HookExecutionConfigInit(initValuesString, `{}`)
 
 	initialKubeState := `
 apiVersion: v1
@@ -48,6 +55,9 @@ spec:
 
 		It("Should succeed with no collected metrics", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneInNodesKey)
+			Expect(exists).To(BeTrue())
+			Expect(hasDeprecatedZone).To(BeFalse())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(BeEmpty())
 		})
 	})
@@ -67,7 +77,7 @@ spec:
 
 	expectedMetric := operation.MetricOperation{
 		Name:   "d8_node_group_node_with_deprecated_availability_zone",
-		Value:  pointer.Float64(1.0),
+		Value:  ptr.To(1.0),
 		Labels: map[string]string{"node_group": "system-c"},
 		Action: "set",
 	}
@@ -82,6 +92,9 @@ spec:
 			collectedMetrics := f.MetricsCollector.CollectedMetrics()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(collectedMetrics).To(ContainElement(expectedMetric))
+			hasDeprecatedZone, exists := requirements.GetValue(yandexDeprecatedZoneInNodesKey)
+			Expect(exists).To(BeTrue())
+			Expect(hasDeprecatedZone).To(BeTrue())
 			Expect(len(collectedMetrics)).Should(Equal(1))
 		})
 	})

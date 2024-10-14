@@ -16,17 +16,22 @@ package deckhouse
 
 import (
 	"context"
-	"fmt"
+	"strings"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func GetPod(kubeCl *client.KubernetesClient) (*v1.Pod, error) {
-	pods, err := kubeCl.CoreV1().Pods("d8-system").List(context.TODO(), metav1.ListOptions{LabelSelector: "app=deckhouse"})
+func GetPod(kubeCl *client.KubernetesClient, leaderElectionLeaseName types.NamespacedName) (*v1.Pod, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	pods, err := kubeCl.CoreV1().Pods("d8-system").List(ctx, metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
 		log.DebugF("Cannot get deckhouse pod. Got error: %v", err)
 		return nil, ErrListPods
@@ -37,36 +42,53 @@ func GetPod(kubeCl *client.KubernetesClient) (*v1.Pod, error) {
 		return nil, ErrListPods
 	}
 
-	if len(pods.Items) > 1 {
-		return nil, ErrMultiplePodsFound
+	if len(pods.Items) == 1 {
+		pod := pods.Items[0]
+		return &pod, nil
 	}
 
-	pod := pods.Items[0]
-
-	return &pod, nil
+	return getLeaderElectionLeaseHolderPod(ctx, kubeCl, leaderElectionLeaseName, pods)
 }
 
-func GetRunningPod(kubeCl *client.KubernetesClient) (*v1.Pod, error) {
-	pod, err := GetPod(kubeCl)
-	if err != nil {
-		return nil, err
+func getLeaderElectionLeaseHolderPod(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	leaderElectionLeaseName types.NamespacedName,
+	pods *v1.PodList,
+) (*v1.Pod, error) {
+	lease, err := kubeCl.
+		CoordinationV1().
+		Leases(leaderElectionLeaseName.Namespace).
+		Get(ctx, leaderElectionLeaseName.Name, metav1.GetOptions{})
+	switch {
+	case err != nil:
+		log.DebugF("Cannot get deckhouse pod. Got error reading lease: %v", err)
+		return nil, ErrReadLease
+	case lease.Spec.HolderIdentity == nil:
+		log.DebugLn("No Deckhouse leader election lease holder identity found")
+		return nil, ErrBadLease
+	case lease.Spec.RenewTime == nil:
+		log.DebugLn("No Deckhouse leader election lease renew time found")
+		return nil, ErrBadLease
+	case lease.Spec.LeaseDurationSeconds == nil:
+		log.DebugLn("No Deckhouse leader election lease duration seconds found")
+		return nil, ErrBadLease
 	}
 
-	phase := pod.Status.Phase
-	message := fmt.Sprintf("Deckhouse pod found: %s (%s)", pod.Name, pod.Status.Phase)
-
-	if phase != v1.PodRunning {
-		return nil, fmt.Errorf(message)
+	leaseRenewTime := *lease.Spec.RenewTime
+	leaseDuration := time.Duration(*lease.Spec.LeaseDurationSeconds) * time.Second
+	if time.Since(leaseRenewTime.Time) >= leaseDuration {
+		log.DebugLn("Deckhouse leader election lease is expired")
+		return nil, ErrBadLease
 	}
 
-	return pod, nil
-}
-
-func DeletePod(kubeCl *client.KubernetesClient) error {
-	pod, err := GetPod(kubeCl)
-	if err != nil {
-		return err
+	for _, pod := range pods.Items {
+		if pod.Name == strings.Split(*lease.Spec.HolderIdentity, ".")[0] {
+			podCopy := pod
+			return &podCopy, nil
+		}
 	}
 
-	return kubeCl.CoreV1().Pods("d8-system").Delete(context.TODO(), pod.GetName(), metav1.DeleteOptions{})
+	log.DebugLn("Pod specified as Deckhouse leader election lease holder does not exist")
+	return nil, ErrListPods
 }

@@ -17,3 +17,5 @@ limitations under the License.
 package main
 
 //go:generate go run ./helm_generate/ authz-generate-roles
+
+//go:generate go run ./helm_generate/ alert-templates

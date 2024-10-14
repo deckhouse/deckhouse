@@ -133,7 +133,6 @@ func Test_EpisodePayload(t *testing.T) {
 
 			var got EpisodesPayload
 			err = json.Unmarshal(marshalled, &got)
-
 			if err != nil {
 				t.Errorf("cannot unmarshal episode payload JSON err=%v", err)
 			}

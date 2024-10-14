@@ -1,0 +1,13 @@
+{% for group in site.data.deckhouse-ports.groups %}
+## {{ group.description[page.lang] }}
+
+{% if page.lang == 'ru' -%}
+| Порт | Протокол | Назначение |
+{%- else %}
+| Port | Protocol | Purpose |
+{%- endif %}
+|---|---|---|
+{%- for destination in group.destinations %}
+| {{ destination.ports }} | {{ destination.protocol }} | {{ destination.description[page.lang] }} |
+{%- endfor %}
+{% endfor %}

@@ -26,7 +26,7 @@ Essentials
 <p>Explore Grafana dashboards bundled with Deckhouse.</p>
 <p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" %}</p>
 <p>To access Prometheus: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" path="/prometheus/" onlyPath="true" %}</p>
-<a href="/documentation/v1/modules/300-prometheus/" target="_blank">Learn more</a> about the <code>monitoring</code> module.
+<a href="/products/kubernetes-platform/documentation/v1/modules/300-prometheus/" target="_blank">Learn more</a> about the <code>monitoring</code> module.
 </div>
 </div>
 {% endif %}
@@ -73,7 +73,7 @@ Deploying your first application
 ⟳ <span class="cards-item__title-text">Setting up a CI/CD system</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-[Create](/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)
+[Create](/products/kubernetes-platform/documentation/v1/modules/140-user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)
 a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
 
 You can use the generated `kubeconfig` file in Kubernetes with any deployment system.
@@ -87,7 +87,7 @@ You can use the generated `kubeconfig` file in Kubernetes with any deployment sy
 <div class="cards-item__text" markdown="1">
 Create a `Service` and `Ingress` for your application.
 
-[Learn more](/documentation/v1/modules/402-ingress-nginx/) about the capabilities of the `ingress-nginx` module.
+[Learn more](/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/) about the capabilities of the `ingress-nginx` module.
 </div>
 </div>
 
@@ -98,7 +98,7 @@ Create a `Service` and `Ingress` for your application.
 <div class="cards-item__text" markdown="1">
 Add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
 
-For more information, see the `monitoring-custom` module's [documentation](/documentation/v1/modules/340-monitoring-custom/).
+For more information, see the `monitoring-custom` module's [documentation](/products/kubernetes-platform/documentation/v1/modules/340-monitoring-custom/).
 </div>
 </div>
 
@@ -119,13 +119,13 @@ Other features
 ⚖ <span class="cards-item__title-text">Managing nodes</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/documentation/v1/modules/040-node-manager/).
+Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/products/kubernetes-platform/documentation/v1/modules/040-node-manager/).
 
 You only need to make changes to `minPerZone` and `maxPerZone` parameters to scale the existing groups. If these two parameters are not equal, Deckhouse will automatically launch an autoscaler.
 
 You need to create a new
-[InstanceClass](/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) and a
-[NodeGroup](/documentation/v1/modules/040-node-manager/cr.html#nodegroup) referring to it to create new groups.
+[InstanceClass](/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) and a
+[NodeGroup](/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup) referring to it to create new groups.
 </div>
 </div>
 
@@ -137,7 +137,7 @@ You need to create a new
 <div markdown="1">
 ## What's next?
 
-Detailed information about the system and the Deckhouse Kubernetes Platform components is available in the [documentation](/documentation/v1/).
+Detailed information about the system and the Deckhouse Kubernetes Platform components is available in the [documentation](/products/kubernetes-platform/documentation/v1/).
 
 Please, reach us via our [online community](/community/about.html#online-community) if you have any questions.
 </div>

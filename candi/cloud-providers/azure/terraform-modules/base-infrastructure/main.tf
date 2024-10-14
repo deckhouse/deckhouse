@@ -24,6 +24,7 @@ resource "azurerm_virtual_network" "kube" {
   location            = azurerm_resource_group.kube.location
   resource_group_name = azurerm_resource_group.kube.name
   tags                = local.additional_tags
+  dns_servers         = local.nameservers
 }
 
 resource "azurerm_subnet" "kube" {

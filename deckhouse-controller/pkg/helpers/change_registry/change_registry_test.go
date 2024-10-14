@@ -115,21 +115,56 @@ func TestNewImagePullSecretData(t *testing.T) {
 		name      string
 		newRepo   string
 		caContent string
-		insecure  bool
+		scheme    string
 		args      args
 		want      map[string]string
 		wantErr   bool
 	}{
 		{
-			name:     "http anonymous registry",
-			args:     args{},
-			newRepo:  "registry.example.com/deckhouse",
-			insecure: true,
+			name:    "http anonymous registry",
+			args:    args{},
+			newRepo: "registry.example.com/deckhouse",
+			scheme:  "http",
 			want: map[string]string{
 				".dockerconfigjson": `{"auths":{"registry.example.com":{}}}`,
 				"address":           "registry.example.com",
 				"path":              "/deckhouse",
 				"scheme":            "http",
+			},
+		},
+		{
+			name:    "https anonymous registry",
+			args:    args{},
+			newRepo: "registry.example.com/deckhouse",
+			scheme:  "https",
+			want: map[string]string{
+				".dockerconfigjson": `{"auths":{"registry.example.com":{}}}`,
+				"address":           "registry.example.com",
+				"path":              "/deckhouse",
+				"scheme":            "https",
+			},
+		},
+		{
+			name:    "http local registry",
+			args:    args{},
+			newRepo: "my.registry.local/deckhouse",
+			want: map[string]string{
+				".dockerconfigjson": `{"auths":{"my.registry.local":{}}}`,
+				"address":           "my.registry.local",
+				"path":              "/deckhouse",
+				"scheme":            "http",
+			},
+		},
+		{
+			name:    "https local registry",
+			args:    args{},
+			newRepo: "my.registry.local/deckhouse",
+			scheme:  "https",
+			want: map[string]string{
+				".dockerconfigjson": `{"auths":{"my.registry.local":{}}}`,
+				"address":           "my.registry.local",
+				"path":              "/deckhouse",
+				"scheme":            "https",
 			},
 		},
 		{
@@ -154,17 +189,12 @@ func TestNewImagePullSecretData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var opts []name.Option
-			if tt.insecure {
-				opts = append(opts, name.Insecure)
-			}
-
-			newRepo, err := name.NewRepository(tt.newRepo, opts...)
+			newRepo, err := name.NewRepository(tt.newRepo)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			got, err := newImagePullSecretData(newRepo, tt.args.authConfig, tt.caContent)
+			got, err := newImagePullSecretData(newRepo, tt.args.authConfig, tt.caContent, tt.scheme)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("newImagePullSecretData() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -217,7 +247,7 @@ func TestCheckResponseForBearerSupport(t *testing.T) {
 			resp.Header.Add("WWW-Authenticate", tt.headerValue)
 			resp.Request.URL = u
 
-			if err := checkResponseForBearerSupport(resp, tt.host); (err != nil) != tt.wantErr {
+			if err := checkResponseForAuthSupport(resp, tt.host); (err != nil) != tt.wantErr {
 				t.Errorf("checkResponseForBearerSupport() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -249,8 +279,40 @@ func TestAuthHeaderWithBearer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			header := http.Header{}
 			header.Set("WWW-Authenticate", tt.headerValue)
-			if !authHeaderWithBearer(header) && !tt.wantFalse {
+			if !authHeader(header) && !tt.wantFalse {
 				t.Error("Unexpected scheme in auth header: must be 'bearer'")
+			}
+		})
+	}
+}
+
+func TestAuthHeaderWithBasic(t *testing.T) {
+	tests := []struct {
+		name        string
+		headerValue string
+		wantFalse   bool
+	}{
+		{
+			name:        "full header",
+			headerValue: `BASIC realm="Sonatype Nexus Repository Manager"`,
+		},
+		{
+			name:        "short header",
+			headerValue: "BASIC;",
+		},
+		{
+			name:        "no auth",
+			headerValue: "anonymous;",
+			wantFalse:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			header := http.Header{}
+			header.Set("WWW-Authenticate", tt.headerValue)
+			if !authHeader(header) && !tt.wantFalse {
+				t.Error("Unexpected scheme in auth header: must be 'basic'")
 			}
 		})
 	}
@@ -263,7 +325,7 @@ func testDeckhouseDeploy() *appsv1.Deployment {
 				Spec: v1.PodSpec{
 					InitContainers: []v1.Container{
 						{
-							Name:  "init-external-modules",
+							Name:  "init-downloaded-modules",
 							Image: "registry.example.com@sha256:79ed551f4d0ec60799a9bd67f35441df6d86443515dd8337284fb68d97a01b3d",
 						},
 					},
@@ -286,7 +348,7 @@ func Test_checkBearerSupport(t *testing.T) {
 	tests := []struct {
 		name         string
 		registryHost string
-		insecure     bool
+		scheme       string
 		args         args
 		wantErr      bool
 	}{
@@ -301,7 +363,6 @@ func Test_checkBearerSupport(t *testing.T) {
 		{
 			name:         "check non existed registry",
 			registryHost: "registry.example.com",
-			insecure:     true,
 			args: args{
 				ctx: context.Background(),
 			},
@@ -310,17 +371,12 @@ func Test_checkBearerSupport(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var opts []name.Option
-			if tt.insecure {
-				opts = append(opts, name.Insecure)
-			}
-
-			reg, err := name.NewRegistry(tt.registryHost, opts...)
+			reg, err := name.NewRegistry(tt.registryHost)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if err := checkBearerSupport(tt.args.ctx, reg, http.DefaultTransport); (err != nil) != tt.wantErr {
+			if err := checkAuthSupport(tt.args.ctx, reg, http.DefaultTransport); (err != nil) != tt.wantErr {
 				t.Errorf("checkBearerSupport() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

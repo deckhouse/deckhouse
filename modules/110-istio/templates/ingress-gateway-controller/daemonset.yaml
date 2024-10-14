@@ -6,7 +6,7 @@
   {{- $resourcesRequests := $controller.spec.resourcesRequests | default dict }}
   {{- $hostPort := $controller.spec.hostPort | default dict }}
   {{- $ingressGatewayName := printf "ingressgateway-%s" $controller.name }}
-  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -54,6 +54,8 @@ spec:
       istio.deckhouse.io/ingress-gateway-class: "{{ $ingressGatewayClass }}"
   template:
     metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: ingress-gateway-controller
         instance: {{ $controller.name }}

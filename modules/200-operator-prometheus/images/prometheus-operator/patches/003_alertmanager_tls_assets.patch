@@ -1,0 +1,30 @@
+Subject: [PATCH] Fix not save TLS in assets secret
+---
+Index: pkg/alertmanager/amcfg.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/alertmanager/amcfg.go b/pkg/alertmanager/amcfg.go
+--- a/pkg/alertmanager/amcfg.go	(revision 52526e3b0cfb5f3deaa967998ff88a5133f1ec0f)
++++ b/pkg/alertmanager/amcfg.go	(date 1714746403104)
+@@ -1047,6 +1047,9 @@
+ 	}
+
+ 	if in.TLSConfig != nil {
++		if err := cb.store.AddSafeTLSConfig(ctx, crKey.Namespace, in.TLSConfig); err != nil {
++			return nil, err
++		}
+ 		out.TLSConfig = cb.convertTLSConfig(in.TLSConfig, crKey)
+ 	}
+
+@@ -1476,6 +1479,9 @@
+ 	}
+
+ 	if in.TLSConfig != nil {
++		if err := cb.store.AddSafeTLSConfig(ctx, crKey.Namespace, in.TLSConfig); err != nil {
++			return nil, err
++		}
+ 		out.TLSConfig = cb.convertTLSConfig(in.TLSConfig, crKey)
+ 	}
+

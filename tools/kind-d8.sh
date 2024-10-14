@@ -15,7 +15,7 @@
 # limitations under the License.
 
 CONFIG_DIR=~/.kind-d8
-KIND_IMAGE=kindest/node:v1.25.9@sha256:c08d6c52820aa42e533b70bce0c2901183326d86dcdcbedecc9343681db45161
+KIND_IMAGE=kindest/node:v1.27.13@sha256:17439fa5b32290e3ead39ead1250dca1d822d94a10d26f1981756cd51b24b9d8
 D8_RELEASE_CHANNEL_TAG=stable
 D8_RELEASE_CHANNEL_NAME=Stable
 D8_REGISTRY_ADDRESS=registry.deckhouse.io
@@ -25,11 +25,11 @@ D8_LICENSE_KEY=
 KIND_INSTALL_DIRECTORY=$CONFIG_DIR
 KIND_PATH=kind
 KIND_CLUSTER_NAME=d8
-KIND_VERSION=v0.19.0
+KIND_VERSION=v0.23.0
 
 KUBECTL_INSTALL_DIRECTORY=$CONFIG_DIR
 KUBECTL_PATH=kubectl
-KUBECTL_VERSION=v1.25.9
+KUBECTL_VERSION=v1.27.13
 
 REQUIRE_MEMORY_MIN_BYTES=4000000000 # 4GB
 
@@ -269,7 +269,7 @@ kind_check() {
     echo "Detected ${KIND_INSTALL_DIRECTORY}/kind..."
     KIND_PATH=${KIND_INSTALL_DIRECTORY}/kind
   else
-    echo "kind is not installed or is not version $KIND_VERSION."
+    echo "kind is not installed or is not $KIND_VERSION version."
     while [[ "$should_install_kind" != "y" ]]; do
       read -rp "Install kind? y/[n]: " should_install_kind
 
@@ -364,6 +364,10 @@ configs_create() {
   cat <<EOF >${CONFIG_DIR}/kind.cfg
 apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
+featureGates:
+  "ValidatingAdmissionPolicy": true
+runtimeConfig:
+  "admissionregistration.k8s.io/v1alpha1": true
 nodes:
 - role: control-plane
   extraPortMappings:
@@ -423,13 +427,6 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: operator-prometheus-crd
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
   name: operator-prometheus
 spec:
   enabled: true
@@ -437,7 +434,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: prometheus-crd
+  name: operator-prometheus
 spec:
   enabled: true
 ---
@@ -466,6 +463,10 @@ EOF
   if [[ -n "$D8_LICENSE_KEY" ]]; then
     generate_ee_access_string "$D8_LICENSE_KEY"
     cat <<EOF >>${CONFIG_DIR}/config.yml
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
   imagesRepo: $D8_REGISTRY_PATH
   registryDockerCfg: $D8_EE_ACCESS_STRING
 EOF
@@ -565,7 +566,7 @@ ingress_check() {
       echo "Here is the output of the 'kubectl -n d8-ingress-nginx get all' command:"
       ${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-ingress-nginx get all
       echo
-      echo "If the controller-nginx Pod is in the ContainerCreating status, you most likely have a slow connection. If so, wait a little longer until the controller-nginx Pod becomes Ready. After that, run the following command to get the admin password for Grafana: '${KUBECTL_PATH} --context kind-${KIND_CLUSTER_NAME} -n d8-system exec deploy/deckhouse -- sh -c \"deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'\""
+      echo "If the controller-nginx Pod is in the ContainerCreating status, you most likely have a slow connection. If so, wait a little longer until the controller-nginx Pod becomes Ready. After that, run the following command to get the admin password for Grafana: '${KUBECTL_PATH} --context kind-${KIND_CLUSTER_NAME} -n d8-system exec deploy/deckhouse -- sh -c \"deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'\""
       echo
       cluster_deletion_info
       exit 1
@@ -589,14 +590,14 @@ generate_ee_access_string() {
 install_show_credentials() {
 
   local prometheus_password
-  prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'")
+  prometheus_password=$(${KUBECTL_PATH} --context "kind-${KIND_CLUSTER_NAME}" -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'")
   if [ "$?" -ne "0" ] || [ -z "$prometheus_password" ]; then
     printf "
 Error getting Prometheus password.
 
 Try to run the following command to get Prometheus password:
 
-    %s --context %s -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.prometheus.internal.auth.password'"
+    %s --context %s -n d8-system exec deploy/deckhouse -c deckhouse -- sh -c "deckhouse-controller module values prometheus -o json | jq -r '.internal.auth.password'"
 
 " "${KUBECTL_PATH}" "kind-${KIND_CLUSTER_NAME}"
   else

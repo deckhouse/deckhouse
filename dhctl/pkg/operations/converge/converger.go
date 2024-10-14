@@ -15,45 +15,64 @@
 package converge
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient              *ssh.Client
-	OnPhaseFunc            phases.OnPhaseFunc
+	SSHClient  *ssh.Client
+	KubeClient *client.KubernetesClient // optional
+
+	OnPhaseFunc            phases.DefaultOnPhaseFunc
 	AutoDismissDestructive bool
 	AutoApprove            bool
 
 	*client.KubernetesInitParams
 
 	CommanderMode bool
+	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
+	Checker                    *check.Checker
+	OnCheckResult              func(*check.CheckResult) error
+	ApproveDestructiveChangeID string
+
+	TerraformContext *terraform.TerraformContext
 }
 
 type Converger struct {
 	*Params
-	*phases.PhasedExecutionContext
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	lastState phases.DhctlState
 }
 
 func NewConverger(params *Params) *Converger {
+	// if params.CommanderMode {
+	// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
+	// if params.CommanderUUID == uuid.Nil {
+	//	panic("CommanderUUID required for bootstrap operation in commander mode!")
+	// }
+	// }
+
 	return &Converger{
 		Params:                 params,
-		PhasedExecutionContext: phases.NewPhasedExecutionContext(params.OnPhaseFunc),
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc),
 	}
 }
 
@@ -71,23 +90,30 @@ func (c *Converger) applyParams() error {
 	return nil
 }
 
-func (c *Converger) Converge() error {
+func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	{
 		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
 		state, err := phases.ExtractDhctlState(cache.Global())
 		if err != nil {
-			return fmt.Errorf("unable to extract dhctl state: %w", err)
+			return nil, fmt.Errorf("unable to extract dhctl state: %w", err)
 		}
 		c.lastState = state
 	}
 
 	if err := c.applyParams(); err != nil {
-		return err
+		return nil, err
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(c.SSHClient)
-	if err != nil {
-		return err
+	var err error
+	var kubeCl *client.KubernetesClient
+
+	if c.KubeClient != nil {
+		kubeCl = c.KubeClient
+	} else {
+		kubeCl, err = kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
+		if err != nil {
+			return nil, fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
+		}
 	}
 
 	if !c.CommanderMode {
@@ -105,28 +131,68 @@ func (c *Converger) Converge() error {
 			)
 		}
 		if cacheIdentity == "" {
-			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
+			return nil, fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
 		err = cache.InitWithOptions(cacheIdentity, cache.CacheOptions{})
 		if err != nil {
-			return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
+			return nil, fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
 		}
 	}
 
-	inLockRunner := converge.NewInLockLocalRunner(kubeCl, "local-converger")
+	if c.CommanderMode {
+		checkRes, err := c.Checker.Check(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("check failed: %w", err)
+		}
+
+		if c.Params.OnCheckResult != nil {
+			if err := c.Params.OnCheckResult(checkRes); err != nil {
+				return nil, err
+			}
+		}
+
+		switch checkRes.Status {
+		case check.CheckStatusInSync:
+			// No converge needed, exit immediately
+			return &ConvergeResult{
+				Status: ConvergeStatusInSync,
+			}, nil
+
+		case check.CheckStatusOutOfSync:
+			// Proceed converge operation
+
+		case check.CheckStatusDestructiveOutOfSync:
+			destructiveChangeApproved := c.Params.ApproveDestructiveChangeID == checkRes.DestructiveChangeID
+
+			if !destructiveChangeApproved {
+				// Terminate converge with check result
+				return &ConvergeResult{
+					Status:      ConvergeStatusNeedApproveForDestructiveChange,
+					CheckResult: checkRes,
+				}, nil
+			}
+		}
+	}
+
+	var inLockRunner *converge.InLockRunner
+	// No need for converge-lock in commander mode for bootstrap and converge operations
+	if !c.CommanderMode {
+		inLockRunner = converge.NewInLockLocalRunner(kubeCl, "local-converger")
+	}
 
 	stateCache := cache.Global()
 
 	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
-		return err
+		return nil, err
 	}
 	c.lastState = nil
 	defer c.PhasedExecutionContext.Finalize(stateCache)
 
-	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache).
+	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache, c.Params.TerraformContext).
 		WithPhasedExecutionContext(c.PhasedExecutionContext).
 		WithCommanderMode(c.Params.CommanderMode).
+		WithCommanderUUID(c.Params.CommanderUUID).
 		WithCommanderModeParams(c.Params.CommanderModeParams).
 		WithChangeSettings(&terraform.ChangeActionSettings{
 			AutoDismissDestructive: c.AutoDismissDestructive,
@@ -135,27 +201,43 @@ func (c *Converger) Converge() error {
 
 	err = runner.RunConverge()
 	if err != nil {
-		return fmt.Errorf("converge problem: %v", err)
+		return nil, fmt.Errorf("converge problem: %v", err)
 	}
 
-	return c.PhasedExecutionContext.CompletePipeline(stateCache)
+	if err := c.PhasedExecutionContext.CompletePipeline(stateCache); err != nil {
+		return nil, err
+	}
+
+	return &ConvergeResult{
+		Status: ConvergeStatusConverged,
+	}, nil
 }
 
 func (c *Converger) AutoConverge() error {
-	c.applyParams()
+	if err := c.applyParams(); err != nil {
+		return err
+	}
 
 	if app.RunningNodeName == "" {
 		return fmt.Errorf("Need to pass running node name. It is may taints terraform state while converge")
 	}
 
-	sshClient, err := ssh.NewInitClientFromFlags(false)
-	if err != nil {
-		return err
-	}
+	var err error
+	var kubeCl *client.KubernetesClient
 
-	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
-	if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-		return err
+	if c.KubeClient != nil {
+		kubeCl = c.KubeClient
+	} else {
+		var sshClient *ssh.Client
+		sshClient, err = ssh.NewInitClientFromFlags(false)
+		if err != nil {
+			return err
+		}
+
+		kubeCl = client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
+		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+			return err
+		}
 	}
 
 	inLockRunner := converge.NewInLockRunner(kubeCl, converge.AutoConvergerIdentity).
@@ -164,7 +246,7 @@ func (c *Converger) AutoConverge() error {
 
 	app.DeckhouseTimeout = 1 * time.Hour
 
-	runner := converge.NewRunner(kubeCl, inLockRunner, cache.Global()).
+	runner := converge.NewRunner(kubeCl, inLockRunner, cache.Global(), c.TerraformContext).
 		WithChangeSettings(&terraform.ChangeActionSettings{
 			AutoDismissDestructive: c.AutoDismissDestructive,
 			AutoApprove:            c.AutoApprove,

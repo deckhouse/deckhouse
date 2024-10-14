@@ -1,0 +1,1 @@
+{{- tpl .Values.projectTemplate.resourcesTemplate .Values.project }}

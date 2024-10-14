@@ -1,0 +1,150 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.27.10
+  resourceVersion: "999"
+spec:
+  version: v1.27.10
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.27.11
+  resourceVersion: "999"
+spec:
+  version: v1.27.11
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.27.12
+  resourceVersion: "999"
+spec:
+  version: v1.27.12
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.27.13
+  resourceVersion: "999"
+spec:
+  version: v1.27.13
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.27.14
+  resourceVersion: "999"
+spec:
+  version: v1.27.14
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.27.5
+  resourceVersion: "999"
+spec:
+  version: v1.27.5
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.27.6
+  resourceVersion: "999"
+spec:
+  version: v1.27.6
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.27.7
+  resourceVersion: "999"
+spec:
+  version: v1.27.7
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.27.8
+  resourceVersion: "999"
+spec:
+  version: v1.27.8
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.27.9
+  resourceVersion: "999"
+spec:
+  version: v1.27.9
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  transitionTime: null

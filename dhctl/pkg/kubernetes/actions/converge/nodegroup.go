@@ -14,7 +14,18 @@
 
 package converge
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/config"
+import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+)
+
+type NodeGroupGroupOptions struct {
+	Name            string
+	LayoutStep      string
+	CloudConfig     string
+	DesiredReplicas int
+	State           map[string][]byte
+}
 
 func getReplicasByNodeGroupName(metaConfig *config.MetaConfig, nodeGroupName string) int {
 	replicas := 0
@@ -39,7 +50,7 @@ func getStepByNodeGroupName(nodeGroupName string) string {
 	return step
 }
 
-func sortNodeGroupsStateKeys(state map[string]NodeGroupTerraformState, sortedNodeGroupsFromConfig []string) []string {
+func sortNodeGroupsStateKeys(state map[string]state.NodeGroupTerraformState, sortedNodeGroupsFromConfig []string) []string {
 	nodeGroupsFromConfigSet := make(map[string]struct{}, len(sortedNodeGroupsFromConfig))
 	for _, key := range sortedNodeGroupsFromConfig {
 		nodeGroupsFromConfigSet[key] = struct{}{}

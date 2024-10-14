@@ -14,6 +14,12 @@ metadata:
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 rules:
   - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - patch
+  - apiGroups:
       - policy
     resources:
       - poddisruptionbudgets
@@ -66,20 +72,6 @@ rules:
       - get
       - list
       - update
-      - watch
-  - apiGroups:
-      - '*'
-    resources:
-      - '*'
-    verbs:
-      - list
-  - apiGroups:
-      - '*'
-    resources:
-      - '*/scale'
-    verbs:
-      - get
-      - list
       - watch
   - apiGroups:
       - admissionregistration.k8s.io

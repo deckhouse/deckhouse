@@ -67,6 +67,11 @@ func main() {
 	server := &http.Server{Addr: "127.0.0.1:8080"}
 	http.Handle("/metrics", promhttp.Handler())
 
+	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			log.Fatal(err)

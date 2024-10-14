@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2024 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,72 +15,193 @@
 package source
 
 import (
+	"bytes"
 	"context"
+	"flag"
+	"os"
+	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/stretchr/testify/suite"
+	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/tools/cache"
+	"k8s.io/apimachinery/pkg/types"
+	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
-	decFake "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/fake"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
-func TestController_CreateReconcile(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 15*time.Second)
-	defer cancel()
+var (
+	golden     bool
+	mDelimiter *regexp.Regexp
+)
 
-	t.Run("ModuleSource with invalid auth", func(t *testing.T) {
-		var ms *v1alpha1.ModuleSource
+func init() {
+	flag.BoolVar(&golden, "golden", false, "generate golden files")
+	mDelimiter = regexp.MustCompile("(?m)^---$")
+}
 
-		c := createFakeController(ctx)
+func TestControllerTestSuite(t *testing.T) {
+	suite.Run(t, new(ControllerTestSuite))
+}
 
-		ms, err := createFakeModuleSource(c.kubeClient, `
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
-metadata:
-  name: test-source
-spec:
-  registry:
-    dockerCfg: YXNiCg==
-    repo: dev-registry.deckhouse.io/deckhouse/modules
-    scheme: HTTPS
-  releaseChannel: alpha
-`)
-		require.NoError(t, err)
+type ControllerTestSuite struct {
+	suite.Suite
 
-		result, err := c.createOrUpdateReconcile(ctx, ms)
-		require.Error(t, err)
-		assert.False(t, result.Requeue, "error have to be permanent, we don't want to reconcile until the ModuleSource will change")
-		assert.ErrorContains(t, err, "credentials not found in the dockerCfg")
+	kubeClient client.Client
+	ctr        *moduleSourceReconciler
 
-		cms, _ := c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source", v1.GetOptions{})
-		assert.Contains(t, cms.Status.Msg, "credentials not found in the dockerCfg")
-		assert.Len(t, cms.Status.AvailableModules, 0)
+	testDataFileName string
+	testMSName       string
+	compareGolden    bool
+}
+
+func (suite *ControllerTestSuite) SetupSuite() {
+	flag.Parse()
+	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
+}
+
+func (suite *ControllerTestSuite) BeforeTest(suiteName, testName string) {
+	if suiteName == "ControllerTestSuite" && testName == "TestCreateReconcile" {
+		suite.compareGolden = true
+	}
+}
+
+func (suite *ControllerTestSuite) AfterTest(_, _ string) {
+	suite.compareGolden = false
+}
+
+func (suite *ControllerTestSuite) SetupSubTest() {
+	dependency.TestDC.CRClient = cr.NewClientMock(suite.T())
+}
+
+func (suite *ControllerTestSuite) TearDownSubTest() {
+	if !suite.compareGolden {
+		return
+	}
+
+	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
+	gotB := suite.fetchResults()
+
+	if golden {
+		err := os.WriteFile(goldenFile, gotB, 0666)
+		require.NoError(suite.T(), err)
+	} else {
+		got := singleDocToManifests(gotB)
+		expB, err := os.ReadFile(goldenFile)
+		require.NoError(suite.T(), err)
+		exp := singleDocToManifests(expB)
+		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
+		for i := range got {
+			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
+		}
+	}
+}
+
+func (suite *ControllerTestSuite) TestCreateReconcile() {
+	suite.Run("init.yaml", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
+		suite.setupController(string(suite.fetchTestFileData("init.yaml")))
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("ms-with-registry.yaml", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+		}}, nil)
+
+		suite.setupController(string(suite.fetchTestFileData("ms-with-registry.yaml")))
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("ms-with-policy.yaml", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+		}}, nil)
+
+		suite.setupController(string(suite.fetchTestFileData("with-policy.yaml")))
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("With error from registry", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar", "baz"}, nil)
+		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (i1 v1.Image, err error) {
+			if tag == "alpha" {
+				return nil, errors.New("fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/baz/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]")
+			}
+
+			return &crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+			}}, nil
+		})
+
+		suite.setupController(string(suite.fetchTestFileData("with-error.yaml")))
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("With stale registry error", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil) // baz module was removed
+		dependency.TestDC.CRClient.ImageMock.Return(
+			&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+			}}, nil,
+		)
+
+		suite.setupController(string(suite.fetchTestFileData("with-stale-error.yaml")))
+		ms := suite.getModuleSource(suite.testMSName)
+		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
 	})
 }
 
-func TestController_DeleteReconcile(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 15*time.Second)
-	defer cancel()
+func (suite *ControllerTestSuite) fetchTestFileData(filename string) []byte {
+	dir := "./testdata"
+	data, err := os.ReadFile(filepath.Join(dir, filename))
+	require.NoError(suite.T(), err)
 
-	c := createFakeController(ctx)
+	suite.testDataFileName = filename
 
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.moduleSourcesSynced, c.moduleReleasesSynced); !ok {
-		c.logger.Fatal("failed to wait for caches to sync")
-	}
+	return data
+}
 
-	t.Run("ModuleSource with finalizer and empty releases", func(t *testing.T) {
-		var ms *v1alpha1.ModuleSource
+func (suite *ControllerTestSuite) TestDeleteReconcile() {
+	suite.Run("not found ModuleSource, must truncate the checksum map", func() {
+		suite.setupController("")
+		suite.ctr.moduleSourcesChecksum["not-found"] = map[string]string{"foo": "bar"}
+		_, err := suite.ctr.Reconcile(context.TODO(), controllerruntime.Request{NamespacedName: types.NamespacedName{Name: "not-found"}})
+		require.NoError(suite.T(), err)
 
-		ms, err := createFakeModuleSource(c.kubeClient, `
+		assert.Len(suite.T(), suite.ctr.moduleSourcesChecksum["not-found"], 0)
+	})
+
+	suite.Run("ModuleSource with finalizer and empty releases", func() {
+		m := `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
@@ -92,26 +213,23 @@ spec:
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
-  releaseChannel: alpha
-`)
-		require.NoError(t, err)
+`
+		suite.setupController(m)
 
-		time.Sleep(120 * time.Millisecond)
+		ms := suite.getModuleSource("test-source")
 
-		result, err := c.deleteReconcile(ctx, ms)
-		require.NoError(t, err)
-		assert.False(t, result.Requeue)
-		assert.Empty(t, result.RequeueAfter)
+		result, err := suite.ctr.deleteReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+		assert.False(suite.T(), result.Requeue)
+		assert.Empty(suite.T(), result.RequeueAfter)
 
-		ms, err = c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source", v1.GetOptions{})
-		require.NoError(t, err)
-		assert.Len(t, ms.Finalizers, 0)
+		ms = suite.getModuleSource("test-source")
+		require.NoError(suite.T(), err)
+		assert.Len(suite.T(), ms.Finalizers, 0)
 	})
 
-	t.Run("ModuleSource with finalizer and release", func(t *testing.T) {
-		var ms *v1alpha1.ModuleSource
-
-		ms, err := createFakeModuleSource(c.kubeClient, `
+	suite.Run("ModuleSource with finalizer and release", func() {
+		m := `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
@@ -123,11 +241,7 @@ spec:
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
-  releaseChannel: alpha
-`)
-		require.NoError(t, err)
-
-		_, err = createFakeModuleRelease(c.kubeClient, `
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
@@ -151,26 +265,23 @@ status:
   approved: false
   message: ""
   phase: Deployed
-`)
-		require.NoError(t, err)
+`
+		suite.setupController(m)
 
-		time.Sleep(120 * time.Millisecond)
+		ms := suite.getModuleSource("test-source-2")
+		result, err := suite.ctr.deleteReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+		assert.False(suite.T(), result.Requeue)
+		assert.Equal(suite.T(), 5*time.Second, result.RequeueAfter)
 
-		result, err := c.deleteReconcile(ctx, ms)
-		require.NoError(t, err)
-		assert.False(t, result.Requeue)
-		assert.Equal(t, 5*time.Second, result.RequeueAfter)
-
-		ms, err = c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source-2", v1.GetOptions{})
-		require.NoError(t, err)
-		assert.Len(t, ms.Finalizers, 1)
-		assert.Equal(t, ms.Status.Msg, "ModuleSource contains at least 1 Deployed release and cannot be deleted. Please delete ModuleRelease manually to continue")
+		ms = suite.getModuleSource("test-source-2")
+		require.NoError(suite.T(), err)
+		assert.Len(suite.T(), ms.Finalizers, 1)
+		assert.Equal(suite.T(), ms.Status.Msg, "ModuleSource contains at least 1 Deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue")
 	})
 
-	t.Run("ModuleSource with finalizer,annotation and release", func(t *testing.T) {
-		var ms *v1alpha1.ModuleSource
-
-		ms, err := createFakeModuleSource(c.kubeClient, `
+	suite.Run("ModuleSource with finalizer,annotation and release", func() {
+		m := `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
@@ -185,10 +296,7 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
   releaseChannel: alpha
-`)
-		require.NoError(t, err)
-
-		_, err = createFakeModuleRelease(c.kubeClient, `
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
@@ -212,59 +320,161 @@ status:
   approved: false
   message: ""
   phase: Deployed
-`)
-		require.NoError(t, err)
+`
 
-		time.Sleep(120 * time.Millisecond)
+		suite.setupController(m)
 
-		result, err := c.deleteReconcile(ctx, ms)
-		require.NoError(t, err)
-		assert.False(t, result.Requeue)
-		assert.Empty(t, result.RequeueAfter)
+		ms := suite.getModuleSource("test-source-3")
 
-		ms, err = c.kubeClient.DeckhouseV1alpha1().ModuleSources().Get(context.TODO(), "test-source-3", v1.GetOptions{})
-		require.NoError(t, err)
-		assert.Len(t, ms.Finalizers, 0)
+		result, err := suite.ctr.deleteReconcile(context.TODO(), ms)
+		require.NoError(suite.T(), err)
+		assert.False(suite.T(), result.Requeue)
+		assert.Empty(suite.T(), result.RequeueAfter)
+
+		ms = suite.getModuleSource("test-source-3")
+		require.NoError(suite.T(), err)
+		assert.Len(suite.T(), ms.Finalizers, 0)
 	})
 }
 
-func createFakeController(ctx context.Context) *Controller {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+func (suite *ControllerTestSuite) assembleInitObject(obj string) client.Object {
+	var res client.Object
 
-	cs := decFake.NewSimpleClientset()
+	var typ runtime.TypeMeta
 
-	informerFactory := externalversions.NewSharedInformerFactory(cs, 15*time.Minute)
-	moduleSourceInformer := informerFactory.Deckhouse().V1alpha1().ModuleSources()
-	moduleReleaseInformer := informerFactory.Deckhouse().V1alpha1().ModuleReleases()
-	moduleUpdatePolicyInformer := informerFactory.Deckhouse().V1alpha1().ModuleUpdatePolicies()
-	modulePullOverrideInformer := informerFactory.Deckhouse().V1alpha1().ModulePullOverrides()
-	defer informerFactory.Start(ctx.Done())
+	err := yaml.Unmarshal([]byte(obj), &typ)
+	require.NoError(suite.T(), err)
 
-	return NewController(cs, moduleSourceInformer, moduleReleaseInformer, moduleUpdatePolicyInformer, modulePullOverrideInformer)
+	switch typ.Kind {
+	case "ModuleSource":
+		var ms v1alpha1.ModuleSource
+		err = yaml.Unmarshal([]byte(obj), &ms)
+		require.NoError(suite.T(), err)
+		res = &ms
+		suite.testMSName = ms.Name
+
+	case "ModuleRelease":
+		var mr v1alpha1.ModuleRelease
+		err = yaml.Unmarshal([]byte(obj), &mr)
+		require.NoError(suite.T(), err)
+		res = &mr
+
+	case "ModuleUpdatePolicy":
+		var mup v1alpha1.ModuleUpdatePolicy
+		err = yaml.Unmarshal([]byte(obj), &mup)
+		require.NoError(suite.T(), err)
+		res = &mup
+	}
+
+	return res
 }
 
-func createFakeModuleSource(cs versioned.Interface, yamlObj string) (*v1alpha1.ModuleSource, error) {
-	var ms *v1alpha1.ModuleSource
+func (suite *ControllerTestSuite) fetchResults() []byte {
+	result := bytes.NewBuffer(nil)
+
+	var mslist v1alpha1.ModuleSourceList
+	err := suite.kubeClient.List(context.TODO(), &mslist)
+	require.NoError(suite.T(), err)
+
+	for _, item := range mslist.Items {
+		got, _ := yaml.Marshal(item)
+		result.WriteString("---\n")
+		result.Write(got)
+	}
+
+	var mrlist v1alpha1.ModuleReleaseList
+	err = suite.kubeClient.List(context.TODO(), &mrlist)
+	require.NoError(suite.T(), err)
+
+	for _, item := range mrlist.Items {
+		got, _ := yaml.Marshal(item)
+		result.WriteString("---\n")
+		result.Write(got)
+	}
+
+	return result.Bytes()
+}
+
+func (suite *ControllerTestSuite) createFakeModuleSource(yamlObj string) *v1alpha1.ModuleSource {
+	var ms v1alpha1.ModuleSource
 	err := yaml.Unmarshal([]byte(yamlObj), &ms)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(suite.T(), err)
 
-	ms, err = cs.DeckhouseV1alpha1().ModuleSources().Create(context.TODO(), ms, v1.CreateOptions{})
+	err = suite.kubeClient.Create(context.TODO(), &ms)
+	require.NoError(suite.T(), err)
 
-	return ms, err
+	return &ms
 }
 
-// nolint: unparam
-func createFakeModuleRelease(cs versioned.Interface, yamlObj string) (*v1alpha1.ModuleRelease, error) {
-	var mr *v1alpha1.ModuleRelease
-	err := yaml.Unmarshal([]byte(yamlObj), &mr)
-	if err != nil {
-		return nil, err
+func (suite *ControllerTestSuite) getModuleSource(name string) *v1alpha1.ModuleSource {
+	var ms v1alpha1.ModuleSource
+	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &ms)
+	require.NoError(suite.T(), err)
+
+	return &ms
+}
+
+func (suite *ControllerTestSuite) TestInvalidRegistry() {
+	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "false")
+	invalidMS := `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: test-source
+spec:
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+`
+	ms := suite.createFakeModuleSource(invalidMS)
+	_, err := suite.ctr.Reconcile(context.TODO(), controllerruntime.Request{NamespacedName: types.NamespacedName{Name: ms.Name}})
+	require.NoError(suite.T(), err)
+
+	ms = suite.getModuleSource(ms.Name)
+	assert.Contains(suite.T(), ms.Status.Msg, "credentials not found in the dockerCfg")
+	assert.Len(suite.T(), ms.Status.AvailableModules, 0)
+}
+
+func (suite *ControllerTestSuite) setupController(yamlDoc string) {
+	manifests := releaseutil.SplitManifests(yamlDoc)
+
+	var initObjects = make([]client.Object, 0, len(manifests))
+	for _, manifest := range manifests {
+		obj := suite.assembleInitObject(manifest)
+		initObjects = append(initObjects, obj)
 	}
 
-	mr, err = cs.DeckhouseV1alpha1().ModuleReleases().Create(context.TODO(), mr, v1.CreateOptions{})
+	sc := runtime.NewScheme()
+	_ = v1alpha1.SchemeBuilder.AddToScheme(sc)
+	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha1.ModuleRelease{}).Build()
 
-	return mr, err
+	rec := &moduleSourceReconciler{
+		client:               cl,
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		dc:                   dependency.NewDependencyContainer(),
+		logger:               log.New(),
+
+		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
+			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+				Mode: "Auto",
+			},
+			ReleaseChannel: "Stable",
+		}),
+		moduleSourcesChecksum: make(sourceChecksum),
+	}
+
+	suite.ctr = rec
+	suite.kubeClient = cl
+}
+
+func singleDocToManifests(doc []byte) (result []string) {
+	split := mDelimiter.Split(string(doc), -1)
+
+	for i := range split {
+		if split[i] != "" {
+			result = append(result, split[i])
+		}
+	}
+	return
 }

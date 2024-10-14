@@ -87,7 +87,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (pod, namespace) (rate(uwsgi_worker_average_response_time_seconds{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))",
+          "expr": "sum by (pod, namespace) (rate(uwsgi_worker_average_response_time_seconds{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }} / {{ pod }}",
@@ -170,7 +170,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (pod, namespace) (rate(uwsgi_worker_requests_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__interval_sx4]))",
+          "expr": "sum by (pod, namespace) (rate(uwsgi_worker_requests_total{namespace=~\"$namespace\", pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }} / {{ pod }}",

@@ -1,0 +1,33 @@
+cloud-provider-yandex:
+  fixes:
+    - summary: Fix typo in label key in discoverer.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8792
+dhctl:
+  fixes:
+    - summary: Fix working with registries on non-standard ports.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8809
+    - summary: Fix registry path calculation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8802
+    - summary: Fix bootstrap cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8787
+ingress-nginx:
+  fixes:
+    - summary: Fix pod descheduling from a not-ready node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8801
+      impact: Kruise controller's pods will be recreated.
+    - summary: Fix usage custom logs formats without our fields.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8621
+      impact: Ingress controller will restart.
+node-manager:
+  fixes:
+    - summary: Fix RBAC permissions and startup schedule cleanup of NodeUser creation errors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8803
+registry-packages-proxy:
+  fixes:
+    - summary: Fix working with registries on non-standard ports.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8809
+      impact: registry-packages-proxy will restart.
+    - summary: Fix registry path calculation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8802
+      impact: registry-packages-proxy will restart.
+

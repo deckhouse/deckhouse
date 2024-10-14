@@ -22,7 +22,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   attempt=0
   until
     node_data="$(
-      kubectl_exec get node "$(hostname -s)" -o json | jq '
+      kubectl_exec get node "${D8_NODE_HOSTNAME}" -o json | jq '
       {
         "resourceVersion": .metadata.resourceVersion,
         "isApproved": (.metadata.annotations | has("update.node.deckhouse.io/approved")),
@@ -36,7 +36,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
       >&2 echo "ERROR: Can't set update.node.deckhouse.io/waiting-for-approval= annotation on our Node."
       exit 1
     fi
-    kubectl_exec annotate node "$(hostname -s)" \
+    kubectl_exec annotate node "${D8_NODE_HOSTNAME}" \
       --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
       update.node.deckhouse.io/waiting-for-approval= node.deckhouse.io/configuration-checksum- \
       || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
@@ -45,7 +45,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
   attempt=0
   until
-    kubectl_exec get node "$(hostname -s)" -o json | \
+    kubectl_exec get node "${D8_NODE_HOSTNAME}" -o json | \
     jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
   do
     attempt=$(( attempt + 1 ))
@@ -55,7 +55,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
     fi
     echo "Steps are waiting for approval to start."
     echo "Note: Deckhouse is performing a rolling update. If you want to force an update, use the following command."
-    echo "kubectl annotate node $(hostname -s) update.node.deckhouse.io/approved="
+    echo "kubectl annotate node ${D8_NODE_HOSTNAME} update.node.deckhouse.io/approved="
     echo "Retry in 10sec..."
     sleep 10
   done

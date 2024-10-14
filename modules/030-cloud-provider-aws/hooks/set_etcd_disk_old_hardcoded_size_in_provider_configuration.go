@@ -29,7 +29,7 @@ import (
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -47,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-provider-cluster-configuration"},
 			},
-			ExecuteHookOnEvents: pointer.Bool(false),
+			ExecuteHookOnEvents: ptr.To(false),
 			FilterFunc:          applyProviderClusterConfigurationSecretFilter,
 		},
 	},

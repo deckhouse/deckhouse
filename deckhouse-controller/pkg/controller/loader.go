@@ -17,12 +17,14 @@ limitations under the License.
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -30,15 +32,43 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 )
 
 var (
+	ErrModuleAlreadyExists = errors.New("module already exists")
 	// some ephemeral modules, which we even don't want to load
 	excludeModules = map[string]struct{}{
 		"000-common":           {},
 		"007-registrypackages": {},
 	}
 )
+
+// LoadModule reads single directory and returns BasicModule
+// modulePath is in the following format: /deckhouse-controller/downloaded/<module_name>/<module_version>
+func (dml *DeckhouseController) LoadModule(moduleSource, modulePath string) (*modules.BasicModule, error) {
+	_, err := readDir(modulePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// run parseModuleDir("<module_name>", "/deckhouse-controller/downloaded/<module_name>/<module_version>")
+	def, err := dml.parseModuleDir(filepath.Base(filepath.Dir(modulePath)), modulePath)
+	if err != nil {
+		return nil, err
+	}
+
+	dm, err := dml.processModuleDefinition(*def)
+	if err != nil && !errors.Is(err, ErrModuleAlreadyExists) {
+		return nil, err
+	}
+
+	dml.deckhouseModules[def.Name] = dm
+	dml.sourceModules[def.Name] = moduleSource
+	return dm.GetBasicModule(), nil
+}
 
 func (dml *DeckhouseController) LoadModules() ([]*modules.BasicModule, error) {
 	result := make([]*modules.BasicModule, 0, len(dml.deckhouseModules))
@@ -50,6 +80,62 @@ func (dml *DeckhouseController) LoadModules() ([]*modules.BasicModule, error) {
 	return result, nil
 }
 
+func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModuleDefinition) (*models.DeckhouseModule, error) {
+	err := validateModuleName(def.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	// load values for module
+	valuesModuleName := utils.ModuleNameToValuesKey(def.Name)
+	// 1. from static values.yaml inside the module
+	moduleStaticValues, err := utils.LoadValuesFileFromDir(def.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	if moduleStaticValues.HasKey(valuesModuleName) {
+		moduleStaticValues = moduleStaticValues.GetKeySection(valuesModuleName)
+	}
+
+	// 2. from openapi defaults
+	cb, vb, err := utils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
+	if err != nil {
+		return nil, err
+	}
+
+	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb)
+	if err != nil {
+		return nil, fmt.Errorf("new deckhouse module: %w", err)
+	}
+
+	// Load conversions
+	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
+		log.Debugf("conversions for %q module found", valuesModuleName)
+		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
+			log.Debugf("loading conversions for %q module failed", valuesModuleName)
+			return nil, err
+		}
+	} else {
+		if !os.IsNotExist(err) {
+			log.Debugf("loading conversions for %q module failed", valuesModuleName)
+			return nil, err
+		}
+		log.Debugf("conversions for %q module not found", valuesModuleName)
+	}
+
+	// Load constrains
+	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
+		return nil, err
+	}
+
+	if _, ok := dml.deckhouseModules[def.Name]; ok {
+		return dm, ErrModuleAlreadyExists
+	}
+
+	return dm, nil
+}
+
 func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 	for _, dir := range dml.dirs {
 		definitions, err := dml.findModulesInDir(dir)
@@ -58,43 +144,19 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 		}
 
 		for _, def := range definitions {
-			err = validateModuleName(def.Name)
+			dm, err := dml.processModuleDefinition(def)
 			if err != nil {
-				return err
-			}
-
-			// load values for module
-			valuesModuleName := utils.ModuleNameToValuesKey(def.Name)
-			// 1. from static values.yaml inside the module
-			moduleStaticValues, err := utils.LoadValuesFileFromDir(def.Path)
-			if err != nil {
-				return err
-			}
-
-			if moduleStaticValues.HasKey(valuesModuleName) {
-				moduleStaticValues = moduleStaticValues.GetKeySection(valuesModuleName)
-			}
-
-			// 2. from openapi defaults
-			cb, vb, err := utils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
-			if err != nil {
-				return err
-			}
-
-			if cb != nil && vb != nil {
-				log.Debugf("Add openapi schema for %q module", valuesModuleName)
-				err = dml.mm.GetValuesValidator().SchemaStorage.AddModuleValuesSchemas(valuesModuleName, cb, vb)
-				if err != nil {
-					return err
+				if errors.Is(err, ErrModuleAlreadyExists) {
+					log.Warnf("Module %q is already exists. Skipping module from %q", def.Name, def.Path)
+					continue
 				}
+				return fmt.Errorf("process module %s: %w", def.Name, err)
 			}
 
-			if _, ok := dml.deckhouseModules[def.Name]; ok {
-				log.Warnf("Module %q is already exists. Skipping module from %q", def.Name, def.Path)
-				continue
+			if !strings.HasPrefix(def.Path, d8env.GetDownloadedModulesDir()) {
+				dml.sourceModules[def.Name] = "Embedded"
 			}
 
-			dm := models.NewDeckhouseModule(def, moduleStaticValues, dml.mm.GetValuesValidator())
 			dml.deckhouseModules[def.Name] = dm
 		}
 	}
@@ -102,13 +164,40 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 	return nil
 }
 
-func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]models.DeckhouseModuleDefinition, error) {
-	dirEntries, err := os.ReadDir(modulesDir)
-	if err != nil && os.IsNotExist(err) {
-		return nil, fmt.Errorf("path '%s' does not exist", modulesDir)
-	}
+// checks if dir exists and returns entries
+func readDir(dir string) ([]os.DirEntry, error) {
+	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("listing modules directory '%s': %s", modulesDir, err)
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("path '%s' does not exist", dir)
+		}
+		return nil, fmt.Errorf("listing modules directory '%s': %s", dir, err)
+	}
+	return dirEntries, nil
+}
+
+// get module's definition out of a target dir
+func (dml *DeckhouseController) parseModuleDir(moduleName, moduleDir string) (*models.DeckhouseModuleDefinition, error) {
+	definition, err := dml.moduleFromFile(moduleDir)
+	if err != nil {
+		return nil, err
+	}
+
+	if definition == nil {
+		log.Debugf("module.yaml for module %q does not exist", moduleName)
+		definition, err = dml.moduleFromDirName(moduleName, moduleDir)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return definition, nil
+}
+
+func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]models.DeckhouseModuleDefinition, error) {
+	dirEntries, err := readDir(modulesDir)
+	if err != nil {
+		return nil, err
 	}
 
 	definitions := make([]models.DeckhouseModuleDefinition, 0)
@@ -126,17 +215,9 @@ func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]models.De
 			continue
 		}
 
-		definition, err := dml.moduleFromFile(absPath)
+		definition, err := dml.parseModuleDir(name, absPath)
 		if err != nil {
 			return nil, err
-		}
-
-		if definition == nil {
-			log.Debugf("module.yaml for module %q does not exist", name)
-			definition, err = dml.moduleFromDirName(name, absPath)
-			if err != nil {
-				return nil, err
-			}
 		}
 
 		definitions = append(definitions, *definition)
@@ -159,28 +240,21 @@ func (dml *DeckhouseController) moduleFromFile(absPath string) (*models.Deckhous
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-
 		return nil, err
 	}
-
 	f, err := os.Open(mFilePath)
 	if err != nil {
 		return nil, err
 	}
-
 	var def models.DeckhouseModuleDefinition
-
 	err = yaml.NewDecoder(f).Decode(&def)
 	if err != nil {
 		return nil, err
 	}
-
 	if def.Name == "" || def.Weight == 0 {
 		return nil, nil
 	}
-
 	def.Path = absPath
-
 	return &def, nil
 }
 

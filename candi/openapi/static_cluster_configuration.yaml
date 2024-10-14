@@ -9,7 +9,7 @@ apiVersions:
       To change the `StaticClusterConfiguration` resource in a running cluster, run the following command:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
       ```
     additionalProperties: false
     required: [apiVersion, kind]
@@ -34,7 +34,9 @@ apiVersions:
 
           Internal cluster networks connect Kubernetes components (`kube-apiserver`, `kubelet`, etc.).
 
-          The parameter can be omitted (and the `StaticClusterConfiguration` resource can be omitted) if each node in the cluster has only one network interface.
+          The parameter is mandatory in the following cases:
+          - Cluster nodes have more than one network interface
+          - The cluster is deployed inside a Deckhouse Virtualization Platform
         items:
           type: string
           example: '192.168.42.0/24'

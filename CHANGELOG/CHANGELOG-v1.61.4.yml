@@ -1,0 +1,11 @@
+docs:
+  fixes:
+    - summary: Add the FAQ section to the side menu for the chrony module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8785
+node-manager:
+  fixes:
+    - summary: >-
+        Create status.errors object for all NodeUsers (migration) and add conversion webhook for
+        same logic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/8814
+

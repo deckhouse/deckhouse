@@ -37,8 +37,6 @@ The YAML installation config contains multiple resource configurations (manifest
 
   This resource contains the parameters Deckhouse needs to start or run smoothly, such as the [placement-related parameters for Deckhouse components](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the [storageClass](../deckhouse-configure-global.html#parameters-storageclass) used, the [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg) credentials, the [DNS naming template](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and more.
 
-  **Caution!** The [configOverrides](configuration.html#initconfiguration-deckhouse-configoverrides) parameter is deprecated and will be removed. Use the [ModuleConfig](../#configuring-the-module) in the installation config to set parameters for **built-in** Deckhouse modules. For other modules, use [installation resource file](#installation-resource-config).  
-
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — general cluster parameters, such as network parameters, CRI parameters, control plane version, etc.
   
   > The `ClusterConfiguration` resource is only required if a Kubernetes cluster has to be pre-deployed when installing Deckhouse. That is, `ClusterConfiguration` is not required if Deckhouse is installed into an existing Kubernetes cluster.
@@ -61,6 +59,8 @@ The YAML installation config contains multiple resource configurations (manifest
 
 - `ModuleConfig` — a set of resources containing [Deckhouse configuration](../) parameters.
 
+If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), it is recommended to explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](../modules/300-prometheus/configuration.html#parameters-nodeselector).
+
 {% offtopic title="An example of the installation config..." %}
 
 ```yaml
@@ -79,10 +79,6 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   releaseChannel: Stable
-  configOverrides:
-    global:
-      modules:
-        publicDomainTemplate: "%s.example.com"
 ---
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
@@ -130,6 +126,18 @@ spec:
   enabled: true
   settings:
     allowedBundles: ["ubuntu-lts"]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  # Specify, in case of using dedicated nodes for monitoring.
+  # settings:
+  #   nodeSelector:
+  #     node.deckhouse.io/group: monitoring
 ```
 
 {% endofftopic %}
@@ -277,7 +285,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 ```
 
 , where:
-- `<DECKHOUSE_REVISION>` — edition of Deckhouse: `ee` for Enterprise Edition and `ce` for Community Edition;
+- `<DECKHOUSE_REVISION>` — [edition](../revision-comparison.html) of Deckhouse (e.g., `ee` for Enterprise Edition, `ce` for Community Edition, etc.);
 - `<MOUNT_OPTIONS>` — options for mounting files in the installer container, such as:
   - SSH authentication keys;
   - config file;
@@ -310,7 +318,7 @@ This command will start the Deckhouse installation in a cloud:
 ```shell
 dhctl bootstrap \
   --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml --resources=/resources.yml
+  --config=/config.yml --config=/resources.yml
 ```
 
 , where:
@@ -319,8 +327,37 @@ dhctl bootstrap \
 - `<SSH_USER>` — SSH user on the server;
 - `--ssh-agent-private-keys` — file with the private SSH key for connecting via SSH.
 
-### Aborting the installation and uninstalling Deckhouse
+### Pre-installation checks
 
-When installing in a supported cloud, the resources created may remain in the cloud if the installation is interrupted or there are problems during the installation. Use the `dhctl bootstrap-phase abort` command to delete those resources. Note that the configuration file passed via the `--config` flag must be the same as the one used for the installation.
+{% offtopic title="Scheme of checks prior to Deckhouse installation..." %}
+![Scheme of checks prior to Deckhouse installation](../images/installing/preflight-checks.png)
+{% endofftopic %}
 
-To delete a cluster running in a supported cloud and deployed after the Deckhouse installation, use the `dhctl destroy` command. In this case, `dhctl` will connect to the master node, retrieve the terraform state, and delete the resources created in the cloud in the correct fashion.
+List of checks performed by the installer before starting the installation of Deckhouse:
+- General checks:
+  - The values of the [PublicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) and [clusterDomain](configuration.html#clusterconfiguration-clusterdomain) parameters don't match.
+  - The authentication data for the container registry specified in the installation configuration is correct.
+  - The hostname meets the following requirements:
+    - length <= 63 characters;
+    - in lowercase;
+    - does not contain special characters (only `-` and `.`, which cannot be at the beginning or end of the name, are allowed).
+  - There is no installed CRI (containerd) on the server (VM).
+  - The hostname is unique relative to other hostnames in the cluster.
+- Checks for static and hybrid cluster installation:
+  - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be specified to configure the first master node.
+  - It is possible to connect via SSH using the specified authentication data.
+  - It is possible to establish an SSH tunnel to the master node server (VM).
+  - The server (VM) meets the minimum requirements for configuring the master node.
+  - Python and the necessary libraries are installed on the server (VM) for the master node.
+  - The container registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
+  - The server (VM) for the master node and the installer host have free ports required for the installation process.
+  - localhost resolves in DNS to IP 127.0.0.1.
+  - The `sudo` command is available to the user on the server (VM). 
+- Checks for cloud cluster installation:
+  - The master node virtual machine configuration meets the minimum requirements.
+
+### Aborting the installation
+
+If the installation was carried out in a supported cloud and was interrupted for any reason, or if problems occurred during the installation, resources that were created during the installation may end up residing in the cloud. To purge them, run the `dhctl bootstrap-phase abort` command in the installer container.
+
+> Note that the **config file** that is passed via the `--config` parameter to run the installer must be the **same** as the one used to initiate the installation in the first place.

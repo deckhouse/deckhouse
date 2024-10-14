@@ -16,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of GCP Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/documentation/v1/modules/040-node-manager/) module).
+            Parameters of a group of GCP Instances used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module).
 
             The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
           required:
@@ -68,7 +68,7 @@ spec:
 
                     You can find a list of available images in the [provider documentation](https://cloud.google.com/compute/docs/images#ubuntu).
 
-                    The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](https://deckhouse.ru/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                    The list of OS and their versions supported by Deckhouse can be found in the [Deckhouse documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
                   x-doc-examples: ["https://www.googleapis.com/compute/v1/projects/ubuntu-os-cloud/global/images/ubuntu-1804-bionic-v20190911"]
                   x-doc-required: false
                   type: string

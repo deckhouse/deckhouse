@@ -1,6 +1,6 @@
 module github.com/flant/docs-builder
 
-go 1.20
+go 1.22
 
 require (
 	github.com/bep/clocks v0.5.0
@@ -8,7 +8,6 @@ require (
 	github.com/bep/logg v0.2.0
 	github.com/bep/overlayfs v0.6.0
 	github.com/gohugoio/hugo v0.119.0
-	github.com/gorilla/mux v1.8.0
 	github.com/spf13/afero v1.9.5
 	github.com/spf13/fsync v0.9.0
 	golang.org/x/sync v0.3.0
@@ -17,7 +16,7 @@ require (
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
 	k8s.io/klog/v2 v2.100.1
-	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
+	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 )
 
 require (
@@ -160,7 +159,7 @@ require (
 	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230807174057-1744710a1577 // indirect
-	google.golang.org/grpc v1.57.0 // indirect
+	google.golang.org/grpc v1.57.1 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

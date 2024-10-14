@@ -1,4 +1,4 @@
-## fav-converter
+## far-converter
 
 Converts files with Falco rules to FalcoAuditRules CRD format.
 

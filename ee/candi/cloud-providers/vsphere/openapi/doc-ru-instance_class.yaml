@@ -13,7 +13,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Параметры группы vSphere VirtualMachines, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/documentation/v1/modules/040-node-manager/)).
+            Параметры группы vSphere VirtualMachines, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           properties:
@@ -41,7 +41,7 @@ spec:
                     Список путей до сетей, которые будут подключены к виртуальной машине.
                 datastore:
                   description: |
-                    Путь до Datastore, на котором будут созданы склонированные виртуальные машины.
+                    Путь до Datastore (относительно датацентра), на котором будут созданы склонированные виртуальные машины.
 
                     По умолчанию используется `datastore` из InstanceClass'а `master`.
                 disableTimesync:

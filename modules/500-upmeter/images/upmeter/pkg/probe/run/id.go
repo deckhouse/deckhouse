@@ -17,10 +17,11 @@ limitations under the License.
 package run
 
 import (
-	"github.com/spaolacci/murmur3"
 	"math/rand"
 	"os"
 	"strconv"
+
+	"github.com/spaolacci/murmur3"
 )
 
 const (

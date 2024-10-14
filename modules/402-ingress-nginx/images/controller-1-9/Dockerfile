@@ -4,6 +4,7 @@ ARG BASE_ALPINE_DEV
 ARG BASE_GOLANG_21_BULLSEYE_DEV
 ARG CONTROLLER_BRANCH=controller-v1.9.5
 
+FROM $BASE_ALT as base-alt
 
 # Build dumb-init binary
 FROM $BASE_ALPINE_DEV as dumb-init-builder
@@ -11,6 +12,23 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 RUN git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 
+# Build opentelemetry assets
+FROM $BASE_ALT_DEV as opentelemetry-artifact
+ARG SOURCE_REPO
+ENV SOURCE_REPO=${SOURCE_REPO}
+
+RUN mkdir -p /opt/third_party/install
+COPY ./opentelemetry/ /opt/third_party/
+
+RUN apt-get update && \
+	apt-get install libpcre2-devel libcurl-devel libgnutls-openssl-devel libcares-devel ninja-build \
+        libgtest-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins -y
+
+ENV NINJA_STATUS "[%p/%f/%t] "
+
+RUN bash /opt/third_party/build.sh -o v1.11.0-flant && \
+         cp -r /opt/third_party/install/* /usr/ && \
+         bash /opt/third_party/build.sh -n
 
 # Build luarocks assets
 FROM $BASE_ALT_DEV as luarocks-builder
@@ -24,7 +42,6 @@ RUN cd / && \
     git clone --branch 7-3 ${SOURCE_REPO}/luarocks-sorces/lua-iconv \
     && cd lua-iconv/ \
     && luarocks-5.1 install lua-iconv-7-3.src.rock
-
 
 # Build ingress controller, debug tool and pre-stop hook
 FROM $BASE_GOLANG_21_BULLSEYE_DEV as controller-builder
@@ -44,6 +61,8 @@ COPY patches/fix-cleanup.patch /
 COPY patches/geoip.patch /
 ENV GOARCH=amd64
 RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
+    # jaegertracing hunter deps
+    git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
@@ -52,7 +71,6 @@ RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/in
     patch -p1 < /fix-cleanup.patch && \
     patch -p1 < /geoip.patch && \
     make GO111MODULE=on USE_DOCKER=false build
-
 
 # Build nginx for ingress controller
 FROM $BASE_ALT_DEV as nginx-builder
@@ -63,15 +81,22 @@ ENV SOURCE_REPO=${SOURCE_REPO}
 COPY --from=controller-builder /src/images/nginx/rootfs/ /
 COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
-RUN patch build.sh < nginx-build.patch
-RUN /build.sh
-
+RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
+    # build pcre library with jit support due to lack of jit support in standard alt pcre library
+    cd pcre && \
+    ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit && \
+    make && \
+    make install && \
+    cd / && \
+    patch build.sh < nginx-build.patch && \
+    /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
 # Based on tag "controller-v1.9.5":
 # - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/images/nginx/rootfs/Dockerfile
 # - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/rootfs/Dockerfile-chroot
 # - https://github.com/kubernetes/ingress-nginx/blob/be46124ccc9e8158165f06e3f7d2ebd0cbbb284f/rootfs/chroot.sh
+
 FROM $BASE_ALT_DEV as chroot
 
 ENV PATH=$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin
@@ -91,6 +116,10 @@ COPY --from=luarocks-builder /usr/share/lua/5.1/protoc.lua /usr/local/share/lua/
 COPY patches/balancer-lua.patch /
 COPY patches/nginx-tmpl.patch /
 COPY patches/auth-cookie-always.patch /
+
+# copy complete set of libs
+COPY --from=base-alt /usr/lib64 /chroot/usr/lib64
+COPY --from=base-alt /lib64 /chroot/lib64
 
 RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
   && adduser -r -U -u 101 -d /usr/local/nginx \
@@ -115,6 +144,8 @@ RUN bash -eu -c ' \
   writeDirs=( \
     /chroot/etc/nginx \
     /chroot/usr/local/nginx \
+    /chroot/usr/share \
+    /chroot/usr/bin \
     /chroot/etc/ingress-controller \
     /chroot/etc/ingress-controller/ssl \
     /chroot/etc/ingress-controller/auth \
@@ -131,6 +162,7 @@ RUN bash -eu -c ' \
     /chroot/var/lib/nginx/scgi \
     /chroot/var/lib/nginx/uwsgi \
     /chroot/tmp/nginx \
+    /chroot/modules_mount \
   ); \
   for dir in "${writeDirs[@]}"; do \
     mkdir -p ${dir}; \
@@ -142,32 +174,47 @@ RUN bash -eu -c ' \
   && touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && chown -R www-data.www-data /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml \
   && mkdir -p /chroot/etc/nginx/geoip \
-  && ln -s /chroot/etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
-  && cp -a /etc/nginx/* /chroot/etc/nginx/ \
-  && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
-  && cp -a /lib64/libpthread-* /lib64/libpthread.* /chroot/lib64/ \
-  && cp -a /lib64/libcrypt.* /chroot/lib64/ \
-  && cp -a /lib64/libcrypto.* /chroot/lib64/ \
-  && cp -a /lib64/libpcre* /chroot/lib64/ \
-  && cp -a /lib64/libssl* /chroot/lib64/ \
-  && cp -a /lib64/libz.* /chroot/lib64/ \
+  && cp -a /etc/pki /chroot/etc/pki \
+  && cp -a /usr/share/ca-certificates /chroot/usr/share/ca-certificates \
+  && cp -a /usr/bin/curl /chroot/usr/bin/curl \
+  && cp -a /lib64/* /chroot/lib64/ \
   && cp -a /usr/lib64/libGeoIP* /chroot/usr/lib64/ \
-  && cp -a /lib64/libc-* /lib64/libc.* /chroot/lib64/ \
-  && cp -a /lib64/ld-* /chroot/lib64/ \
-  && cp -a /lib64/libm-* /lib64/libm.* /chroot/lib64/ \
-  && cp -a /lib64/libdl-* /lib64/libdl.* /chroot/lib64/ \
-  && cp -a /lib64/libgcc_s.* /chroot/lib64/ \
+  && cp -a /usr/lib64/libcurl* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libgsasl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnfnetlink.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libntlm.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libnghttp2.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libpsl.so* /chroot/usr/lib64/ \
+  && cp -a /usr/lib64/libssh2.so* /chroot/usr/lib64/ \
   && cp -a /usr/lib64/gconv /chroot/usr/lib64/ \
+  && cp -a /etc/nginx/* /chroot/etc/nginx/ \
   && cp -a /usr/local/bin /chroot/usr/local/ \
   && cp -a /usr/local/lib /chroot/usr/local/ \
   && cp -a /usr/local/share/lua* /chroot/usr/local/share/ \
   && cp -a /usr/local/lib64 /chroot/usr/local/ \
   && cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/ \
-  && cp -a /usr/local/modsecurity/lib /chroot/usr/local/modsecurity/ \
-  && cp -a /usr/local/nginx /chroot/usr/local/
+  && cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/ \
+  && cp -a /usr/local/nginx /chroot/usr/local/ \
+  # replace pcre with version with jit support
+  && rm -f /chroot/lib64/libpcre*
+
+#opentelemetry-artifacts and libs
+COPY --from=opentelemetry-artifact /etc/nginx/modules /chroot/modules_mount/etc/nginx/modules/otel
+COPY --from=opentelemetry-artifact /usr/lib64/libcares.so.2 /usr/lib64/libre2.so.9 /usr/lib64/libgpr.so.16 /usr/lib64/libaddress_sorting.so.16 /usr/lib64/libgrpc++.so.1.38.0 /usr/lib64/libprotobuf.so.27.0.0 /usr/lib64/libgrpc.so.16 /usr/lib64/libgpr.so.16 /usr/lib64/libupb.so.16 /chroot/lib64/
+
+COPY --from=nginx-builder /usr/local/pcre/lib/libpcre.so.1.2.13 /usr/local/pcre/lib/libpcre16.so.0.2.13 /usr/local/pcre/lib/libpcre32.so.0.0.13  /usr/local/pcre/lib/libpcrecpp.so.0.0.2 /usr/local/pcre/lib/libpcreposix.so.0.0.7 /chroot/lib64/
 COPY --from=controller-builder --chown=www-data:www-data /src/rootfs/etc /chroot/etc
-RUN cd / \
+
+RUN ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip \
+  # fix simlink to proper pcre jit version
+  && ln -s libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3 \
+  && cd / \
   && patch -p1 < /balancer-lua.patch \
   && patch -p1 < /nginx-tmpl.patch \
   && patch -p1 < /auth-cookie-always.patch
@@ -188,13 +235,12 @@ RUN ln -s /usr/local/nginx/sbin/nginx /sbin/nginx \
     -s /sbin/nologin -c www-data www-data
 
 COPY --from=chroot /chroot /chroot
-COPY --from=chroot /usr/share/pki/ca-trust-source/ca-bundle.trust.p11-kit /usr/share/pki/ca-trust-source/ca-bundle.trust.p11-kit
-COPY --from=chroot /usr/share/ca-certificates /usr/share/ca-certificates
 
 COPY --from=controller-builder /src/rootfs/bin/amd64/dbg /
 COPY --from=controller-builder /src/rootfs/bin/amd64/nginx-ingress-controller  /
 COPY --from=controller-builder /src/rootfs/bin/amd64/wait-shutdown /
 COPY --chown=www-data:www-data nginx-chroot-wrapper.sh /usr/bin/nginx
+COPY --chown=www-data:www-data curl-chroot-wrapper.sh /usr/bin/curl
 
 COPY --from=dumb-init-builder /dumb-init/dumb-init /usr/bin/dumb-init
 
@@ -207,10 +253,16 @@ RUN  chmod 1777 /tmp \
   && setcap -v cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/dumb-init \
+  && rm -rf /etc/pki \
+  # Remove opentracing.json - deprecated
+  && rm /chroot/etc/nginx/opentracing.json \
+  && ln -sf /chroot/etc/pki /etc/pki \
+  && ln -sf /chroot/usr/share/ca-certificates /usr/share/ca-certificates \
   && ln -sf /chroot/etc/nginx /etc/nginx \
   && ln -sf /chroot/tmp/nginx /tmp/nginx \
   && ln -sf /chroot/etc/ingress-controller /etc/ingress-controller \
   && ln -sf /chroot/var/log/nginx /var/log/nginx \
+  && ln -sf /chroot/modules_mount /modules_mount \
   && touch /chroot/var/log/nginx/access.log \
   && chown www-data:www-data /chroot/var/log/nginx/access.log \
   && echo "" > /chroot/etc/resolv.conf \
@@ -222,9 +274,6 @@ RUN  chmod 1777 /tmp \
   && mknod -m 0666 /chroot/dev/ptmx c 5 2 \
   && mknod -m 0666 /chroot/dev/zero c 1 5 \
   && mknod -m 0666 /chroot/dev/tty c 5 0 \
-  && mkdir -p /chroot/modules_mount \
-  && mkdir -p modules_mount \
-  && ln -s /modules_mount /chroot/modules_mount \
   && echo -e "/usr/local/lib\n/usr/local/lib64\n/modules_mount/etc/nginx/modules/otel" > /etc/ld.so.conf.d/local.conf \
   && ldconfig \
   # Create ld.so.cache inside chroot

@@ -1,7 +1,7 @@
 # Keep this versions in sync with candi/cloud-providers/*/terraform-modules/versions.tf
 # and ee/candi/cloud-providers/*/terraform-modules/versions.tf
 
-version: 0.13.4
+version: 0.14.8
 
 aws:
   namespace: hashicorp
@@ -37,6 +37,14 @@ openstack:
   artifact: terraform-provider-openstack
   artifactBinary: terraform-provider-openstack
   destinationBinary: terraform-provider-openstack
+
+ovirt:
+  namespace: terraform-provider-ovirt
+  type: ovirt
+  version: 2.1.5
+  artifact: terraform-provider-ovirt
+  artifactBinary: terraform-provider-ovirt
+  destinationBinary: terraform-provider-ovirt
 
 vsphere:
   namespace: hashicorp

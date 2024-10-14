@@ -34,6 +34,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "alertmanager_crds",

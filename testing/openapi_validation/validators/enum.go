@@ -36,6 +36,8 @@ var (
 			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.zones.items",
 			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.zones.items",
 			"apiVersions[0].openAPISpec.properties.zones.items",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
 		},
 		// disk types - gp2.,..
 		"candi/cloud-providers/aws/openapi/cluster_configuration.yaml": {
@@ -64,11 +66,11 @@ var (
 			// http and https
 			"properties.modulesImages.properties.registry.properties.scheme",
 		},
-		"modules/010-user-authn-crd/crds/dex-provider.yaml": {
+		"modules/150-user-authn/crds/dex-provider.yaml": {
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.github.properties.teamNameField",
 		},
-		"modules/010-prometheus-crd/crds/grafanaadditionaldatasources.yaml": {
+		"modules/300-prometheus/crds/grafanaadditionaldatasources.yaml": {
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.access",
 		},
@@ -133,8 +135,14 @@ var (
 		},
 		"modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values
+			"properties.internal.properties.discoveryData.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+		},
+		"modules/030-cloud-provider-zvirt/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 		},
 		"ee/modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values

@@ -30,7 +30,7 @@ func TestValidateConfigWithVector(t *testing.T) {
 
 	containerImage := os.Getenv("D8_LOG_SHIPPER_VECTOR_VALIDATE_IMAGE")
 	if containerImage == "" {
-		containerImage = "timberio/vector:0.31.0-debian"
+		containerImage = "timberio/vector:0.40.0-debian"
 	}
 
 	script := `

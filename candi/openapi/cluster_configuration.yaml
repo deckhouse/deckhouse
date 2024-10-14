@@ -11,7 +11,7 @@ apiVersions:
       To change the `ClusterConfiguration` resource in a running cluster, run the following command:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
       ```
     additionalProperties: false
     required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
@@ -21,7 +21,7 @@ apiVersions:
       podSubnetNodeCIDRPrefix: "24"
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
-      kubernetesVersion: "1.25"
+      kubernetesVersion: "1.27"
       clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
@@ -68,6 +68,7 @@ apiVersions:
             - "vSphere"
             - "Azure"
             - "VCD"
+            - "Zvirt"
           prefix:
             type: string
             description: |
@@ -102,6 +103,8 @@ apiVersions:
           Cluster domain (used for local routing).
 
           **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
+          
+          > If you need to change a parameter in a running cluster, it is recommended to use [instructions](../modules/042-kube-dns/faq.html#how-do-i-replace-the-cluster-domain-with-minimal-downtime)
         default: "cluster.local"
       defaultCRI:
         type: string
@@ -120,16 +123,16 @@ apiVersions:
         description: |
           Kubernetes control plane version to use in a cluster.
 
-          Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/documentation/v1/modules/040-control-plane-manager/#version-control) the cluster's control plane version.
+          Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/#version-control) the cluster's control plane version.
 
-          If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment.
+          If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
-        - "1.25"
         - "1.26"
         - "1.27"
         - "1.28"
         - "1.29"
+        - "1.30"
         - "Automatic"
       proxy:
         x-doc-d8Revision: ee
@@ -145,7 +148,7 @@ apiVersions:
           httpProxy:
             type: string
             x-doc-d8Revision: ee
-            pattern: '^https?://([0-9a-zA-Z\.\-\_]+(\:[0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$'
+            pattern: ^https?://([!*'();&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+(\:[!*'();:@&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$
             description: |
               Proxy URL for HTTP requests.
 
@@ -153,10 +156,12 @@ apiVersions:
             x-examples:
             - 'http://proxy.company.my'
             - 'https://user:password@proxy.company.my:8443'
+            - 'https://DOMAIN%5Cuser:password@proxy.company.my:8443'
+            - 'https://user%40domain.local:password@proxy.company.my:8443'
           httpsProxy:
             type: string
             x-doc-d8Revision: ee
-            pattern: '^https?://([0-9a-zA-Z\.\-\_]+(\:[0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$'
+            pattern: ^https?://([!*'();&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+(\:[!*'();:@&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$
             description: |
               Proxy URL for HTTPS requests.
 
@@ -164,6 +169,8 @@ apiVersions:
             x-examples:
             - 'http://proxy.company.my'
             - 'https://user:password@proxy.company.my:8443'
+            - 'https://DOMAIN%5Cuser:password@proxy.company.my:8443'
+            - 'https://user%40domain.local:password@proxy.company.my:8443'
           noProxy:
             x-doc-d8Revision: ee
             description: |

@@ -76,18 +76,23 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 	msgs := NewMessages()
 
 	dashboard := gjson.ParseBytes(fileContent)
-	dashboardPanels := make([]gjson.Result, 0)
-	dashboardRows := dashboard.Get("rows").Array()
-
-	for _, dashboardRow := range dashboardRows {
-		rowPanels := dashboardRow.Get("panels").Array()
-		dashboardPanels = append(dashboardPanels, rowPanels...)
-	}
-	panels := dashboard.Get("panels").Array()
-	dashboardPanels = append(dashboardPanels, panels...)
+	dashboardPanels := extractDashboardPanels(dashboard)
+	dashboardTemplates := extractDashboardTemplates(dashboard)
 
 	for _, panel := range dashboardPanels {
 		panelTitle := panel.Get("title").String()
+		panelType := panel.Get("type").String()
+		replaceWith, isDeprecated := evaluateDeprecatedPanelType(panelType)
+		if isDeprecated {
+			msgs.Add(
+				NewError(
+					fileName,
+					"deprecated panel type",
+					fmt.Sprintf("Panel %s is of deprecated type: '%s', consider using '%s'",
+						panelTitle, panelType, replaceWith),
+				),
+			)
+		}
 		intervals := evaluateDeprecatedIntervals(panel)
 		for _, interval := range intervals {
 			msgs.Add(
@@ -111,8 +116,18 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 				),
 			)
 		}
-		datasourceUIDs := evaluateHardcodedDatasourceUIDs(panel)
-		for _, datasourceUID := range datasourceUIDs {
+		legacyDatasourceUIDs, hardcodedDatasourceUIDs, nonRecommendedPrometheusDatasourceUIDs := evaluateDeprecatedDatasourceUIDs(panel)
+		for _, datasourceUID := range legacyDatasourceUIDs {
+			msgs.Add(
+				NewError(
+					fileName,
+					"legacy datasource uid",
+					fmt.Sprintf("Panel %s contains legacy datasource uid: '%s', consider resaving dashboard using newer version of Grafana",
+						panelTitle, datasourceUID),
+				),
+			)
+		}
+		for _, datasourceUID := range hardcodedDatasourceUIDs {
 			msgs.Add(
 				NewError(
 					fileName,
@@ -122,23 +137,141 @@ func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages
 				),
 			)
 		}
+		for _, datasourceUID := range nonRecommendedPrometheusDatasourceUIDs {
+			msgs.Add(
+				NewError(
+					fileName,
+					"non-recommended prometheus datasource uid",
+					fmt.Sprintf("Panel %s datasource must be one of: %s instead of '%s'",
+						panelTitle, prometheusDatasourceRecommendedUIDsMessageString, datasourceUID),
+				),
+			)
+		}
+	}
+
+	var hasPrometheusDatasourceVariable bool
+	for _, dashboardTemplate := range dashboardTemplates {
+		if evaluatePrometheusDatasourceTemplateVariable(dashboardTemplate) {
+			hasPrometheusDatasourceVariable = true
+		}
+		if queryVariable, ok := evaluateNonRecommendedPrometheusDatasourceQueryTemplateVariable(dashboardTemplate); ok {
+			msgs.Add(
+				NewError(
+					fileName,
+					"non-recommended prometheus datasource query variable",
+					fmt.Sprintf("Dashboard variable '%s' must use one of: %s as it's datasource", queryVariable, prometheusDatasourceRecommendedUIDsMessageString),
+				),
+			)
+		}
+	}
+	if !hasPrometheusDatasourceVariable {
+		msgs.Add(
+			NewError(
+				fileName,
+				"missing prometheus datasource variable",
+				fmt.Sprintf("Dashboard must contain prometheus variable with query type: '%s' and name: '%s'",
+					prometheusDatasourceQuery, prometheusDatasourceRecommendedName),
+			),
+		)
 	}
 	return msgs
 }
 
-func evaluateHardcodedDatasourceUIDs(panel gjson.Result) []string {
+func extractDashboardPanels(dashboard gjson.Result) []gjson.Result {
+	dashboardPanels := make([]gjson.Result, 0)
+	dashboardRows := dashboard.Get("rows").Array()
+	for _, dashboardRow := range dashboardRows {
+		rowPanels := dashboardRow.Get("panels").Array()
+		dashboardPanels = append(dashboardPanels, rowPanels...)
+	}
+
+	panels := dashboard.Get("panels").Array()
+	for _, panel := range panels {
+		panelType := panel.Get("type").String()
+		if panelType == "row" {
+			rowPanels := panel.Get("panels").Array()
+			dashboardPanels = append(dashboardPanels, rowPanels...)
+		} else {
+			dashboardPanels = append(dashboardPanels, panel)
+		}
+	}
+	return dashboardPanels
+}
+
+func extractDashboardTemplates(dashboard gjson.Result) []gjson.Result {
+	dashboardTemplating := dashboard.Get("templating")
+	if !dashboardTemplating.Exists() {
+		return []gjson.Result{}
+	}
+	dashboardTemplatesList := dashboardTemplating.Get("list")
+	if !dashboardTemplatesList.Exists() || !dashboardTemplatesList.IsArray() {
+		return []gjson.Result{}
+	}
+	return dashboardTemplatesList.Array()
+}
+
+const (
+	prometheusDatasourceType            = "prometheus"
+	prometheusDatasourceQuery           = "prometheus"
+	prometheusDatasourceRecommendedName = "ds_prometheus"
+)
+
+var (
+	// both ${datasource_uid} and $datasource_uid will be parsed as $datasource_uid
+	prometheusDatasourceRecommendedUIDs = []string{
+		"$" + prometheusDatasourceRecommendedName,
+		"${" + prometheusDatasourceRecommendedName + "}",
+	}
+	prometheusDatasourceRecommendedUIDsMessageString = func() string {
+		res := make([]string, 0, len(prometheusDatasourceRecommendedUIDs))
+		for _, prometheusDatasourceRecommendedUID := range prometheusDatasourceRecommendedUIDs {
+			res = append(res, fmt.Sprintf("'%s'", prometheusDatasourceRecommendedUID))
+		}
+		return strings.Join(res, ", ")
+	}()
+)
+
+func isRecommendedPrometheusDatasourceUID(prometheusDatasourceUID string) bool {
+	for _, prometheusDatasourceRecommendedUID := range prometheusDatasourceRecommendedUIDs {
+		if prometheusDatasourceRecommendedUID == prometheusDatasourceUID {
+			return true
+		}
+	}
+	return false
+}
+
+func evaluateDeprecatedDatasourceUIDs(panel gjson.Result) (
+	legacyUIDs, hardcodedUIDs, nonRecommendedPrometheusUIDs []string,
+) {
 	targets := panel.Get("targets").Array()
-	datasourceUIDs := make([]string, 0)
+	legacyUIDs = make([]string, 0)
+	hardcodedUIDs = make([]string, 0)
+	nonRecommendedPrometheusUIDs = make([]string, 0)
 	for _, target := range targets {
 		datasource := target.Get("datasource")
 		if datasource.Exists() {
-			uid := datasource.Get("uid").String()
-			if !strings.HasPrefix(uid, "$") {
-				datasourceUIDs = append(datasourceUIDs, uid)
+			var uidStr string
+			uid := datasource.Get("uid")
+			if uid.Exists() {
+				uidStr = uid.String()
+			} else {
+				// some old dashboards (before Grafana 8.3) may implicitly contain uid as a string, not as parameter
+				uidStr = datasource.String()
+				legacyUIDs = append(legacyUIDs, uidStr)
+			}
+			if !strings.HasPrefix(uidStr, "$") {
+				hardcodedUIDs = append(hardcodedUIDs, uidStr)
+			}
+			datasourceType := datasource.Get("type")
+			if datasourceType.Exists() {
+				datasourceTypeStr := datasourceType.String()
+				if datasourceTypeStr == prometheusDatasourceType && !isRecommendedPrometheusDatasourceUID(uidStr) {
+					nonRecommendedPrometheusUIDs = append(nonRecommendedPrometheusUIDs, uidStr)
+				}
 			}
 		}
 	}
-	return datasourceUIDs
+	return hardcodedUIDs, legacyUIDs, nonRecommendedPrometheusUIDs
 }
 
 var (
@@ -168,4 +301,59 @@ func evaluateDeprecatedInterval(expression string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+var (
+	deprecatedPanelTypes = map[string]string{
+		"graph":                 "timeseries",
+		"flant-statusmap-panel": "state-timeline",
+	}
+)
+
+func evaluateDeprecatedPanelType(panelType string) (replaceWith string, isDeprecated bool) {
+	replaceWith, isDeprecated = deprecatedPanelTypes[panelType]
+	return replaceWith, isDeprecated
+}
+
+func evaluatePrometheusDatasourceTemplateVariable(dashboardTemplate gjson.Result) bool {
+	templateType := dashboardTemplate.Get("type")
+	if !templateType.Exists() {
+		return false
+	}
+	if templateType.String() != "datasource" {
+		return false
+	}
+	queryType := dashboardTemplate.Get("query")
+	if queryType.String() != prometheusDatasourceQuery {
+		return false
+	}
+	templateName := dashboardTemplate.Get("name")
+	if templateName.String() != prometheusDatasourceRecommendedName {
+		return false
+	}
+	return true
+}
+
+func evaluateNonRecommendedPrometheusDatasourceQueryTemplateVariable(dashboardTemplate gjson.Result) (string, bool) {
+	templateType := dashboardTemplate.Get("type")
+	if !templateType.Exists() {
+		return "", false
+	}
+	if templateType.String() != "query" {
+		return "", false
+	}
+	datasource := dashboardTemplate.Get("datasource")
+	if !datasource.Exists() {
+		return "", false
+	}
+	datasourceType := datasource.Get("type")
+	if datasourceType.String() != prometheusDatasourceType {
+		return "", false
+	}
+	datasourceUID := datasource.Get("uid")
+	if isRecommendedPrometheusDatasourceUID(datasourceUID.String()) {
+		return "", false
+	}
+	templateName := dashboardTemplate.Get("name")
+	return templateName.String(), true
 }

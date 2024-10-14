@@ -11,7 +11,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
   cp -f $schema_path _data/schemas/${module_name}/
   if [ -f $module_path/openapi/doc-ru-config-values.yaml ]; then
      echo -e "\ni18n:\n  ru:" >>_data/schemas/${module_name}/config-values.yaml
-     cat $module_path/openapi/doc-ru-config-values.yaml | sed 's/^/    /' >>_data/schemas/${module_name}/config-values.yaml
+     cat $module_path/openapi/doc-ru-config-values.yaml | sed '1{/^---$/d}; s/^/    /' >>_data/schemas/${module_name}/config-values.yaml
   fi
   if [ ! -f ${module_path}/docs/CONFIGURATION.md ]; then
       continue
@@ -23,6 +23,9 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
     sed -i "/<!-- SCHEMA -->/i\{\% include module-configuration.liquid \%\}" ${module_path}/docs/CONFIGURATION.md
   else
     echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CONFIGURATION.md"
+  fi
+  if [ $module_name == "ingress-nginx" ]; then
+    cat _data/schemas/${module_name}/config-values.yaml
   fi
 done
 
@@ -44,7 +47,11 @@ if [ -d /src/global ]; then
   cp -f /src/global/static_cluster_configuration.yaml _data/schemas/global/static_cluster_configuration.yaml
   echo -e "\ni18n:\n  ru:" >>_data/schemas/global/static_cluster_configuration.yaml
   cat /src/global/doc-ru-static_cluster_configuration.yaml | sed 's/^/    /' >>_data/schemas/global/static_cluster_configuration.yaml
-  # "Global" CRDS (from the deckhouse-controller/crds)
+  # DeckhouseRelease CRD
+  cp -f /src/global/crds/deckhouse-release.yaml _data/schemas/global/crds/deckhouse-release.yaml
+  echo -e "\ni18n:\n  ru:" >>_data/schemas/global/crds/deckhouse-release.yaml
+  cat /src/global/crds/doc-ru-deckhouse-release.yaml | sed 's/^/    /' >>_data/schemas/global/crds/deckhouse-release.yaml
+  # module CRDS
   cp /src/global/crds/module* /srv/jekyll-data/documentation/_data/schemas/global/crds
   for i in /src/global/crds/module* ; do
     cp -v $i /srv/jekyll-data/documentation/_data/schemas/global/crds/

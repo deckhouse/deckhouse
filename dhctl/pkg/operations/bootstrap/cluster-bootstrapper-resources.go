@@ -15,12 +15,16 @@
 package bootstrap
 
 import (
+	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 func (b *ClusterBootstrapper) CreateResources() error {
@@ -30,28 +34,49 @@ func (b *ClusterBootstrapper) CreateResources() error {
 		defer restore()
 	}
 
-	var resourcesToCreate template.Resources
+	resourcesToCreate := make(template.Resources, 0)
 	if app.ResourcesPath != "" {
+		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
 		parsedResources, err := template.ParseResources(app.ResourcesPath, nil)
 		if err != nil {
 			return err
 		}
 
 		resourcesToCreate = parsedResources
+	} else {
+		paths := fs.RevealWildcardPaths(app.ConfigPaths)
+		for _, cfg := range paths {
+			ress, err := template.ParseResources(cfg, nil)
+			if err != nil {
+				return err
+			}
+
+			resourcesToCreate = append(resourcesToCreate, ress...)
+		}
 	}
+
+	log.DebugF("Resources: %s\n", resourcesToCreate.String())
 
 	if len(resourcesToCreate) == 0 {
 		log.WarnLn("Resources to create were not found.")
 		return nil
 	}
 
-	sshClient, err := ssh.NewInitClientFromFlags(true)
-	if err != nil {
+	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
+		sshClient := wrapper.Client()
+		if sshClient != nil {
+			if _, err := sshClient.Start(); err != nil {
+				return fmt.Errorf("unable to start ssh-client: %w", err)
+			}
+		}
+	}
+
+	if err := terminal.AskBecomePassword(); err != nil {
 		return err
 	}
 
 	return log.Process("bootstrap", "Create resources", func() error {
-		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
 		if err != nil {
 			return err
 		}

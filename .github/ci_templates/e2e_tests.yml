@@ -11,11 +11,18 @@
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $layout = "Standard" -}!}
 {!{- end -}!}
+{!{- if eq $ctx.provider "vcd"  -}!}
+{!{-   $layout = "Standard" -}!}
+{!{- end -}!}
 {!{- if eq $ctx.provider "static"  -}!}
 {!{-   $layout = "Static" -}!}
 {!{- end -}!}
 {!{ $layout }!}
 {!{ end -}!}
+
+{!{- define "e2e_kubernetes_default_version" -}!}
+1.27
+{!{- end -}!}
 
 # job for set e2e requirement status
 # $1 - name of function to set status. see ../scripts/e2e-commit-status.js
@@ -79,6 +86,12 @@
 {!{- else if eq $provider "vsphere" }!}
   LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
+{!{- else if eq $provider "vcd" }!}
+  LAYOUT_VCD_PASSWORD: ${{ secrets.LAYOUT_VCD_PASSWORD }}
+  LAYOUT_VCD_USERNAME: ${{ secrets.LAYOUT_VCD_USERNAME }}
+  LAYOUT_STATIC_BASTION_IP: 80.249.129.56
+  LAYOUT_VCD_SERVER: ${{ secrets.LAYOUT_VCD_SERVER }}
+  LAYOUT_VCD_ORG: ${{ secrets.LAYOUT_VCD_ORG }}
 {!{- end }!}
   COMMENT_ID: ${{ inputs.comment_id }}
   GITHUB_API_SERVER: ${{ github.api_url }}
@@ -101,12 +114,17 @@ run: |
     LAYOUT=${LAYOUT}
     KUBERNETES_VERSION=${KUBERNETES_VERSION}
     TMP_DIR_PATH=${TMP_DIR_PATH}
+    MASTERS_COUNT=${MASTERS_COUNT}
   "
 
   ls -lh $(pwd)/testing
 
   dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
   echo "DHCTL log file: $dhctl_log_file"
+
+  user_runner_id=$(id -u):$(id -g)
+  echo "user_runner_id $user_runner_id"
+
 
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
   echo "Start waiting ssh connection string script"
@@ -119,6 +137,8 @@ run: |
   bastion_ip_file=""
   if [[ "${PROVIDER}" == "Static" ]] ; then
     bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+  elif [[ "${PROVIDER}" == "VCD" ]] ; then
+    bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
   fi
 
   echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
@@ -140,9 +160,10 @@ run: |
   -e LAYOUT=${LAYOUT} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e CRI=${CRI} \
+  -e USER_RUNNER_ID=${user_runner_id} \
   -v $(pwd)/testing:/deckhouse/testing \
+  -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   -v ${TMP_DIR_PATH}:/tmp \
-  --user $(id -u):$(id -u) \
   ${TERRAFORM_IMAGE_NAME} \
   bash /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} {!{ $script_arg }!}
 
@@ -158,6 +179,7 @@ run: |
   -v ${TMP_DIR_PATH}:/tmp \
   -v "$PWD/resources.yml:/resources.yml" \
   -v $(pwd)/testing:/deckhouse/testing \
+  -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   ${INSTALL_IMAGE_NAME} \
   bash -c "dhctl bootstrap-phase install-deckhouse \
     --kubeconfig=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
@@ -178,9 +200,10 @@ run: |
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
   -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
   -e CRI=${CRI} \
+  -e USER_RUNNER_ID=${user_runner_id} \
   -v $(pwd)/testing:/deckhouse/testing \
+  -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   -v ${TMP_DIR_PATH}:/tmp \
-  --user $(id -u):$(id -u) \
   ${TERRAFORM_IMAGE_NAME} \
   bash -c "/deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_deckhouse_ready && \
   /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready"
@@ -191,6 +214,7 @@ run: |
   docker run --rm \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
     -e PREFIX=${PREFIX} \
+    -e MASTERS_COUNT=${MASTERS_COUNT} \
     -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
     -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
     -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -222,13 +246,17 @@ run: |
 {!{- else if eq $provider "vsphere" }!}
     -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
     -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
+{!{- else if eq $provider "vcd" }!}
+    -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
+    -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
+    -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
+    -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
+    -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
 {!{- end }!}
+    -e USER_RUNNER_ID=${user_runner_id} \
     -v $(pwd)/testing:/deckhouse/testing \
+    -v $(pwd)/release.yaml:/deckhouse/release.yaml \
     -v ${TMP_DIR_PATH}:/tmp \
-    --user $(id -u):$(id -u) \
-    -v /etc/group:/etc/group:ro \
-    -v /etc/passwd:/etc/passwd:ro \
-    -v /etc/shadow:/etc/shadow:ro \
     -w /deckhouse \
   ${INSTALL_IMAGE_NAME} \
   bash /deckhouse/testing/cloud_layouts/{!{ $script }!} {!{ $script_arg }!}
@@ -259,6 +287,7 @@ check_e2e_labels:
     {!{ printf "run_%s_%s: ${{ steps.check.outputs.run_%s_%s }}" $cri $kubernetesVersionSlug $cri $kubernetesVersionSlug }!}
 {!{- end -}!}
 {!{- end }!}
+    multimaster: ${{ steps.check.outputs.multimaster }}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check e2e labels
@@ -267,9 +296,10 @@ check_e2e_labels:
       with:
         script: |
           const provider = '{!{ $ctx.provider }!}';
+          const kubernetesDefaultVersion = '{!{ $ctx.kubernetesDefaultVersion }!}';
 
           const ci = require('./.github/scripts/js/ci');
-          return await ci.checkE2ELabels({github, context, core, provider});
+          return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
 # </template: check_e2e_labels_job>
 {!{- end -}!}
 
@@ -306,7 +336,11 @@ check_e2e_labels:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
     KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
@@ -331,13 +365,19 @@ check_e2e_labels:
         REF_FULL: ${{needs.git_info.outputs.ref_full}}
         INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
         MANUAL_RUN: {!{ coll.Has $ctx "manualRun" | conv.ToString | strings.Quote }!}
+        MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
       run: |
         # Calculate unique prefix for e2e test.
         # GITHUB_RUN_ID is a unique number for each workflow run.
         # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
         # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
         # CRI and PROVIDER values are trimmed to reduce prefix length.
-        DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}")
+        if [[ "${KUBERNETES_VERSION}" == "Automatic" ]] ; then
+          KUBERNETES_VERSION_SUF="auto"
+        else
+          KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
+        fi
+        DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
         if [[ "${MANUAL_RUN}" == "false" ]] ; then
           # for jobs which run multiple providers concurrency (daily e2e, for example)
           # add provider suffix to prevent "directory already exists" error
@@ -419,6 +459,13 @@ check_e2e_labels:
         SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
         echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
+        if [ "${MULTIMASTER}" == true ] ; then
+          MASTERS_COUNT=3
+        else
+          MASTERS_COUNT=1
+        fi
+        echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
         # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
         echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
         docker pull "${INSTALL_IMAGE_NAME}"
@@ -439,6 +486,7 @@ check_e2e_labels:
         echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
         echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
         echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+        echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
 
@@ -449,11 +497,16 @@ check_e2e_labels:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+        MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -493,11 +546,16 @@ check_e2e_labels:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+        MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -538,6 +596,17 @@ check_e2e_labels:
         else
           echo Not a directory.
         fi
+        if [ -n $USER_RUNNER_ID ]; then
+          echo "Fix temp directories owner..."
+          chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+          chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+          chown -R $USER_RUNNER_ID /tmp || true
+        else
+          echo "Fix temp directories permissions..."
+          chmod -f -R 777 "$(pwd)/testing" || true
+          chmod -f -R 777 "/deckhouse/testing" || true
+          chmod -f -R 777 /tmp || true
+        fi
 
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
@@ -570,7 +639,11 @@ check_e2e_labels:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
     LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
     KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
@@ -591,6 +664,7 @@ check_e2e_labels:
         DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
         INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
+        MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
       run: |
         # Create tmppath for test script.
         TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -620,6 +694,13 @@ check_e2e_labels:
         TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
 {!{- end }!}
 
+        if [ "${MULTIMASTER}" == true ] ; then
+          MASTERS_COUNT=3
+        else
+          MASTERS_COUNT=1
+        fi
+        echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
         echo '::echo::on'
         echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
         echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -628,6 +709,7 @@ check_e2e_labels:
         echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
 {!{- end }!}
         echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+        echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
 
@@ -641,17 +723,22 @@ check_e2e_labels:
         path: ${{ steps.setup.outputs.tmp-dir-path}}
 
     - name: Cleanup bootstrapped cluster
-      if: ${{ success() }}
+      if: ${{ success() || cancelled() }}
       id: cleanup_cluster
       env:
         PROVIDER: {!{ $ctx.providerName }!}
         CRI: {!{ $ctx.criName }!}
         LAYOUT: {!{ $ctx.layout }!}
+{!{- if and ( eq $provider "eks" ) ( eq $ctx.kubernetesVersion "Automatic" ) }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesDefaultVersion }!}"
+{!{- else }!}
         KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+{!{- end }!}
         LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ github.event.inputs.cluster_prefix }}
+        MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
 {!{- if eq $provider "eks" }!}
@@ -678,6 +765,17 @@ check_e2e_labels:
           rm -rf "${TMPPATH}"
         else
           echo Not a directory.
+        fi
+        if [ -n $USER_RUNNER_ID ]; then
+          echo "Fix temp directories owner..."
+          chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+          chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+          chown -R $USER_RUNNER_ID /tmp || true
+        else
+          echo "Fix temp directories permissions..."
+          chmod -f -R 777 "$(pwd)/testing" || true
+          chmod -f -R 777 "/deckhouse/testing" || true
+          chmod -f -R 777 /tmp || true
         fi
 
 {!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}

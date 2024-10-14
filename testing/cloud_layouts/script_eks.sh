@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-sex -x
-
 usage=$(cat <<EOF
 Usage:
   ./script.sh [command]
@@ -105,13 +103,13 @@ function prepare_environment() {
 
 
 function bootstrap_eks() {
-  set -x
+  # set -x
 
   >&2 echo "Run terraform to create nodes for EKS cluster ..."
 #  pushd "$cwd"
   cd $cwd
-  /terraform/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
-  /terraform/terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  /image/bin/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  /image/bin/terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 #  popd
 
   if ! cluster_endpoint="$(tail -n5 "$cwd/terraform.log" | grep "cluster_endpoint" | cut -d "=" -f2 | tr -d " \"")" ; then
@@ -257,8 +255,8 @@ function destroy_eks_infra() {
 
 #  pushd "$cwd"
   cd $cwd
-  /terraform/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
-  /terraform/terraform destroy -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  /image/bin/terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  /image/bin/terraform destroy -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 #  popd
 
   return $exitCode
@@ -272,6 +270,22 @@ function run-test() {
 function cleanup() {
   destroy_eks_infra || return $?
 }
+
+function chmod_dirs_for_cleanup() {
+
+  if [ -n $USER_RUNNER_ID ]; then
+    echo "Fix temp directories owner before cleanup ..."
+    chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
+    chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
+    chown -R $USER_RUNNER_ID /tmp || true
+  else
+    echo "Fix temp directories permissions before cleanup ..."
+    chmod -f -R 777 "$(pwd)/testing" || true
+    chmod -f -R 777 "/deckhouse/testing" || true
+    chmod -f -R 777 /tmp || true
+  fi
+}
+
 
 function main() {
    >&2 echo "Start cloud test script"
@@ -313,6 +327,8 @@ function main() {
   else
     echo "E2E test: fail."
   fi
+
+  chmod_dirs_for_cleanup
   exit $exitCode
 }
 

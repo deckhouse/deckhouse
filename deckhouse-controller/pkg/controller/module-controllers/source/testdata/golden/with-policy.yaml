@@ -1,0 +1,81 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  creationTimestamp: null
+  name: test-source-1
+  resourceVersion: "1000"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+  releaseChannel: ""
+status:
+  message: ""
+  moduleErrors: []
+  modules:
+  - name: bar
+  - name: foo
+    policy: test-source-1
+  modulesCount: 2
+  syncTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: bar
+    modules.deckhouse.io/update-policy: ""
+    release-checksum: 853ae90f0351324bd73ea615e6487517
+    source: test-source-1
+  name: bar-v1.2.3
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test-source-1
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: bar
+  version: 1.2.3
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: foo
+    modules.deckhouse.io/update-policy: test-source-1
+    release-checksum: 853ae90f0351324bd73ea615e6487517
+    source: test-source-1
+  name: foo-v1.2.3
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test-source-1
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: foo
+  version: 1.2.3
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null

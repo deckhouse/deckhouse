@@ -1,0 +1,31 @@
+# permissions for end users to edit zvirtmachines.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: zvirtmachine-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: src
+    app.kubernetes.io/part-of: src
+    app.kubernetes.io/managed-by: kustomize
+  name: zvirtmachine-editor-role
+rules:
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - zvirtmachines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - zvirtmachines/status
+  verbs:
+  - get
