@@ -51,6 +51,11 @@ if [[ -z "${cri_socket_path}" ]]; then
   exit 1
 fi
 
+{{- else if eq .cri "Containerd" }}
+cri_type="Containerd"
+{{- end }}
+
+
 if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "NotManagedContainerd" ]]; then
   criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
 fi
