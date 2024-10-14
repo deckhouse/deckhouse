@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,19 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package models
+package v1alpha1
 
 const (
-	ModuleDefinitionFile = "module.yaml"
+	FsReleaseFinalizer          = "modules.deckhouse.io/exist-on-fs"
+	SourceReleaseExistFinalizer = "modules.deckhouse.io/release-exists"
 )
-
-type DeckhouseModuleDefinition struct {
-	Name         string            `yaml:"name"`
-	Weight       uint32            `yaml:"weight,omitempty"`
-	Tags         []string          `yaml:"tags"`
-	Stage        string            `yaml:"stage"`
-	Description  string            `yaml:"description"`
-	Requirements map[string]string `json:"requirements"`
-
-	Path string `yaml:"-"`
-}
