@@ -52,6 +52,9 @@ spec:
           host: 127.0.0.1
           port: 10259
           scheme: HTTPS
+      env:
+      - name: GOGC
+        value: "50"
 {{- $millicpu := $.resourcesRequestsMilliCpuControlPlane | default 512 -}}
 {{- $memory := $.resourcesRequestsMemoryControlPlane | default 536870912 }}
 ---
