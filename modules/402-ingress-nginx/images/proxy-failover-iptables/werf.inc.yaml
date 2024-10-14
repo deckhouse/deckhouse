@@ -6,6 +6,7 @@ from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
     - |
+      mkdir -p /relocate/sbin
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
       done
