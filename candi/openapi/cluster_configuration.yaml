@@ -141,6 +141,9 @@ apiVersions:
           The parameters described in this section will be translated into the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` for all cluster nodes and Deckhouse components. This will result in HTTP(S) requests (curl, git, registry, etc.) to all resources not listed in the `noProxy` parameter being made through a proxy. Note that the `podSubnetCIDR` and `serviceSubnetCIDR` subnets, as well as the `clusterDomain` domain are added to `noProxy` automatically.
 
           > **Caution!** To avoid interfering with internal requests, make sure you list all the host subnets in the `noProxy` parameter.
+
+          > **Caution!** Current deployment scripts do not support processing subnets specified in the `noProxy` parameter with a network prefix (for example, `10.122.15.0/24`).  
+          > For correct deployment, you must specify in the `noProxy` parameter all IP addresses of the cluster master nodes without a network prefix (for example, `10.122.15.21`), as well as the IP address of the private registry (if necessary).
         additionalProperties: false
         properties:
           httpProxy:
@@ -175,6 +178,10 @@ apiVersions:
               List of no proxy IP and domain entries.
 
               For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
+
+              > **Caution!** Current deployment scripts do not support processing subnets specified in the `noProxy` parameter with a network prefix (for example, `10.122.15.0/24`).  
+              > For correct deployment, you must specify in the `noProxy` parameter all IP addresses of the cluster master nodes without a network prefix (for example, `10.122.15.21`), as well as the IP address of the private registry (if necessary).
+
             type: array
             items:
               type: string
