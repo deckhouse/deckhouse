@@ -133,7 +133,7 @@ spec:
         podAffinityTerm:
           labelSelector:
             matchLabels:
-              app: prometheus
+              app.kubernetes.io/name: prometheus
               prometheus: main
           topologyKey: kubernetes.io/hostname
   scrapeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
