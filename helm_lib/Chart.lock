@@ -3,4 +3,4 @@ dependencies:
   repository: https://deckhouse.github.io/lib-helm
   version: 1.32.0
 digest: sha256:7cd5a9eb96eba07095f58adf64176314b49190fa24cc8314c17a66421894d7d0
-generated: "2024-10-14T20:25:54.966697372+03:00"
+generated: "2024-10-14T20:29:19.988672865+03:00"
