@@ -1,3 +1,6 @@
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
 # Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile
@@ -58,12 +61,9 @@
 # for check and cleaning unnecessary iptables
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/check-n-cleaning-iptables.sh" }}
 # iptables and dependencies
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/arptables* /sbin/ebtables* /sbin/ip6tables* /sbin/iptables*" }}
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/iptables-wrapper" }}
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/iptables-xml" }}
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/nfnl_osf" }}
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/lib64/iptables/*" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables-monitor" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/arptables-nft* /sbin/ebtables-nft*" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/iptables-legacy* /sbin/iptables-nft* /sbin/ip6tables-legacy* /sbin/ip6tables-nft*" }}
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
@@ -98,9 +98,12 @@ import:
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
-- artifact: {{ $.ModuleName }}/iptables-artifact
-  add: /iptables
-  to: /iptables
+- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin/
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
   before: install
 - image: common/iptables-wrapper
   add: /iptables-wrapper
@@ -149,14 +152,11 @@ import:
   before: setup
 shell:
   install:
-  - rsync -a --keep-dirlinks iptables/* /
-  - rm -rf /iptables
   - chown root:root /usr/sbin/iptables-wrapper
   - chmod 755 /usr/sbin/iptables-wrapper
   #
   - chmod +x /check-n-cleaning-iptables.sh
   beforeSetup:
-
   # common relocate
   - chmod +x /binary_replace.sh
   - mkdir -p /relocate
