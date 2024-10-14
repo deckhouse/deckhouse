@@ -170,6 +170,8 @@ spec:
                                   Query to PostgreSQL for testing.
                                   Must return one of the values TRUE, 't', 'true', 'y', 'yes','1'
                                   to be considered successful. Default: select 1
+
+                                  > **WARNING!** The privileges for the user under whom the requests are executed should be minimal!
                               targetPort:
                                 anyOf:
                                   - type: integer
