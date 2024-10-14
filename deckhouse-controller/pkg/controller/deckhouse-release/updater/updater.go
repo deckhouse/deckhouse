@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,9 +41,10 @@ const (
 )
 
 func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependency.Container,
-	updateSettings *updater.DeckhouseUpdateSettings, releaseData updater.DeckhouseReleaseData, metricStorage *metric_storage.MetricStorage,
-	podIsReady, clusterBootstrapping bool, imagesRegistry string, enabledModules []string) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
-	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](logger, updateSettings.NotificationConfig, updateSettings.Mode, releaseData,
+	updateSettings *updater.DeckhouseUpdateSettings, releaseData updater.DeckhouseReleaseData, metricStorage metric.Storage,
+	podIsReady, clusterBootstrapping bool, imagesRegistry string, enabledModules []string,
+) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
+	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](dc, logger, updateSettings.NotificationConfig, updateSettings.Mode, releaseData,
 		podIsReady, clusterBootstrapping, NewKubeAPI(client, dc, imagesRegistry),
 		newMetricUpdater(metricStorage), newValueSettings(updateSettings.DisruptionApprovalMode), newWebhookDataSource(logger), enabledModules), nil
 }

@@ -32,9 +32,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
-const GeneratedConfigMapName = "deckhouse-generated-config-do-not-edit"
-const DeckhouseConfigMapName = "deckhouse"
-const DeckhouseNS = "d8-system"
+const (
+	GeneratedConfigMapName = "deckhouse-generated-config-do-not-edit"
+	DeckhouseConfigMapName = "deckhouse"
+	DeckhouseNS            = "d8-system"
+)
 
 // GetGeneratedConfigMap returns generated ConfigMap with config values.
 func GetGeneratedConfigMap(klient k8s.Client) (*v1.ConfigMap, error) {

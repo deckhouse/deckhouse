@@ -47,10 +47,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module"
+	docs_builder "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module/docs-builder"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/module"
-	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 )
 
 const defaultDocumentationCheckInterval = 10 * time.Second

@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
@@ -56,7 +57,7 @@ properties:
 	sourceModule.Spec.Registry.Scheme = "http"
 	sourceModule.Spec.Registry.CA = "someCA"
 
-	data, err := mutateOpenapiSchema([]byte(source), sourceModule)
+	data, err := module.MutateOpenapiSchema([]byte(source), sourceModule)
 	require.NoError(t, err)
 
 	assert.YAMLEq(t, `
