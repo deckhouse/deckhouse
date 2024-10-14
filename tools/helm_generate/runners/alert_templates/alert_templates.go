@@ -209,9 +209,11 @@ func getAlertsFromTemplate(templateContent []byte, moduleName, moduleUrlName, ed
 			severity = "undefined"
 			if ok {
 				// don't store severity if it is not a number (e.g. it can be a template)
-				fmt.Println(sourceFile)
-				if _, err := strconv.Atoi(alertLabels["severity_level"].(string)); err == nil {
-					severity, _ = alertLabels["severity_level"].(string)
+				_, sevOK := alertLabels["severity_level"]
+				if sevOK {
+					if _, err := strconv.Atoi(alertLabels["severity_level"].(string)); err == nil {
+						severity, _ = alertLabels["severity_level"].(string)
+					}
 				}
 			}
 
@@ -323,8 +325,6 @@ func readDirWithTemplates(pathToDir string, parentFolder string, yamlTemplates m
 			if err != nil {
 				continue
 			}
-
-			fmt.Println(filepath.Join(parentFolder, file.Name()))
 
 			switch filepath.Ext(file.Name()) {
 			case ".yaml":
