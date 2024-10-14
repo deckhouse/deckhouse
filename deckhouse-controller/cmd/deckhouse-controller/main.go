@@ -100,7 +100,7 @@ func main() {
 	// deckhouse-controller requirements
 	debug.DefineRequirementsCommands(kpApp)
 
-	// deckhouse-controller repository
+	// deckhouse-controller registry
 	registry.DefineRegistryCommand(kpApp)
 
 	// deckhouse-controller edit subcommands

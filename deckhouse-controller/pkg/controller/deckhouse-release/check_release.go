@@ -543,7 +543,7 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, actual
 		return nil, fmt.Errorf("get next version: %w", err)
 	}
 
-	image, err := dcr.registryClient.Image(context.TODO(), nextVersion.Original())
+	image, err := dcr.registryClient.Image(ctx, nextVersion.Original())
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
 	}

@@ -38,17 +38,6 @@ var semVerRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
 	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
 	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
 
-// get releases
-// get releases --all
-// get releases -c auto (default channel, print name, if empty - stable)
-// get releases -c alpha --all
-// get sources
-// get modules deckhouse-prod
-// get modules deckhouse-prod console
-// get modules deckhouse-prod console --all
-// get modules deckhouse-prod console -c alpha
-// get modules deckhouse-prod console -c alpha --all
-
 func DefineRegistryCommand(kpApp *kingpin.Application) {
 	registryCmd := kpApp.Command("registry", "Deckhouse repository work.").
 		PreAction(func(_ *kingpin.ParseContext) error {
