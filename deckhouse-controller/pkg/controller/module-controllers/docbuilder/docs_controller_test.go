@@ -41,9 +41,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	docs_builder "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module/docs-builder"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 )
 
 var golden bool
@@ -71,7 +71,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	got := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, got, 0666)
+		err := os.WriteFile(goldenFile, got, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
 		exp, err := os.ReadFile(goldenFile)
@@ -85,7 +85,7 @@ func (suite *ControllerTestSuite) SetupSuite() {
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	suite.tmpDir = suite.T().TempDir()
 	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
-	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
+	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0o777)
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
@@ -98,8 +98,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("with only one builder", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0o777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0o666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
@@ -121,8 +121,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("with two builders", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0o777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0o666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
@@ -144,8 +144,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("one builder cannot render", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0o777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0o666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			if strings.HasPrefix(req.Host, "10-111-111-11") {
@@ -171,8 +171,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("render new version", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0o777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0o666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
@@ -194,8 +194,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("render new lease", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0o777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0o666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
@@ -217,8 +217,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("render new checksum", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi"), 0o777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi", "config-values.yaml"), []byte("{}"), 0o666)
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
@@ -240,8 +240,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("keep up-to-date rendered documentation", func() {
-		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
-		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
+		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0o777)
+		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0o666)
 		dependency.TestDC.GetClock().(clockwork.FakeClock).Advance(1 * time.Hour)
 
 		suite.setupController(string(suite.fetchTestFileData("keep-actual.yaml")))
@@ -265,7 +265,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
-	var initObjects = make([]client.Object, 0, len(manifests))
+	initObjects := make([]client.Object, 0, len(manifests))
 
 	for _, manifest := range manifests {
 		obj := suite.assembleInitObject(manifest)

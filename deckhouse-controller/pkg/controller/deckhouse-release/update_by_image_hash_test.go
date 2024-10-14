@@ -18,6 +18,8 @@ package deckhouse_release
 
 import (
 	"context"
+	"reflect"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 
@@ -25,15 +27,24 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
+type storageMockCounterAddParams struct {
+	metric string
+	value  float64
+	labels map[string]string
+}
+
 func (suite *ControllerTestSuite) TestUpdateByImageHash() {
 	ctx := context.Background()
 
 	suite.Run("No new deckhouse image", func() {
-		dependency.TestDC.CRClient.DigestMock.Set(func(_ string) (s1 string, err error) {
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.DigestMock.Set(func(_ string) (s1 string, err error) {
 			return "sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1", nil
 		})
 
-		suite.setupController("dev-no-new-deckhouse-image.yaml", initValues, embeddedMUP)
+		suite.setupController("dev-no-new-deckhouse-image.yaml", initValues, embeddedMUP, withDependencyContainer(dc))
+		suite.metricStorage.CounterAddMock.Times(3).Set(counterAddMock(suite.T()))
+
 		leaderPod, err := suite.ctr.getDeckhouseLatestPod(ctx)
 		require.NoError(suite.T(), err)
 
@@ -42,7 +53,8 @@ func (suite *ControllerTestSuite) TestUpdateByImageHash() {
 	})
 
 	suite.Run("Have new deckhouse image", func() {
-		dependency.TestDC.CRClient.DigestMock.Set(func(_ string) (s1 string, err error) {
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.DigestMock.Set(func(_ string) (s1 string, err error) {
 			return "sha256:123456", nil
 		})
 
@@ -51,11 +63,37 @@ func (suite *ControllerTestSuite) TestUpdateByImageHash() {
 		ds.Update.Windows = embeddedMUP.Update.Windows
 		ds.Update.DisruptionApprovalMode = "Auto"
 
-		suite.setupControllerSettings("dev-have-new-deckhouse-image.yaml", initValues, ds)
+		suite.setupControllerSettings("dev-have-new-deckhouse-image.yaml", initValues, ds, withDependencyContainer(dc))
+		suite.metricStorage.CounterAddMock.Times(3).Set(counterAddMock(suite.T()))
+
 		leaderPod, err := suite.ctr.getDeckhouseLatestPod(ctx)
 		require.NoError(suite.T(), err)
 
 		err = suite.ctr.tagUpdate(ctx, leaderPod)
 		require.NoError(suite.T(), err)
 	})
+}
+
+// TODO: use somthing like this:
+// suite.metricStorage.CounterAddMock.Expect("deckhouse_registry_check_total", 1, map[string]string{})
+// suite.metricStorage.CounterAddMock.Expect("deckhouse_kube_image_digest_check_total", 1, map[string]string{})
+// suite.metricStorage.CounterAddMock.Expect("deckhouse_kube_image_digest_check_success", 1, map[string]string{})
+func counterAddMock(t *testing.T) func(string, float64, map[string]string) {
+	t.Helper()
+
+	return func(metric string, value float64, labels map[string]string) {
+		params := storageMockCounterAddParams{
+			metric: metric,
+			value:  value,
+			labels: labels,
+		}
+
+		if reflect.DeepEqual(params, storageMockCounterAddParams{"deckhouse_registry_check_total", 1, map[string]string{}}) ||
+			reflect.DeepEqual(params, storageMockCounterAddParams{"deckhouse_kube_image_digest_check_total", 1, map[string]string{}}) ||
+			reflect.DeepEqual(params, storageMockCounterAddParams{"deckhouse_kube_image_digest_check_success", 1, map[string]string{}}) {
+			return
+		}
+
+		t.Fatalf("Unexpected arguments: %+v\n", params)
+	}
 }

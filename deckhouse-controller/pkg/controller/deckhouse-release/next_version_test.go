@@ -66,7 +66,7 @@ func (suite *ReleaseTestSuite) SetupSubTest() {
 		"v1.33.1",
 	}, nil)
 
-	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), "", initValues, embeddedMUP)
+	suite.ctr, suite.kubeClient, _, _ = setupFakeController(suite.T(), "", initValues, embeddedMUP)
 	var err error
 	suite.rc, err = NewDeckhouseReleaseChecker([]cr.Option{}, suite.ctr.logger, suite.ctr.dc,
 		suite.ctr.moduleManager, "", "")

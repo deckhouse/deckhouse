@@ -105,6 +105,8 @@ PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
 GH_VERSION = 2.52.0
 TESTS_TIMEOUT="15m"
+GO_BIN=go
+GO_TEST_CMD=${GO_BIN} test -v -shuffle=on
 
 ##@ General
 
@@ -133,21 +135,21 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 .PHONY: tests-modules tests-matrix tests-openapi tests-controller
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
-	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
+	${GO_TEST_CMD} -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
-	go test -timeout=${TESTS_TIMEOUT} ./testing/matrix/ -v
+	${GO_TEST_CMD} -timeout=${TESTS_TIMEOUT} ./testing/matrix/
 
 tests-openapi: ## Run tests against modules openapi values schemas.
-	go test -vet=off ./testing/openapi_cases/
+	${GO_TEST_CMD} -vet=off ./testing/openapi_cases/
 
 tests-controller: ## Run deckhouse-controller unit tests.
-	go test ./deckhouse-controller/... -v
+	${GO_TEST_CMD} ./deckhouse-controller/... -v
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
-	go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
+	${GO_TEST_CMD} -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
 
 bin/golangci-lint:
 	mkdir -p bin
@@ -398,3 +400,15 @@ build: set-build-envs ## Build Deckhouse images.
 
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 	werf config render
+
+.PHONY: dependency controller-dependency tools-dependency dhctl-dependency
+dependency: controller-dependency tools-dependency dhctl-dependency
+
+controller-dependency:
+	${GO_BIN} mod tidy
+
+tools-dependency:
+	cd tools && ${GO_BIN} mod tidy
+
+dhctl-dependency:
+	cd dhctl && ${GO_BIN} mod tidy

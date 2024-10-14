@@ -30,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -99,14 +100,17 @@ type ControllerTestSuite struct {
 	kubeClient client.Client
 	ctr        *deckhouseReleaseReconciler
 
-	testDataFileName string
-	backupTZ         *time.Location
+	testDataFileName     string
+	backupTZ             *time.Location
+	metricStorage        *metric.StorageMock
+	groupedMetricStorage *metric.GroupedStorageMock
 }
 
 func (suite *ControllerTestSuite) SetupSuite() {
 	flag.Parse()
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	suite.backupTZ = time.Local
+	// TODO: remove this
 	time.Local = dependency.TestTimeZone
 }
 
@@ -153,16 +157,17 @@ func (suite *ControllerTestSuite) setupController(
 	options ...reconcilerOption,
 ) {
 	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename, initValues, mup, options...)
+	suite.ctr, suite.kubeClient, suite.metricStorage, suite.groupedMetricStorage = setupFakeController(suite.T(), filename, initValues, mup, options...)
 }
 
 func (suite *ControllerTestSuite) setupControllerSettings(
 	filename string,
 	initValues string,
 	ds *helpers.DeckhouseSettings,
+	options ...reconcilerOption,
 ) {
 	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupControllerSettings(suite.T(), filename, initValues, ds)
+	suite.ctr, suite.kubeClient, suite.metricStorage, suite.groupedMetricStorage = setupControllerSettings(suite.T(), filename, initValues, ds, options...)
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
@@ -180,6 +185,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
 
 		suite.setupController("update-out-of-window.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -190,6 +206,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 
 		suite.setupController("no-update-windows-configured.yaml", values, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -200,6 +227,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "23:00", Days: []string{"Mon", "Tue"}}}
 
 		suite.setupController("update-out-of-day-window.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -220,6 +258,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "23:00", Days: []string{"Fri", "Sun", "Thu"}}}
 
 		suite.setupController("update-in-day-window.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -227,6 +276,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Shutdown and evicted pods", func() {
 		suite.setupController("shutdown-and-evicted-pods.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -237,6 +297,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01"}}
 
 		suite.setupController("patch-out-of-update-window.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.25.1",
+				"version": "v1.25.1",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -253,6 +324,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, errors.New("some internal error"))
 
 		suite.setupController("deckhouse-previous-release-is-not-ready.yaml", initValues, mup)
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -263,6 +344,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("manual-approval-mode-is-set.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			1,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -273,6 +365,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("after-setting-manual-approve.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -283,6 +386,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("auto-deploy-patch-release-in-manual-mode.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			1,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.25.1",
+				"version": "v1.25.1",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -292,6 +406,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup := embeddedMUP.DeepCopy()
 		mup.Update.Mode = updater.ModeManual.String()
 		suite.setupController("manual-approval-mode-with-canary-process.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			1,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.36.0",
+				"version": "v1.36.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -302,6 +427,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("after-setting-manual-approve-with-canary-process.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.36.0",
+				"version": "v1.36.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -312,6 +448,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("manual-mode.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			1,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.27.0",
+				"version": "v1.27.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.27.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -322,6 +469,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		mup.Update.Mode = updater.ModeManual.String()
 
 		suite.setupController("second-run-of-the-hook-in-a-manual-mode-should-not-change-state.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			1,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.27.0",
+				"version": "v1.27.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.27.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -333,6 +491,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Single First Release", func() {
 		suite.setupController("single-first-release.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.25.1",
+				"version": "v1.25.1",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -346,6 +515,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 
 		suite.setupController("first-release-with-manual-mode.yaml", values, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -353,6 +524,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Few patch releases", func() {
 		suite.setupController("few-patch-releases.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 		dr := suite.getDeckhouseRelease("v1.32.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -366,6 +539,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 
 		suite.setupController("pending-manual-release-on-cluster-bootstrap.yaml", values, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			1,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.46.0",
+				"version": "v1.46.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.46.0")
 		_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -373,6 +557,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Forced release", func() {
 		suite.setupController("forced-release.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 		dr := suite.getDeckhouseRelease("v1.31.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -380,6 +566,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Postponed release", func() {
 		suite.setupController("postponed-release.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.25.1",
+				"version": "v1.25.1",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -387,6 +584,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Release applyAfter time passed", func() {
 		suite.setupController("release-apply-after-time-passed.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.25.1",
+				"version": "v1.25.1",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.25.1")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -394,6 +602,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Suspend release", func() {
 		suite.setupController("suspend-release.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.25.2",
+				"version": "v1.25.2",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.25.2")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -411,6 +630,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
 
 		suite.setupController("release-with-not-met-requirements.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 		dr := suite.getDeckhouseRelease("v1.30.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -428,6 +649,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.0")
 
 		suite.setupController("release-requirements-passed.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.30.0",
+				"version": "v1.30.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.30.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -447,6 +679,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		ds.Update.DisruptionApprovalMode = updater.ModeManual.String()
 
 		suite.setupControllerSettings("disruption-release.yaml", initValues, ds)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.groupedMetricStorage.GaugeSetMock.Expect(
+			"d8_releases",
+			"d8_release_blocked",
+			1,
+			map[string]string{
+				"name":   "v1.36.0",
+				"reason": "disruption",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -461,6 +704,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		ds.Update.DisruptionApprovalMode = updater.ModeManual.String()
 
 		suite.setupControllerSettings("disruption-release-approved.yaml", initValues, ds)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.36.0",
+				"version": "v1.36.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -483,6 +737,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: time.Hour}
 
 		suite.setupControllerSettings("release-with-notification-settings.yaml", initValues, ds)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -494,6 +759,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Notification: after met conditions", func() {
 		suite.setupController("notification-after-met-conditions.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -523,6 +799,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 4*time.Hour + 10*time.Minute}
 
 		suite.setupControllerSettings("notification-release-apply-after-time-is-after-notification-period.yaml", initValues, ds)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.36.0",
+				"version": "v1.36.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -551,6 +838,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		ds.Update.NotificationConfig.Auth = &updater.Auth{Basic: &updater.BasicAuth{Username: "user", Password: "pass"}}
 
 		suite.setupControllerSettings("notification-basic-auth.yaml", initValues, ds)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.36.0",
+				"version": "v1.36.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -575,6 +873,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		ds.Update.NotificationConfig.Auth = &updater.Auth{Token: ptr.To("the_token")}
 
 		suite.setupControllerSettings("notification-bearer-token-auth.yaml", initValues, ds)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.36.0",
+				"version": "v1.36.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.36.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -595,6 +904,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 2 * time.Hour}
 
 		suite.setupControllerSettings("update-minimal-notification-time-without-configuring-notification-webhook.yaml", initValues, ds)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.26.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -618,6 +938,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		ds.Update.NotificationConfig.ReleaseType = updater.ReleaseTypeAll
 
 		suite.setupControllerSettings("patch-release-notification.yaml", initValues, ds)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.0",
+				"version": "v1.25.1", // TODO: fix testdata
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -626,7 +957,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.Contains(suite.T(), httpBody, `"version":"1.25.1"`)
 		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
-
 	suite.Run("apply now annotation", func() {
 		suite.Run("Minor update out of window", func() {
 			mup := embeddedMUP.DeepCopy()
@@ -634,6 +964,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
 
 			suite.setupController("release-with-apply-now-annotation-out-of-window.yaml", initValues, mup)
+			suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 			dr := suite.getDeckhouseRelease("v1.26.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -654,6 +986,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
 
 			suite.setupController("release-with-apply-now-annotation-requirements.yaml", initValues, mup)
+			suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 			dr := suite.getDeckhouseRelease("v1.26.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -669,6 +1003,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			requirements.RegisterDisruption("testme", df)
 
 			suite.setupController("release-with-apply-now-annotation-disruption.yaml", initValues, mup)
+			suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 			dr := suite.getDeckhouseRelease("v1.26.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -680,6 +1016,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
 
 			suite.setupController("patch-release-with-apply-now-annotation-out-of-window.yaml", initValues, mup)
+			suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 			dr := suite.getDeckhouseRelease("v1.25.1")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -712,6 +1050,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 				}, nil)
 
 			suite.setupController("apply-now-manual-approval-mode-is-set.yaml", initValues, mup)
+			suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 			dr := suite.getDeckhouseRelease("v1.26.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -719,6 +1059,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Postponed release", func() {
 			suite.setupController("applied-now-postponed-release.yaml", initValues, embeddedMUP)
+			suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 			dr := suite.getDeckhouseRelease("v1.25.1")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -727,6 +1069,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Test auto-mode for postponed release", func() {
 		suite.setupController("auto-mode.yaml", initValues, embeddedMUP)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.27.0",
+				"version": "v1.27.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.27.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -743,6 +1096,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil)
 
 		suite.setupController("auto-patch-mode.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.3",
+				"version": "v1.26.3",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.3")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -759,6 +1123,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil)
 
 		suite.setupController("auto-patch-mode-minor-release.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			1,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.27.0",
+				"version": "v1.27.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.27.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -775,6 +1150,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil)
 
 		suite.setupController("auto-patch-mode-minor-release-approved.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.27.0",
+				"version": "v1.27.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.27.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -791,6 +1177,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil)
 
 		suite.setupController("unknown-mode.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.26.3",
+				"version": "v1.26.3",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.26.3")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -807,6 +1204,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil)
 
 		suite.setupController("unknown-mode-minor-release.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			1,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.27.0",
+				"version": "v1.27.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.27.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -823,6 +1231,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil)
 
 		suite.setupController("manual-mode-with-approved.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+		suite.metricStorage.GaugeSetMock.Expect(
+			"d8_module_release_waiting_manual",
+			0,
+			map[string]string{
+				"kind":    "deckhouse",
+				"name":    "v1.27.0",
+				"version": "v1.27.0",
+			},
+		)
+
 		dr := suite.getDeckhouseRelease("v1.27.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -839,6 +1258,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil)
 
 		suite.setupController("apply-now-autopatch-mode-is-set.yaml", initValues, mup)
+		suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -855,6 +1276,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}
 
 			suite.setupController("auto-patch-patch-update.yaml", initValues, mup)
+			suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+			suite.metricStorage.GaugeSetMock.Expect(
+				"d8_module_release_waiting_manual",
+				0,
+				map[string]string{
+					"kind":    "deckhouse",
+					"name":    "v1.26.3",
+					"version": "v1.26.3",
+				})
+
 			dr := suite.getDeckhouseRelease("v1.26.3")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -870,6 +1301,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}
 
 			suite.setupController("auto-patch-minor-update.yaml", initValues, mup)
+			suite.groupedMetricStorage.ExpireGroupMetricsMock.Expect("d8_updating")
+			suite.metricStorage.GaugeSetMock.Expect(
+				"d8_module_release_waiting_manual",
+				0,
+				map[string]string{
+					"kind":    "deckhouse",
+					"name":    "v1.27.0",
+					"version": "v1.27.0",
+				})
+
 			dr := suite.getDeckhouseRelease("v1.27.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)

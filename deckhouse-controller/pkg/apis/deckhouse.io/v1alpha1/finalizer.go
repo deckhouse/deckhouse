@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 const (
-	ModuleReleaseApprovalAnnotation    = "modules.deckhouse.io/approved"
-	DeckhouseReleaseApprovalAnnotation = "release.deckhouse.io/approved"
-	RegistrySpecChangedAnnotation      = "modules.deckhouse.io/registry-spec-changed"
-	DeckhouseNodeNameAnnotation        = "modules.deckhouse.io/deployed-on"
+	FsReleaseFinalizer          = "modules.deckhouse.io/exist-on-fs"
+	SourceReleaseExistFinalizer = "modules.deckhouse.io/release-exists"
 )

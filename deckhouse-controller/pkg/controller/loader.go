@@ -31,7 +31,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -80,7 +80,7 @@ func (dml *DeckhouseController) LoadModules() ([]*modules.BasicModule, error) {
 	return result, nil
 }
 
-func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModuleDefinition) (*models.DeckhouseModule, error) {
+func (dml *DeckhouseController) processModuleDefinition(def module.DeckhouseModuleDefinition) (*module.DeckhouseModule, error) {
 	err := validateModuleName(def.Name)
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		return nil, err
 	}
 
-	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb)
+	dm, err := module.NewDeckhouseModule(def, moduleStaticValues, cb, vb)
 	if err != nil {
 		return nil, fmt.Errorf("new deckhouse module: %w", err)
 	}
@@ -177,7 +177,7 @@ func readDir(dir string) ([]os.DirEntry, error) {
 }
 
 // get module's definition out of a target dir
-func (dml *DeckhouseController) parseModuleDir(moduleName, moduleDir string) (*models.DeckhouseModuleDefinition, error) {
+func (dml *DeckhouseController) parseModuleDir(moduleName, moduleDir string) (*module.DeckhouseModuleDefinition, error) {
 	definition, err := dml.moduleFromFile(moduleDir)
 	if err != nil {
 		return nil, err
@@ -194,13 +194,13 @@ func (dml *DeckhouseController) parseModuleDir(moduleName, moduleDir string) (*m
 	return definition, nil
 }
 
-func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]models.DeckhouseModuleDefinition, error) {
+func (dml *DeckhouseController) findModulesInDir(modulesDir string) ([]module.DeckhouseModuleDefinition, error) {
 	dirEntries, err := readDir(modulesDir)
 	if err != nil {
 		return nil, err
 	}
 
-	definitions := make([]models.DeckhouseModuleDefinition, 0)
+	definitions := make([]module.DeckhouseModuleDefinition, 0)
 	for _, dirEntry := range dirEntries {
 		name, absPath, err := resolveDirEntry(modulesDir, dirEntry)
 		if err != nil {
@@ -234,8 +234,8 @@ const (
 	ModuleNameIdx  = 3
 )
 
-func (dml *DeckhouseController) moduleFromFile(absPath string) (*models.DeckhouseModuleDefinition, error) {
-	mFilePath := filepath.Join(absPath, models.ModuleDefinitionFile)
+func (dml *DeckhouseController) moduleFromFile(absPath string) (*module.DeckhouseModuleDefinition, error) {
+	mFilePath := filepath.Join(absPath, module.DefinitionFile)
 	if _, err := os.Stat(mFilePath); err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -246,7 +246,7 @@ func (dml *DeckhouseController) moduleFromFile(absPath string) (*models.Deckhous
 	if err != nil {
 		return nil, err
 	}
-	var def models.DeckhouseModuleDefinition
+	var def module.DeckhouseModuleDefinition
 	err = yaml.NewDecoder(f).Decode(&def)
 	if err != nil {
 		return nil, err
@@ -259,13 +259,13 @@ func (dml *DeckhouseController) moduleFromFile(absPath string) (*models.Deckhous
 }
 
 // moduleFromDirName returns Module instance filled with name, order and its absolute path.
-func (dml *DeckhouseController) moduleFromDirName(dirName string, absPath string) (*models.DeckhouseModuleDefinition, error) {
+func (dml *DeckhouseController) moduleFromDirName(dirName string, absPath string) (*module.DeckhouseModuleDefinition, error) {
 	matchRes := validModuleNameRe.FindStringSubmatch(dirName)
 	if matchRes == nil {
 		return nil, fmt.Errorf("'%s' is invalid name for module: should match regex '%s'", dirName, validModuleNameRe.String())
 	}
 
-	return &models.DeckhouseModuleDefinition{
+	return &module.DeckhouseModuleDefinition{
 		Name:   matchRes[ModuleNameIdx],
 		Path:   absPath,
 		Weight: parseUintOrDefault(matchRes[ModuleOrderIdx], 100),

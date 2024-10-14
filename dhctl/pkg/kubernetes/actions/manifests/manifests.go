@@ -191,7 +191,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			RevisionHistoryLimit: ptr.To[int32](2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "deckhouse",
@@ -217,7 +217,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			DNSPolicy:          apiv1.DNSDefault,
 			ServiceAccountName: "deckhouse",
 			SecurityContext: &apiv1.PodSecurityContext{
-				RunAsUser:    ptr.To(int64(0)),
+				RunAsUser:    ptr.To[int64](0),
 				RunAsNonRoot: ptr.To(false),
 			},
 			Tolerations: []apiv1.Toleration{

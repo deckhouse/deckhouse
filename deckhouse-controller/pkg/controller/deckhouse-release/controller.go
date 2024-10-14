@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	log "github.com/sirupsen/logrus"
@@ -70,7 +70,7 @@ type deckhouseReleaseReconciler struct {
 	moduleManager moduleManager
 
 	updateSettings *helpers.DeckhouseSettingsContainer
-	metricStorage  *metric_storage.MetricStorage
+	metricStorage  metric.Storage
 
 	preflightCountDown      *sync.WaitGroup
 	clusterUUID             string
@@ -78,7 +78,7 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage,
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metric.Storage,
 	preflightCountDown *sync.WaitGroup,
 ) error {
 	lg := log.WithField("component", "DeckhouseRelease")
@@ -137,7 +137,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return result, nil
 	}
 
-	r.metricStorage.GroupedVault.ExpireGroupMetrics(metricReleasesGroup)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricReleasesGroup)
 
 	release := new(v1alpha1.DeckhouseRelease)
 	err = r.client.Get(ctx, req.NamespacedName, release)
@@ -332,7 +332,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	if podReady {
-		r.metricStorage.GroupedVault.ExpireGroupMetrics(metricUpdatingGroup)
+		r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
 
 		if releaseData.IsUpdating {
 			_ = deckhouseUpdater.ChangeUpdatingFlag(false)
@@ -341,7 +341,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		labels := map[string]string{
 			"releaseChannel": r.updateSettings.Get().ReleaseChannel,
 		}
-		r.metricStorage.GroupedVault.GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, labels)
+		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, labels)
 	}
 	{
 		var releases v1alpha1.DeckhouseReleaseList

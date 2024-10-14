@@ -34,14 +34,14 @@ metadata:
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
   name: echo-v0.4.69
-  resourceVersion: "1000"
+  resourceVersion: "999"
 spec:
   moduleName: echo
   version: 0.4.69
   weight: 900
 status:
   approved: false
-  message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
+  message: ""
   phase: Pending
   pullDuration: 0s
   size: 0

@@ -331,7 +331,8 @@ func (u *Updater[R]) calculatePatchResultDeployTime(release R) (time.Time, deplo
 //   - Release requirements
 //
 // In addition to the regular error, ErrDeployConditionsNotMet or NotReadyForDeployError is returned as appropriate.
-func (u *Updater[R]) ApplyPredictedRelease() (err error) {
+func (u *Updater[R]) ApplyPredictedRelease() error {
+	var err error
 	if u.predictedReleaseIndex == -1 {
 		return ErrDeployConditionsNotMet // has no predicted release
 	}
@@ -361,7 +362,7 @@ func (u *Updater[R]) ApplyPredictedRelease() (err error) {
 	}
 
 	// all checks are passed, deploy release
-
+	// TODO: context
 	return u.runReleaseDeploy(predictedRelease, currentRelease)
 }
 

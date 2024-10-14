@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package release
+package module_pull_override
 
 import (
 	"bytes"
@@ -21,9 +21,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	log "github.com/sirupsen/logrus"
@@ -39,8 +41,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module/downloader"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -78,6 +80,12 @@ properties:
     type: object`
 )
 
+var golden bool
+
+func init() {
+	flag.BoolVar(&golden, "golden", false, "generate golden files")
+}
+
 func TestPullOverrideControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(PullOverrideControllerTestSuite))
 }
@@ -86,7 +94,7 @@ type PullOverrideControllerTestSuite struct {
 	suite.Suite
 
 	kubeClient client.Client
-	ctr        *modulePullOverrideReconciler
+	ctr        *reconciler
 
 	testDataFileName string
 	testMPOName      string
@@ -100,7 +108,7 @@ func (suite *PullOverrideControllerTestSuite) SetupSuite() {
 	suite.T().Setenv("DECKHOUSE_NODE_NAME", "dev-master-0")
 	suite.tmpDir = suite.T().TempDir()
 	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
-	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
+	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0o777)
 }
 
 type moduleDirDescriptor struct {
@@ -111,19 +119,19 @@ type moduleDirDescriptor struct {
 
 func prepareModuleDir(d moduleDirDescriptor) error {
 	if d.dir != "" {
-		err := os.MkdirAll(d.dir, 0750)
+		err := os.MkdirAll(d.dir, 0o750)
 		if err != nil {
 			return err
 		}
 		if d.values != "" {
 			openAPIDir := filepath.Join(d.dir, "openapi")
-			err := os.MkdirAll(openAPIDir, 0750)
+			err := os.MkdirAll(openAPIDir, 0o750)
 			if err != nil {
 				return err
 			}
 
 			valuesFile := filepath.Join(openAPIDir, "values.yaml")
-			err = os.WriteFile(valuesFile, []byte(d.values), 0644)
+			err = os.WriteFile(valuesFile, []byte(d.values), 0o644)
 			if err != nil {
 				return err
 			}
@@ -160,6 +168,11 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	moduleDir := filepath.Join(suite.tmpDir, moduleName, downloader.DefaultDevVersion)
 	moduleValues := filepath.Join(moduleDir, "openapi", "values.yaml")
 
+	dc := dependency.NewMockedContainer()
+	dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+		return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
+	}}, nil)
+
 	suite.Run("Ok", func() {
 		d := moduleDirDescriptor{
 			dir:     moduleDir,
@@ -190,7 +203,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 		assert.True(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink mustn't be modified")
 
 		mpo := suite.getModulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[deckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", deckhouseNodeNameAnnotation)
+		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.DeckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.DeckhouseNodeNameAnnotation)
 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(910), "Module's weight mustn't be modified")
 
 		require.NoError(suite.T(), cleanupPaths(d.dir, d.symlink))
@@ -213,7 +226,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupPullOverrideController(string(suite.fetchTestFileData("up-to-date-no-weight.yaml")))
+		suite.setupPullOverrideController(string(suite.fetchTestFileData("up-to-date-no-weight.yaml")), withDependencyContainer(dc))
 		err = suite.ctr.restoreAbsentModulesFromOverrides(context.TODO())
 		require.NoError(suite.T(), err)
 
@@ -226,7 +239,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 		assert.True(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink mustn't be modified")
 
 		mpo := suite.getModulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[deckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", deckhouseNodeNameAnnotation)
+		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.DeckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.DeckhouseNodeNameAnnotation)
 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(900), "dev-master-0", "Module's weight must be set to 900")
 
 		require.NoError(suite.T(), cleanupPaths(d.dir, d.symlink))
@@ -266,7 +279,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 		assert.True(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink mustn't be modified")
 
 		mpo := suite.getModulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[deckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", deckhouseNodeNameAnnotation)
+		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.DeckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.DeckhouseNodeNameAnnotation)
 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(915), "dev-master-0", "Module's weight must be set to 915")
 
 		require.NoError(suite.T(), cleanupPaths(d.dir, d.symlink))
@@ -302,7 +315,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 		assert.True(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink mustn't be modified")
 
 		mpo := suite.getModulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[deckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", deckhouseNodeNameAnnotation)
+		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.DeckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.DeckhouseNodeNameAnnotation)
 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(910), "dev-master-0", "Module's weight must be set to 910")
 
 		require.NoError(suite.T(), cleanupPaths(d.dir, d.symlink))
@@ -341,7 +354,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 		assert.False(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink must be modified")
 
 		mpo := suite.getModulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[deckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", deckhouseNodeNameAnnotation)
+		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.DeckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.DeckhouseNodeNameAnnotation)
 		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "dev-master-0", "Module's weight must be set to %d", 900)
 
 		require.NoError(suite.T(), cleanupPaths(d.dir, d.symlink))
@@ -380,7 +393,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 		assert.False(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink must be modified")
 
 		mpo := suite.getModulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[deckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", deckhouseNodeNameAnnotation)
+		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.DeckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.DeckhouseNodeNameAnnotation)
 		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "dev-master-0", "Module's weight must be set to %d", 900)
 
 		require.NoError(suite.T(), cleanupPaths(d.dir, d.symlink))
@@ -419,7 +432,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 		assert.Equal(suite.T(), err, nil, "Module's symlink must be created")
 
 		mpo := suite.getModulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[deckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", deckhouseNodeNameAnnotation)
+		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.DeckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.DeckhouseNodeNameAnnotation)
 		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "dev-master-0", "Module's weight must be set to %d", 900)
 
 		require.NoError(suite.T(), cleanupPaths(d.dir, symlink))
@@ -475,7 +488,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
 
 		mpo := suite.getModulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[deckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", deckhouseNodeNameAnnotation)
+		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.DeckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.DeckhouseNodeNameAnnotation)
 		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "dev-master-0", "Module's weight must be set to %d", 900)
 
 		require.NoError(suite.T(), cleanupPaths(d.dir, symlink, symlink1, symlink2, symlink3))
@@ -513,7 +526,7 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 		assert.False(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink mustn't be modified")
 
 		mpo := suite.getModulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[deckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", deckhouseNodeNameAnnotation)
+		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.DeckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.DeckhouseNodeNameAnnotation)
 		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "dev-master-0", "Module's weight must be set to %d", 900)
 
 		require.NoError(suite.T(), cleanupPaths(moduleDir, d.symlink))
@@ -556,8 +569,8 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 		assert.False(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink must be modified")
 
 		mpo := suite.getModulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[deckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", deckhouseNodeNameAnnotation)
-		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "dev-master-0", "Module's weight must be set to %d", 900)
+		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.DeckhouseNodeNameAnnotation], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.DeckhouseNodeNameAnnotation)
+		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "Module's weight must be set to %d", 900)
 
 		require.NoError(suite.T(), cleanupPaths(d.dir, symlink))
 	})
@@ -575,10 +588,18 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	})
 }
 
-func (suite *PullOverrideControllerTestSuite) setupPullOverrideController(yamlDoc string) {
+type controllerOption func(*reconciler)
+
+func withDependencyContainer(dc dependency.Container) controllerOption {
+	return func(r *reconciler) {
+		r.dc = dc
+	}
+}
+
+func (suite *PullOverrideControllerTestSuite) setupPullOverrideController(yamlDoc string, options ...controllerOption) {
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
-	var initObjects = make([]client.Object, 0, len(manifests))
+	initObjects := make([]client.Object, 0, len(manifests))
 
 	for _, manifest := range manifests {
 		obj := suite.assembleInitObject(manifest)
@@ -590,13 +611,17 @@ func (suite *PullOverrideControllerTestSuite) setupPullOverrideController(yamlDo
 	_ = corev1.AddToScheme(sc)
 	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha1.ModulePullOverride{}).Build()
 
-	rec := &modulePullOverrideReconciler{
+	rec := &reconciler{
 		client:               cl,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
 		logger:               log.New(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
-		moduleManager:        stubModulesManager{},
+		moduleManager:        &stubModulesManager{},
+	}
+
+	for _, option := range options {
+		option(rec)
 	}
 
 	suite.ctr = rec
@@ -664,11 +689,46 @@ func (suite *PullOverrideControllerTestSuite) fetchResults() []byte {
 }
 
 func (suite *PullOverrideControllerTestSuite) fetchTestFileData(filename string) []byte {
-	dir := "./testdata/pulloverrideController"
+	dir := "./testdata"
 	data, err := os.ReadFile(filepath.Join(dir, filename))
 	require.NoError(suite.T(), err)
 
 	suite.testDataFileName = filename
 
 	return data
+}
+
+type stubModulesManager struct {
+	enabledModules []string
+}
+
+func (s *stubModulesManager) GetGlobal() *addonmodules.GlobalModule {
+	return nil
+}
+
+func (s *stubModulesManager) GetModuleNames() []string {
+	return nil
+}
+
+func (s *stubModulesManager) GetUpdatedByExtender(_ string) (string, error) {
+	panic("implement me")
+}
+
+func (s *stubModulesManager) DisableModuleHooks(_ string) {
+}
+
+func (s *stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
+	return nil
+}
+
+func (s *stubModulesManager) GetEnabledModuleNames() []string {
+	return s.enabledModules
+}
+
+func (s *stubModulesManager) IsModuleEnabled(moduleName string) bool {
+	return slices.Contains(s.enabledModules, moduleName)
+}
+
+func (s *stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error {
+	return nil
 }

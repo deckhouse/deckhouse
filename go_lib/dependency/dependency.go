@@ -65,6 +65,7 @@ func init() {
 }
 
 // NewDependencyContainer creates new Dependency container with external clients
+// TODO: rename to NewContainer
 func NewDependencyContainer() Container {
 	return &dependencyContainer{
 		helmClient: clients{

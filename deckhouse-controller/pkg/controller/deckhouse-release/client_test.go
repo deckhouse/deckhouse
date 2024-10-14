@@ -26,7 +26,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -47,7 +47,7 @@ func setupFakeController(
 	filename, values string,
 	mup *v1alpha1.ModuleUpdatePolicySpec,
 	options ...reconcilerOption,
-) (*deckhouseReleaseReconciler, client.Client) {
+) (*deckhouseReleaseReconciler, client.Client, *metric.StorageMock, *metric.GroupedStorageMock) {
 	ds := &helpers.DeckhouseSettings{
 		ReleaseChannel: mup.ReleaseChannel,
 	}
@@ -71,7 +71,7 @@ func setupControllerSettings(
 	values string,
 	ds *helpers.DeckhouseSettings,
 	options ...reconcilerOption,
-) (*deckhouseReleaseReconciler, client.Client) {
+) (*deckhouseReleaseReconciler, client.Client, *metric.StorageMock, *metric.GroupedStorageMock) {
 	yamlDoc := fetchTestFileData(t, filename, values)
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
@@ -90,15 +90,18 @@ func setupControllerSettings(
 		WithObjects(initObjects...).
 		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}).
 		Build()
-	dc := dependency.NewDependencyContainer()
+
+	metricStorage := metric.NewStorageMock(t)
+	groupedStorage := metric.NewGroupedStorageMock(t)
+	metricStorage.GroupedMock.Optional().Return(groupedStorage)
 
 	rec := &deckhouseReleaseReconciler{
 		client:         cl,
-		dc:             dc,
+		dc:             dependency.TestDC,
 		logger:         log.New(),
 		moduleManager:  stubModulesManager{},
 		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
-		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true),
+		metricStorage:  metricStorage,
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())
 
@@ -110,7 +113,11 @@ func setupControllerSettings(
 		option(rec)
 	}
 
-	return rec, cl
+	for _, option := range options {
+		option(rec)
+	}
+
+	return rec, cl, metricStorage, groupedStorage
 }
 
 func assembleInitObject(t *testing.T, obj string) client.Object {

@@ -37,10 +37,9 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
 const (
@@ -70,14 +69,14 @@ type ModuleDownloadResult struct {
 	ModuleVersion string
 	ModuleWeight  uint32
 
-	ModuleDefinition *models.DeckhouseModuleDefinition
+	ModuleDefinition *module.DeckhouseModuleDefinition
 	Changelog        map[string]any
 }
 
 // DownloadDevImageTag downloads image tag and store it in the .../<moduleName>/dev fs path
 // if checksum is equal to a module image digest - do nothing
 // otherwise return new digest
-func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *models.DeckhouseModuleDefinition, error) {
+func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *module.DeckhouseModuleDefinition, error) {
 	moduleStorePath := path.Join(md.downloadedModulesDir, moduleName, DefaultDevVersion)
 
 	img, err := md.fetchImage(moduleName, imageTag)
@@ -151,7 +150,7 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, relea
 }
 
 // DownloadModuleDefinitionByVersion returns a module definition from the repo by the module's name and version(tag)
-func (md *ModuleDownloader) DownloadModuleDefinitionByVersion(moduleName, moduleVersion string) (*models.DeckhouseModuleDefinition, error) {
+func (md *ModuleDownloader) DownloadModuleDefinitionByVersion(moduleName, moduleVersion string) (*module.DeckhouseModuleDefinition, error) {
 	img, err := md.fetchImage(moduleName, moduleVersion)
 	if err != nil {
 		return nil, err
@@ -191,7 +190,7 @@ func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) (*
 	}
 
 	// inject registry to values
-	err = InjectRegistryToModuleValues(moduleStorePath, md.ms)
+	err = module.InjectRegistryToModuleValues(moduleStorePath, md.ms)
 	if err != nil {
 		return nil, fmt.Errorf("inject registry error: %v", err)
 	}
@@ -295,7 +294,8 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 }
 
 func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (
-	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
+	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error,
+) {
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
@@ -327,14 +327,14 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 	return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersionPath string) *models.DeckhouseModuleDefinition {
-	def := &models.DeckhouseModuleDefinition{
+func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersionPath string) *module.DeckhouseModuleDefinition {
+	def := &module.DeckhouseModuleDefinition{
 		Name:   moduleName,
 		Weight: defaultModuleWeight,
 		Path:   moduleVersionPath,
 	}
 
-	moduleDefFile := path.Join(moduleVersionPath, models.ModuleDefinitionFile)
+	moduleDefFile := path.Join(moduleVersionPath, module.DefinitionFile)
 
 	if _, err := os.Stat(moduleDefFile); err != nil {
 		return def
@@ -354,8 +354,8 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersio
 	return def
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img v1.Image) (*models.DeckhouseModuleDefinition, error) {
-	def := &models.DeckhouseModuleDefinition{
+func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img v1.Image) (*module.DeckhouseModuleDefinition, error) {
+	def := &module.DeckhouseModuleDefinition{
 		Name:   moduleName,
 		Weight: defaultModuleWeight,
 	}
@@ -467,6 +467,7 @@ type ModuleReleaseMetadata struct {
 	Changelog map[string]any
 }
 
+// TODO: remove
 func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alpha1.ModuleSource) error {
 	valuesFile := path.Join(moduleVersionPath, "openapi", "values.yaml")
 

@@ -180,7 +180,7 @@ func (s *Service) bootstrap(
 		if err != nil {
 			return fmt.Errorf("failed to open post bootstrap script: %w", err)
 		}
-		err = postBootstrapScript.Chmod(0555)
+		err = postBootstrapScript.Chmod(0o555)
 		if err != nil {
 			return fmt.Errorf("failed to chmod post bootstrap script: %w", err)
 		}

@@ -27,22 +27,22 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	"github.com/flant/shell-operator/pkg/metric"
 	cp "github.com/otiai10/copy"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/module/downloader"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
 func newModuleUpdater(dc dependency.Container, logger logger.Logger, settings *updater.Settings,
-	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
+	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage metric.Storage,
 ) *updater.Updater[*v1alpha1.ModuleRelease] {
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, settings,
 		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage, enabledModules),
@@ -167,7 +167,7 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	tmpModuleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
 	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
 
-	def := models.DeckhouseModuleDefinition{
+	def := module.DeckhouseModuleDefinition{
 		Name:   moduleName,
 		Weight: release.Spec.Weight,
 		Path:   tmpModuleVersionPath,
@@ -176,7 +176,7 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	if module := k.moduleManager.GetModule(moduleName); module != nil {
 		values = module.GetConfigValues(false)
 	}
-	err = validateModule(def, values)
+	err = module.Validate(def, values)
 	if err != nil {
 		release.Status.Phase = v1alpha1.PhaseSuspended
 		_ = k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase)
@@ -196,12 +196,13 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	// search symlink for module by regexp
 	// module weight for a new version of the module may be different from the old one,
 	// we need to find a symlink that contains the module name without looking at the weight prefix.
-	currentModuleSymlink, err := findExistingModuleSymlink(k.symlinksDir, moduleName)
+	currentModuleSymlink, err := module.FindExistingSymlink(k.symlinksDir, moduleName)
 	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", def.Weight, moduleName))
+
 	if err != nil {
 		currentModuleSymlink = "900-" + moduleName // fallback
 	}
-	err = enableModule(k.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
+	err = module.Enable(k.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
 	if err != nil {
 		k.logger.Errorf("Module deploy failed: %v", err)
 		if e := k.suspendModuleVersionForRelease(release, err); e != nil {
@@ -247,11 +248,11 @@ func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, rele
 }
 
 type metricsUpdater struct {
-	metricStorage  *metric_storage.MetricStorage
+	metricStorage  metric.Storage
 	enabledModules []string
 }
 
-func newMetricsUpdater(metricStorage *metric_storage.MetricStorage, enabledModules []string) *metricsUpdater {
+func newMetricsUpdater(metricStorage metric.Storage, enabledModules []string) *metricsUpdater {
 	return &metricsUpdater{
 		enabledModules: enabledModules,
 		metricStorage:  metricStorage,
@@ -263,7 +264,7 @@ func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
 
 func (m *metricsUpdater) WaitingManual(release *v1alpha1.ModuleRelease, totalPendingManualReleases float64) {
 	if !slices.Contains(m.enabledModules, release.GetModuleName()) {
-		return
+		totalPendingManualReleases = 0
 	}
 
 	m.metricStorage.GaugeSet(
