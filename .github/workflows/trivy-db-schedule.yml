@@ -19,7 +19,7 @@
 name: Trivy DB Download
 on:
   schedule:
-    - cron: '0 */6 * * *'
+  - cron: '0 */6 * * *'
   workflow_dispatch:
 
 # Always run a single job at a time.
