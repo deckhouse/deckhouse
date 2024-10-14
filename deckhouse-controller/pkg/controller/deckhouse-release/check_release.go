@@ -42,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
@@ -93,14 +94,17 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		imagesRegistry string
 	)
 	if registrySecret != nil {
-		opts = []cr.Option{
-			cr.WithCA(string(registrySecret.Data["ca"])),
-			cr.WithInsecureSchema(string(registrySecret.Data["scheme"]) == "http"),
-			cr.WithUserAgent(r.clusterUUID),
-			cr.WithAuth(string(registrySecret.Data[".dockerconfigjson"])),
+		drs, _ := utils.ParseDeckhouseRegistrySecret(registrySecret.Data)
+		rconf := &utils.RegistryConfig{
+			DockerConfig: drs.DockerConfig,
+			Scheme:       drs.Scheme,
+			UserAgent:    r.clusterUUID,
+			CA:           drs.CA,
 		}
 
-		imagesRegistry = string(registrySecret.Data["imagesRegistry"])
+		opts = utils.GenerateRegistryOptions(rconf)
+
+		imagesRegistry = drs.ImageRegistry
 	}
 
 	releaseChecker, err := NewDeckhouseReleaseChecker(opts, r.logger, r.dc, r.moduleManager, imagesRegistry, releaseChannelName)
@@ -213,7 +217,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 			actual := release.GetVersion()
 			for !actual.Equal(newSemver) {
-				if actual, err = releaseChecker.StepByStepUpdate(actual, newSemver); err != nil {
+				if actual, err = releaseChecker.StepByStepUpdate(ctx, actual, newSemver); err != nil {
 					releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
 					labels := map[string]string{
 						"version": release.GetVersion().Original(),
@@ -533,8 +537,8 @@ func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts metav1.Time, cluste
 	return nil
 }
 
-func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Version) (*semver.Version, error) {
-	nextVersion, err := dcr.nextVersion(actual, target)
+func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, actual, target *semver.Version) (*semver.Version, error) {
+	nextVersion, err := dcr.nextVersion(ctx, actual, target)
 	if err != nil {
 		return nil, fmt.Errorf("get next version: %w", err)
 	}
@@ -557,22 +561,22 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Vers
 	return nextVersion, nil
 }
 
-func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) (*semver.Version, error) {
+func (dcr *DeckhouseReleaseChecker) nextVersion(ctx context.Context, actual, target *semver.Version) (*semver.Version, error) {
 	if actual.Major() != target.Major() {
 		return nil, fmt.Errorf("major version updated") // TODO step by step update for major version
 	}
 
 	if actual.Minor() == target.Minor() {
-		return dcr.getMaxPatch(1, actual.Minor())
+		return dcr.getMaxPatch(ctx, 1, actual.Minor())
 	}
 
 	// Here we get the following minor with the maximum patch version.
 	// <major.minor+1.max>
-	return dcr.getMaxPatch(1, actual.IncMinor().Minor())
+	return dcr.getMaxPatch(ctx, 1, actual.IncMinor().Minor())
 }
 
-func (dcr *DeckhouseReleaseChecker) getMaxPatch(major, minor uint64) (*semver.Version, error) {
-	tags, err := dcr.listTags()
+func (dcr *DeckhouseReleaseChecker) getMaxPatch(ctx context.Context, major, minor uint64) (*semver.Version, error) {
+	tags, err := dcr.listTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
@@ -626,10 +630,10 @@ func (dcr *DeckhouseReleaseChecker) generateChangelogForEnabledModules() map[str
 	return enabledModulesChangelog
 }
 
-func (dcr *DeckhouseReleaseChecker) listTags() ([]string, error) {
+func (dcr *DeckhouseReleaseChecker) listTags(ctx context.Context) ([]string, error) {
 	var err error
 	if dcr.tags == nil {
-		dcr.tags, err = dcr.registryClient.ListTags()
+		dcr.tags, err = dcr.registryClient.ListTags(ctx)
 	}
 
 	return dcr.tags, err

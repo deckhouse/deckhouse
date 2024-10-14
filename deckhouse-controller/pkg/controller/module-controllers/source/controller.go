@@ -123,7 +123,7 @@ func (c *moduleSourceReconciler) createOrUpdateReconcile(ctx context.Context, ms
 	ms.Status.Msg = ""
 	ms.Status.ModuleErrors = make([]v1alpha1.ModuleError, 0)
 
-	opts := controllerUtils.GenerateRegistryOptions(ms)
+	opts := controllerUtils.GenerateRegistryOptionsFromModuleSource(ms)
 
 	regCli, err := c.dc.GetRegistryClient(ms.Spec.Registry.Repo, opts...)
 	if err != nil {
@@ -136,7 +136,7 @@ func (c *moduleSourceReconciler) createOrUpdateReconcile(ctx context.Context, ms
 		return ctrl.Result{Requeue: false}, nil
 	}
 
-	moduleNames, err := regCli.ListTags()
+	moduleNames, err := regCli.ListTags(ctx)
 	if err != nil {
 		ms.Status.Msg = err.Error()
 		if e := c.updateModuleSourceStatus(ctx, ms); e != nil {

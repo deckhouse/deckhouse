@@ -6,6 +6,7 @@ package cr
 
 import (
 	"sync"
+	"context"
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
@@ -558,7 +559,7 @@ func (mmListTags *mClientMockListTags) Set(f func() (sa1 []string, err error)) *
 }
 
 // ListTags implements Client
-func (mmListTags *ClientMock) ListTags() (sa1 []string, err error) {
+func (mmListTags *ClientMock) ListTags(_ context.Context) (sa1 []string, err error) {
 	mm_atomic.AddUint64(&mmListTags.beforeListTagsCounter, 1)
 	defer mm_atomic.AddUint64(&mmListTags.afterListTagsCounter, 1)
 

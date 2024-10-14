@@ -46,7 +46,7 @@ const (
 type Client interface {
 	Image(tag string) (v1.Image, error)
 	Digest(tag string) (string, error)
-	ListTags() ([]string, error)
+	ListTags(ctx context.Context) ([]string, error)
 }
 
 type client struct {
@@ -131,7 +131,7 @@ func (r *client) Image(tag string) (v1.Image, error) {
 	)
 }
 
-func (r *client) ListTags() ([]string, error) {
+func (r *client) ListTags(ctx context.Context) ([]string, error) {
 	var nameOpts []name.Option
 	if r.options.useHTTP {
 		nameOpts = append(nameOpts, name.Insecure)
@@ -152,17 +152,17 @@ func (r *client) ListTags() ([]string, error) {
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge amount of tags
-		ctx, cancel := context.WithTimeout(context.Background(), r.options.timeout)
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
 		go func() {
-			<-ctx.Done()
+			<-ctxWTO.Done()
 			cancel()
 		}()
 
+		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
+	} else {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
-	// TODO: replace with context
-	// remote.ListWithContext()
 	return remote.List(repo, imageOptions...)
 }
 
