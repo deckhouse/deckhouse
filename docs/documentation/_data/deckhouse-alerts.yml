@@ -2769,37 +2769,6 @@ alerts:
         file descriptors soon exhausted
       severity: "4"
       markupFormat: default
-    - name: FlantPricingNotSendingSamples
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/grafana-agent.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        Succeeded samples metric of the Grafana Agent is not increasing.
-
-        To get more details, check logs of the following containers:
-        - `kubectl -n d8-flant-integration logs -l app=pricing -c grafana-agent`
-        - `kubectl -n d8-flant-integration logs -l app=pricing -c pricing`
-      summary: |
-        Flant-pricing cluster metrics are not being delivered
-      severity: "6"
-      markupFormat: markdown
-    - name: FlantPricingSucceededSamplesMetricIsAbsent
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/grafana-agent.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        There are no succeeded samples metric from the Grafana Agent.
-
-        To get more details:
-
-        Check pods state: `kubectl -n d8-flant-integration get pod -l app=pricing`
-        or logs: `kubectl -n d8-flant-integration logs -l app=pricing -c grafana-agent`
-      summary: |
-        Crucial metrics are missing.
-      severity: "6"
-      markupFormat: markdown
     - name: GrafanaDashboardAlertRulesDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
       moduleUrl: 300-prometheus
@@ -4622,7 +4591,6 @@ modules-having-alerts:
     - control-plane-manager
     - documentation
     - extended-monitoring
-    - flant-integration
     - flow-schema
     - ingress-nginx
     - istio
