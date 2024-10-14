@@ -184,8 +184,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("loop until deploy: canary", func() {
-			suite.T().Skip("TODO: requeue all releases after got deckhouse module config update")
-
 			dc := dependency.NewMockedContainer()
 			dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
@@ -201,36 +199,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 			testData := suite.fetchTestFileData("loop-canary.yaml")
 			suite.setupReleaseController(string(testData), withModuleUpdatePolicy(mup), withDependencyContainer(dc))
-
-			var (
-				result = ctrl.Result{Requeue: true}
-				err    error
-				i      int
-			)
-
-			// Setting restartReason field in real code causes the process to reboot.
-			// And at the next startup, Reconcile will be called for existing objects.
-			// Therefore, this condition emulates the behavior in real code.
-			for result.Requeue || result.RequeueAfter > 0 || suite.ctr.restartReason != "" {
-				suite.ctr.restartReason = ""
-				dc.GetFakeClock().Advance(result.RequeueAfter)
-
-				mr := suite.getModuleRelease(suite.testMRName)
-				if mr.Status.Phase == v1alpha1.PhaseDeployed {
-					suite.T().Log("Deployed")
-					return
-				}
-
-				result, err = suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
-				require.NoError(suite.T(), err)
-
-				i++
-				if i > maxIterations {
-					suite.T().Fatal("Too many iterations")
-				}
-			}
-
-			suite.T().Fatal("Loop was broken")
+			suite.loopUntilDeploy(dc, suite.testMRName)
 		})
 
 		suite.Run("install new module in manual mode with deckhouse release approval annotation", func() {
@@ -241,6 +210,40 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 		})
 	})
+}
+
+func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
+	const maxIterations = 3
+	suite.T().Helper()
+
+	var (
+		result = ctrl.Result{Requeue: true}
+		err    error
+		i      int
+	)
+
+	// Setting restartReason field in real code causes the process to reboot.
+	// And at the next startup, Reconcile will be called for existing objects.
+	// Therefore, this condition emulates the behavior in real code.
+	for result.Requeue || result.RequeueAfter > 0 || suite.ctr.restartReason != "" {
+		suite.ctr.restartReason = ""
+		dc.GetFakeClock().Advance(result.RequeueAfter)
+
+		dr := suite.getModuleRelease(releaseName)
+		if dr.Status.Phase == v1alpha1.PhaseDeployed {
+			return
+		}
+
+		result, err = suite.ctr.createOrUpdateReconcile(context.TODO(), dr)
+		require.NoError(suite.T(), err)
+
+		i++
+		if i > maxIterations {
+			suite.T().Fatal("Too many iterations")
+		}
+	}
+
+	suite.T().Fatal("Loop was broken")
 }
 
 func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() error {
