@@ -166,6 +166,8 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.5.1-0.20241007195011-18ba6a3cae68 h1:Fj7UTbUVJ0qge89nJsW7ONh7d5iawjZ5HGCeLvNN8zY=
 github.com/flant/addon-operator v1.5.1-0.20241007195011-18ba6a3cae68/go.mod h1:eNKrMzVe8NfJPpYAYbIxUM1xLcaEX3YiYmhWRlSYy58=
+github.com/flant/addon-operator v1.5.1-0.20241014084542-2c8cd82021a2 h1:YS3M1bjBm9vlc8u8M5bjoSn1d8T66q0DPZq0pvgOKqg=
+github.com/flant/addon-operator v1.5.1-0.20241014084542-2c8cd82021a2/go.mod h1:IaHJNsMCRHxeY//prUS5fOUi4SB2pBKFWg+p9hY8zWs=
 github.com/flant/go-openapi-validate v0.19.12-flant.1 h1:GuB9XEfiLHq3M7fafRLq1AWkndSY/+/5MX7ad1xJ/8A=
 github.com/flant/go-openapi-validate v0.19.12-flant.1/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.2.0 h1:cOjnZgwoJVm4scqsMGcgO6qctJ+Z6wRVTFqvyhoAOiQ=
@@ -174,6 +176,7 @@ github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee h1:evii83J+/6QGNv
 github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee/go.mod h1:f+REaGl/+pZR97rbTcwHEka/MAipoQQ2Mc0iQUj4ak0=
 github.com/flant/shell-operator v1.4.13-0.20241007164747-29f3b60cb144 h1:sHyrdnT8Uk8eCcPSBbpqqPn7cmyWovbG2guUZlR0Jc8=
 github.com/flant/shell-operator v1.4.13-0.20241007164747-29f3b60cb144/go.mod h1:Qs85SR4Kss+AGc/QYBCXt6dbFPduEnVzwL7IjwXw4rI=
+github.com/flant/shell-operator v1.4.13-0.20241014082856-2631d3222902/go.mod h1:08P+189T1HyzW9Nn8g/TBPYbiPmLemyfVo2Zqt1ttMQ=
 github.com/fogleman/gg v1.3.0 h1:/7zJX8F6AaYQc57WQCyN9cAIz+4bCJGO9B+dyW29am8=
 github.com/fogleman/gg v1.3.0/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/foxcpp/go-mockdns v1.0.0 h1:7jBqxd3WDWwi/6WhDvacvH1XsN3rOLXyHM1uhvIx6FI=
@@ -885,6 +888,7 @@ golang.org/x/text v0.16.0 h1:a94ExnEXNtEwYLGJSIUxnWoxoRz/ZcCsV63ROupILh4=
 golang.org/x/text v0.16.0/go.mod h1:GhwF1Be+LQoKShO3cGOHzqOgRrGaYc9AvblQOmPVHnI=
 golang.org/x/time v0.6.0 h1:eTDhh4ZXt5Qf0augr54TN6suAUudPcawVZeIAPU7D4U=
 golang.org/x/time v0.6.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
+golang.org/x/time v0.7.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=
 golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20181030221726-6c7e314b6563/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20190114222345-bf090417da8b/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
