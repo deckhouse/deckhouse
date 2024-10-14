@@ -20,6 +20,7 @@ shell:
   - git clone --depth 1 --branch v0.1.1 {{ .SOURCE_REPO }}/falcosecurity/k8s-metacollector.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
+  - rm -rf test
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
