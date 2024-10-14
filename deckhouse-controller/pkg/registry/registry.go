@@ -109,8 +109,6 @@ func handleListDeckhouseReleases(ctx context.Context, svc *DeckhouseService, all
 	}
 
 	if len(ls) == 0 {
-		fmt.Println()
-
 		if all {
 			fmt.Println("Releases not found")
 		} else {
@@ -120,7 +118,6 @@ func handleListDeckhouseReleases(ctx context.Context, svc *DeckhouseService, all
 		return nil
 	}
 
-	fmt.Println()
 	fmt.Println(strings.Join(ls, "\n"))
 
 	return nil
@@ -137,9 +134,7 @@ func handleGetDeckhouseRelease(ctx context.Context, svc *DeckhouseService, chann
 	}
 
 	if !all {
-		fmt.Println()
 		fmt.Printf("Deckhouse version in channel '%s': %s\n", channel, meta.Version)
-		fmt.Println()
 
 		return nil
 	}
@@ -149,9 +144,7 @@ func handleGetDeckhouseRelease(ctx context.Context, svc *DeckhouseService, chann
 		return fmt.Errorf("marshall indent: %w", err)
 	}
 
-	fmt.Println()
-	fmt.Printf("%s", b)
-	fmt.Println()
+	fmt.Printf("%s\n", b)
 
 	return nil
 }
@@ -177,7 +170,6 @@ func registerSourceCommand(parentCMD *kingpin.CmdClause) {
 			srcs = append(srcs, ms.GetName())
 		}
 
-		fmt.Println()
 		fmt.Printf("Module sources found (%d):\n\n", len(srcs))
 
 		for _, src := range srcs {
@@ -230,9 +222,7 @@ func handleGetModuleInfoInChannel(ctx context.Context, svc *ModuleService, name 
 	}
 
 	if !all {
-		fmt.Println()
-		fmt.Printf("Module version in channel '%s': %s", channel, meta.Version)
-		fmt.Println()
+		fmt.Printf("Module version in channel '%s': %s\n", channel, meta.Version)
 
 		return nil
 	}
@@ -242,9 +232,7 @@ func handleGetModuleInfoInChannel(ctx context.Context, svc *ModuleService, name 
 		return fmt.Errorf("marshall indent: %w", err)
 	}
 
-	fmt.Println()
-	fmt.Printf("%s", b)
-	fmt.Println()
+	fmt.Printf("%s\n", b)
 
 	return nil
 }
@@ -272,8 +260,6 @@ func handleListModulesVersions(ctx context.Context, svc *ModuleService, name str
 	}
 
 	if len(ls) == 0 {
-		fmt.Println()
-
 		if all {
 			fmt.Println("Module releases not found")
 		} else {
@@ -283,7 +269,6 @@ func handleListModulesVersions(ctx context.Context, svc *ModuleService, name str
 		return nil
 	}
 
-	fmt.Println()
 	fmt.Println(strings.Join(ls, "\n"))
 
 	return nil
@@ -296,24 +281,17 @@ func handleListModulesNames(ctx context.Context, svc *ModuleService, all bool) e
 	}
 
 	if len(modules) == 0 {
-		fmt.Println()
-
 		if all {
 			fmt.Println("Modules not found")
 		} else {
 			fmt.Println("Modules with semVer not found. Use --all argument to watch all releases in the registry")
 		}
 
-		fmt.Println()
-
 		return nil
 	}
 
-	fmt.Println()
-	fmt.Printf("Modules found (%d):", len(modules))
-	fmt.Println()
+	fmt.Printf("Modules found (%d):\n\n", len(modules))
 
-	fmt.Println()
 	fmt.Println(strings.Join(modules, "\n"))
 
 	return nil
