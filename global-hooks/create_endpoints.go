@@ -154,15 +154,15 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 		Ports: []discv1.EndpointPort{
 			{
 				Name: ptr.To("self"),
-				Port: ptr.To[int32](4222),
+				Port: ptr.To(int32(4222)),
 			},
 			{
 				Name: ptr.To("webhook"),
-				Port: ptr.To[int32](4223),
+				Port: ptr.To(int32(4223)),
 			},
 			{
 				Name: ptr.To("debug-server"),
-				Port: ptr.To[int32](9652),
+				Port: ptr.To(int32(9652)),
 			},
 		},
 	}

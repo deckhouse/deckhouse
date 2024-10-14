@@ -9,6 +9,9 @@ import (
 	"strings"
 
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
@@ -322,6 +325,7 @@ var hookInitValues = `
 `
 
 var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
+
 	f := HookExecutionConfigInit(hookInitValues, "")
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
@@ -334,6 +338,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(0))
+
 		})
 	})
 
@@ -364,7 +369,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 			Name:   istioPodMetadataMetricName,
 			Group:  metadataExporterMetricsGroup,
 			Action: "set",
-			Value:  ptr.Float64(1.0),
+			Value:  ptr.To(1.0),
 			Labels: map[string]string{
 				"namespace":            nsName,
 				"dataplane_pod":        podName,
@@ -1010,6 +1015,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 })
 
 var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", func() {
+
 	f := HookExecutionConfigInit(hookInitValues, "")
 
 	istioNsYAML := generateIstioNsYAML(nsParams{
@@ -1022,6 +1028,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 	})
 
 	Context("Test Deployment", func() {
+
 		istioDeployYAML := generateIstioDeploymentYAML(deployParams{
 			Replicas:            2,
 			UnavailableReplicas: 0,
@@ -1189,6 +1196,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 	})
 
 	Context("Test DaemonSet", func() {
+
 		istioDsYAML := generateIstioDaemonSetYAML(dsParams{
 			NumberUnavailable: 0,
 			AutoUpgrade:       false,
@@ -1339,6 +1347,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 	})
 
 	Context("Testing StatefulSet", func() {
+
 		istioStsYAML := generateIstioStatefulSetYAML(stsParams{
 			Replicas:      2,
 			ReadyReplicas: 2,
@@ -1575,4 +1584,5 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			})
 		})
 	})
+
 })

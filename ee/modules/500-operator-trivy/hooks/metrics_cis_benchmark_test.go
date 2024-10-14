@@ -7,12 +7,15 @@ package hooks
 
 import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: operator-trivy :: hooks :: metrics for cis benchmark ::", func() {
+
 	f := HookExecutionConfigInit("", "")
 	f.RegisterCRD("aquasecurity.github.io", "v1alpha1", "ClusterComplianceReport", false)
 
@@ -28,7 +31,7 @@ var _ = Describe("Modules :: operator-trivy :: hooks :: metrics for cis benchmar
 		for i, m := range metrics {
 			if m.Name == metricName && m.Labels["id"] == id {
 				assertMetricLabels(m.Labels, expectedLabels)
-				Expect(m.Value).To(Equal(ptr.Float64(value)))
+				Expect(m.Value).To(Equal(ptr.To(value)))
 				metricIndex = i
 				break
 			}
@@ -172,7 +175,6 @@ status:
         severity: LOW
         totalFail: 10`
 }
-
 func testGetReadyClippedDetailedCisBecnmark() string {
 	return testGetNotReadyClippedCisBecnmark() + `
 status:

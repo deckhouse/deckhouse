@@ -74,7 +74,7 @@ var _ = Describe("Istio hooks :: multicluster_discovery ::", func() {
 	})
 
 	Context("Proper multiclusters only", func() {
-		bearerTokens := map[string]string{}
+		var bearerTokens = map[string]string{}
 
 		BeforeEach(func() {
 			f.ValuesSet(`istio.multicluster.enabled`, true)
