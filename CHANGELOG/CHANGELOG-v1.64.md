@@ -21,6 +21,7 @@
  - **[control-plane-manager]** Added ability to connect kube-scheduler extenders. [#9303](https://github.com/deckhouse/deckhouse/pull/9303)
     kube-scheduler should be restarted every time when extender config is added.
  - **[control-plane-manager]** Add new module `deckhouse-tools`. [#9140](https://github.com/deckhouse/deckhouse/pull/9140)
+ - **[dashboard]** Add auth.allowedUserGroups option. Now it is possible to authorize user access based on their groups. [#10068](https://github.com/deckhouse/deckhouse/pull/10068)
  - **[deckhouse]** Add bootstrapped extender. [#9425](https://github.com/deckhouse/deckhouse/pull/9425)
  - **[deckhouse]** Added validation of `update.windows` module parameter. [#9185](https://github.com/deckhouse/deckhouse/pull/9185)
  - **[deckhouse]** Add `deckhouseVersion` and `kubernetesVersion` extenders. [#8997](https://github.com/deckhouse/deckhouse/pull/8997)
@@ -53,6 +54,8 @@
  - **[node-manager]** Add alert about unavailable CAPS instances. [#9195](https://github.com/deckhouse/deckhouse/pull/9195)
  - **[registrypackages]** Add new module `deckhouse-tools`. [#9140](https://github.com/deckhouse/deckhouse/pull/9140)
  - **[secret-copier]** Delete ArgoCD labels on copied secrets [#9670](https://github.com/deckhouse/deckhouse/pull/9670)
+ - **[user-authn]** Add claimMappingOverride option for OIDC Dex provider. [#9974](https://github.com/deckhouse/deckhouse/pull/9974)
+ - **[user-authn]** dex support Base64 encoded and PEM encoded certs. [#9894](https://github.com/deckhouse/deckhouse/pull/9894)
  - **[user-authz]** RBAC v2. The new RBAC model. [#8538](https://github.com/deckhouse/deckhouse/pull/8538)
 
 ## Fixes
@@ -88,6 +91,10 @@
  - **[cloud-provider-yandex]** Minimize RBAC permissions by removing the wildcard("*") from ClusterRole rules. [#8969](https://github.com/deckhouse/deckhouse/pull/8969)
  - **[cloud-provider-zvirt]** Canceling migration from d8-cni-configuration secret to proper CNI module configs. [#9900](https://github.com/deckhouse/deckhouse/pull/9900)
  - **[cloud-provider-zvirt]** Minimize RBAC permissions by removing the wildcard("*") from ClusterRole rules. [#8969](https://github.com/deckhouse/deckhouse/pull/8969)
+ - **[cni-cilium]** Disabling the upload of the service image `base-cilium-dev` to the final container registry. [#9987](https://github.com/deckhouse/deckhouse/pull/9987)
+    All cilium-agent pods will be restarted.
+ - **[cni-cilium]** Wiping unwanted iptables-legacy rules. [#9971](https://github.com/deckhouse/deckhouse/pull/9971)
+    All cilium-agent pods will be restarted.
  - **[cni-cilium]** Canceling migration from d8-cni-configuration secret to proper CNI module configs. [#9900](https://github.com/deckhouse/deckhouse/pull/9900)
  - **[cni-cilium]** iptables-wrapper fix for cilium pods. [#9856](https://github.com/deckhouse/deckhouse/pull/9856)
     The cilium pods will be restarted.
@@ -111,6 +118,9 @@
  - **[deckhouse-controller]** Correct module validation. [#8989](https://github.com/deckhouse/deckhouse/pull/8989)
  - **[deckhouse-tools]** Fix custom certs copying. [#9840](https://github.com/deckhouse/deckhouse/pull/9840)
  - **[delivery]** Fixed the `argocd-repo-server` and `argocd-server` Services with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)
+ - **[dhctl]** Fix panic during creation resources and add timestamps to debug log. [#10070](https://github.com/deckhouse/deckhouse/pull/10070)
+ - **[dhctl]** Fix ensure required namespaces. [#9714](https://github.com/deckhouse/deckhouse/pull/9714)
+ - **[dhctl]** Fix sshBastionPort spec type [#9990](https://github.com/deckhouse/deckhouse/pull/9990)
  - **[dhctl]** Canceling migration from d8-cni-configuration secret to proper CNI module configs. [#9900](https://github.com/deckhouse/deckhouse/pull/9900)
  - **[dhctl]** Fix SSH client startup in Deckhouse installation phase. [#9628](https://github.com/deckhouse/deckhouse/pull/9628)
  - **[dhctl]** Retry loop for `ensureRequiredNamespacesExist` function. [#9620](https://github.com/deckhouse/deckhouse/pull/9620)
@@ -137,12 +147,15 @@
  - **[node-manager]** Fix `ValidatingAdmissionPolicy` so that a cluster with CAPI rosurces can be deleted successfully. [#9426](https://github.com/deckhouse/deckhouse/pull/9426)
  - **[node-manager]** Restricted actions on `cluster.x-k8s.io/machine.sapcloud.io`. [#9026](https://github.com/deckhouse/deckhouse/pull/9026)
     Unauthorized users will be unable to manage `cluster.x-k8s.io/machine.sapcloud.io` resources (`machines`, `machinesets`, `machinedeployments`).
+ - **[prometheus]** Fix Grafana root URL. [#10076](https://github.com/deckhouse/deckhouse/pull/10076)
+    Grafana will be restarted.
  - **[prometheus]** Increase aggregation-proxy timeout. [#9579](https://github.com/deckhouse/deckhouse/pull/9579)
     Aggregation-proxy deployment will restart.
  - **[prometheus]** Fixed the `memcached` Service with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)
  - **[registrypackages]** Check more kernel modules that are needed to detect the nft support of iptables. [#9601](https://github.com/deckhouse/deckhouse/pull/9601)
  - **[registrypackages]** Add kernel version check for installing iptables. [#9254](https://github.com/deckhouse/deckhouse/pull/9254)
  - **[runtime-audit-engine]** Fix monitoring RBAC permissions. [#9470](https://github.com/deckhouse/deckhouse/pull/9470)
+ - **[upmeter]** Fix `D8UpmeterSmokeMiniMoreThanOnePVxPVC` alert. [#10026](https://github.com/deckhouse/deckhouse/pull/10026)
  - **[user-authn]** Allow system-users with + symbol in email. [#9846](https://github.com/deckhouse/deckhouse/pull/9846)
 
 ## Chore
