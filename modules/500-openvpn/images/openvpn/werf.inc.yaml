@@ -8,12 +8,13 @@ from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
     - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - mkdir -m 0755 -p /relocate/run
+    - mkdir -p /relocate/sbin
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         rm -f "/relocate/sbin/${cmd}"
         ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
       done
-    - mkdir -m 0755 -p /relocate/run
 ---
 artifact: {{ .ModuleName }}/entrypoint-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
