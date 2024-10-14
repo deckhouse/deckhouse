@@ -1,9 +1,5 @@
 # Patches
 
-### 001-go-mod.patch
-
-Bump libraries versions to fix security errors.
-
 ### 001-add-registry-secret-as-dockerconfigjson.patch
 
 This patch adds docker auth config via kubernetes volume/volumeMount to scanjobs in Standalone mode so that trivy init container can download trivy-db from a private registry. ClientServer mode doesn't have to download trivy-db on its own.
@@ -12,14 +8,6 @@ This [issue](https://github.com/aquasecurity/trivy-operator/issues/695) covers b
 ### 002-skip-some-checks.patch
 
 Skip some defseq checks for proper reports result for deckhouse installation.
-
-
-### 003-aws-ecr.patch
-
-In ClientServer mode scan pods can't retrive images from Amazon Elastic Container Registry, because `AWS_REGION` environment variable is absent.
-This patch is fixing this behaviour.
-
-[PR](https://github.com/aquasecurity/trivy-operator/pull/1613)
 
 
 ### 004-scan-job-registry-ca.patch
@@ -39,8 +27,7 @@ The first check begins instantly when the operator starts.
 
 This patch adds primaryLink metric for reports.
 
-### 007-delete-historical-sbom.patch
+### 007-fix-custom-volumes.patch
 
-This patch adds sbom reports to reportTTL manager, the current version of operator can mark historical sbom reports to be deleted, but nobody deletes them.
-
-This problem is not relevant for the operator version higher than 0.17.
+[PR](https://github.com/aquasecurity/trivy-operator/pull/2241)
+[Issue](https://github.com/aquasecurity/trivy-operator/issues/2240)
