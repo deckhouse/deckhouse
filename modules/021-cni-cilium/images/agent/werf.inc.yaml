@@ -64,6 +64,7 @@
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables-monitor" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/arptables-nft* /sbin/ebtables-nft*" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/iptables-legacy* /sbin/iptables-nft* /sbin/ip6tables-legacy* /sbin/ip6tables-nft*" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/iptables-wrapper" }}
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
