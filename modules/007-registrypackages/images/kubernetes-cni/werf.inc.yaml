@@ -58,7 +58,7 @@ shell:
   - git apply /patches/plugins/*.patch --verbose 
   - git clone --depth 1 --branch v{{ $flannel_version }} {{ $.SOURCE_REPO }}/flannel-io/cni-plugin.git /src/cni-plugin
   - cd /src/cni-plugin
-  - git apply /patches/cni-plugin/*.patch --verbose 
+  - git apply /patches/cni-plugins/*.patch --verbose 
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
