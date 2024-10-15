@@ -31,10 +31,11 @@ mount:
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
-  to: /
+  to: /src
   before: install
 shell:
   install:
+    - cd /src/
     - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
     - cd server && go build -ldflags="-s -w" -o /etcd . && cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
