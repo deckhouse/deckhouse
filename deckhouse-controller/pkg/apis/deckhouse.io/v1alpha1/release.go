@@ -50,6 +50,6 @@ func GetReleaseApprovalAnnotation(release Release) string {
 	case *ModuleRelease:
 		return ModuleReleaseApprovalAnnotation
 	default:
-		return fmt.Sprintf("cannot find approval annotation: unsupported release type %T", release)
+		panic(fmt.Sprintf("cannot find approval annotation: unsupported release type %T", release))
 	}
 }
