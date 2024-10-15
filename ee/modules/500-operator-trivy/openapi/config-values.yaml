@@ -86,8 +86,7 @@ properties:
       - env
   insecureRegistries:
     type: array
-    x-examples:
-      - registryHostname1
-      - registryHostname2
+    items:
+      type: string
     description: |
       The registries to which insecure connections are allowed.
