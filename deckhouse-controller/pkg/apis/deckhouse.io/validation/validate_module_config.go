@@ -50,6 +50,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 				}
 
 				// if we have no annotation and module enabled
+				//
 				// we check module
 				// we check confirmation restriction and confirmation message
 				_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
@@ -65,6 +66,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 					}
 				}
 
+				// if module is already disabled - we don't need to warn user about disabling module
 				return allowResult("")
 			}
 		case kwhmodel.OperationConnect, kwhmodel.OperationUnknown:
@@ -88,9 +90,10 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
 
-			// if we have no annotation and module is not disabled
-			// (what if we have no annotation and module is disabled?)
-			// (if annotation stay while module disabled - we alarm user everytime, before he deletes it)
+			// if we have no annotation on current ModuleConfig
+			// and we have no annotation on previous ModuleConfig (if we want to take off annotation, while disabled)
+			// and module is disabled
+			//
 			// we check module
 			// we check confirmation restriction and confirmation message
 			_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
