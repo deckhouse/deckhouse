@@ -20,6 +20,7 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromArtifact: src-artifact
+fromCacheVersion: 20241015-1
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
