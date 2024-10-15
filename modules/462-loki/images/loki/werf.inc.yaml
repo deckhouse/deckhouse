@@ -22,6 +22,7 @@ shell:
   - cd /src
   - git clone --depth 1 --branch v2.9.10 {{ .SOURCE_REPO }}/grafana/loki/ .
   - git apply /patches/*.patch --verbose
+  - rm -rf tools/lambda-promtail operator
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
