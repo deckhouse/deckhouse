@@ -62,7 +62,12 @@ bb-apt-rpm-update() {
     export DEBIAN_FRONTEND=noninteractive
     bb-flag? apt-rpm-updated && return 0
     bb-log-info 'Updating apt cache'
-    apt-get update
+    OUTPUT=$(apt-get update 2>&1)
+    echo "$OUTPUT"
+    if echo "$OUTPUT" | grep -q "error reading from /var/lib/apt/lists/partial"; then
+        rm -rf /var/lib/apt/lists/partial/*
+        return 1
+    fi
     bb-flag-set apt-rpm-updated
 }
 
