@@ -149,6 +149,9 @@ git:
   stageDependencies:
     install:
     - "**/*"
+shell:
+  install:
+  - rm -r /src/docs
 ---
 artifact: jq
 from: {{ $.Images.BASE_ALPINE }}
