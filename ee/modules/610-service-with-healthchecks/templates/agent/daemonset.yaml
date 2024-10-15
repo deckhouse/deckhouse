@@ -56,6 +56,7 @@ spec:
             {{- if .Values.serviceWithHealthchecks.debug }}
             - --debugging=true
             {{- end }}
+            - --workers-count={{ .Values.serviceWithHealthchecks.numberOfWorkers }}
           env:
             - name: NODE_NAME
               valueFrom:
