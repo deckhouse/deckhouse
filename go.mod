@@ -1,8 +1,6 @@
 module github.com/deckhouse/deckhouse
 
-go 1.22.4
-
-toolchain go1.22.8
+go 1.22.8
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
@@ -15,11 +13,11 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/flant/addon-operator v1.5.0
 	github.com/flant/kube-client v1.2.0
-	github.com/flant/shell-operator v1.4.12
+	github.com/flant/shell-operator v1.4.13
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
-	github.com/gojuno/minimock/v3 v3.0.8
+	github.com/gojuno/minimock/v3 v3.4.0
 	github.com/golang/protobuf v1.5.4
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-containerregistry v0.17.0
@@ -62,6 +60,7 @@ require (
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/docker/distribution v2.8.3+incompatible
+	github.com/ettle/strcase v0.2.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.1
 	github.com/gofrs/uuid/v5 v5.3.0
@@ -111,7 +110,6 @@ require (
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
-	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
@@ -223,7 +221,7 @@ require (
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/term v0.22.0 // indirect
-	golang.org/x/time v0.6.0 // indirect
+	golang.org/x/time v0.7.0 // indirect
 	golang.org/x/tools v0.23.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
