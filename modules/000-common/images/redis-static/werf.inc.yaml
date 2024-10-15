@@ -4,6 +4,7 @@ fromArtifact: src-artifact
 shell:
   install:
   - git clone --branch 7.4.0 --depth 1 {{ $.SOURCE_REPO }}/redis/redis.git /src
+  - rm -r /src/utils
 ---
 artifact: {{ .ModuleName }}/build-redis-static-artifact
 from: {{ .Images.BASE_ALPINE }}

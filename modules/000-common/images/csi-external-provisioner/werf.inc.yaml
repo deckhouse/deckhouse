@@ -15,9 +15,18 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromArtifact: src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.provisioner }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-provisioner.git /src
+  - cd /src
+  - test -d "/patches/{{ $value.csi.provisioner }}" && git apply /patches/{{ $value.csi.provisioner }}/*.patch --verbose
+  - rm -r vendor
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
@@ -29,10 +38,11 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" $ | nindent 2 }}
-  - apk add --no-cache make bash
+  - apk add --no-cache make bash git
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
+  - go mod tidy
   - make build
   - cp bin/csi-provisioner /csi-provisioner
   - chown 64535:64535 /csi-provisioner
