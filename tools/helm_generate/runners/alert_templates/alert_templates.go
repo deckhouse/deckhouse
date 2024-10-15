@@ -209,10 +209,9 @@ func getAlertsFromTemplate(templateContent []byte, moduleName, moduleUrlName, ed
 			severity = "undefined"
 			if ok {
 				// don't store severity if it is not a number (e.g. it can be a template)
-				_, sevOK := alertLabels["severity_level"]
-				if sevOK {
-					if _, err := strconv.Atoi(alertLabels["severity_level"].(string)); err == nil {
-						severity, _ = alertLabels["severity_level"].(string)
+				if severityData, severityExists := alertLabels["severity_level"]; severityExists {
+					if _, err := strconv.Atoi(severityData.(string)); err == nil {
+						severity = severityData.(string)
 					}
 				}
 			}
