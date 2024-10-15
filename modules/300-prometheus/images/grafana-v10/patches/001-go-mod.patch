@@ -1,0 +1,104 @@
+diff --git a/go.work b/go.work
+index d4126874..b94b2dca 100644
+--- a/go.work
++++ b/go.work
+@@ -4,3 +4,5 @@ use (
+ 	.
+ 	./pkg/build
+ )
++
++replace github.com/docker/docker => github.com/moby/moby v24.0.9+incompatible
+diff --git a/go.work.sum b/go.work.sum
+index 56f3929d..fb3ab565 100644
+--- a/go.work.sum
++++ b/go.work.sum
+@@ -844,7 +844,6 @@ github.com/godbus/dbus/v5 v5.0.4 h1:9349emZab16e7zQvpmsbtjc18ykshndd8y2PG3sgJbA=
+ github.com/gofrs/flock v0.8.1/go.mod h1:F1TvTiK9OcQqauNUHlbJvyl9Qa1QvF/gOUDKA14jxHU=
+ github.com/gofrs/uuid/v3 v3.1.2 h1:V3IBv1oU82x6YIr5txe3azVHgmOKYdyKQTowm9moBlY=
+ github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
+-github.com/golang-jwt/jwt/v5 v5.2.1 h1:OuVbFODueb089Lh128TAcimifWaLhJwVflnrgM17wHk=
+ github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 h1:DACJavvAHhabrF08vX0COfcOBJRhZ8lUbR+ZWIs0Y5g=
+ github.com/golang/gddo v0.0.0-20190904175337-72a348e765d2 h1:xisWqjiKEff2B0KfFYGpCqc3M3zdTz+OHQHRc09FeYk=
+ github.com/golang/glog v1.2.1/go.mod h1:6AhwSGph0fcJtXVM/PEHPqZlFeoLxhs7/t5UDAwmO+w=
+@@ -1061,6 +1060,7 @@ github.com/mitchellh/iochan v1.0.0 h1:C+X3KsSTLFVBr/tK1eYN/vs4rJcvsiLU338UhYPJWe
+ github.com/mithrandie/readline-csvq v1.2.1 h1:4cfeYeVSrqKEWi/1t7CjyhFD2yS6fm+l+oe+WyoSNlI=
+ github.com/mithrandie/readline-csvq v1.2.1/go.mod h1:ydD9Eyp3/wn8KPSNbKmMZe4RQQauCuxi26yEo4N40dk=
+ github.com/moby/docker-image-spec v1.3.1/go.mod h1:eKmb5VW8vQEh/BAr2yvVNvuiJuY6UIocYsFu/DxxRpo=
++github.com/moby/moby v24.0.9+incompatible/go.mod h1:fDXVQ6+S340veQPv35CzDahGBmHsiclFwfEygB/TWMc=
+ github.com/modocache/gover v0.0.0-20171022184752-b58185e213c5 h1:8Q0qkMVC/MmWkpIdlvZgcv2o2jrlF6zqVOh7W5YHdMA=
+ github.com/monoculum/formam v0.0.0-20180901015400-4e68be1d79ba h1:FEJJhVHSH+Kyxa5qNe/7dprlZbFcj2TG51OWIouhwls=
+ github.com/montanaflynn/stats v0.7.0 h1:r3y12KyNxj/Sb/iOE46ws+3mS1+MZca1wlHQFPsY/JU=
+diff --git a/pkg/build/go.mod b/pkg/build/go.mod
+index e37fce97..2c2ca043 100644
+--- a/pkg/build/go.mod
++++ b/pkg/build/go.mod
+@@ -5,7 +5,7 @@ go 1.22.7
+ // Override docker/docker to avoid:
+ // go: github.com/drone-runners/drone-runner-docker@v1.8.2 requires
+ // github.com/docker/docker@v0.0.0-00010101000000-000000000000: invalid version: unknown revision 000000000000
+-replace github.com/docker/docker => github.com/moby/moby v23.0.4+incompatible
++replace github.com/docker/docker => github.com/moby/moby v24.0.9+incompatible
+ 
+ require (
+ 	cloud.google.com/go/storage v1.43.0
+@@ -20,7 +20,7 @@ require (
+ 	github.com/google/go-github/v45 v45.2.0
+ 	github.com/stretchr/testify v1.9.0
+ 	github.com/urfave/cli v1.22.15
+-	github.com/urfave/cli/v2 v2.25.0
++	github.com/urfave/cli/v2 v2.27.1
+ 	golang.org/x/mod v0.17.0
+ 	golang.org/x/oauth2 v0.21.0
+ 	google.golang.org/api v0.189.0
+@@ -37,6 +37,7 @@ require (
+ 	github.com/Khan/genqlient v0.7.0 // indirect
+ 	github.com/Microsoft/go-winio v0.5.2 // indirect
+ 	github.com/adrg/xdg v0.4.0 // indirect
++	github.com/agnivade/levenshtein v1.2.0 // indirect
+ 	github.com/bmatcuk/doublestar v1.1.1 // indirect
+ 	github.com/buildkite/yaml v2.1.0+incompatible // indirect
+ 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+@@ -71,7 +72,7 @@ require (
+ 	github.com/pmezard/go-difflib v1.0.0 // indirect
+ 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+ 	github.com/sosodev/duration v1.2.0 // indirect
+-	github.com/vektah/gqlparser/v2 v2.5.11 // indirect
++	github.com/vektah/gqlparser/v2 v2.5.14 // indirect
+ 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+ 	go.opencensus.io v0.24.0 // indirect
+ 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
+diff --git a/pkg/build/go.sum b/pkg/build/go.sum
+index 92ad8883..bf4b110d 100644
+--- a/pkg/build/go.sum
++++ b/pkg/build/go.sum
+@@ -33,10 +33,13 @@ github.com/Microsoft/go-winio v0.5.2 h1:a9IhgEQBCUEk6QCdml9CiJGhAws+YwffDHEMp1VM
+ github.com/Microsoft/go-winio v0.5.2/go.mod h1:WpS1mjBmmwHBEWmogvA2mj8546UReBk4v8QkMxJ6pZY=
+ github.com/adrg/xdg v0.4.0 h1:RzRqFcjH4nE5C6oTAxhBtoE2IRyjBSa62SCbyPidvls=
+ github.com/adrg/xdg v0.4.0/go.mod h1:N6ag73EX4wyxeaoeHctc1mas01KZgsj5tYiAIwqJE/E=
++github.com/agnivade/levenshtein v1.2.0 h1:U9L4IOT0Y3i0TIlUIDJ7rVUziKi/zPbrJGaFrtYH3SY=
++github.com/agnivade/levenshtein v1.2.0/go.mod h1:QVVI16kDrtSuwcpd0p1+xMC6Z/VfhtCyDIjcwga4/DU=
+ github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
+ github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
+ github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883 h1:bvNMNQO63//z+xNgfBlViaCIJKLlCJ6/fmUseuG0wVQ=
+ github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
++github.com/arbovm/levenshtein v0.0.0-20160628152529-48b4e1c0c4d0/go.mod h1:t2tdKJDJF9BV14lnkjHmOQgcvEKgtqs5a1N3LNdJhGE=
+ github.com/aws/aws-sdk-go v1.55.3 h1:0B5hOX+mIx7I5XPOrjrHlKSDQV/+ypFZpIHOx5LOk3E=
+ github.com/aws/aws-sdk-go v1.55.3/go.mod h1:eRwEWoyTWFMVYVQzKMNHWP5/RV4xIUGMQfXQHfHkpNU=
+ github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
+@@ -168,6 +171,7 @@ github.com/mitchellh/go-homedir v1.1.0 h1:lukF9ziXFxDFPkA1vsr5zpc1XuPDn/wFntq5mG
+ github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
+ github.com/moby/moby v23.0.4+incompatible h1:A/pe8vi9KIKhNbzR0G3wW4ACKDsMgXILBveMqiJNa8M=
+ github.com/moby/moby v23.0.4+incompatible/go.mod h1:fDXVQ6+S340veQPv35CzDahGBmHsiclFwfEygB/TWMc=
++github.com/moby/moby v24.0.9+incompatible/go.mod h1:fDXVQ6+S340veQPv35CzDahGBmHsiclFwfEygB/TWMc=
+ github.com/moby/term v0.5.0 h1:xt8Q1nalod/v7BqbG21f8mQPqH+xAaC9C3N3wfWbVP0=
+ github.com/moby/term v0.5.0/go.mod h1:8FzsFHVUBGZdbDsJw/ot+X+d5HLUbvklYLJ9uGfcI3Y=
+ github.com/morikuni/aec v1.0.0 h1:nP9CBfwrvYnBRgY6qfDQkygYDmYwOilePFkwzv4dU8A=
+@@ -215,6 +219,8 @@ github.com/urfave/cli/v2 v2.27.1 h1:8xSQ6szndafKVRmfyeUMxkNUJQMjL1F2zmsZ+qHpfho=
+ github.com/urfave/cli/v2 v2.27.1/go.mod h1:8qnjx1vcq5s2/wpsqoZFndg2CE5tNFyrTvS6SinrnYQ=
+ github.com/vektah/gqlparser/v2 v2.5.11 h1:JJxLtXIoN7+3x6MBdtIP59TP1RANnY7pXOaDnADQSf8=
+ github.com/vektah/gqlparser/v2 v2.5.11/go.mod h1:1rCcfwB2ekJofmluGWXMSEnPMZgbxzwj6FaZ/4OT8Cc=
++github.com/vektah/gqlparser/v2 v2.5.14 h1:dzLq75BJe03jjQm6n56PdH1oweB8ana42wj7E4jRy70=
++github.com/vektah/gqlparser/v2 v2.5.14/go.mod h1:WQQjFc+I1YIzoPvZBhUQX7waZgg3pMLi0r8KymvAE2w=
+ github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 h1:bAn7/zixMGCfxrRTfdpNzjtPYqr8smhKouy9mxVdGPU=
+ github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673/go.mod h1:N3UwUGtsrSj3ccvlPHLoLsHnpR27oXr4ZE984MbSER8=
+ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

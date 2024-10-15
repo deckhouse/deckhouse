@@ -22,7 +22,7 @@ shell:
   - cd /src
   - git clone --depth 1 --branch mimir-2.10.5 {{ .SOURCE_REPO }}/grafana/mimir.git .
   - git apply /patches/*.patch --verbose
-  - rm -r /src/vendor
+  - rm -r vendor operations/mimir-mixin-tools
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
