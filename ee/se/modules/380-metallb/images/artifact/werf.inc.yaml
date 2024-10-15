@@ -2,7 +2,7 @@
 artifact: {{ .ModuleName }}/metallb-src-artifact
 fromArtifact: src-artifact
 git:
-- add: /{{ .ModulePath }}modules/380-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+- add: /{{ .ModulePath }}modules/380-{{ .ModuleName }}/images/artifact/patches
   to: /patches
   stageDependencies:
     install:
