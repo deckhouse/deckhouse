@@ -52,7 +52,7 @@ func (r deployDelayReason) String() string {
 	return r.GoString()
 }
 
-func (r deployDelayReason) Message(release Release, applyTime time.Time) string {
+func (r deployDelayReason) Message(release v1alpha1.Release, applyTime time.Time) string {
 	if r == noDelay {
 		return r.String()
 	}

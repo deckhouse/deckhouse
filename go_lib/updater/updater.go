@@ -53,7 +53,7 @@ const (
 	ModeManual UpdateMode = "Manual"
 )
 
-type Updater[R Release] struct {
+type Updater[R v1alpha1.Release] struct {
 	now            time.Time
 	settings       *Settings
 	enabledModules set.Set
@@ -75,7 +75,7 @@ type Updater[R Release] struct {
 	releaseData                 DeckhouseReleaseData
 }
 
-func NewUpdater[R Release](dc dependency.Container, logger logger.Logger, settings *Settings,
+func NewUpdater[R v1alpha1.Release](dc dependency.Container, logger logger.Logger, settings *Settings,
 	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater,
 	webhookDataSource WebhookDataSource[R], enabledModules []string,
 ) *Updater[R] {
