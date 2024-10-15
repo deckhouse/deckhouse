@@ -24,6 +24,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"unicode/utf8"
 	"fmt"
 	"encoding/base64"
 	"io"
@@ -320,29 +321,21 @@ func (e *exporter) buildTLSConfig() (*tls.Config, error) {
 		tlsConfig.RootCAs = certPool
 	}
 
-	// Load certificates from CA field if it exists and check if it's Base64.
+	// Load certificates from CA field if it exists.
 	ca := e.config.TLSConfig["ca"]
 	if ca != "" {
+		decodedCA, err := base64.StdEncoding.DecodeString(ca)
+		if err != nil || !utf8.Valid(decodedCA) {
+			decodedCA = []byte(ca)
+		}
+
 		var certPool *x509.CertPool
 		if tlsConfig.RootCAs != nil {
 			certPool = tlsConfig.RootCAs
 		} else {
 			certPool = x509.NewCertPool()
 		}
-
-		if _, err := base64.StdEncoding.DecodeString(ca); err == nil {
-			decodedCA, err := base64.StdEncoding.DecodeString(ca)
-			if err != nil {
-				return nil, fmt.Errorf("failed to decode base64 CA: %v", err)
-			}
-			if !certPool.AppendCertsFromPEM(decodedCA) {
-				return nil, fmt.Errorf("failed to append decoded CA certificate")
-			}
-		} else {
-			if !certPool.AppendCertsFromPEM([]byte(ca)) {
-				return nil, fmt.Errorf("failed to append CA certificate from PEM")
-			}
-		}
+		certPool.AppendCertsFromPEM(decodedCA)
 		tlsConfig.RootCAs = certPool
 	}
 
