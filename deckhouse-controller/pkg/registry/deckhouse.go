@@ -24,17 +24,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	dhRelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
 type DeckhouseService struct {
@@ -52,7 +52,7 @@ func NewDeckhouseService(registryAddress string, registryConfig *utils.RegistryC
 	}
 }
 
-func (svc *DeckhouseService) GetDeckhouseRelease(ctx context.Context, releaseChannel string) (*ReleaseMetadata, error) {
+func (svc *DeckhouseService) GetDeckhouseRelease(ctx context.Context, releaseChannel string) (*dhRelease.ReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, "release-channel"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
@@ -72,7 +72,7 @@ func (svc *DeckhouseService) GetDeckhouseRelease(ctx context.Context, releaseCha
 		return nil, fmt.Errorf("fetch release metadata: %w", err)
 	}
 
-	if releaseMetadata.Version == nil {
+	if releaseMetadata.Version == "" {
 		return nil, fmt.Errorf("release metadata malformed: no version found")
 	}
 
@@ -93,66 +93,20 @@ func (svc *DeckhouseService) ListDeckhouseReleases(ctx context.Context) ([]strin
 	return ls, nil
 }
 
-type canarySettings struct {
-	Enabled  bool            `json:"enabled"`
-	Waves    uint            `json:"waves"`
-	Interval libapi.Duration `json:"interval"` // in minutes
-}
+func (svc *DeckhouseService) fetchReleaseMetadata(img v1.Image) (*dhRelease.ReleaseMetadata, error) {
+	var meta = new(dhRelease.ReleaseMetadata)
 
-type ReleaseMetadata struct {
-	Version      *semver.Version           `json:"version"`
-	Canary       map[string]canarySettings `json:"canary"`
-	Requirements map[string]string         `json:"requirements"`
-	Disruptions  map[string][]string       `json:"disruptions"`
-	Suspend      bool                      `json:"suspend"`
-
-	Changelog map[string]interface{}
-
-	Cooldown *metav1.Time `json:"-"`
-}
-
-func (svc *DeckhouseService) fetchReleaseMetadata(image v1.Image) (*ReleaseMetadata, error) {
-	var meta = new(ReleaseMetadata)
-
-	layers, err := image.Layers()
-	if err != nil {
-		return nil, err
-	}
-
-	if len(layers) == 0 {
-		return nil, fmt.Errorf("no layers found")
-	}
+	rc := mutate.Extract(img)
+	defer rc.Close()
 
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
 	}
 
-	for _, layer := range layers {
-		size, err := layer.Size()
-		if err != nil {
-			fmt.Println("couldn't calculate layer size")
-		}
-
-		if size == 0 {
-			// skip some empty werf layers
-			continue
-		}
-		rc, err := layer.Uncompressed()
-		if err != nil {
-			return nil, err
-		}
-
-		err = rr.untarDeckhouseLayer(rc)
-		if err != nil {
-			rc.Close()
-
-			fmt.Printf("layer is invalid: %s\n", err)
-
-			continue
-		}
-
-		rc.Close()
+	err := rr.untarDeckhouseLayer(rc)
+	if err != nil {
+		return nil, err
 	}
 
 	if rr.versionReader.Len() > 0 {
@@ -163,20 +117,22 @@ func (svc *DeckhouseService) fetchReleaseMetadata(image v1.Image) (*ReleaseMetad
 	}
 
 	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]interface{}
+		var changelog map[string]any
 
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 		if err != nil {
 			// if changelog build failed - warn about it but don't fail the release
 			fmt.Printf("Unmarshal CHANGELOG yaml failed: %s\n", err)
-			meta.Changelog = make(map[string]interface{})
+
+			meta.Changelog = make(map[string]any)
+
 			return meta, nil
 		}
 
 		meta.Changelog = changelog
 	}
 
-	cooldown := svc.fetchCooldown(image)
+	cooldown := svc.fetchCooldown(img)
 	if cooldown != nil {
 		meta.Cooldown = cooldown
 	}

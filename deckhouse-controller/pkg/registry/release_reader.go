@@ -36,9 +36,11 @@ func (rr *releaseReader) untarModuleMetadata(rc io.ReadCloser) error {
 			// end of archive
 			return nil
 		}
+
 		if err != nil {
 			return err
 		}
+
 		if strings.HasPrefix(hdr.Name, ".werf") {
 			continue
 		}
@@ -54,7 +56,6 @@ func (rr *releaseReader) untarModuleMetadata(rc io.ReadCloser) error {
 			if err != nil {
 				return err
 			}
-
 		default:
 			continue
 		}
@@ -69,6 +70,7 @@ func (rr *releaseReader) untarDeckhouseLayer(rc io.Reader) error {
 			// end of archive
 			return nil
 		}
+
 		if err != nil {
 			return err
 		}
@@ -84,7 +86,6 @@ func (rr *releaseReader) untarDeckhouseLayer(rc io.Reader) error {
 			if err != nil {
 				return err
 			}
-
 		default:
 			continue
 		}

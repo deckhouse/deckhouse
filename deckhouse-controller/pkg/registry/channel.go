@@ -43,6 +43,6 @@ const (
 	ChannelAlpha       = "alpha"
 	ChannelBeta        = "beta"
 	ChannelStable      = "stable"
-	ChannelEarlyAccess = "eary-access"
+	ChannelEarlyAccess = "early-access"
 	ChannelRockSolid   = "rock-solid"
 )

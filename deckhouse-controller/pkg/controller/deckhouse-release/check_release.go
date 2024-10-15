@@ -31,6 +31,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/spaolacci/murmur3"
@@ -339,7 +340,7 @@ type DeckhouseReleaseChecker struct {
 	moduleManager  moduleManager
 
 	releaseChannel  string
-	releaseMetadata releaseMetadata
+	releaseMetadata ReleaseMetadata
 	tags            []string
 }
 
@@ -371,11 +372,12 @@ func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash strin
 	if err != nil {
 		return "", err
 	}
+
 	if releaseMeta.Version == "" {
 		return "", fmt.Errorf("version not found. Probably image is broken or layer does not exist")
 	}
 
-	dcr.releaseMetadata = releaseMeta
+	dcr.releaseMetadata = *releaseMeta
 
 	return imageDigest.String(), nil
 }
@@ -385,7 +387,7 @@ type releaseReader struct {
 	changelogReader *bytes.Buffer
 }
 
-func (rr *releaseReader) untarLayer(rc io.Reader) error {
+func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 	tr := tar.NewReader(rc)
 	for {
 		hdr, err := tr.Next()
@@ -415,65 +417,45 @@ func (rr *releaseReader) untarLayer(rc io.Reader) error {
 	}
 }
 
-func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releaseMetadata, error) {
-	var meta releaseMetadata
+func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(img v1.Image) (*ReleaseMetadata, error) {
+	meta := new(ReleaseMetadata)
 
-	layers, err := image.Layers()
-	if err != nil {
-		return meta, err
-	}
-
-	if len(layers) == 0 {
-		return meta, fmt.Errorf("no layers found")
-	}
+	rc := mutate.Extract(img)
+	defer rc.Close()
 
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
 	}
-	for _, layer := range layers {
-		size, err := layer.Size()
-		if err != nil {
-			dcr.logger.Warnf("couldn't calculate layer size")
-		}
-		if size == 0 {
-			// skip some empty werf layers
-			continue
-		}
-		rc, err := layer.Uncompressed()
-		if err != nil {
-			return meta, err
-		}
 
-		err = rr.untarLayer(rc)
-		if err != nil {
-			rc.Close()
-			dcr.logger.Warnf("layer is invalid: %s", err)
-			continue
-		}
-		rc.Close()
+	err := rr.untarMetadata(rc)
+	if err != nil {
+		return nil, err
 	}
 
 	if rr.versionReader.Len() > 0 {
 		err = json.NewDecoder(rr.versionReader).Decode(&meta)
 		if err != nil {
-			return meta, err
+			return nil, err
 		}
 	}
 
 	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]interface{}
+		var changelog map[string]any
+
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 		if err != nil {
 			// if changelog build failed - warn about it but don't fail the release
 			dcr.logger.Warnf("Unmarshal CHANGELOG yaml failed: %s", err)
-			meta.Changelog = make(map[string]interface{})
+			meta.Changelog = make(map[string]any)
+
 			return meta, nil
 		}
+
 		meta.Changelog = changelog
 	}
 
-	cooldown := dcr.fetchCooldown(image)
+	cooldown := dcr.fetchCooldown(img)
 	if cooldown != nil {
 		meta.Cooldown = cooldown
 	}
@@ -552,11 +534,12 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, actual
 	if err != nil {
 		return nil, fmt.Errorf("fetch release metadata: %w", err)
 	}
+
 	if releaseMeta.Version == "" {
 		return nil, fmt.Errorf("version not found. Probably image is broken or layer does not exist")
 	}
 
-	dcr.releaseMetadata = releaseMeta
+	dcr.releaseMetadata = *releaseMeta
 
 	return nextVersion, nil
 }
@@ -639,7 +622,8 @@ func (dcr *DeckhouseReleaseChecker) listTags(ctx context.Context) ([]string, err
 	return dcr.tags, err
 }
 
-type releaseMetadata struct {
+type ReleaseMetadata struct {
+	// TODO: semVer as module?
 	Version      string                    `json:"version"`
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`

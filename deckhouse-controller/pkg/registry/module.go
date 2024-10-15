@@ -23,13 +23,13 @@ import (
 	"path"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"gopkg.in/yaml.v2"
 
+	modRelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -87,13 +87,7 @@ func (svc *ModuleService) ListModuleTags(ctx context.Context, moduleName string)
 	return ls, err
 }
 
-type ModuleReleaseMetadata struct {
-	Version *semver.Version `json:"version"`
-
-	Changelog map[string]any
-}
-
-func (svc *ModuleService) GetModuleRelease(ctx context.Context, moduleName, releaseChannel string) (*ModuleReleaseMetadata, error) {
+func (svc *ModuleService) GetModuleRelease(ctx context.Context, moduleName, releaseChannel string) (*modRelease.ModuleReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName, "release"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
@@ -120,8 +114,8 @@ func (svc *ModuleService) GetModuleRelease(ctx context.Context, moduleName, rele
 	return moduleMetadata, nil
 }
 
-func (svc *ModuleService) fetchModuleReleaseMetadata(img v1.Image) (*ModuleReleaseMetadata, error) {
-	var meta = new(ModuleReleaseMetadata)
+func (svc *ModuleService) fetchModuleReleaseMetadata(img v1.Image) (*modRelease.ModuleReleaseMetadata, error) {
+	var meta = new(modRelease.ModuleReleaseMetadata)
 
 	rc := mutate.Extract(img)
 	defer rc.Close()
@@ -149,7 +143,11 @@ func (svc *ModuleService) fetchModuleReleaseMetadata(img v1.Image) (*ModuleRelea
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 
 		if err != nil {
+			// if changelog build failed - warn about it but don't fail the release
+			fmt.Printf("Unmarshal CHANGELOG yaml failed: %s\n", err)
+
 			meta.Changelog = make(map[string]any)
+
 			return nil, nil
 		}
 

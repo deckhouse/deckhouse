@@ -381,8 +381,8 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 	return def, nil
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
-	var meta moduleReleaseMetadata
+func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (ModuleReleaseMetadata, error) {
+	var meta ModuleReleaseMetadata
 
 	rc := mutate.Extract(img)
 	defer rc.Close()
@@ -460,13 +460,11 @@ func isRel(candidate, target string) bool {
 	return err == nil && !strings.HasPrefix(filepath.Clean(relpath), "..")
 }
 
-type moduleReleaseMetadata struct {
+type ModuleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
 
 	Changelog map[string]any
 }
-
-// Inject registry to module values
 
 func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alpha1.ModuleSource) error {
 	valuesFile := path.Join(moduleVersionPath, "openapi", "values.yaml")
