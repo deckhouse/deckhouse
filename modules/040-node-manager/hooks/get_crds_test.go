@@ -252,7 +252,6 @@ spec:
     zones:
     - xxx
 `
-
 		stateNGSimple = `
 ---
 apiVersion: deckhouse.io/v1
@@ -266,8 +265,6 @@ spec:
       kind: D8TestInstanceClass
       name: proper1
 `
-
-
 		stateICProper = `
 ---
 apiVersion: deckhouse.io/v1alpha1
