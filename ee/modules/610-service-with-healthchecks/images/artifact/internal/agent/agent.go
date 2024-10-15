@@ -59,8 +59,8 @@ func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int
 		Client:              client,
 		Scheme:              scheme,
 		logger:              logger,
-		tasks:               make(chan ProbeTask, workersCount),
-		tasksResults:        make(chan ProbeResult, workersCount),
+		tasks:               make(chan ProbeTask, workersCount*10),
+		tasksResults:        make(chan ProbeResult, workersCount*10),
 		events:              make(chan event.GenericEvent),
 		healthecksByService: make(map[types.NamespacedName][]HealthcheckTarget),
 	}
