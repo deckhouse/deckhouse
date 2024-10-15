@@ -74,6 +74,8 @@ shell:
   install:
     - export GOPROXY={{ $.GOPROXY }}
     - cd /src/plugins
+    - go mod tidy
+    - go mod vendor
     - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'
     - cp -f bin/* /
     - cd /src/cni-plugin
