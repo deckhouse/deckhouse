@@ -18,21 +18,17 @@ package registry
 
 import "fmt"
 
-const (
-	UnknownChannelSecretDiscovery = "Unknown"
-)
+var _ fmt.Stringer = (*ReleaseChannel)(nil)
 
-var _ fmt.Stringer = (*Channel)(nil)
+type ReleaseChannel string
 
-type Channel string
-
-func (ch Channel) String() string {
+func (ch ReleaseChannel) String() string {
 	return string(ch)
 }
 
-func (ch Channel) IsValid() bool {
+func (ch ReleaseChannel) IsValid() bool {
 	switch ch {
-	case ChannelAlpha, ChannelBeta, ChannelStable, ChannelEarlyAccess, ChannelRockSolid:
+	case ReleaseChannelAlpha, ReleaseChannelBeta, ReleaseChannelStable, ReleaseChannelEarlyAccess, ReleaseChannelRockSolid:
 		return true
 	}
 
@@ -40,9 +36,9 @@ func (ch Channel) IsValid() bool {
 }
 
 const (
-	ChannelAlpha       = "alpha"
-	ChannelBeta        = "beta"
-	ChannelStable      = "stable"
-	ChannelEarlyAccess = "early-access"
-	ChannelRockSolid   = "rock-solid"
+	ReleaseChannelAlpha       = "alpha"
+	ReleaseChannelBeta        = "beta"
+	ReleaseChannelStable      = "stable"
+	ReleaseChannelEarlyAccess = "early-access"
+	ReleaseChannelRockSolid   = "rock-solid"
 )

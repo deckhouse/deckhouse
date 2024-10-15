@@ -38,6 +38,11 @@ var semVerRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
 	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
 	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
 
+const (
+	ReleaseChannelAuto                   = "auto"
+	UnknownReleaseChannelSecretDiscovery = "Unknown"
+)
+
 func DefineRegistryCommand(kpApp *kingpin.Application) {
 	registryCmd := kpApp.Command("registry", "Deckhouse repository work.").
 		PreAction(func(_ *kingpin.ParseContext) error {
@@ -62,7 +67,8 @@ func registerReleaseCommand(parentCMD *kingpin.CmdClause) {
 
 	releaseChannel := releasesCmd.Flag("channel", "Release channel."+
 		" If release is 'auto' - using default channel from configuration."+
-		" If there is not default channel in configuration - use 'stable'").Short('c').String()
+		" If there is not default channel in configuration - use 'stable'").Short('c').
+		Enum(ReleaseChannelAlpha, ReleaseChannelBeta, ReleaseChannelStable, ReleaseChannelEarlyAccess, ReleaseChannelRockSolid, ReleaseChannelAuto)
 	allFlag := releasesCmd.Flag("all", "Output without restrictions.").Bool()
 	releasesCmd.Action(func(_ *kingpin.ParseContext) error {
 		ctx := context.TODO()
@@ -72,15 +78,15 @@ func registerReleaseCommand(parentCMD *kingpin.CmdClause) {
 			return fmt.Errorf("get deckhouse registry: %w", err)
 		}
 
-		svc := NewDeckhouseService(registry, rconf)
+		svc := newDeckhouseReleaseService(registry, rconf)
 
 		if *releaseChannel != "" {
-			if *releaseChannel != "auto" {
+			if *releaseChannel != ReleaseChannelAuto {
 				channel = *releaseChannel
 			}
 
-			if channel == "" || channel == UnknownChannelSecretDiscovery {
-				channel = ChannelStable
+			if channel == "" || channel == UnknownReleaseChannelSecretDiscovery {
+				channel = ReleaseChannelStable
 			}
 
 			return handleGetDeckhouseRelease(ctx, svc, channel, *allFlag)
@@ -90,7 +96,7 @@ func registerReleaseCommand(parentCMD *kingpin.CmdClause) {
 	})
 }
 
-func handleListDeckhouseReleases(ctx context.Context, svc *DeckhouseService, all bool) error {
+func handleListDeckhouseReleases(ctx context.Context, svc *deckhouseReleaseService, all bool) error {
 	ls, err := svc.ListDeckhouseReleases(ctx)
 	if err != nil {
 		return fmt.Errorf("list deckhouse releases: %w", err)
@@ -123,7 +129,7 @@ func handleListDeckhouseReleases(ctx context.Context, svc *DeckhouseService, all
 	return nil
 }
 
-func handleGetDeckhouseRelease(ctx context.Context, svc *DeckhouseService, channel string, all bool) error {
+func handleGetDeckhouseRelease(ctx context.Context, svc *deckhouseReleaseService, channel string, all bool) error {
 	meta, err := svc.GetDeckhouseRelease(ctx, channel)
 	if err != nil && !errors.Is(err, ErrChannelIsNotFound) {
 		return fmt.Errorf("get deckhouse release: %w", err)
@@ -186,7 +192,8 @@ func registerModuleCommand(parentCMD *kingpin.CmdClause) {
 		Alias("module").Alias("mod")
 	moduleSource := modulesCmd.Arg("module-source", "Module source name.").Required().String()
 	moduleName := modulesCmd.Arg("module-name", "Module name.").String()
-	moduleChannel := modulesCmd.Flag("channel", "Module name.").Short('c').String()
+	moduleChannel := modulesCmd.Flag("channel", "Module name.").Short('c').
+		Enum(ReleaseChannelAlpha, ReleaseChannelBeta, ReleaseChannelStable, ReleaseChannelEarlyAccess, ReleaseChannelRockSolid)
 	allFlag := modulesCmd.Flag("all", "Complete list of tags.").Bool()
 
 	modulesCmd.Action(func(_ *kingpin.ParseContext) error {
@@ -197,7 +204,7 @@ func registerModuleCommand(parentCMD *kingpin.CmdClause) {
 			return fmt.Errorf("get module registry: %w", err)
 		}
 
-		svc := NewModuleService(registry, rconf)
+		svc := newModuleReleaseService(registry, rconf)
 
 		if *moduleName != "" {
 			if *moduleChannel != "" {
@@ -211,7 +218,7 @@ func registerModuleCommand(parentCMD *kingpin.CmdClause) {
 	})
 }
 
-func handleGetModuleInfoInChannel(ctx context.Context, svc *ModuleService, name string, channel string, all bool) error {
+func handleGetModuleInfoInChannel(ctx context.Context, svc *moduleReleaseService, name string, channel string, all bool) error {
 	meta, err := svc.GetModuleRelease(ctx, name, channel)
 	if err != nil && !errors.Is(err, ErrChannelIsNotFound) {
 		return fmt.Errorf("get module release %s: %w", name, err)
@@ -237,7 +244,7 @@ func handleGetModuleInfoInChannel(ctx context.Context, svc *ModuleService, name 
 	return nil
 }
 
-func handleListModulesVersions(ctx context.Context, svc *ModuleService, name string, all bool) error {
+func handleListModulesVersions(ctx context.Context, svc *moduleReleaseService, name string, all bool) error {
 	ls, err := svc.ListModuleTags(ctx, name)
 	if err != nil && !errors.Is(err, ErrModuleIsNotFound) {
 		return fmt.Errorf("list module tags: %w", err)
@@ -274,7 +281,7 @@ func handleListModulesVersions(ctx context.Context, svc *ModuleService, name str
 	return nil
 }
 
-func handleListModulesNames(ctx context.Context, svc *ModuleService, all bool) error {
+func handleListModulesNames(ctx context.Context, svc *moduleReleaseService, all bool) error {
 	modules, err := svc.ListModules(ctx)
 	if err != nil {
 		return fmt.Errorf("list modules: %w", err)

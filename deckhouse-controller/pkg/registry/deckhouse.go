@@ -22,14 +22,12 @@ import (
 	"fmt"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"gopkg.in/yaml.v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	dhRelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -37,22 +35,22 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
-type DeckhouseService struct {
+type deckhouseReleaseService struct {
 	dc dependency.Container
 
 	registry        string
 	registryOptions []cr.Option
 }
 
-func NewDeckhouseService(registryAddress string, registryConfig *utils.RegistryConfig) *DeckhouseService {
-	return &DeckhouseService{
+func newDeckhouseReleaseService(registryAddress string, registryConfig *utils.RegistryConfig) *deckhouseReleaseService {
+	return &deckhouseReleaseService{
 		dc:              dependency.NewDependencyContainer(),
 		registry:        registryAddress,
 		registryOptions: utils.GenerateRegistryOptions(registryConfig),
 	}
 }
 
-func (svc *DeckhouseService) GetDeckhouseRelease(ctx context.Context, releaseChannel string) (*dhRelease.ReleaseMetadata, error) {
+func (svc *deckhouseReleaseService) GetDeckhouseRelease(ctx context.Context, releaseChannel string) (*dhRelease.ReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, "release-channel"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
@@ -79,7 +77,7 @@ func (svc *DeckhouseService) GetDeckhouseRelease(ctx context.Context, releaseCha
 	return releaseMetadata, nil
 }
 
-func (svc *DeckhouseService) ListDeckhouseReleases(ctx context.Context) ([]string, error) {
+func (svc *deckhouseReleaseService) ListDeckhouseReleases(ctx context.Context) ([]string, error) {
 	regCli, err := svc.dc.GetRegistryClient(svc.registry, svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
@@ -93,7 +91,7 @@ func (svc *DeckhouseService) ListDeckhouseReleases(ctx context.Context) ([]strin
 	return ls, nil
 }
 
-func (svc *DeckhouseService) fetchReleaseMetadata(img v1.Image) (*dhRelease.ReleaseMetadata, error) {
+func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelease.ReleaseMetadata, error) {
 	var meta = new(dhRelease.ReleaseMetadata)
 
 	rc := mutate.Extract(img)
@@ -104,7 +102,7 @@ func (svc *DeckhouseService) fetchReleaseMetadata(img v1.Image) (*dhRelease.Rele
 		changelogReader: bytes.NewBuffer(nil),
 	}
 
-	err := rr.untarDeckhouseLayer(rc)
+	err := rr.untarMetadata(rc)
 	if err != nil {
 		return nil, err
 	}
@@ -132,55 +130,5 @@ func (svc *DeckhouseService) fetchReleaseMetadata(img v1.Image) (*dhRelease.Rele
 		meta.Changelog = changelog
 	}
 
-	cooldown := svc.fetchCooldown(img)
-	if cooldown != nil {
-		meta.Cooldown = cooldown
-	}
-
 	return meta, nil
-}
-
-func (svc *DeckhouseService) fetchCooldown(image v1.Image) *metav1.Time {
-	cfg, err := image.ConfigFile()
-	if err != nil {
-		fmt.Printf("image config error: %s\n", err)
-
-		return nil
-	}
-
-	if cfg == nil {
-		return nil
-	}
-
-	if len(cfg.Config.Labels) == 0 {
-		return nil
-	}
-
-	if v, ok := cfg.Config.Labels["cooldown"]; ok {
-		t, err := parseTime(v)
-		if err != nil {
-			fmt.Printf("parse cooldown(%s) error: %s\n", v, err)
-			return nil
-		}
-
-		mt := metav1.NewTime(t)
-
-		return &mt
-	}
-
-	return nil
-}
-
-func parseTime(s string) (time.Time, error) {
-	t, err := time.Parse("2006-01-02 15:04", s)
-	if err == nil {
-		return t, nil
-	}
-
-	t, err = time.Parse("2006-01-02 15:04:05", s)
-	if err == nil {
-		return t, nil
-	}
-
-	return time.Parse(time.RFC3339, s)
 }

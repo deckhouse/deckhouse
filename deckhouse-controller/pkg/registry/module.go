@@ -35,22 +35,22 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
-type ModuleService struct {
+type moduleReleaseService struct {
 	dc dependency.Container
 
 	registry        string
 	registryOptions []cr.Option
 }
 
-func NewModuleService(registryAddress string, registryConfig *utils.RegistryConfig) *ModuleService {
-	return &ModuleService{
+func newModuleReleaseService(registryAddress string, registryConfig *utils.RegistryConfig) *moduleReleaseService {
+	return &moduleReleaseService{
 		dc:              dependency.NewDependencyContainer(),
 		registry:        registryAddress,
 		registryOptions: utils.GenerateRegistryOptions(registryConfig),
 	}
 }
 
-func (svc *ModuleService) ListModules(ctx context.Context) ([]string, error) {
+func (svc *moduleReleaseService) ListModules(ctx context.Context) ([]string, error) {
 	regCli, err := svc.dc.GetRegistryClient(svc.registry, svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
@@ -69,7 +69,7 @@ var (
 	ErrModuleIsNotFound  = errors.New("module is not found")
 )
 
-func (svc *ModuleService) ListModuleTags(ctx context.Context, moduleName string) ([]string, error) {
+func (svc *moduleReleaseService) ListModuleTags(ctx context.Context, moduleName string) ([]string, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
@@ -87,7 +87,7 @@ func (svc *ModuleService) ListModuleTags(ctx context.Context, moduleName string)
 	return ls, err
 }
 
-func (svc *ModuleService) GetModuleRelease(ctx context.Context, moduleName, releaseChannel string) (*modRelease.ModuleReleaseMetadata, error) {
+func (svc *moduleReleaseService) GetModuleRelease(ctx context.Context, moduleName, releaseChannel string) (*modRelease.ModuleReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName, "release"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
@@ -114,7 +114,7 @@ func (svc *ModuleService) GetModuleRelease(ctx context.Context, moduleName, rele
 	return moduleMetadata, nil
 }
 
-func (svc *ModuleService) fetchModuleReleaseMetadata(img v1.Image) (*modRelease.ModuleReleaseMetadata, error) {
+func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modRelease.ModuleReleaseMetadata, error) {
 	var meta = new(modRelease.ModuleReleaseMetadata)
 
 	rc := mutate.Extract(img)
@@ -125,7 +125,7 @@ func (svc *ModuleService) fetchModuleReleaseMetadata(img v1.Image) (*modRelease.
 		changelogReader: bytes.NewBuffer(nil),
 	}
 
-	err := rr.untarModuleMetadata(rc)
+	err := rr.untarMetadata(rc)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,6 @@ func (svc *ModuleService) fetchModuleReleaseMetadata(img v1.Image) (*modRelease.
 		var changelog map[string]any
 
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
-
 		if err != nil {
 			// if changelog build failed - warn about it but don't fail the release
 			fmt.Printf("Unmarshal CHANGELOG yaml failed: %s\n", err)
