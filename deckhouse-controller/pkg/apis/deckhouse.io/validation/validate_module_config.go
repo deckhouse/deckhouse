@@ -49,11 +49,11 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 					return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 				}
 
-				// if we have no annotation
+				// if we have no annotation and module enabled
 				// we check module
 				// we check confirmation restriction and confirmation message
 				_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
-				if !ok {
+				if !ok && *cfg.Spec.Enabled {
 					module, err := moduleStorage.GetModuleByName(obj.GetName())
 					if err != nil {
 						return rejectResult(fmt.Sprintf("Module '%s' not registered in deckhouse", obj.GetName()))
