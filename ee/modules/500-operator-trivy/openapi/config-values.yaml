@@ -84,3 +84,12 @@ properties:
     x-example:
       - app
       - env
+  insecureRegistries:
+    type: object
+    additionalProperties:
+      type: string
+    x-kubernetes-preserve-unknown-fields: true
+    x-examples:
+      - myregistry: registryHostName
+    description: |
+      The registry to which insecure connections are allowed. There can be multiple registries with different keys.
