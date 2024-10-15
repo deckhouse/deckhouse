@@ -23,7 +23,7 @@ import (
 )
 
 type ModuleStorage interface {
-	GetModules() map[string]*models.DeckhouseModule
+	GetModuleByName(name string) (*models.DeckhouseModule, error)
 }
 
 // RegisterAdmissionHandlers register validation webhook handlers for admission server built-in in addon-operator

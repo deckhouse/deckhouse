@@ -17,7 +17,9 @@ limitations under the License.
 package validation
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -34,10 +36,15 @@ import (
 // moduleConfigValidationHandler validations for ModuleConfig creation
 func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+		var (
+			cfg = new(v1alpha1.ModuleConfig)
+			ok  bool
+		)
+
 		switch review.Operation {
 		case kwhmodel.OperationDelete:
 			{
-				cfg, ok := obj.(*v1alpha1.ModuleConfig)
+				cfg, ok = obj.(*v1alpha1.ModuleConfig)
 				if !ok {
 					return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 				}
@@ -47,8 +54,8 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 				// we check confirmation restriction and confirmation message
 				_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
 				if !ok {
-					module, ok := moduleStorage.GetModules()[obj.GetName()]
-					if !ok {
+					module, err := moduleStorage.GetModuleByName(obj.GetName())
+					if err != nil {
 						return rejectResult(fmt.Sprintf("Module '%s' not registered in deckhouse", obj.GetName()))
 					}
 
@@ -62,28 +69,42 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 			}
 		case kwhmodel.OperationConnect, kwhmodel.OperationUnknown:
 			return rejectResult(fmt.Sprintf("operation '%s' is not applicable", review.Operation))
-		}
-
-		cfg, ok := obj.(*v1alpha1.ModuleConfig)
-		if !ok {
-			return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
-		}
-
-		// if we have no annotation and module is not disabled
-		// (what if we have no annotation and module is disabled?)
-		// (if annotation stay while module disabled - we alarm user everytime, before he deletes it)
-		// we check module
-		// we check confirmation restriction and confirmation message
-		_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
-		if !ok && !*cfg.Spec.Enabled {
-			module, ok := moduleStorage.GetModules()[obj.GetName()]
+		case kwhmodel.OperationCreate:
+			cfg, ok = obj.(*v1alpha1.ModuleConfig)
 			if !ok {
-				return rejectResult(fmt.Sprintf("Module '%s' not registered in deckhouse", obj.GetName()))
+				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
+			}
+		case kwhmodel.OperationUpdate:
+			oldModuleCfg := new(v1alpha1.ModuleConfig)
+
+			buf := bytes.NewBuffer(review.OldObjectRaw)
+			err = json.NewDecoder(buf).Decode(oldModuleCfg)
+			if err != nil {
+				return nil, fmt.Errorf("can not parse old module config: %w", err)
 			}
 
-			reason, needConfirm := module.GetConfirmationReason()
-			if needConfirm {
-				return rejectResult(reason)
+			cfg, ok = obj.(*v1alpha1.ModuleConfig)
+			if !ok {
+				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
+			}
+
+			// if we have no annotation and module is not disabled
+			// (what if we have no annotation and module is disabled?)
+			// (if annotation stay while module disabled - we alarm user everytime, before he deletes it)
+			// we check module
+			// we check confirmation restriction and confirmation message
+			_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
+			_, oldOk := oldModuleCfg.Annotations[v1alpha1.AllowDisableAnnotion]
+			if !ok && !oldOk && !*cfg.Spec.Enabled {
+				module, err := moduleStorage.GetModuleByName(obj.GetName())
+				if err != nil {
+					return rejectResult(fmt.Sprintf("Module '%s' not registered in deckhouse", obj.GetName()))
+				}
+
+				reason, needConfirm := module.GetConfirmationReason()
+				if needConfirm {
+					return rejectResult(reason)
+				}
 			}
 		}
 
