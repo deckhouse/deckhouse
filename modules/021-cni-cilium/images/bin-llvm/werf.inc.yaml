@@ -14,6 +14,7 @@
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
+fromCacheVersion: "2024-10-15 14:30"
 shell:
   install:
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
@@ -23,7 +24,7 @@ shell:
   - git cherry-pick 13f6c81c5d9a7a34a684363bcaad8eb7c65356fd
   - git cherry-pick ea72b0319d7b0f0c2fcf41d121afa5d031b319d5
   # CSE
-  - rm -rf llvm/clang-tools-extra/clangd/clients/clangd-vscode
+  - rm -rf clang-tools-extra/clangd/clients/clangd-vscode
 ---
 artifact: {{ $.ModuleName }}/llvm-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
