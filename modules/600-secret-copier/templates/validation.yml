@@ -13,12 +13,7 @@ spec:
   failurePolicy: Fail
   matchConstraints:
     matchPolicy: Equivalent
-    namespaceSelector:
-      matchExpressions:
-        - key: kubernetes.io/metadata.name
-          operator: NotIn
-          values:
-            - default
+    namespaceSelector: {}
     objectSelector: {}
     resourceRules:
       - apiGroups:
@@ -50,7 +45,12 @@ spec:
     objectSelector:
       matchLabels:
         secret-copier.deckhouse.io/enabled: ""
-    namespaceSelector: {}
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - default
   policyName: {{ $policyName }}
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
