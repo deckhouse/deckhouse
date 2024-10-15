@@ -33,6 +33,14 @@ import (
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 )
 
+type AnnotationsOnly struct {
+	ObjectMeta `json:"metadata,omitempty"`
+}
+
+type ObjectMeta struct {
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
 // moduleConfigValidationHandler validations for ModuleConfig creation
 func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
@@ -77,10 +85,10 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
 		case kwhmodel.OperationUpdate:
-			oldModuleCfg := new(v1alpha1.ModuleConfig)
+			oldModuleMeta := new(AnnotationsOnly)
 
 			buf := bytes.NewBuffer(review.OldObjectRaw)
-			err = json.NewDecoder(buf).Decode(oldModuleCfg)
+			err = json.NewDecoder(buf).Decode(oldModuleMeta)
 			if err != nil {
 				return nil, fmt.Errorf("can not parse old module config: %w", err)
 			}
@@ -97,7 +105,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 			// we check module
 			// we check confirmation restriction and confirmation message
 			_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
-			_, oldOk := oldModuleCfg.Annotations[v1alpha1.AllowDisableAnnotion]
+			_, oldOk := oldModuleMeta.Annotations[v1alpha1.AllowDisableAnnotion]
 			if !ok && !oldOk && !*cfg.Spec.Enabled {
 				module, err := moduleStorage.GetModuleByName(obj.GetName())
 				if err != nil {
