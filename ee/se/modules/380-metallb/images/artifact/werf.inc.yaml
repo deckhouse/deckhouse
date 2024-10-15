@@ -8,7 +8,7 @@ git:
     install:
     - '**/*'
 shell:
-  beforeInstall:
+  install:
   - git clone -b v0.14.8 {{ $.SOURCE_REPO }}/metallb/metallb.git /src
   - git apply /patches/*.patch --verbose
 ---
