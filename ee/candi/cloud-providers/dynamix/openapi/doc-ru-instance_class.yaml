@@ -7,7 +7,6 @@ spec:
         openAPIV3Schema:
           description: |
             Параметры группы Dynamix servers, которые будет использовать `CAPI` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/)).
-
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           properties:
             spec:

@@ -6,11 +6,8 @@ apiVersions:
     additionalProperties: false
     description: |
       Описывает конфигурацию облачного кластера в Dynamix.
-
       Используется cloud-провайдером, если control plane кластера размещен в облаке.
-
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
-
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
@@ -29,7 +26,6 @@ apiVersions:
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
-
           > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
         properties:
           replicas:
@@ -81,9 +77,7 @@ apiVersions:
                 labels:
                   description: |
                     Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
-
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
-
                     Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
                   x-doc-example: |
                     ```yaml
@@ -102,7 +96,6 @@ apiVersions:
                 taints:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
-
                     > **Внимание!** Доступны только поля `effect`, `key`, `values`.
                   x-doc-example: |
                     ```yaml
@@ -125,8 +118,7 @@ apiVersions:
       layout:
         description: |
           Название схемы размещения.
-
-          [Подробнее](layouts.html)  о возможных схемах размещения провайдера.
+          [Подробнее](layouts.html) о возможных схемах размещения провайдера.
       provider:
         type: object
         additionalProperties: false

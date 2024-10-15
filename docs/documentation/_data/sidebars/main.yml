@@ -363,8 +363,6 @@ entries:
                       url: /modules/030-cloud-provider-dynamix/configuration.html
                     - title: Custom Resources
                       url: /modules/030-cloud-provider-dynamix/cr.html
-                - title: FAQ
-                  url: /modules/030-cloud-provider-dynamix/faq.html
             - title: VMware Cloud Director
               d8Revision: ee
               featureStatus: experimental
