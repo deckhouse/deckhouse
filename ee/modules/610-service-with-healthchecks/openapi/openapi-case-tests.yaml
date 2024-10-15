@@ -1,10 +1,12 @@
 positive:
   configValues:
-  - {}
-  values:
-  - { internal: {} }
+    - debug: true
+      numberOfWorkers: 16
+    - debug: false
+      numberOfWorkers: 100
 negative:
   configValues:
-  - { somethingInConfig: yes }
-  values:
-  - { somethingInConfig: yes }
+    - debug: true
+      numberOfWorkers: -16
+    - debug: "bbb"
+      numberOfWorkers: 1024

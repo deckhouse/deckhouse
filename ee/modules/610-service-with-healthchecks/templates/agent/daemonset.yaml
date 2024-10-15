@@ -1,6 +1,6 @@
 {{- define "agent_resources" }}
-cpu: 10m
-memory: 30Mi
+cpu: 1500m
+memory: 300Mi
 {{- end }}
 
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
