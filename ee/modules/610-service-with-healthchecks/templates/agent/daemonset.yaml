@@ -45,9 +45,7 @@ spec:
                 resourceFieldRef:
                   resource: limits.memory
             - name: GOMAXPROCS
-              valueFrom:
-                resourceFieldRef:
-                    resource: limits.cpu
+              value: "4"
           image: {{ include "helm_lib_module_image" (list $ "agent") }}
           imagePullPolicy: IfNotPresent
           name: agent
