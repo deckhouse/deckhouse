@@ -39,8 +39,14 @@ var semVerRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
 	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)
 
 const (
-	ReleaseChannelAuto                   = "auto"
 	UnknownReleaseChannelSecretDiscovery = "Unknown"
+	ReleaseChannelAuto                   = "auto"
+
+	ReleaseChannelAlpha       = "alpha"
+	ReleaseChannelBeta        = "beta"
+	ReleaseChannelStable      = "stable"
+	ReleaseChannelEarlyAccess = "early-access"
+	ReleaseChannelRockSolid   = "rock-solid"
 )
 
 func DefineRegistryCommand(kpApp *kingpin.Application) {
