@@ -975,7 +975,7 @@ func (c *moduleReleaseReconciler) createModuleSymlink(moduleName, moduleVersion 
 	if err != nil || !info.IsDir() {
 		c.logger.Infof("Downloading module %q from registry", moduleName)
 		// download the module to fs
-		md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, moduleSource, utils.GenerateRegistryOptions(moduleSource))
+		md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, moduleSource, utils.GenerateRegistryOptionsFromModuleSource(moduleSource))
 		_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
 		if err != nil {
 			return fmt.Errorf("download module %v with version %v failed: %w. Skipping", moduleName, moduleVersion, err)

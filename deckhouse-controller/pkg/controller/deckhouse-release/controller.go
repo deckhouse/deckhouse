@@ -46,6 +46,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -472,11 +473,13 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 
 	var opts []cr.Option
 	if registrySecret != nil {
-		opts = []cr.Option{
-			cr.WithCA(string(registrySecret.Data["ca"])),
-			cr.WithInsecureSchema(string(registrySecret.Data["scheme"]) == "http"),
-			cr.WithAuth(string(registrySecret.Data[".dockerconfigjson"])),
+		drs, _ := utils.ParseDeckhouseRegistrySecret(registrySecret.Data)
+		rconf := &utils.RegistryConfig{
+			DockerConfig: drs.DockerConfig,
+			Scheme:       drs.Scheme,
+			CA:           drs.CA,
 		}
+		opts = utils.GenerateRegistryOptions(rconf)
 	}
 
 	regClient, err := r.dc.GetRegistryClient(repo, opts...)
@@ -487,7 +490,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 	r.metricStorage.CounterAdd("deckhouse_registry_check_total", 1, map[string]string{})
 	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_total", 1, map[string]string{})
 
-	repoDigest, err := regClient.Digest(tag)
+	repoDigest, err := regClient.Digest(ctx, tag)
 	if err != nil {
 		r.metricStorage.CounterAdd("deckhouse_registry_check_errors_total", 1, map[string]string{})
 		return fmt.Errorf("registry (%s) get digest failed: %s", repo, err)
