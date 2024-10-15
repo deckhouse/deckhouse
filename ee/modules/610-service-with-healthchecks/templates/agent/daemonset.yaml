@@ -1,6 +1,6 @@
 {{- define "agent_resources" }}
-cpu: 1500m
-memory: 300Mi
+cpu: 500m
+memory: 100Mi
 {{- end }}
 
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -24,8 +24,8 @@ spec:
       minAllowed:
         {{- include "agent_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 200m
-        memory: 100Mi
+        cpu: 1500m
+        memory: 300Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
@@ -62,6 +62,14 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+            - name: GOMAXPROCS
+              valueFrom:
+                resourceFieldRef:
+                    resource: limits.cpu
           image: {{ include "helm_lib_module_image" (list $ "agent") }}
           imagePullPolicy: IfNotPresent
           name: agent
