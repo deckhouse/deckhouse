@@ -19,3 +19,5 @@
   to: /deckhouse/candi/cloud-providers/vcd
 - add: /ee/candi/cloud-providers/dynamix
   to: /deckhouse/candi/cloud-providers/dynamix
+- add: /ee/candi/cloud-providers/huaweicloud
+  to: /deckhouse/candi/cloud-providers/huaweicloud
