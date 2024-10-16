@@ -186,7 +186,8 @@ defaults:
       path: "*/610-service-with-healthchecks"
       type: "pages"
     values:
-      featureStatus: experimental    
+      featureStatus: experimental
+      d8Revision: ee
   - scope:
       path: "*/160-multitenancy-manager"
       type: "pages"
