@@ -144,7 +144,7 @@ spec:
       expression: 'object.name == "deckhouse"'
     - name: 'windows-are-set'
       expression: |
-        has(object.spec.settings.update &&
+        has(object.spec.settings.update) &&
         has(object.spec.settings.update.windows) &&
         object.spec.settings.update.windows.size() > 0
   validations:
