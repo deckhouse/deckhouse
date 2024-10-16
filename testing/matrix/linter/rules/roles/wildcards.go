@@ -71,6 +71,9 @@ var skipCheckWildcards = map[string][]string{
 	"ingress-nginx/templates/kruise/rbac-for-us.yaml": {
 		"d8:ingress-nginx:kruise-role",
 	},
+	"istio/templates/operator/rbac-for-us.yaml": {
+		"d8:istio:operator",
+	},
 	"okmeter/templates/rbac-for-us.yaml": {
 		"d8:okmeter",
 	},
