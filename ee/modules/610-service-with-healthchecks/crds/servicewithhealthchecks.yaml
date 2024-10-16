@@ -16,7 +16,7 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: ServiceWithHealthchecks is the Schema for the servicewithhealthchecks API
+          description: ServiceWithHealthchecks is the Schema for the `servicewithhealthchecks` API
           properties:
             apiVersion:
               type: string
@@ -157,12 +157,12 @@ spec:
                                 description: Optional Database Name
                               query:
                                 type: string
-                                default: "select 1"
+                                default: select 1
                                 description: |-
                                   Query to PostgreSQL for testing.
                                   
                                   Must return one of the values TRUE, 't', 'true', 'y', 'yes','1'
-                                  to be considered successful. Default: select 1
+                                  to be considered successful. Default: `select 1`
 
                                   > **WARNING!** The privileges for the user under whom the requests are executed should be minimal.
                               targetPort:
@@ -229,10 +229,10 @@ spec:
                     field is being changed from ExternalName (in which case this field may
                     optionally be specified, as describe above).  
                     
-                    Valid values are "None",
+                    Valid values are `None`,
                     empty string (""), or a valid IP address. 
                     
-                    Setting this to "None" makes a
+                    Setting this to `None` makes a
                     "headless service" (no virtual IP), which is useful when direct endpoint
                     connections are preferred and proxying is not required.  Only applies to
                     types ClusterIP, NodePort, and LoadBalancer. If this field is specified
@@ -253,10 +253,10 @@ spec:
                     case this field may optionally be specified, as describe above). 
                     
                     Valid
-                    values are "None", empty string (""), or a valid IP address.  
+                    values are `None`, empty string (""), or a valid IP address.  
                     
                     Setting
-                    this to "None" makes a "headless service" (no virtual IP), which is
+                    this to `None` makes a "headless service" (no virtual IP), which is
                     useful when direct endpoint connections are preferred and proxying is
                     not required.  Only applies to types ClusterIP, NodePort, and
                     LoadBalancer. 
@@ -507,7 +507,7 @@ spec:
                           If this is not specified, the value
                           of the 'port' field is used (an identity map).
                           
-                          This field is ignored for services with clusterIP=None, and should be
+                          This field is ignored for services with `clusterIP=None`, and should be
                           omitted or set equal to the 'port' field.
                           [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service)
                         x-kubernetes-int-or-string: true
@@ -548,7 +548,7 @@ spec:
                   x-kubernetes-map-type: atomic
                 sessionAffinity:
                   description: |-
-                    Supports "ClientIP" and "None". Used to maintain session affinity.
+                    Supports "ClientIP" and `None`. Used to maintain session affinity.
                     Enable client IP based session affinity.
                     
                     Must be ClientIP or None.
@@ -596,7 +596,7 @@ spec:
                     specified, by manual construction of an Endpoints object or
                     EndpointSlice objects. 
                     
-                    If clusterIP is "None", no virtual IP is
+                    If clusterIP is `None`, no virtual IP is
                     allocated and the endpoints are published as a set of endpoints rather
                     than a virtual IP.
                     
@@ -621,16 +621,8 @@ spec:
                 conditions:
                   description: Current service state
                   items:
-                    description: "Condition contains details for one aspect of the current
-                    state of this API Resource.\n---\nThis struct is intended for
-                    direct use as an array at the field path .status.conditions.  For
-                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
-                    observations of a foo's current state.\n\t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
-                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
-                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                    \   // other fields\n\t}"
+                    description: Condition contains details for one aspect of the current state of this API Resource.
+                      This struct is intended for direct use as an array at the field path `.status.conditions`.
                     properties:
                       lastTransitionTime:
                         description: |-
