@@ -575,6 +575,7 @@ entries:
                     ru: Настройки
                   url: /modules/350-node-local-dns/configuration.html
             - title: static-routing-manager
+              d8Revision: ee
               folders:
                 - title:
                     en: Description
