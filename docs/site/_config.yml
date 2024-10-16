@@ -183,7 +183,7 @@ defaults:
     values:
       featureStatus: experimental
   - scope:
-      path: "*/610-service-with-healthcheck"
+      path: "*/610-service-with-healthchecks"
       type: "pages"
     values:
       featureStatus: experimental    
