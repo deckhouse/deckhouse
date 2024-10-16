@@ -96,6 +96,7 @@ func main() {
 			SecureServing: secureMetrics,
 			TLSOpts:       tlsOpts,
 		},
+		PprofBindAddress:       ":9876",
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         false,
 	})
