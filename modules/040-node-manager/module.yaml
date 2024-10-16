@@ -5,4 +5,5 @@ description: |
 
 disable:
   confirmation: true
+  # TODO: check disable warning
   message: "Disabling this module will delete all nodes created via NodeGroup"

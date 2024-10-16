@@ -121,7 +121,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 			}
 		}
 
-		var allowedToDisableMetric float64 = 0
+		var allowedToDisableMetric float64
 		_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
 		if ok && *cfg.Spec.Enabled {
 			allowedToDisableMetric = 1

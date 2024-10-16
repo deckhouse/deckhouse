@@ -3,6 +3,7 @@ weight: 500
 description: |
     The cilium-hubble module
 
+# TODO: remove before merge
 disable:
   confirmation: true
-  message: "Disabling this module will remove cilium hubble and his resources from cluster"
+  message: "TODO: write disable cilium-hubble warning"
