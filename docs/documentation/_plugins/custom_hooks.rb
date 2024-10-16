@@ -63,7 +63,7 @@ Jekyll::Hooks.register :site, :post_read do |site|
   # Exclude custom resource and module setting files from the search index by setting the 'searchable' parameter to false.
   # Add module name in kebab case and snake case to search keywords.
   site.pages.each do |page|
-    if ( page.url.match?(%r{/modules/[0-9]+-[^/]+/$}) or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') ) then
+    if ( page.url.match?(%r{/modules/[0-9]+-[^/]+/$}) or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CR.md') ) then
       moduleKebabCase = page.url.sub(%r{(.*)?/modules/[0-9]+-([^/]+)/.*$},'\2')
       moduleSnakeCase = moduleKebabCase.gsub(/-[a-z]/,&:upcase).gsub(/-/,'')
       page.data['module-kebab-name'] = moduleKebabCase

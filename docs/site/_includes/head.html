@@ -38,7 +38,16 @@
 {% if page.description %}
     {%- assign description = page.description | strip_html | strip_newlines | strip | truncate: 200 %}
 {% else %}
-    {%- assign description = site.site_description[page.lang] | strip_html | strip_newlines | strip | truncate: 200 %}
+    {% if page.name == "CONFIGURATION.md" or page.name == "CONFIGURATION_RU.md" or page.name == "CR.md" or page.name == "CR_RU.md" %}
+        {%- assign moduleName = page['module-kebab-name'] %}
+        {% if page.lang == "ru" %}
+        {%- assign description = "Параметры конфигурации модуля " | append: moduleName | append: "." %}
+        {% elsif page.lang == "en" %}
+        {%- assign description = "Configuration parameters of the " | append: moduleName | append: "module." %}
+        {% endif %}
+    {% else %}
+        {%- assign description = page.content | markdownify | strip_html | normalizeSearchContent | strip_newlines | strip | truncate: 200 %}
+    {% endif %}
 {% endif %}
 
 {%- if include.mode=='documentation' %}

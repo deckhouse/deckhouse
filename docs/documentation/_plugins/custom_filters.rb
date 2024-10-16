@@ -12,6 +12,9 @@ module Jekyll
       %r{\|\|+}
     )
     STRIP_HTML_TAGS = /<.*?>/m
+    STRIP_JEKYLL_RAW = Regexp.new "{% raw %}"
+    STRIP_ALERTS = Regexp.new "{% alert level=”warning” %}"
+    STRIP_END_ALERT = Regexp.new "{% endalert %}"
 
     def true_relative_url(path)
         if !path.instance_of? String
@@ -42,7 +45,10 @@ module Jekyll
                        gsub(STRIP_HTML_TAGS, ' ').
                        gsub(STRIP_MD_TABLES,' ').
                        gsub(/\n/,' ').
-                       gsub(/\s\s+/,' ').strip
+                       gsub(/\s\s+/,' ').
+                       gsub(STRIP_JEKYLL_RAW, ' ').
+                       gsub(STRIP_ALERTS, ' ').
+                       gsub(STRIP_END_ALERT, ' ').strip
     end
 
     def startswith(text, query)
