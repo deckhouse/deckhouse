@@ -122,6 +122,7 @@ spec:
   validationActions: [Deny]
 {{- end }}
 
+
 ---
 {{/* Check update windows in the deckhouse ModuleConfig */}}
 {{- $policyName := "update-windows.deckhouse.io" }}
