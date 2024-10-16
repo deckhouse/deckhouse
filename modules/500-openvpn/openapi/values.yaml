@@ -6,6 +6,8 @@ properties:
     type: object
     default: {}
     properties:
+      migrated:
+        type: boolean
       customCertificateData:
         type: object
         properties:
@@ -17,6 +19,11 @@ properties:
             type: string
       deployDexAuthenticator:
         type: boolean
+      effectiveStorageClass:
+        oneOf:
+          - type: string
+          - type: boolean
+        x-examples: [false, "test"]
       auth:
         type: object
         default: {}

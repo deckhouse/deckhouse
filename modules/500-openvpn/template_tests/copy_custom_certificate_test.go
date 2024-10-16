@@ -49,6 +49,7 @@ https:
   mode: CustomCertificate
 auth: {}
 internal:
+  migrated: true
   customCertificateData:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY
