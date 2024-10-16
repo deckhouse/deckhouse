@@ -2431,6 +2431,25 @@ alerts:
         Module release is waiting for manual approval.
       severity: "6"
       markupFormat: markdown
+    - name: D8HasModuleConfigAllowedToDisable
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module Configuration is waiting for disable.
+
+        It is recommended to keep clean your module configurations from approve annotations.
+
+        If you ignore this alert and didn't clean annotation - it may may result in a module being accidentally removed from the cluster.
+
+        Removing a module from a cluster can lead to a number of irreparable consequences.
+
+        Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disable-` to stop this alert.
+      summary: |
+        Module Configuration annotation for allow to disable is setted.
+      severity: "4"
+      markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
       sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/deprecated_availability_zone.yaml
       moduleUrl: 030-cloud-provider-yandex
