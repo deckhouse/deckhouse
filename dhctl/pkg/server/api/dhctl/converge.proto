@@ -63,6 +63,11 @@ message ConvergeStartOptions {
   int32 log_width = 3;
   google.protobuf.Duration resources_timeout = 4;
   google.protobuf.Duration deckhouse_timeout = 5;
+  string api_server_url = 6;
+  string api_server_token = 7;
+  bool api_server_insecure_skip_tls_verify = 8;
+  string api_server_certificate_authority_data = 9;
+  OperationOptions common_options = 10;
 }
 
 message ConvergeResult {

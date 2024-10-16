@@ -55,7 +55,7 @@ func (c *resourceReadinessChecker) IsReady() (bool, error) {
 	// wait some attempts for set statuses in the resources
 	if c.attempt < 1 {
 		logNotReadyYet()
-		c.logger.LogDebugF("Skip resource % readiness checking for waiting set status\n", name)
+		c.logger.LogDebugF("Skip resource %s readiness checking for waiting set status\n", name)
 		return false, nil
 	}
 

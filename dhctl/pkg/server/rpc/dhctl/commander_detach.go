@@ -37,7 +37,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -161,6 +164,9 @@ func (s *Service) CommanderDetachCluster(
 ) *pb.CommanderDetachResult {
 	var err error
 
+	cleanuper := callback.NewCallback()
+	defer cleanuper.Call()
+
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
 		Width:     int(request.Options.LogWidth),
@@ -170,6 +176,7 @@ func (s *Service) CommanderDetachCluster(
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
+	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
@@ -228,7 +235,9 @@ func (s *Service) CommanderDetachCluster(
 			return fmt.Errorf("parsing connection config: %w", err)
 		}
 
-		sshClient, err = prepareSSHClient(connectionConfig)
+		var cleanup func() error
+		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
@@ -237,7 +246,6 @@ func (s *Service) CommanderDetachCluster(
 	if err != nil {
 		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
-	defer sshClient.Stop()
 
 	var commanderUUID uuid.UUID
 	if request.Options.CommanderUuid != "" {
@@ -289,7 +297,7 @@ func (s *Service) CommanderDetachCluster(
 		resState = string(data)
 	}
 
-	return &pb.CommanderDetachResult{State: resState, Err: errToString(errors.Join(resErrs...))}
+	return &pb.CommanderDetachResult{State: resState, Err: util.ErrToString(errors.Join(resErrs...))}
 }
 
 func (s *Service) CommanderDetachServerTransitions() []fsm.Transition {

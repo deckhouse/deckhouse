@@ -28,3 +28,7 @@ enum Continue {
 message Logs {
   repeated string logs = 1;
 }
+
+message OperationOptions {
+  repeated string skip_preflight_checks = 1;
+}
