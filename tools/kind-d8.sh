@@ -147,7 +147,7 @@ os_detect() {
   OS_NAME="${OS_NAME// /}"
 
   # Supported on ...
-  if [[ ("$OS_NAME" == "Ubuntu") || ("$OS_NAME" == "Debian") || ("$OS_NAME" == "debian") ]]; then
+  if [[ ("$OS_NAME" == "Ubuntu") || ("$OS_NAME" == "ubuntu") || ("$OS_NAME" == "Debian") || ("$OS_NAME" == "debian") ]]; then
     OS_NAME=linux
   elif [[ ("$OS_NAME" != "mac") && ("$OS_NAME" != "linux") ]]; then
     OS_NAME=
