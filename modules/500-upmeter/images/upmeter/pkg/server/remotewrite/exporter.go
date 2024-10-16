@@ -24,7 +24,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"unicode/utf8"
 	"fmt"
 	"encoding/base64"
 	"io"
