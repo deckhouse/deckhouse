@@ -122,7 +122,6 @@ spec:
   validationActions: [Deny]
 {{- end }}
 
-
 ---
 {{/* Check update windows in the deckhouse ModuleConfig */}}
 {{- $policyName := "update-windows.deckhouse.io" }}
@@ -142,7 +141,7 @@ spec:
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'windows-are-set'
-      expression: 'object.spec.settings.update.windows.size() > 0 || object.spec.update.windows.size() > 0'
+      expression: '(has(object.spec.settings.update.windows) &&object.spec.settings.update.windows.size() > 0) || (has(object.spec.update.windows) && object.spec.update.windows.size() > 0)'
   validations:
     - expression: |
         has(object.spec.settings.update.windows)
