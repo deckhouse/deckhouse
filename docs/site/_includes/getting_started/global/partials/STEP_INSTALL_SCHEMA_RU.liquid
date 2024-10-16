@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES.liquid %}
 
-{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' %}
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' or page.platform_code == 'dynamix' %}
 
 Для развертывания будет использован минимальный набор узлов:
 {%- assign preset=site.data.getting_started.data.presets.minimal %}
