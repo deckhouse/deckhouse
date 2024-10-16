@@ -141,14 +141,23 @@ spec:
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'windows-are-set'
-      expression: 'object.spec.settings.update.windows.size() > 0'
+      expression: 'object.spec.settings.update.windows.size() > 0 || object.spec.update.windows.size() > 0'
   validations:
-    - expression: 'object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) > int(string(w.to).replace(":", "")))'
+    - expression: |
+        // Create a variable `windows` based on whether specific fields exist
+        let windows = has(object.spec.settings.update.windows)
+          ? object.spec.settings.update.windows
+          : object.spec.update.windows;
+        windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))'
       reason: Forbidden
-      messageExpression: '''Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'''
+      messageExpression: "'Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'"
 {{- else }}
   validations:
-    - expression: '!(object.spec.settings.update.windows.size() > 0 && object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) > int(string(w.to).replace(":", ""))))'
+    - expression: |
+        let windows = has(object.spec.settings.update.windows)
+          ? object.spec.settings.update.windows
+          : object.spec.update.windows;
+        windows.size() > 0 && object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
       reason: Forbidden
 {{- end }}
 ---
