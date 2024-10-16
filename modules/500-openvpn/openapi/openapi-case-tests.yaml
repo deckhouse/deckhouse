@@ -6,5 +6,6 @@ positive:
           authURL: test
       internal:
         deployDexAuthenticator: true
+        effectiveStorageClass: test
         auth: {}
       loadBalancer: { }
