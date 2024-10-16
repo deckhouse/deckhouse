@@ -144,20 +144,17 @@ spec:
       expression: 'object.spec.settings.update.windows.size() > 0 || object.spec.update.windows.size() > 0'
   validations:
     - expression: |
-        // Create a variable `windows` based on whether specific fields exist
-        let windows = has(object.spec.settings.update.windows)
-          ? object.spec.settings.update.windows
-          : object.spec.update.windows;
-        windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
+        has(object.spec.settings.update.windows)
+        ? object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
+        : object.spec.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
       reason: Forbidden
       messageExpression: "'Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'"
 {{- else }}
   validations:
     - expression: |
-        let windows = has(object.spec.settings.update.windows)
-          ? object.spec.settings.update.windows
-          : object.spec.update.windows;
-        windows.size() > 0 && object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
+        has(object.spec.settings.update.windows)
+        ? object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
+        : object.spec.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
       reason: Forbidden
 {{- end }}
 ---
