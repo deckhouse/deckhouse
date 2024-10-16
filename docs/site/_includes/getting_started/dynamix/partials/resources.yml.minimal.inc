@@ -1,23 +1,27 @@
 # [<en>] Section containing the parameters of instance class for worker nodes.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dynamix/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-dynamix/cr.html
 apiVersion: deckhouse.io/v1
-kind: OpenStackInstanceClass
+kind: DynamixInstanceClass
 metadata:
   name: worker
 spec:
-  # [<en>] Flavor in use for this instance class.
-  # [<ru>] Используемый flavor для данного инстанс-класса.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  flavorName: Standard-2-4-50
-  rootDiskSize: 30
-  # [<en>] VM image in use.
-  # [<ru>] Используемый образ виртуальной машины.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
-  imageName: ubuntu-22-04-cloud-amd64
+  # [<en>] Number of allocated CPUs for the virtual machine.
+  # [<ru>] Количество выделеных CPU для виртуальной машины.
+  numCPUs: 4
+  # [<en>] The amount of allocated RAM for the virtual machine.
+  # [<ru>] Количество выделеной оперативной памяти для виртуальной машины.
+  memory: 8192
+  # [<en>] OS image name to use for VM deployment.
+  # [<ru>] Имя образа ОС, используемое для развертывания ВМ.
+  imageName: *!CHANGE_IMAGE_NAME*
+  # [<en>] Disk size for the root FS.
+  # [<ru>] Размер диска для корневой ФС.
+  rootDiskSizeGb: 40
+  # [<en>] External network name.
+  # [<ru>] Имя внешней сети.
+  externalNetwork: *!CHANGE_EXTERNAL_NETWORK*
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup
@@ -30,7 +34,7 @@ metadata:
 spec:
   cloudInstances:
     classReference:
-      kind: OpenStackInstanceClass
+      kind: DynamixInstanceClass
       name: worker
     # [<en>] The maximum number of instances for the group in each zone (used by the autoscaler).
     # [<en>] You might consider changing this.
@@ -40,12 +44,6 @@ spec:
     # [<en>] The minimum number of instances for the group in each zone.
     # [<ru>] Минимальное количество инстансов в каждой зоне.
     minPerZone: 1
-    # [<en>] List of availability zones to create instances in.
-    # [<ru>] Список зон, в которых создаются инстансы.
-    # [<en>] You might consider changing this.
-    # [<ru>] Возможно, захотите изменить.
-    zones:
-    - DP1
   disruptions:
     approvalMode: Automatic
   nodeType: CloudEphemeral
