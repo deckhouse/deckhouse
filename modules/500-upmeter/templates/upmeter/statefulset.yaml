@@ -69,23 +69,6 @@ spec:
       {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       initContainers:
 {{- $storageClass := .Values.upmeter.internal.effectiveStorageClass }}
-      - command:
-          - sh
-          - -c
-          - chown -vfR 64535:64535 /db/
-        image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
-        imagePullPolicy: IfNotPresent
-        name: fix-permissions
-        securityContext:
-          runAsNonRoot: false
-          runAsUser: 0
-        volumeMounts:
-          - mountPath: /db
-            name: data
-            readOnly: false
-        resources:
-          requests:
-          {{ include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
       - name: migrator
         image: {{ include "helm_lib_module_image" (list . "upmeter") }}
         command:
