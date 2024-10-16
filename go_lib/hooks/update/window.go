@@ -77,11 +77,9 @@ func (uw Window) IsAllowed(now time.Time) bool {
 		return false
 	}
 
-	if now.After(fromTime) && now.Before(toTime) {
-		return true
-	}
-
-	return false
+	return now.Equal(fromTime) ||
+		now.Equal(toTime) ||
+		(now.After(fromTime) && now.Before(toTime))
 }
 
 // NextAllowedTime calculates next update window with respect on minimalTime

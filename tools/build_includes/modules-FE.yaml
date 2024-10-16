@@ -24,11 +24,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/be/modules/600-flant-integration
-  to: /deckhouse/modules/600-flant-integration
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   stageDependencies:
@@ -261,6 +256,11 @@
         - '**/*.go'
 - add: /ee/modules/650-runtime-audit-engine
   to: /deckhouse/modules/650-runtime-audit-engine
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
+  to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
   stageDependencies:
     setup:
         - '**/*.go'
