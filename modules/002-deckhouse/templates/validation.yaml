@@ -148,7 +148,7 @@ spec:
         let windows = has(object.spec.settings.update.windows)
           ? object.spec.settings.update.windows
           : object.spec.update.windows;
-        windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))'
+        windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
       reason: Forbidden
       messageExpression: "'Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'"
 {{- else }}
