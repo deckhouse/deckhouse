@@ -14,19 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package updater
-
-import (
-	"time"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-)
+package v1alpha1
 
 const (
-	SubjectDeckhouse = "Deckhouse"
-	SubjectModule    = "Module"
+	ModuleReleaseApprovalAnnotation    = "modules.deckhouse.io/approved"
+	DeckhouseReleaseApprovalAnnotation = "release.deckhouse.io/approved"
 )
-
-type WebhookDataSource[R v1alpha1.Release] interface {
-	Fill(output *WebhookData, release R, applyTime time.Time)
-}

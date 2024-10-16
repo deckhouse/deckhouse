@@ -17,6 +17,8 @@ limitations under the License.
 package d8updater
 
 import (
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+
 	"github.com/flant/shell-operator/pkg/metric_storage"
 )
 
@@ -32,12 +34,12 @@ type metricUpdater struct {
 	metricStorage *metric_storage.MetricStorage
 }
 
-func (mu metricUpdater) WaitingManual(name string, totalPendingManualReleases float64) {
+func (mu metricUpdater) WaitingManual(release *v1alpha1.DeckhouseRelease, totalPendingManualReleases float64) {
 	mu.metricStorage.GaugeSet(
 		"d8_module_release_waiting_manual",
 		totalPendingManualReleases,
 		map[string]string{
-			"name": name,
+			"name": release.GetName(),
 		})
 }
 

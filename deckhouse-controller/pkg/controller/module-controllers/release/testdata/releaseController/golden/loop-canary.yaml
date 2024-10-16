@@ -30,8 +30,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    release.deckhouse.io/notified: "false"
   creationTimestamp: null
   labels:
     module: parca
@@ -45,7 +43,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1003"
+  resourceVersion: "1000"
 spec:
   applyAfter: "2019-10-21T15:00:00Z"
   changelog:
@@ -56,8 +54,8 @@ spec:
   weight: 900
 status:
   approved: false
-  message: ""
-  phase: Deployed
-  pullDuration: 9m15s
-  size: 3
-  transitionTime: "2019-10-21T15:00:00Z"
+  message: Release is postponed by canary process until 21 Oct 19 18:00 MSK
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
