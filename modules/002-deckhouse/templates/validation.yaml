@@ -194,7 +194,7 @@ spec:
   matchConditions:
     - name: 'windows-are-set'
       expression: |
-        has(object.spec.update &&
+        has(object.spec.update) &&
         has(object.spec.update.windows) &&
         object.spec.update.windows.size() > 0
   validations:
