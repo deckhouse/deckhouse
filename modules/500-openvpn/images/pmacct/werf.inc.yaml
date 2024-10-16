@@ -2,27 +2,43 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /relocate
   to: /
   before: setup
 docker:
   ENTRYPOINT: ["/usr/sbin/pmacctd"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-# pmacctd notfound in BASE_ALT_P11
-from: {{ .Images.BASE_ALPINE }}
-git:
-- add: /tools/dev_images/additional_tools/alt/binary_replace.sh
-  to: /binary_replace.sh
-  stageDependencies:
-    install:
-    - '**/*'
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
 shell:
   install:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache pmacct bash
-  - |
-      /binary_replace.sh -i "\
-        /usr/sbin/pmacctd \
-        " -o /relocate
+  - cd /src
+  - git clone --depth 1 -b 1.7.9 https://github.com/pmacct/pmacct.git .
+# - git clone --depth 1 -b 1.7.9 {{ .SOURCE_REPO }}/pmacct/pmacct.git .
+# - |
+#   cat > .gitmodules <<"EOF"
+#   [submodule "src/external_libs/libcdada"]
+#       path = src/external_libs/libcdada
+#       url = {{ .SOURCE_REPO }}/msune/libcdada.git
+#   EOF
+  - git submodule update --init
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromArtifact: common/relocate-artifact
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential libpcap-devel
+  install:
+  - cd /src
+  - ./autogen.sh
+  - ./configure --prefix=/usr
+  - make
+  - make install
+  - /binary_replace.sh -i "/usr/sbin/pmacctd" -o /relocate
