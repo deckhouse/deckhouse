@@ -124,7 +124,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 		// Allow changing configuration for unknown modules.
 		if !d8config.Service().PossibleNames().Has(cfg.Name) {
 			_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
-			if ok {
+			if ok && *cfg.Spec.Enabled {
 				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 1, map[string]string{"module": cfg.GetName()})
 			}
 
@@ -139,7 +139,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 		}
 
 		_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
-		if ok {
+		if ok && *cfg.Spec.Enabled {
 			metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 1, map[string]string{"module": cfg.GetName()})
 		}
 
