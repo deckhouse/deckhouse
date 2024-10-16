@@ -36,7 +36,7 @@ var (
 	}
 )
 
-const AllowDisableAnnotion = "modules.deckhouse.io/allow-disable"
+const AllowDisableAnnotation = "modules.deckhouse.io/allow-disable"
 
 var _ runtime.Object = (*ModuleConfig)(nil)
 

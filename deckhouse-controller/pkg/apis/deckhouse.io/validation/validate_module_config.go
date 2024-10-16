@@ -61,7 +61,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 				//
 				// we check module
 				// we check confirmation restriction and confirmation message
-				_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
+				_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
 				if !ok && *cfg.Spec.Enabled {
 					module, err := moduleStorage.GetModuleByName(obj.GetName())
 					if err != nil {
@@ -104,8 +104,8 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 			//
 			// we check module
 			// we check confirmation restriction and confirmation message
-			_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotion]
-			_, oldOk := oldModuleMeta.Annotations[v1alpha1.AllowDisableAnnotion]
+			_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
+			_, oldOk := oldModuleMeta.Annotations[v1alpha1.AllowDisableAnnotation]
 			if !ok && !oldOk && !*cfg.Spec.Enabled {
 				module, err := moduleStorage.GetModuleByName(obj.GetName())
 				if err != nil {
