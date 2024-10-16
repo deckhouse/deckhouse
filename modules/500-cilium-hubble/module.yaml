@@ -1,0 +1,8 @@
+name: cilium-hubble
+weight: 500
+description: |
+    The cilium-hubble module
+
+disable:
+  confirmation: true
+  message: "Disabling this module will remove cilium hubble and his resources from cluster"
