@@ -114,7 +114,7 @@ In high-load clusters, where many alerts are generated and many metrics are coll
 
 When allocating monitoring nodes, it is important to allocate fast disks to them. You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (global parameter [storageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)) or allocate a dedicated `storageClass` to monitoring components only ([storageClass](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
 
-If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), it is recommended to explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](../documentation/v1/modules/300-prometheus/configuration.html#parameters-nodeselector).
+If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), it is recommended to explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-nodeselector).
 
 ### System nodes
 
@@ -156,10 +156,10 @@ Reference:
 ## Backups
 
 {% alert %}
-Set up [etcd backups](/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-make-etcd-backup). Have a backup plan ready at all times.
+Set up [etcd backups](/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/faq.html#how-to-manually-backup-etcd). Have a backup plan ready at all times.
 {% endalert %}
 
-We strongly advise you to set up [etcd backups](/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/faq.html#how-do-make-etcd-backup) as a bare minimum. This will be your last chance to restore the cluster should things go awry. Keep these backups as *away* from your cluster as possible.
+We strongly advise you to set up [etcd backups](/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/faq.html#how-to-manually-backup-etcd) as a bare minimum. This will be your last chance to restore the cluster should things go awry. Keep these backups as *away* from your cluster as possible.
 
 The backups won't help if they don't work or if you don't know how to use them to recover the cluster. The best practice is to compile a [Disaster Recovery Plan](https://www.google.com/search?q=Disaster+Recovery+Plan) with specific steps and commands to restore the cluster from a backup.
 

@@ -85,7 +85,7 @@ apiVersions:
 
           A virtual network is a virtual, isolated portion of the Azure public network. Each virtual network is dedicated to your subscription.
 
-          **Caution!** If you are setting up peering, using vpn or linking networks of other clusters, network address spaces should not overlap.
+          **Warinig.** If you are setting up peering, using vpn or linking networks of other clusters, network address spaces should not overlap.
         type: string
         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         example: 10.0.0.0/16
@@ -93,11 +93,11 @@ apiVersions:
       nameservers:
         type: object
         description: |
-          DNS server configuration for the Azure virtual network used by the cluster nodes.
+          DNS-server configuration for the Azure virtual network used by the cluster nodes.
         properties:
           addresses:
             type: array
-            description: A list of DNS servers.
+            description: A list of DNS-servers.
             x-examples:
               - - 8.8.8.8
                 - 8.8.4.4
@@ -135,7 +135,10 @@ apiVersions:
         description: |
           The list of Service endpoints to associate with the subnet.
 
-          Virtual Network (VNet) service endpoint provides secure and direct connectivity to Azure services over an optimized route over the Azure backbone network. Endpoints allow you to secure your critical Azure service resources to only your virtual networks. Service Endpoints enables private IP addresses in the VNet to reach the endpoint of an Azure service without needing a public IP address on the VNet. More information about Service Endpoints can be found in the [official documentation](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview).
+          Virtual Network (VNet) service endpoint provides secure and direct connectivity to Azure services over an optimized route over the Azure backbone network.
+          Endpoints allow you to secure your critical Azure service resources to only your virtual networks. Service Endpoints enables private IP addresses in the VNet to reach the endpoint of an Azure service without needing a public IP address on the VNet.
+          
+          More information about Service Endpoints can be found in the [official documentation](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview).
         type: array
         items:
           type: string
@@ -144,7 +147,7 @@ apiVersions:
         description: |
           The definition of the master's NodeGroup.
 
-          > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+          > **Warning.** After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         required: [replicas, instanceClass]
         x-unsafe-rules: [updateMasterImage]
         properties:
@@ -318,7 +321,7 @@ apiVersions:
                   description: |
                     The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                    > **Warning.** Only the `effect`, `key`, `values`  fields are available.
                   x-doc-example: |
                     ```yaml
                     taints:
