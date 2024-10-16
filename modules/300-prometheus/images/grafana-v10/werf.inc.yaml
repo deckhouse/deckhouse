@@ -27,13 +27,20 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ .SOURCE_REPO }}/grafana/grafana.git /src/grafana
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ .SOURCE_REPO }}/grafana/grafana-deps.git /src/grafana-deps
   - cd /src/grafana
+  - git apply /patches/*.patch --verbose
   # this directory contains very long filename tests files and source extractor cannot create file
   - rm -rf pkg/tsdb/azuremonitor/testdata/azuremonitor
+  - rm yarn.lock
   - git clone --depth 1 {{ .SOURCE_REPO }}/grafana/grafana-plugins.git /src/grafana-plugins
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-go-builder

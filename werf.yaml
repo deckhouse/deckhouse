@@ -152,6 +152,8 @@ git:
 shell:
   install:
   - rm -r /src/docs
+  - mkdir -p docs/content/manual
+  - touch docs/content/manual/manual.yml
 ---
 artifact: jq
 from: {{ $.Images.BASE_ALPINE }}
