@@ -14,14 +14,13 @@ fromArtifact: common/src-artifact
 shell:
   install:
   - cd /src
-  - git clone --depth 1 -b 1.7.9 https://github.com/pmacct/pmacct.git .
-# - git clone --depth 1 -b 1.7.9 {{ .SOURCE_REPO }}/pmacct/pmacct.git .
-# - |
-#   cat > .gitmodules <<"EOF"
-#   [submodule "src/external_libs/libcdada"]
-#       path = src/external_libs/libcdada
-#       url = {{ .SOURCE_REPO }}/msune/libcdada.git
-#   EOF
+  - git clone --depth 1 -b 1.7.9 {{ .SOURCE_REPO }}/pmacct/pmacct.git .
+  - |
+    cat > .gitmodules <<"EOF"
+    [submodule "src/external_libs/libcdada"]
+      path = src/external_libs/libcdada
+      url = {{ .SOURCE_REPO }}/msune/libcdada.git
+    EOF
   - git submodule update --init
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
