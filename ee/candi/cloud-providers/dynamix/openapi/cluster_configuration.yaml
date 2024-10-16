@@ -61,7 +61,7 @@ apiVersions:
         enum: [DynamixClusterConfiguration]
       sshPublicKey:
         type: string
-        description: a public key for accessing nodes.
+        description: A public key for accessing nodes.
       location:
         type: string
         description: The name of the location to install the cluster.
@@ -235,7 +235,7 @@ apiVersions:
             description: The URL to the SSO Dynamix API endpoint.
           appId:
             type: string
-            description: App Id.
+            description: App ID.
           appSecret:
             type: string
             description: App Secret.

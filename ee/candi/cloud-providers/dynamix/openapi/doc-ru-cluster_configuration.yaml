@@ -6,8 +6,11 @@ apiVersions:
     additionalProperties: false
     description: |
       Описывает конфигурацию облачного кластера в Dynamix.
+
       Используется cloud-провайдером, если control plane кластера размещен в облаке.
+
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
@@ -46,7 +49,7 @@ apiVersions:
                   Размер корневого диска в GiB для использования в виртуальных машинах.
               etcdDiskSizeGb:
                 description: |
-                  Размер Etcd диска в GiB.
+                  Размер диска для хранения данных etcd в GiB.
               imageName:
                 description: |
                   Имя образа ОС, используемое для развертывания ВМ.
@@ -77,6 +80,7 @@ apiVersions:
                 labels:
                   description: |
                     Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
+
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
                     Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
                   x-doc-example: |
@@ -129,7 +133,7 @@ apiVersions:
           oAuth2Url:
             description: URL-адрес конечной точки SSO Dynamix API.
           appId:
-            description: Id приложения.
+            description: ID приложения.
           appSecret:
             description: Секрет приложения.
           insecure:
