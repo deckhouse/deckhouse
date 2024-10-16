@@ -233,6 +233,12 @@ common:
   all_modules:
     en: All modules
     ru: Все модули
+  description_cr:
+    ru: Custom resources модуля <MODULENAME>
+    en: Custom resources of the <MODULENAME> module
+  description_configuration:
+    ru: Параметры конфигурации модуля <MODULENAME>
+    en: Configuration parameters of the <MODULENAME> module
 
 comparison:
   except_parameters:

@@ -26,13 +26,17 @@ layout: none
 
 {% unless page.description %}
 * {{ page.title }} — {{ page.permalink }} <br>
-  {% if page.name == "CONFIGURATION.md" or page.name == "CONFIGURATION_RU.md" or page.name == "CR.md" or page.name == "CR_RU.md" %}
+  {% if page.name == "CONFIGURATION.md" or page.name == "CONFIGURATION_RU.md" %}
   {%- assign moduleName = page['module-kebab-name'] %}
-  {%- assign description = "Параметры конфигурации модуля " | append: moduleName | append: "." %}
+  {%- assign description = site.data.i18n.common.description_configuration[page.lang] | replace: '<MODULENAME>', moduleName %}
+  {% elsif page.name == "CR.md" or page.name == "CR_RU.md" %}
+  {%- assign moduleName = page['module-kebab-name'] %}
+  {%- assign description = site.data.i18n.common.description_cr[page.lang] | replace: '<MODULENAME>', moduleName %}
   {% else %}
   {%- assign description = page.content | markdownify | strip_html | normalizeSearchContent | strip_newlines | strip | truncate: 200 %}
   {% endif %}
   DESCRIPTION: {{ description }}
-{% endunless %}
+  {% endunless %}
+
 {% endfor %}
 EOF
