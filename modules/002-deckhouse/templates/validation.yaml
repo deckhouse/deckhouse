@@ -148,7 +148,7 @@ spec:
         ? object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
         : object.spec.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
       reason: Forbidden
-      messageExpression: "'Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'"
+      messageExpression: "'Invalid update windows. Start time (windows.from) should be less than the end time of the update window (windows.to)'"
 {{- else }}
   validations:
     - expression: |
