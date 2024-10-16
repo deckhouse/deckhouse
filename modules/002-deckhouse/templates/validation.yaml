@@ -123,7 +123,8 @@ spec:
 {{- end }}
 
 ---
-{{- $policyName := "moduleconfigs-settings.deckhouse.io" }}
+{{/* Check update windows in the deckhouse ModuleConfig */}}
+{{- $policyName := "update-windows.deckhouse.io" }}
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -136,12 +137,19 @@ spec:
     - apiGroups:   ["deckhouse.io"]
       apiVersions: ["*"]
       operations:  ["CREATE", "UPDATE"]
-      resources:   ["moduleconfigs"]
-  validations:
-    - expression: '!(object.metadata.name == "deckhouse" && has(object.spec.settings.update) && has(object.spec.settings.update.windows) && object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) > int(string(w.to).replace(":", ""))))'
-      reason: Forbidden
+      resources:   ["moduleconfigs", "moduleupdatepolicies"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  matchConditions:
+    - name: 'windows-are-set'
+      expression: 'object.spec.settings.update.windows.size() > 0'
+  validations:
+    - expression: 'object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) > int(string(w.to).replace(":", "")))'
+      reason: Forbidden
       messageExpression: '''Invalid update windows. Start time (windows.to) should be less than the end time of the update window (windows.from)'''
+{{- else }}
+  validations:
+    - expression: '!(object.spec.settings.update.windows.size() > 0 && object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) > int(string(w.to).replace(":", ""))))'
+      reason: Forbidden
 {{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
@@ -155,3 +163,4 @@ spec:
   validationActions: [Deny, Audit]
 {{- end }}
 {{- end }}
+{{/* End windows validation */}}
