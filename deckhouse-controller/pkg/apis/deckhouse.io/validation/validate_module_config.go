@@ -126,6 +126,8 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 			_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
 			if ok && *cfg.Spec.Enabled {
 				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 1, map[string]string{"module": cfg.GetName()})
+			} else {
+				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 0, map[string]string{"module": cfg.GetName()})
 			}
 
 			return allowResult(fmt.Sprintf("module name '%s' is unknown for deckhouse", cfg.Name))
@@ -141,6 +143,8 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 		_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
 		if ok && *cfg.Spec.Enabled {
 			metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 1, map[string]string{"module": cfg.GetName()})
+		} else {
+			metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 0, map[string]string{"module": cfg.GetName()})
 		}
 
 		// Return allow with warning.
