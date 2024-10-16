@@ -13,7 +13,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/flant/addon-operator v1.5.0
 	github.com/flant/kube-client v1.2.0
-	github.com/flant/shell-operator v1.4.14
+	github.com/flant/shell-operator v1.4.12
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
