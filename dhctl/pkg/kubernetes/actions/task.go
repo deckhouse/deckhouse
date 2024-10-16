@@ -50,6 +50,8 @@ func (task *ManifestTask) CreateOrUpdate() error {
 			return fmt.Errorf("update resource: %v", err)
 		}
 		log.InfoLn("OK!")
+	} else {
+		log.InfoF("Created resource %s\n", task.Name)
 	}
 	return nil
 }

@@ -119,7 +119,7 @@ func (c *Creator) createAll() error {
 
 	for indx, resource := range c.resources {
 		if _, shouldSkip := resourcesToSkipInCurrentIteration[indx]; shouldSkip {
-			log.DebugF("Resource %s with index % should skip to create in current iteration because namespace is not existed\n", resource.String())
+			log.DebugF("Resource %s with index %d should be skipped to be created in the current iteration because namespace does not exist\n", resource.String(), indx)
 			continue
 		}
 
@@ -131,6 +131,7 @@ func (c *Creator) createAll() error {
 
 		for _, discoveredResource := range resourcesList.APIResources {
 			if discoveredResource.Kind != resource.GVK.Kind {
+				log.DebugF("discoveredResourceKind is not equal to resourceKind: %s != %s\n", discoveredResource.Name, resource.String())
 				continue
 			}
 			if err := c.createSingleResource(resource); err != nil {
