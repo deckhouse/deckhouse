@@ -144,6 +144,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/030-cloud-provider-huaweicloud
+  to: /deckhouse/modules/030-cloud-provider-huaweicloud
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
   stageDependencies:
