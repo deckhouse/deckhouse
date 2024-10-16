@@ -1,0 +1,28 @@
+diff --git a/go.mod b/go.mod
+index 6f1dfa895..51eee43c7 100644
+--- a/go.mod
++++ b/go.mod
+@@ -26,7 +26,7 @@ require (
+ 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
+ 	github.com/cristalhq/hedgedhttp v0.7.2
+ 	github.com/davecgh/go-spew v1.1.1
+-	github.com/docker/docker v23.0.14+incompatible
++	github.com/docker/docker v23.0.15+incompatible
+ 	github.com/docker/go-plugins-helpers v0.0.0-20181025120712-1e6269c305b8
+ 	github.com/drone/envsubst v1.0.3
+ 	github.com/dustin/go-humanize v1.0.1
+diff --git a/go.sum b/go.sum
+index 0a7b3bd0c..ef2926bf4 100644
+--- a/go.sum
++++ b/go.sum
+@@ -711,8 +711,8 @@ github.com/docker/distribution v2.6.0-rc.1.0.20170726174610-edc3ab29cdff+incompa
+ github.com/docker/distribution v2.8.2+incompatible h1:T3de5rq0dB1j30rp0sA2rER+m322EBzniBPB6ZIzuh8=
+ github.com/docker/distribution v2.8.2+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
+ github.com/docker/docker v17.12.0-ce-rc1.0.20200916142827-bd33bbf0497b+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+-github.com/docker/docker v23.0.14+incompatible h1:r/nVCRovydMLP+zyzzcpY+n+yRsKBri9NXPbKgHfaVM=
+-github.com/docker/docker v23.0.14+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
++github.com/docker/docker v23.0.15+incompatible h1:FnANKw0DBmNSfsivQq07CbPsYvahxZwdyfzg5TtPJWQ=
++github.com/docker/docker v23.0.15+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+ github.com/docker/go-connections v0.3.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=
+ github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKohAFqRJQ=
+ github.com/docker/go-connections v0.4.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=
