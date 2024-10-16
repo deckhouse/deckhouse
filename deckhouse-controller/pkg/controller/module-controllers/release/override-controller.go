@@ -185,7 +185,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, utils.GenerateRegistryOptionsFromModuleSource(ms))
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()
@@ -325,7 +325,7 @@ func (c *modulePullOverrideReconciler) restoreAbsentModulesFromOverrides(ctx con
 
 		// mpo's status.weight field isn't set - get it from the module's definition
 		if moduleWeight == 0 {
-			md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, utils.GenerateRegistryOptions(ms))
+			md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, utils.GenerateRegistryOptionsFromModuleSource(ms))
 			def, err := md.DownloadModuleDefinitionByVersion(moduleName, moduleImageTag)
 			if err != nil {
 				return fmt.Errorf("couldn't get the %s module definition from repository: %w", moduleName, err)
@@ -409,7 +409,7 @@ func (c *modulePullOverrideReconciler) createModuleSymlink(moduleName, moduleIma
 	if err != nil || !info.IsDir() {
 		// download the module to fs
 		c.logger.Infof("Downloading module %q from registry", moduleName)
-		md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, moduleSource, utils.GenerateRegistryOptions(moduleSource))
+		md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, moduleSource, utils.GenerateRegistryOptionsFromModuleSource(moduleSource))
 		_, _, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
 		if err != nil {
 			return fmt.Errorf("couldn't get module %q pull override definition: %s", moduleName, err)

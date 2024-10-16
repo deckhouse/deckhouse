@@ -1,10 +1,10 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_19_BULLSEYE
+ARG BASE_GOLANG_22_BULLSEYE
 
-FROM $BASE_GOLANG_19_BULLSEYE AS build
+FROM $BASE_GOLANG_22_BULLSEYE AS build
 # Also check operator image version and admission-policy-engine module trivy-provider image "github.com/aquasecurity/trivy" library version
-ARG TRIVY_VERSION=v0.44.0-flant.3
-ARG TRIVY_DB_VERSION=flant-latest
+ARG TRIVY_VERSION=v0.56.1-flant
+ARG TRIVY_DB_VERSION=flant-v2
 ARG GOPROXY
 ARG SOURCE_REPO
 ENV GOPROXY=${GOPROXY} \

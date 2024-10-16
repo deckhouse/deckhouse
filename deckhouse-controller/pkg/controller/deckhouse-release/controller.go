@@ -46,6 +46,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -270,7 +271,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	podReady := r.isDeckhousePodReady()
 	us := r.updateSettings.Get()
 	dus := &updater.DeckhouseUpdateSettings{
-		NotificationConfig:     &us.Update.NotificationConfig,
+		NotificationConfig:     us.Update.NotificationConfig,
 		DisruptionApprovalMode: us.Update.DisruptionApprovalMode,
 		Mode:                   us.Update.Mode,
 		ClusterUUID:            r.clusterUUID,
@@ -349,7 +350,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		if err == nil {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, fmt.Errorf("apply forced release: %w", err)
+		return ctrl.Result{}, fmt.Errorf("apply forced release: %w", err)
 	}
 
 	var windows update.Windows
@@ -361,16 +362,27 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	err = deckhouseUpdater.ApplyPredictedRelease(windows)
-
 	if err != nil {
-		if errors.Is(err, updater.ErrNotReadyForDeploy) || errors.Is(err, updater.ErrRequirementsNotMet) {
-			// TODO: create custom error type with additional fields like reason end requeueAfter
-			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
+		return r.wrapApplyReleaseError(err)
 	}
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+}
+
+func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
+	var notReadyErr *updater.NotReadyForDeployError
+	if errors.As(err, &notReadyErr) {
+		r.logger.Infoln(err.Error())
+		// TODO: requeue all releases if deckhouse update settings is changed
+		// requeueAfter := notReadyErr.RetryDelay()
+		// if requeueAfter == 0 {
+		// requeueAfter = defaultCheckInterval
+		// }
+		// r.logger.Infof("%s: retry after %s", err.Error(), requeueAfter)
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
@@ -472,11 +484,13 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 
 	var opts []cr.Option
 	if registrySecret != nil {
-		opts = []cr.Option{
-			cr.WithCA(string(registrySecret.Data["ca"])),
-			cr.WithInsecureSchema(string(registrySecret.Data["scheme"]) == "http"),
-			cr.WithAuth(string(registrySecret.Data[".dockerconfigjson"])),
+		drs, _ := utils.ParseDeckhouseRegistrySecret(registrySecret.Data)
+		rconf := &utils.RegistryConfig{
+			DockerConfig: drs.DockerConfig,
+			Scheme:       drs.Scheme,
+			CA:           drs.CA,
 		}
+		opts = utils.GenerateRegistryOptions(rconf)
 	}
 
 	regClient, err := r.dc.GetRegistryClient(repo, opts...)
@@ -487,7 +501,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 	r.metricStorage.CounterAdd("deckhouse_registry_check_total", 1, map[string]string{})
 	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_total", 1, map[string]string{})
 
-	repoDigest, err := regClient.Digest(tag)
+	repoDigest, err := regClient.Digest(ctx, tag)
 	if err != nil {
 		r.metricStorage.CounterAdd("deckhouse_registry_check_errors_total", 1, map[string]string{})
 		return fmt.Errorf("registry (%s) get digest failed: %s", repo, err)

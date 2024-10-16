@@ -461,4 +461,36 @@ description: "my awesome module"
 Будет создан модуль (`deckhouse.io/v1alpha/Module`) с лейблами: `module.deckhouse.io/test=""` и `module.deckhouse.io/myTag=""`, весом `960` и описанием `my awesome module`.
 
 Таким образом можно управлять очередностью модулей, а также задавать дополнительную метаинформацию для них.
+
+Пример настройки зависимости от версии Deckhouse Kubernetes Platform:
+
+```yaml
+name: test
+weight: 901
+requirements:
+    deckhouse: ">= 1.61"
+```
+
+Пример настройки зависимости от версии Kubernetes:
+
+```yaml
+name: test
+weight: 901
+requirements:
+    kubernetes: ">= 1.27"
+```
+
+Пример настройки зависимости от статуса установки кластера (bootstrapped):
+
+```yaml
+name: ingress-nginx
+weight: 402
+description: |
+    Ingress controller for nginx
+    https://kubernetes.github.io/ingress-nginx
+
+requirements:
+    bootstrapped: true
+```
+
 {% endraw %}

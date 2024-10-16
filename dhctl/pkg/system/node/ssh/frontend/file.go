@@ -40,6 +40,7 @@ func (f *File) Upload(srcPath, remotePath string) error {
 		return err
 	}
 	scp := cmd.NewSCP(f.Session)
+	scp.WithPreserve(true)
 	if fType == "DIR" {
 		scp.WithRecursive(true)
 	}

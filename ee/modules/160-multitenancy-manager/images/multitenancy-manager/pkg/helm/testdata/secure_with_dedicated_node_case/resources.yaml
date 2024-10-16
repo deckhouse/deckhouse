@@ -76,7 +76,7 @@ spec:
           kubernetes.io/metadata.name: d8-monitoring
       podSelector:
         matchLabels:
-          app: prometheus
+          app.kubernetes.io/name: prometheus
     - namespaceSelector:
         matchLabels:
           kubernetes.io/metadata.name: d8-ingress-nginx

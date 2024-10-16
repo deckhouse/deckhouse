@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: deckhouse
+    backup.deckhouse.io/cluster-config: "true"
   name: projects.deckhouse.io
 spec:
   group: deckhouse.io

@@ -16,7 +16,9 @@ limitations under the License.
 
 package d8updater
 
-import "github.com/flant/shell-operator/pkg/metric_storage"
+import (
+	"github.com/flant/shell-operator/pkg/metric_storage"
+)
 
 const metricReleasesGroup = "d8_releases"
 
@@ -31,7 +33,12 @@ type metricUpdater struct {
 }
 
 func (mu metricUpdater) WaitingManual(name string, totalPendingManualReleases float64) {
-	mu.metricStorage.GroupedVault.GaugeSet(metricReleasesGroup, "d8_release_waiting_manual", totalPendingManualReleases, map[string]string{"name": name})
+	mu.metricStorage.GaugeSet(
+		"d8_module_release_waiting_manual",
+		totalPendingManualReleases,
+		map[string]string{
+			"name": name,
+		})
 }
 
 func (mu metricUpdater) ReleaseBlocked(name, reason string) {
