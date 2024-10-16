@@ -14,10 +14,16 @@ properties:
               **Обратите внимание**, что все поды в кластере, использующие токены ServiceAccount, должны быть перезапущены при изменении этой опции.
           additionalAPIAudiences:
             description: |
-              Список API audience'ов, которые следует добавить при создании токенов ServiceAccount.
+              Список дополнительных API audience'ов, которые нужно добавить при создании токенов ServiceAccount.
+              audience по умолчанию, автоматически генерируются на основе шаблона https://kubernetes.default.svc.${clusterDomain}, например, https://kubernetes.default.svc.cluster.local.
+              Аутентификатор токенов ServiceAccount ироверяет, что токены, использованные с API, привязаны как минимум к одной из этих audiences.
+              Этот вариант полезен при переходе от одного API issuer к другому.
           additionalAPIIssuers:
             description: |
-              Список дополнительных API issuer'ов, которые следует добавить при создании токенов ServiceAccount.
+              Список дополнительных API issuer'ов, которые нужно включить при создании токенов ServiceAccount. Issuer'ы (iss) используются для проверки источника токенов, обеспечивая, что они поступают от доверенных сущностей.
+              Первый issuer автоматически генерируется по шаблону `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`.
+              Когда указано несколько issuer'ов, первый issuer используется для генерации токенов, а все указанные issuer'ы принимаются для валидации токенов.
+              Этот вариант полезен при переходе от одного API issuer к другому.
       admissionPlugins:
         description: |
           Список включенных дополнительных [admission plugin'ов](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers).
