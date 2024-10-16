@@ -926,6 +926,7 @@ alerts:
       summary: |
         Module Configuration annotation for allow to disable is setted.
       severity: "4"
+      markupFormat: markdown
     - name: D8ImageAvailabilityExporterMalfunctioning
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
