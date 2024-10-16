@@ -111,6 +111,9 @@ rules:
       - dynamixclusters
       - dynamixmachines
       - dynamixmachinetemplates
+      - huaweicloudclusters
+      - huaweicloudmachines
+      - huaweicloudmachinetemplates
     verbs:
       - create
       - delete

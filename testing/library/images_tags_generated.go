@@ -75,6 +75,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pdCsiPlugin131":            "imageHash-cloudProviderGcp-pdCsiPlugin131",
 	},
 	"cloudProviderHuaweicloud": map[string]interface{}{
+		"caphcControllerManager": "imageHash-cloudProviderHuaweicloud-caphcControllerManager",
 		"cloudControllerManager": "imageHash-cloudProviderHuaweicloud-cloudControllerManager",
 		"cloudDataDiscoverer":    "imageHash-cloudProviderHuaweicloud-cloudDataDiscoverer",
 		"huaweicloudCsiDriver":   "imageHash-cloudProviderHuaweicloud-huaweicloudCsiDriver",
