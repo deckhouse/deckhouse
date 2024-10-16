@@ -155,7 +155,7 @@ defaults:
       path: "*/025-static-routing-manager"
       type: "pages"
     values:
-      featureStatus: experimental  
+      d8Revision: ee  
   - scope:
       path: "*/380-metallb"
       type: "pages"
