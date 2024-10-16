@@ -77,7 +77,7 @@ decort:
   artifact: terraform-provider-decort
   artifactBinary: terraform-provider-decort
   destinationBinary: terraform-provider-decort
-  
+
 huaweicloud:
   namespace: terraform-provider-huaweicloud
   type: huaweicloud

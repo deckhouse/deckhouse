@@ -83,6 +83,11 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 	case "HuaweiCloudClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
 
+	case "HuaweiCloudClusterConfiguration":
+		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
+		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
+		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
+
 	default:
 		return fmt.Errorf("unknown provider cluster configuration kind: %s", configKind)
 	}
