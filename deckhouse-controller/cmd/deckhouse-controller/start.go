@@ -182,7 +182,7 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 		return err
 	}
 
-	validation.RegisterAdmissionHandlers(operator, dController)
+	validation.RegisterAdmissionHandlers(operator, dController, operator.MetricStorage)
 
 	operator.ModuleManager.SetModuleEventsChannel(kubeConfigChannel)
 

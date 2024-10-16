@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
-	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,8 +42,8 @@ type ObjectMeta struct {
 }
 
 // moduleConfigValidationHandler validations for ModuleConfig creation
-func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
-	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *model.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *metric_storage.MetricStorage) http.Handler {
+	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
 		var (
 			cfg = new(v1alpha1.ModuleConfig)
 			ok  bool
@@ -73,6 +73,8 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 						return rejectResult(reason)
 					}
 				}
+
+				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 0, map[string]string{"module": cfg.GetName()})
 
 				// if module is already disabled - we don't need to warn user about disabling module
 				return allowResult("")
@@ -121,6 +123,11 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 
 		// Allow changing configuration for unknown modules.
 		if !d8config.Service().PossibleNames().Has(cfg.Name) {
+			_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
+			if ok {
+				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 1, map[string]string{"module": cfg.GetName()})
+			}
+
 			return allowResult(fmt.Sprintf("module name '%s' is unknown for deckhouse", cfg.Name))
 		}
 
@@ -129,6 +136,11 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage) http.Handler {
 		res := d8config.Service().ConfigValidator().Validate(cfg)
 		if res.HasError() {
 			return rejectResult(res.Error)
+		}
+
+		_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
+		if ok {
+			metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 1, map[string]string{"module": cfg.GetName()})
 		}
 
 		// Return allow with warning.

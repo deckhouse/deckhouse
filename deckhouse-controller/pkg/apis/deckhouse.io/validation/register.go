@@ -18,6 +18,7 @@ package validation
 
 import (
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 )
@@ -27,8 +28,8 @@ type ModuleStorage interface {
 }
 
 // RegisterAdmissionHandlers register validation webhook handlers for admission server built-in in addon-operator
-func RegisterAdmissionHandlers(operator *addon_operator.AddonOperator, moduleStorage ModuleStorage) {
-	operator.AdmissionServer.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(moduleStorage))
+func RegisterAdmissionHandlers(operator *addon_operator.AddonOperator, moduleStorage ModuleStorage, metricStorage *metric_storage.MetricStorage) {
+	operator.AdmissionServer.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(moduleStorage, metricStorage))
 	operator.AdmissionServer.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
 	operator.AdmissionServer.RegisterHandler("/validate/v1/configuration-secret", kubernetesVersionHandler(operator.ModuleManager))
 }
