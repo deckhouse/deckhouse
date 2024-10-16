@@ -140,7 +140,11 @@ func (mc ModuleConfigBackend) handleEvent(ctx context.Context, obj *v1alpha1.Mod
 		_, ok := obj.ObjectMeta.Annotations[v1alpha1.AllowDisableAnnotation]
 		if ok && !*obj.Spec.Enabled {
 			delete(obj.ObjectMeta.Annotations, v1alpha1.AllowDisableAnnotation)
-			mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(ctx, obj, metav1.UpdateOptions{})
+			_, err := mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(ctx, obj, metav1.UpdateOptions{})
+			if err != nil {
+				eventC <- config.Event{Key: obj.Name, Config: cfg, Err: err}
+				return
+			}
 		}
 
 		mc.handleDeckhouseConfig(obj.Name, values)
