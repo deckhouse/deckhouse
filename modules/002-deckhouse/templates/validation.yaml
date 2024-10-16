@@ -172,7 +172,6 @@ spec:
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
 {{- end }}
-{{- end }}
 {{/* End deckhouse windows validation */}}
 
 ---
@@ -223,5 +222,5 @@ spec:
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
 {{- end }}
-{{- end }}
 {{/* End mup windows validation */}}
+{{- end }}
