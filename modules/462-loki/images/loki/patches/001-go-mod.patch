@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 25150a216..6f1dfa895 100644
+index 25150a2..51eee43 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -26,7 +26,7 @@ require (
@@ -7,12 +7,12 @@ index 25150a216..6f1dfa895 100644
  	github.com/cristalhq/hedgedhttp v0.7.2
  	github.com/davecgh/go-spew v1.1.1
 -	github.com/docker/docker v23.0.8+incompatible
-+	github.com/docker/docker v23.0.14+incompatible
++	github.com/docker/docker v23.0.15+incompatible
  	github.com/docker/go-plugins-helpers v0.0.0-20181025120712-1e6269c305b8
  	github.com/drone/envsubst v1.0.3
  	github.com/dustin/go-humanize v1.0.1
 diff --git a/go.sum b/go.sum
-index 0efcd0923..0a7b3bd0c 100644
+index 0efcd09..ef2926b 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -711,8 +711,8 @@ github.com/docker/distribution v2.6.0-rc.1.0.20170726174610-edc3ab29cdff+incompa
@@ -21,13 +21,13 @@ index 0efcd0923..0a7b3bd0c 100644
  github.com/docker/docker v17.12.0-ce-rc1.0.20200916142827-bd33bbf0497b+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 -github.com/docker/docker v23.0.8+incompatible h1:z4ZCIwfqHgOEwhxmAWugSL1PFtPQmLP60EVhJYJPaX8=
 -github.com/docker/docker v23.0.8+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
-+github.com/docker/docker v23.0.14+incompatible h1:r/nVCRovydMLP+zyzzcpY+n+yRsKBri9NXPbKgHfaVM=
-+github.com/docker/docker v23.0.14+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
++github.com/docker/docker v23.0.15+incompatible h1:FnANKw0DBmNSfsivQq07CbPsYvahxZwdyfzg5TtPJWQ=
++github.com/docker/docker v23.0.15+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
  github.com/docker/go-connections v0.3.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=
  github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKohAFqRJQ=
  github.com/docker/go-connections v0.4.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=
 diff --git a/operator/go.mod b/operator/go.mod
-index 7c8dcdd45..1e3b81e01 100644
+index 7c8dcdd..1e3b81e 100644
 --- a/operator/go.mod
 +++ b/operator/go.mod
 @@ -135,7 +135,7 @@ require (
@@ -53,7 +53,7 @@ index 7c8dcdd45..1e3b81e01 100644
  	gopkg.in/yaml.v3 v3.0.1 // indirect
  	k8s.io/apiextensions-apiserver v0.26.1 // indirect
 diff --git a/operator/go.sum b/operator/go.sum
-index 2710f89fd..6481eb7fb 100644
+index 2710f89..6481eb7 100644
 --- a/operator/go.sum
 +++ b/operator/go.sum
 @@ -974,6 +974,7 @@ golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb/go.mod h1:jaDAt6Dkxork7Lm
@@ -92,7 +92,7 @@ index 2710f89fd..6481eb7fb 100644
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 diff --git a/pkg/push/go.mod b/pkg/push/go.mod
-index b69662d9a..ff5d8df17 100644
+index b69662d..ff5d8df 100644
 --- a/pkg/push/go.mod
 +++ b/pkg/push/go.mod
 @@ -6,7 +6,7 @@ require (
@@ -102,7 +102,7 @@ index b69662d9a..ff5d8df17 100644
 -	google.golang.org/grpc v1.53.0
 +	google.golang.org/grpc v1.56.3
  )
- 
+
  require (
 @@ -17,8 +17,8 @@ require (
  	golang.org/x/net v0.23.0 // indirect
@@ -116,7 +116,7 @@ index b69662d9a..ff5d8df17 100644
  	gopkg.in/yaml.v3 v3.0.1 // indirect
  )
 diff --git a/pkg/push/go.sum b/pkg/push/go.sum
-index 36986203d..3b26d319e 100644
+index 3698620..3b26d31 100644
 --- a/pkg/push/go.sum
 +++ b/pkg/push/go.sum
 @@ -63,12 +63,20 @@ golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8T
@@ -141,7 +141,7 @@ index 36986203d..3b26d319e 100644
  gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
  gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c/go.mod h1:JHkPIbrfpd72SG/EVd6muEfDQjcINNoR0C8j2r3qZ4Q=
 diff --git a/tools/lambda-promtail/go.mod b/tools/lambda-promtail/go.mod
-index 22f7df1ea..d57cfa98f 100644
+index 22f7df1..d57cfa9 100644
 --- a/tools/lambda-promtail/go.mod
 +++ b/tools/lambda-promtail/go.mod
 @@ -44,7 +44,7 @@ require (
@@ -175,7 +175,7 @@ index 22f7df1ea..d57cfa98f 100644
  	gopkg.in/yaml.v3 v3.0.1 // indirect
  )
 diff --git a/tools/lambda-promtail/go.sum b/tools/lambda-promtail/go.sum
-index ac1a139fe..eea59ce2a 100644
+index ac1a139..eea59ce 100644
 --- a/tools/lambda-promtail/go.sum
 +++ b/tools/lambda-promtail/go.sum
 @@ -240,6 +240,8 @@ github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaS
@@ -226,7 +226,7 @@ index ac1a139fe..eea59ce2a 100644
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
  gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 diff --git a/vendor/github.com/docker/docker/client/container_wait.go b/vendor/github.com/docker/docker/client/container_wait.go
-index 2375eb1e8..b7d80542c 100644
+index 2375eb1..b7d8054 100644
 --- a/vendor/github.com/docker/docker/client/container_wait.go
 +++ b/vendor/github.com/docker/docker/client/container_wait.go
 @@ -66,8 +66,12 @@ func (cli *Client) ContainerWait(ctx context.Context, containerID string, condit
@@ -243,9 +243,9 @@ index 2375eb1e8..b7d80542c 100644
 +			}
  			return
  		}
- 
+
 diff --git a/vendor/github.com/docker/docker/pkg/ioutils/readers.go b/vendor/github.com/docker/docker/pkg/ioutils/readers.go
-index de00b95e3..d82ae9303 100644
+index de00b95..d82ae93 100644
 --- a/vendor/github.com/docker/docker/pkg/ioutils/readers.go
 +++ b/vendor/github.com/docker/docker/pkg/ioutils/readers.go
 @@ -3,11 +3,15 @@ package ioutils // import "github.com/docker/docker/pkg/ioutils"
@@ -254,7 +254,7 @@ index de00b95e3..d82ae9303 100644
  	"io"
 +	"runtime/debug"
 +	"sync/atomic"
- 
+
  	// make sure crypto.SHA256, crypto.sha512 and crypto.SHA384 are registered
  	// TODO remove once https://github.com/opencontainers/go-digest/pull/64 is merged.
  	_ "crypto/sha256"
@@ -262,7 +262,7 @@ index de00b95e3..d82ae9303 100644
 +
 +	"github.com/sirupsen/logrus"
  )
- 
+
  // ReadCloserWrapper wraps an io.Reader, and implements an io.ReadCloser
 @@ -16,10 +20,15 @@ import (
  type ReadCloserWrapper struct {
@@ -270,7 +270,7 @@ index de00b95e3..d82ae9303 100644
  	closer func() error
 +	closed atomic.Bool
  }
- 
+
  // Close calls back the passed closer function
  func (r *ReadCloserWrapper) Close() error {
 +	if !r.closed.CompareAndSwap(false, true) {
@@ -279,14 +279,14 @@ index de00b95e3..d82ae9303 100644
 +	}
  	return r.closer()
  }
- 
+
 @@ -87,6 +96,7 @@ type cancelReadCloser struct {
  	cancel func()
  	pR     *io.PipeReader // Stream to read from
  	pW     *io.PipeWriter
 +	closed atomic.Bool
  }
- 
+
  // NewCancelReadCloser creates a wrapper that closes the ReadCloser when the
 @@ -146,6 +156,17 @@ func (p *cancelReadCloser) closeWithError(err error) {
  // Close closes the wrapper its underlying reader. It will cause
@@ -307,18 +307,18 @@ index de00b95e3..d82ae9303 100644
 +	}
 +}
 diff --git a/vendor/github.com/docker/docker/pkg/ioutils/writers.go b/vendor/github.com/docker/docker/pkg/ioutils/writers.go
-index 61c679497..1f50602f2 100644
+index 61c6794..1f50602 100644
 --- a/vendor/github.com/docker/docker/pkg/ioutils/writers.go
 +++ b/vendor/github.com/docker/docker/pkg/ioutils/writers.go
 @@ -1,6 +1,9 @@
  package ioutils // import "github.com/docker/docker/pkg/ioutils"
- 
+
 -import "io"
 +import (
 +	"io"
 +	"sync/atomic"
 +)
- 
+
  // NopWriter represents a type which write operation is nop.
  type NopWriter struct{}
 @@ -29,9 +32,14 @@ func (f *NopFlusher) Flush() {}
@@ -327,7 +327,7 @@ index 61c679497..1f50602f2 100644
  	closer func() error
 +	closed atomic.Bool
  }
- 
+
  func (r *writeCloserWrapper) Close() error {
 +	if !r.closed.CompareAndSwap(false, true) {
 +		subsequentCloseWarn("WriteCloserWrapper")
@@ -335,9 +335,9 @@ index 61c679497..1f50602f2 100644
 +	}
  	return r.closer()
  }
- 
+
 diff --git a/vendor/modules.txt b/vendor/modules.txt
-index 1f3f29e4e..d2497e3e2 100644
+index 1f3f29e..d2497e3 100644
 --- a/vendor/modules.txt
 +++ b/vendor/modules.txt
 @@ -482,7 +482,7 @@ github.com/dimchansky/utfbom
