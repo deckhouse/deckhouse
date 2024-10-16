@@ -325,7 +325,7 @@ func (e *exporter) buildTLSConfig() (*tls.Config, error) {
 	ca := e.config.TLSConfig["ca"]
 	if ca != "" {
 		decodedCA, err := base64.StdEncoding.DecodeString(ca)
-		if err != nil || !utf8.Valid(decodedCA) {
+		if err != nil {
 			decodedCA = []byte(ca)
 		}
 
