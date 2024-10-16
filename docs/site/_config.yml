@@ -152,6 +152,11 @@ defaults:
     values:
       d8Revision: ee
   - scope:
+      path: "*/025-static-routing-manager"
+      type: "pages"
+    values:
+      d8Revision: ee  
+  - scope:
       path: "*/380-metallb"
       type: "pages"
     values:
