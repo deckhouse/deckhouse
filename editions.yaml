@@ -57,6 +57,7 @@ editions:
     - vcd
     - ovirt
     - decort
+    - huaweicloud
 
 - name: FE
   modulesDir: "ee/fe/modules"
