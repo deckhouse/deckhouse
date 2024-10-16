@@ -15,4 +15,6 @@ If the infrastructure does not have a DNS server, access to the Dynamix portal f
 Dynamix portal from the cluster can be organized by adding the IP address and domains associated with the Dynamix portal to the `cloud-init` template for generating the hosts file.
 This template is located in the `/etc/cloud/templates/` folder. The name of the template depends on the OS.
 
+{% alert level="warning" %}
 After adding data to hosts and before creating the template from the virtual machine, you must run the `cloud-init clean` command.
+{% endalert %}
