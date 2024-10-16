@@ -65,21 +65,6 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
-  initContainers:
-  - command:
-    - sh
-    - -c
-    - chown -vfR 64535:64535 /prometheus-db/
-    image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
-    imagePullPolicy: IfNotPresent
-    name: fix-permissions
-    securityContext:
-      runAsNonRoot: false
-      runAsUser: 0
-    volumeMounts:
-    - mountPath: /prometheus-db
-      name: prometheus-main-db
-      subPath: prometheus-db
   containers:
   - name: prometheus
     startupProbe:
@@ -151,7 +136,7 @@ spec:
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   # Empty field because when scraping metrics via the Federation API,
-  # labels from externalLabels are being added, 
+  # labels from externalLabels are being added,
   # which makes the series in long-term storage and regular Prometheus different
   externalLabels: {}
   prometheusExternalLabelName: ""
