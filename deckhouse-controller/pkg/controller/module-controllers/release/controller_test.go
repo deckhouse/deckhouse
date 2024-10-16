@@ -110,8 +110,6 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 }
 
 func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
-	const maxIterations = 3
-
 	err := os.Setenv("TEST_EXTENDER_DECKHOUSE_VERSION", "v1.0.0")
 	require.NoError(suite.T(), err)
 	err = os.Setenv("TEST_EXTENDER_KUBERNETES_VERSION", "1.28.0")
@@ -186,7 +184,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		suite.Run("loop until deploy: canary", func() {
 			dc := dependency.NewMockedContainer()
 			dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
+				return []v1.Layer{&utils.FakeLayer{}}, nil
 			}}, nil)
 
 			mup := &v1alpha1.ModuleUpdatePolicySpec{
@@ -241,6 +239,7 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 		if i > maxIterations {
 			suite.T().Fatal("Too many iterations")
 		}
+		suite.ctr.logger.Infof("Iteration %d result: %+v\n", i, result)
 	}
 
 	suite.T().Fatal("Loop was broken")
