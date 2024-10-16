@@ -23,7 +23,7 @@ There are scenarios where pods contain multiple processes, each capable of handl
 
 The service-with-healthchecks module provides the ability to independently check the availability of each process and, based on the results of the new set of probes, direct traffic to the appropriate instances. This is useful, for example, for complex multi-container applications in Kubernetes where a "common" health check is defined for multiple containers in a pod.
 
-A new load-balancing method can be configured using the `ServiceWithHealthchecks` resource:
+A new load-balancing method can be configured using the [ServiceWithHealthchecks](cr.html#servicewithhealthchecks) resource:
 - Its specification is identical to `Service`, with the addition of a `healthchecks` section that contains a set of new checks.
 - When creating this resource, child `Service` objects (without a selector) and corresponding `EndpointSlices` are created.
 - Availability checks for the target processes are performed by agents deployed on each node.
