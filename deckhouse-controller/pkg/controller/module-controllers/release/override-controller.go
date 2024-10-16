@@ -24,7 +24,9 @@ import (
 	"syscall"
 	"time"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
+	cp "github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,13 +126,15 @@ func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) (err 
 }
 
 func (c *modulePullOverrideReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	var result ctrl.Result
+
 	mpo := new(v1alpha1.ModulePullOverride)
 	err := c.client.Get(ctx, types.NamespacedName{Name: request.Name}, mpo)
 	if err != nil {
 		// The ModulePullOverride resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
+			return result, nil
 		}
 
 		return ctrl.Result{Requeue: true}, err
@@ -140,6 +144,7 @@ func (c *modulePullOverrideReconciler) Reconcile(ctx context.Context, request ct
 }
 
 func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Context, mo *v1alpha1.ModulePullOverride) (ctrl.Result, error) {
+	var result ctrl.Result
 	var metaUpdateRequired bool
 
 	// check if RegistrySpecChangedAnnotation annotation is set and process it
@@ -185,7 +190,17 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, utils.GenerateRegistryOptionsFromModuleSource(ms))
+	tmpDir, err := os.MkdirTemp("", "module*")
+	if err != nil {
+		return result, fmt.Errorf("cannot create tmp directory: %w", err)
+	}
+	defer func() {
+		if err = os.RemoveAll(tmpDir); err != nil {
+			c.logger.Errorf("cannot remove old module dir %q: %s", tmpDir, err.Error())
+		}
+	}()
+
+	md := downloader.NewModuleDownloader(c.dc, tmpDir, ms, utils.GenerateRegistryOptionsFromModuleSource(ms))
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()
@@ -211,14 +226,25 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, fmt.Errorf("got an empty module definition for %s module pull override", mo.Name)
 	}
 
-	err = validateModule(*moduleDef)
+	var values = make(addonutils.Values)
+	if module := c.moduleManager.GetModule(moduleDef.Name); module != nil {
+		values = module.GetConfigValues(false)
+	}
+	err = validateModule(*moduleDef, values)
 	if err != nil {
 		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
 		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
-			return ctrl.Result{Requeue: true}, e
+			return ctrl.Result{Requeue: true}, fmt.Errorf("update override status: %w", e)
 		}
+		return result, fmt.Errorf("validation failed: %w", err)
+	}
 
-		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
+	moduleStorePath := path.Join(c.downloadedModulesDir, moduleDef.Name, downloader.DefaultDevVersion)
+	if err = os.RemoveAll(moduleStorePath); err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot remove old module dir %q: %w", c.downloadedModulesDir, err)
+	}
+	if err = cp.Copy(tmpDir, c.downloadedModulesDir); err != nil {
+		return ctrl.Result{}, fmt.Errorf("copy module dir: %w", err)
 	}
 
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleDef.Weight, mo.Name))

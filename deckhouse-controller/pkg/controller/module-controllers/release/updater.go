@@ -24,8 +24,10 @@ import (
 	"strconv"
 	"time"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
+	cp "github.com/otiai10/copy"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -137,7 +139,17 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 		return fmt.Errorf("get module source: %w", err)
 	}
 
-	md := downloader.NewModuleDownloader(k.dc, k.downloadedModulesDir, &ms, utils.GenerateRegistryOptionsFromModuleSource(&ms))
+	tmpDir, err := os.MkdirTemp("", "module*")
+	if err != nil {
+		return fmt.Errorf("cannot create tmp directory: %w", err)
+	}
+	defer func() {
+		if err = os.RemoveAll(tmpDir); err != nil {
+			k.logger.Errorf("cannot remove old module dir %q: %s", tmpDir, err.Error())
+		}
+	}()
+
+	md := downloader.NewModuleDownloader(k.dc, tmpDir, &ms, utils.GenerateRegistryOptionsFromModuleSource(&ms))
 	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
 		return fmt.Errorf("download module: %w", err)
@@ -148,30 +160,40 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 		return fmt.Errorf("update module release download statistic: %w", err)
 	}
 
-	moduleVersionPath := path.Join(k.downloadedModulesDir, moduleName, "v"+release.Spec.Version.String())
+	tmpModuleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
 	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
-	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
 
 	def := models.DeckhouseModuleDefinition{
 		Name:   moduleName,
 		Weight: release.Spec.Weight,
-		Path:   moduleVersionPath,
+		Path:   tmpModuleVersionPath,
 	}
-	err = validateModule(def)
+	values := make(addonutils.Values)
+	if module := k.moduleManager.GetModule(moduleName); module != nil {
+		values = module.GetConfigValues(false)
+	}
+	err = validateModule(def, values)
 	if err != nil {
-		k.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 		release.Status.Phase = v1alpha1.PhaseSuspended
-		if e := k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase); e != nil {
-			return e
-		}
-
-		return nil
+		_ = k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase)
+		return fmt.Errorf("module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 	}
+
+	moduleVersionPath := path.Join(k.downloadedModulesDir, moduleName, "v"+release.Spec.Version.String())
+	if err = os.RemoveAll(moduleVersionPath); err != nil {
+		return fmt.Errorf("cannot remove old module dir %q: %w", moduleVersionPath, err)
+	}
+
+	if err = cp.Copy(tmpModuleVersionPath, moduleVersionPath); err != nil {
+		return fmt.Errorf("copy module dir: %w", err)
+	}
+	def.Path = moduleVersionPath
 
 	// search symlink for module by regexp
 	// module weight for a new version of the module may be different from the old one,
 	// we need to find a symlink that contains the module name without looking at the weight prefix.
 	currentModuleSymlink, err := findExistingModuleSymlink(k.symlinksDir, moduleName)
+	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", def.Weight, moduleName))
 	if err != nil {
 		currentModuleSymlink = "900-" + moduleName // fallback
 	}

@@ -31,7 +31,7 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.34.1
-	github.com/otiai10/copy v1.0.2
+	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spaolacci/murmur3 v1.1.0
@@ -63,6 +63,7 @@ require (
 	github.com/ettle/strcase v0.2.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.1
+	github.com/go-openapi/errors v0.19.7
 	github.com/gofrs/uuid/v5 v5.3.0
 	github.com/itchyny/gojq v0.12.15
 	github.com/jonboulle/clockwork v0.4.0
@@ -121,7 +122,6 @@ require (
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/analysis v0.19.10 // indirect
-	github.com/go-openapi/errors v0.19.7 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/loads v0.19.5 // indirect
@@ -218,8 +218,8 @@ require (
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/oauth2 v0.17.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sys v0.23.0 // indirect
 	golang.org/x/term v0.22.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	golang.org/x/tools v0.23.0 // indirect
