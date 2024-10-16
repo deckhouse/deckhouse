@@ -47,9 +47,9 @@ alerts:
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
-      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired
+      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired or has False condition due to another reason.
       summary: |
-        Certificate expired
+        Certificate has False condition
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateExpiredSoon
