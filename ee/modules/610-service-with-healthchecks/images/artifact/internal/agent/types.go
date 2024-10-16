@@ -126,6 +126,11 @@ type ProbeTask struct {
 	probes      []Prober
 }
 
+type ProbeTaskIdentity struct {
+	host        string
+	serviceName types.NamespacedName
+}
+
 func ProbeDialer() *net.Dialer {
 	dialer := &net.Dialer{
 		Control: func(network, address string, c syscall.RawConn) error {

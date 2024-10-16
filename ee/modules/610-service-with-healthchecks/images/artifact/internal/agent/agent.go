@@ -42,10 +42,12 @@ type ServiceWithHealthchecksReconciler struct {
 	workersCount int
 	nodeName     string
 	mu           sync.RWMutex
+	muInProcess  sync.RWMutex
 	client.Client
 	Scheme              *runtime.Scheme
 	logger              logr.Logger
 	healthecksByService map[types.NamespacedName][]HealthcheckTarget
+	tasksInProcess      map[ProbeTaskIdentity]bool
 	tasks               chan ProbeTask
 	tasksResults        chan ProbeResult
 	events              chan event.GenericEvent
@@ -63,6 +65,7 @@ func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int
 		tasksResults:        make(chan ProbeResult, workersCount*10),
 		events:              make(chan event.GenericEvent),
 		healthecksByService: make(map[types.NamespacedName][]HealthcheckTarget),
+		tasksInProcess:      make(map[ProbeTaskIdentity]bool),
 	}
 }
 
@@ -342,11 +345,11 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 					if diff < float64(healthcheckTarget.periodSeconds) {
 						continue // skip task while period elapsed
 					}
-					r.tasks <- ProbeTask{
+					r.addTask(ProbeTask{
 						host:        healthcheckTarget.targetHost,
 						serviceName: serviceName,
 						probes:      healthcheckTarget.GetRenewedProbes(),
-					}
+					})
 				}
 			}
 			r.mu.RUnlock()
@@ -359,6 +362,7 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.Context) {
 	r.logger.Info("analyzing results")
 	for result := range r.tasksResults {
+		r.deleteTask(result)
 		r.mu.Lock()
 		if _, exists := r.healthecksByService[result.serviceName]; !exists {
 			r.logger.Info("Could not update probes result for service - service is not founded", "name", result.serviceName.String())
@@ -602,6 +606,31 @@ func (r *ServiceWithHealthchecksReconciler) getPostgreSQLCredentials(sqlHandler 
 	creds.ClientKey = string(secret.Data["clientKey"])
 	creds.CaCert = string(secret.Data["caCert"])
 	return creds, nil
+}
+
+func (r *ServiceWithHealthchecksReconciler) addTask(task ProbeTask) {
+	taskIdentity := ProbeTaskIdentity{
+		host:        task.host,
+		serviceName: task.serviceName,
+	}
+	// task already in queue
+	r.muInProcess.Lock()
+	defer r.muInProcess.Unlock()
+	if _, exists := r.tasksInProcess[taskIdentity]; !exists {
+		return
+	}
+	r.tasksInProcess[taskIdentity] = true
+	r.tasks <- task
+}
+
+func (r *ServiceWithHealthchecksReconciler) deleteTask(taskResult ProbeResult) {
+	taskIdentity := ProbeTaskIdentity{
+		host:        taskResult.host,
+		serviceName: taskResult.serviceName,
+	}
+	r.muInProcess.Lock()
+	delete(r.tasksInProcess, taskIdentity)
+	r.muInProcess.Unlock()
 }
 
 func areAllProbesSucceeed(probeResultDetail []ProbeResultDetail) *bool {
