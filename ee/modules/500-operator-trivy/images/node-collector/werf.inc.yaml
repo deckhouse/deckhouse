@@ -6,6 +6,12 @@ import:
   add: /node-collector
   to: /usr/local/bin/node-collector
   before: install
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+    - '**/*'
 docker:
   ENTRYPOINT: ["/usr/local/bin/node-collector"]
 ---
@@ -29,3 +35,13 @@ shell:
   - go build -ldflags '-s -w -extldflags "-static"' -o /node-collector ./cmd/node-collector/main.go
   - chown 64535:64535 /node-collector
   - chmod 0755 /node-collector
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromArtifact: relocate-artifact
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y procps
+  install:
+  - |
+    /binary_replace.sh -i "/usr/bin/ps" -o /relocate
