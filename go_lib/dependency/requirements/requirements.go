@@ -70,7 +70,7 @@ func CheckRequirement(key, value string, enabledModules ...set.Set) (bool, error
 	if key == disabledModulesKey && len(enabledModules) > 0 {
 		blocked := hasBlockingEnabledModules(value, enabledModules[0])
 		if blocked {
-			return false, fmt.Errorf("%q modules have to be disabled", value)
+			return false, fmt.Errorf("%q module(s) have to be disabled", value)
 		}
 
 		return true, nil
