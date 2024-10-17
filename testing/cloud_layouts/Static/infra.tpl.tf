@@ -126,7 +126,8 @@ data "openstack_images_image_v2" "astra_image" {
 
 data "openstack_images_image_v2" "alt_image" {
   most_recent = true
-  name        = "alt-p11-cloud-x86_64-ya-mirror"
+  visibility  = "shared"
+  name        = "alt-p11-cloud-x86_64"
 }
 
 data "openstack_images_image_v2" "redos_image" {
