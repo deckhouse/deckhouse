@@ -548,7 +548,7 @@ func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks
 	for _, serviceProbe := range svc.Spec.Healthcheck.Probes {
 		switch strings.ToLower(serviceProbe.Mode) {
 		case "http":
-			probes = append(probes, HTTPProbeTarget{
+			probes = append(probes, FastHTTPProbeTarget{
 				targetHost:       targetHost,
 				host:             serviceProbe.HTTPHandler.Host,
 				path:             serviceProbe.HTTPHandler.Path,
