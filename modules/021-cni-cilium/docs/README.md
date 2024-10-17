@@ -20,6 +20,36 @@ This module is responsible for providing a network between multiple nodes in a c
       * 7 (needs new kernel from [repository](http://elrepo.org))
       * 8 (needs new kernel from [repository](http://elrepo.org))
 
+## A note on handling external traffic in different `bpfLB` modes (replacement for cilium's kube-proxy)
+To correctly select the `bpfLB` operating mode, it is important to understand the features and prerequisites for creating each type:
+* `SNAT` (Source Network Address Translation) - is one of the NAT subtypes in which for each outgoing packet, the source IP address is translated to the gateway IP address from the target subnet, and incoming packets passing through the gateway are translated back based on the translation table.
+* `DSR` (Direct Server Return) - is a load balancing method that allows all incoming traffic to go through the load balancer, and all outgoing traffic to bypass it.  
+Kubernetes usually uses schemes where traffic comes to the balancer, which distributes it between many terminating servers. In this case, both incoming and outgoing traffic go through the balancer. Thus, the total throughput is limited by the resources and channel width of the balancer.  
+To optimize traffic and unload the balancer, the `DSR` mechanism was invented, in which incoming packets go through the balancer, and outgoing ones go directly from the terminating servers. Since responses are usually much larger in size than requests, this approach can significantly increase the overall throughput of the scheme.
+
+
+![SNAT data flow diagram](../../images/021-cni-cilium/snat.png)
+![DSR data flow diagram](../../images/021-cni-cilium/dsr.png)
+
+The module allows [selecting the operating mode](./configuration.html#parameters-bpflbmode), which affects the behavior of `Service` with the `NodePort` and `LoadBalancer` types:
+* `SNAT` (Source Network Address Translation) - in this mode, `bpfLB` completely repeats the logic of `kube-proxy`:
+  * if `Service` specifies `externalTrafficPolicy: Local`, then traffic will be transmitted and balanced only to those target pods that are running on the same node to which this traffic arrived. If the target pod is not running on this node, then the traffic will be dropped.
+  * if `Service` specifies `externalTrafficPolicy: Cluster`, then traffic will be transmitted and balanced to all target pods in the cluster. In this case, if the target pods are on other nodes, then SNAT will be performed when transmitting traffic to them (the source IP address will be replaced with the InternalIP of the node).
+* `DSR` - in this mode, when forwarding traffic to another node, the `DSR` mechanism is used instead of `SNAT`, in which incoming and outgoing traffic goes along asymmetric paths:
+  * if `externalTrafficPolicy: Local` is specified in `Service`, then the behavior is absolutely identical to `kube-proxy` and `bpfLB` in `SNAT` mode
+  * if `externalTrafficPolicy: Cluster` is specified in `Service`, then the traffic will also be transmitted and balanced to all target pods in the cluster.  
+  In this case:
+    * if the target pods are on other nodes, then the source IP address will be preserved when incoming traffic is sent to them
+    * outgoing traffic will go directly from the node on which the target pod was launched
+    * the source IP address will be replaced with the external IP address of the node to which the incoming request **originally** came.
+  
+{% alert level="warning" %}
+In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.  
+Network equipment must be ready for asymmetric traffic flow: IP address anti-spoofing tools (`uRPF`, `sourceGuard`, etc.) must be disabled or configured accordingly.
+{% endalert %}
+
+* `Hybrid` - in this mode, TCP traffic is processed in `DSR` mode, and UDP - in `SNAT` mode.
+
 ## A note about CiliumClusterwideNetworkPolicies
 
 1. Make sure that you deploy initial set of CiliumClusterwideNetworkPolicies with `policyAuditMode` configuration options set to `true`.
