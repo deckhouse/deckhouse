@@ -59,7 +59,7 @@ properties:
           * `kubernetes.default`;
           * `kubernetes.default.svc`;
           * `kubernetes.default.svc.cluster.local`;
-          * `192.168.0.1`;
+          * *адрес kubernetes API*;
           * `127.0.0.1`;
           * *текущий_hostname*;
           * *hostIP*.
