@@ -14,6 +14,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+var (
+	transport *http.Transport
+)
+
+func init() {
+	transport = http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConns = 100
+	transport.MaxConnsPerHost = 100
+	transport.MaxIdleConnsPerHost = 100
+}
+
 type HTTPProbeTarget struct {
 	targetPort       int
 	successThreshold int32
@@ -69,7 +80,10 @@ func (h HTTPProbeTarget) FailureThreshold() int32 {
 }
 
 func (h HTTPProbeTarget) PerformCheck() error {
-	c := http.Client{Timeout: time.Duration(h.timeoutSeconds) * time.Second}
+	c := http.Client{
+		Timeout:   time.Duration(h.timeoutSeconds) * time.Second,
+		Transport: transport,
+	}
 	url := fmt.Sprintf("%s://%s:%d/%s", h.scheme, h.targetHost, h.targetPort, h.path)
 	req, err := http.NewRequest(h.method, url, nil)
 	if err != nil {
