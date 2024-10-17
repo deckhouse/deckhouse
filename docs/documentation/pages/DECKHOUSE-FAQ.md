@@ -859,7 +859,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
 1. Run a temporary Deckhouse CE pod to retrieve up-to-date digests and module lists:
 
    ```shell
-   kubectl run ce-image --image=registry.deckhouse.ru/deckhouse/ce/install:v1.63.7 --command sleep -- infinity
+   kubectl run ce-image --image=registry.deckhouse.io/deckhouse/ce/install:v1.63.7 --command sleep -- infinity
    ```
 
    > Run an image of the latest installed Deckhouse version in the cluster. To find out which version is currently installed, use the following command:
@@ -905,13 +905,13 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
      Run the command:
 
      ```shell
-     crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
+     crictl pull registry.deckhouse.io/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
      ```
 
      An example:
 
      ```console
-     $ crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
+     $ crictl pull registry.deckhouse.io/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
      Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
      ```
 
@@ -1010,14 +1010,14 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
        bb-sync-file /etc/containerd/conf.d/ce-registry.toml - containerd-config-file-changed << "EOF_TOML"
        [plugins]
          [plugins."io.containerd.grpc.v1.cri"]
-           sandbox_image = "registry.deckhouse.ru/deckhouse/ce@$CE_SANDBOX_IMAGE"
+           sandbox_image = "registry.deckhouse.io/deckhouse/ce@$CE_SANDBOX_IMAGE"
            [plugins."io.containerd.grpc.v1.cri".registry.configs]
-             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
                auth = ""
        EOF_TOML
 
-       sed -i 's|image: .*|image: registry.deckhouse.ru/deckhouse/ce@$CE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
-       sed -i 's|crictl pull .*|crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+       sed -i 's|image: .*|image: registry.deckhouse.io/deckhouse/ce@$CE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+       sed -i 's|crictl pull .*|crictl pull registry.deckhouse.io/deckhouse/ce@$CE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
 
    EOF
    ```
@@ -1053,8 +1053,8 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
 
    ```bash
    kubectl -n d8-system create secret generic deckhouse-registry \
-     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.ru\": {}}}" \
-     --from-literal="address"=registry.deckhouse.ru \
+     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.io\": {}}}" \
+     --from-literal="address"=registry.deckhouse.io \
      --from-literal="path"=/deckhouse/ce \
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
@@ -1065,7 +1065,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
 1. Apply the Deckhouse CE image:
 
    ```shell
-   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ce:v1.63.7
+   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ce:v1.63.7
    ```
 
 1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
@@ -1086,7 +1086,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
 
    ```shell
    kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
-      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+      | select(.image | contains("deckhouse.io/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
    > If the module was disabled in the process, enable it again:
@@ -1141,7 +1141,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
    ```
 
-1. Create a NodeGroupConfiguration resource for authorization in `registry.deckhouse.ru` during the migration:
+1. Create a NodeGroupConfiguration resource for authorization in `registry.deckhouse.io` during the migration:
 
    ```shell
    kubectl apply -f - <<EOF
@@ -1166,7 +1166,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
        [plugins]
          [plugins."io.containerd.grpc.v1.cri"]
            [plugins."io.containerd.grpc.v1.cri".registry.configs]
-             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.ru".auth]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
                auth = "$AUTH_STRING"
        EOF_TOML
 
@@ -1197,7 +1197,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    Run a temporary Deckhouse EE pod to retrieve up-to-date digests and module lists:
 
    ```shell
-   kubectl run ee-image --image=registry.deckhouse.ru/deckhouse/ee/install:v1.63.8 --command sleep -- infinity
+   kubectl run ee-image --image=registry.deckhouse.io/deckhouse/ee/install:v1.63.8 --command sleep -- infinity
    ```
 
    > Run an image of the latest installed Deckhouse version in the cluster. To find out which version is currently installed, use the following command:
@@ -1243,13 +1243,13 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
      Run the command:
 
      ```shell
-     crictl pull registry.deckhouse.ru/deckhouse/ee@$EE_REGISTRY_PACKAGE_PROXY
+     crictl pull registry.deckhouse.io/deckhouse/ee@$EE_REGISTRY_PACKAGE_PROXY
      ```
 
      An example:
 
      ```console
-     $ crictl pull registry.deckhouse.ru/deckhouse/ee@$EE_REGISTRY_PACKAGE_PROXY
+     $ crictl pull registry.deckhouse.io/deckhouse/ee@$EE_REGISTRY_PACKAGE_PROXY
      Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
      ```
 
@@ -1276,11 +1276,11 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
        bb-sync-file /etc/containerd/conf.d/ee-sandbox.toml - containerd-config-file-changed << "EOF_TOML"
        [plugins]
          [plugins."io.containerd.grpc.v1.cri"]
-           sandbox_image = "registry.deckhouse.ru/deckhouse/ee@$EE_SANDBOX_IMAGE"
+           sandbox_image = "registry.deckhouse.io/deckhouse/ee@$EE_SANDBOX_IMAGE"
        EOF_TOML
 
-       sed -i 's|image: .*|image: registry.deckhouse.ru/deckhouse/ee@$EE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
-       sed -i 's|crictl pull .*|crictl pull registry.deckhouse.ru/deckhouse/ee@$EE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+       sed -i 's|image: .*|image: registry.deckhouse.io/deckhouse/ee@$EE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+       sed -i 's|crictl pull .*|crictl pull registry.deckhouse.io/deckhouse/ee@$EE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
 
    EOF
    ```
@@ -1310,8 +1310,8 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
    ```shell
    kubectl -n d8-system create secret generic deckhouse-registry \
-     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\":    \"$AUTH_STRING\" }}}" \
-     --from-literal="address"=registry.deckhouse.ru \
+     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.io\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\":    \"$AUTH_STRING\" }}}" \
+     --from-literal="address"=registry.deckhouse.io \
      --from-literal="path"=/deckhouse/ee \
      --from-literal="scheme"=https \
      --type=kubernetes.io/dockerconfigjson \
