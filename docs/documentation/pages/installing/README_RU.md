@@ -1,6 +1,8 @@
 ---
 title: "Установка"
 permalink: ru/installing/
+description: | 
+ Информация по установке Deckhouse Kubernetes Platform, включая подготовку инфраструктуры, конфигурацию и запуск инсталлятора.
 lang: ru
 ---
 
