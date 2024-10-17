@@ -93,7 +93,7 @@ apiVersions:
       nameservers:
         type: object
         description: |
-          DNS-server configuration for the Azure virtual network used by the cluster nodes.
+          DNS server configuration for the Azure virtual network used by the cluster nodes.
         properties:
           addresses:
             type: array
