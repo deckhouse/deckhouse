@@ -126,17 +126,17 @@ index f3afdc334..e196c5c49 100644
 +		workerProcesses: prometheus.NewDesc(
 +			prometheus.BuildFQName(PrometheusNamespace, subSystem, "worker_processes"),
 +			"max worker processes",
-+			[]string{"state"}, constLabels),
++			nil, constLabels),
 +
 +		workerConnections: prometheus.NewDesc(
 +			prometheus.BuildFQName(PrometheusNamespace, subSystem, "worker_connections"),
 +			"max worker connections",
-+			[]string{"state"}, constLabels),
++			nil, constLabels),
 +
 +		workerRlimitNofile: prometheus.NewDesc(
 +			prometheus.BuildFQName(PrometheusNamespace, subSystem, "worker_rlimit_nofile"),
 +			"max worker rlimit nofile",
-+			[]string{"state"}, constLabels),
++			nil, constLabels),
 +
  		connectionsTotal: prometheus.NewDesc(
  			prometheus.BuildFQName(PrometheusNamespace, subSystem, "connections_total"),
