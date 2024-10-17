@@ -91,15 +91,9 @@ func (h FastHTTPProbeTarget) FailureThreshold() int32 {
 }
 
 func (h FastHTTPProbeTarget) PerformCheck() error {
-	//client := &fasthttp.Client{
-	//	ReadTimeout:                   time.Duration(h.timeoutSeconds) * time.Second,
-	//	WriteTimeout:                  time.Duration(h.timeoutSeconds) * time.Second,
-	//	MaxIdleConnDuration:           maxIdleConnDuration,
-	//	NoDefaultUserAgentHeader:      true,
-	//	DisableHeaderNamesNormalizing: true,
-	//	DisablePathNormalizing:        true,
-	//}
 	client := pool.Get().(*fasthttp.Client)
+	client.ReadTimeout = time.Duration(h.timeoutSeconds) * time.Second
+	client.WriteTimeout = time.Duration(h.timeoutSeconds) * time.Second
 	defer pool.Put(client)
 
 	url := fmt.Sprintf("%s://%s:%d/%s", h.scheme, h.targetHost, h.targetPort, h.path)

@@ -257,6 +257,7 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 			Ready:            false, //TODO: pod readiness
 			ProbesSuccessful: *areAllProbesSucceeed(result.probeResultDetails),
 			FailedProbes:     result.FailedProbes(),
+			LastProbeTime:    metav1.Time{Time: result.lastCheck},
 		})
 	}
 	return endpointStatuses

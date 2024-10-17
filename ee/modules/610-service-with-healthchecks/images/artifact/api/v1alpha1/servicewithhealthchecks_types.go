@@ -136,6 +136,9 @@ type EndpointStatus struct {
 	Ready            bool     `json:"ready,omitempty" protobuf:"varint,3,opt,name=ready"`
 	ProbesSuccessful bool     `json:"probesSuccessful,omitempty" protobuf:"varint,4,opt,name=probesSuccessful"`
 	FailedProbes     []string `json:"failedProbes,omitempty" protobuf:"bytes,5,rep,name=failedProbes"`
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Format=date-time
+	LastProbeTime metav1.Time `json:"lastProbeTime" protobuf:"bytes,6,opt,name=lastTransitionTime"`
 }
 
 func init() {
