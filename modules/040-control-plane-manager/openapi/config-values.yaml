@@ -105,7 +105,7 @@ properties:
           * `kubernetes.default`;
           * `kubernetes.default.svc`;
           * `kubernetes.default.svc.cluster.local`;
-          * *kubernetes API address*;
+          * *Kubernetes API address*;
           * `127.0.0.1`;
           * *current_hostname*;
           * *hostIP*.
