@@ -234,11 +234,20 @@ common:
     en: All modules
     ru: Все модули
   description_cr:
-    ru: Custom resources модуля <MODULENAME>
-    en: Custom resources of the <MODULENAME> module
+    ru: Deckhouse Kubernetes Platform, кастомные ресурсы (custom resources) модуля <MODULENAME>.
+    en: Custom resources of module <MODULENAME> of Deckhouse Kubernetes Platform.
   description_configuration:
-    ru: Параметры конфигурации модуля <MODULENAME>
-    en: Configuration parameters of the <MODULENAME> module
+    ru: Deckhouse Kubernetes Platform, параметры конфигурации модуля <MODULENAME>.
+    en: Configuration parameters of module <MODULENAME> of Deckhouse Kubernetes Platform.
+  description_examples:
+    ru: Deckhouse Kubernetes Platform, примеры конфигурации модуля <MODULENAME>.
+    en: Examples of configuring module <MODULENAME> of Deckhouse Kubernetes Platform.
+  description_usage:
+    ru: Deckhouse Kubernetes Platform, примеры использования модуля <MODULENAME>.
+    en: Examples of using module <MODULENAME> of Deckhouse Kubernetes Platform.
+  description_faq:
+    ru: Deckhouse Kubernetes Platform, частые вопросы по использованию модуля <MODULENAME>.
+    en: Frequently Asked Questions for module <MODULENAME> of Deckhouse Kubernetes Platform.
 
 comparison:
   except_parameters:

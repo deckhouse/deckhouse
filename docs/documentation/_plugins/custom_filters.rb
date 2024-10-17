@@ -16,9 +16,6 @@ module Jekyll
       /\{%.*?%}/m
     )
     STRIP_HTML_TAGS = /<.*?>/m
-    STRIP_JEKYLL_RAW = Regexp.new "{% raw %}"
-    STRIP_ALERTS = Regexp.new "{% alert level=”warning” %}"
-    STRIP_END_ALERT = Regexp.new "{% endalert %}"
 
     def true_relative_url(path)
         if !path.instance_of? String
