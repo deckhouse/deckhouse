@@ -44,19 +44,18 @@ properties:
               memory: 16384
               rootDiskSizeGb: 50
               imageName: "<image name>"
-          storageEndpoint: "<storage endpoint>"
-          pool: "<pool>"
-          externalNetwork: "<external network>"
-      nodeGroups:
-      - name: worker
-        replicas: 1
-        instanceClass:
-          numCPUs: 6
-          memory: 16384
-          rootDiskSizeGb: 50
-          imageName: "<image name>"
-          externalNetwork: "<external network>"
-
+              storageEndpoint: "<storage endpoint>"
+              pool: "<pool>"
+              externalNetwork: "<external network>"
+          nodeGroups:
+          - name: worker
+            replicas: 1
+            instanceClass:
+              numCPUs: 6
+              memory: 16384
+              rootDiskSizeGb: 50
+              imageName: "<image name>"
+              externalNetwork: "<external network>"
         required: [ apiVersion, kind, sshPublicKey, location, account, masterNodeGroup, layout, provider ]
         properties:
           apiVersion:
