@@ -62,23 +62,9 @@ bb-apt-rpm-update() {
     export DEBIAN_FRONTEND=noninteractive
     bb-flag? apt-rpm-updated && return 0
     bb-log-info 'Updating apt cache'
-
-    set +Eeuo pipefail
-    OUTPUT=$(apt-get update 2>&1)
-    EXIT_CODE=$?
-    set -Eeuo pipefail
-
-    echo "$OUTPUT"
-    if echo "$OUTPUT" | grep -q "error reading from /var/lib/apt/lists/partial"; then
-        rm -rf /var/lib/apt/lists/partial/*
-    fi
-
-    if [ $EXIT_CODE -eq 0 ]; then
-        bb-flag-set apt-rpm-updated
-    fi
-    return $EXIT_CODE
+    apt-get update
+    bb-flag-set apt-rpm-updated
 }
-
 
 bb-apt-rpm-dist-upgrade() {
     export DEBIAN_FRONTEND=noninteractive
