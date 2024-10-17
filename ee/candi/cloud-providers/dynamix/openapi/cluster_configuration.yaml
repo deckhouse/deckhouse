@@ -51,7 +51,7 @@ apiVersions:
           rootDiskSizeGb: 50
           imageName: "<image name>"
           externalNetwork: "<external network>"
-    required: [apiVersion, kind, sshPublicKey, location, account, masterNodeGroup, nodeNetworkCIDR, layout, provider]
+    required: [apiVersion, kind, sshPublicKey, location, account, masterNodeGroup, layout, provider]
     properties:
       apiVersion:
         type: string
@@ -250,10 +250,15 @@ apiVersions:
         - appId
         - appSecret
     oneOf:
+    - required: [layout, nodeNetworkCIDR]
+      properties:
+        layout:
+          enum:
+          - StandardWithInternalNetwork
+          type: string
     - required: [layout]
       properties:
         layout:
           enum:
           - Standard
-          - StandardWithInternalNetwork
           type: string
