@@ -1,0 +1,219 @@
+diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
+index e19ee8bb3..8d340af7c 100644
+--- a/internal/ingress/controller/nginx.go
++++ b/internal/ingress/controller/nginx.go
+@@ -138,7 +138,8 @@ func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXContro
+ 		config.DisableCatchAll,
+ 		config.DeepInspector,
+ 		config.IngressClassConfiguration,
+-		config.DisableSyncEvents)
++		config.DisableSyncEvents,
++		mc)
+ 
+ 	n.syncQueue = task.NewTaskQueue(n.syncIngress)
+ 
+diff --git a/internal/ingress/controller/store/store.go b/internal/ingress/controller/store/store.go
+index 284f53209..1f07fd047 100644
+--- a/internal/ingress/controller/store/store.go
++++ b/internal/ingress/controller/store/store.go
+@@ -23,6 +23,7 @@ import (
+ 	"os"
+ 	"reflect"
+ 	"sort"
++	"strconv"
+ 	"strings"
+ 	"sync"
+ 	"time"
+@@ -55,6 +56,7 @@ import (
+ 	ngx_template "k8s.io/ingress-nginx/internal/ingress/controller/template"
+ 	"k8s.io/ingress-nginx/internal/ingress/defaults"
+ 	"k8s.io/ingress-nginx/internal/ingress/errors"
++	"k8s.io/ingress-nginx/internal/ingress/metric"
+ 	"k8s.io/ingress-nginx/internal/ingress/resolver"
+ 	"k8s.io/ingress-nginx/internal/k8s"
+ 	"k8s.io/ingress-nginx/pkg/apis/ingress"
+@@ -219,6 +221,8 @@ type k8sStore struct {
+ 	// listers contains the cache.Store interfaces used in the ingress controller
+ 	listers *Lister
+ 
++	mc metric.Collector
++
+ 	// sslStore local store of SSL certificates (certificates used in ingress)
+ 	// this is required because the certificates must be present in the
+ 	// container filesystem
+@@ -256,12 +260,14 @@ func New(
+ 	deepInspector bool,
+ 	icConfig *ingressclass.Configuration,
+ 	disableSyncEvents bool,
++	mc metric.Collector,
+ ) Storer {
+ 	store := &k8sStore{
+ 		informers:             &Informer{},
+ 		listers:               &Lister{},
+ 		sslStore:              NewSSLCertTracker(),
+ 		updateCh:              updateCh,
++		mc:                    mc,
+ 		backendConfig:         ngx_config.NewDefault(),
+ 		syncSecretMu:          &sync.Mutex{},
+ 		backendConfigMu:       &sync.RWMutex{},
+@@ -269,6 +275,12 @@ func New(
+ 		defaultSSLCertificate: defaultSSLCertificate,
+ 	}
+ 
++	if n, err := strconv.Atoi(store.backendConfig.WorkerProcesses); err == nil {
++		store.mc.SetWorkerProcesses(n)
++	}
++	store.mc.SetWorkerConnections(store.backendConfig.MaxWorkerConnections)
++	store.mc.SetWorkerRlimitNofile(store.backendConfig.MaxWorkerOpenFiles)
++
+ 	eventBroadcaster := record.NewBroadcaster()
+ 	eventBroadcaster.StartLogging(klog.Infof)
+ 	if !disableSyncEvents {
+@@ -1214,6 +1226,11 @@ func (s *k8sStore) setConfig(cmap *corev1.ConfigMap) {
+ 		klog.Warning("The GeoIP2 feature is enabled but the databases are missing. Disabling")
+ 		s.backendConfig.UseGeoIP2 = false
+ 	}
++	if n, err := strconv.Atoi(s.backendConfig.WorkerProcesses); err == nil {
++		s.mc.SetWorkerProcesses(n)
++	}
++	s.mc.SetWorkerConnections(s.backendConfig.MaxWorkerConnections)
++	s.mc.SetWorkerRlimitNofile(s.backendConfig.MaxWorkerOpenFiles)
+ 
+ 	s.writeSSLSessionTicketKey(cmap, "/etc/ingress-controller/tickets.key")
+ }
+diff --git a/internal/ingress/metric/collectors/nginx_status.go b/internal/ingress/metric/collectors/nginx_status.go
+index f3afdc334..d36a5cea7 100644
+--- a/internal/ingress/metric/collectors/nginx_status.go
++++ b/internal/ingress/metric/collectors/nginx_status.go
+@@ -39,12 +39,19 @@ type (
+ 		scrapeChan chan scrapeRequest
+ 
+ 		data *nginxStatusData
++
++		workerConnections  int
++		workerProcesses    int
++		workerRlimitNofile int
+ 	}
+ 
+ 	nginxStatusData struct {
+-		connectionsTotal *prometheus.Desc
+-		requestsTotal    *prometheus.Desc
+-		connections      *prometheus.Desc
++		workerConnections  *prometheus.Desc
++		workerProcesses    *prometheus.Desc
++		workerRlimitNofile *prometheus.Desc
++		connectionsTotal   *prometheus.Desc
++		requestsTotal      *prometheus.Desc
++		connections        *prometheus.Desc
+ 	}
+ 
+ 	basicStatus struct {
+@@ -69,6 +76,10 @@ type (
+ type NGINXStatusCollector interface {
+ 	prometheus.Collector
+ 
++	SetWorkerConnections(workerConnections int)
++	SetWorkerProcesses(workerProcesses int)
++	SetWorkerRlimitNofile(workerRlimitNofile int)
++
+ 	Start()
+ 	Stop()
+ }
+@@ -86,6 +97,21 @@ func NewNGINXStatus(podName, namespace, ingressClass string) (NGINXStatusCollect
+ 	}
+ 
+ 	p.data = &nginxStatusData{
++		workerProcesses: prometheus.NewDesc(
++			prometheus.BuildFQName(namespace, subSystem, "worker_processes"),
++			"max worker processes",
++			nil, constLabels),
++
++		workerConnections: prometheus.NewDesc(
++			prometheus.BuildFQName(namespace, subSystem, "worker_connections"),
++			"max worker connections",
++			nil, constLabels),
++
++		workerRlimitNofile: prometheus.NewDesc(
++			prometheus.BuildFQName(namespace, subSystem, "worker_rlimit_nofile"),
++			"max worker rlimit nofile",
++			nil, constLabels),
++
+ 		connectionsTotal: prometheus.NewDesc(
+ 			prometheus.BuildFQName(PrometheusNamespace, subSystem, "connections_total"),
+ 			"total number of connections with state {accepted, handled}",
+@@ -107,6 +133,9 @@ func NewNGINXStatus(podName, namespace, ingressClass string) (NGINXStatusCollect
+ 
+ // Describe implements prometheus.Collector.
+ func (p nginxStatusCollector) Describe(ch chan<- *prometheus.Desc) {
++	ch <- p.data.workerProcesses
++	ch <- p.data.workerConnections
++	ch <- p.data.workerRlimitNofile
+ 	ch <- p.data.connectionsTotal
+ 	ch <- p.data.requestsTotal
+ 	ch <- p.data.connections
+@@ -131,6 +160,18 @@ func (p nginxStatusCollector) Stop() {
+ 	close(p.scrapeChan)
+ }
+ 
++func (p nginxStatusCollector) SetWorkerConnections(n int) {
++	p.workerConnections = n
++}
++
++func (p nginxStatusCollector) SetWorkerProcesses(n int) {
++	p.workerProcesses = n
++}
++
++func (p nginxStatusCollector) SetWorkerRlimitNofile(n int) {
++	p.workerRlimitNofile = n
++}
++
+ func toInt(data []string, pos int) int {
+ 	if len(data) == 0 {
+ 		return 0
+@@ -179,6 +220,12 @@ func (p nginxStatusCollector) scrape(ch chan<- prometheus.Metric) {
+ 
+ 	s := parse(string(data))
+ 
++	ch <- prometheus.MustNewConstMetric(p.data.workerConnections,
++		prometheus.GaugeValue, float64(p.workerConnections))
++	ch <- prometheus.MustNewConstMetric(p.data.workerProcesses,
++		prometheus.GaugeValue, float64(p.workerProcesses))
++	ch <- prometheus.MustNewConstMetric(p.data.workerRlimitNofile,
++		prometheus.GaugeValue, float64(p.workerRlimitNofile))
+ 	ch <- prometheus.MustNewConstMetric(p.data.connectionsTotal,
+ 		prometheus.CounterValue, float64(s.Accepted), "accepted")
+ 	ch <- prometheus.MustNewConstMetric(p.data.connectionsTotal,
+diff --git a/internal/ingress/metric/main.go b/internal/ingress/metric/main.go
+index 93c31622c..4c21c7141 100644
+--- a/internal/ingress/metric/main.go
++++ b/internal/ingress/metric/main.go
+@@ -41,6 +41,10 @@ type Collector interface {
+ 	OnStartedLeading(string)
+ 	OnStoppedLeading(string)
+ 
++	SetWorkerConnections(n int)
++	SetWorkerProcesses(n int)
++	SetWorkerRlimitNofile(n int)
++
+ 	IncCheckCount(string, string)
+ 	IncCheckErrorCount(string, string)
+ 	IncOrphanIngress(string, string, string)
+@@ -115,6 +119,18 @@ func (c *collector) ConfigSuccess(hash uint64, success bool) {
+ 	c.ingressController.ConfigSuccess(hash, success)
+ }
+ 
++func (c *collector) SetWorkerConnections(n int) {
++	c.nginxStatus.SetWorkerConnections(n)
++}
++
++func (c *collector) SetWorkerProcesses(n int) {
++	c.nginxStatus.SetWorkerProcesses(n)
++}
++
++func (c *collector) SetWorkerRlimitNofile(n int) {
++	c.nginxStatus.SetWorkerRlimitNofile(n)
++}
++
+ func (c *collector) IncCheckCount(namespace, name string) {
+ 	c.ingressController.IncCheckCount(namespace, name)
+ }
