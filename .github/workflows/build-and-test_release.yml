@@ -2912,12 +2912,12 @@ jobs:
           # Extract documentation content to the tmp directory.
           export WERF_DIR=$BASEDIR/documentation
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo "werf stage image web:"
+          echo "werf stage image docs/web:"
           werf stage image web | tr 'a-z' 'A-Z'
-          echo "Run 'docker pull' from werf stage image web"
-          docker pull $(werf stage image web)
-          echo "Run 'docker cp' from werf stage image web"
-          docker cp $(docker create --rm $(werf stage image web)):/app ${_TMPDIR}/documentation
+          echo "Run 'docker pull' from werf stage image docs/web"
+          docker pull $(werf stage image docs/web)
+          echo "Run 'docker cp' from werf stage image docs/web"
+          docker cp $(docker create --rm $(werf stage image docs/web)):/app ${_TMPDIR}/documentation
 
           # Create EN site structure.
           echo "Create site structure in '${_TMPDIR}/site_en/'"
