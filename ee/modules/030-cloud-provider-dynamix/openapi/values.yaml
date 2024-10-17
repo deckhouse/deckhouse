@@ -271,6 +271,11 @@ properties:
         type: object
         additionalProperties: false
         required: [ apiVersion, kind ]
+        x-examples:
+        - apiVersion: deckhouse.io/v1
+          kind: DynamixCloudProviderDiscoveryData
+          storageEndpoints:
+          - name: Default
         properties:
           apiVersion:
             type: string
