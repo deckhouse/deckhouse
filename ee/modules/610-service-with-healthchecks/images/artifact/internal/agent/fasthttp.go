@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/valyala/fasthttp"
@@ -17,7 +18,23 @@ import (
 
 var (
 	maxIdleConnDuration, _ = time.ParseDuration("100s")
+	pool                   *sync.Pool
 )
+
+func init() {
+	pool = &sync.Pool{
+		New: func() any {
+			return &fasthttp.Client{
+				ReadTimeout:                   time.Duration(1) * time.Second,
+				WriteTimeout:                  time.Duration(1) * time.Second,
+				MaxIdleConnDuration:           maxIdleConnDuration,
+				NoDefaultUserAgentHeader:      true,
+				DisableHeaderNamesNormalizing: true,
+				DisablePathNormalizing:        true,
+			}
+		},
+	}
+}
 
 type FastHTTPProbeTarget struct {
 	targetPort       int
@@ -74,14 +91,17 @@ func (h FastHTTPProbeTarget) FailureThreshold() int32 {
 }
 
 func (h FastHTTPProbeTarget) PerformCheck() error {
-	client := &fasthttp.Client{
-		ReadTimeout:                   time.Duration(h.timeoutSeconds) * time.Second,
-		WriteTimeout:                  time.Duration(h.timeoutSeconds) * time.Second,
-		MaxIdleConnDuration:           maxIdleConnDuration,
-		NoDefaultUserAgentHeader:      true,
-		DisableHeaderNamesNormalizing: true,
-		DisablePathNormalizing:        true,
-	}
+	//client := &fasthttp.Client{
+	//	ReadTimeout:                   time.Duration(h.timeoutSeconds) * time.Second,
+	//	WriteTimeout:                  time.Duration(h.timeoutSeconds) * time.Second,
+	//	MaxIdleConnDuration:           maxIdleConnDuration,
+	//	NoDefaultUserAgentHeader:      true,
+	//	DisableHeaderNamesNormalizing: true,
+	//	DisablePathNormalizing:        true,
+	//}
+	client := pool.Get().(*fasthttp.Client)
+	defer pool.Put(client)
+
 	url := fmt.Sprintf("%s://%s:%d/%s", h.scheme, h.targetHost, h.targetPort, h.path)
 	req := fasthttp.AcquireRequest()
 	req.SetRequestURI(url)
