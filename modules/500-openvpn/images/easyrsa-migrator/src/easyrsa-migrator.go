@@ -19,14 +19,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"os"
-	"strings"
 )
 
 type indexTxtLine struct {
@@ -73,16 +73,16 @@ func main() {
 		return
 	}
 
-	indexTxtFile, err := ioutil.ReadFile(easyrsaDir + "/pki/index.txt")
+	indexTxtFile, err := os.ReadFile(easyrsaDir + "/pki/index.txt")
 	if err != nil {
 		log.Error(err)
 	}
 
-	caCertFile, err := ioutil.ReadFile(fmt.Sprintf("%s/pki/ca.crt", easyrsaDir))
+	caCertFile, err := os.ReadFile(fmt.Sprintf("%s/pki/ca.crt", easyrsaDir))
 	if err != nil {
 		log.Error(err)
 	}
-	caKeyFile, err := ioutil.ReadFile(fmt.Sprintf("%s/pki/private/ca.key", easyrsaDir))
+	caKeyFile, err := os.ReadFile(fmt.Sprintf("%s/pki/private/ca.key", easyrsaDir))
 	if err != nil {
 		log.Error(err)
 	}
@@ -105,11 +105,11 @@ func main() {
 		log.Errorf("error create secret: %s", err.Error())
 	}
 
-	serverCertFile, err := ioutil.ReadFile(fmt.Sprintf("%s/pki/issued/server.crt", easyrsaDir))
+	serverCertFile, err := os.ReadFile(fmt.Sprintf("%s/pki/issued/server.crt", easyrsaDir))
 	if err != nil {
 		log.Error(err)
 	}
-	serverKeyFile, err := ioutil.ReadFile(fmt.Sprintf("%s/pki/private/server.key", easyrsaDir))
+	serverKeyFile, err := os.ReadFile(fmt.Sprintf("%s/pki/private/server.key", easyrsaDir))
 	if err != nil {
 		log.Error(err)
 	}
@@ -132,11 +132,11 @@ func main() {
 		log.Errorf("error create secret: %s", err.Error())
 	}
 
-	taKeyFile, err := ioutil.ReadFile(fmt.Sprintf("%s/pki/ta.key", easyrsaDir))
+	taKeyFile, err := os.ReadFile(fmt.Sprintf("%s/pki/ta.key", easyrsaDir))
 	if err != nil {
 		log.Error(err)
 	}
-	dhFile, err := ioutil.ReadFile(fmt.Sprintf("%s/pki/dh.pem", easyrsaDir))
+	dhFile, err := os.ReadFile(fmt.Sprintf("%s/pki/dh.pem", easyrsaDir))
 	if err != nil {
 		log.Error(err)
 	}
@@ -174,7 +174,7 @@ func main() {
 			log.Printf("file not found: %s", path)
 			path = fmt.Sprintf("%s/pki/revoked/certs_by_serial/%s.crt", easyrsaDir, cert.SerialNumber)
 		}
-		file, err := ioutil.ReadFile(path)
+		file, err := os.ReadFile(path)
 		if err != nil {
 			log.Error(err)
 		}
@@ -185,7 +185,7 @@ func main() {
 			log.Printf("file not found: %s", path)
 			path = fmt.Sprintf("%s/pki/revoked/private_by_serial/%s.key", easyrsaDir, cert.SerialNumber)
 		}
-		file, err = ioutil.ReadFile(path)
+		file, err = os.ReadFile(path)
 		if err != nil {
 			log.Error(err)
 		}
