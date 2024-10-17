@@ -64,4 +64,4 @@ Add HTTP/3 support.
 
 ### new metrics
 
-This patch adds max workers connections, max worker processes and max worker open files metrics.
+This patch adds worker max connections, worker processes and worker max open files metrics.
