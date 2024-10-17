@@ -22,10 +22,15 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+)
+
+const (
+	disabledModulesKey = "disabledModules"
 )
 
 var (
@@ -60,6 +65,13 @@ func CheckRequirement(key, value string, enabledModules ...set.Set) (bool, error
 	}
 	if defaultRegistry == nil {
 		return true, nil
+	}
+
+	if key == disabledModulesKey && len(enabledModules) > 0 {
+		blocked := hasBlockingEnabledModules(value, enabledModules[0])
+		if blocked {
+			return false, fmt.Errorf("%q modules have to be disabled", value)
+		}
 	}
 
 	fs, err := defaultRegistry.GetChecksByKey(key)
@@ -184,4 +196,21 @@ func (r *requirementsRegistry) GetDisruptionByKey(key string) (DisruptionFunc, e
 	}
 
 	return f, nil
+}
+
+// hasBlockingEnabledModules checks special requirement key `disabledModules` and block the release update
+// if any of these modules is enabled in the cluster
+func hasBlockingEnabledModules(requirementsValue string, enabledModules set.Set) bool {
+	arr := strings.Split(requirementsValue, ",")
+	if len(arr) == 0 {
+		return false
+	}
+
+	for _, moduleName := range arr {
+		if enabledModules.Has(strings.TrimSpace(moduleName)) {
+			return true
+		}
+	}
+
+	return false
 }
