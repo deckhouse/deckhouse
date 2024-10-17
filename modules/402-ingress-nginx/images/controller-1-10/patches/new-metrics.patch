@@ -183,6 +183,26 @@ index f3afdc334..e196c5c49 100644
  	ch <- prometheus.MustNewConstMetric(p.data.connectionsTotal,
  		prometheus.CounterValue, float64(s.Accepted), "accepted")
  	ch <- prometheus.MustNewConstMetric(p.data.connectionsTotal,
+diff --git a/internal/ingress/metric/dummy.go b/internal/ingress/metric/dummy.go
+index 7b1485280..3763d750d 100644
+--- a/internal/ingress/metric/dummy.go
++++ b/internal/ingress/metric/dummy.go
+@@ -62,6 +62,15 @@ func (dc DummyCollector) Start(_ string) {}
+ // Stop dummy implementation
+ func (dc DummyCollector) Stop(_ string) {}
+ 
++// SetWorkerConnections dummy implementation
++func (dc DummyCollector) SetWorkerConnections(n int) {}
++
++// SetWorkerProcesses dummy implementation
++func (dc DummyCollector) SetWorkerProcesses(n int) {}
++
++// SetWorkerRlimitNofile dummy implementation
++func (dc DummyCollector) SetWorkerRlimitNofile(n int) {}
++
+ // SetSSLInfo dummy implementation
+ func (dc DummyCollector) SetSSLInfo([]*ingress.Server) {}
+ 
 diff --git a/internal/ingress/metric/main.go b/internal/ingress/metric/main.go
 index 93c31622c..4c21c7141 100644
 --- a/internal/ingress/metric/main.go
