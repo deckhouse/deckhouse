@@ -63,7 +63,6 @@ import (
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
-	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
@@ -459,7 +458,12 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	}
 
 	k8 := newKubeAPI(ctx, r.logger, r.client, r.downloadedModulesDir, r.symlinksDir, r.moduleManager, r.dc)
-	releaseUpdater := newModuleUpdater(r.dc, r.logger, nConfig, policy.Spec.Update.Mode, k8, r.moduleManager.GetEnabledModuleNames(), r.metricStorage)
+	settings := &updater.Settings{
+		NotificationConfig: nConfig,
+		Mode:               updater.ParseUpdateMode(policy.Spec.Update.Mode),
+		Windows:            policy.Spec.Update.Windows,
+	}
+	releaseUpdater := newModuleUpdater(r.dc, r.logger, settings, k8, r.moduleManager.GetEnabledModuleNames(), r.metricStorage)
 
 	otherReleases := new(v1alpha1.ModuleReleaseList)
 	err = r.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
@@ -510,7 +514,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	if releaseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
-		err = releaseUpdater.ApplyPredictedRelease(nil)
+		err = releaseUpdater.ApplyPredictedRelease()
 		if err != nil {
 			return r.wrapApplyReleaseError(err)
 		}
@@ -519,12 +523,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		return ctrl.Result{}, nil
 	}
 
-	var windows update.Windows
-	if !releaseUpdater.InManualMode() {
-		windows = policy.Spec.Update.Windows
-	}
-
-	err = releaseUpdater.ApplyPredictedRelease(windows)
+	err = releaseUpdater.ApplyPredictedRelease()
 	if err != nil {
 		return r.wrapApplyReleaseError(err)
 	}
@@ -534,7 +533,9 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 }
 
 func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
+	var result ctrl.Result
 	var notReadyErr *updater.NotReadyForDeployError
+
 	if errors.As(err, &notReadyErr) {
 		r.logger.Infoln(err.Error())
 		// TODO: requeue all releases if deckhouse update settings is changed
@@ -546,7 +547,7 @@ func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result,
 		return ctrl.Result{Requeue: true, RequeueAfter: notReadyErr.RetryDelay()}, nil
 	}
 
-	return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
+	return result, fmt.Errorf("apply predicted release: %w", err)
 }
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.

@@ -40,12 +40,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-func newModuleUpdater(dc dependency.Container, logger logger.Logger, nConfig updater.NotificationConfig, mode string,
+func newModuleUpdater(dc dependency.Container, logger logger.Logger, settings *updater.Settings,
 	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
 ) *updater.Updater[*v1alpha1.ModuleRelease] {
-	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, nConfig, mode,
+	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, settings,
 		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage),
-		newSettings(), newWebhookDataSource(logger), enabledModules)
+		newWebhookDataSource(logger), enabledModules)
 }
 
 func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
@@ -257,14 +257,4 @@ func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
 
 func (m *metricsUpdater) WaitingManual(name string, _ float64) {
 	m.metricStorage.GaugeSet("d8_module_release_waiting_manual", 1, map[string]string{"name": name})
-}
-
-type settings struct{}
-
-func (s *settings) GetDisruptionApprovalMode() (string, bool) {
-	return "", false
-}
-
-func newSettings() *settings {
-	return &settings{}
 }
