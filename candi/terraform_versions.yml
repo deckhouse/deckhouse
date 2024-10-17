@@ -69,3 +69,12 @@ yandex:
   artifact: terraform-provider-yandex
   artifactBinary: terraform-provider-yandex
   destinationBinary: terraform-provider-yandex
+
+huaweicloud:
+  namespace: terraform-provider-huaweicloud
+  type: huaweicloud
+  version: 1.69.0
+  artifact: terraform-provider-huaweicloud
+  artifactBinary: terraform-provider-huaweicloud
+  destinationBinary: terraform-provider-huaweicloud
+

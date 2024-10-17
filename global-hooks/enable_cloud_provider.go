@@ -27,14 +27,15 @@ import (
 
 var (
 	cloudProviderNameToModule = map[string]string{
-		"OpenStack": "cloudProviderOpenstack",
-		"AWS":       "cloudProviderAws",
-		"GCP":       "cloudProviderGcp",
-		"Yandex":    "cloudProviderYandex",
-		"vSphere":   "cloudProviderVsphere",
-		"Azure":     "cloudProviderAzure",
-		"VCD":       "cloudProviderVcd",
-		"Zvirt":     "cloudProviderZvirt",
+		"OpenStack":   "cloudProviderOpenstack",
+		"AWS":         "cloudProviderAws",
+		"GCP":         "cloudProviderGcp",
+		"Yandex":      "cloudProviderYandex",
+		"vSphere":     "cloudProviderVsphere",
+		"Azure":       "cloudProviderAzure",
+		"VCD":         "cloudProviderVcd",
+		"Zvirt":       "cloudProviderZvirt",
+		"HuaweiCloud": "cloudProviderHuaweiCloud",
 	}
 )
 
