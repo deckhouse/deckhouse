@@ -70,6 +70,11 @@ spec:
           value: "oomkill"
         - name: EBPF_EXPORTER_LISTEN_ADDRESS
           value: "127.0.0.1:9435"
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 4205
+            scheme: HTTPS
         volumeMounts:
         - name: host-sys
           mountPath: /sys
@@ -98,9 +103,11 @@ spec:
               fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
+            excludePaths:
+            - /healthz
             upstreams:
-            - upstream: http://127.0.0.1:9435/metrics
-              path: /metrics
+            - upstream: http://127.0.0.1:9435/
+              path: /
               authorization:
                 resourceAttributes:
                   namespace: d8-monitoring
