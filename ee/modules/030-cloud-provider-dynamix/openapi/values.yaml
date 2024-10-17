@@ -309,3 +309,4 @@ properties:
               type: boolean
       defaultStorageClass:
         type: string
+
