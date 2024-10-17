@@ -31,6 +31,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/spaolacci/murmur3"
@@ -42,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
@@ -93,14 +95,17 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		imagesRegistry string
 	)
 	if registrySecret != nil {
-		opts = []cr.Option{
-			cr.WithCA(string(registrySecret.Data["ca"])),
-			cr.WithInsecureSchema(string(registrySecret.Data["scheme"]) == "http"),
-			cr.WithUserAgent(r.clusterUUID),
-			cr.WithAuth(string(registrySecret.Data[".dockerconfigjson"])),
+		drs, _ := utils.ParseDeckhouseRegistrySecret(registrySecret.Data)
+		rconf := &utils.RegistryConfig{
+			DockerConfig: drs.DockerConfig,
+			Scheme:       drs.Scheme,
+			UserAgent:    r.clusterUUID,
+			CA:           drs.CA,
 		}
 
-		imagesRegistry = string(registrySecret.Data["imagesRegistry"])
+		opts = utils.GenerateRegistryOptions(rconf)
+
+		imagesRegistry = drs.ImageRegistry
 	}
 
 	releaseChecker, err := NewDeckhouseReleaseChecker(opts, r.logger, r.dc, r.moduleManager, imagesRegistry, releaseChannelName)
@@ -213,7 +218,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 			actual := release.GetVersion()
 			for !actual.Equal(newSemver) {
-				if actual, err = releaseChecker.StepByStepUpdate(actual, newSemver); err != nil {
+				if actual, err = releaseChecker.StepByStepUpdate(ctx, actual, newSemver); err != nil {
 					releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
 					labels := map[string]string{
 						"version": release.GetVersion().Original(),
@@ -335,7 +340,7 @@ type DeckhouseReleaseChecker struct {
 	moduleManager  moduleManager
 
 	releaseChannel  string
-	releaseMetadata releaseMetadata
+	releaseMetadata ReleaseMetadata
 	tags            []string
 }
 
@@ -349,7 +354,7 @@ func (dcr *DeckhouseReleaseChecker) releaseCanarySettings() canarySettings {
 }
 
 func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash string) (digestHash string, err error) {
-	image, err := dcr.registryClient.Image(dcr.releaseChannel)
+	image, err := dcr.registryClient.Image(context.TODO(), dcr.releaseChannel)
 	if err != nil {
 		return "", err
 	}
@@ -367,11 +372,12 @@ func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash strin
 	if err != nil {
 		return "", err
 	}
+
 	if releaseMeta.Version == "" {
 		return "", fmt.Errorf("version not found. Probably image is broken or layer does not exist")
 	}
 
-	dcr.releaseMetadata = releaseMeta
+	dcr.releaseMetadata = *releaseMeta
 
 	return imageDigest.String(), nil
 }
@@ -381,7 +387,7 @@ type releaseReader struct {
 	changelogReader *bytes.Buffer
 }
 
-func (rr *releaseReader) untarLayer(rc io.Reader) error {
+func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 	tr := tar.NewReader(rc)
 	for {
 		hdr, err := tr.Next()
@@ -411,65 +417,45 @@ func (rr *releaseReader) untarLayer(rc io.Reader) error {
 	}
 }
 
-func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(image v1.Image) (releaseMetadata, error) {
-	var meta releaseMetadata
+func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(img v1.Image) (*ReleaseMetadata, error) {
+	meta := new(ReleaseMetadata)
 
-	layers, err := image.Layers()
-	if err != nil {
-		return meta, err
-	}
-
-	if len(layers) == 0 {
-		return meta, fmt.Errorf("no layers found")
-	}
+	rc := mutate.Extract(img)
+	defer rc.Close()
 
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
 	}
-	for _, layer := range layers {
-		size, err := layer.Size()
-		if err != nil {
-			dcr.logger.Warnf("couldn't calculate layer size")
-		}
-		if size == 0 {
-			// skip some empty werf layers
-			continue
-		}
-		rc, err := layer.Uncompressed()
-		if err != nil {
-			return meta, err
-		}
 
-		err = rr.untarLayer(rc)
-		if err != nil {
-			rc.Close()
-			dcr.logger.Warnf("layer is invalid: %s", err)
-			continue
-		}
-		rc.Close()
+	err := rr.untarMetadata(rc)
+	if err != nil {
+		return nil, err
 	}
 
 	if rr.versionReader.Len() > 0 {
 		err = json.NewDecoder(rr.versionReader).Decode(&meta)
 		if err != nil {
-			return meta, err
+			return nil, err
 		}
 	}
 
 	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]interface{}
+		var changelog map[string]any
+
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 		if err != nil {
 			// if changelog build failed - warn about it but don't fail the release
 			dcr.logger.Warnf("Unmarshal CHANGELOG yaml failed: %s", err)
-			meta.Changelog = make(map[string]interface{})
+			meta.Changelog = make(map[string]any)
+
 			return meta, nil
 		}
+
 		meta.Changelog = changelog
 	}
 
-	cooldown := dcr.fetchCooldown(image)
+	cooldown := dcr.fetchCooldown(img)
 	if cooldown != nil {
 		meta.Cooldown = cooldown
 	}
@@ -533,13 +519,13 @@ func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts metav1.Time, cluste
 	return nil
 }
 
-func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Version) (*semver.Version, error) {
-	nextVersion, err := dcr.nextVersion(actual, target)
+func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, actual, target *semver.Version) (*semver.Version, error) {
+	nextVersion, err := dcr.nextVersion(ctx, actual, target)
 	if err != nil {
 		return nil, fmt.Errorf("get next version: %w", err)
 	}
 
-	image, err := dcr.registryClient.Image(nextVersion.Original())
+	image, err := dcr.registryClient.Image(ctx, nextVersion.Original())
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
 	}
@@ -548,31 +534,32 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(actual, target *semver.Vers
 	if err != nil {
 		return nil, fmt.Errorf("fetch release metadata: %w", err)
 	}
+
 	if releaseMeta.Version == "" {
 		return nil, fmt.Errorf("version not found. Probably image is broken or layer does not exist")
 	}
 
-	dcr.releaseMetadata = releaseMeta
+	dcr.releaseMetadata = *releaseMeta
 
 	return nextVersion, nil
 }
 
-func (dcr *DeckhouseReleaseChecker) nextVersion(actual, target *semver.Version) (*semver.Version, error) {
+func (dcr *DeckhouseReleaseChecker) nextVersion(ctx context.Context, actual, target *semver.Version) (*semver.Version, error) {
 	if actual.Major() != target.Major() {
 		return nil, fmt.Errorf("major version updated") // TODO step by step update for major version
 	}
 
 	if actual.Minor() == target.Minor() {
-		return dcr.getMaxPatch(1, actual.Minor())
+		return dcr.getMaxPatch(ctx, 1, actual.Minor())
 	}
 
 	// Here we get the following minor with the maximum patch version.
 	// <major.minor+1.max>
-	return dcr.getMaxPatch(1, actual.IncMinor().Minor())
+	return dcr.getMaxPatch(ctx, 1, actual.IncMinor().Minor())
 }
 
-func (dcr *DeckhouseReleaseChecker) getMaxPatch(major, minor uint64) (*semver.Version, error) {
-	tags, err := dcr.listTags()
+func (dcr *DeckhouseReleaseChecker) getMaxPatch(ctx context.Context, major, minor uint64) (*semver.Version, error) {
+	tags, err := dcr.listTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
@@ -626,16 +613,17 @@ func (dcr *DeckhouseReleaseChecker) generateChangelogForEnabledModules() map[str
 	return enabledModulesChangelog
 }
 
-func (dcr *DeckhouseReleaseChecker) listTags() ([]string, error) {
+func (dcr *DeckhouseReleaseChecker) listTags(ctx context.Context) ([]string, error) {
 	var err error
 	if dcr.tags == nil {
-		dcr.tags, err = dcr.registryClient.ListTags()
+		dcr.tags, err = dcr.registryClient.ListTags(ctx)
 	}
 
 	return dcr.tags, err
 }
 
-type releaseMetadata struct {
+type ReleaseMetadata struct {
+	// TODO: semVer as module?
 	Version      string                    `json:"version"`
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`

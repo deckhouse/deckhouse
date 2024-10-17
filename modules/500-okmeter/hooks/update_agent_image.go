@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -51,7 +52,7 @@ func checkRelease(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	imageHash, err := regCli.Digest(tag)
+	imageHash, err := regCli.Digest(context.TODO(), tag)
 	if err != nil {
 		return err
 	}

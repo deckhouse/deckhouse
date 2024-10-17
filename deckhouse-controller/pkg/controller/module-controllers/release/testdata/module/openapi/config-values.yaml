@@ -1,0 +1,18 @@
+type: object
+properties:
+  replicas:
+    type: integer
+    default: 1
+  msg:
+    type: string
+  envValue:
+    type: string
+    default: bar
+  envName:
+    type: string
+    default: foo
+  foo:
+    type: object
+    properties:
+      bar:
+        type: string

@@ -1,5 +1,6 @@
 ---
 title: "Модуль openvpn"
+description: "Описание модуля openvpn Deckhouse Kubernetes Platform: функции, веб-интерфейс, варианты публикации VPN-сервиса, доступные ресурсы кластера после подключения и аудит пользовательских соединений."
 webIfaces:
 - name: openvpn-admin
 ---

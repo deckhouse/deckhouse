@@ -1,5 +1,6 @@
 ---
 title: "Модуль openvpn: примеры"
+description: "Примеры конфигурации модуля openvpn Deckhouse Kubernetes Platform для различных сценариев, включая кластеры bare metal, AWS, Google Cloud и публичные IP-адреса на внешнем балансировщике."
 ---
 
 ## Пример для кластеров bare metal

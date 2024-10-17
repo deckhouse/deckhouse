@@ -2,35 +2,39 @@
 title: "The descheduler module: examples"
 ---
 
-## Example LowNodeUtilization strategy
+## Example custom resource
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: Descheduler
 metadata:
-  name: low-node-utilization
+  name: example
 spec:
-  strategies:
-    lowNodeUtilization:
-      thresholds:
-        cpu: 20
-      targetThresholds:
-        cpu: 50
+  deschedulerPolicy:
+    # Provide common parameters that apply to all strategies.
+    globalParameters:
+      evictFailedBarePods: true
+    strategies:
+      # Enable a strategy.
+      podLifeTime:
+        enabled: true
+
+      # Enable a strategy and set additional parameters.
+      removeDuplicates:
+        enabled: true
+        parameters:
+          nodeFit: true
 ```
 
-## Example HighNodeUtilization strategy
+## Example custom resource for specific NodeGroup (node labelSelector)
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: Descheduler
 metadata:
-  name: high-node-utilization
+  name: example-specific-ng
 spec:
-  strategies:
-    highNodeUtilization:
-      thresholds:
-        cpu: 50
-        memory: 50
+  deploymentTemplate:
+    nodeSelector:
+      node.deckhouse.io/group: worker
 ```

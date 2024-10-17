@@ -147,7 +147,7 @@ os_detect() {
   OS_NAME="${OS_NAME// /}"
 
   # Supported on ...
-  if [[ ("$OS_NAME" == "Ubuntu") || ("$OS_NAME" == "Debian") ]]; then
+  if [[ ("$OS_NAME" == "Ubuntu") || ("$OS_NAME" == "ubuntu") || ("$OS_NAME" == "Debian") || ("$OS_NAME" == "debian") ]]; then
     OS_NAME=linux
   elif [[ ("$OS_NAME" != "mac") && ("$OS_NAME" != "linux") ]]; then
     OS_NAME=
@@ -410,6 +410,20 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
+  name: operator-prometheus-crd
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus-crd
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
   name: prometheus
 spec:
   version: 2
@@ -578,8 +592,9 @@ ingress_check() {
 }
 
 generate_ee_access_string() {
-  auth_part=$(echo -n "license-token:$1" | base64 -w0)
-  D8_EE_ACCESS_STRING=$(echo -n "{\"auths\": { \"$D8_REGISTRY_ADDRESS\": { \"username\": \"license-token\", \"password\": \"$1\", \"auth\": \"$auth_part\"}}}" | base64 -w0)
+  if [ "$OS_NAME" != "mac" ]; then B64_ARG="-w0"; else B64_ARG=""; fi
+  auth_part=$(echo -n "license-token:$1" | base64 $B64_ARG)
+  D8_EE_ACCESS_STRING=$(echo -n "{\"auths\": { \"$D8_REGISTRY_ADDRESS\": { \"username\": \"license-token\", \"password\": \"$1\", \"auth\": \"$auth_part\"}}}" | base64 $B64_ARG)
 
   if [ "$?" -ne "0" ]; then
     echo "Error generation container registry access string for Deckhouse Kubernetes Platform Enterprise Edition"
