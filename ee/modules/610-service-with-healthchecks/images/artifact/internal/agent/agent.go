@@ -324,7 +324,7 @@ func (r *ServiceWithHealthchecksReconciler) Shutdown() {
 
 func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Context) {
 	r.logger.Info("making tasks")
-	ticker := time.NewTicker(time.Second * 1)
+	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
 	for {
 		select {
