@@ -33,4 +33,6 @@ type RunnerInterface interface {
 	GetPlanDestructiveChanges() *PlanDestructiveChanges
 	GetPlanPath() string
 	GetTerraformExecutor() Executor
+	IsLogToBuffer() bool
+	GetLog() []string
 }
