@@ -29,10 +29,10 @@ index 284f53209..3e00ae2b5 100644
  }
  
 diff --git a/internal/ingress/metric/collectors/nginx_status.go b/internal/ingress/metric/collectors/nginx_status.go
-index f3afdc334..cf20ab601 100644
+index f3afdc334..c9fe50594 100644
 --- a/internal/ingress/metric/collectors/nginx_status.go
 +++ b/internal/ingress/metric/collectors/nginx_status.go
-@@ -17,13 +17,14 @@ limitations under the License.
+@@ -17,13 +17,15 @@ limitations under the License.
  package collectors
  
  import (
@@ -48,10 +48,11 @@ index f3afdc334..cf20ab601 100644
 +	"runtime"
 +	"strconv"
 +	"sync"
++	"syscall"
  )
  
  var (
-@@ -34,6 +35,33 @@ var (
+@@ -34,6 +36,53 @@ var (
  	waiting = regexp.MustCompile(`Waiting: (\d+)`)
  )
  
@@ -62,11 +63,31 @@ index f3afdc334..cf20ab601 100644
 +	Lock               sync.Mutex
 +}
 +
++func rlimitMaxNumFiles() int {
++	var rLimit syscall.Rlimit
++	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
++		return 0
++	}
++	return int(rLimit.Max)
++}
++
 +func (w *WorkerStatus) Set(workerConnections, workerRlimitNofile int, workerProcesses string) {
 +	w.Lock.Lock()
 +	defer w.Lock.Unlock()
-+	w.WorkerConnections = workerConnections
++	if workerRlimitNofile == 0 {
++		maxOpenFiles := rlimitMaxNumFiles() - 1024
++		if maxOpenFiles < 1024 {
++			maxOpenFiles = 1024
++		}
++		workerRlimitNofile = maxOpenFiles
++	}
 +	w.WorkerRlimitNofile = workerRlimitNofile
++
++	if workerConnections == 0 {
++		workerConnections = int(float64(workerRlimitNofile * 3.0 / 4))
++	}
++	w.WorkerConnections = workerConnections
++
 +	if n, err := strconv.Atoi(workerProcesses); err == nil {
 +		w.WorkerProcesses = n
 +	} else {
@@ -85,7 +106,7 @@ index f3afdc334..cf20ab601 100644
  type (
  	nginxStatusCollector struct {
  		scrapeChan chan scrapeRequest
-@@ -42,9 +70,12 @@ type (
+@@ -42,9 +91,12 @@ type (
  	}
  
  	nginxStatusData struct {
@@ -101,7 +122,7 @@ index f3afdc334..cf20ab601 100644
  	}
  
  	basicStatus struct {
-@@ -86,6 +117,21 @@ func NewNGINXStatus(podName, namespace, ingressClass string) (NGINXStatusCollect
+@@ -86,6 +138,21 @@ func NewNGINXStatus(podName, namespace, ingressClass string) (NGINXStatusCollect
  	}
  
  	p.data = &nginxStatusData{
@@ -123,7 +144,7 @@ index f3afdc334..cf20ab601 100644
  		connectionsTotal: prometheus.NewDesc(
  			prometheus.BuildFQName(PrometheusNamespace, subSystem, "connections_total"),
  			"total number of connections with state {accepted, handled}",
-@@ -107,6 +153,9 @@ func NewNGINXStatus(podName, namespace, ingressClass string) (NGINXStatusCollect
+@@ -107,6 +174,9 @@ func NewNGINXStatus(podName, namespace, ingressClass string) (NGINXStatusCollect
  
  // Describe implements prometheus.Collector.
  func (p nginxStatusCollector) Describe(ch chan<- *prometheus.Desc) {
@@ -133,7 +154,7 @@ index f3afdc334..cf20ab601 100644
  	ch <- p.data.connectionsTotal
  	ch <- p.data.requestsTotal
  	ch <- p.data.connections
-@@ -179,6 +228,14 @@ func (p nginxStatusCollector) scrape(ch chan<- prometheus.Metric) {
+@@ -179,6 +249,14 @@ func (p nginxStatusCollector) scrape(ch chan<- prometheus.Metric) {
  
  	s := parse(string(data))
  
