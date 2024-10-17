@@ -546,6 +546,12 @@ deckhouse_install() {
   fi
 }
 
+macos_force_qemu() {
+  if [ "$OS_NAME" = "mac" ]
+  then ${KUBECTL_PATH} --context kind-"${KIND_CLUSTER_NAME}" patch daemonset node-exporter -n d8-monitoring --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/1/env/-", "value": {"name": "EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU", "value": "1"}}]' 2>/dev/null
+  fi
+}
+
 ingress_check() {
   local retries_max=100
   local retries_count=0
@@ -654,6 +660,7 @@ main() {
   configs_create
   cluster_create
   deckhouse_install
+  macos_force_qemu
   ingress_check
   installation_finish
 }
