@@ -138,7 +138,7 @@ type EndpointStatus struct {
 	FailedProbes     []string `json:"failedProbes,omitempty" protobuf:"bytes,5,rep,name=failedProbes"`
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Format=date-time
-	LastProbeTime metav1.Time `json:"lastProbeTime" protobuf:"bytes,6,opt,name=lastProbeTime"`
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty" protobuf:"bytes,6,opt,name=lastProbeTime"`
 }
 
 func init() {
