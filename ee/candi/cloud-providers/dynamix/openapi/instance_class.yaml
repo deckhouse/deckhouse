@@ -56,7 +56,7 @@ spec:
                   type: string
                   description: |
                     External network name.
-                  x-doc-examples: extnet_vlan_1700
+                  x-doc-examples: 'extnet_vlan_1700'
             status:
               type: object
               properties:
