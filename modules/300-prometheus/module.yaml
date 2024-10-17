@@ -1,0 +1,9 @@
+name: prometheus
+weight: 300
+description: |
+    The Prometheus monitoring module
+
+# TODO: remove before merge
+disable:
+  confirmation: false
+  message: "TODO: write disable prometheus warning"

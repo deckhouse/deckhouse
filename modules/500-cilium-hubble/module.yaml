@@ -1,0 +1,9 @@
+name: cilium-hubble
+weight: 500
+description: |
+    The cilium-hubble module
+
+# TODO: remove before merge
+disable:
+  confirmation: true
+  message: "TODO: write disable cilium-hubble warning"
