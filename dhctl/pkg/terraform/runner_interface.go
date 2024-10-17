@@ -22,6 +22,7 @@ type RunnerInterface interface {
 	Init() error
 	Apply() error
 	Plan(opts PlanOptions) error
+	DestroyPlanOutput() error
 	Destroy() error
 	Stop()
 

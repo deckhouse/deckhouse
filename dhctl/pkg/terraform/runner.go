@@ -499,6 +499,46 @@ func (r *Runner) GetTerraformOutput(output string) ([]byte, error) {
 	return result, nil
 }
 
+func (r *Runner) DestroyPlanOutput() error {
+	if r.stopped {
+		return ErrRunnerStopped
+	}
+
+	if r.statePath == "" {
+		return fmt.Errorf("no state found, try to run terraform apply first")
+	}
+
+	return log.Process("default", "terraform plan destroy ...", func() error {
+		err := r.stateSaver.Start(r)
+		if err != nil {
+			return err
+		}
+		defer r.stateSaver.Stop()
+
+		args := []string{
+			"plan",
+			"-destroy",
+			"-no-color",
+			"-auto-approve",
+			fmt.Sprintf("-var-file=%s", r.variablesPath),
+			fmt.Sprintf("-state=%s", r.statePath),
+		}
+		args = append(args, r.workingDir)
+
+		_, err = r.execTerraform(args...)
+
+		var errRes *multierror.Error
+		errRes = multierror.Append(errRes, err)
+
+		// yes, do not check err from exec terraform
+		// always run post action if need
+		err = r.getHook().AfterAction(r)
+		errRes = multierror.Append(errRes, err)
+
+		return errRes.ErrorOrNil()
+	})
+}
+
 func (r *Runner) Destroy() error {
 	if r.stopped {
 		return ErrRunnerStopped
