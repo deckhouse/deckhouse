@@ -84,6 +84,10 @@ spec:
   - name: prometheus
     startupProbe:
       failureThreshold: 300
+    lifecycle:
+      preStop:
+        exec:
+          command: ['/bin/sleep', '30']
   - name: kube-rbac-proxy
     {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
     image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -114,6 +118,10 @@ spec:
               resource: prometheuses
               subresource: http
               name: main
+    lifecycle:
+      preStop:
+        exec:
+          command: ['/bin/sleep', '30']
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
