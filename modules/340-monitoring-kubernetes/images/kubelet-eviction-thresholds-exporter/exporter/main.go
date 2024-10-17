@@ -241,9 +241,10 @@ func getBytesAndInodeStatsFromPath(path string) (bytesTotal uint64, inodeTotal u
 	var stat unix.Statfs_t
 
 	err = unix.Statfs(path, &stat)
-	if err != nil {
-		return 0, 0, err
-	}
+    if err != nil {
+        log.Printf("Error statfs on path %s", path)
+        return 0, 0, err
+    }
 
 	bytesTotal = stat.Blocks * uint64(stat.Bsize)
 	inodeTotal = stat.Files
@@ -254,13 +255,14 @@ func getBytesAndInodeStatsFromPath(path string) (bytesTotal uint64, inodeTotal u
 func getKubeletRootDir() (string, error) {
 	procs, err := process.Processes()
 	if err != nil {
+        log.Printf("Error getting processes: %s", err)
 		return "", err
 	}
 
 	for _, p := range procs {
 		cmdLine, err := p.CmdlineSlice()
 		if err != nil {
-			log.Println(err.Error())
+            log.Printf("Error getting command line for process %d: %s", p.Pid, err)
 
 			// Skip errors, as they are likely due to the process having terminated
 			continue
@@ -340,11 +342,13 @@ func getDockerRootDir() (string, error) {
 func getContainerdRootDir() (string, error) {
 	containerdConfig, err := os.ReadFile("/etc/containerd/config.toml")
 	if err != nil {
+		log.Printf("Error reading containerd config: %s, using default /var/lib/containerd,", err)
 		return "/var/lib/containerd", nil
 	}
 
 	matches := containerdConfigRootDirRegex.FindSubmatch(containerdConfig)
 	if len(matches) != 2 {
+		log.Printf("Error reading containerd config: %s, using default /var/lib/containerd,", err)
 		return "/var/lib/containerd", nil
 	}
 
@@ -358,6 +362,7 @@ func getMountpoint(path string) string {
 
 	pi, err := os.Stat(path)
 	if err != nil {
+        log.Printf("Error getting stat for path %s: %s", path, err)
 		return ""
 	}
 
@@ -368,6 +373,7 @@ func getMountpoint(path string) string {
 
 		_pi, err := os.Stat(_path)
 		if err != nil {
+            log.Printf("Error getting stat for path %s: %s", _path, err)
 			return ""
 		}
 
