@@ -1,0 +1,171 @@
+diff --git a/internal/ingress/controller/store/store.go b/internal/ingress/controller/store/store.go
+index 284f53209..3e00ae2b5 100644
+--- a/internal/ingress/controller/store/store.go
++++ b/internal/ingress/controller/store/store.go
+@@ -55,6 +55,7 @@ import (
+ 	ngx_template "k8s.io/ingress-nginx/internal/ingress/controller/template"
+ 	"k8s.io/ingress-nginx/internal/ingress/defaults"
+ 	"k8s.io/ingress-nginx/internal/ingress/errors"
++	"k8s.io/ingress-nginx/internal/ingress/metric/collectors"
+ 	"k8s.io/ingress-nginx/internal/ingress/resolver"
+ 	"k8s.io/ingress-nginx/internal/k8s"
+ 	"k8s.io/ingress-nginx/pkg/apis/ingress"
+@@ -269,6 +270,8 @@ func New(
+ 		defaultSSLCertificate: defaultSSLCertificate,
+ 	}
+ 
++	collectors.WorkerStatusInstance.Set(store.backendConfig.MaxWorkerConnections, store.backendConfig.MaxWorkerOpenFiles, store.backendConfig.WorkerProcesses)
++
+ 	eventBroadcaster := record.NewBroadcaster()
+ 	eventBroadcaster.StartLogging(klog.Infof)
+ 	if !disableSyncEvents {
+@@ -1215,6 +1218,8 @@ func (s *k8sStore) setConfig(cmap *corev1.ConfigMap) {
+ 		s.backendConfig.UseGeoIP2 = false
+ 	}
+ 
++	collectors.WorkerStatusInstance.Set(s.backendConfig.MaxWorkerConnections, s.backendConfig.MaxWorkerOpenFiles, s.backendConfig.WorkerProcesses)
++
+ 	s.writeSSLSessionTicketKey(cmap, "/etc/ingress-controller/tickets.key")
+ }
+ 
+diff --git a/internal/ingress/metric/collectors/nginx_status.go b/internal/ingress/metric/collectors/nginx_status.go
+index f3afdc334..c9fe50594 100644
+--- a/internal/ingress/metric/collectors/nginx_status.go
++++ b/internal/ingress/metric/collectors/nginx_status.go
+@@ -17,13 +17,15 @@ limitations under the License.
+ package collectors
+ 
+ import (
+-	"log"
+-	"regexp"
+-	"strconv"
+-
+ 	"github.com/prometheus/client_golang/prometheus"
+ 	"k8s.io/ingress-nginx/internal/nginx"
+ 	"k8s.io/klog/v2"
++	"log"
++	"regexp"
++	"runtime"
++	"strconv"
++	"sync"
++	"syscall"
+ )
+ 
+ var (
+@@ -34,6 +36,53 @@ var (
+ 	waiting = regexp.MustCompile(`Waiting: (\d+)`)
+ )
+ 
++type WorkerStatus struct {
++	WorkerConnections  int
++	WorkerProcesses    int
++	WorkerRlimitNofile int
++	Lock               sync.Mutex
++}
++
++func rlimitMaxNumFiles() int {
++	var rLimit syscall.Rlimit
++	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
++		return 0
++	}
++	return int(rLimit.Max)
++}
++
++func (w *WorkerStatus) Set(workerConnections, workerRlimitNofile int, workerProcesses string) {
++	w.Lock.Lock()
++	defer w.Lock.Unlock()
++	if workerRlimitNofile == 0 {
++		maxOpenFiles := rlimitMaxNumFiles() - 1024
++		if maxOpenFiles < 1024 {
++			maxOpenFiles = 1024
++		}
++		workerRlimitNofile = maxOpenFiles
++	}
++	w.WorkerRlimitNofile = workerRlimitNofile
++
++	if workerConnections == 0 {
++		workerConnections = int(float64(workerRlimitNofile * 3.0 / 4))
++	}
++	w.WorkerConnections = workerConnections
++
++	if n, err := strconv.Atoi(workerProcesses); err == nil {
++		w.WorkerProcesses = n
++	} else {
++		w.WorkerProcesses = runtime.NumCPU()
++	}
++}
++
++func (w *WorkerStatus) Get() (int, int, int) {
++	w.Lock.Lock()
++	defer w.Lock.Unlock()
++	return w.WorkerConnections, w.WorkerProcesses, w.WorkerRlimitNofile
++}
++
++var WorkerStatusInstance = &WorkerStatus{}
++
+ type (
+ 	nginxStatusCollector struct {
+ 		scrapeChan chan scrapeRequest
+@@ -42,9 +91,12 @@ type (
+ 	}
+ 
+ 	nginxStatusData struct {
+-		connectionsTotal *prometheus.Desc
+-		requestsTotal    *prometheus.Desc
+-		connections      *prometheus.Desc
++		workerConnections  *prometheus.Desc
++		workerProcesses    *prometheus.Desc
++		workerRlimitNofile *prometheus.Desc
++		connectionsTotal   *prometheus.Desc
++		requestsTotal      *prometheus.Desc
++		connections        *prometheus.Desc
+ 	}
+ 
+ 	basicStatus struct {
+@@ -86,6 +138,21 @@ func NewNGINXStatus(podName, namespace, ingressClass string) (NGINXStatusCollect
+ 	}
+ 
+ 	p.data = &nginxStatusData{
++		workerProcesses: prometheus.NewDesc(
++			prometheus.BuildFQName(PrometheusNamespace, subSystem, "worker_processes"),
++			"worker processes",
++			nil, constLabels),
++
++		workerConnections: prometheus.NewDesc(
++			prometheus.BuildFQName(PrometheusNamespace, subSystem, "worker_max_connections"),
++			"worker max connections",
++			nil, constLabels),
++
++		workerRlimitNofile: prometheus.NewDesc(
++			prometheus.BuildFQName(PrometheusNamespace, subSystem, "worker_rlimit_nofile"),
++			"worker rlimit nofile",
++			nil, constLabels),
++
+ 		connectionsTotal: prometheus.NewDesc(
+ 			prometheus.BuildFQName(PrometheusNamespace, subSystem, "connections_total"),
+ 			"total number of connections with state {accepted, handled}",
+@@ -107,6 +174,9 @@ func NewNGINXStatus(podName, namespace, ingressClass string) (NGINXStatusCollect
+ 
+ // Describe implements prometheus.Collector.
+ func (p nginxStatusCollector) Describe(ch chan<- *prometheus.Desc) {
++	ch <- p.data.workerProcesses
++	ch <- p.data.workerConnections
++	ch <- p.data.workerRlimitNofile
+ 	ch <- p.data.connectionsTotal
+ 	ch <- p.data.requestsTotal
+ 	ch <- p.data.connections
+@@ -179,6 +249,14 @@ func (p nginxStatusCollector) scrape(ch chan<- prometheus.Metric) {
+ 
+ 	s := parse(string(data))
+ 
++	workerConnections, workerProcesses, workerRlimitNofile := WorkerStatusInstance.Get()
++
++	ch <- prometheus.MustNewConstMetric(p.data.workerConnections,
++		prometheus.GaugeValue, float64(workerConnections))
++	ch <- prometheus.MustNewConstMetric(p.data.workerProcesses,
++		prometheus.GaugeValue, float64(workerProcesses))
++	ch <- prometheus.MustNewConstMetric(p.data.workerRlimitNofile,
++		prometheus.GaugeValue, float64(workerRlimitNofile))
+ 	ch <- prometheus.MustNewConstMetric(p.data.connectionsTotal,
+ 		prometheus.CounterValue, float64(s.Accepted), "accepted")
+ 	ch <- prometheus.MustNewConstMetric(p.data.connectionsTotal,
