@@ -1,7 +1,7 @@
-diff --git a/vertical-pod-autoscaler/pkg/recommender/input/controller_fetcher/controller_fetcher.go b/vertical-pod-autoscaler/pkg/recommender/input/controller_fetcher/controller_fetcher.go
+diff --git a/vertical-pod-autoscaler/pkg/target/controller_fetcher/controller_fetcher.go b/vertical-pod-autoscaler/pkg/target/controller_fetcher/controller_fetcher.go
 index dcbd11ee2..7f7ea6a39 100644
---- a/vertical-pod-autoscaler/pkg/recommender/input/controller_fetcher/controller_fetcher.go
-+++ b/vertical-pod-autoscaler/pkg/recommender/input/controller_fetcher/controller_fetcher.go
+--- a/vertical-pod-autoscaler/pkg/target/controller_fetcher/controller_fetcher.go
++++ b/vertical-pod-autoscaler/pkg/target/controller_fetcher/controller_fetcher.go
 @@ -203,7 +203,9 @@ func (f *controllerFetcher) getParentOfController(controllerKey ControllerKeyWit
  	kind := wellKnownController(controllerKey.Kind)
  	informer, exists := f.informersMap[kind]
