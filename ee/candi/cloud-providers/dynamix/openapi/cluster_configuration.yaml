@@ -18,7 +18,7 @@ apiVersions:
       ProviderClusterConfiguration
     x-unsafe-rules: [deleteZones]
     x-examples:
-      apiVersion: deckhouse.io/v1
+    - apiVersion: deckhouse.io/v1
       kind: DynamixClusterConfiguration
       layout: StandardWithInternalNetwork
       sshPublicKey: "ssh-rsa AAAA"
