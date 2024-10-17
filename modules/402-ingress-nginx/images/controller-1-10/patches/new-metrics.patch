@@ -82,7 +82,7 @@ index 284f53209..1f07fd047 100644
  	s.writeSSLSessionTicketKey(cmap, "/etc/ingress-controller/tickets.key")
  }
 diff --git a/internal/ingress/metric/collectors/nginx_status.go b/internal/ingress/metric/collectors/nginx_status.go
-index f3afdc334..d36a5cea7 100644
+index f3afdc334..e196c5c49 100644
 --- a/internal/ingress/metric/collectors/nginx_status.go
 +++ b/internal/ingress/metric/collectors/nginx_status.go
 @@ -39,12 +39,19 @@ type (
@@ -124,19 +124,19 @@ index f3afdc334..d36a5cea7 100644
  
  	p.data = &nginxStatusData{
 +		workerProcesses: prometheus.NewDesc(
-+			prometheus.BuildFQName(namespace, subSystem, "worker_processes"),
++			prometheus.BuildFQName(PrometheusNamespace, subSystem, "worker_processes"),
 +			"max worker processes",
-+			nil, constLabels),
++			[]string{"state"}, constLabels),
 +
 +		workerConnections: prometheus.NewDesc(
-+			prometheus.BuildFQName(namespace, subSystem, "worker_connections"),
++			prometheus.BuildFQName(PrometheusNamespace, subSystem, "worker_connections"),
 +			"max worker connections",
-+			nil, constLabels),
++			[]string{"state"}, constLabels),
 +
 +		workerRlimitNofile: prometheus.NewDesc(
-+			prometheus.BuildFQName(namespace, subSystem, "worker_rlimit_nofile"),
++			prometheus.BuildFQName(PrometheusNamespace, subSystem, "worker_rlimit_nofile"),
 +			"max worker rlimit nofile",
-+			nil, constLabels),
++			[]string{"state"}, constLabels),
 +
  		connectionsTotal: prometheus.NewDesc(
  			prometheus.BuildFQName(PrometheusNamespace, subSystem, "connections_total"),

@@ -61,3 +61,7 @@ Build nginx for controller on ALT Linux.
 ### http3
 
 Add HTTP/3 support.
+
+### new metrics
+
+This patch adds max workers connections, max worker processes and max worker open files metrics.
