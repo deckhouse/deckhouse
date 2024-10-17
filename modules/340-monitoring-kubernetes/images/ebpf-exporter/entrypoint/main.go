@@ -88,10 +88,6 @@ func main() {
 func runHTTPServer(addr string) *http.Server {
 	server := &http.Server{Addr: addr}
 	http.Handle("/metrics", promhttp.Handler())
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
-	})
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
