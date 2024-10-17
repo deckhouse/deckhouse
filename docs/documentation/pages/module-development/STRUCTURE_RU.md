@@ -236,7 +236,7 @@ import os
 import yaml
 from deckhouse import hook
 
-# We expect structure with possible subdirectories like this
+# Ожидается структура с возможными поддиректориями, подобная следующей:
 #
 #   my-module/
 #       crds/
@@ -265,12 +265,10 @@ def iter_manifests(root_path: str):
     for dirpath, dirnames, filenames in os.walk(top=root_path):
         for filename in filenames:
             if not filename.endswith(".yaml"):
-                # Wee only seek manifests
+                # Ищем только манифесты.
                 continue
             if filename.startswith("doc-"):
-                # Skip dedicated doc yamls,
-                # common for Deckhouse internal
-                # modules
+                # Пропускаем YAML-файлы с документацией модуля.
                 continue
 
         crd_path = os.path.join(dirpath, filename)
