@@ -72,6 +72,8 @@ func CheckRequirement(key, value string, enabledModules ...set.Set) (bool, error
 		if blocked {
 			return false, fmt.Errorf("%q modules have to be disabled", value)
 		}
+
+		return true, nil
 	}
 
 	fs, err := defaultRegistry.GetChecksByKey(key)
