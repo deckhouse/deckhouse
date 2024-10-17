@@ -717,6 +717,25 @@ entries:
                 en: Examples
                 ru: Примеры
               url: /modules/110-istio/examples.html
+        - title: service-with-healthchecks
+          featureStatus: experimental
+          d8Revision: ee
+          moduleName: service-with-healthchecks
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/610-service-with-healthchecks/
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/610-service-with-healthchecks/configuration.html
+                - title: Custom Resources
+                  url: /modules/610-service-with-healthchecks/cr.html
     - title:
         en: Monitoring
         ru: Мониторинг
