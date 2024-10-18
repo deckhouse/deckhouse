@@ -31,3 +31,11 @@ This patch adds primaryLink metric for reports.
 
 [PR](https://github.com/aquasecurity/trivy-operator/pull/2241)
 [Issue](https://github.com/aquasecurity/trivy-operator/issues/2240)
+
+### 008-bump-dependencies.patch
+
+This patch updates vulnerable dependencies.
+
+### 009-fix-policies-cache.patch
+
+The operator of v0.22.0 cannot redownload policies if the image of the policies has been changed, it tries to download the old one.
