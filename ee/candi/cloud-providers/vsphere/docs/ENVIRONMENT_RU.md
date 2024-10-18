@@ -123,7 +123,7 @@ Deckhouse использует `cloud-init` для настройки вирту
 * `cloud-init`
 * [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (если используется версия `cloud-init` ниже 21.3)
 
-Также после запуска виртуальной машины должны быть запущены связанные с этими пакетами службы:
+Также после запуска виртуальной машины должны быть запущены следующие службы, связанные с этими пакетами:
 
 * `cloud-config.service`
 * `cloud-final.service`
