@@ -370,6 +370,7 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 		r.logger.Info("target in progress", "map", r.tasksInProcess)
 		if _, exists := r.healthecksByService[result.serviceName]; !exists {
 			r.logger.Info("Could not update probes result for service - service is not founded", "name", result.serviceName.String())
+			r.mu.Unlock()
 			continue
 		}
 
