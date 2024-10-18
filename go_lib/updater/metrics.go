@@ -14,7 +14,9 @@
 
 package updater
 
-type MetricsUpdater interface {
+import "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+
+type MetricsUpdater[R v1alpha1.Release] interface {
 	ReleaseBlocked(name, reason string)
-	WaitingManual(name string, totalPendingManualReleases float64)
+	WaitingManual(release R, totalPendingManualReleases float64)
 }
