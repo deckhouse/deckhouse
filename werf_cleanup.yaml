@@ -1,6 +1,8 @@
 project: deckhouse
 configVersion: 1
 cleanup:
+  keepImagesBuiltWithinLastNHours: 24
+  disableKubernetesBasedPolicy: true
   keepPolicies:
   - references:
       branch: /.*/
@@ -9,8 +11,13 @@ cleanup:
   - references:
       branch: /release-.*/
       limit:
-        in: 360h
+        last: 2
   - references:
       tag: /.*/
       limit:
-        in: 360h
+        last: 2
+  - references:
+      branch: main
+    imagesPerReference:
+      last: -1
+      in: 336h
