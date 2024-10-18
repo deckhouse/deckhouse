@@ -5,8 +5,8 @@ description: "Schemes of placement and interaction of resources in Dynamix when 
 
 ## Standard
 
-![resources](../../images/030-cloud-provider-zvirt/network/zvirt-standard.svg)
-<!--- Source: https://docs.google.com/drawings/d/1aosnFD7AzBgHrQGvxxQHZPfV0PSaTM66A-EPMWgPEqw/edit --->
+![resources](../../images/030-cloud-provider-dynamix/network/dynamix-standard.svg)
+<!--- Source: https://docs.google.com/drawings/d/1EqkEFD68b_yR0DeZNwH_2FQ42P2JAv9eUcPwx9JECww/edit --->
 
 Example of the layout configuration:
 
