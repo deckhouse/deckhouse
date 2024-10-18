@@ -30,6 +30,11 @@ kubernetesCustomResourceConversion:
     conversions:
     - fromVersion: deckhouse.io/v2alpha1
       toVersion: deckhouse.io/v1alpha1
+  - name: v1_to_v1alpha1
+    crdName: dexauthenticators.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1
+      toVersion: deckhouse.io/v1alpha1
 EOF
 }
 
@@ -43,6 +48,22 @@ function __on_conversion::v2alpha1_to_v1alpha1() {
         applicationIngressClassName: .spec.applications[0].ingressClassName
       } |
       del(.spec.applications)
+    else . end
+  )'); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of dexproviders.deckhouse.io failed"}
+EOF
+  fi
+}
+
+function __on_conversion::v1_to_v1alpha1() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+    if .apiVersion == "deckhouse.io/v1" then
+      .apiVersion = "deckhouse.io/v1alpha1"
     else . end
   )'); then
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
