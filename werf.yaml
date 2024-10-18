@@ -413,7 +413,7 @@ shell:
   install:
   - |
     version="{{ env "CI_COMMIT_REF_NAME" }}"
-    yq w /deckhouse/release.yaml version $version digest $deckhouseImageDigest | yq r - -j > version.json
+    yq '.version = "$version" | .digest = "$deckhouseImageDigest"' /deckhouse/release.yaml > version.json
     # changelog exists only for tags, we have to skip it for branches
     {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
     {{ if $changelog }}
@@ -472,7 +472,7 @@ shell:
 
      {{- if $previousEditionFile }}
   - cp {{ $edition.versionMapFile }} {{ $tmpEditionFile }}
-  - yq m {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
+  - yq '.+' {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
 
       {{- else }}
 
