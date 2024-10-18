@@ -165,11 +165,6 @@ spec:
         - jsonPath: .spec.applicationDomain
           name: Domain
           type: string
-    - name: v1
-      served: true
-      storage: false
-      schema: *schema
-      additionalPrinterColumns: *additionalPrinterColumns
     - name: v2alpha1
       served: true
       storage: true
@@ -295,3 +290,8 @@ spec:
         - jsonPath: .spec.applications[*].domain
           name: Domains
           type: string
+    - name: v1
+      served: true
+      storage: false
+      schema: *schema
+      additionalPrinterColumns: *additionalPrinterColumns
