@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -369,17 +370,19 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 		r.mu.Lock()
 		if _, exists := r.healthecksByService[result.serviceName]; !exists {
 			r.logger.Info("Could not update probes result for service - service is not founded", "name", result.serviceName.String())
-		} else {
-			for i, target := range r.healthecksByService[result.serviceName] {
-				if target.targetHost == result.host {
-					r.healthecksByService[result.serviceName][i].lastCheck = time.Now()
-					r.healthecksByService[result.serviceName][i].probeResultDetails = result.probeDetails
-					//generate event for watcher
-					//TODO: add comprasion between old and new events?
-					r.events <- event.GenericEvent{Object: &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: result.serviceName.Name, Namespace: result.serviceName.Namespace}}}
-				}
+			continue
+		}
+
+		for i, target := range r.healthecksByService[result.serviceName] {
+			if target.targetHost == result.host {
+				r.healthecksByService[result.serviceName][i].lastCheck = time.Now()
+				r.healthecksByService[result.serviceName][i].probeResultDetails = result.probeDetails
+				//generate event for watcher
+				//TODO: add comprasion between old and new events?
+				r.events <- event.GenericEvent{Object: &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: result.serviceName.Name, Namespace: result.serviceName.Namespace}}}
 			}
 		}
+
 		r.mu.Unlock()
 	}
 }
@@ -633,6 +636,7 @@ func (r *ServiceWithHealthchecksReconciler) deleteTask(taskResult ProbeResult) {
 	}
 	r.muInProcess.Lock()
 	delete(r.tasksInProcess, taskIdentity)
+	fmt.Println("busymap: ", r.tasksInProcess)
 	r.muInProcess.Unlock()
 }
 
