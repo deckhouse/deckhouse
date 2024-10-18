@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: {{ .Images.BASE_ALT_P11 }}
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/dashboard
