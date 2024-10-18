@@ -4,7 +4,7 @@ properties:
     type: boolean
     default: false
     description: |
-      Option to tell the logger to output stacktraces for warnings and errors.
+      Option to instruct the logger to output stacktraces for warnings and errors.
   numberOfWorkers:
     type: integer
     default: 16
