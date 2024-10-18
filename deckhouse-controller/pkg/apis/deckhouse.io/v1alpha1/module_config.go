@@ -36,6 +36,8 @@ var (
 	}
 )
 
+const AllowDisableAnnotation = "modules.deckhouse.io/allow-disable"
+
 var _ runtime.Object = (*ModuleConfig)(nil)
 
 // +genclient
