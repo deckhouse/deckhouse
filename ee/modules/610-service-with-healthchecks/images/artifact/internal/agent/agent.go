@@ -62,8 +62,8 @@ func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int
 		Client:              client,
 		Scheme:              scheme,
 		logger:              logger,
-		tasks:               make(chan ProbeTask, workersCount*10),
-		tasksResults:        make(chan ProbeResult, workersCount*10),
+		tasks:               make(chan ProbeTask, workersCount),
+		tasksResults:        make(chan ProbeResult, workersCount),
 		events:              make(chan event.GenericEvent),
 		healthecksByService: make(map[types.NamespacedName][]HealthcheckTarget),
 		tasksInProcess:      make(map[ProbeTaskIdentity]bool),
@@ -325,7 +325,7 @@ func (r *ServiceWithHealthchecksReconciler) Shutdown() {
 
 func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Context) {
 	r.logger.Info("making tasks")
-	ticker := time.NewTicker(time.Millisecond * 100)
+	ticker := time.NewTicker(time.Millisecond * 200)
 	defer ticker.Stop()
 	for {
 		select {
