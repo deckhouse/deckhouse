@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -227,7 +226,6 @@ func (r *ServiceWithHealthchecksReconciler) SetupWithManager(mgr ctrl.Manager) e
 		return err
 	}
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 10}).
 		For(&networkv1alpha1.ServiceWithHealthchecks{}).
 		Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(r.getExposedServiceWithHCForPod)).
 		WatchesRawSource(source.Channel(r.events, &handler.EnqueueRequestForObject{})).
