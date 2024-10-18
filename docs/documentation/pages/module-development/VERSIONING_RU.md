@@ -101,7 +101,7 @@ lang: ru
             <th colspan="5" style="text-align:center; vertical-align: middle;">Каналы обновлений</th>
         </tr>
         <tr class="sub-header">
-            <th style="text-align:center; vertical-align: middle;">Alfa</th>
+            <th style="text-align:center; vertical-align: middle;">Alpfa</th>
             <th style="text-align:center; vertical-align: middle;">Beta</th>
             <th style="text-align:center; vertical-align: middle;">Early Access</th>
             <th style="text-align:center; vertical-align: middle;">Stable</th>
