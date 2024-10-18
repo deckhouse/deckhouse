@@ -405,7 +405,7 @@ dependencies:
   - type: ImageDigest
     targetEnv: deckhouseImageDigest
 import:
-- artifact: yq-artifact
+- artifact: yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
@@ -442,7 +442,7 @@ import:
 artifact: version-map-artifact
 from: {{ .Images.BASE_ALPINE }}
 import:
-- artifact: yq-artifact
+- artifact: yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
