@@ -212,11 +212,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"deckhouseTools": map[string]interface{}{
 		"web": "imageHash-deckhouseTools-web",
 	},
-	"delivery": map[string]interface{}{
-		"argocd":               "imageHash-delivery-argocd",
-		"argocdImageUpdater":   "imageHash-delivery-argocdImageUpdater",
-		"werfArgocdCmpSidecar": "imageHash-delivery-werfArgocdCmpSidecar",
-	},
 	"descheduler": map[string]interface{}{
 		"descheduler": "imageHash-descheduler-descheduler",
 	},

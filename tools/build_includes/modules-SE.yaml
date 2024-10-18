@@ -29,8 +29,3 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/se/modules/502-delivery
-  to: /deckhouse/modules/502-delivery
-  stageDependencies:
-    setup:
-        - '**/*.go'
