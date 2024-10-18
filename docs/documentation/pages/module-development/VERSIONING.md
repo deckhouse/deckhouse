@@ -14,35 +14,139 @@ The git tag and registry container **always** have a "v" before the version numb
 
 ## Release channels
 
-Once published, the module version *moves* through the [release channels](../../deckhouse-release-channels.html) from less stable to more stable: `Alpha` -> `Beta` -> `EarlyAccess` -> `Stable` -> `RockSolid`.
-
 Release channels allow you to publish a version of a module to a limited group of users and get early feedback. You decide how stable the module version is and to which release channel you want to publish it.
 
 Note that the choice of a specific release channel does not determine how stable a module is or what stage of its lifecycle it is in. Channels are a delivery tool and are intended to measure the stability level of a particular release.
 
+When publishing a new version of the module to the [update channel](../../deckhouse-release-channels.html), first use the `Alpha` update channel. Then, if module version has no issues, publish the module version sequentially to other update channels, taking their stability into account: `Alpha` → `Beta` → `Early Access` → `Stable` → `Rock Solid`. If the module version requires fixing, the publication of that version should be halted. After releasing a version with fixes, the publication stage must be repeated starting from the `Alpha` update channel.
+
 ## Module lifecycle
 
-During development, a module may be at any of the following stages:
+During its life cycle, a module may be at any of the following stages:
 
-**Experimental** refers t to an experimental version. The module functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
-
-**Preview** refers to a preliminary version. The module functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
-
-**General Availability (GA)** refers to a generally available version. The module is ready to be used in production environments.
-
-**Deprecated** refers to a module version that has been deprecated.
+- **Experimental** refers t to an experimental version. The module functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
+- **Preview** refers to a preliminary version. The module functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
+- **General Availability (GA)** refers to a generally available version. The module is ready to be used in production environments.
+- **Deprecated** refers to a module version that has been deprecated.
 
 ## How do I figure out how stable a module is?
 
 Depending on the stage of the module lifecycle and the release channel from which the specific module version was installed, the overall stability can be determined according to the following table:
 
-![Module_Stability](../../images/module-development/module_stability.png)
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Stages Table</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 1em;
+            text-align: left;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #000;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .header-row {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        .sub-header {
+            background-color: #f9f9f9;
+        }
+        .pink {
+            background-color: #ffe6e6;
+        }
+        .light-pink {
+            background-color: #ffe0e0;
+        }
+        .yellow {
+            background-color: #ffebcc;
+        }
+        .light-yellow {
+            background-color: #fff2cc;
+        }
+        .green {
+            background-color: #d9ead3;
+        }
+        .grey {
+            background-color: #eeeeee;
+        }
+        .medium-green {
+            background-color: #89AC76;
+        }
+        .dark-green {
+            background-color: #44944A;
+        }
+    </style>
+</head>
+<body>
+
+<table>
+    <thead>
+        <tr class="header-row">
+            <th rowspan="2">Lifecycle stage</th>
+            <th colspan="5" style="text-align:center;">Release channels</th>
+        </tr>
+        <tr class="sub-header">
+            <th>Alpha</th>
+            <th>Beta</th>
+            <th>Early Access</th>
+            <th>Stable</th>
+            <th>Rock Solid</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Experimental</strong></td>
+            <td class="pink">Experiments and feature testing</td>
+            <td class="pink">Experiments and feature testing</td>
+            <td class="pink">Experiments and feature testing</td>
+            <td class="yellow">Experiments and feature testing.<br>Precise use in environments equivalent to experienced users</td>
+            <td class="yellow">Experiments and feature testing.<br>Precise use in environments equivalent to experienced users</td>
+        </tr>
+        <tr>
+            <td><strong>Preview</strong></td>
+            <td class="pink">Experiments and feature testing</td>
+            <td class="yellow">Development environments, pilots, non-critical production environments</td>
+            <td class="yellow">Development environments, pilots, non-critical production environments</td>
+            <td class="green">Production environments</td>
+            <td class="green">Production environments</td>
+        </tr>
+        <tr>
+            <td><strong>GA (Generally Available)</strong></td>
+            <td class="pink">Experiments and feature testing</td>
+            <td class="yellow">Development environments, pilots, non-critical production environments</td>
+            <td class="green">Production environments</td>
+            <td class="medium-green">Critical production environments</td>
+            <td class="dark-green">Critical production environments</td>
+        </tr>
+        <tr>
+            <td><strong>Deprecated</strong></td>
+            <td class="grey">Must be phased out of use</td>
+            <td class="grey">Must be phased out of use</td>
+            <td class="grey">Must be phased out of use</td>
+            <td class="grey">Must be phased out of use</td>
+            <td class="grey">Must be phased out of use</td>
+        </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
 
 Highlights:
-- `Experimental` modules in the `Stable` channel are not recommended for use in production environments.
-- `GA` modules in the `Alpha` channel are also not recommended for use in production environments.
-- Only `GA` modules installed from `EarlyAccess`, `Stable`, or `RockSolid` channels are suitable for production environments.
-- `Deprecated` modules are recommended to be replaced according to the guidelines provided in the documentation.
+- A module in `Experimental` status on the `Stable` channel is recommended to be used in production environments only with limitations.
+- A module in `General Availability` status on the `Alpha` channel is also not recommended for use in production environments.
+- Only `GA` modules installed from `Early Access`, `Stable`, or `Rock Solid` channels are suitable for production environments.
+- `Deprecated` modules are recommended to be replaced.
 
 <!--
 ## Stages of specific module features @TODO
@@ -70,7 +174,7 @@ The reasons for releasing a new version may be as follows:
 
 You can add new parameters without changing the version.
 
-To enable automatic conversion of module parameters from one version to another, you must include the appropriate [conversions](../structure/#conversions) in the module. Conversions may be necessary when a parameter is renamed or moved to a different location in a new version of the OpenAPI specification.
+To enable automatic conversion of module parameters from one version to another, you can include the appropriate [module conversions](../structure/#conversions). Conversions may be necessary when a parameter is renamed or moved to a different location in a new version of the OpenAPI specification.
 
 Please follow these recommendations when releasing a new version of the *CustomResourceDefinition* (CRD):
 * Set `deprecated: true` for previous versions (read more in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#version-deprecation)).
