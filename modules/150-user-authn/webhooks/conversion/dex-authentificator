@@ -44,7 +44,7 @@ function __on_conversion::v2alpha1_to_v1() {
       } |
       del(.spec.applications)
     else . end
-  '); then
+  )'); then
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
 {"convertedObjects": $converted}
 EOF
@@ -66,7 +66,7 @@ function __on_conversion::v1_to_v2alpha1() {
       }] } |
       del(.spec.applicationDomain, .spec.applicationIngressCertificateSecretName, .spec.applicationIngressClassName)
     else . end
-  '); then
+  )'); then
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
 {"convertedObjects": $converted}
 EOF
