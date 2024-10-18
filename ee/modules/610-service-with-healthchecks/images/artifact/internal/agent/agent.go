@@ -365,7 +365,6 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 	for result := range r.tasksResults {
 		r.deleteTask(result)
 		r.mu.Lock()
-		r.logger.Info("target in progress", "map", r.tasksInProcess)
 		if _, exists := r.healthecksByService[result.serviceName]; !exists {
 			r.logger.Info("Could not update probes result for service - service is not founded", "name", result.serviceName.String())
 			r.mu.Unlock()
@@ -373,6 +372,7 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 		}
 
 		for i, target := range r.healthecksByService[result.serviceName] {
+			r.logger.Info("compare", "targetHost", target.targetHost, "host", result.host)
 			if target.targetHost == result.host {
 				r.healthecksByService[result.serviceName][i].lastCheck = time.Now()
 				r.healthecksByService[result.serviceName][i].probeResultDetails = result.probeDetails
