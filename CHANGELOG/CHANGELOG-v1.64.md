@@ -1,5 +1,10 @@
 # Changelog v1.64
 
+## [MALFORMED]
+
+
+ - #9289 unknown section "flant-integration"
+
 ## Know before update
 
 
@@ -25,6 +30,7 @@
  - **[deckhouse]** Add bootstrapped extender. [#9425](https://github.com/deckhouse/deckhouse/pull/9425)
  - **[deckhouse]** Added validation of `update.windows` module parameter. [#9185](https://github.com/deckhouse/deckhouse/pull/9185)
  - **[deckhouse]** Add `deckhouseVersion` and `kubernetesVersion` extenders. [#8997](https://github.com/deckhouse/deckhouse/pull/8997)
+ - **[deckhouse-controller]** Add mechanism to check that desired modules are disabled before deckhouse update. [#10176](https://github.com/deckhouse/deckhouse/pull/10176)
  - **[deckhouse-controller]** Reflect info about applied extenders in modules' statuses. [#9527](https://github.com/deckhouse/deckhouse/pull/9527)
  - **[deckhouse-controller]** add additional debugging information [#9508](https://github.com/deckhouse/deckhouse/pull/9508)
  - **[deckhouse-controller]** Added ability to send update notifications for Deckhouse patch releases. [#9319](https://github.com/deckhouse/deckhouse/pull/9319)
@@ -104,6 +110,7 @@
  - **[common]** Fixed the displayed version of shell-operator. [#9281](https://github.com/deckhouse/deckhouse/pull/9281)
  - **[control-plane-manager]** D8EtcdExcessiveDatabaseGrowth alert fix [#9773](https://github.com/deckhouse/deckhouse/pull/9773)
  - **[control-plane-manager]** Two new etcd alerts with a low `severity_level` and an increase in the `severity_level` for one existing alert. [#9464](https://github.com/deckhouse/deckhouse/pull/9464)
+ - **[deckhouse]** Fix ValidatingAdmissionPolicy for checking update windows. [#10151](https://github.com/deckhouse/deckhouse/pull/10151)
  - **[deckhouse]** Fixed the `deckhouse-leader` and `deckhouse` Services with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)
  - **[deckhouse]** Fix parsing Kubernetes version. [#9458](https://github.com/deckhouse/deckhouse/pull/9458)
  - **[deckhouse]** Fix `ValidatingAdmissionPolicy` so that a cluster with CAPI rosurces can be deleted successfully. [#9426](https://github.com/deckhouse/deckhouse/pull/9426)
@@ -118,6 +125,8 @@
  - **[deckhouse-controller]** Correct module validation. [#8989](https://github.com/deckhouse/deckhouse/pull/8989)
  - **[deckhouse-tools]** Fix custom certs copying. [#9840](https://github.com/deckhouse/deckhouse/pull/9840)
  - **[delivery]** Fixed the `argocd-repo-server` and `argocd-server` Services with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)
+ - **[dhctl]** Do not return error if deckhouse release exists. [#10164](https://github.com/deckhouse/deckhouse/pull/10164)
+ - **[dhctl]** Only one resource will create for namespace if it namespace does not exist. [#10159](https://github.com/deckhouse/deckhouse/pull/10159)
  - **[dhctl]** Fix panic during creation resources and add timestamps to debug log. [#10070](https://github.com/deckhouse/deckhouse/pull/10070)
  - **[dhctl]** Fix ensure required namespaces. [#9714](https://github.com/deckhouse/deckhouse/pull/9714)
  - **[dhctl]** Fix sshBastionPort spec type [#9990](https://github.com/deckhouse/deckhouse/pull/9990)
@@ -125,6 +134,7 @@
  - **[dhctl]** Fix SSH client startup in Deckhouse installation phase. [#9628](https://github.com/deckhouse/deckhouse/pull/9628)
  - **[dhctl]** Retry loop for `ensureRequiredNamespacesExist` function. [#9620](https://github.com/deckhouse/deckhouse/pull/9620)
  - **[dhctl]** Added back missing preflight check for sudo access. [#9290](https://github.com/deckhouse/deckhouse/pull/9290)
+ - **[docs]** Add conditions reference, fix links on actual DKP istio version - v1.19 [#10166](https://github.com/deckhouse/deckhouse/pull/10166)
  - **[docs]** Add CEF format example in docs log-shipper [#9875](https://github.com/deckhouse/deckhouse/pull/9875)
  - **[docs]** Added steps to configure integrity level for Astra Linux SE to prevent permission issues. [#9442](https://github.com/deckhouse/deckhouse/pull/9442)
  - **[global-hooks]** Canceling migration from d8-cni-configuration secret to proper CNI module configs. [#9900](https://github.com/deckhouse/deckhouse/pull/9900)
@@ -204,7 +214,6 @@
     Mirroring via dhctl is deprecated since v1.61 and all of it's functions were moved into the Deckhouse CLI as `d8 mirror` family of commands. Users are expected to migrate to `d8 mirror`.
  - **[docs]** Set VXLAN port into allowed range. [#9089](https://github.com/deckhouse/deckhouse/pull/9089)
     In new installations, the Cilium VXLAN ports will be set to 4299 or 4298 (with virtualization).
- - **[flant-integration]** Update Python in images `flant-pricing`. [#9289](https://github.com/deckhouse/deckhouse/pull/9289)
  - **[global-hooks]** Removed a deprecated CRD of MetalLB module. [#9466](https://github.com/deckhouse/deckhouse/pull/9466)
  - **[global-hooks]** Migration from `d8-cni-configuration` secret to proper CNI module configs. [#9347](https://github.com/deckhouse/deckhouse/pull/9347)
  - **[go_lib]** Migration from `d8-cni-configuration` secret to proper CNI module configs. [#9347](https://github.com/deckhouse/deckhouse/pull/9347)
