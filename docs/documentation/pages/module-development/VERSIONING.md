@@ -96,7 +96,7 @@ Depending on the stage of the module lifecycle and the release channel from whic
             <th colspan="5" style="text-align:center;">Release channels</th>
         </tr>
         <tr class="sub-header">
-            <th>Alpfa</th>
+            <th>Alpha</th>
             <th>Beta</th>
             <th>Early Access</th>
             <th>Stable</th>

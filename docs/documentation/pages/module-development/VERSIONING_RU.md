@@ -54,7 +54,6 @@ lang: ru
         }
         th, td {
             padding: 6px;
-            border: 1px solid #000;
             text-align: center;
             vertical-align: middle;
             word-wrap: break-word;
@@ -101,7 +100,7 @@ lang: ru
             <th colspan="5" style="text-align:center; vertical-align: middle;">Каналы обновлений</th>
         </tr>
         <tr class="sub-header">
-            <th style="text-align:center; vertical-align: middle;">Alpfa</th>
+            <th style="text-align:center; vertical-align: middle;">Alpha</th>
             <th style="text-align:center; vertical-align: middle;">Beta</th>
             <th style="text-align:center; vertical-align: middle;">Early Access</th>
             <th style="text-align:center; vertical-align: middle;">Stable</th>
@@ -111,35 +110,35 @@ lang: ru
     <tbody>
         <tr>
             <td style="text-align:center; vertical-align: middle;"><strong>Experimental (экспериментальный)</strong></td>
-            <td class="pink" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
-            <td class="pink" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
-            <td class="pink" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
-            <td class="yellow" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности. Точечное использование опытными пользователями в окружениях, приравненных к продуктивным</td>
-            <td class="yellow" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности. Точечное использование опытными пользователями в окружениях, приравненных к продуктивным</td>
+            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
+            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
+            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
+            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности. Точечное использование опытными пользователями в окружениях, приравненных к продуктивным</td>
+            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности. Точечное использование опытными пользователями в окружениях, приравненных к продуктивным</td>
         </tr>
         <tr>
             <td style="text-align:center; vertical-align: middle;"><strong>Preview (предварительный доступ)</strong></td>
-            <td class="pink" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
-            <td class="yellow" style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
-            <td class="yellow" style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
-            <td class="green" style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
-            <td class="green" style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
+            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
+            <td style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
+            <td style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
+            <td style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
+            <td style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
         </tr>
         <tr>
             <td style="text-align:center; vertical-align: middle;"><strong>GA (Общедоступный)</strong></td>
-            <td class="pink" style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
-            <td class="yellow" style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
-            <td class="green" style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
-            <td class="medium-green" style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
-            <td class="dark-green" style="text-align:center; vertical-align: middle;">Критично важные продуктивные окружения и приравненные к ним</td>
+            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
+            <td style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
+            <td style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
+            <td style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
+            <td style="text-align:center; vertical-align: middle;">Критично важные продуктивные окружения и приравненные к ним</td>
         </tr>
         <tr>
             <td style="text-align:center; vertical-align: middle;"><strong>Deprecated (устарел)</strong></td>
-            <td class="grey" style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
-            <td class="grey" style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
-            <td class="grey" style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
-            <td class="grey" style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
-            <td class="grey" style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+            <td style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+            <td style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+            <td style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+            <td style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+            <td style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
         </tr>
     </tbody>
 </table>
