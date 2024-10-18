@@ -3,9 +3,13 @@ title: "Cloud provider — AWS: Preparing environment"
 description: "Configuring AWS for Deckhouse cloud provider operation."
 ---
 
+{% include notice_envinronment.liquid %}
+
 To use the `cloud-provider` and `machine-controller-manager` modules, you must access the AWS API as an IAM user with a sufficient set of privileges.
 
-> Make sure that you have access to the desired regions and that you have the necessary quotas.
+{% alert level="warning" %}
+Make sure that you have access to the desired regions and that you have the necessary quotas.
+{% endalert %}
 
 ## JSON Policy
 
