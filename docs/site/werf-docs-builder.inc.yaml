@@ -8,11 +8,11 @@ from: {{ .Images.BASE_SCRATCH }}
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/docs-builder
-  to: /app/docs-builder
+  to: /app/server
   before: setup
 docker:
   WORKDIR: /app
-  ENTRYPOINT: [ "/app/docs-builder" ]
+  ENTRYPOINT: [ "/app/server" ]
 git:
   - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
     to: /app/hugo
