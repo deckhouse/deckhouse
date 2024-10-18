@@ -1,0 +1,14 @@
+diff --git a/pkg/policy/loader.go b/pkg/policy/loader.go
+index d8b439ab..f7c9c7c7 100644
+--- a/pkg/policy/loader.go
++++ b/pkg/policy/loader.go
+@@ -100,8 +100,8 @@ func (pl *policyLoader) LoadPoliciesAndCommands() ([]string, []string, error) {
+ 	if err != nil {
+ 		return []string{}, []string{}, fmt.Errorf("failed to download policies: %w", err)
+ 	}
+-	_ = pl.cache.SetWithExpire(bundlePolicies, contentData, *pl.expiration)
+-	_ = pl.cache.SetWithExpire(bundlePath, bundlePaths, *pl.expiration)
++	_ = pl.cache.Set(bundlePolicies, contentData)
++	_ = pl.cache.Set(bundlePath, bundlePaths)
+ 	return contentData, bundlePaths, nil
+ }

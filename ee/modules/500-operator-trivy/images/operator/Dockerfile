@@ -20,6 +20,7 @@ COPY patches/005-cis-benchmark-on-startup.patch /src
 COPY patches/006-new-metrics.patch /src
 COPY patches/007-fix-custom-volumes.patch /src
 COPY patches/008-bump-dependencies.patch /src
+COPY patches/009-fix-policies-cache.patch /src
 
 RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch && \
     patch -p1 < 002-skip-some-checks.patch && \
@@ -27,7 +28,8 @@ RUN patch -p1 < 001-add-registry-secret-as-dockerconfigjson.patch && \
     patch -p1 < 005-cis-benchmark-on-startup.patch && \
     patch -p1 < 006-new-metrics.patch && \
     patch -p1 < 007-fix-custom-volumes.patch && \
-    patch -p1 < 008-bump-dependencies.patch
+    patch -p1 < 008-bump-dependencies.patch && \
+    patch -p1 < 009-fix-policies-cache.patch
 
 RUN go build -ldflags '-s -w -extldflags "-static"' -o operator-trivy ./cmd/trivy-operator/main.go
 
