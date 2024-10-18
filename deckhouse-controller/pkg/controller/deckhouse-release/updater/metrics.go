@@ -17,9 +17,9 @@ limitations under the License.
 package d8updater
 
 import (
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-
 	"github.com/flant/shell-operator/pkg/metric_storage"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 const metricReleasesGroup = "d8_releases"
