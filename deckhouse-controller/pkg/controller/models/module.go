@@ -33,6 +33,9 @@ type DeckhouseModule struct {
 	description string
 	stage       string
 	labels      map[string]string
+
+	needConfirm               bool
+	needConfirmDisableMessage string
 }
 
 func NewDeckhouseModule(def DeckhouseModuleDefinition, staticValues utils.Values, configBytes, valuesBytes []byte) (*DeckhouseModule, error) {
@@ -51,10 +54,12 @@ func NewDeckhouseModule(def DeckhouseModuleDefinition, staticValues utils.Values
 	}
 
 	return &DeckhouseModule{
-		basic:       basic,
-		labels:      labels,
-		description: def.Description,
-		stage:       def.Stage,
+		basic:                     basic,
+		labels:                    labels,
+		description:               def.Description,
+		stage:                     def.Stage,
+		needConfirm:               def.DisableOptions.Confirmation,
+		needConfirmDisableMessage: def.DisableOptions.Message,
 	}, nil
 }
 
@@ -83,6 +88,10 @@ func (dm DeckhouseModule) AsKubeObject(source string) *v1alpha1.Module {
 			Description: dm.description,
 		},
 	}
+}
+
+func (dm DeckhouseModule) GetConfirmationReason() (string, bool) {
+	return dm.needConfirmDisableMessage, dm.needConfirm
 }
 
 func calculateLabels(name string) map[string]string {

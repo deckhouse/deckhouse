@@ -1,0 +1,4 @@
+name: node-manager
+weight: 040
+description: |
+    Managing nodes
