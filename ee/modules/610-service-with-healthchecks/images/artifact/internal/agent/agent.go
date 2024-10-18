@@ -323,7 +323,7 @@ func (r *ServiceWithHealthchecksReconciler) Shutdown() {
 
 func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Context) {
 	r.logger.Info("making tasks")
-	ticker := time.NewTicker(time.Millisecond * 200)
+	ticker := time.NewTicker(time.Millisecond * 500)
 	defer ticker.Stop()
 	for {
 		select {
@@ -621,7 +621,7 @@ func (r *ServiceWithHealthchecksReconciler) addTask(task ProbeTask) {
 	// task already in queue
 	r.muInProcess.Lock()
 	defer r.muInProcess.Unlock()
-	if _, exists := r.tasksInProcess[taskIdentity]; !exists {
+	if _, exists := r.tasksInProcess[taskIdentity]; exists {
 		return
 	}
 	r.tasksInProcess[taskIdentity] = true
