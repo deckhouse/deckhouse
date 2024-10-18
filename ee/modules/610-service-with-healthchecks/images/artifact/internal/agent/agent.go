@@ -7,7 +7,6 @@ package agent
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -368,6 +367,7 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 	for result := range r.tasksResults {
 		r.deleteTask(result)
 		r.mu.Lock()
+		r.logger.Info("target in progress", "map", r.tasksInProcess)
 		if _, exists := r.healthecksByService[result.serviceName]; !exists {
 			r.logger.Info("Could not update probes result for service - service is not founded", "name", result.serviceName.String())
 			continue
@@ -636,7 +636,6 @@ func (r *ServiceWithHealthchecksReconciler) deleteTask(taskResult ProbeResult) {
 	}
 	r.muInProcess.Lock()
 	delete(r.tasksInProcess, taskIdentity)
-	fmt.Println("busymap: ", r.tasksInProcess)
 	r.muInProcess.Unlock()
 }
 
