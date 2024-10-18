@@ -18,8 +18,6 @@ layout: Standard
 sshPublicKey: "ssh-rsa AAAA"
 location: dynamix
 account: acc_user
-nodeNetworkCIDR: "10.241.32.0/24"
-nameservers: ["10.0.0.10"]
 provider:
   controllerUrl: "<controller url>"
   oAuth2Url: "<oAuth2 url>"
