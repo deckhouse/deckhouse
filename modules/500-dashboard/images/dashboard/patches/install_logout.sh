@@ -16,12 +16,12 @@
 
 hash=$(grep -Eo 'en\.main\.(.*)\.js' /public/en/index.html | cut -d '.' -f 3)
 
-cat /public/logout_button.js >> "/public/de/de.main.${hash}.js"
-cat /public/logout_button.js >> "/public/en/en.main.${hash}.js"
-cat /public/logout_button.js >> "/public/es/es.main.${hash}.js"
-cat /public/logout_button.js >> "/public/fr/fr.main.${hash}.js"
-cat /public/logout_button.js >> "/public/ja/ja.main.${hash}.js"
-cat /public/logout_button.js >> "/public/ko/ko.main.${hash}.js"
-cat /public/logout_button.js >> "/public/zh-Hans/zh-Hans.main.${hash}.js"
-cat /public/logout_button.js >> "/public/zh-Hant/zh-Hant.main.${hash}.js"
-cat /public/logout_button.js >> "/public/zh-Hant-HK/zh-Hant-HK.main.${hash}.js"
+cat logout_button.js >> "/public/de/de.main.${hash}.js"
+cat logout_button.js >> "/public/en/en.main.${hash}.js"
+cat logout_button.js >> "/public/es/es.main.${hash}.js"
+cat logout_button.js >> "/public/fr/fr.main.${hash}.js"
+cat logout_button.js >> "/public/ja/ja.main.${hash}.js"
+cat logout_button.js >> "/public/ko/ko.main.${hash}.js"
+cat logout_button.js >> "/public/zh-Hans/zh-Hans.main.${hash}.js"
+cat logout_button.js >> "/public/zh-Hant/zh-Hant.main.${hash}.js"
+cat logout_button.js >> "/public/zh-Hant-HK/zh-Hant-HK.main.${hash}.js"
