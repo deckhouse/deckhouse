@@ -16,3 +16,7 @@ find /etc/kubernetes -type d -exec chmod 700 {} \;
 find /etc/kubernetes -type f -exec chmod 600 {} \;
 
 chmod 700 /var/lib/kubelet/
+
+if [[ -d /etc/containerd ]]; then
+    chmod 700 /etc/containerd
+fi
