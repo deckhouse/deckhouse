@@ -24,6 +24,7 @@ spec:
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       containers:
         - name: backend
+          command: ["/app/server"]
           image: {{ index .Values.werf.image "web-backend" }}
           {{- include "resources" . | nindent 10 }}
           ports:
