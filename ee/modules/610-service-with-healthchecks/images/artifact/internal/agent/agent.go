@@ -346,11 +346,12 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 					if diff < float64(healthcheckTarget.periodSeconds) {
 						continue // skip task while period elapsed
 					}
-					r.addTask(ProbeTask{
+					result := r.addTask(ProbeTask{
 						host:        healthcheckTarget.targetHost,
 						serviceName: serviceName,
 						probes:      healthcheckTarget.GetRenewedProbes(),
 					})
+					r.logger.Info("task was added", "really", result)
 				}
 			}
 			r.mu.RUnlock()
@@ -613,7 +614,7 @@ func (r *ServiceWithHealthchecksReconciler) getPostgreSQLCredentials(sqlHandler 
 	return creds, nil
 }
 
-func (r *ServiceWithHealthchecksReconciler) addTask(task ProbeTask) {
+func (r *ServiceWithHealthchecksReconciler) addTask(task ProbeTask) bool {
 	taskIdentity := ProbeTaskIdentity{
 		host:        task.host,
 		serviceName: task.serviceName,
@@ -622,10 +623,11 @@ func (r *ServiceWithHealthchecksReconciler) addTask(task ProbeTask) {
 	r.muInProcess.Lock()
 	defer r.muInProcess.Unlock()
 	if _, exists := r.tasksInProcess[taskIdentity]; exists {
-		return
+		return false
 	}
 	r.tasksInProcess[taskIdentity] = true
 	r.tasks <- task
+	return true
 }
 
 func (r *ServiceWithHealthchecksReconciler) deleteTask(taskResult ProbeResult) {
