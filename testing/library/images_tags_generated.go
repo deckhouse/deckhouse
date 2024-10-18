@@ -130,7 +130,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"simpleBridge": "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
-		"alpine":                    "imageHash-common-alpine",
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
 		"csiExternalAttacher126":    "imageHash-common-csiExternalAttacher126",
 		"csiExternalAttacher127":    "imageHash-common-csiExternalAttacher127",
@@ -168,6 +167,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"csiVsphereSyncer129":       "imageHash-common-csiVsphereSyncer129",
 		"csiVsphereSyncer130":       "imageHash-common-csiVsphereSyncer130",
 		"distroless":                "imageHash-common-distroless",
+		"init":                      "imageHash-common-init",
 		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
 		"kubeRbacProxy":             "imageHash-common-kubeRbacProxy",
 		"nginxStatic":               "imageHash-common-nginxStatic",
@@ -231,11 +231,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"eventsExporter":             "imageHash-extendedMonitoring-eventsExporter",
 		"extendedMonitoringExporter": "imageHash-extendedMonitoring-extendedMonitoringExporter",
 		"imageAvailabilityExporter":  "imageHash-extendedMonitoring-imageAvailabilityExporter",
-	},
-	"flantIntegration": map[string]interface{}{
-		"flantPricing": "imageHash-flantIntegration-flantPricing",
-		"grafanaAgent": "imageHash-flantIntegration-grafanaAgent",
-		"madisonProxy": "imageHash-flantIntegration-madisonProxy",
 	},
 	"ingressNginx": map[string]interface{}{
 		"controller110":         "imageHash-ingressNginx-controller110",

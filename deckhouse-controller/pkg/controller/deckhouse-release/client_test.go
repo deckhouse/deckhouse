@@ -100,6 +100,11 @@ func setupControllerSettings(
 		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
 		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true),
 	}
+	rec.clusterUUID = rec.getClusterUUID(context.Background())
+
+	for _, option := range options {
+		option(rec)
+	}
 
 	for _, option := range options {
 		option(rec)

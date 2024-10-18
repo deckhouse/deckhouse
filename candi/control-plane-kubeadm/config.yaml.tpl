@@ -48,7 +48,15 @@ apiServer:
 {{- end }}
   extraArgs:
 {{- if .apiserver.serviceAccount }}
-    api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}{{ with .apiserver.serviceAccount.additionalAPIAudiences }},{{ . | join "," }}{{ end }}
+    {{- $defaultAud := printf "https://kubernetes.default.svc.%s" .clusterConfiguration.clusterDomain }}
+    {{- $uniqueAdditionalAuds := .apiserver.serviceAccount.additionalAPIAudiences | uniq }}
+    {{- $filteredAuds := list }}
+    {{- range $uniqueAdditionalAuds }}
+      {{- if ne . $defaultAud }}
+        {{- $filteredAuds = append $filteredAuds . }}
+      {{- end }}
+    {{- end }}
+    api-audiences: {{ $defaultAud }}{{- if gt (len $filteredAuds) 0 }},{{ $filteredAuds | join "," }}{{ end }}
     {{- if .apiserver.serviceAccount.issuer }}
     service-account-issuer: {{ .apiserver.serviceAccount.issuer }}
     service-account-jwks-uri: {{ .apiserver.serviceAccount.issuer }}/openid/v1/jwks

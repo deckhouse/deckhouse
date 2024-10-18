@@ -5,7 +5,7 @@
   {{- $context := index . 0 -}}
   {{- $volume_name := index . 1  -}}
 - name: chown-volume-{{ $volume_name }}
-  image: {{ include "helm_lib_module_common_image" (list $context "alpine") }}
+  image: {{ include "helm_lib_module_common_image" (list $context "init") }}
   command: ["sh", "-c", "chown -R 65534:65534 /tmp/{{ $volume_name }}"]
   securityContext:
     runAsNonRoot: false
@@ -25,7 +25,7 @@
   {{- $context := index . 0 -}}
   {{- $volume_name := index . 1  -}}
 - name: chown-volume-{{ $volume_name }}
-  image: {{ include "helm_lib_module_common_image" (list $context "alpine") }}
+  image: {{ include "helm_lib_module_common_image" (list $context "init") }}
   command: ["sh", "-c", "chown -R 64535:64535 /tmp/{{ $volume_name }}"]
   securityContext:
     runAsNonRoot: false
