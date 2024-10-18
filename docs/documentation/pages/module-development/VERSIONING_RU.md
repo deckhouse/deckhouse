@@ -19,7 +19,7 @@ lang: ru
 
 Важно понимать, что выбор канала обновлений не определяет, насколько стабилен сам модуль. Каналы являются инструментом доставки и определяют степень стабильности конкретного релиза.
 
-При публикации новой версии модуля на [канал обновлений](../../deckhouse-release-channels.html) сначала используйте канал обновлений `Alpha`. Далее, если работа версии модуля не вызывает нареканий, публикуйте версию модуля последовательно на другие каналы обновлений, с учетом их стабильности: `Alpha` → `Beta` → `Early Access` → `Stable` → `Rock Solid`. Если версия модуля требует исправления ошибок, то публикация такой версии должна быть остановлена. После выпуска версии с исправлениями, необходимо повторить этап публикации версии начиная с канала обновлений `Alpha`.        
+При публикации новой версии модуля на [канал обновлений](../../deckhouse-release-channels.html) сначала используйте канал обновлений `Alpha`. Далее, если работа версии модуля не вызывает нареканий, публикуйте версию модуля последовательно на другие каналы обновлений, с учетом их стабильности: `Alpha` → `Beta` → `Early Access` → `Stable` → `Rock Solid`. Если версия модуля требует исправления ошибок, то публикация такой версии должна быть остановлена. После выпуска версии с исправлениями, необходимо повторить этап публикации версии начиная с канала обновлений `Alpha`.
 
 ## Жизненный цикл модуля
 
@@ -34,117 +34,74 @@ lang: ru
 
 В зависимости от стадии жизненного цикла модуля и канала обновлений, из которого была установлена версия модуля, общая стабильность может быть определена в соответствии со следующей таблицей:
 
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Статус модуля</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        table {
-            width: 100%;
-            table-layout: fixed;
-            border-collapse: collapse;
-            margin: 20px auto;
-            font-size: 0.7em;
-        }
-        th, td {
-            padding: 6px;
-            text-align: center;
-            vertical-align: middle;
-            word-wrap: break-word;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-            text-align: center;
-            vertical-align: middle;
-        }
-        .header-row {
-            background-color: #e0e0e0;
-            font-weight: bold;
-        }
-        .sub-header {
-            background-color: #f9f9f9;
-        }
-        .pink {
-            background-color: #ffe6e6;
-        }
-        .yellow {
-            background-color: #ffebcc;
-        }
-        .green {
-            background-color: #d9ead3;
-        }
-        .grey {
-            background-color: #eeeeee;
-        }
-        .medium-green {
-            background-color: #89AC76;
-        }
-        .dark-green {
-            background-color: #44944A;
-        }
-    </style>
-</head>
-<body>
+Версия 1
 
 <table>
     <thead>
         <tr class="header-row">
-            <th rowspan="2" style="text-align:center; vertical-align: middle;">Стадия жизненного цикла</th>
-            <th colspan="5" style="text-align:center; vertical-align: middle;">Каналы обновлений</th>
+            <th rowspan="2">Стадия жизненного цикла</th>
+            <th colspan="5">Каналы обновлений</th>
         </tr>
         <tr class="sub-header">
-            <th style="text-align:center; vertical-align: middle;">Alpha</th>
-            <th style="text-align:center; vertical-align: middle;">Beta</th>
-            <th style="text-align:center; vertical-align: middle;">Early Access</th>
-            <th style="text-align:center; vertical-align: middle;">Stable</th>
-            <th style="text-align:center; vertical-align: middle;">Rock Solid</th>
+            <th>Alpha</th>
+            <th>Beta</th>
+            <th>Early Access</th>
+            <th>Stable</th>
+            <th>Rock Solid</th>
         </tr>
     </thead>
     <tbody>
         <tr>
-            <td style="text-align:center; vertical-align: middle;"><strong>Experimental (экспериментальный)</strong></td>
-            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
-            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
-            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
-            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности. Точечное использование опытными пользователями в окружениях, приравненных к продуктивным</td>
-            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности. Точечное использование опытными пользователями в окружениях, приравненных к продуктивным</td>
+            <td><strong>Experimental</strong></td>
+            <td>Эксперименты</td>
+            <td>Эксперименты</td>
+            <td>Эксперименты</td>
+            <td>Опытная эксплуатация</td>
+            <td>Опытная эксплуатация</td>
         </tr>
         <tr>
-            <td style="text-align:center; vertical-align: middle;"><strong>Preview (предварительный доступ)</strong></td>
-            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
-            <td style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
-            <td style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
-            <td style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
-            <td style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
+            <td><strong>Preview</strong></td>
+            <td>Эксперименты</td>
+            <td>Ограниченная эксплуатация</td>
+            <td>Ограниченная эксплуатация</td>
+            <td>Промышленная эксплуатация</td>
+            <td>Промышленная эксплуатация</td>
         </tr>
         <tr>
-            <td style="text-align:center; vertical-align: middle;"><strong>GA (Общедоступный)</strong></td>
-            <td style="text-align:center; vertical-align: middle;">Эксперименты, проверка функциональности</td>
-            <td style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
-            <td style="text-align:center; vertical-align: middle;">Окружения разработки, пилотные проекты, малозначимые продуктивные окружения</td>
-            <td style="text-align:center; vertical-align: middle;">Продуктивные окружения и приравненные к ним</td>
-            <td style="text-align:center; vertical-align: middle;">Критично важные продуктивные окружения и приравненные к ним</td>
+            <td><strong>General Availability</strong></td>
+            <td>Эксперименты</td>
+            <td>Ограниченная эксплуатация</td>
+            <td>Ограниченная эксплуатация</td>
+            <td>Промышленная эксплуатация</td>
+            <td>Промышленная эксплуатация в ответственных системах</td>
         </tr>
         <tr>
-            <td style="text-align:center; vertical-align: middle;"><strong>Deprecated (устарел)</strong></td>
-            <td style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
-            <td style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
-            <td style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
-            <td style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
-            <td style="text-align:center; vertical-align: middle;">Необходимо выводить из использования</td>
+            <td><strong>Deprecated</strong></td>
+            <td>Отказ от использования</td>
+            <td>Отказ от использования</td>
+            <td>Отказ от использования</td>
+            <td>Отказ от использования</td>
+            <td>Отказ от использования</td>
         </tr>
     </tbody>
 </table>
 
-</body>
-</html>
+Версия 2
+
+| Стадия жизненного цикла  | Alpha        | Beta                  | Early Access         | Stable                | Rock Solid                          |
+|--------------------------|--------------|-----------------------|----------------------|-----------------------|-------------------------------------|
+| **Experimental**         | Эксперименты | Эксперименты          | Эксперименты         | Опытная эксплуатация  | Опытная эксплуатация                |
+| **Preview**              | Эксперименты | Ограниченная эксплуатация | Ограниченная эксплуатация | Промышленная эксплуатация | Промышленная эксплуатация |
+| **General Availability** | Эксперименты | Ограниченная эксплуатация | Ограниченная эксплуатация | Промышленная эксплуатация | Промышленная эксплуатация в ответственных системах |
+| **Deprecated**           | Отказ от использования | Отказ от использования | Отказ от использования | Отказ от использования | Отказ от использования |
+
+
+- Эксперименты — Проверка функциональности, эксперименты и тестирование;
+- Опытная эксплуатация — Проверка функциональности, эксперименты и тестирование. Точечное использование опытными пользователями в окружениях, приравненных ; продуктивным.
+- Ограниченная эксплуатация — Окружения разработки, пилотные проекты, малозначимые продуктивные окружения;
+- Промышленная эксплуатация — Продуктивные окружения и приравненные к ним;
+- Промышленная эксплуатация в ответственных системах — Критично важные продуктивные окружения и приравненные к ним;
+- Отказ от использования — Необходимо выводить из использования.
 
 Выводы:
 - Модуль в статусе`Experimental` на канале `Stable` рекомендовано использовать в продуктивных средах только ограниченно.
