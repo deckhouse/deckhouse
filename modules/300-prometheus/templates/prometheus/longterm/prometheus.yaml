@@ -72,7 +72,7 @@ spec:
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
-        {{- include "helm_lib_container_init_config_reloader_resources" . | nindent 8 }}
+        {{- include "init_config_reloader_resources" . | nindent 8 }}
   - command:
     - sh
     - -c
