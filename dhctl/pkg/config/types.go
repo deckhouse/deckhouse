@@ -116,5 +116,5 @@ type RegistryProxyModeProperties struct {
 
 type RegistryDetachedModeProperties struct {
 	ImagesBundlePath string `json:"imagesBundlePath,omitempty"`
-	StorageMode      string `json:"scheme,storageMode"`
+	StorageMode      string `json:"storageMode,omitempty"`
 }
