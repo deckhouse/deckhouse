@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package d8updater
+package release
 
 import (
 	"github.com/flant/shell-operator/pkg/metric_storage"
@@ -22,7 +22,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-const d8ReleaseBlockedMetricName = "d8_release_info"
+const moduleReleaseBlockedMetricName = "d8_module_release_info"
+
+type metricsUpdater struct {
+	metricStorage *metric_storage.MetricStorage
+}
 
 func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpdater {
 	return &metricsUpdater{
@@ -30,15 +34,11 @@ func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpda
 	}
 }
 
-type metricsUpdater struct {
-	metricStorage *metric_storage.MetricStorage
+func (m *metricsUpdater) UpdateReleaseMetric(name string, metricLabels updater.MetricLabels) {
+	m.PurgeReleaseMetric(name)
+	m.metricStorage.Grouped().GaugeSet(name, moduleReleaseBlockedMetricName, 1, metricLabels)
 }
 
-func (mu *metricsUpdater) UpdateReleaseMetric(name string, metricLabels updater.MetricLabels) {
-	mu.PurgeReleaseMetric(name)
-	mu.metricStorage.Grouped().GaugeSet(name, d8ReleaseBlockedMetricName, 1, metricLabels)
-}
-
-func (mu *metricsUpdater) PurgeReleaseMetric(name string) {
-	mu.metricStorage.Grouped().ExpireGroupMetricByName(name, d8ReleaseBlockedMetricName)
+func (m *metricsUpdater) PurgeReleaseMetric(name string) {
+	m.metricStorage.Grouped().ExpireGroupMetricByName(name, moduleReleaseBlockedMetricName)
 }
