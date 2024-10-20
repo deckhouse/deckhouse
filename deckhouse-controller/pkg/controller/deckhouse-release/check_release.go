@@ -145,7 +145,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		pointerReleases = append(pointerReleases, &r)
 	}
 	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
-	r.metricStorage.GroupedVault.ExpireGroupMetrics(metricUpdatingFailedGroup)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
 
 	for _, release := range pointerReleases {
 		switch {
@@ -220,7 +220,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 						"version": release.GetVersion().Original(),
 					}
 
-					r.metricStorage.GroupedVault.GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
+					r.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
 					return err
 				}
 

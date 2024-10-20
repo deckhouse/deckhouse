@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"slices"
 	"strconv"
 	"time"
 
@@ -41,12 +40,25 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-func newModuleUpdater(dc dependency.Container, logger logger.Logger, settings *updater.Settings,
-	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
+func newModuleUpdater(
+	dc dependency.Container,
+	logger logger.Logger,
+	settings *updater.Settings,
+	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease],
+	enabledModules []string,
+	metricStorage *metric_storage.MetricStorage,
 ) *updater.Updater[*v1alpha1.ModuleRelease] {
-	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, settings,
-		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage, enabledModules),
-		newWebhookDataSource(logger), enabledModules)
+	return updater.NewUpdater[*v1alpha1.ModuleRelease](
+		dc,
+		logger, settings,
+		updater.DeckhouseReleaseData{},
+		true,
+		false,
+		kubeAPI,
+		newMetricsUpdater(metricStorage),
+		newWebhookDataSource(logger),
+		enabledModules,
+	)
 }
 
 func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
@@ -244,35 +256,4 @@ func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, rele
 	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
 
 	return k.client.Status().Update(ctx, release)
-}
-
-type metricsUpdater struct {
-	metricStorage  *metric_storage.MetricStorage
-	enabledModules []string
-}
-
-func newMetricsUpdater(metricStorage *metric_storage.MetricStorage, enabledModules []string) *metricsUpdater {
-	return &metricsUpdater{
-		enabledModules: enabledModules,
-		metricStorage:  metricStorage,
-	}
-}
-
-func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
-}
-
-func (m *metricsUpdater) WaitingManual(release *v1alpha1.ModuleRelease, totalPendingManualReleases float64) {
-	if !slices.Contains(m.enabledModules, release.GetModuleName()) {
-		return
-	}
-
-	m.metricStorage.GaugeSet(
-		"d8_module_release_waiting_manual",
-		totalPendingManualReleases,
-		map[string]string{
-			"name":       release.GetName(),
-			"kind":       "module",
-			"moduleName": release.GetModuleName(),
-			"version":    "v" + release.Spec.Version.String(),
-		})
 }
