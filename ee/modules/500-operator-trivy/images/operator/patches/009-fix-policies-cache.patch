@@ -11,7 +11,7 @@ index da97e78c..fbf78b63 100644
  	return policyLoader, nil
  }
 diff --git a/pkg/policy/loader.go b/pkg/policy/loader.go
-index d8b439ab..598944ec 100644
+index d8b439ab..675fe710 100644
 --- a/pkg/policy/loader.go
 +++ b/pkg/policy/loader.go
 @@ -58,6 +58,7 @@ func (pl *policyLoader) GetPoliciesAndBundlePath() ([]string, []string, error) {
@@ -22,20 +22,23 @@ index d8b439ab..598944ec 100644
  		policies, bundlePaths, err = pl.LoadPoliciesAndCommands()
  		if err != nil {
  			log.V(1).Error(err, "failed to load policies")
-@@ -80,10 +81,12 @@ func (pl *policyLoader) getPoliciesFromCache() (interface{}, interface{}, error)
+@@ -78,12 +79,15 @@ func (pl *policyLoader) GetPoliciesAndBundlePath() ([]string, []string, error) {
+ func (pl *policyLoader) getPoliciesFromCache() (interface{}, interface{}, error) {
+ 	pl.mutex.RLock()
  	defer pl.mutex.RUnlock()
++	log := pl.logger.WithName("Get policies from cache")
  	policies, err := pl.cache.Get(bundlePolicies)
  	if err != nil {
-+		pl.logger.Error(err, "failed to load bundle policies")
++		log.V(1).Info("failed to load bundle policies from cache", "err", err.Error())
  		return nil, nil, err
  	}
  	bundlePath, err := pl.cache.Get(bundlePath)
  	if err != nil {
-+		pl.logger.Error(err, "failed to load bundle path")
++		log.V(1).Info("failed to load bundle path from cache", "err", err.Error())
  		return nil, nil, err
  	}
  	return policies, bundlePath, nil
-@@ -100,8 +103,8 @@ func (pl *policyLoader) LoadPoliciesAndCommands() ([]string, []string, error) {
+@@ -100,8 +104,8 @@ func (pl *policyLoader) LoadPoliciesAndCommands() ([]string, []string, error) {
  	if err != nil {
  		return []string{}, []string{}, fmt.Errorf("failed to download policies: %w", err)
  	}
