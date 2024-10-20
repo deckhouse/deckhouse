@@ -1,0 +1,14 @@
+{%- if page.webIfaces %}
+<blockquote>
+<p class="webifaces">
+{{ site.data.i18n.common.module_web_ifaces[page.lang] }}:
+  {%- for item in page.webIfaces %}
+  {%- capture itemTitle %}{{ site.data.i18n.common.for_example[page.lang] | capitalize }}, '{{ item.name }}.kube.my' {{ site.data.i18n.common.for_domain_template[page.lang] }} '%s.kube.my'{% endcapture %}
+  {%- if item.urlInfo %} <a href="{{ item.urlInfo }}" title="{{ itemTitle }}">{{ item.name }}</a>
+  {%- else %} <span title="{{ itemTitle }}">{{ item.name }}</span>
+  {%- endif %}
+  {%- unless forloop.last %},{% endunless %}
+  {%- endfor %}
+</p>
+</blockquote>
+{%- endif %}

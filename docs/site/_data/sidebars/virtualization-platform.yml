@@ -1,0 +1,39 @@
+# Next lines are for local build only
+entries:
+  folders:
+    - title:
+        en: Overview
+        ru: Введение
+      url: /virtualization-platform/documentation/
+    - title:
+        en: Guides
+        ru: Руководства
+      folders:
+        - title:
+            en: Installation
+            ru: Установка
+          url: /virtualization-platform/guides/installation.html
+        - title:
+            en: Administration
+            ru: Администрирование
+          url: /virtualization-platform/guides/administration.html
+        - title:
+            en: User guide
+            ru: Руководство пользователя
+          url: /virtualization-platform/guides/user-guide.html
+    - title:
+        en: Documentation
+        ru: Документация
+      folders:
+        - title:
+            en: Functional characteristics
+            ru: Описание функциональных характеристик
+          url: /virtualization-platform/documentation/characteristics.html
+        - title:
+            en: Modules
+            ru: Модули
+          folders:
+            - title:
+                en: virtualization
+                ru: virtualization
+              url: /kubernetes-platform/modules/virtualization/stable/
