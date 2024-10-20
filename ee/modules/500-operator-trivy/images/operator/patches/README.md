@@ -38,4 +38,4 @@ This patch updates vulnerable dependencies.
 
 ### 009-fix-policies-cache.patch
 
-The operator of v0.22.0 cannot redownload policies if the image of the policies has been changed, it tries to download the old one.
+The operator of v0.22.0 cannot re-download policies if the image of the policies has been changed, it tries to download the old one.
