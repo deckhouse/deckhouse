@@ -33,11 +33,14 @@ type ServiceAccountInfo struct {
 }
 
 const (
+	labelDhApp                 = "app"
+	labelDhHeritage            = "heritage"
+	labelDhModule              = "module"
 	labelHelmManagedBy         = "app.kubernetes.io/managed-by"
 	annotationReleaseName      = "meta.helm.sh/release-name"
 	annotationReleaseNamespace = "meta.helm.sh/release-namespace"
-	saName                     = "capi-controller-manager"
 	clusterAPINamespace        = "d8-cloud-instance-manager"
+	saName                     = "capi-controller-manager"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -81,9 +84,9 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
 				labelHelmManagedBy: "Helm",
-				"app":              "capi-controller-manager",
-				"heritage":         "deckhouse",
-				"module":           "node-manager",
+				labelDhApp:         "capi-controller-manager",
+				labelDhHeritage:    "deckhouse",
+				labelDhModule:      "node-manager",
 			},
 			"annotations": map[string]string{
 				annotationReleaseName:      "node-manager",
