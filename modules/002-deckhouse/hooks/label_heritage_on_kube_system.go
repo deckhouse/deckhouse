@@ -41,7 +41,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, labelHeritage)
 
 func filterResource(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	if unstructured.GetLabels()["kubernetes.io/metadata.name"] == "kube-system" {
+	if unstructured.GetLabels()["heritage"] == "deckhouse" {
 		return nil, nil
 	}
 	return unstructured.GetName(), nil
