@@ -66,6 +66,7 @@
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
+fromCacheVersion: 10
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
@@ -223,6 +224,7 @@ shell:
 # New Main Agent Image (Distroless)
 ---
 image: {{ $.ModuleName }}/agent-distroless
+fromCacheVersion: 10
 fromImage: common/distroless
 import:
 - artifact: {{ $.ModuleName }}/agent-binaries-artifact
