@@ -4,7 +4,7 @@ candi:
       pull_request: https://github.com/deckhouse/deckhouse/pull/10175
 deckhouse:
   fixes:
-    - summary: Fix ValidatingAdmissionPolicy for checking update windows.
+    - summary: Fix `ValidatingAdmissionPolicy` for checking update windows.
       pull_request: https://github.com/deckhouse/deckhouse/pull/10151
 deckhouse-controller:
   features:
