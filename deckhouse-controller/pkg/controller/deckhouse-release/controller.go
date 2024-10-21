@@ -401,6 +401,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 }
 
 func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
+	var result ctrl.Result
 	var notReadyErr *updater.NotReadyForDeployError
 	if errors.As(err, &notReadyErr) {
 		r.logger.Infoln(err.Error())
@@ -414,7 +415,7 @@ func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
+	return result, fmt.Errorf("apply predicted release: %w", err)
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {
