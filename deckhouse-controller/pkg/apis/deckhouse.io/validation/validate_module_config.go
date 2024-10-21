@@ -65,7 +65,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 				// we check module
 				// we check confirmation restriction and confirmation message
 				_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
-				if !ok && *cfg.Spec.Enabled {
+				if !ok && cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
 					// we can delete unknown module without any further check
 					module, err := moduleStorage.GetModuleByName(obj.GetName())
 					if err == nil {
@@ -115,7 +115,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 			// we check confirmation restriction and confirmation message
 			_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
 			_, oldOk := oldModuleMeta.Annotations[v1alpha1.AllowDisableAnnotation]
-			if !ok && !oldOk && !*cfg.Spec.Enabled {
+			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
 				// we can disable unknown module without any further check
 				module, err := moduleStorage.GetModuleByName(obj.GetName())
 				if err == nil {
@@ -134,7 +134,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 
 		var allowedToDisableMetric float64
 		_, ok = cfg.Annotations[v1alpha1.AllowDisableAnnotation]
-		if ok && *cfg.Spec.Enabled {
+		if ok && cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
 			allowedToDisableMetric = 1
 		}
 
