@@ -84,14 +84,14 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 	_, _ = mcInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			mconfig := obj.(*v1alpha1.ModuleConfig)
-			mc.handleEvent(mconfig, eventC, config.EventAdd)
+			mc.handleEvent(ctx, mconfig, eventC, config.EventAdd)
 		},
 		UpdateFunc: func(prev interface{}, obj interface{}) {
 			prevConfig := prev.(*v1alpha1.ModuleConfig)
 			mconfig := obj.(*v1alpha1.ModuleConfig)
 			// TODO: find a better way of comparing mconfigs (some sort of generator for DeepEqual method)
 			if !reflect.DeepEqual(prevConfig.Spec, mconfig.Spec) {
-				mc.handleEvent(mconfig, eventC, config.EventUpdate)
+				mc.handleEvent(ctx, mconfig, eventC, config.EventUpdate)
 				// send an event to moduleEventC so that the moduleconfig status could be refreshed
 			} else if mc.moduleEventC != nil {
 				mc.moduleEventC <- events.ModuleEvent{
@@ -101,7 +101,7 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			mc.handleEvent(obj.(*v1alpha1.ModuleConfig), eventC, config.EventDelete)
+			mc.handleEvent(ctx, obj.(*v1alpha1.ModuleConfig), eventC, config.EventDelete)
 		},
 	})
 
@@ -110,7 +110,7 @@ func (mc ModuleConfigBackend) StartInformer(ctx context.Context, eventC chan con
 	}()
 }
 
-func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC chan config.Event, op config.Op) {
+func (mc ModuleConfigBackend) handleEvent(ctx context.Context, obj *v1alpha1.ModuleConfig, eventC chan config.Event, op config.Op) {
 	cfg := config.NewConfig()
 
 	values, err := mc.fetchValuesFromModuleConfig(obj)
@@ -133,9 +133,25 @@ func (mc ModuleConfigBackend) handleEvent(obj *v1alpha1.ModuleConfig, eventC cha
 			ModuleConfig: *mcfg,
 			Checksum:     mcfg.Checksum(),
 		}
+
+		// TODO: move to moduleConfig reconciler
+		//
+		// remove annotation if module disabled
+		_, ok := obj.ObjectMeta.Annotations[v1alpha1.AllowDisableAnnotation]
+		if ok && !*obj.Spec.Enabled {
+			delete(obj.ObjectMeta.Annotations, v1alpha1.AllowDisableAnnotation)
+			_, err := mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().Update(ctx, obj, metav1.UpdateOptions{})
+			if err != nil {
+				eventC <- config.Event{Key: obj.Name, Config: cfg, Err: err}
+				return
+			}
+		}
+
 		mc.handleDeckhouseConfig(obj.Name, values)
 	}
+
 	eventC <- config.Event{Key: obj.Name, Config: cfg, Op: op}
+
 	if mc.moduleEventC != nil {
 		mc.moduleEventC <- events.ModuleEvent{
 			ModuleName: obj.Name,
@@ -167,10 +183,12 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*con
 		} else {
 			mcfg := utils.NewModuleConfig(item.Name, values)
 			mcfg.IsEnabled = item.Spec.Enabled
+
 			cfg.Modules[item.Name] = &config.ModuleKubeConfig{
 				ModuleConfig: *mcfg,
 				Checksum:     mcfg.Checksum(),
 			}
+
 			mc.handleDeckhouseConfig(item.Name, values)
 		}
 	}
@@ -189,10 +207,12 @@ func (mc ModuleConfigBackend) fetchValuesFromModuleConfig(item *v1alpha1.ModuleC
 	}
 
 	converter := conversion.Store().Get(item.Name)
+
 	newVersion, newSettings, err := converter.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
 	if err != nil {
 		return utils.Values{}, err
 	}
+
 	item.Spec.Version = newVersion
 	item.Spec.Settings = newSettings
 
