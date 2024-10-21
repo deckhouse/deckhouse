@@ -266,6 +266,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	var result ctrl.Result
 
 	if moduleName, err := deckhouseversion.Instance().ValidateBaseVersion(dr.Spec.Version); err != nil {
+		// invalid deckhouse version in deckhouse release
+		if moduleName == "" {
+			return ctrl.Result{}, err
+		}
 		if r.moduleManager.IsModuleEnabled(moduleName) {
 			dr.Status.Message = err.Error()
 			if e := r.client.Status().Update(ctx, dr); e != nil {
@@ -277,6 +281,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	if r.isKubernetesVersionAutomatic(ctx) && len(dr.Spec.Requirements["autoK8sVersion"]) > 0 {
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(dr.Spec.Requirements["autoK8sVersion"]); err != nil {
+			// invalid auto kubernetes version in deckhouse release
+			if moduleName == "" {
+				return ctrl.Result{}, err
+			}
 			if r.moduleManager.IsModuleEnabled(moduleName) {
 				dr.Status.Message = err.Error()
 				if e := r.client.Status().Update(ctx, dr); e != nil {
