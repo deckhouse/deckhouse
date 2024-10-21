@@ -64,7 +64,37 @@ metadata:
   labels:
     extended-monitoring.deckhouse.io/enabled: ""
     kubernetes.io/metadata.name: kube-system
-	heritage: deckhouse
+  name: kube-system
+`))
+		})
+	})
+	Context("Cluster has ns kube-system with label heritage", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    extended-monitoring.deckhouse.io/enabled: ""
+    kubernetes.io/metadata.name: kube-system
+  name: kube-system
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("Namespace", "kube-system").ToYaml()).To(MatchYAML(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    heritage: deckhouse
+    extended-monitoring.deckhouse.io/enabled: ""
+    kubernetes.io/metadata.name: kube-system
   name: kube-system
 `))
 		})
