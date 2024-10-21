@@ -1,23 +1,4 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}/entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
-git:
-- add: /{{ $.ModulePath }}modules/340-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
-  to: /entrypoint
-  stageDependencies:
-    install:
-    - '**/*'
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  install:
-  - cd /entrypoint
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go build -ldflags="-s -w" -o entrypoint main.go
-  - chown -R 64535:64535 /entrypoint/
-  - chmod 0700 /entrypoint/entrypoint
----
 artifact: {{ .ModuleName }}/build-artifact
 from: {{ .Images.BASE_GOLANG_21_BULLSEYE_DEV }}
 git:
@@ -64,10 +45,6 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}/entrypoint-artifact
-  add: /entrypoint/entrypoint
-  to: /usr/local/bin/entrypoint
-  before: install
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
@@ -76,7 +53,7 @@ import:
   - '**/*'
 - artifact: {{ .ModuleName }}/build-artifact
   add: /build/ebpf-exporter/ebpf_exporter
-  to: /usr/local/bin/ebpf_exporter
+  to: /bin/ebpf_exporter
   before: setup
 - artifact: {{ .ModuleName }}/build-artifact
   add: /build/ebpf-exporter/metrics
@@ -86,54 +63,4 @@ import:
   - '**/*.yaml'
   - '**/*.o'
 docker:
-  ENTRYPOINT: ["/usr/local/bin/entrypoint"]
-
-
-# ebpf_exporter_build_info{branch="HEAD",goarch="amd64",goos="linux",goversion="go1.21.6",revision="4145b41",tags="unknown",version="v2.3.0"} 1
-# ebpf_exporter_ebpf_program_attached{id="2876"} 1
-# ebpf_exporter_ebpf_program_info{config="oomkill",id="2876",program="kprobe__oom_kill_process",tag="504302b7a55b8562"} 1
-# ebpf_exporter_enabled_configs{name="oomkill"} 1
-# go_gc_duration_seconds{quantile="0"} 4.2363e-05
-# go_gc_duration_seconds{quantile="0.25"} 4.6119e-05
-# go_gc_duration_seconds{quantile="0.5"} 7.0836e-05
-# go_gc_duration_seconds{quantile="0.75"} 0.000125127
-# go_gc_duration_seconds{quantile="1"} 0.001709026
-# go_gc_duration_seconds_sum 0.002528163
-# go_gc_duration_seconds_count 12
-# go_goroutines 11
-# go_info{version="go1.21.6"} 1
-# go_memstats_alloc_bytes 2.8726832e+07
-# go_memstats_alloc_bytes_total 7.7391456e+07
-# go_memstats_buck_hash_sys_bytes 4612
-# go_memstats_frees_total 384172
-# go_memstats_gc_sys_bytes 4.15804e+06
-# go_memstats_heap_alloc_bytes 2.8726832e+07
-# go_memstats_heap_idle_bytes 1.4974976e+07
-# go_memstats_heap_inuse_bytes 3.0539776e+07
-# go_memstats_heap_objects 356322
-# go_memstats_heap_released_bytes 1.3164544e+07
-# go_memstats_heap_sys_bytes 4.5514752e+07
-# go_memstats_last_gc_time_seconds 1.729181053106236e+09
-# go_memstats_lookups_total 0
-# go_memstats_mallocs_total 740494
-# go_memstats_mcache_inuse_bytes 4800
-# go_memstats_mcache_sys_bytes 15600
-# go_memstats_mspan_inuse_bytes 441504
-# go_memstats_mspan_sys_bytes 537768
-# go_memstats_next_gc_bytes 5.3882632e+07
-# go_memstats_other_sys_bytes 894492
-# go_memstats_stack_inuse_bytes 622592
-# go_memstats_stack_sys_bytes 622592
-# go_memstats_sys_bytes 5.1747856e+07
-# go_threads 10
-# process_cpu_seconds_total 0.71
-# process_max_fds 1.048576e+06
-# process_open_fds 20
-# process_resident_memory_bytes 4.696064e+07
-# process_start_time_seconds 1.72918069199e+09
-# process_virtual_memory_bytes 1.891094528e+09
-# process_virtual_memory_max_bytes 1.8446744073709552e+19
-# promhttp_metric_handler_requests_in_flight 1
-# promhttp_metric_handler_requests_total{code="200"} 16
-# promhttp_metric_handler_requests_total{code="500"} 0
-# promhttp_metric_handler_requests_total{code="503"} 0
+  ENTRYPOINT: ["/bin/ebpf_exporter"]
