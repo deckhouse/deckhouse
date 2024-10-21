@@ -68,7 +68,7 @@ Depending on the stage of the module lifecycle and the release channel from whic
         <tr>
             <td><strong>General Availability</strong></td>
             <td>Experiments</td>
-            <td>Limited exploitation</td>
+            <td>Limited use</td>
             <td>Limited use</td>
             <td>Production use</td>
             <td>Production use in critical systems</td>
