@@ -16,7 +16,7 @@ properties:
 
   tolerations:
     description: |
-      Опциональные исключения (tolerations) для компонентов `operator-trivy` и заданий сканирования (jobs).
+      Опциональные tolerations для компонентов `operator-trivy` и заданий сканирования (Jobs).
 
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
