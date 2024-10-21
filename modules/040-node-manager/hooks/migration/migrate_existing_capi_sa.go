@@ -72,11 +72,9 @@ func applyServiceAccountFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}
 
 	_, isLabeledWithHelmManaged := serviceAccount.Labels[labelHelmManagedBy]
-	_, isAnnotatedWithReleseName := serviceAccount.Annotations[annotationReleaseName]
-	_, isAnnotatedWithReleseNamespace := serviceAccount.Annotations[annotationReleaseNamespace]
 
 	return ServiceAccountInfo{
-		IsLabeledAndAnnotated: isLabeledWithHelmManaged && isAnnotatedWithReleseName && isAnnotatedWithReleseNamespace,
+		IsLabeledAndAnnotated: isLabeledWithHelmManaged,
 		Name:                  serviceAccount.GetName(),
 	}, nil
 }
@@ -86,6 +84,9 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
 				labelHelmManagedBy: "Helm",
+				"app":              "capi-controller-manager",
+				"heritage":         "deckhouse",
+				"module":           "node-manager",
 			},
 			"annotations": map[string]string{
 				annotationReleaseName:      "node-manager",
