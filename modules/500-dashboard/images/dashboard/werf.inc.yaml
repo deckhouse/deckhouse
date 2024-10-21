@@ -4,7 +4,7 @@ fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/dashboard
-  to: /bin/dashboard
+  to: /dashboard
   before: setup
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
   add: /locale_conf.json
@@ -13,7 +13,7 @@ import:
   add: /public
   before: setup
 docker:
-  ENTRYPOINT: ["/bin/dashboard"]
+  ENTRYPOINT: ["/dashboard"]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: common/src-artifact
