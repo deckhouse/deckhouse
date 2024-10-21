@@ -41,6 +41,5 @@ shell:
     - ./configure --libdir=/opt/deckhouse/bin/.libs
     - make
     - ls -la
-    - strip ./ethtool/ethtool
-    - mv ./ethtool/ethtool /xtables-legacy-multi
+    - strip ./ethtool
     - chmod +x /ethtool /install /uninstall
