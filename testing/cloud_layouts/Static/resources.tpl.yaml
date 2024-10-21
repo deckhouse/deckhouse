@@ -178,6 +178,36 @@ metadata:
 data:
   .file: "content"
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: apt-rpm-updated-fix
+spec:
+  weight: 2
+  bundles:
+  - "*"
+  nodeGroups:
+  - "system"
+  content: |
+    export DEBIAN_FRONTEND=noninteractive
+    bb-flag? apt-rpm-updated && return 0
+    bb-log-info 'Updating apt cache'
+
+    set +Eeuo pipefail
+    OUTPUT=$(apt-get update 2>&1)
+    EXIT_CODE=$?
+    set -Eeuo pipefail
+
+    echo "$OUTPUT"
+    if echo "$OUTPUT" | grep -q "error reading from /var/lib/apt/lists/partial"; then
+        rm -rf /var/lib/apt/lists/partial/*
+    fi
+
+    if [ $EXIT_CODE -eq 0 ]; then
+        bb-flag-set apt-rpm-updated
+    fi
+    return $EXIT_CODE
+---
 # testing creating multiple resources for one non exists resource
 apiVersion: v1
 kind: Namespace
