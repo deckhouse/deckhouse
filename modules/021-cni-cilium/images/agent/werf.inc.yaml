@@ -61,6 +61,7 @@
 # for check and cleaning unnecessary iptables
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/check-n-cleaning-iptables.sh" }}
 # iptables and dependencies
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/iptables-wrapper" }}
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
@@ -99,7 +100,7 @@ import:
   before: install
 - artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
-  to: /sbin/
+  to: /sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
