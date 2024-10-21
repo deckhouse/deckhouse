@@ -3,6 +3,7 @@
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALT_P11 }}
+fromCacheVersion: 1
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell-operator
