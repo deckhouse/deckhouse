@@ -118,7 +118,7 @@ func assembleInitObject(t *testing.T, obj string) client.Object {
 	var typ runtime.TypeMeta
 
 	err := yaml.Unmarshal([]byte(obj), &typ)
-	require.NoError(t, err)
+	require.NoErrorf(t, err, "try unmarshal yaml\n%s", obj)
 
 	switch typ.Kind {
 	case "Secret":
