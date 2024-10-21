@@ -130,6 +130,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"simpleBridge": "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
+		"alpine":                    "imageHash-common-alpine",
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
 		"csiExternalAttacher126":    "imageHash-common-csiExternalAttacher126",
 		"csiExternalAttacher127":    "imageHash-common-csiExternalAttacher127",
@@ -220,11 +221,9 @@ var DefaultImagesDigests = map[string]interface{}{
 	"descheduler": map[string]interface{}{
 		"descheduler": "imageHash-descheduler-descheduler",
 	},
-	"docsBuilder": map[string]interface{}{
-		"docsBuilder": "imageHash-docsBuilder-docsBuilder",
-	},
 	"documentation": map[string]interface{}{
-		"web": "imageHash-documentation-web",
+		"docsBuilder": "imageHash-documentation-docsBuilder",
+		"web":         "imageHash-documentation-web",
 	},
 	"extendedMonitoring": map[string]interface{}{
 		"certExporter":               "imageHash-extendedMonitoring-certExporter",
