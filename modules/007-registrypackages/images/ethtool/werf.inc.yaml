@@ -38,7 +38,7 @@ shell:
     - git clone -b v{{ $version }} --depth 1  https://git.kernel.org/pub/scm/network/ethtool/ethtool.git /src
     - cd /src
     - ./autogen.sh
-    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
+    - ./configure --libdir=/opt/deckhouse/bin/.libs
     - make LDFLAGS='-all-static'
     - ls -la
     - strip ./ethtool/ethtool
