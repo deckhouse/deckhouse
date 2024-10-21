@@ -2,6 +2,7 @@
 cpu: 10m
 memory: 100Mi
 {{- end }}
+{{- $port := "4205" -}}
 
 {{- if .Values.monitoringKubernetes.ebpfExporterEnabled }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -39,7 +40,7 @@ metadata:
 spec:
   updateStrategy:
     rollingUpdate:
-      maxUnavailable: 1
+      maxUnavailable: 100%
     type: RollingUpdate
   selector:
     matchLabels:
@@ -61,15 +62,15 @@ spec:
       - image: {{ include "helm_lib_module_image" (list . "ebpfExporter") }}
         name: ebpf-exporter
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
-        env:
-        - name: EBPF_EXPORTER_BIN_PATH
-          value: "/usr/local/bin/ebpf_exporter"
-        - name: EBPF_EXPORTER_CONFIG_DIR
-          value: "/metrics"
-        - name: EBPF_EXPORTER_CONFIG_NAMES
-          value: "oomkill"
-        - name: EBPF_EXPORTER_LISTEN_ADDRESS
-          value: "127.0.0.1:9435"
+        args:
+        - --config.dir=/metrics
+        - --config.names=oomkill
+        - --web.listen-address=127.0.0.1:{{ $port }}
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ $port }}
+            scheme: HTTPS
         volumeMounts:
         - name: host-sys
           mountPath: /sys
@@ -87,7 +88,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4205"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):{{ $port }}"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -98,9 +99,11 @@ spec:
               fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
+            excludePaths:
+            - /healthz
             upstreams:
-            - upstream: http://127.0.0.1:9435/metrics
-              path: /metrics
+            - upstream: http://127.0.0.1:{{ $port }}/
+              path: /
               authorization:
                 resourceAttributes:
                   namespace: d8-monitoring
@@ -110,7 +113,7 @@ spec:
                   subresource: prometheus-metrics
                   name: ebpf-exporter
         ports:
-        - containerPort: 4205
+        - containerPort: {{ $port }}
           name: https-metrics
         resources:
           requests:
