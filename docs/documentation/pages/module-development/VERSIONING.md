@@ -33,67 +33,11 @@ During its life cycle, a module may be at any of the following stages:
 
 Depending on the stage of the module lifecycle and the release channel from which the specific module version was installed, the overall stability can be determined according to the following table:
 
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Module Stages Table</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            font-size: 1em;
-            text-align: left;
-        }
-        th, td {
-            padding: 12px;
-            border: 1px solid #000;
-            text-align: center;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .header-row {
-            background-color: #e0e0e0;
-            font-weight: bold;
-        }
-        .sub-header {
-            background-color: #f9f9f9;
-        }
-        .pink {
-            background-color: #ffe6e6;
-        }
-        .light-pink {
-            background-color: #ffe0e0;
-        }
-        .yellow {
-            background-color: #ffebcc;
-        }
-        .light-yellow {
-            background-color: #fff2cc;
-        }
-        .green {
-            background-color: #d9ead3;
-        }
-        .grey {
-            background-color: #eeeeee;
-        }
-        .medium-green {
-            background-color: #89AC76;
-        }
-        .dark-green {
-            background-color: #44944A;
-        }
-    </style>
-</head>
-<body>
-
-<table>
+<table class="versioning-table">
     <thead>
         <tr class="header-row">
             <th rowspan="2">Lifecycle stage</th>
-            <th colspan="5" style="text-align:center;">Release channels</th>
+            <th colspan="5">Release channels</th>
         </tr>
         <tr class="sub-header">
             <th>Alpha</th>
@@ -106,41 +50,38 @@ Depending on the stage of the module lifecycle and the release channel from whic
     <tbody>
         <tr>
             <td><strong>Experimental</strong></td>
-            <td class="pink">Experiments and feature testing</td>
-            <td class="pink">Experiments and feature testing</td>
-            <td class="pink">Experiments and feature testing</td>
-            <td class="yellow">Experiments and feature testing.<br>Precise use in environments equivalent to experienced users</td>
-            <td class="yellow">Experiments and feature testing.<br>Precise use in environments equivalent to experienced users</td>
+            <td>Experiments and feature testing</td>
+            <td>Experiments and feature testing</td>
+            <td>Experiments and feature testing</td>
+            <td>Experiments and feature testing.<br>Precise use in environments equivalent to experienced users</td>
+            <td>Experiments and feature testing.<br>Precise use in environments equivalent to experienced users</td>
         </tr>
         <tr>
             <td><strong>Preview</strong></td>
-            <td class="pink">Experiments and feature testing</td>
-            <td class="yellow">Development environments, pilots, non-critical production environments</td>
-            <td class="yellow">Development environments, pilots, non-critical production environments</td>
-            <td class="green">Production environments</td>
-            <td class="green">Production environments</td>
+            <td>Experiments and feature testing</td>
+            <td>Development environments, pilots, non-critical production environments</td>
+            <td>Development environments, pilots, non-critical production environments</td>
+            <td>Production environments</td>
+            <td>Production environments</td>
         </tr>
         <tr>
             <td><strong>GA (Generally Available)</strong></td>
-            <td class="pink">Experiments and feature testing</td>
-            <td class="yellow">Development environments, pilots, non-critical production environments</td>
-            <td class="green">Production environments</td>
-            <td class="medium-green">Critical production environments</td>
-            <td class="dark-green">Critical production environments</td>
+            <td>Experiments and feature testing</td>
+            <td>Development environments, pilots, non-critical production environments</td>
+            <td>Production environments</td>
+            <td>Critical production environments</td>
+            <td>Critical production environments</td>
         </tr>
         <tr>
             <td><strong>Deprecated</strong></td>
-            <td class="grey">Must be phased out of use</td>
-            <td class="grey">Must be phased out of use</td>
-            <td class="grey">Must be phased out of use</td>
-            <td class="grey">Must be phased out of use</td>
-            <td class="grey">Must be phased out of use</td>
+            <td>Must be phased out of use</td>
+            <td>Must be phased out of use</td>
+            <td>Must be phased out of use</td>
+            <td>Must be phased out of use</td>
+            <td>Must be phased out of use</td>
         </tr>
     </tbody>
 </table>
-
-</body>
-</html>
 
 Highlights:
 - A module in `Experimental` status on the `Stable` channel is recommended to be used in production environments only with limitations.

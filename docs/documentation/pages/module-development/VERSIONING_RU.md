@@ -35,8 +35,7 @@ lang: ru
 В зависимости от стадии жизненного цикла модуля и канала обновлений, из которого была установлена версия модуля, общая стабильность может быть определена в соответствии со следующей таблицей:
 
 Версия 1
-
-<table>
+<table class="versioning-table">
     <thead>
         <tr class="header-row">
             <th rowspan="2">Стадия жизненного цикла</th>
@@ -45,7 +44,7 @@ lang: ru
         <tr class="sub-header">
             <th>Alpha</th>
             <th>Beta</th>
-            <th>Early Access</th>
+            <th class="middle">Early Access</th>
             <th>Stable</th>
             <th>Rock Solid</th>
         </tr>
