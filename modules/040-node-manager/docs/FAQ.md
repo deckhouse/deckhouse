@@ -837,7 +837,7 @@ spec:
 
 {% endraw %}
 {% alert level="info" %}
-In addition to containerd, the certificate can be [simultaneously added](examples.html#configuring-a-registry-certificate-in-containerd) into the OS.
+In addition to containerd, the certificate can be [simultaneously added](examples.html#adding-a-certificate-to-the-os-and-containerd) into the OS.
 {% endalert %}
 {% raw %}
 
