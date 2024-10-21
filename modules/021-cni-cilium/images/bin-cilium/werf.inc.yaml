@@ -40,11 +40,6 @@ shell:
   beforeInstall:
   - mkdir -p /go/src/github.com/cilium/cilium
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
-  install:
-  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
-  - cd /go/src/github.com/cilium/cilium/images/runtime
-  - mkdir -p orig && cp -a iptables-wrapper-installer.sh orig/
-  - ./iptables-wrapper-installer.sh --no-sanity-check
   setup:
   - export GOROOT=/usr/local/go GOPATH=/go
   # When launching this container via CI, an unexpected path is inserted into the PATH variable.
