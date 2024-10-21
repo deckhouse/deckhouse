@@ -965,7 +965,9 @@ func syncModuleRegistrySpec(downloadedModulesDir, moduleName, moduleVersion stri
 
 	registrySpec := openAPISpec.Properties.Registry.Properties
 
-	if moduleSource.Spec.Registry.CA != registrySpec.CA.Default || moduleSource.Spec.Registry.DockerCFG != registrySpec.DockerCFG.Default || moduleSource.Spec.Registry.Repo != registrySpec.Base.Default || moduleSource.Spec.Registry.Scheme != registrySpec.Scheme.Default {
+	dockercfg := downloader.DockerCFGForModules(moduleSource.Spec.Registry.Repo, moduleSource.Spec.Registry.DockerCFG)
+
+	if moduleSource.Spec.Registry.CA != registrySpec.CA.Default || dockercfg != registrySpec.DockerCFG.Default || moduleSource.Spec.Registry.Repo != registrySpec.Base.Default || moduleSource.Spec.Registry.Scheme != registrySpec.Scheme.Default {
 		err = downloader.InjectRegistryToModuleValues(filepath.Join(downloadedModulesDir, moduleName, moduleVersion), moduleSource)
 	}
 
