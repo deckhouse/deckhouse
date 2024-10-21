@@ -90,4 +90,4 @@ properties:
     items:
       type: string
     description: |
-      The registries to which insecure connections are allowed.
+      Container registries to which insecure connections are allowed.
