@@ -472,7 +472,7 @@ shell:
 
      {{- if $previousEditionFile }}
   - cp {{ $edition.versionMapFile }} {{ $tmpEditionFile }}
-  - yq '.+' {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
+  - yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
 
       {{- else }}
 
