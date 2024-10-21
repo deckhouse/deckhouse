@@ -412,7 +412,7 @@ import:
 shell:
   install:
   - |
-    version="{{ env "CI_COMMIT_REF_NAME" }}"
+    export version="{{ env "CI_COMMIT_REF_NAME" }}"
     yq eval '.version = env(version) | .digest = env(deckhouseImageDigest)' /deckhouse/release.yaml | yq eval -j > version.json
     # changelog exists only for tags, we have to skip it for branches
     {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
