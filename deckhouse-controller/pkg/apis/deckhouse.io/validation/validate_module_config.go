@@ -57,7 +57,7 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 			{
 				cfg, ok = obj.(*v1alpha1.ModuleConfig)
 				if !ok {
-					return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
+					return nil, fmt.Errorf(" expect ModuleConfig as unstructured, got %T", obj)
 				}
 
 				// if we have no annotation and module enabled
