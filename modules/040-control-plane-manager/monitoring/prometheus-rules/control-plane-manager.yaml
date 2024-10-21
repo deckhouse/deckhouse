@@ -36,7 +36,7 @@
 
   - alert: D8KubernetesVersionIsDeprecated
     for: 10m
-    expr: max by (k8s_version) (d8_kubernetes_version{k8s_version="1.27"}) == 1
+    expr: max by (k8s_version) (d8_kubernetes_version{k8s_version="1.26"}) == 1
     labels:
       severity_level: "7"
       tier: cluster
