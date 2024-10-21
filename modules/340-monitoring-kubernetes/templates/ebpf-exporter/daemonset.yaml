@@ -2,6 +2,7 @@
 cpu: 10m
 memory: 100Mi
 {{- end }}
+{{- $port := "4205" -}}
 
 {{- if .Values.monitoringKubernetes.ebpfExporterEnabled }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -64,11 +65,11 @@ spec:
         args:
         - --config.dir=/metrics
         - --config.names=oomkill
-        - --web.listen-address=127.0.0.1:4205
+        - --web.listen-address=127.0.0.1:{{ $port }}
         readinessProbe:
           httpGet:
             path: /healthz
-            port: 4205
+            port: {{ $port }}
             scheme: HTTPS
         volumeMounts:
         - name: host-sys
@@ -87,7 +88,7 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4205"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):{{ $port }}"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -101,7 +102,7 @@ spec:
             excludePaths:
             - /healthz
             upstreams:
-            - upstream: http://127.0.0.1:9435/
+            - upstream: http://127.0.0.1:{{ $port }}/
               path: /
               authorization:
                 resourceAttributes:
@@ -112,7 +113,7 @@ spec:
                   subresource: prometheus-metrics
                   name: ebpf-exporter
         ports:
-        - containerPort: 4205
+        - containerPort: {{ $port }}
           name: https-metrics
         resources:
           requests:
