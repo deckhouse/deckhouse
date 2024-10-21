@@ -121,7 +121,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	dc := dependency.NewMockedContainer()
 	dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-		return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
+		return []v1.Layer{&utils.FakeLayer{}}, nil
 	}}, nil)
 
 	suite.Run("simple", func() {
