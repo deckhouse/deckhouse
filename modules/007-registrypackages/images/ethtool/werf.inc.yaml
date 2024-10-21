@@ -39,7 +39,6 @@ shell:
     - cd /src
     - ./autogen.sh
     - ./configure --libdir=/opt/deckhouse/bin/.libs
-    - make LDFLAGS='-all-static'
     - ls -la
     - strip ./ethtool/ethtool
     - mv ./ethtool/ethtool /xtables-legacy-multi
