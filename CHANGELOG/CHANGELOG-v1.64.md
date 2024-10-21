@@ -1,5 +1,10 @@
 # Changelog v1.64
 
+## [MALFORMED]
+
+
+ - #9289 unknown section "flant-integration"
+
 ## Know before update
 
 
@@ -120,6 +125,7 @@
  - **[deckhouse-controller]** Correct module validation. [#8989](https://github.com/deckhouse/deckhouse/pull/8989)
  - **[deckhouse-tools]** Fix custom certs copying. [#9840](https://github.com/deckhouse/deckhouse/pull/9840)
  - **[delivery]** Fixed the `argocd-repo-server` and `argocd-server` Services with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)
+ - **[dhctl]** Fix empty registry credentials preflight check failure. [#10226](https://github.com/deckhouse/deckhouse/pull/10226)
  - **[dhctl]** Do not return error if deckhouse release exists. [#10164](https://github.com/deckhouse/deckhouse/pull/10164)
  - **[dhctl]** Only one resource will create for namespace if it namespace does not exist. [#10159](https://github.com/deckhouse/deckhouse/pull/10159)
  - **[dhctl]** Fix panic during creation resources and add timestamps to debug log. [#10070](https://github.com/deckhouse/deckhouse/pull/10070)

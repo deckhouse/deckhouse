@@ -1,0 +1,5 @@
+dhctl:
+  fixes:
+    - summary: Fix empty registry credentials preflight check failure.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10226
+
