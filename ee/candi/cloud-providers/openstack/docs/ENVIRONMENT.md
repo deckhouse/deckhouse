@@ -3,6 +3,8 @@ title: "Cloud provider — OpenStack: Preparing environment"
 description: "Configuring OpenStack for Deckhouse cloud provider operation."
 ---
 
+{% include notice_envinronment.liquid %}
+
 To manage resources in an OpenStack cloud, Deckhouse connects to the OpenStack API.  
 The list of OpenStack API services that need to be accessed for deployment is available in the [settings](./configuration.html#list-of-required-openstack-services) section.  
 The user credentials required to connect to the OpenStack API are located in the openrc file (OpenStack RC file).

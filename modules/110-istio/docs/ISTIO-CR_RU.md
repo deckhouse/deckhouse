@@ -6,7 +6,7 @@ title: "Модуль istio: Custom Resources (от istio.io)"
 
 ### DestinationRule
 
-[Reference](https://istio.io/latest/docs/reference/config/networking/destination-rule/)
+[Reference](https://istio.io/v1.19/docs/reference/config/networking/destination-rule/)
 
 Позволяет:
 * Определить стратегию балансировки трафика между эндпоинтами сервиса:
@@ -20,7 +20,7 @@ title: "Модуль istio: Custom Resources (от istio.io)"
 
 ### VirtualService
 
-[Reference](https://istio.io/latest/docs/reference/config/networking/virtual-service/)
+[Reference](https://istio.io/v1.19/docs/reference/config/networking/virtual-service/)
 
 Использование VirtualService опционально, классические сервисы продолжают работать, если вам достаточно их функционала.
 
@@ -39,7 +39,7 @@ title: "Модуль istio: Custom Resources (от istio.io)"
 
 ### ServiceEntry
 
-[Reference](https://istio.io/latest/docs/reference/config/networking/service-entry/)
+[Reference](https://istio.io/v1.19/docs/reference/config/networking/service-entry/)
 
 Аналог Endpoints + Service из ванильного Kubernetes. Позволяет сообщить Istio о существовании внешнего сервиса или даже переопределить его адрес.
 
@@ -53,13 +53,13 @@ title: "Модуль istio: Custom Resources (от istio.io)"
 
 ### PeerAuthentication
 
-[Reference](https://istio.io/latest/docs/reference/config/security/peer_authentication/)
+[Reference](https://istio.io/v1.19/docs/reference/config/security/peer_authentication/)
 
 Позволяет определить стратегию mTLS в отдельном NS — принимать или нет нешифрованные запросы. Каждый mTLS-запрос автоматически позволяет определить источник и использовать его в правилах авторизации.
 
 ### RequestAuthentication
 
-[Reference](https://istio.io/latest/docs/reference/config/security/request_authentication/)
+[Reference](https://istio.io/v1.19/docs/reference/config/security/request_authentication/)
 
 Позволяет настроить JWT-аутентификацию для реквестов.
 
@@ -69,14 +69,14 @@ title: "Модуль istio: Custom Resources (от istio.io)"
 
 ### AuthorizationPolicy
 
-[Reference](https://istio.io/latest/docs/reference/config/security/authorization-policy/).
+[Reference](https://istio.io/v1.19/docs/reference/config/security/authorization-policy/).
 
 Включает и определяет контроль доступа к workload. Поддерживает как ALLOW-, так и DENY-правила. Как только у workload появляется хотя бы одна политика, начинает работать следующий приоритет:
 
-* Если под реквест есть политика DENY — отклонить запрос.
-* Если под реквест нет политики ALLOW — разрешить запрос.
-* Если под реквест есть политика ALLOW — разрешить запрос.
-* Отклонить запрос.
+* Если запрос попадает под политику DENY — запретить запрос.
+* Если для данного приложения нет политик ALLOW — разрешить запрос.
+* Если запрос попадает под политику ALLOW — разрешить запрос.
+* Все остальные запросы — запретить.
 
 Аргументы для принятия решения об авторизации:
 * source:
@@ -88,9 +88,14 @@ title: "Модуль istio: Custom Resources (от istio.io)"
   * Host;
   * порт;
   * URI.
+* [conditions](https://istio.io/v1.19/docs/reference/config/security/conditions/#supported-conditions):
+  * HTTP-заголовки
+  * аргументы source
+  * аргументы destination
+  * JWT-токены
 
 ### Sidecar
 
-[Reference](https://istio.io/latest/docs/reference/config/networking/sidecar/)
+[Reference](https://istio.io/v1.19/docs/reference/config/networking/sidecar/)
 
 Данный ресурс позволяет ограничить количество сервисов, информация о которых будет передана в сайдкар istio-proxy.

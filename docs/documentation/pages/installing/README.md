@@ -1,6 +1,8 @@
 ---
 title: "Installation"
 permalink: en/installing/
+description: | 
+  Information on installing the Deckhouse Kubernetes Platform, including infrastructure preparation, configuration, and installer run.
 ---
 
 <div class="docs__information warning active">

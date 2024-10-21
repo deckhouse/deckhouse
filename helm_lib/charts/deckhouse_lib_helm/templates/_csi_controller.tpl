@@ -60,6 +60,9 @@ memory: 50Mi
   {{- $additionalControllerVolumeMounts := $config.additionalControllerVolumeMounts }}
   {{- $additionalContainers := $config.additionalContainers }}
   {{- $livenessProbePort := $config.livenessProbePort | default 9808 }}
+  {{- $initContainerCommand := $config.initContainerCommand }}
+  {{- $initContainerImage := $config.initContainerImage }}
+  {{- $initContainerVolumeMounts := $config.initContainerVolumeMounts }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 
@@ -414,6 +417,21 @@ spec:
   {{- end }}
     {{- if $additionalContainers }}
       {{- $additionalContainers | toYaml | nindent 6 }}
+    {{- end }}
+    {{- if $initContainerCommand }}
+      initContainers:
+      - command:
+        {{- $initContainerCommand | toYaml | nindent 8 }}
+        image: {{ $initContainerImage }}
+        imagePullPolicy: IfNotPresent
+        name: csi-controller-init-container
+        {{- if $initContainerVolumeMounts }}
+        volumeMounts:
+        {{- $initContainerVolumeMounts | toYaml | nindent 8 }}
+        {{- end }}
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
     {{- end }}
       volumes:
       - name: socket-dir

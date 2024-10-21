@@ -3,9 +3,13 @@ title: "Cloud provider — GCP: Preparing environment"
 description: "Configuring GCP for Deckhouse cloud provider operation."
 ---
 
+{% include notice_envinronment.liquid %}
+
 You need to create a service account so that Deckhouse can manage resources in the Google Cloud. Below is a brief sequence of steps to create a service account. If you need detailed instructions, you can find them in the [provider's documentation](https://cloud.google.com/iam/docs/service-accounts).
 
-> **Note!** The created `service account key` cannot be restored, you can only delete and create a new one.
+{% alert level="warning" %}
+**Note!** The created `service account key` cannot be restored, you can only delete and create a new one.
+{% endalert %}
 
 ## Setup using Google Cloud Console
 

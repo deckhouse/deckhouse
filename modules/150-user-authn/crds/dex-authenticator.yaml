@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authn
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Namespaced

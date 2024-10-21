@@ -1,0 +1,51 @@
+diff --git a/pkg/operator/operator.go b/pkg/operator/operator.go
+index da97e78c..fbf78b63 100644
+--- a/pkg/operator/operator.go
++++ b/pkg/operator/operator.go
+@@ -445,6 +445,6 @@ func buildPolicyLoader(tc trivyoperator.ConfigData) (policy.Loader, error) {
+ 		}
+ 		artifact.RegistryOptions = ro
+ 	}
+-	policyLoader := policy.NewPolicyLoader(tc.PolicyBundleOciRef(), gcache.New(1).LRU().Build(), ro, mp.WithOCIArtifact(artifact))
++	policyLoader := policy.NewPolicyLoader(tc.PolicyBundleOciRef(), gcache.New(2).LRU().Build(), ro, mp.WithOCIArtifact(artifact))
+ 	return policyLoader, nil
+ }
+diff --git a/pkg/policy/loader.go b/pkg/policy/loader.go
+index d8b439ab..675fe710 100644
+--- a/pkg/policy/loader.go
++++ b/pkg/policy/loader.go
+@@ -58,6 +58,7 @@ func (pl *policyLoader) GetPoliciesAndBundlePath() ([]string, []string, error) {
+ 		if !errors.Is(err, gcache.KeyNotFoundError) {
+ 			return []string{}, []string{}, err
+ 		}
++		log.V(1).Info("values not found in cache", "err", err.Error())
+ 		policies, bundlePaths, err = pl.LoadPoliciesAndCommands()
+ 		if err != nil {
+ 			log.V(1).Error(err, "failed to load policies")
+@@ -78,12 +79,15 @@ func (pl *policyLoader) GetPoliciesAndBundlePath() ([]string, []string, error) {
+ func (pl *policyLoader) getPoliciesFromCache() (interface{}, interface{}, error) {
+ 	pl.mutex.RLock()
+ 	defer pl.mutex.RUnlock()
++	log := pl.logger.WithName("Get policies from cache")
+ 	policies, err := pl.cache.Get(bundlePolicies)
+ 	if err != nil {
++		log.V(1).Info("failed to load bundle policies from cache", "err", err.Error())
+ 		return nil, nil, err
+ 	}
+ 	bundlePath, err := pl.cache.Get(bundlePath)
+ 	if err != nil {
++		log.V(1).Info("failed to load bundle path from cache", "err", err.Error())
+ 		return nil, nil, err
+ 	}
+ 	return policies, bundlePath, nil
+@@ -100,8 +104,8 @@ func (pl *policyLoader) LoadPoliciesAndCommands() ([]string, []string, error) {
+ 	if err != nil {
+ 		return []string{}, []string{}, fmt.Errorf("failed to download policies: %w", err)
+ 	}
+-	_ = pl.cache.SetWithExpire(bundlePolicies, contentData, *pl.expiration)
+-	_ = pl.cache.SetWithExpire(bundlePath, bundlePaths, *pl.expiration)
++	_ = pl.cache.Set(bundlePolicies, contentData)
++	_ = pl.cache.Set(bundlePath, bundlePaths)
+ 	return contentData, bundlePaths, nil
+ }
+ 

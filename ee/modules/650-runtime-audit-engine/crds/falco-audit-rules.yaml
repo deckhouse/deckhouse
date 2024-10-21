@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: runtime-audit-engine
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster

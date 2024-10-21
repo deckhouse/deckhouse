@@ -1,0 +1,4 @@
+name: prometheus
+weight: 300
+description: |
+    The Prometheus monitoring module

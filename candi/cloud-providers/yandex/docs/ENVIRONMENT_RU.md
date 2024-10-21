@@ -3,6 +3,8 @@ title: "Cloud provider — Yandex Cloud: подготовка окружения
 description: "Настройка Yandex Cloud для работы облачного провайдера Deckhouse."
 ---
 
+{% include notice_envinronment.liquid %}
+
 Чтобы Deckhouse смог управлять ресурсами в облаке Yandex Cloud, необходимо создать сервисный аккаунт и выдать ему права на редактирование. Подробная инструкция по созданию сервисного аккаунта в Yandex Cloud доступна в [документации провайдера](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Далее представлена краткая последовательность необходимых действий:
 
 1. Создайте пользователя с именем `deckhouse`. В ответ вернутся параметры пользователя:

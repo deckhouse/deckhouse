@@ -1,6 +1,7 @@
 ---
 title: "Глобальные настройки"
 permalink: ru/deckhouse-configure-global.html
+description: "Описание глобальных настроек Deckhouse Kubernetes Platform"
 lang: ru
 ---
 

@@ -6,7 +6,7 @@ metadata:
     modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
   creationTimestamp: null
   finalizers:
-    - modules.deckhouse.io/release-exists
+  - modules.deckhouse.io/release-exists
   name: foxtrot-suitable
   resourceVersion: "999"
 spec:
@@ -20,10 +20,10 @@ status:
   message: ""
   moduleErrors: []
   modules:
-    - name: mcplay-suitable
-      policy: foxtrot-alpha-suitable
-    - name: parca-suitable
-      policy: foxtrot-alpha-suitable
+  - name: mcplay-suitable
+    policy: foxtrot-alpha-suitable
+  - name: parca-suitable
+    policy: foxtrot-alpha-suitable
   modulesCount: 2
   syncTime: "2024-05-03T21:05:05Z"
 ---
@@ -40,19 +40,19 @@ metadata:
     source: foxtrot-suitable
   name: parca-v1.4.3-suitable
   ownerReferences:
-    - apiVersion: deckhouse.io/v1alpha1
-      controller: true
-      kind: ModuleSource
-      name: foxtrot-suitable
-      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: foxtrot-suitable
+    uid: 71d2300f-700b-452a-896a-6a3805f9cef7
   resourceVersion: "1002"
 spec:
   changelog:
     features:
-      - Bump parca version
+    - Bump parca version
   moduleName: parca-suitable
   requirements:
-    deckhouse: "< v1.63.0"
+    deckhouse: < v1.63.0
   version: 1.4.3
   weight: 900
 status:
@@ -60,5 +60,5 @@ status:
   message: ""
   phase: Deployed
   pullDuration: 9m15s
-  size: 3
+  size: 0
   transitionTime: "2019-10-17T15:33:00Z"

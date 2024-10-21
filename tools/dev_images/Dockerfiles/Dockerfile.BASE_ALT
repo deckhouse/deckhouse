@@ -23,5 +23,5 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&\
     rustup install 1.70.0
 # GOLANG
 RUN rm -rf /usr/local/go &&\
-    curl -sSfL https://go.dev/dl/go1.21.6.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
+    curl -sSfL https://go.dev/dl/go1.22.8.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
 ENV PATH=${PATH}:/usr/local/go/bin

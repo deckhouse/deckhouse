@@ -17,6 +17,7 @@ limitations under the License.
 package deckhouse_release
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -78,6 +79,7 @@ func (suite *ReleaseTestSuite) TestCheckRelease() {
 			actual, _ := semver.NewVersion(actual)
 			target, _ := semver.NewVersion(target)
 			v, err := suite.rc.nextVersion(
+				context.Background(),
 				actual,
 				target,
 			)

@@ -56,6 +56,8 @@ type DeckhouseSettingsContainer struct {
 	inited   chan struct{}
 }
 
+// Set update settings in container
+// TODO: notify controllers and requeue all releases
 func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	if settings == nil {
 		panic("argument should be defined")

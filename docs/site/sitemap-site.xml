@@ -5,5 +5,4 @@ sitemap_include: false
 permalink: en/gs/sitemap.xml
 lang: en
 ---
-
 {% include sitemap-site.liquid %}

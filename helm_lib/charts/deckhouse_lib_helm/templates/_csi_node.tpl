@@ -24,6 +24,7 @@ memory: 25Mi
   {{- $additionalNodeLivenessProbesCmd := $config.additionalNodeLivenessProbesCmd }}
   {{- $initContainerCommand := $config.initContainerCommand }}
   {{- $initContainerImage := $config.initContainerImage }}
+  {{- $initContainerVolumeMounts := $config.initContainerVolumeMounts }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
@@ -170,6 +171,10 @@ spec:
         image: {{ $initContainerImage }}
         imagePullPolicy: IfNotPresent
         name: csi-node-init-container
+        {{- if $initContainerVolumeMounts }}
+        volumeMounts:
+        {{- $initContainerVolumeMounts | toYaml | nindent 8 }}
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

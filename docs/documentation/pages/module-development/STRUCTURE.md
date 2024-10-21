@@ -236,7 +236,7 @@ import os
 import yaml
 from deckhouse import hook
 
-# We expect structure with possible subdirectories like this
+# We expect structure with possible subdirectories like this:
 #
 #   my-module/
 #       crds/
@@ -252,34 +252,37 @@ configVersion: v1
 onStartup: 5
 """
 
+
 def main(ctx: hook.Context):
-    for crd in iter_manifests(find_crds_root(**file**)):
+    for crd in iter_manifests(find_crds_root(__file__)):
         ctx.kubernetes.create_or_update(crd)
 
+
 def iter_manifests(root_path: str):
-  if not os.path.exists(root_path):
-      return
+    if not os.path.exists(root_path):
+        return
 
-  for dirpath, dirnames, filenames in os.walk(top=root_path):
-      for filename in filenames:
-          if not filename.endswith(".yaml"):
-              # Wee only seek manifests
-              continue
-          if filename.startswith("doc-"):
-              # Skip dedicated doc yamls, common for Deckhouse internal modules
-              continue
+    for dirpath, dirnames, filenames in os.walk(top=root_path):
+        for filename in filenames:
+            if not filename.endswith(".yaml"):
+                # Seek only manifests.
+                continue
+            if filename.startswith("doc-"):
+                # Skip YAML files for module documentation.
+                continue
 
-      crd_path = os.path.join(dirpath, filename)
-      with open(crd_path, "r", encoding="utf-8") as f:
-          for manifest in yaml.safe_load_all(f):
-              if manifest is None:
-                  continue
-              yield manifest
+        crd_path = os.path.join(dirpath, filename)
+        with open(crd_path, "r", encoding="utf-8") as f:
+            for manifest in yaml.safe_load_all(f):
+                if manifest is None:
+                    continue
+                yield manifest
 
-  for dirname in dirnames:
-      subroot = os.path.join(dirpath, dirname)
-      for manifest in iter_manifests(subroot):
-          yield manifest
+    for dirname in dirnames:
+        subroot = os.path.join(dirpath, dirname)
+        for manifest in iter_manifests(subroot):
+            yield manifest
+
 
 def find_crds_root(hookpath):
     hooks_root = os.path.dirname(hookpath)
@@ -287,8 +290,10 @@ def find_crds_root(hookpath):
     crds_root = os.path.join(module_root, "crds")
     return crds_root
 
-if **name** == "**main**":
-    hook.run(main, config=config)</code>
+
+if __name__ == "__main__":
+    hook.run(main, config=config)
+
 ```
 
 ## images

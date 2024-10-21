@@ -7,32 +7,38 @@
           {
             "title": "Kubernetes Platform",
             "url": "/products/kubernetes-platform/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Virtualization Platform",
             "url": "/products/virtualization-platform/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Observability Platform",
             "url": "/products/observability-platform/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Commander",
             "url": "/products/commander/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Stronghold",
             "url": "/products/stronghold/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Delivery",
             "url": "/products/delivery/",
-            "target": ""
+            "target": "",
+            "rel": ""
           }
         ]
       },
@@ -42,22 +48,26 @@
           {
             "title": "Technical Support",
             "url": "/tech-support/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Security",
             "url": "/security/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Training &amp; Consulting",
             "url": "/services/training-and-consulting/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Deckhouse vs KaaS",
             "url": "/deckhouse-vs-kaas/",
-            "target": ""
+            "target": "",
+            "rel": ""
           }
         ]
       },
@@ -67,7 +77,8 @@
           {
             "title": "Success stories",
             "url": "/success-stories/",
-            "target": ""
+            "target": "",
+            "rel": ""
           }
         ]
       }
@@ -79,32 +90,38 @@
           {
             "title": "Kubernetes Platform",
             "url": "/products/kubernetes-platform/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Virtualization Platform",
             "url": "/products/virtualization-platform/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Observability Platform",
             "url": "/products/observability-platform/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Commander",
             "url": "/products/commander/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Stronghold",
             "url": "/products/stronghold/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Delivery",
             "url": "/products/delivery/",
-            "target": ""
+            "target": "",
+            "rel": ""
           }
         ]
       },
@@ -114,27 +131,32 @@
           {
             "title": "Техническая поддержка",
             "url": "/tech-support/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Технологические партнёры",
             "url": "/partnership-products/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Переезд с OpenShift",
             "url": "/moving-from-openshift/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Безопасность",
             "url": "/security/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Сравнение с KaaS",
             "url": "/deckhouse-vs-kaas/",
-            "target": ""
+            "target": "",
+            "rel": ""
           }
         ]
       },
@@ -144,47 +166,56 @@
           {
             "title": "Стать партнёром",
             "url": "/how-to-buy/#partners",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Партнёрская программа",
             "url": "/partners-program/",
-            "target": "_blank"
+            "target": "_blank",
+            "rel": ""
           },
           {
             "title": "Образовательная деятельность",
             "url": "/education-licence/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Истории успеха",
             "url": "/success-stories/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Вакансии",
             "url": "https://job.flant.ru/",
-            "target": "_blank"
+            "target": "_blank",
+            "rel": ""
           },
           {
             "title": "Блог",
             "url": "https://blog.deckhouse.ru/",
-            "target": "_blank"
+            "target": "_blank",
+            "rel": ""
           },
           {
             "title": "Новости",
             "url": "/news/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Вебинары",
             "url": "/webinars/",
-            "target": ""
+            "target": "",
+            "rel": ""
           },
           {
             "title": "Сообщество",
             "url": "/community/",
-            "target": ""
+            "target": "",
+            "rel": ""
           }
         ]
       }

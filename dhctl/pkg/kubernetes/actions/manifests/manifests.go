@@ -174,7 +174,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		log.ErrorLn(err)
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
-		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["alpine"].(string))
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["init"].(string))
 	}
 
 	deckhouseDeployment := &appsv1.Deployment{
@@ -208,6 +208,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhousePodTemplate := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: deckhouseDeployment.Spec.Selector.MatchLabels,
+			Annotations: map[string]string{
+				"kubectl.kubernetes.io/default-container": "deckhouse",
+			},
 		},
 		Spec: apiv1.PodSpec{
 			HostNetwork:        true,

@@ -33,7 +33,7 @@ standard:
 provider:
   authURL: 'https://api.selvpc.ru/identity/v3'
   domainName: '48348'
-  tenantID: '80625ad45e604fbe86679e63b704f3b8'
+  tenantID: 'ceda80a1b33844adb1cbddd20ee93585'
   username: 'deckhouse-e2e'
   password: '${OS_PASSWORD}'
   region: 'ru-3'

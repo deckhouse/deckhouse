@@ -884,7 +884,7 @@ spec:
 
 {% endraw %}
 {% alert level="info" %}
-Помимо containerd сертификат можно [одновременно добавить](examples.html#добавления-сертификата-в-ос-и-containerd) и в ОС.
+Помимо containerd сертификат можно [одновременно добавить](examples.html#добавление-сертификата-в-ос-и-containerd) и в ОС.
 {% endalert %}
 {% raw %}
 

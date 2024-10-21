@@ -1,5 +1,6 @@
 ---
 title: Information about used software
+description: Information about the software used in the Deckhouse Kubernetes Platform.
 permalink: en/oss_info.html
 ---
 

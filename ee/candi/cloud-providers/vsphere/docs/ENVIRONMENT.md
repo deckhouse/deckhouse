@@ -117,6 +117,12 @@ Deckhouse uses `cloud-init` to configure a virtual machine after startup. To do 
 * `cloud-init`
 * [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) (if the `cloud-init` version lower than 21.3 is used)
 
+Also, after the virtual machine is started, the following services associated with these packages must be started:
+
+* `cloud-config.service`
+* `cloud-final.service`
+* `cloud-init.service`
+
 To add SSH keys to user's authorized keys, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
 
 {% alert level="warning" %}

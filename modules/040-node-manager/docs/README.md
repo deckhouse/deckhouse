@@ -216,7 +216,7 @@ The [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource allows you
 
   Examples:
   - [customizing the sysctl parameter](examples.html#tuning-sysctl-parameters);
-  - [adding a root certificate](examples.html#adding-a-root-certificate).
+  - [adding a root certificate](examples.html#adding-a-root-certificate-to-the-host).
 
 - Collecting information on a node and carrying out other similar tasks.
 

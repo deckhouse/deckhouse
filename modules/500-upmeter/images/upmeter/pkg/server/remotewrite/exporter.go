@@ -25,6 +25,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"encoding/base64"
 	"io"
 	"io/ioutil"
 	"net"
@@ -322,13 +323,18 @@ func (e *exporter) buildTLSConfig() (*tls.Config, error) {
 	// Load certificates from CA field if it exists.
 	ca := e.config.TLSConfig["ca"]
 	if ca != "" {
+		decodedCA, err := base64.StdEncoding.DecodeString(ca)
+		if err != nil {
+			decodedCA = []byte(ca)
+		}
+
 		var certPool *x509.CertPool
 		if tlsConfig.RootCAs != nil {
 			certPool = tlsConfig.RootCAs
 		} else {
 			certPool = x509.NewCertPool()
 		}
-		certPool.AppendCertsFromPEM([]byte(ca))
+		certPool.AppendCertsFromPEM(decodedCA)
 		tlsConfig.RootCAs = certPool
 	}
 

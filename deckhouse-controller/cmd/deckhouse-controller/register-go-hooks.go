@@ -5,10 +5,6 @@ import (
 	_ "github.com/flant/addon-operator/sdk"
 
 	_ "github.com/deckhouse/deckhouse/ee/be/modules/350-node-local-dns/hooks"
-	_ "github.com/deckhouse/deckhouse/ee/be/modules/600-flant-integration/hooks"
-	_ "github.com/deckhouse/deckhouse/ee/be/modules/600-flant-integration/hooks/madison"
-	_ "github.com/deckhouse/deckhouse/ee/be/modules/600-flant-integration/hooks/migrate"
-	_ "github.com/deckhouse/deckhouse/ee/be/modules/600-flant-integration/hooks/pricing"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/340-monitoring-applications/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-basic-auth/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-okmeter/hooks"

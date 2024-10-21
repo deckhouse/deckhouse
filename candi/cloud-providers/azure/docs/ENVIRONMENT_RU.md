@@ -3,7 +3,11 @@ title: "Cloud provider — Azure: подготовка окружения"
 description: "Настройка Azure для работы облачного провайдера Deckhouse."
 ---
 
-> **Внимание!** Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region), в которых доступны `Availability Zones`.
+{% include notice_envinronment.liquid %}
+
+{% alert level="warning" %}
+**Внимание!** Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region), в которых доступны `Availability Zones`.
+{% endalert %}
 
 Для управления облаком Microsoft Azure необходимо иметь соответствующую учетную запись и хотя бы одну привязанную [подписку (Subscription)](https://docs.microsoft.com/en-us/azure/cost-management-billing/manage/create-subscription).
 
