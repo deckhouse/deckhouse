@@ -37,8 +37,10 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret ge
 
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system delete secret registry-pki || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret generic registry-pki \
+{{- if eq .registry.registryStorageMode "S3" }}
   --from-file=etcd-ca.key=$etcd_pki_path/ca.key \
   --from-file=etcd-ca.crt=$etcd_pki_path/ca.crt \
+{{- end }}
   --from-file=registry-ca.key=$registry_pki_path/ca.key \
   --from-file=registry-ca.crt=$registry_pki_path/ca.crt \
   --labels=heritage=deckhouse,module=embedded-registry,type=ca-secret
