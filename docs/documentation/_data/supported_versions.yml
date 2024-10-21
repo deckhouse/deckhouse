@@ -12,7 +12,43 @@ osDistributions:
     note_content:
       ru: |
         В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b><br>
-        С остальными ядрами могут быть проблемы с поддержкой модулей Deckhouse Kubernetes Platform.<br>
+        С остальными ядрами могут быть проблемы с поддержкой модулей:<br>
+        <table>
+          <thead>
+            <tr>
+              <th>Kernel Image</th>
+              <th>cilium</th>
+              <th>runtime-audit-engine</th>
+              <th>btf</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>linux-image-6.1</td>
+              <td>✓</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>linux-image-6.1-debug</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>linux-image-6.6</td>
+              <td>✓</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>linux-image-6.6-debug</td>
+              <td></td>
+              <td></td>
+              <td>✓</td>
+            </tr>
+          </tbody>
+        </table>
   centos:
     name: CentOS
     url: https://www.centos.org/download/
