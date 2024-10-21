@@ -19,18 +19,12 @@ package hooks
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
-)
-
-const (
-	clusterAPINamespace = "d8-cloud-instance-manager"
 )
 
 type ServiceAccountInfo struct {
@@ -43,6 +37,7 @@ const (
 	annotationReleaseName      = "meta.helm.sh/release-name"
 	annotationReleaseNamespace = "meta.helm.sh/release-namespace"
 	saName                     = "capi-controller-manager"
+	clusterAPINamespace        = "d8-cloud-instance-manager"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -50,12 +45,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         "capi_sa",
-			ExecuteHookOnSynchronization: ptr.To(false),
-			ExecuteHookOnEvents:          ptr.To(false),
-			ApiVersion:                   "v1",
-			Kind:                         "ServiceAccount",
-			NamespaceSelector:            lib.NsSelector(),
+			Name:       "capi_sa",
+			ApiVersion: "v1",
+			Kind:       "ServiceAccount",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{clusterAPINamespace},
+				},
+			},
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{saName},
 			},
