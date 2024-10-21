@@ -10,25 +10,40 @@ osDistributions:
     ru_support: 'true'
     en_support: 'false'
     note_content:
-      ru: 'В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>'
+      ru: |
+        В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b><br>
+        С остальными ядрами могут быть проблемы с поддержкой модулей Deckhouse Kubernetes Platform.<br>
   centos:
     name: CentOS
     url: https://www.centos.org/download/
     note_content:
-      ru: 'CentOS Linux 8 не поддерживается разработчиками с 31 мая 2024 года.<br>CentOS Linux 7 не поддерживается разработчиками с 30 июня 2024 года.'
-      en: 'CentOS Linux 8 end of life is May 31, 2024.<br>CentOS Linux 7 end of life is June 30, 2024.'
+      ru: |
+        <b>CentOS Linux 8</b> не поддерживается разработчиками дистрибутива и с 31 мая 2024 года является EOL.<br>
+        <b>CentOS Linux 7</b> не поддерживается разработчиками дистрибутива и с 30 июня 2024 года является EOL.
+      en: |
+        <b>CentOS Linux 8</b> is not supported by the developers of the distribution and has been EOL since May 31, 2024.<br>
+        <b>CentOS Linux 7</b> is not supported by the developers of the distribution and has been EOL since June 30, 2024.
   debian:
     name: Debian
     url: https://www.debian.org/download
+    note_content:
+      ru: <b>Debian 10</b> не поддерживается разработчиками дистрибутива и c 30 июня 2024 является EOL.
+      en: <b>Debian 10</b> is not supported by the developers of the distribution and has been EOL since June 30, 2024.
   opensuse:
     name: openSUSE
     url: https://get.opensuse.org/
   rocky:
     name: Rocky Linux
     url: https://rockylinux.org/download
+    note_content:
+      ru: Для <b>Rocky 8</b> прекращена активная поддержка разработчиками дистрибутива (продолжается только поддержка безопасности) и c 31 мая 2024 дистрибутив является EOL.
+      en: For <b>Rocky 8</b>, active support by the distribution developers has been discontinued (only security support continues) and since May 31, 2024, the distribution is EOL.
   ubuntu:
     name: Ubuntu
     url: https://ubuntu.com/download/server
+    note_content:
+      ru: <b>Ubuntu 18.04</b> не поддерживается разработчиками дистрибутива и c 31 мая 2023 является EOL.
+      en: <b>Ubuntu 18.04</b> is not supported by the developers of the distribution and has been EOL since May 31, 2023.
   '_redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
