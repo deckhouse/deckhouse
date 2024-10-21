@@ -85,10 +85,10 @@ Depending on the stage of the module lifecycle and the release channel from whic
 </table>
 
 - **Experiments** — Functionality checks, experiments, and testing;
-- **Beta Testing** — Functionality checks, experiments, and testing. Limited use by experienced users in environments equivalent to production;
-- **Limited Release** — Development environments, pilot projects, low-impact production environments;
-- **Production Use** — Production environments and those equivalent to them;
-- **Production Use in Critical Systems** — Mission-critical production environments and those equivalent to them;
+- **Beta testing** — Functionality checks, experiments, and testing. Limited use by experienced users in environments equivalent to production;
+- **Limited use** — Development environments, pilot projects, low-impact production environments;
+- **Production use** — Production environments and those equivalent to them;
+- **Production use in critical systems** — Mission-critical production environments and those equivalent to them;
 - **Deprecated** — Should be phased out of use.
 
 Highlights:
