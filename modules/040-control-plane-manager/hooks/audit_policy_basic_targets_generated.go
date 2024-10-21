@@ -18,7 +18,6 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-cni-cilium",
 	"d8-cni-flannel",
 	"d8-cni-simple-bridge",
-	"d8-delivery",
 	"d8-descheduler",
 	"d8-ingress-nginx",
 	"d8-istio",
