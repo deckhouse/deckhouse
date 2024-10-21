@@ -8,7 +8,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 ## Ограничения
 
 1. Сервисы с типом `NodePort` и `LoadBalancer` несовместимы с hostNetwork-эндпойнтами в LB-режиме `DSR`. Переключитесь на режим `SNAT`, если это требуется.
-2. `HostPort` поды связываются только [с одним IP-адресом](https://github.com/deckhouse/deckhouse/issues/3035). Если в ОС есть несколько IP-адресов, Cilium выберет один, предпочитая «серые» «белым».
+2. `HostPort` поды связываются только [с одним IP-адресом](https://github.com/deckhouse/deckhouse/issues/3035). Если в ОС есть несколько интерфейсов/IP, Cilium выберет один, предпочитая «серые» «белым».
 3. Требования к ядру:
    * ядро Linux версии не ниже `5.7` для работы модуля `cni-cilium` и его совместной работы с модулями [istio](../110-istio/), [openvpn](../500-openvpn/), [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/350-node-local-dns/).
 4. Совместимость с ОС:
@@ -26,7 +26,7 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 * `SNAT` (Source Network Address Translation) - один из подвидов NAT, при котором для каждого исходящего пакета происходит трансляция IP-адреса источника в IP-адрес шлюза из целевой подсети, а входящие пакеты, проходящие через шлюз, транслируются обратно на основе таблицы трансляций. В этом режиме `bpfLB` полностью повторяет логику работы `kube-proxy`:
   * если в `Service` указан `externalTrafficPolicy: Local`, то трафик будет передаваться и балансироваться только в те целевые поды, которые запущены на том же узле, на который этот трафик пришел. Если целевой под не запущен на этом узле, то трафик будет отброшен.
-  * если в `Service` указан `externalTrafficPolicy: Cluster`, то трафик будет передаваться и балансироваться во все целевые поды в кластере. При этом если целевые поды находятся на других узлах, то при передаче трафика на них будет произведен SNAT (IP-адрес источника будет заменен на InternalIP узла).
+  * если в `Service` указан `externalTrafficPolicy: Cluster`, то трафик будет передаваться и балансироваться во все целевые поды в кластере. При этом, если целевые поды находятся на других узлах, то при передаче трафика на них будет произведен SNAT (IP-адрес источника будет заменен на InternalIP узла).
 
    ![Схема потоков данных SNAT](../../images/021-cni-cilium/snat.png)
 
@@ -47,13 +47,10 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
 
 * `Hybrid` - в данном режиме TCP-трафик обрабатывается в режиме `DSR`, а UDP - в режиме `SNAT`.
 
-
 ## Использование CiliumClusterwideNetworkPolicies
 
 Для использования CiliumClusterwideNetworkPolicies следует применить:
-1. Первичный набор объектов `CiliumClusterwideNetworkPolicy`, поставив конфигурационную опцию `policyAuditMode` в `true`.
-   Отсутствие опции может привести к некорректной работе control plane или потере доступа ко всем узлам кластера по SSH.
-   Опция может быть удалена после применения всех `CniliumClusterwideNetworkPolicy`-объектов и проверки корректности их работы в Hubble UI.
+1. Первичный набор объектов `CiliumClusterwideNetworkPolicy`, поставив конфигурационную опцию `policyAuditMode` в `true`. Отсутствие опции может привести к некорректной работе Control plane или потере доступа ко всем узлам кластера по SSH. Опция может быть удалена после применения всех `CniliumClusterwideNetworkPolicy`-объектов и проверки корректности их работы в Hubble UI.
 2. Правило политики сетевой безопасности:
 
    ```yaml
@@ -70,11 +67,11 @@ description: Модуль cni-cilium Deckhouse обеспечивает рабо
          node-role.kubernetes.io/control-plane: ""
    ```
 
-В противном случае control plane может некорректно работать до одной минуты во время перезагрузки `cilium-agent`-подов. Это происходит из-за [сброса conntrack таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет обойти баг.
+В случае, если CiliumClusterwideNetworkPolicies не будут использованы, Control plane может некорректно работать до одной минуты во время перезагрузки `cilium-agent`-подов. Это происходит из-за [сброса Conntrack-таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет обойти баг.
 
 ## Смена режима работы Cilium
 
-При смене режима работы Cilium (параметр [tunnelMode](configuration.html#parameters-tunnelmode)) c `Disabled` на `VXLAN` или обратно необходимо перезагрузить все узлы, иначе возможны проблемы с доступностью подов.
+При смене режима работы Cilium (параметр [tunnelMode](configuration.html#parameters-tunnelmode)) c `Disabled` на `VXLAN` или обратно, необходимо перезагрузить все узлы, иначе возможны проблемы с доступностью подов.
 
 ## Выключение модуля kube-proxy
 
