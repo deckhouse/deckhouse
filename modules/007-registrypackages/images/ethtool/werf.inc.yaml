@@ -42,4 +42,5 @@ shell:
     - make
     - ls -la
     - strip ./ethtool
+    - mv ./ethtool /ethtool
     - chmod +x /ethtool /install /uninstall
