@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package migrate
+package hooks
 
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,60 +24,34 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// TODO: migrate ns d8-cloud-instance-manager from node-manager helm release to deckhouse helm release
-//   it could be deleted after 1.60 release
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/deckhouse/adopt_node_manager_resources",
+	Queue:        "/modules/deckhouse/label_heritage_on_kube_system",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "ns",
 			ApiVersion:                   "v1",
 			Kind:                         "Namespace",
-			NameSelector:                 &types.NameSelector{MatchNames: []string{"d8-cloud-instance-manager"}},
-			ExecuteHookOnSynchronization: ptr.To(true),
-			ExecuteHookOnEvents:          ptr.To(false),
-			FilterFunc:                   filterResource,
-		},
-		{
-			Name:       "cm",
-			ApiVersion: "v1",
-			Kind:       "ConfigMap",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-cloud-instance-manager"},
-				},
-			},
-			NameSelector:                 &types.NameSelector{MatchNames: []string{"kube-rbac-proxy-ca.crt"}},
+			NameSelector:                 &types.NameSelector{MatchNames: []string{"kube-system"}},
 			ExecuteHookOnSynchronization: ptr.To(true),
 			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   filterResource,
 		},
 	},
-}, adoptResources)
+}, labelHeritage)
 
 func filterResource(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	if unstructured.GetAnnotations()["meta.helm.sh/release-name"] == "deckhouse" {
+	if unstructured.GetLabels()["kubernetes.io/metadata.name"] == "kube-system" {
 		return nil, nil
 	}
 	return unstructured.GetName(), nil
 }
 
-func adoptResources(input *go_hook.HookInput) error {
+func labelHeritage(input *go_hook.HookInput) error {
 	nsPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"annotations": map[string]string{
-				"meta.helm.sh/release-name": "deckhouse",
-				"helm.sh/resource-policy":   "keep",
-			},
-		},
-	}
-
-	cmPatch := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]string{
-				"meta.helm.sh/release-name": "deckhouse",
+			"labels": map[string]string{
+				"heritage": "deckhouse",
 			},
 		},
 	}
@@ -90,12 +64,5 @@ func adoptResources(input *go_hook.HookInput) error {
 		}
 	}
 
-	snap = input.Snapshots["cm"]
-	if len(snap) == 1 {
-		if snap[0] != nil {
-			name := snap[0].(string)
-			input.PatchCollector.MergePatch(cmPatch, "v1", "ConfigMap", "d8-cloud-instance-manager", name)
-		}
-	}
 	return nil
 }
