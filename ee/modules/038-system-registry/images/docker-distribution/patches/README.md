@@ -22,3 +22,12 @@ Allows you to specify the allowed path to the registry, as well as replace the p
 # not 'docker pull localhost:5001/sys/deckhouse-oss/install:latest'
 docker pull localhost:5001/system/deckhouse/install:latest
 ```
+
+
+### 002-scheduler-state-file-filling-and-deleting.patch
+
+Adds logic for working with `/scheduler-state.json` file:
+- For proxy mode, if the file is empty, a background job is started to fill it;
+- If the mode is not proxy, the file is deleted;
+
+It is necessary to switch from `Detached` to `Proxy` registry mode.
