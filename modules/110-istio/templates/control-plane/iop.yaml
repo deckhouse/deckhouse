@@ -114,7 +114,6 @@ spec:
     trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
     accessLogFile: /dev/stdout
     
-
     # The rules below exclude upmeter-related namespaces from istiod's point of view.
     # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.
     discoverySelectors:
