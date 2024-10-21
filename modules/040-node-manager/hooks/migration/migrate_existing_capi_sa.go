@@ -23,6 +23,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
@@ -41,6 +42,7 @@ const (
 	labelHelmManagedBy         = "app.kubernetes.io/managed-by"
 	annotationReleaseName      = "meta.helm.sh/release-name"
 	annotationReleaseNamespace = "meta.helm.sh/release-namespace"
+	saName                     = "capi-controller-manager"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -54,7 +56,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "v1",
 			Kind:                         "ServiceAccount",
 			NamespaceSelector:            lib.NsSelector(),
-			FilterFunc:                   applyServiceAccountFilter,
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{saName},
+			},
+			FilterFunc: applyServiceAccountFilter,
 		},
 	},
 }, migrateServiceAccounts)
@@ -90,11 +95,14 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 	}
 
 	snap := input.Snapshots
-	for _, serviceAccountSnap := range snap["capi_sa"] {
-		serviceAccount := serviceAccountSnap.(ServiceAccountInfo)
-		if !serviceAccount.IsLabeledAndAnnotated {
-			input.PatchCollector.MergePatch(patch, "v1", "ServiceAccount", "d8-cloud-instance-manager", serviceAccount.Name, object_patch.IgnoreMissingObject())
-		}
+	if len(snap["capi_sa"]) == 0 {
+		return nil
 	}
+
+	serviceAccount := snap["capi_sa"][0].(ServiceAccountInfo)
+	if !serviceAccount.IsLabeledAndAnnotated {
+		input.PatchCollector.MergePatch(patch, "v1", "ServiceAccount", "d8-cloud-instance-manager", serviceAccount.Name, object_patch.IgnoreMissingObject())
+	}
+
 	return nil
 }
