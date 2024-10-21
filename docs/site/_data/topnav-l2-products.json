@@ -46,7 +46,7 @@
         },
         {
           "title": "Документация",
-          "url": "/products/kubernetes-platform/modules/virtualization/stable/",
+          "url": "/products/virtualization-platform/documentation/",
           "target": "",
           "rel": "doc"
         }
