@@ -8,11 +8,6 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- define "init_config_reloader_resources" }}
-cpu: 100m
-memory: 128Mi
-{{- end }}
-
 {{- if .Values.prometheus.longtermRetentionDays }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
@@ -67,12 +62,6 @@ spec:
     - name: scrape.timestamp-tolerance
       value: 10ms
   initContainers:
-  # for security editions like CSE we need to set requests
-  - name: init-config-reloader
-    resources:
-      requests:
-        {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
-        {{- include "init_config_reloader_resources" . | nindent 8 }}
   - command:
     - sh
     - -c

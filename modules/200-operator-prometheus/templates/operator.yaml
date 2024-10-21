@@ -54,12 +54,10 @@ spec:
       containers:
       - args:
         - --kubelet-service=d8-monitoring/kubelet
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
         - --config-reloader-cpu-request=0
         - --config-reloader-cpu-limit=0
         - --config-reloader-memory-request=0
         - --config-reloader-memory-limit=0
-{{- end }}
         - "--prometheus-config-reloader={{ include "helm_lib_module_image" (list . "prometheusConfigReloader") }}"
         - --alertmanager-instance-namespaces=d8-monitoring
         - --prometheus-instance-namespaces=d8-monitoring
