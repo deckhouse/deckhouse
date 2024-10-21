@@ -6,6 +6,7 @@ permalink: en/module-development/versioning/
 We use [semantic versioning](https://semver.org/) to control module versions.
 
 When choosing a version, stick to the following guidelines:
+
 - updating the **patch version** (e.g., from `0.0.1` to `0.0.2`) means that some issue has been fixed;
 - updating the **minor version** (e.g., from `0.0.1` to `0.1.0`) means that some new feature has been added;
 - updating the **major version** (e.g., from `0.0.1` to `1.0.0`) means that a feature has been added that radically changes the module's capabilities; the interface has undergone significant changes or a major phase of development has been completed.
@@ -36,13 +37,13 @@ Depending on the stage of the module lifecycle and the release channel from whic
 <table class="versioning-table">
     <thead>
         <tr class="header-row">
-            <th rowspan="2">Lifecycle stage</th>
-            <th colspan="5">Release channels</th>
+            <th rowspan="2">Lifecycle Stage</th>
+            <th colspan="5">Update Channels</th>
         </tr>
         <tr class="sub-header">
             <th>Alpha</th>
             <th>Beta</th>
-            <th>Early Access</th>
+            <th class="middle">Early Access</th>
             <th>Stable</th>
             <th>Rock Solid</th>
         </tr>
@@ -50,40 +51,48 @@ Depending on the stage of the module lifecycle and the release channel from whic
     <tbody>
         <tr>
             <td><strong>Experimental</strong></td>
-            <td>Experiments and feature testing</td>
-            <td>Experiments and feature testing</td>
-            <td>Experiments and feature testing</td>
-            <td>Experiments and feature testing.<br>Precise use in environments equivalent to experienced users</td>
-            <td>Experiments and feature testing.<br>Precise use in environments equivalent to experienced users</td>
+            <td>Experiments</td>
+            <td>Experiments</td>
+            <td>Experiments</td>
+            <td>Beta testing</td>
+            <td>Beta testing</td>
         </tr>
         <tr>
             <td><strong>Preview</strong></td>
-            <td>Experiments and feature testing</td>
-            <td>Development environments, pilots, non-critical production environments</td>
-            <td>Development environments, pilots, non-critical production environments</td>
-            <td>Production environments</td>
-            <td>Production environments</td>
+            <td>Experiments</td>
+            <td>Limited use</td>
+            <td>Limited use</td>
+            <td>Production use</td>
+            <td>Production use</td>
         </tr>
         <tr>
-            <td><strong>GA (Generally Available)</strong></td>
-            <td>Experiments and feature testing</td>
-            <td>Development environments, pilots, non-critical production environments</td>
-            <td>Production environments</td>
-            <td>Critical production environments</td>
-            <td>Critical production environments</td>
+            <td><strong>General Availability</strong></td>
+            <td>Experiments</td>
+            <td>Limited exploitation</td>
+            <td>Limited use</td>
+            <td>Production use</td>
+            <td>Production use in critical systems</td>
         </tr>
         <tr>
             <td><strong>Deprecated</strong></td>
-            <td>Must be phased out of use</td>
-            <td>Must be phased out of use</td>
-            <td>Must be phased out of use</td>
-            <td>Must be phased out of use</td>
-            <td>Must be phased out of use</td>
+            <td>Deprecated</td>
+            <td>Deprecated</td>
+            <td>Deprecated</td>
+            <td>Deprecated</td>
+            <td>Deprecated</td>
         </tr>
     </tbody>
 </table>
 
+- **Experiments** — Functionality checks, experiments, and testing;
+- **Beta Testing** — Functionality checks, experiments, and testing. Limited use by experienced users in environments equivalent to production;
+- **Limited Release** — Development environments, pilot projects, low-impact production environments;
+- **Production Use** — Production environments and those equivalent to them;
+- **Production Use in Critical Systems** — Mission-critical production environments and those equivalent to them;
+- **Deprecated** — Should be phased out of use.
+
 Highlights:
+
 - A module in `Experimental` status on the `Stable` channel is recommended to be used in production environments only with limitations.
 - A module in `General Availability` status on the `Alpha` channel is also not recommended for use in production environments.
 - Only `GA` modules installed from `Early Access`, `Stable`, or `Rock Solid` channels are suitable for production environments.
@@ -110,13 +119,15 @@ Modules in DKP use custom resources to interact with users. The `apiVersion` par
 You can release a new version v2 of the API that goes through the same steps, but with the prefix `v2`. Keep in mind that once `v1stableX` has been released, Kubernetes will treat it as higher priority than `alpha` or `beta` versions until a new stable version of `v2stableX` is released. The `kubectl apply` and `kubectl edit` commands will use `v1stableX`.
 
 The reasons for releasing a new version may be as follows:
-* structure changes;
-* updating obsolete parameters.
+
+- structure changes;
+- updating obsolete parameters.
 
 You can add new parameters without changing the version.
 
 To enable automatic conversion of module parameters from one version to another, you can include the appropriate [module conversions](../structure/#conversions). Conversions may be necessary when a parameter is renamed or moved to a different location in a new version of the OpenAPI specification.
 
 Please follow these recommendations when releasing a new version of the *CustomResourceDefinition* (CRD):
-* Set `deprecated: true` for previous versions (read more in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#version-deprecation)).
-* The version that stores data in etcd ([storage version](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version)) should not be changed earlier than two months after the new version has been released.
+
+- Set `deprecated: true` for previous versions (read more in the [Kubernetes documentation](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#version-deprecation)).
+- The version that stores data in etcd ([storage version](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#upgrade-existing-objects-to-a-new-stored-version)) should not be changed earlier than two months after the new version has been released.
