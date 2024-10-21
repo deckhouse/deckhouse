@@ -1153,6 +1153,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-spacing: 0;
     border: none;
     border-collapse: collapse;
+    font-size: 16px;
 }
 
 .docs table th,
@@ -1199,8 +1200,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 .docs table tbody tr td {
     text-align: left;
-    font-size: 16px;
-    line-height: 24px;
+    font-size: 0.875em;
+    line-height: 1.5em;
     font-weight: normal;
     font-style: normal;
     font-stretch: normal;
@@ -1219,11 +1220,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-weight: bold;
     text-align: center;
     vertical-align: middle;
-    font-size: 0.875em;
+    font-size: 0.8125em;
   }
 
   tbody tr td {
-    font-size: 0.875em;
+    font-size: 0.8125em;
     text-align: center;
     vertical-align: top;
     line-height: 16px;
