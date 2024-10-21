@@ -99,7 +99,7 @@ k8s:
       snapshotter: v6.3.3
       livenessprobe: v2.12.0
   '1.30':
-    status: preview
+    status: available
     patch: 6
     bashible: *bashible
     clusterAutoscalerPatch: 1
