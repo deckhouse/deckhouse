@@ -157,7 +157,22 @@ Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parame
 </tbody>
 </table>
 
-> **Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module). Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
+### Features of working with a set of Minimal modules on bare metal
+
+{% alert level="warning" %}
+**Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module).
+
+Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
+{% endalert %}
+
+To install a Deckhouse with a set of `Minimal` modules the following modules must be enabled on bare metal by specifying them in the installer configuration file:
+
+* registry-packages-proxy;
+* cloud-data-crd;
+* node-manager;
+* cni-cilium (or another CNI control module if necessary);
+* kube-dns;
+* control-plane-manager.
 
 ## Managing placement of Deckhouse components
 
