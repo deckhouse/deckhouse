@@ -1,14 +1,16 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- range $app := $crd.spec.applications }}
+  {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
 ---
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
 metadata:
-  name: {{ $crd.encodedName }}
+  name: {{ $crd.encodedName }}-{{ $hashedDomain }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex")) | nindent 2 }}
-id: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
-name: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
+id: {{ $crd.name }}-{{ $hashedDomain }}-{{ $crd.namespace }}-dex-authenticator
+name: {{ $crd.name }}-{{ $hashedDomain }}-{{ $crd.namespace }}-dex-authenticator
 secret: {{ $crd.credentials.appDexSecret }}
     {{- if $crd.spec.allowedGroups }}
 allowedGroups:
@@ -17,5 +19,6 @@ allowedGroups:
 {{- end }}
     {{- end }}
 redirectURIs:
-- https://{{ $crd.spec.applicationDomain }}/dex-authenticator/callback
+- https://{{ $app.domain }}/dex-authenticator/callback
+  {{- end }}
 {{- end }}
