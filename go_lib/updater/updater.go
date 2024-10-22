@@ -381,6 +381,7 @@ func (u *Updater[R]) DeployedRelease() *R {
 	}
 
 	deployedRelease := &(u.releases[u.currentDeployedReleaseIndex])
+	u.logger.Debugf("Deployed release found by updater: %v", deployedRelease)
 
 	return deployedRelease
 }
