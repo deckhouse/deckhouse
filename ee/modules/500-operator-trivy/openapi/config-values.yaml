@@ -84,3 +84,10 @@ properties:
     x-example:
       - app
       - env
+  insecureRegistries:
+    type: array
+    x-doc-example: [["my.registry.com", "http-only.registry.io"]]
+    items:
+      type: string
+    description: |
+      Container registries to which insecure connections are allowed.
