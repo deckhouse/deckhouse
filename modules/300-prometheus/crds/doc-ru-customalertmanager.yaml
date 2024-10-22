@@ -47,7 +47,6 @@ spec:
                         insecureSkipVerify:
                           description: Отключение проверки сертификата.
                 internal:
-                  type: object
                   description: Параметры настройки внутренного Alertmanager.
                   properties:
                     inhibitRules:
