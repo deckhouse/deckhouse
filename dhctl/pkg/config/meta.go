@@ -103,125 +103,8 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	}
 
 	if len(m.InitClusterConfig) > 0 {
-		// Migrate from old to new init config apiVersion
-		var initCfgApiVersion string
-		if err := json.Unmarshal(m.InitClusterConfig["apiVersion"], &initCfgApiVersion); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal apiVersion for init configuration: %v", err)
-		}
-
-		if initCfgApiVersion != "deckhouse.io/v2alpha1" {
-			var deckhouseCfgOld DeckhouseClusterConfigOld
-			if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &deckhouseCfgOld); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
-			} else {
-				m.RegistryConfig = RegistryClusterConfig{
-					Mode: "Direct",
-					DirectModeProperties: &RegistryDirectModeProperties{
-						ImagesRepo: deckhouseCfgOld.ImagesRepo,
-						DockerCfg:  deckhouseCfgOld.RegistryDockerCfg,
-						CA:         deckhouseCfgOld.RegistryCA,
-						Scheme:     deckhouseCfgOld.RegistryScheme,
-					},
-				}
-				m.DeckhouseConfig = DeckhouseClusterConfig{
-					ReleaseChannel:  deckhouseCfgOld.ReleaseChannel,
-					DevBranch:       deckhouseCfgOld.DevBranch,
-					Bundle:          deckhouseCfgOld.Bundle,
-					LogLevel:        deckhouseCfgOld.LogLevel,
-					ConfigOverrides: deckhouseCfgOld.ConfigOverrides,
-				}
-			}
-		} else {
-			if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
-			}
-			if err := json.Unmarshal(m.InitClusterConfig["registry"], &m.RegistryConfig); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal registry configuration: %v", err)
-			}
-		}
-
-		embeddedRegistryPath := "/system/deckhouse"
-		switch m.RegistryConfig.Mode {
-		case "Direct":
-			properties := m.RegistryConfig.DirectModeProperties
-			if properties == nil {
-				return nil, fmt.Errorf("unable to get the properties of the direct registry mode")
-			}
-			if err := validateRegistryDockerCfg(properties.DockerCfg); err != nil {
-				return nil, err
-			}
-			address, path := getRegistryAddressAndPath(properties.ImagesRepo)
-			m.Registry = Registry{
-				Mode: m.RegistryConfig.Mode,
-				Data: RegistryData{
-					Address:   address,
-					Path:      path,
-					Scheme:    strings.ToLower(properties.Scheme),
-					CA:        properties.CA,
-					DockerCfg: properties.DockerCfg,
-				},
-			}
-		case "Proxy":
-			m.SystemRegistryConfig.Enable = true
-			properties := m.RegistryConfig.ProxyModeProperties
-			if properties == nil {
-				return nil, fmt.Errorf("unable to get the properties of the proxy registry mode")
-			}
-			if err := validateRegistryDockerCfg(properties.DockerCfg); err != nil {
-				return nil, err
-			}
-			clusterDomain, err := m.GetClusterDomain()
-			if err != nil {
-				return nil, err
-			}
-			address, path := getRegistryAddressAndPath(properties.ImagesRepo)
-			m.Registry = Registry{
-				Mode: m.RegistryConfig.Mode,
-				Data: RegistryData{
-					Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
-					Path:    embeddedRegistryPath,
-					// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
-					// Scheme:       "",
-					// DockerCfg:    "",
-					// CA:           "",
-				},
-				ModeSpecificFields: ProxyModeRegistryData{
-					UpstreamRegistryData: RegistryData{
-						Address:   address,
-						Path:      path,
-						Scheme:    strings.ToLower(properties.Scheme),
-						CA:        properties.CA,
-						DockerCfg: properties.DockerCfg,
-					},
-					RegistryStorageMode: properties.StorageMode,
-				},
-			}
-		case "Detached":
-			m.SystemRegistryConfig.Enable = true
-			properties := m.RegistryConfig.DetachedModeProperties
-			if properties == nil {
-				return nil, fmt.Errorf("unable to get the properties of the detached registry mode")
-			}
-			clusterDomain, err := m.GetClusterDomain()
-			if err != nil {
-				return nil, err
-			}
-			m.Registry = Registry{
-				Mode: m.RegistryConfig.Mode,
-				Data: RegistryData{
-					Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
-					Path:    embeddedRegistryPath,
-					// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
-					// Scheme:       "",
-					// DockerCfg:    "",
-					// CA:           "",
-				},
-				ModeSpecificFields: DetachedModeRegistryData{
-					RegistryPath:        embeddedRegistryPath,
-					ImagesBundlePath:    properties.ImagesBundlePath,
-					RegistryStorageMode: properties.StorageMode,
-				},
-			}
+		if err := m.prepareDataFromInitClusterConfig(); err != nil {
+			return nil, err
 		}
 	}
 
@@ -302,23 +185,19 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 				return fmt.Errorf("unable to get internal registry access data: %v", err)
 			}
 
-			dockerAuth := base64.StdEncoding.EncodeToString(
-				[]byte(fmt.Sprintf(
-					"%s:%s",
-					internalRegistryAccessData.UserRo.Name,
-					internalRegistryAccessData.UserRo.Password,
-				)),
-			)
-
 			dockerCfg, err := json.Marshal(
 				DockerCfg{
 					Auths: map[string]struct {
 						Auth string `json:"auth"`
 					}{
-						m.Registry.Data.Address: struct {
-							Auth string `json:"auth"`
-						}{
-							Auth: dockerAuth,
+						m.Registry.Data.Address: {
+							Auth: base64.StdEncoding.EncodeToString(
+								[]byte(fmt.Sprintf(
+									"%s:%s",
+									internalRegistryAccessData.UserRo.Name,
+									internalRegistryAccessData.UserRo.Password,
+								)),
+							),
 						},
 					},
 				},
@@ -341,6 +220,130 @@ func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 			m.Registry.Data.DockerCfg = string(base64.StdEncoding.EncodeToString(dockerCfg))
 			m.Registry.Data.Scheme = "https"
 			m.Registry.Data.CA = (*internalRegistryAccessData).CA.Cert
+		}
+	}
+	return nil
+}
+
+func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
+	// Migrate from old to new init config apiVersion
+	var initCfgApiVersion string
+	if err := json.Unmarshal(m.InitClusterConfig["apiVersion"], &initCfgApiVersion); err != nil {
+		return fmt.Errorf("unable to unmarshal apiVersion for init configuration: %v", err)
+	}
+
+	if initCfgApiVersion != "deckhouse.io/v2alpha1" {
+		var deckhouseCfgOld DeckhouseClusterConfigOld
+		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &deckhouseCfgOld); err != nil {
+			return fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+		} else {
+			m.RegistryConfig = RegistryClusterConfig{
+				Mode: "Direct",
+				DirectModeProperties: &RegistryDirectModeProperties{
+					ImagesRepo: deckhouseCfgOld.ImagesRepo,
+					DockerCfg:  deckhouseCfgOld.RegistryDockerCfg,
+					CA:         deckhouseCfgOld.RegistryCA,
+					Scheme:     deckhouseCfgOld.RegistryScheme,
+				},
+			}
+			m.DeckhouseConfig = DeckhouseClusterConfig{
+				ReleaseChannel:  deckhouseCfgOld.ReleaseChannel,
+				DevBranch:       deckhouseCfgOld.DevBranch,
+				Bundle:          deckhouseCfgOld.Bundle,
+				LogLevel:        deckhouseCfgOld.LogLevel,
+				ConfigOverrides: deckhouseCfgOld.ConfigOverrides,
+			}
+		}
+	} else {
+		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
+			return fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
+		}
+		if err := json.Unmarshal(m.InitClusterConfig["registry"], &m.RegistryConfig); err != nil {
+			return fmt.Errorf("unable to unmarshal registry configuration: %v", err)
+		}
+	}
+
+	embeddedRegistryPath := "/system/deckhouse"
+	switch m.RegistryConfig.Mode {
+	case "Direct":
+		properties := m.RegistryConfig.DirectModeProperties
+		if properties == nil {
+			return fmt.Errorf("unable to get the properties of the direct registry mode")
+		}
+		if err := validateRegistryDockerCfg(properties.DockerCfg); err != nil {
+			return err
+		}
+		address, path := getRegistryAddressAndPath(properties.ImagesRepo)
+		m.Registry = Registry{
+			Mode: m.RegistryConfig.Mode,
+			Data: RegistryData{
+				Address:   address,
+				Path:      path,
+				Scheme:    strings.ToLower(properties.Scheme),
+				CA:        properties.CA,
+				DockerCfg: properties.DockerCfg,
+			},
+		}
+	case "Proxy":
+		m.SystemRegistryConfig.Enable = true
+		properties := m.RegistryConfig.ProxyModeProperties
+		if properties == nil {
+			return fmt.Errorf("unable to get the properties of the proxy registry mode")
+		}
+		if err := validateRegistryDockerCfg(properties.DockerCfg); err != nil {
+			return err
+		}
+		clusterDomain, err := m.GetClusterDomain()
+		if err != nil {
+			return err
+		}
+		address, path := getRegistryAddressAndPath(properties.ImagesRepo)
+		m.Registry = Registry{
+			Mode: m.RegistryConfig.Mode,
+			Data: RegistryData{
+				Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
+				Path:    embeddedRegistryPath,
+				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
+				// Scheme:       "",
+				// DockerCfg:    "",
+				// CA:           "",
+			},
+			ModeSpecificFields: ProxyModeRegistryData{
+				UpstreamRegistryData: RegistryData{
+					Address:   address,
+					Path:      path,
+					Scheme:    strings.ToLower(properties.Scheme),
+					CA:        properties.CA,
+					DockerCfg: properties.DockerCfg,
+				},
+				RegistryStorageMode: properties.StorageMode,
+			},
+		}
+	case "Detached":
+		m.SystemRegistryConfig.Enable = true
+		properties := m.RegistryConfig.DetachedModeProperties
+		if properties == nil {
+			return fmt.Errorf("unable to get the properties of the detached registry mode")
+		}
+		clusterDomain, err := m.GetClusterDomain()
+		if err != nil {
+			return err
+		}
+		m.Registry = Registry{
+			Mode: m.RegistryConfig.Mode,
+			Data: RegistryData{
+				Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
+				Path:    embeddedRegistryPath,
+				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
+				// Scheme:       "",
+				// DockerCfg:    "",
+				// CA:           "",
+			},
+			ModeSpecificFields: DetachedModeRegistryData{
+				RegistryPath:        embeddedRegistryPath,
+				ImagesBundlePath:    properties.ImagesBundlePath,
+				RegistryStorageMode: properties.StorageMode,
+			},
 		}
 	}
 	return nil
