@@ -56,7 +56,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: CronJob {{$labels.namespace}}/{{$labels.job_name}} hangs.
+      plk_create_group_if_not_exists__cron_job_hungs: "CronJobHungsGroup,kubernetes=~kubernetes,namespace=~namespace,owner_name=~owner_name"
+      plk_grouped_by__cron_job_hungs: "CronJobHungsGroup,kubernetes=~kubernetes,namespace=~namespace,owner_name=~owner_name"
+      summary: CronJob {{$labels.namespace}}/{{$labels.job_name}} hungs.
 
   - alert: CronJobSchedulingError
     expr: |

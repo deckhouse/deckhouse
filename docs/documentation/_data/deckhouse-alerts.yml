@@ -237,9 +237,9 @@ alerts:
       edition: ce
       description: ""
       summary: |
-        Job {{$labels.namespace}}/{{$labels.job_name}} hangs.
+        CronJob {{$labels.namespace}}/{{$labels.job_name}} hungs.
       severity: "5"
-      markupFormat: default
+      markupFormat: markdown
     - name: CronJobImageAbsent
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
       moduleUrl: 340-extended-monitoring
