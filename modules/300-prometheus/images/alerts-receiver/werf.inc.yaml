@@ -41,7 +41,6 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod tidy
   #TODO: memstore_test.go:77 and memstore_test.go:95 fail
   # - go test ./... -v
   - go build -ldflags="-s -w" -o alerts-receiver
