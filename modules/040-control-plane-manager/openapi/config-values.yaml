@@ -105,10 +105,10 @@ properties:
           * `kubernetes.default`;
           * `kubernetes.default.svc`;
           * `kubernetes.default.svc.cluster.local`;
-          * `192.168.0.1`;
+          * Kubernetes API server address;
           * `127.0.0.1`;
-          * *current_hostname*;
-          * *hostIP*.
+          * host name;
+          * host IP.
         x-examples:
           - ["my-site.com", "192.168.67.76"]
         items:

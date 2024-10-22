@@ -3,6 +3,8 @@ title: "Cloud provider — OpenStack: подготовка окружения"
 description: "Настройка Openstack для работы облачного провайдера Deckhouse."
 ---
 
+{% include notice_envinronment.liquid %}
+
 Чтобы Deckhouse мог управлять ресурсами в облаке OpenStack, ему необходимо подключиться к OpenStack API.  
 Перечень API-сервисов OpenStack, доступ до которых необходим для развертывания, доступен в разделе [настройки](./configuration.html#список-необходимых-сервисов-openstack).  
 Доступы пользователя, необходимые для подключения к OpenStack API, находятся в openrc-файле (OpenStack RC file).

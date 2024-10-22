@@ -142,6 +142,24 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/api-proxy"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/modules/110-istio/images/metadata-exporter"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/160-multitenancy-manager/images/multitenancy-manager"
   labels:
   - "type/dependencies"
@@ -412,24 +430,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/110-istio/images/api-proxy"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/110-istio/images/metadata-exporter"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/modules/150-user-authn/images/basic-auth-proxy/app"
   labels:
   - "type/dependencies"
@@ -574,7 +574,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/500-openvpn/images/easyrsa-migrator"
+  directory: "/modules/500-openvpn/images/easyrsa-migrator/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
