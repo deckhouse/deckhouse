@@ -18,3 +18,9 @@
         kube_pod_container_info * on (uid) group_left
         max by (uid) (label_replace(klog_oomkill{task_memcg=~".*kubepods/pod.*"}, "uid", "$1", "task_memcg", ".+kubepods/pod(.*)"))
       )
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod, container) (
+        kube_pod_container_info * on (uid) group_left
+        max by (uid) (label_replace(klog_oomkill{task_memcg=~".*kubepods/pod.*"}, "uid", "$1", "task_memcg", ".+kubepods/pod(.*)/.+"))
+      )
