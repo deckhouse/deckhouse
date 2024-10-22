@@ -117,10 +117,8 @@ func manageScopeRole(name, level, scope string) string {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				"heritage":                "deckhouse",
 				"rbac.deckhouse.io/level": level,
 				"rbac.deckhouse.io/kind":  "manage",
-				"rbac.deckhouse.io/scope": scope,
 			},
 		},
 		AggregationRule: &rbacv1.AggregationRule{ClusterRoleSelectors: []metav1.LabelSelector{
@@ -131,6 +129,9 @@ func manageScopeRole(name, level, scope string) string {
 				},
 			},
 		}},
+	}
+	if level != "all" {
+		role.Labels["rbac.deckhouse.io/aggregate-to-all-as"] = "admin"
 	}
 	marshaled, _ := yaml.Marshal(&role)
 	return string(marshaled)
@@ -145,10 +146,9 @@ func manageModuleRole(name, scope, namespace string) string {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				"heritage":                    "deckhouse",
-				"rbac.deckhouse.io/level":     "module",
-				"rbac.deckhouse.io/kind":      "manage",
-				"rbac.deckhouse.io/namespace": namespace,
+				"rbac.deckhouse.io/level":                                  "module",
+				"rbac.deckhouse.io/kind":                                   "manage",
+				"rbac.deckhouse.io/namespace":                              namespace,
 				fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", scope): "admin",
 			},
 		},
@@ -165,17 +165,11 @@ func manageScopeBinding(name, role string) string {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
-			Labels: map[string]string{
-				"heritage":                              "deckhouse",
-				"rbac.deckhouse.io/kind":                "manage",
-				"rbac.deckhouse.io/level":               "scope",
-				"rbac.deckhouse.io/aggregate-to-all-as": "admin",
-			},
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:     "User",
-				APIGroup: "v1",
+				APIGroup: "rbac.authorization.k8s.io",
 				Name:     "test",
 			},
 		},
@@ -207,7 +201,7 @@ func useBinding(relatedWith, namespace string) string {
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:     "User",
-				APIGroup: "v1",
+				APIGroup: "rbac.authorization.k8s.io",
 				Name:     "test",
 			},
 		},

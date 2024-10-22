@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -128,7 +127,7 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 func syncBindings(input *go_hook.HookInput) error {
 	expected := make(map[string]bool)
 	for _, snap := range input.Snapshots["manageBindings"] {
-		for _, namespace := range matchRole(input.Snapshots["manageRoles"], snap.(*filteredManageBinding).RoleName) {
+		for namespace := range matchRole(input.Snapshots["manageRoles"], snap.(*filteredManageBinding).RoleName) {
 			binding := createBinding(snap.(*filteredManageBinding), namespace)
 			input.PatchCollector.Create(binding, object_patch.UpdateIfExists())
 			expected[binding.Name] = true
@@ -146,7 +145,7 @@ func syncBindings(input *go_hook.HookInput) error {
 	return nil
 }
 
-func matchRole(manageRoles []go_hook.FilterResult, roleName string) []string {
+func matchRole(manageRoles []go_hook.FilterResult, roleName string) map[string]bool {
 	var found *filteredManageRole
 	for _, snap := range manageRoles {
 		if role := snap.(*filteredManageRole); role.Name == roleName {
@@ -158,12 +157,21 @@ func matchRole(manageRoles []go_hook.FilterResult, roleName string) []string {
 		return nil
 	}
 
-	var namespaces []string
+	var namespaces = make(map[string]bool)
 	for _, snap := range manageRoles {
 		role := snap.(*filteredManageRole)
-		if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok && !slices.Contains(namespaces, namespace) {
-			if found.Labels["rbac.deckhouse.io/level"] == "all" || matchAggregationRule(found.Rule, role.Labels) {
-				namespaces = append(namespaces, namespace)
+		if matchAggregationRule(found.Rule, role.Labels) {
+			if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
+				namespaces[namespace] = true
+			}
+			if role.Rule != nil {
+				for _, nestedSnap := range manageRoles {
+					if matchAggregationRule(role.Rule, nestedSnap.(*filteredManageRole).Labels) {
+						if namespace, ok := nestedSnap.(*filteredManageRole).Labels["rbac.deckhouse.io/namespace"]; ok {
+							namespaces[namespace] = true
+						}
+					}
+				}
 			}
 		}
 	}
