@@ -868,7 +868,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
    > kubectl get deckhousereleases
    > ```
 
-1. Wait for the pod to become `Running' and then run the following commands:
+1. Wait for the pod to become `Running` and then run the following commands:
 
    * Retrieve the value of `CE_SANDBOX_IMAGE`:
 
@@ -1206,7 +1206,7 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
    >  kubectl get deckhousereleases
    >  ```
 
-1. Wait for the pod to become `Running' and then run the following commands:
+1. Wait for the pod to become `Running` and then run the following commands:
 
    * Retrieve the value of `EE_SANDBOX_IMAGE`:
 
