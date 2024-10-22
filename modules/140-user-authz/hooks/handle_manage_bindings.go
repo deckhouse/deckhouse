@@ -128,7 +128,6 @@ func syncBindings(input *go_hook.HookInput) error {
 	expected := make(map[string]bool)
 	for _, snap := range input.Snapshots["manageBindings"] {
 		for namespace := range namespacesByRole(input.Snapshots["manageRoles"], snap.(*filteredManageBinding).RoleName) {
-			input.LogEntry.Infof("ensure the '%s' use binding, expected: %v", fmt.Sprintf("d8:use:binding:%s", snap.(*filteredManageBinding).Name), expected)
 			input.PatchCollector.Create(createBinding(snap.(*filteredManageBinding), namespace), object_patch.UpdateIfExists())
 			expected[fmt.Sprintf("d8:use:binding:%s", snap.(*filteredManageBinding).Name)] = true
 		}
@@ -137,8 +136,7 @@ func syncBindings(input *go_hook.HookInput) error {
 	// delete excess use bindings
 	for _, snap := range input.Snapshots["useBindings"] {
 		existing := snap.(*filteredUseBinding)
-		if _, ok := expected[existing.RoleName]; !ok {
-			input.LogEntry.Infof("delete the '%s' use binding, expected: %v", existing.RoleName, expected)
+		if _, ok := expected[existing.Name]; !ok {
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
 	}
