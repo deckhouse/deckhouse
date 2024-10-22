@@ -857,8 +857,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 Для переключения кластера Deckhouse Enterprise Edition на Community Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
 
-1. Убедитесь, что используемые в кластере модули [поддерживаются в версии CE](revision-comparison.html). Отключите модули, которые не поддерживаются в Deckhouse CE.
-
 1. Выполните следующую команду для запуска временного пода Deckhouse CE для получения актуальных дайджестов и списка модулей:
 
    ```shell
@@ -1375,7 +1373,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
       | select(.image | contains("deckhouse.ru/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-1. Удалите временные файлы, ресурс NodeGroupConfiguration и переменные:
+1. Удалите временные файлы, ресурс `NodeGroupConfiguration` и переменные:
 
    ```shell
    kubectl delete ngc containerd-ee-config.sh ee-set-sha-images.sh

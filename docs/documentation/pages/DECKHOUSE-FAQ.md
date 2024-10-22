@@ -1095,7 +1095,7 @@ Perform the following steps to switch a Deckhouse Enterprise Edition cluster to 
    > kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
    > ```
 
-1. Purge temporary files, NodeGroupConfiguration resource, and variables:
+1. Purge temporary files, `NodeGroupConfiguration` resource, and variables:
 
    ```shell
    kubectl delete ngc containerd-ce-config.sh
@@ -1253,6 +1253,32 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
      Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
      ```
 
+   * Retrieve the value of `EE_MODULES`:
+
+     ```shell
+     EE_MODULES=$(kubectl exec ee-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*"  | awk {'print $9'} | cut -c5-)
+     ```
+
+     An example:
+
+     ```console
+     $ echo $EE_MODULES
+     common priority-class deckhouse external-module-manager ...
+     ```
+
+   * Retrieve the value of `USED_MODULES`:
+
+     ```shell
+     USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+     ```
+
+     An example:
+
+     ```console
+     $ echo $USED_MODULES
+     admission-policy-engine cert-manager chrony cloud-data-crd ...
+     ```
+
 1. Create a NodeGroupConfiguration resource:
 
    ```shell
@@ -1317,6 +1343,65 @@ To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
      --type=kubernetes.io/dockerconfigjson \
      --dry-run='client' \
      -o yaml | kubectl replace -f -
+   ```
+
+1. Apply the Deckhouse EE image:
+
+   ```shell
+   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.63.8
+   ```
+
+1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
+
+   Use the following command to check the Deckhouse pod's status:
+
+   ```shell
+   kubectl -n d8-system get po -l app=deckhouse
+   ```
+
+   Use the following command to check the Deckhouse queue:
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   ```
+
+1. Check if there are any pods with the Deckhouse CE registry address left in the cluster:
+
+   ```shell
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+      | select(.image | contains("deckhouse.ru/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+1. Purge temporary files, `NodeGroupConfiguration` resource, and variables:
+
+   ```shell
+   kubectl delete ngc containerd-ee-config.sh ee-set-sha-images.sh
+   kubectl delete pod ee-image
+   kubectl apply -f - <<EOF
+       apiVersion: deckhouse.io/v1alpha1
+       kind: NodeGroupConfiguration
+       metadata:
+         name: del-temp-config.sh
+       spec:
+         nodeGroups:
+         - '*'
+         bundles:
+         - '*'
+         weight: 90
+         content: |
+           if [ -f /etc/containerd/conf.d/ee-registry.toml ]; then
+             rm -f /etc/containerd/conf.d/ee-registry.toml
+           fi
+           if [ -f /etc/containerd/conf.d/ee-sandbox.toml ]; then
+             rm -f /etc/containerd/conf.d/ee-sandbox.toml
+           fi
+   EOF
+   ```
+
+   Once bashible synchronization is complete (you can track the synchronization status on nodes via the `UPTODATE` value of the NodeGroup), delete the NodeGroupConfiguration resource you created earlier:
+
+   ```shell
+   kubectl  delete ngc del-temp-config.sh
    ```
 
 ### How do I get access to Deckhouse controller in multimaster cluster?
