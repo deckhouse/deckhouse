@@ -477,17 +477,18 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		Windows:            policy.Spec.Update.Windows,
 	}
 	releaseUpdater := newModuleUpdater(r.dc, r.logger, settings, k8, r.moduleManager.GetEnabledModuleNames(), r.metricStorage)
-
-	otherReleases := new(v1alpha1.ModuleReleaseList)
-	err = r.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
-	if err != nil {
-		return ctrl.Result{Requeue: true}, err
+	{
+		otherReleases := new(v1alpha1.ModuleReleaseList)
+		err = r.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
+		if err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+		pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
+		for _, r := range otherReleases.Items {
+			pointerReleases = append(pointerReleases, &r)
+		}
+		releaseUpdater.SetReleases(pointerReleases)
 	}
-	pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
-	for _, r := range otherReleases.Items {
-		pointerReleases = append(pointerReleases, &r)
-	}
-	releaseUpdater.SetReleases(pointerReleases)
 
 	if releaseUpdater.ReleasesCount() == 0 {
 		return result, nil
@@ -497,7 +498,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	if releaseUpdater.LastReleaseDeployed() {
 		// latest release deployed
-		deployedRelease := otherReleases.Items[releaseUpdater.GetCurrentDeployedReleaseIndex()]
+		deployedRelease := *releaseUpdater.DeployedRelease()
 		deckhouseconfig.Service().AddModuleNameToSource(deployedRelease.Spec.ModuleName, deployedRelease.GetModuleSource())
 
 		// check symlink exists on FS, relative symlink
@@ -507,10 +508,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			r.logger.Debugf("Module %q doesn't exist on the filesystem. Restoring", moduleName)
 			err = enableModule(r.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 			if err != nil {
-				r.logger.Errorf("Module restore failed: %v", err)
-				if err := r.suspendModuleVersionForRelease(ctx, &deployedRelease, err); err != nil {
-					return result, fmt.Errorf("suspend module version for release: %w", err)
-				}
+				r.logger.Errorf("Module restore for module %q and release %q failed: %v", moduleName, deployedRelease.Spec.Version.String(), err)
 
 				return ctrl.Result{Requeue: true}, err
 			}
@@ -629,24 +627,12 @@ func (r *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	return r.createOrUpdateReconcile(ctx, mr)
 }
 
-func (r *moduleReleaseReconciler) suspendModuleVersionForRelease(ctx context.Context, release *v1alpha1.ModuleRelease, err error) error {
-	if os.IsNotExist(err) {
-		err = errors.New("not found")
-	}
-
-	release.Status.Phase = v1alpha1.PhaseSuspended
-	release.Status.Message = fmt.Sprintf("Desired version of the module met problems: %s", err)
-	release.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
-
-	return r.client.Status().Update(ctx, release)
-}
-
 func enableModule(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
 	if oldSymlinkPath != "" {
 		if _, err := os.Lstat(oldSymlinkPath); err == nil {
 			err = os.Remove(oldSymlinkPath)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "delete old symlink %s", oldSymlinkPath)
 			}
 		}
 	}
@@ -654,7 +640,7 @@ func enableModule(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePa
 	if _, err := os.Lstat(newSymlinkPath); err == nil {
 		err = os.Remove(newSymlinkPath)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "delete new symlink %s", newSymlinkPath)
 		}
 	}
 
@@ -662,7 +648,7 @@ func enableModule(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePa
 	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(modulePath, "../"))
 	// check that module exists on a disk
 	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
-		return err
+		return errors.Wrapf(err, "module absolute path %s not found", moduleAbsPath)
 	}
 
 	return os.Symlink(modulePath, newSymlinkPath)
