@@ -65,7 +65,7 @@ spec:
         # { {- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "CAP_SYSLOG")) | nindent 8 } }
         readinessProbe:
           httpGet:
-            path: /healthz
+            path: /ready
             port: {{ $port }}
             scheme: HTTPS
         resources:
@@ -90,7 +90,7 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:
-            - /healthz
+            - /ready
             upstreams:
             - upstream: http://127.0.0.1:{{ $port }}/
               path: /
