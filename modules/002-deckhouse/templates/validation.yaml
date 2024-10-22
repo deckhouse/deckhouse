@@ -152,11 +152,11 @@ spec:
 {{- else }}
   validations:
     - expression: |
-        object.metadata.name == "deckhouse" &&
+        !(object.metadata.name == "deckhouse" &&
         has(object.spec.settings.update) &&
         has(object.spec.settings.update.windows) &&
         object.spec.settings.update.windows.size() > 0 &&
-        object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
+        object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) >= int(string(w.to).replace(":", ""))))
       reason: Forbidden
 {{- end }}
 ---
