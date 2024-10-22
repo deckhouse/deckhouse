@@ -8,7 +8,7 @@ properties:
 
   severities:
     description: |
-      Фильтрация отчетов уязвимостей по их уровню критичности.
+      Фильтрация отчетов уязвимостей по уровню их критичности.
 
   linkCVEtoBDU:
     description: |
@@ -20,7 +20,7 @@ properties:
 
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   nodeSelector:
     description: |
       Опциональный селектор для компонентов `operator-trivy` и заданий сканирования (Jobs).
@@ -34,3 +34,7 @@ properties:
       Список дополнительных меток маркировки отчетов (VulnerabilityReport) Trivy.
 
       Значения этих меток будут соответствовать значениям меток сканируемых ресурсов.
+
+  insecureRegistries:
+    description: |
+      Хранилище образов контейнеров (container registry), к которым разрешены незащищённые соединения.

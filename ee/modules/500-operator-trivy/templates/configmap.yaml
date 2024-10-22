@@ -55,6 +55,9 @@ data:
   {{- else }}
   trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   {{- end }}
+  {{- range $idx, $registry := .Values.operatorTrivy.insecureRegistries }}
+  trivy.insecureRegistry.{{ $idx }}: {{ $registry | quote }}
+  {{- end }}
   trivy.slow: "true"
   trivy.dbRepository: {{ $dbRepository }}
   trivy.javaDbRepository: {{ $javaDbRepository }}
