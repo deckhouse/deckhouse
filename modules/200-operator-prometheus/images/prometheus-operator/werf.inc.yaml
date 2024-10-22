@@ -37,7 +37,6 @@ shell:
   install:
     - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
     - cd /src
-    - go mod tidy
     - export VERSION=$(cat VERSION | tr -d " \t\n\r")
     - export GO_BUILD_LDFLAGS="-X github.com/prometheus/common/version.Version=${VERSION} -X github.com/prometheus/common/version.BuildUser=deckhouse"
     - go build -ldflags="-s -w ${GO_BUILD_LDFLAGS}" -o operator cmd/operator/main.go

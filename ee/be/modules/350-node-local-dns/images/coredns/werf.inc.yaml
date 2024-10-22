@@ -30,7 +30,6 @@ shell:
   install:
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
-  - go mod tidy
   - go build -v -ldflags="-s -w" -o coredns
   - chmod -R 0700 /src/coredns
   - chown -R 64535:64535 /src/coredns
