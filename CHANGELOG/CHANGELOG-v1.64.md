@@ -1,9 +1,5 @@
 # Changelog v1.64
 
-## [MALFORMED]
-
-
- - #9289 unknown section "flant-integration"
 
 ## Know before update
 
