@@ -192,6 +192,7 @@ func (s *Service) CommanderAttachCluster(
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
+	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
