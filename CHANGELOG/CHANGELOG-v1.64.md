@@ -1,5 +1,10 @@
 # Changelog v1.64
 
+## [MALFORMED]
+
+
+ - #9289 unknown section "flant-integration"
+
 ## Know before update
 
 
@@ -35,6 +40,7 @@
  - **[deckhouse-controller]** Add new module `deckhouse-tools`. [#9140](https://github.com/deckhouse/deckhouse/pull/9140)
  - **[deckhouse-controller]** Add a field about the type of update in the notification. [#9082](https://github.com/deckhouse/deckhouse/pull/9082)
  - **[deckhouse-tools]** Add new module `deckhouse-tools`. [#9140](https://github.com/deckhouse/deckhouse/pull/9140)
+ - **[dhctl]** Options to skip preflight checks for dhctl-server operations. [#10043](https://github.com/deckhouse/deckhouse/pull/10043)
  - **[dhctl]** Add cleanup resources confirmation on destroy. [#9515](https://github.com/deckhouse/deckhouse/pull/9515)
  - **[dhctl]** Support for localhost bootstrapping. [#9404](https://github.com/deckhouse/deckhouse/pull/9404)
  - **[dhctl]** Add new Status grpc Service. [#9256](https://github.com/deckhouse/deckhouse/pull/9256)
@@ -105,6 +111,7 @@
  - **[common]** Fixed the displayed version of shell-operator. [#9281](https://github.com/deckhouse/deckhouse/pull/9281)
  - **[control-plane-manager]** D8EtcdExcessiveDatabaseGrowth alert fix [#9773](https://github.com/deckhouse/deckhouse/pull/9773)
  - **[control-plane-manager]** Two new etcd alerts with a low `severity_level` and an increase in the `severity_level` for one existing alert. [#9464](https://github.com/deckhouse/deckhouse/pull/9464)
+ - **[deckhouse]** Fix validation policy for update windows in kubernetes 1.26 [#10235](https://github.com/deckhouse/deckhouse/pull/10235)
  - **[deckhouse]** Fix `ValidatingAdmissionPolicy` for checking update windows. [#10151](https://github.com/deckhouse/deckhouse/pull/10151)
  - **[deckhouse]** Fixed the `deckhouse-leader` and `deckhouse` Services with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)
  - **[deckhouse]** Fix parsing Kubernetes version. [#9458](https://github.com/deckhouse/deckhouse/pull/9458)
@@ -120,6 +127,7 @@
  - **[deckhouse-controller]** Correct module validation. [#8989](https://github.com/deckhouse/deckhouse/pull/8989)
  - **[deckhouse-tools]** Fix custom certs copying. [#9840](https://github.com/deckhouse/deckhouse/pull/9840)
  - **[delivery]** Fixed the `argocd-repo-server` and `argocd-server` Services with multiple ports broken by Helm. [#9573](https://github.com/deckhouse/deckhouse/pull/9573)
+ - **[dhctl]** Fix empty registry credentials preflight check failure. [#10226](https://github.com/deckhouse/deckhouse/pull/10226)
  - **[dhctl]** Do not return error if deckhouse release exists. [#10164](https://github.com/deckhouse/deckhouse/pull/10164)
  - **[dhctl]** Only one resource will create for namespace if it namespace does not exist. [#10159](https://github.com/deckhouse/deckhouse/pull/10159)
  - **[dhctl]** Fix panic during creation resources and add timestamps to debug log. [#10070](https://github.com/deckhouse/deckhouse/pull/10070)
