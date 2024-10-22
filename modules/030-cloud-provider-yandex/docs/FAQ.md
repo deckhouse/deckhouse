@@ -48,7 +48,7 @@ If the dhcpOptions parameter is set, all DNS are routed to the DNS servers speci
 ## How to set a custom StorageClass as default?
 
 Specify the StorageClass name in the [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass) parameter in the `global` module settings.
-Note that after doing so, the `storageclass.kubernetes.io/is-default-class='true'` annotation will be removed from the StorageClass that was previously be as the default one.
+Note that after doing so, the `storageclass.kubernetes.io/is-default-class='true'` annotation will be removed from the StorageClass that was previously set as the default one.
 
 ```shell
 kubectl edit mc global
