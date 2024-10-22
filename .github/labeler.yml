@@ -49,9 +49,6 @@ type/dependencies:
   - '**/go.mod'
   - '**/go.sum'
 
-area/delivery:
-  - ee/modules/502-delivery/**
-
 area/docs:
   - '**/docs/**'
   - docs/**
