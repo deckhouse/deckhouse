@@ -110,7 +110,7 @@ func checkAuthn(header http.Header, scope string) error {
 }
 
 func initProxyTransport() {
-	kubeCA, _ := os.ReadFile("/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	kubeCA, _ := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
 	kubeCertPool := x509.NewCertPool()
 	kubeCertPool.AppendCertsFromPEM(kubeCA)
 
