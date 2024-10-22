@@ -15,4 +15,3 @@ USER 1000
 ENTRYPOINT ["/opt/kiali/kiali"]
 
 CMD ["kiali"]
- 
