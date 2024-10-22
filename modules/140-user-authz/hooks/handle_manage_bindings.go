@@ -128,11 +128,10 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 func syncBindings(input *go_hook.HookInput) error {
 	expected := make(map[string]bool)
 	for _, snap := range input.Snapshots["manageBindings"] {
-		binding := snap.(*filteredManageBinding)
-		splits := strings.Split(binding.RoleName, ":")
-		for _, namespace := range matchRole(input.Snapshots["manageRoles"], binding.RoleName) {
-			input.PatchCollector.Create(createBinding(binding.Name, namespace, splits[len(splits)-1], binding.Subjects), object_patch.UpdateIfExists())
-			expected[fmt.Sprintf("d8:use:binding:%s", binding.Name)] = true
+		for _, namespace := range matchRole(input.Snapshots["manageRoles"], snap.(*filteredManageBinding).RoleName) {
+			binding := createBinding(snap.(*filteredManageBinding), namespace)
+			input.PatchCollector.Create(binding, object_patch.UpdateIfExists())
+			expected[binding.Name] = true
 		}
 	}
 
@@ -186,26 +185,27 @@ func matchAggregationRule(rule *rbacv1.AggregationRule, roleLabels map[string]st
 	return false
 }
 
-func createBinding(relatedWith, namespace, roleName string, subjects []rbacv1.Subject) *rbacv1.RoleBinding {
+func createBinding(binding *filteredManageBinding, namespace string) *rbacv1.RoleBinding {
+	splits := strings.Split(binding.RoleName, ":")
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RoleBinding",
 			APIVersion: "rbac.authorization.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("d8:use:binding:%s", relatedWith),
+			Name:      fmt.Sprintf("d8:use:binding:%s", binding.Name),
 			Namespace: namespace,
 			Labels: map[string]string{
 				"heritage":                       "deckhouse",
 				"rbac.deckhouse.io/automated":    "true",
-				"rbac.deckhouse.io/related-with": relatedWith,
+				"rbac.deckhouse.io/related-with": binding.Name,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     fmt.Sprintf("d8:use:role:%s", roleName),
+			Name:     fmt.Sprintf("d8:use:role:%s", splits[len(splits)-1]),
 		},
-		Subjects: subjects,
+		Subjects: binding.Subjects,
 	}
 }
