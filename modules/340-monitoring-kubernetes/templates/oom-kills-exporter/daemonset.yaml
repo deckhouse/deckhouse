@@ -40,7 +40,7 @@ metadata:
 spec:
   updateStrategy:
     rollingUpdate:
-      maxUnavailable: 1
+      maxUnavailable: 100%
     type: RollingUpdate
   selector:
     matchLabels:
