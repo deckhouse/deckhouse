@@ -53,9 +53,9 @@ properties:
     enum: ["SNAT", "Hybrid", "DSR"]
     description: |
       eBPF LoadBalancer mode:
-      - `SNAT` - traffic from the client to the pod (and back) passes through NAT, and accordingly the sender's address is lost.
-      - `DSR` - traffic from the client to the pod passes with the sender's address preserved, and back - according to the routing rules (bypassing the balancer). This mode saves network traffic and reduces delays, but only works for TCP traffic.
-      - `Hybrid` - TCP traffic is processed in DSR mode, and UDP traffic is processed in SNAT mode.
+      - `SNAT` — traffic from the client to the pod (and back) passes through NAT, and accordingly the sender's address is lost.
+      - `DSR` — traffic from the client to the pod passes with the sender's address preserved, and back - according to the routing rules (bypassing the balancer). This mode saves network traffic and reduces delays, but only works for TCP traffic.
+      - `Hybrid` — TCP traffic is processed in DSR mode, and UDP traffic is processed in SNAT mode.
 
   resourcesManagement:
     description: |
