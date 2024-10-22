@@ -111,6 +111,7 @@ spec:
   {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         {{- include "longterm_config_reloader_resources" . | nindent 8 }}
   {{- end }}
+  {{- if or (eq .Values.prometheus.longtermPodAntiAffinity "preferred") (not .Values.prometheus.longtermPodAntiAffinity) }}
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -121,6 +122,14 @@ spec:
               app.kubernetes.io/name: prometheus
               prometheus: main
           topologyKey: kubernetes.io/hostname
+  {{- elseif eq .Values.prometheus.longtermPodAntiAffinity "required" }}
+      requiredDuringSchedulingIgnoredDuringExecution:
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: prometheus
+            prometheus: main
+        topologyKey: kubernetes.io/hostname
+  {{- end }}
   scrapeInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
   evaluationInterval: {{ .Values.prometheus.longtermScrapeInterval | default "5m" }}
 {{- if .Values.global.modules.publicDomainTemplate }}
