@@ -127,10 +127,10 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 func syncBindings(input *go_hook.HookInput) error {
 	expected := make(map[string]bool)
 	for _, snap := range input.Snapshots["manageBindings"] {
-		for namespace := range matchRole(input.Snapshots["manageRoles"], snap.(*filteredManageBinding).RoleName) {
-			binding := createBinding(snap.(*filteredManageBinding), namespace)
-			input.PatchCollector.Create(binding, object_patch.UpdateIfExists())
-			expected[binding.Name] = true
+		for namespace := range namespacesByRole(input.Snapshots["manageRoles"], snap.(*filteredManageBinding).RoleName) {
+			input.LogEntry.Infof("ensure the '%s', use binding", fmt.Sprintf("d8:use:binding:%s", snap.(*filteredManageRole).Name))
+			input.PatchCollector.Create(createBinding(snap.(*filteredManageBinding), namespace), object_patch.UpdateIfExists())
+			expected[fmt.Sprintf("d8:use:binding:%s", snap.(*filteredManageRole).Name)] = true
 		}
 	}
 
@@ -138,6 +138,7 @@ func syncBindings(input *go_hook.HookInput) error {
 	for _, snap := range input.Snapshots["useBindings"] {
 		existing := snap.(*filteredUseBinding)
 		if _, ok := expected[existing.RoleName]; !ok {
+			input.LogEntry.Infof("delete the '%s', use binding", existing.RoleName)
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
 	}
@@ -145,7 +146,7 @@ func syncBindings(input *go_hook.HookInput) error {
 	return nil
 }
 
-func matchRole(manageRoles []go_hook.FilterResult, roleName string) map[string]bool {
+func namespacesByRole(manageRoles []go_hook.FilterResult, roleName string) map[string]bool {
 	var found *filteredManageRole
 	for _, snap := range manageRoles {
 		if role := snap.(*filteredManageRole); role.Name == roleName {
