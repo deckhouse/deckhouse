@@ -3,7 +3,7 @@ title: "The cni-cilium module"
 description: The cni-cilium module provides networking in a cluster using the Cilium module.
 ---
 
-The `cni-cilium module` provides a network in a cluster using the [Cilium](https://cilium.io/) module.
+The `cni-cilium module` provides a network in a cluster. It is based on the [Cilium](https://cilium.io/) project.
 
 ## Limitations
 
