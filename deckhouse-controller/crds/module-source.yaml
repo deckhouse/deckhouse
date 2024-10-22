@@ -64,7 +64,7 @@ spec:
                       x-doc-examples: ['registry.example.io/deckhouse/modules']
                     dockerCfg:
                       type: string
-                      description: Container registry access token in Base64.
+                      description: Container registry access token in Base64. If using anonymous access to the container registry, do not fill in this field.
                     ca:
                       type: string
                       description: |
