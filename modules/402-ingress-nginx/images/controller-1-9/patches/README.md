@@ -61,3 +61,7 @@ Build nginx for controller on ALT Linux.
 ### GeoIP
 
 https://github.com/kubernetes/ingress-nginx/pull/10495
+
+### new metrics
+
+This patch adds worker max connections, worker processes and worker max open files metrics.
