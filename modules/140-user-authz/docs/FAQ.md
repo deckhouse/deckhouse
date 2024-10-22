@@ -64,3 +64,191 @@ Because `Jane Doe` matches two rules, some calculations will be made:
 * The `namespaceSelector` options will be combined, so that Jane will have access to all the namespaces labeled with `env` label of the following values: `review`, `stage`, or `prod`.
 
 > **Note!** If there is a rule without the `namespaceSelector` option and `limitNamespaces` deprecated option, it means that all namespaces are allowed excluding system namespaces, which will affect the resulting limit namespaces calculation.
+
+## How to expand roles or create a new one ?
+
+The new model facilities the principles of aggregation, it combines smaller roles into larger ones, so it can be easily expanded.
+
+1. Creating a new scope role
+
+   Suppose that the current scopes roles do not match the company's role model and a new role, 
+   that contains the user-authn module and the deckhouse and kubernetes scopes, needs to be created.
+
+   To solve it, the following role can be created:
+
+    ```yaml
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: custom:manage:custom:admin
+      labels:
+        rbac.deckhouse.io/kind: manage
+        rbac.deckhouse.io/level: scope
+        rbac.deckhouse.io/scope: custom
+        rbac.deckhouse.io/aggregate-to-all-as: admin
+    aggregationRule:
+      clusterRoleSelectors:
+        - matchLabels:
+            rbac.deckhouse.io/kind: manage
+            rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+        - matchLabels:
+            rbac.deckhouse.io/kind: manage
+            rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
+        - matchLabels:
+            rbac.deckhouse.io/kind: manage
+            module: user-authn
+    rules: []
+    ```
+
+   Let`s look at the role. firstly, we need to specify labels:
+    - This label needs to handle this role as a manage role.
+    ```yaml
+    rbac.deckhouse.io/kind: manage
+    ```
+
+    - This label shows that the role is a scope level role.
+    ```yaml
+    rbac.deckhouse.io/level: scope
+    ```
+
+    - This label specify the scope of the role.
+    ```yaml
+    rbac.deckhouse.io/scope: custom
+    ```
+
+    - This label lets the manage:all role to aggregate this role.
+    ```yaml
+    rbac.deckhouse.io/aggregate-to-all-as: admin
+    ```
+   The next moments implement aggregation:
+    - This selector aggregates role admin from the deckhouse scope.
+    ```yaml
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+    ```
+    - This selector aggregates all roles from the user-authn module.
+   ```yaml
+    rbac.deckhouse.io/kind: manage
+    module: user-authn
+   ```
+   
+   So our role gets permissions in deckhouse, kubernetes scopes and in the user-authn module.
+    * Use roles will be created in th scopes namespaces and in the module`s namespace.
+    * No restrictions on names, but for readability keep them this way.
+
+2. Expand a custom role.
+
+   Suppose that a new CRD cluster object has been created (this is an example for a manage role) - MySuperResource,
+   and we need to expand our role (from the example above) to get new permissions to interact with the object.
+
+   First, we need to add a new selector to our scope role:
+    ```yaml
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/aggregate-to-custom-as: admin
+    ```
+   This selector allows us to aggregate roles(capability) to our new scope using this label.
+   After adding this selector, the role is:
+    ```yaml
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: custom:manage:custom:admin
+      labels:
+        rbac.deckhouse.io/kind: manage
+        rbac.deckhouse.io/level: scope
+        rbac.deckhouse.io/scope: custom
+        rbac.deckhouse.io/aggregate-to-all-as: admin
+    aggregationRule:
+      clusterRoleSelectors:
+        - matchLabels:
+            rbac.deckhouse.io/kind: manage
+            rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+        - matchLabels:
+            rbac.deckhouse.io/kind: manage
+            rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
+        - matchLabels:
+            rbac.deckhouse.io/kind: manage
+            module: user-authn
+        - matchLabels:
+            rbac.deckhouse.io/kind: manage
+            rbac.deckhouse.io/aggregate-to-custom-as: admin
+    rules: []
+    ```
+
+   Then we need to create a new role(capability) and specify permissions, for example add read, list and watch verbs:
+    ```yaml
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      labels:
+        rbac.deckhouse.io/aggregate-to-custom-as: admin
+        rbac.deckhouse.io/kind: manage
+      name: custom:manage:capability:custom:superresource:view
+    rules:
+    - apiGroups:
+      - mygroup.io
+      resources:
+      - mysuperresources
+      verbs:
+      - get
+      - list
+      - watch
+    ```
+
+   Aggregation is defined by this label.
+    ```yaml
+    rbac.deckhouse.io/aggregate-to-custom-as: admin
+    ```
+
+   And this role complements our scope role.
+
+    * No restrictions on names, but for readability keep them this way.
+
+3. Expand exising manage roles.
+
+   If we want to expand an existing scope role, we can use method above, but change the aggregation label and name.
+   Example to expand the deckhouse scope role(d8:manage:deckhouse:admin):
+    ```yaml
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      labels:
+        rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+        rbac.deckhouse.io/kind: manage
+      name: custom:manage:capability:custom:superresource:view
+    rules:
+    - apiGroups:
+      - mygroup.io
+      resources:
+      - mysuperresources
+      verbs:
+      - get
+      - list
+      - watch
+    ```
+   
+    And this role complements the d8:manage:deckhouse role.
+
+4. Expand existing use roles.
+
+   If our resource is namespaced, we need to expand the use role instead of the manage role. The difference is labels and name:
+    ```yaml
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      labels:
+        rbac.deckhouse.io/aggregate-to-role: user
+        rbac.deckhouse.io/kind: use
+      name: custom:use:capability:custom:superresource:view
+    rules:
+    - apiGroups:
+      - mygroup.io
+      resources:
+      - mysuperresources
+      verbs:
+      - get
+      - list
+      - watch
+    ```
+
+   And this role complements the d8:use:role:user role.
