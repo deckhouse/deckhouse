@@ -104,7 +104,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-monitoring:alerts-receiver",
 	"system:serviceaccount:d8-monitoring:cert-exporter",
 	"system:serviceaccount:d8-monitoring:control-plane-proxy",
-	"system:serviceaccount:d8-monitoring:oom-kills-exporterer",
+	"system:serviceaccount:d8-monitoring:events-exporter",
 	"system:serviceaccount:d8-monitoring:extended-monitoring-exporter",
 	"system:serviceaccount:d8-monitoring:grafana",
 	"system:serviceaccount:d8-monitoring:image-availability-exporter",
