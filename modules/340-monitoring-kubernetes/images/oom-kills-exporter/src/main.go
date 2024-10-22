@@ -75,7 +75,7 @@ func main() {
 			_, _ = w.Write([]byte("ok"))
 		})
 		http.Handle("/metrics", handler)
-		log.Fatal(http.ListenAndServe("127.0.0.2:4205", nil))
+		log.Fatal(http.ListenAndServe("127.0.0.1:4205", nil))
 	}()
 
 	kmsgWatcher := kmsg.NewKmsgWatcher(types.WatcherConfig{Plugin: "kmsg", Lookback: "240h"})
