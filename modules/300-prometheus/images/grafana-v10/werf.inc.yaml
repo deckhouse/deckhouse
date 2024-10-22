@@ -79,7 +79,6 @@ shell:
   install:
   - cd /app
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod tidy
   - go test ./... -v
   - go build -ldflags="-s -w" -o entrypoint main.go
   - chown -R 64535:64535 /app/
