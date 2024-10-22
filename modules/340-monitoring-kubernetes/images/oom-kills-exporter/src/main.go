@@ -27,16 +27,13 @@ import (
 )
 
 var (
-	// defaultPattern = `^oom-kill.*(global_oom)?,.*(?:oom_memcg=([^,]+))?,.*(?:task_memcg=([^,]+))?`
-	defaultPattern = `^oom-kill:(.+)`
-	kmesgRE        = regexp.MustCompile(defaultPattern)
-	local          = prometheus.NewRegistry()
+	local = prometheus.NewRegistry()
 )
 
 func getContainerIDFromLog(line string) (string, string, string, error) {
 	var globalOom, oomMemcg, taskMemcg string
 	globalOom = "0"
-	if matches := kmesgRE.FindStringSubmatch(line); matches != nil {
+	if matches := regexp.MustCompile(`^oom-kill:(.+)`).FindStringSubmatch(line); matches != nil {
 		for _, word := range strings.Split(matches[0], ",") {
 			switch {
 			case strings.Contains(word, "global_oom"):
