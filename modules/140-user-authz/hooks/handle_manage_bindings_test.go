@@ -65,7 +65,8 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 			resources := []string{
 				manageModuleRole("d8:manage:capability:module:test:edit", "others", "test-ns"),
 				manageModuleRole("d8:manage:capability:module:test2:edit", "others", "test2-ns"),
-				manageScopeRole("d8:manage:all:admin", "all", ""),
+				manageScopeRole("d8:manage:others:admin", "scope", "others"),
+				manageScopeRole("d8:manage:all:admin", "all", "all"),
 				manageScopeBinding("test", "d8:manage:all:admin"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
@@ -119,11 +120,17 @@ func manageScopeRole(name, level, scope string) string {
 				"heritage":                "deckhouse",
 				"rbac.deckhouse.io/level": level,
 				"rbac.deckhouse.io/kind":  "manage",
+				"rbac.deckhouse.io/scope": scope,
 			},
 		},
-	}
-	if scope != "" {
-		role.Labels["rbac.deckhouse.io/scope"] = scope
+		AggregationRule: &rbacv1.AggregationRule{ClusterRoleSelectors: []metav1.LabelSelector{
+			{
+				MatchLabels: map[string]string{
+					"rbac.deckhouse.io/kind":                                   "manage",
+					fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", scope): "admin",
+				},
+			},
+		}},
 	}
 	marshaled, _ := yaml.Marshal(&role)
 	return string(marshaled)
@@ -158,6 +165,12 @@ func manageScopeBinding(name, role string) string {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
+			Labels: map[string]string{
+				"heritage":                              "deckhouse",
+				"rbac.deckhouse.io/kind":                "manage",
+				"rbac.deckhouse.io/level":               "scope",
+				"rbac.deckhouse.io/aggregate-to-all-as": "admin",
+			},
 		},
 		Subjects: []rbacv1.Subject{
 			{
