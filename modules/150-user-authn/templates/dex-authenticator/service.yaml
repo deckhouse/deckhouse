@@ -1,13 +1,12 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
   {{- range $app := $crd.spec.applications }}
-  {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $crd.name }}-dex-authenticator-{{ $hashedDomain }}
-  namespace: {{ $crd.namespace }}
+  name: {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator
+  namespace: {{ $crd.metadata.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
   ports:
@@ -16,6 +15,6 @@ spec:
     targetPort: dex-https
   selector:
     app: dex-authenticator
-    name: {{ $crd.name }}-{{ $hashedDomain }}
-{{- end }}
+    applicationName: {{ $app.applicationName }}
+  {{- end }}
 {{- end }}

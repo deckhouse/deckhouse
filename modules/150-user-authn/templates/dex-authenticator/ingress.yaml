@@ -1,7 +1,6 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
-{{- range $app := $crd.spec.applications }}
-{{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
+  {{- range $app := $crd.spec.applications }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -14,18 +13,18 @@ metadata:
   {{- if $crd.spec.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ $crd.spec.whitelistSourceRanges | join "," }}
   {{- end }}
-  name: {{ $crd.name }}-dex-authenticator-{{ $hashedDomain }}
-  namespace: {{ $crd.namespace }}
+  name: {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator
+  namespace: {{ $crd.metadata.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
   ingressClassName: {{ $app.ingressClassName }}
   rules:
-  - host: {{ $app.domain }}
+  - host: {{ $app.domainName }}
     http:
       paths:
       - backend:
           service:
-            name: {{ $crd.name }}-dex-authenticator
+            name: {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator
             port:
               number: 443
         path: /dex-authenticator
@@ -34,7 +33,7 @@ spec:
     {{- if $app.ingressSecretName }}
   tls:
   - hosts:
-    - {{ $app.domain }}
+    - {{ $app.domainName }}
     secretName: {{ $app.ingressSecretName }}
     {{- end }}
   {{- end }}
@@ -47,18 +46,18 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
-  name: {{ $crd.name }}-dex-authenticator-sign-out-{{ $hashedDomain }}
-  namespace: {{ $crd.namespace }}
+  name: {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator-sign-out
+  namespace: {{ $crd.metadata.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
   ingressClassName: {{ $app.ingressClassName }}
   rules:
-  - host: {{ $app.domain }}
+  - host: {{ $app.domainName }}
     http:
       paths:
       - backend:
           service:
-            name: {{ $crd.name }}-dex-authenticator
+            name: {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator
             port:
               number: 443
         path: {{ $crd.spec.signOutURL }}
@@ -67,10 +66,10 @@ spec:
       {{- if $app.ingressSecretName }}
   tls:
   - hosts:
-    - {{ $app.domain }}
+    - {{ $app.domainName }}
     secretName: {{ $app.ingressSecretName }}
       {{- end }}
     {{- end }}
   {{- end }}
-{{- end }}
+  {{- end }}
 {{- end }}

@@ -168,10 +168,15 @@ spec:
                   items:
                     type: object
                     required:
-                      - domain
+                      - applicationName
+                      - domainName
                       - ingressClassName
                     properties:
-                      domain:
+                      applicationName:
+                        type: string
+                        description: 'Name of the application.'
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                      domainName:
                         type: string
                         description: 'Public domain for the application. Must be specified **without** HTTP scheme.'
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -208,10 +213,15 @@ spec:
                   items:
                     type: object
                     required:
-                      - domain
+                      - domainName
+                      - applicationName
                       - ingressClassName
                     properties:
-                      domain:
+                      applicationName:
+                        type: string
+                        description: 'Name of the application.'
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                      domainName:
                         type: string
                         description: 'Public domain for the application. Must be specified **without** HTTP scheme.'
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'

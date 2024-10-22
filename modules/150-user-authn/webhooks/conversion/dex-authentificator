@@ -48,13 +48,21 @@ function __on_conversion::v2alpha1_to_v1alpha1() {
     if .apiVersion == "deckhouse.io/v2alpha1" then
       .apiVersion = "deckhouse.io/v1alpha1" |
       .spec += {
-        applicationDomain: .spec.applications[0].domain,
+        applicationDomain: .spec.applications[0].domainName,
         applicationIngressCertificateSecretName: .spec.applications[0].ingressSecretName,
         applicationIngressClassName: .spec.applications[0].ingressClassName,
-        additionalApplications: .spec.applications[1:]
+        additionalApplications: (
+          if (.spec.applications | length) > 1 then
+            .spec.applications[1:]
+          else
+            null
+          end
+        )
       } |
-      del(.spec.applications)
-    else . end
+      del(.spec.applications) |
+      (if .spec.additionalApplications == null then del(.spec.additionalApplications) else . end)
+    else .
+    end
   )'); then
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
 {"convertedObjects": $converted}
@@ -100,21 +108,25 @@ EOF
 
 function __on_conversion::v1alpha1_to_v2alpha1() {
   if converted=$(context::jq -r '.review.request.objects//[] | map(
+    .metadata as $meta |
+    $meta.name,  # Print the metadata.name for verification
     if .apiVersion == "deckhouse.io/v1alpha1" then
       .apiVersion = "deckhouse.io/v2alpha1" |
-      .spec += {
-        applications: (
-          [
-            {
-              domain: .spec.applicationDomain,
-              ingressSecretName: .spec.applicationIngressCertificateSecretName,
-              ingressClassName: .spec.applicationIngressClassName
-            }
-          ] + (.spec.additionalApplications // [])
-        )
+      .spec |= {
+        applications: ([
+          {
+            applicationName: $meta.name,
+            domainName: .applicationDomain,
+            ingressSecretName: .applicationIngressCertificateSecretName,
+            ingressClassName: .applicationIngressClassName
+          }
+        ] + (.additionalApplications // []))
       } |
       del(.spec.applicationDomain, .spec.applicationIngressCertificateSecretName, .spec.applicationIngressClassName, .spec.additionalApplications)
-    else . end'); then
+    else
+      .
+    end
+'); then
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
 {"convertedObjects": $converted}
 EOF
@@ -124,6 +136,5 @@ EOF
 EOF
   fi
 }
-
 
 hook::run "$@"
