@@ -22,7 +22,6 @@ mount:
 shell:
   install:
     - cd /src
-    - go mod tidy
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags='-extldflags "-static" -s -w' -o ./protobuf_exporter ./main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}

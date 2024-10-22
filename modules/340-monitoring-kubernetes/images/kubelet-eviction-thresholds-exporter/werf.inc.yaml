@@ -41,7 +41,6 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod tidy
   - go test ./... -v
   - go build -ldflags="-s -w" -o loop main.go
   - chown -R 64535:64535 /src/

@@ -36,7 +36,6 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64
     - cd /src/dex
-    - go mod tidy
     - go build -ldflags '-s -w' -ldflags "-linkmode external -extldflags -static" -tags netgo ./cmd/dex
     - chown 64535:64535 dex
     - chmod 0700 dex

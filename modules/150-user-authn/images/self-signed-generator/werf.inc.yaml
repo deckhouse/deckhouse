@@ -1,6 +1,7 @@
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: src-artifact
+fromCacheVersion: 20241022
 git:
 - add: /{{ $.ModulePath }}modules/150-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
@@ -22,7 +23,6 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd src/
-    - go mod tidy
     - go build -ldflags="-w -s" -o self-signed-generator main.go
     - chown 64535:64535 self-signed-generator
     - chmod 0700 self-signed-generator

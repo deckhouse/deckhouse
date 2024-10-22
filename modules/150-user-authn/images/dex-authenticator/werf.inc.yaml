@@ -34,11 +34,9 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 
     - cd /src/oauth2-proxy
-    - go mod tidy
     - go build -ldflags '-s -w' -o oauth2-proxy github.com/oauth2-proxy/oauth2-proxy/v7
 
     - cd /src/url-exec-prober/
-    - go mod tidy
     - go build -ldflags '-s -w' -o url-exec-prober main.go
 
     - chown 64535:64535 /src/url-exec-prober/url-exec-prober /src/oauth2-proxy/oauth2-proxy

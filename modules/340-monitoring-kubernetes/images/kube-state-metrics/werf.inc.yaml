@@ -40,7 +40,6 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod tidy
   - make build-local
   - chown 64535:64535 /src/kube-state-metrics
   - chmod 0700 /src/kube-state-metrics
