@@ -31,7 +31,7 @@ git:
   to: /patches
   stageDependencies:
     install:
-      - '**/*'    
+      - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch v1.1.5 {{ .SOURCE_REPO }}/trickstercache/trickster.git /src/trickster
@@ -56,7 +56,6 @@ shell:
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod tidy
   - make build
   - chown -R 64535:64535 /src
   - chmod 0700 /src/OPATH/trickster
