@@ -1147,6 +1147,22 @@ a.comparison-table__module-proprietaryOkmeter::after {
     overflow: auto;
 }
 
+.docs table .tippy-content table {
+    background-color: $background-blue;
+    text-align: left;
+    color: #5E6697;
+    font-size: 0.8750em;
+    font-weight: 700;
+    line-height: 1.5em;
+    letter-spacing: 0.3px;
+    font-style: normal;
+    font-stretch: normal;
+}
+
+.docs .tippy-content .text-position {
+    text-align: center;
+}
+
 .docs table {
     width: 100%;
     border-spacing: 0;

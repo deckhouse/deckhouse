@@ -16,10 +16,10 @@ osDistributions:
         <table>
           <thead>
             <tr>
-              <th>Kernel Image</th>
-              <th>cilium</th>
-              <th>runtime-audit-engine</th>
-              <th>btf</th>
+              <th>Версия ядра</th>
+              <th>Модуль cni-cilium</th>
+              <th>Модуль runtime-audit-engine</th>
+              <th>Модуль btf</th>
             </tr>
           </thead>
           <tbody>
