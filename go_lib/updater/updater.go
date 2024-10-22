@@ -375,12 +375,13 @@ func (u *Updater[R]) predictedRelease() *R {
 	return predictedRelease
 }
 
-func (u *Updater[R]) deployedRelease() *R {
+func (u *Updater[R]) DeployedRelease() *R {
 	if u.currentDeployedReleaseIndex == -1 {
 		return nil // has no deployed
 	}
 
 	deployedRelease := &(u.releases[u.currentDeployedReleaseIndex])
+	u.logger.Debugf("Deployed release found by updater: %v", deployedRelease)
 
 	return deployedRelease
 }
