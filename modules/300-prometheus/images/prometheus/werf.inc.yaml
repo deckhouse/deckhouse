@@ -75,7 +75,6 @@ shell:
   install:
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
-  - go mod tidy
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-node-artifact
@@ -116,7 +115,6 @@ shell:
   install:
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
-  - go mod tidy
   - go generate -tags plugins ./plugins
   - /bin/promu build --prefix /src
   - mkdir -p /empty
