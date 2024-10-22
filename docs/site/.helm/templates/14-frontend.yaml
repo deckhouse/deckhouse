@@ -55,7 +55,7 @@ spec:
           command:
             - "/app/server"
             - "-highAvailability={{pluck .Values.werf.env .Values.docsBuilder.highAvailability | first | default .Values.docsBuilder.highAvailability._default}}"
-          image: {{ index .Values.werf.image "docs-builder" }}
+          image: {{ index .Values.werf.image "docs/builder" }}
           {{- include "resources" . | nindent 10 }}
           env:
             - name: HUGO_ENVIRONMENT

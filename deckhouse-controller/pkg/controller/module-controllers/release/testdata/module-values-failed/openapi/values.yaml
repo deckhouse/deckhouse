@@ -1,0 +1,13 @@
+type: object
+additionalProperties: false
+required:
+  - project
+  - clusterName
+minProperties: 2
+properties:
+  param1:
+    type: string
+    enum:
+      - val1
+  param2:
+    type: ssttrriingg

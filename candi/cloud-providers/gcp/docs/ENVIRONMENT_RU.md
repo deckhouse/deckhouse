@@ -3,9 +3,13 @@ title: "Cloud provider — GCP: подготовка окружения"
 description: "Настройка GCP для работы облачного провайдера Deckhouse."
 ---
 
+{% include notice_envinronment.liquid %}
+
 Чтобы Deckhouse мог управлять ресурсами, в Google Cloud необходимо создать service account. Далее представлена краткая последовательность действий по созданию service account. Если вам необходима более подробная инструкция, вы можете найти ее [в документации провайдера](https://cloud.google.com/iam/docs/service-accounts).
 
-> **Внимание!** Созданный `service account key` невозможно восстановить, только удалить и создать новый.
+{% alert level="warning" %}
+**Внимание!** Созданный `service account key` невозможно восстановить, только удалить и создать новый.
+{% endalert %}
 
 ## Настройка через Google Cloud Console
 

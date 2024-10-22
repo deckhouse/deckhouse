@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -37,15 +38,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 )
 
 var (
@@ -79,15 +83,19 @@ func (suite *ReleaseControllerTestSuite) SetupSuite() {
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	suite.tmpDir = suite.T().TempDir()
 	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
-	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
+	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0o777)
 }
 
 func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
+	if suite.T().Skipped() {
+		return
+	}
+
 	goldenFile := filepath.Join("./testdata/releaseController", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, gotB, 0666)
+		err := os.WriteFile(goldenFile, gotB, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
 		got := singleDocToManifests(gotB)
@@ -108,7 +116,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	require.NoError(suite.T(), err)
 	suite.Run("testdata cases", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"openapi/values.yaml": "{}}"}}}, nil
+			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 
 		suite.Run("simple", func() {
@@ -172,7 +180,69 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			_, err = suite.ctr.reconcileDeployedRelease(context.TODO(), mr)
 			require.NoError(suite.T(), err)
 		})
+
+		suite.Run("loop until deploy: canary", func() {
+			dc := dependency.NewMockedContainer()
+			dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}}, nil
+			}}, nil)
+
+			mup := &v1alpha1.ModuleUpdatePolicySpec{
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode:    "Auto",
+					Windows: update.Windows{{From: "00:00", To: "24:00", Days: []string{"tue"}}},
+				},
+				ReleaseChannel: "Stable",
+			}
+
+			testData := suite.fetchTestFileData("loop-canary.yaml")
+			suite.setupReleaseController(string(testData), withModuleUpdatePolicy(mup), withDependencyContainer(dc))
+			suite.loopUntilDeploy(dc, suite.testMRName)
+		})
+
+		suite.Run("install new module in manual mode with deckhouse release approval annotation", func() {
+			suite.setupReleaseController(string(suite.fetchTestFileData("new-module-manual-mode.yaml")))
+			mr := suite.getModuleRelease(suite.testMRName)
+			ctx := context.Background()
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			require.NoError(suite.T(), err)
+		})
 	})
+}
+
+func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
+	const maxIterations = 3
+	suite.T().Skip("TODO: requeue all releases after got deckhouse module config update")
+
+	var (
+		result = ctrl.Result{Requeue: true}
+		err    error
+		i      int
+	)
+
+	// Setting restartReason field in real code causes the process to reboot.
+	// And at the next startup, Reconcile will be called for existing objects.
+	// Therefore, this condition emulates the behavior in real code.
+	for result.Requeue || result.RequeueAfter > 0 || suite.ctr.restartReason != "" {
+		suite.ctr.restartReason = ""
+		dc.GetFakeClock().Advance(result.RequeueAfter)
+
+		dr := suite.getModuleRelease(releaseName)
+		if dr.Status.Phase == v1alpha1.PhaseDeployed {
+			return
+		}
+
+		result, err = suite.ctr.createOrUpdateReconcile(context.TODO(), dr)
+		require.NoError(suite.T(), err)
+
+		i++
+		if i > maxIterations {
+			suite.T().Fatal("Too many iterations")
+		}
+		suite.ctr.logger.Infof("Iteration %d result: %+v\n", i, result)
+	}
+
+	suite.T().Fatal("Loop was broken")
 }
 
 func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() error {
@@ -194,7 +264,21 @@ func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() error {
 	return nil
 }
 
-func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string) {
+type reconcilerOption func(*moduleReleaseReconciler)
+
+func withModuleUpdatePolicy(mup *v1alpha1.ModuleUpdatePolicySpec) reconcilerOption {
+	return func(r *moduleReleaseReconciler) {
+		r.deckhouseEmbeddedPolicy = helpers.NewModuleUpdatePolicySpecContainer(mup)
+	}
+}
+
+func withDependencyContainer(dc dependency.Container) reconcilerOption {
+	return func(r *moduleReleaseReconciler) {
+		r.dc = dc
+	}
+}
+
+func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string, options ...reconcilerOption) {
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
 	manifests["deckhouse-discovery"] = `
@@ -221,7 +305,7 @@ metadata:
 type: Opaque
 `
 
-	var initObjects = make([]client.Object, 0, len(manifests))
+	initObjects := make([]client.Object, 0, len(manifests))
 
 	for _, manifest := range manifests {
 		obj := suite.assembleInitObject(manifest)
@@ -248,6 +332,10 @@ type: Opaque
 			},
 			ReleaseChannel: "Stable",
 		}),
+	}
+
+	for _, option := range options {
+		option(rec)
 	}
 
 	suite.ctr = rec
@@ -339,11 +427,11 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 type stubModulesManager struct{}
 
 func (s stubModulesManager) DisableModuleHooks(_ string) {
-
 }
 
-func (s stubModulesManager) GetModule(_ string) *addonmodules.BasicModule {
-	return nil
+func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
+	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{})
+	return bm
 }
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
@@ -367,4 +455,37 @@ func singleDocToManifests(doc []byte) (result []string) {
 		}
 	}
 	return
+}
+
+func Test_validateModule(t *testing.T) {
+	log.SetOutput(io.Discard)
+
+	check := func(name string, failed bool) {
+		t.Helper()
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join("./testdata", name)
+			err := validateModule(
+				models.DeckhouseModuleDefinition{
+					Name:   name,
+					Weight: 900,
+					Path:   path,
+				},
+				nil,
+			)
+
+			if !failed {
+				require.NoError(t, err, "%s: unexpected error: %v", name, err)
+			}
+
+			if failed {
+				require.Error(t, err, "%s: got nil error", name)
+			}
+		})
+	}
+
+	check("module", false)
+	check("module-not-valid", true)
+	check("module-failed", true)
+	check("module-values-failed", true)
+	check("virtualization", false)
 }

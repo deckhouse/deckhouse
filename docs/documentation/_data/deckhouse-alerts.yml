@@ -10,6 +10,38 @@ alerts:
         There are unavailable instances in the {{ $labels.machine_deployment_name }} MachineDeployment.
       severity: "8"
       markupFormat: markdown
+    - name: CertificateSecretExpired
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificate.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Certificate in secret {{$labels.namespace}}/{{$labels.name}} expired.
+
+        - If the certificate is manually managed, upload a newer one.
+        - If the certificate is managed by cert-manager, try inspecting certificate resource, the recommended course of action:
+          1. Retrieve certificate name from the secret: `cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')`
+          2. View the status of the Certificate and try to figure out why it is not updated: `kubectl describe cert -m {{$labels.namespace}} "$cert"`
+      summary: |
+        Certificate expired
+      severity: "8"
+      markupFormat: markdown
+    - name: CertificateSecretExpiredSoon
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificate.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Certificate in secret {{$labels.namespace}}/{{$labels.name}} will expire in less than 2 weeks
+
+        - If the certificate is manually managed, upload a newer one.
+        - If certificate is managed by cert-manager, try inspecting certificate resource, the recommended course of action:
+          1. Retrieve certificate name from the secret: `cert=$(kubectl get secret -n {{$labels.namespace}} {{$labels.name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')`
+          2. View the status of the Certificate and try to figure out why it is not updated: `kubectl describe cert -n {{$labels.namespace}} "$cert"`
+      summary: |
+        Certificate will expire soon.
+      severity: "8"
+      markupFormat: markdown
     - name: CertmanagerCertificateExpired
       sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/certificate.yaml
       moduleUrl: 101-cert-manager
@@ -142,6 +174,148 @@ alerts:
         Found orphan EgressGatewayPolicy with irrelevant EgressGateway name
       severity: "4"
       markupFormat: markdown
+    - name: CPUStealHigh
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        The CPU steal is too high on the {{ $labels.node }} Node in the last 30 minutes.
+
+        Probably, some other component is stealing Node resources (e.g., a neighboring virtual machine). This may be the result of "overselling" the hypervisor. In other words, there are more virtual machines than the hypervisor can handle.
+      summary: |
+        CPU Steal on the {{ $labels.node }} Node is too high.
+      severity: "4"
+      markupFormat: default
+    - name: CronJobAuthenticationFailure
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Unable to login to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image in the `{{ $labels.namespace }}` Namespace; in the CronJob `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        Unable to login to the container registry using imagePullSecrets for the {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: CronJobAuthorizationFailure
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Insufficient privileges to pull the `{{ $labels.image }}` image using the `imagePullSecrets` specified in the `{{ $labels.namespace }}` Namespace; in the CronJob `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        Insufficient privileges to pull the {{ $labels.image }} image using the imagePullSecrets specified.
+      severity: "7"
+      markupFormat: markdown
+    - name: CronJobBadImageFormat
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        You should check whether the `{{ $labels.image }}` image name is spelled correctly: in the `{{ $labels.namespace }}` Namespace; in the CronJob `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The {{ $labels.image }} image has incorrect name.
+      severity: "7"
+      markupFormat: markdown
+    - name: CronJobFailed
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: ""
+      summary: |
+        Job {{$labels.namespace}}/{{$labels.job_name}} failed in CronJob {{$labels.namespace}}/{{$labels.owner_name}}.
+      severity: "5"
+      markupFormat: default
+    - name: CronJobImageAbsent
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        You should check whether the `{{ $labels.image }}` image is available: in the `{{ $labels.namespace }}` Namespace; in the CronJob `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The {{ $labels.image }} image is missing from the registry.
+      severity: "7"
+      markupFormat: markdown
+    - name: CronJobRegistryUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        The container registry is not available for the `{{ $labels.image }}` image: in the `{{ $labels.namespace }}` Namespace; in the CronJob `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The container registry is not available for the {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: CronJobSchedulingError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
+        Schedule: "{{ printf "kube_cronjob_info{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | label "schedule" }}"
+        Last schedule time: {{ printf "kube_cronjob_status_last_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%
+        Projected next schedule time: {{ printf "kube_cronjob_next_schedule_time{namespace=\"%s\", cronjob=\"%s\"}" $labels.namespace $labels.cronjob | query | first | value | humanizeTimestamp }}%
+      summary: |
+        CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
+      severity: "6"
+      markupFormat: markdown
+    - name: CronJobUnknownError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        An unknown error occurred for the  `{{ $labels.image }}` image
+        in the `{{ $labels.namespace }}` Namespace;
+        in the CronJob `{{ $labels.name }}`
+        in the `{{ $labels.container }}` container in the registry.
+
+        Refer to the exporter logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: |
+        An unknown error occurred for the  {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: CustomPodMonitorFoundInCluster
+      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
+      moduleUrl: 340-monitoring-custom
+      module: monitoring-custom
+      edition: ce
+      description: |-
+        There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
+
+        Use the following command for filtering: `kubectl get podmonitors --all-namespaces -l heritage!=deckhouse`.
+
+        They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
+
+        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
+      summary: |
+        There are PodMonitors in Deckhouse namespace that were not created by Deckhouse.
+      severity: "9"
+      markupFormat: markdown
+    - name: CustomServiceMonitorFoundInD8Namespace
+      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
+      moduleUrl: 340-monitoring-custom
+      module: monitoring-custom
+      edition: ce
+      description: |-
+        There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
+
+        Use the following command for filtering: `kubectl get servicemonitors --all-namespaces -l heritage!=deckhouse`.
+
+        They must be moved from Deckhouse namespace to user-spec namespace (was not labeled as `heritage: deckhouse`).
+
+        The detailed description of the metric collecting process is available in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
+      summary: |
+        There are ServiceMonitors in Deckhouse namespace that were not created by Deckhouse.
+      severity: "9"
+      markupFormat: markdown
     - name: D8AdmissionPolicyEngineNotBootstrapped
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/bootstrap.yaml
       moduleUrl: 015-admission-policy-engine
@@ -165,6 +339,58 @@ alerts:
       summary: |
         Bashible-apiserver is locked for too long
       severity: "6"
+      markupFormat: markdown
+    - name: D8CertExporterPodIsNotReady
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        The recommended course of action:
+        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy cert-exporter`
+        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=cert-exporter`
+      summary: |
+        The cert-exporter Pod is NOT Ready.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8CertExporterPodIsNotRunning
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        The recommended course of action:
+        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy cert-exporter`
+        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=cert-exporter`
+      summary: |
+        The cert-exporter Pod is NOT Running.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8CertExporterTargetAbsent
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=cert-exporter`
+
+        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=cert-exporter -c cert-exporter`
+      summary: |
+        There is no cert-exporter target in Prometheus.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8CertExporterTargetDown
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificates-exporter-health.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=cert-exporter`
+
+        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=cert-exporter -c cert-exporter`
+      summary: |
+        Prometheus cannot scrape the cert-exporter metrics.
+      severity: "8"
       markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
@@ -282,6 +508,23 @@ alerts:
       summary: |
         Controller Pod not running on Node {{ $labels.node }}
       severity: "6"
+      markupFormat: markdown
+    - name: D8CustomPrometheusRuleFoundInCluster
+      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
+      moduleUrl: 340-monitoring-custom
+      module: monitoring-custom
+      edition: ce
+      description: |-
+        There are PrometheusRules in the cluster that were not created by Deckhouse.
+
+        Use the following command for filtering: `kubectl get prometheusrules --all-namespaces -l heritage!=deckhouse`.
+
+        They must be abandoned and replaced with the `CustomPrometheusRules` object.
+
+        Please, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules) for information about adding alerts and/or recording rules.
+      summary: |
+        There are PrometheusRules in the cluster that were not created by Deckhouse.
+      severity: "9"
       markupFormat: markdown
     - name: D8DeckhouseConfigInvalid
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
@@ -664,6 +907,94 @@ alerts:
       summary: |
         Prometheus is unable to scrape Grafana metrics.
       severity: "6"
+      markupFormat: markdown
+    - name: D8HasModuleConfigAllowedToDisable
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        ModuleConfig is waiting for disable.
+
+        It is recommended to keep clean your module configurations from approve annotations.
+
+        If you ignore this alert and do not clear the annotation, it may cause the module to be accidentally removed from the cluster.
+
+        Removing a module from a cluster can lead to a number of irreparable consequences.
+
+        Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disable-` to stop this alert.
+      summary: |
+        ModuleConfig annotation for allow to disable is setted.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8ImageAvailabilityExporterMalfunctioning
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        The `image-availability-exporter` failed to perform any checks for the availability of images in the registry for over 20 minutes.
+
+        You need to analyze its logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: |
+        image-availability-exporter has crashed.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8ImageAvailabilityExporterPodIsNotReady
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        The images listed in the `image` field are not checked for availability in the container registry.
+
+        The recommended course of action:
+        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
+        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+      summary: |
+        The image-availability-exporter Pod is NOT Ready.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8ImageAvailabilityExporterPodIsNotRunning
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        The images listed in the `image` field are not checked for availability in the container registry.
+
+        The recommended course of action:
+        1. Retrieve details of the Deployment: `kubectl -n d8-monitoring describe deploy image-availability-exporter`
+        2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-monitoring describe pod -l app=image-availability-exporter`
+      summary: |
+        The image-availability-exporter Pod is NOT Running.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8ImageAvailabilityExporterTargetAbsent
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
+
+        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: |
+        There is no image-availability-exporter target in Prometheus.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8ImageAvailabilityExporterTargetDown
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Check the Pod status: `kubectl -n d8-monitoring get pod -l app=image-availability-exporter`
+
+        Or check the Pod logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: |
+        Prometheus cannot scrape the image-availability-exporter metrics.
+      severity: "8"
       markupFormat: markdown
     - name: D8IstioActualDataPlaneVersionNotEqualDesired
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
@@ -1341,6 +1672,38 @@ alerts:
         Okmeter agent is not Ready
       severity: "6"
       markupFormat: markdown
+    - name: D8OldPrometheusCustomTargetFormat
+      sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
+      moduleUrl: 340-monitoring-custom
+      module: monitoring-custom
+      edition: ce
+      description: |-
+        Services with the `prometheus-custom-target` label are used to collect metrics in the cluster.
+
+        Use the following command for filtering: `kubectl get service --all-namespaces --show-labels | grep prometheus-custom-target`.
+
+        Note that the label format has changed. You need to change the `prometheus-custom-target` label to `prometheus.deckhouse.io/custom-target`.
+
+        For more information, refer to the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html).
+      summary: |
+        Services with the prometheus-custom-target label are used to collect metrics in the cluster.
+      severity: "9"
+      markupFormat: markdown
+    - name: D8OldPrometheusTargetFormat
+      sourceFile: ee/fe/modules/340-monitoring-applications/monitoring/prometheus-rules/warnings/warnings.yaml
+      moduleUrl: 340-monitoring-applications
+      module: monitoring-applications
+      edition: fe
+      description: |-
+        Services with the `prometheus-target` label are used to collect metrics in the cluster.
+
+        Use the following command to filter them: `kubectl get service --all-namespaces --show-labels | grep prometheus-target`
+
+        Note that the label format has changed. You need to replace the `prometheus-target` label with `prometheus.deckhouse.io/target`.
+      summary: |
+        Services with the prometheus-target label are used to collect metrics in the cluster.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ProblematicNodeGroupConfiguration
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
@@ -1383,42 +1746,6 @@ alerts:
       summary: |
         There is no prometheus-longterm target in Prometheus.
       severity: "7"
-      markupFormat: markdown
-    - name: D8PrometheusMadisonErrorSendingAlerts
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/sending-alerts.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: Prometheus is unable to deliver 100% alerts.
-      summary: |
-        Prometheus is unable to deliver 100% alerts.
-      severity: "5"
-      markupFormat: default
-    - name: D8PrometheusMadisonErrorSendingAlerts
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/sending-alerts.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        Prometheus is unable to deliver 100% alerts through one or more madison-proxies.
-
-        You need to check the `madison-proxy` logs: `kubectl -n d8-monitoring logs -f -l app=madison-proxy`
-      summary: |
-        Prometheus is unable to deliver 100% alerts through one or more madison-proxies.
-      severity: "6"
-      markupFormat: markdown
-    - name: D8PrometheusMadisonErrorSendingAlertsToBackend
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/sending-alerts.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        Prometheus is unable to deliver {{ $value | humanizePercentage }} alerts to the {{ $labels.madison_backend }} Madison backend using the {{ $labels.pod }} `madison-proxy`.
-
-        You need to check the `madison-proxy` logs: `kubectl -n d8-monitoring logs -f {{ $labels.pod }}`
-      summary: |
-        Prometheus is unable to deliver {{ $value | humanizePercentage }} alerts to the {{ $labels.madison_backend }} Madison backend using the {{ $labels.pod }} madison-proxy.
-      severity: undefined
       markupFormat: markdown
     - name: D8PrometheusOperatorPodIsNotReady
       sourceFile: modules/200-operator-prometheus/monitoring/prometheus-rules/operator.yaml
@@ -1626,6 +1953,148 @@ alerts:
         2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-snapshot-controller describe pod -l app=snapshot-validation-webhook`
       summary: |
         The snapshot-validation-webhook Pod is NOT Running.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8TerraformStateExporterClusterStateChanged
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        Real Kubernetes cluster state is `{{ $labels.status }}` comparing to Terraform state.
+
+        It's important to make them equal.
+        First, run the `dhctl terraform check` command to check what will change.
+        To converge state of Kubernetes cluster, use `dhctl converge` command.
+      summary: |
+        Terraform-state-exporter cluster state changed
+      severity: "8"
+      markupFormat: markdown
+    - name: D8TerraformStateExporterClusterStateError
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        Terraform-state-exporter can't check difference between Kubernetes cluster state and Terraform state.
+
+        Probably, it occurred because Terraform-state-exporter had failed to run terraform with current state and config.
+        First, run the `dhctl terraform check` command to check what will change.
+        To converge state of Kubernetes cluster, use `dhctl converge` command.
+      summary: |
+        Terraform-state-exporter cluster state error
+      severity: "8"
+      markupFormat: markdown
+    - name: D8TerraformStateExporterHasErrors
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        Errors occurred while terraform-state-exporter working.
+
+        Check pods logs to get more details: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
+      summary: |
+        Terraform-state-exporter has errors
+      severity: "8"
+      markupFormat: markdown
+    - name: D8TerraformStateExporterNodeStateChanged
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        Real Node `{{ $labels.node_group }}/{{ $labels.name }}` state is `{{ $labels.status }}` comparing to Terraform state.
+
+        It's important to make them equal.
+        First, run the `dhctl terraform check` command to check what will change.
+        To converge state of Kubernetes cluster, use `dhctl converge` command.
+      summary: |
+        Terraform-state-exporter node state changed
+      severity: "8"
+      markupFormat: markdown
+    - name: D8TerraformStateExporterNodeStateError
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        Terraform-state-exporter can't check difference between Node `{{ $labels.node_group }}/{{ $labels.name }}` state and Terraform state.
+
+        Probably, it occurred because Terraform-manager had failed to run terraform with current state and config.
+        First, run the `dhctl terraform check` command to check what will change.
+        To converge state of Kubernetes cluster, use `dhctl converge` command.
+      summary: |
+        Terraform-state-exporter node state error
+      severity: "8"
+      markupFormat: markdown
+    - name: D8TerraformStateExporterNodeTemplateChanged
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        Terraform-state-exporter found difference between node template from cluster provider configuration and from NodeGroup `{{ $labels.name }}`.
+        Node template is `{{ $labels.status }}`.
+
+        First, run the `dhctl terraform check` command to check what will change.
+        Use `dhctl converge` command or manually adjust NodeGroup settings to fix the issue.
+      summary: |
+        Terraform-state-exporter node template changed
+      severity: "8"
+      markupFormat: markdown
+    - name: D8TerraformStateExporterPodIsNotReady
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        Terraform-state-exporter doesn't check the difference between real Kubernetes cluster state and Terraform state.
+
+        Pease, check:
+        1. Deployment description: `kubectl -n d8-system describe deploy terraform-state-exporter`
+        2. Pod status: `kubectl -n d8-system describe pod -l app=terraform-state-exporter`
+      summary: |
+        Pod terraform-state-exporter is not Ready
+      severity: "8"
+      markupFormat: markdown
+    - name: D8TerraformStateExporterPodIsNotRunning
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        Terraform-state-exporter doesn't check the difference between real Kubernetes cluster state and Terraform state.
+
+        Pease, check:
+        1. Deployment description: `kubectl -n d8-system describe deploy terraform-state-exporter`
+        2. Pod status: `kubectl -n d8-system describe pod -l app=terraform-state-exporter`
+      summary: |
+        Pod terraform-state-exporter is not Running
+      severity: "8"
+      markupFormat: markdown
+    - name: D8TerraformStateExporterTargetAbsent
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        To get more details:
+        Check pods state: `kubectl -n d8-system get pod -l app=terraform-state-exporter` or logs: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
+      summary: |
+        Prometheus has no terraform-state-exporter target
+      severity: "8"
+      markupFormat: markdown
+    - name: D8TerraformStateExporterTargetDown
+      sourceFile: modules/040-terraform-manager/monitoring/prometheus-rules/terraform-state-exporter.tpl
+      moduleUrl: 040-terraform-manager
+      module: terraform-manager
+      edition: ce
+      description: |
+        To get more details:
+        Check pods state: `kubectl -n d8-system get pod -l app=terraform-state-exporter` or logs: `kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter`
+      summary: |
+        Prometheus can't scrape terraform-state-exporter
       severity: "8"
       markupFormat: markdown
     - name: D8TricksterTargetAbsent
@@ -1907,7 +2376,7 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        PV count per smoke-mini PVC: {{ $value }}.
+        The number of unnecessary smoke-mini PVs: {{ $value }}.
 
         Smoke-mini PVs should be deleted when released. Probably smoke-mini storage class has Retain policy by default,
         or there is CSI/cloud issue.
@@ -1946,6 +2415,87 @@ alerts:
         Yandex nat-instance connections quota utilization is above 85% over the last 5 minutes.
       severity: "4"
       markupFormat: markdown
+    - name: DaemonSetAuthenticationFailure
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Unable to login to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image in the `{{ $labels.namespace }}` Namespace; in the DaemonSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        Unable to login to the container registry using imagePullSecrets for the {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: DaemonSetAuthorizationFailure
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Insufficient privileges to pull the `{{ $labels.image }}` image using the `imagePullSecrets` specified in the `{{ $labels.namespace }}` Namespace; in the DaemonSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        Insufficient privileges to pull the {{ $labels.image }} image using the imagePullSecrets specified.
+      severity: "7"
+      markupFormat: markdown
+    - name: DaemonSetBadImageFormat
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        You should check whether the `{{ $labels.image }}` image name is spelled correctly: in the `{{ $labels.namespace }}` Namespace; in the DaemonSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The {{ $labels.image }} image has incorrect name.
+      severity: "7"
+      markupFormat: markdown
+    - name: DaemonSetImageAbsent
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        You should check whether the `{{ $labels.image }}` image is available: in the `{{ $labels.namespace }}` Namespace; in the DaemonSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The {{ $labels.image }} image is missing from the registry.
+      severity: "7"
+      markupFormat: markdown
+    - name: DaemonSetRegistryUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        The container registry is not available for the `{{ $labels.image }}` image: in the `{{ $labels.namespace }}` Namespace; in the DaemonSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The container registry is not available for the {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: DaemonSetUnknownError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        An unknown error occurred for the  `{{ $labels.image }}` image
+        in the `{{ $labels.namespace }}` Namespace;
+        in the DaemonSet `{{ $labels.name }}`
+        in the `{{ $labels.container }}` container in the registry.
+
+        Refer to the exporter logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: |
+        An unknown error occurred for the  {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: DeadMansSwitch
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: This is a DeadMansSwitch meant to ensure that the entire Alerting pipeline is functional.
+      summary: |
+        Alerting DeadMansSwitch
+      severity: "4"
+      markupFormat: default
     - name: DeckhouseModuleUseEmptyDir
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/emptydir.yaml
       moduleUrl: 300-prometheus
@@ -2049,6 +2599,87 @@ alerts:
         Deckhouse updating is failed.
       severity: "4"
       markupFormat: markdown
+    - name: DeploymentAuthenticationFailure
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Unable to login to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image in the `{{ $labels.namespace }}` Namespace; in the Deployment `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        Unable to login to the container registry using imagePullSecrets for the {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: DeploymentAuthorizationFailure
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Insufficient privileges to pull the `{{ $labels.image }}` image using the `imagePullSecrets` specified in the `{{ $labels.namespace }}` Namespace; in the Deployment `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        Insufficient privileges to pull the {{ $labels.image }} image using the imagePullSecrets specified.
+      severity: "7"
+      markupFormat: markdown
+    - name: DeploymentBadImageFormat
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        You should check whether the `{{ $labels.image }}` image name is spelled correctly: in the `{{ $labels.namespace }}` Namespace; in the Deployment `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The {{ $labels.image }} image has incorrect name.
+      severity: "7"
+      markupFormat: markdown
+    - name: DeploymentGenerationMismatch
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kube-state-metrics.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: Observed deployment generation does not match expected one for deployment {{$labels.namespace}}/{{$labels.deployment}}
+      summary: |
+        Deployment is outdated
+      severity: "4"
+      markupFormat: default
+    - name: DeploymentImageAbsent
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        You should check whether the `{{ $labels.image }}` image is available: in the `{{ $labels.namespace }}` Namespace; in the Deployment `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The {{ $labels.image }} image is missing from the registry.
+      severity: "7"
+      markupFormat: markdown
+    - name: DeploymentRegistryUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        The container registry is not available for the `{{ $labels.image }}` image: in the `{{ $labels.namespace }}` Namespace; in the Deployment `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The container registry is not available for the {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: DeploymentUnknownError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        An unknown error occurred for the  `{{ $labels.image }}` image
+        in the `{{ $labels.namespace }}` Namespace;
+        in the Deployment `{{ $labels.name }}`
+        in the `{{ $labels.container }}` container in the registry.
+
+        Refer to the exporter logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: |
+        An unknown error occurred for the  {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
     - name: DeprecatedGeoIPVersion
       sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/deprecated-geoip-version.tpl
       moduleUrl: 402-ingress-nginx
@@ -2075,37 +2706,88 @@ alerts:
         The {{$labels.pod}} Pod has detected unavailable PSI subsystem. Check logs for additional information: kubectl -n d8-cloud-instance-manager logs {{$labels.pod}} Possible actions to resolve the problem: * Upgrade kernel to version 4.20 or higher. * Enable Pressure Stall Information. * Disable early oom.
       severity: "8"
       markupFormat: markdown
-    - name: FlantPricingNotSendingSamples
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/grafana-agent.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        Succeeded samples metric of the Grafana Agent is not increasing.
-
-        To get more details, check logs of the following containers:
-        - `kubectl -n d8-flant-integration logs -l app=pricing -c grafana-agent`
-        - `kubectl -n d8-flant-integration logs -l app=pricing -c pricing`
+    - name: EbpfExporterKernelNotSupported
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/ebpf-exporter.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: ""
       summary: |
-        Flant-pricing cluster metrics are not being delivered
-      severity: "6"
+        The BTF module required for ebpf_exporter is missing in the kernel. Possible actions to resolve the problem: * Built kernel with BTF type information info. * Disable ebpf_exporter
+      severity: "8"
       markupFormat: markdown
-    - name: FlantPricingSucceededSamplesMetricIsAbsent
-      sourceFile: ee/be/modules/600-flant-integration/monitoring/prometheus-rules/grafana-agent.yaml
-      moduleUrl: 600-flant-integration
-      module: flant-integration
-      edition: be
-      description: |
-        There are no succeeded samples metric from the Grafana Agent.
-
-        To get more details:
-
-        Check pods state: `kubectl -n d8-flant-integration get pod -l app=pricing`
-        or logs: `kubectl -n d8-flant-integration logs -l app=pricing -c grafana-agent`
+    - name: ExtendedMonitoringDeprecatatedAnnotation
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/deprecated-annotation.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: ""
       summary: |
-        Crucial metrics are missing.
-      severity: "6"
+        Deprecated extended-monitoring.flant.com/enabled annotations are used in cluster. Migrate to extended-monitoring.deckhouse.io/enabled label ASAP. Check d8_deprecated_legacy_annotation metric in Prometheus to get list of all usages.
+      severity: "4"
       markupFormat: markdown
+    - name: ExtendedMonitoringTargetDown
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/self.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        Pod with extended-monitoring exporter is unavailable.
+
+        Following alerts will not be fired:
+          * About lack of the space and inodes on volumes
+          * CPU overloads and throttling of containers
+          * 500 errors on ingress
+          * Replicas quantity of controllers (alerts about the insufficient amount of replicas of  Deployment, StatefulSet, DaemonSet)
+          * And [others](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/340-extended-monitoring/)
+
+        To debug, execute the following commands:
+          1. `kubectl -n d8-monitoring describe deploy extended-monitoring-exporter`
+          2. `kubectl -n d8-monitoring describe pod -l app=extended-monitoring-exporter`
+      summary: |
+        Extended-monitoring is down
+      severity: "5"
+      markupFormat: markdown
+    - name: FdExhaustionClose
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: '{{ $labels.job }}: {{ $labels.instance }} instance will exhaust in file/socket descriptors within the next hour'
+      summary: |
+        file descriptors soon exhausted
+      severity: "3"
+      markupFormat: default
+    - name: FdExhaustionClose
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: '{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} instance will exhaust in file/socket descriptors within the next hour'
+      summary: |
+        file descriptors soon exhausted
+      severity: "3"
+      markupFormat: default
+    - name: FdExhaustionClose
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: '{{ $labels.job }}: {{ $labels.instance }} instance will exhaust in file/socket descriptors within the next 4 hours'
+      summary: |
+        file descriptors soon exhausted
+      severity: "4"
+      markupFormat: default
+    - name: FdExhaustionClose
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/general.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: '{{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} instance will exhaust in file/socket descriptors within the next 4 hours'
+      summary: |
+        file descriptors soon exhausted
+      severity: "4"
+      markupFormat: default
     - name: GrafanaDashboardAlertRulesDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
       moduleUrl: 300-prometheus
@@ -2151,6 +2833,62 @@ alerts:
         Deprecated Grafana plugins have been found.
       severity: "8"
       markupFormat: markdown
+    - name: HelmReleasesHasResourcesWithDeprecatedVersions
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/helm/deprecated-versions.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1` in Prometheus.
+
+        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.
+
+        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+      summary: |
+        At least one HELM release contains resources with deprecated apiVersion, which will be removed in Kubernetes v{{ $labels.k8s_version }}.
+      severity: "5"
+      markupFormat: markdown
+    - name: HelmReleasesHasResourcesWithUnsupportedVersions
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/helm/deprecated-versions.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        To observe all resources use the expr `max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2` in Prometheus.
+
+        You can find more details for migration in the deprecation guide: https://kubernetes.io/docs/reference/using-api/deprecation-guide/#v{{ $labels.k8s_version | reReplaceAll "\\." "-" }}.
+
+        Attention: The check runs once per hour, so this alert should go out within an hour after deprecated resources migration.
+      summary: |
+        At least one HELM release contains resources with unsupported apiVersion for Kubernetes v{{ $labels.k8s_version }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: IngressResponses5xx
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/ingress.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} with Service name "{{$labels.service}}" and port "{{$labels.service_port}}" has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-critical\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
+
+        Currently at: {{ .Value }}%
+      summary: |
+        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} has more than {{ printf &quot;extended_monitoring_ingress_threshold{threshold=&quot;5xx-critical&quot;, namespace=&quot;%s&quot;, ingress=&quot;%s&quot;}&quot; $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
+      severity: "4"
+      markupFormat: default
+    - name: IngressResponses5xx
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/ingress.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} with Service name "{{$labels.service}}" and port "{{$labels.service_port}}" has more than {{ printf "extended_monitoring_ingress_threshold{threshold=\"5xx-warning\", namespace=\"%s\", ingress=\"%s\"}" $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
+
+        Currently at: {{ .Value }}%
+      summary: |
+        URL {{$labels.vhost}}{{$labels.location}} on Ingress {{$labels.ingress}} has more than {{ printf &quot;extended_monitoring_ingress_threshold{threshold=&quot;5xx-warning&quot;, namespace=&quot;%s&quot;, ingress=&quot;%s&quot;}&quot; $labels.namespace $labels.ingress | query | first | value }}% 5xx responses from backend.
+      severity: "5"
+      markupFormat: default
     - name: IstioIrrelevantExternalServiceFound
       sourceFile: modules/110-istio/monitoring/prometheus-rules/services.yaml
       moduleUrl: 110-istio
@@ -2244,6 +2982,56 @@ alerts:
       description: There is no running kube-controller-manager. Deployments and replication controllers are not making progress.
       summary: |
         Controller manager is down
+      severity: "3"
+      markupFormat: default
+    - name: K8SKubeletDown
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: Prometheus failed to scrape {{ $value }}% of kubelets.
+      summary: |
+        Many kubelets cannot be scraped
+      severity: "3"
+      markupFormat: default
+    - name: K8SKubeletDown
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: Prometheus failed to scrape {{ $value }}% of kubelets.
+      summary: |
+        A few kubelets cannot be scraped
+      severity: "4"
+      markupFormat: default
+    - name: K8SKubeletTooManyPods
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: Kubelet {{ $labels.node }} is running {{ $value }} pods, close to the limit of {{ printf "kube_node_status_capacity{job=\"kube-state-metrics\",resource=\"pods\",unit=\"integer\",node=\"%s\"}" $labels.node | query | first | value }}
+      summary: |
+        Kubelet is close to pod limit
+      severity: "7"
+      markupFormat: default
+    - name: K8SManyNodesNotReady
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: '{{ $value }}% of Kubernetes nodes are not ready'
+      summary: |
+        Too many nodes are not ready
+      severity: "3"
+      markupFormat: default
+    - name: K8SNodeNotReady
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubelet.tpl
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: The Kubelet on {{ $labels.node }} has not checked in with the API, or has set itself to NotReady, for more than 10 minutes
+      summary: |
+        Node status is NotReady
       severity: "3"
       markupFormat: default
     - name: K8SSchedulerTargetDown
@@ -2341,6 +3129,227 @@ alerts:
         Prometheus is unable to scrape etcd metrics.
       severity: "5"
       markupFormat: markdown
+    - name: KubeletImageFSBytesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        No more free bytes on imagefs (filesystem that the container runtime uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
+      summary: |
+        No more free bytes on imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+      severity: "5"
+      markupFormat: markdown
+    - name: KubeletImageFSBytesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Hard eviction of imagefs (filesystem that the container runtime uses for storing images and container writable layers) on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+
+        Threshold at: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Hard eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+      severity: "6"
+      markupFormat: markdown
+    - name: KubeletImageFSBytesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Close to hard eviction threshold of imagefs (filesystem that the container runtime uses for storing images and container writable layers) on node {{$labels.node}} mountpoint {{$labels.mountpoint}}.
+
+        Threshold at: {{ printf "kubelet_eviction_imagefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Close to hard eviction threshold of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+      severity: "7"
+      markupFormat: markdown
+    - name: KubeletImageFSBytesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Soft eviction of imagefs (filesystem that the container runtime uses for storing images and container writable layers) on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+
+        Threshold at: {{ printf "kubelet_eviction_imagefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Soft eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+      severity: "9"
+      markupFormat: markdown
+    - name: KubeletImageFSInodesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: ""
+      summary: |
+        No more free inodes on imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+      severity: "5"
+      markupFormat: markdown
+    - name: KubeletImageFSInodesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Hard eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+
+        Threshold at: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Hard eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+      severity: "6"
+      markupFormat: markdown
+    - name: KubeletImageFSInodesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Close to hard eviction threshold of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+
+        Threshold at: {{ printf "kubelet_eviction_imagefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Close to hard eviction threshold of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+      severity: "7"
+      markupFormat: markdown
+    - name: KubeletImageFSInodesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Soft eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+
+        Threshold at: {{ printf "kubelet_eviction_imagefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Soft eviction of imagefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+      severity: "9"
+      markupFormat: markdown
+    - name: KubeletNodeFSBytesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: ""
+      summary: |
+        No more free space on nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+      severity: "5"
+      markupFormat: markdown
+    - name: KubeletNodeFSBytesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Hard eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+
+        Threshold at: {{ printf "kubelet_eviction_nodefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Hard eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+      severity: "6"
+      markupFormat: markdown
+    - name: KubeletNodeFSBytesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Close to hard eviction threshold of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+
+        Threshold at: {{ printf "kubelet_eviction_nodefs_bytes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Close to hard eviction threshold of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+      severity: "7"
+      markupFormat: markdown
+    - name: KubeletNodeFSBytesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Soft eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+
+        Threshold at: {{ printf "kubelet_eviction_nodefs_bytes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Soft eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+      severity: "9"
+      markupFormat: markdown
+    - name: KubeletNodeFSInodesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: ""
+      summary: |
+        No more free inodes on nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+      severity: "5"
+      markupFormat: markdown
+    - name: KubeletNodeFSInodesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Hard eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+
+        Threshold at: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Hard eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+      severity: "6"
+      markupFormat: markdown
+    - name: KubeletNodeFSInodesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Close to hard eviction threshold of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint.
+
+        Threshold at: {{ printf "kubelet_eviction_nodefs_inodes{type=\"hard\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Close to hard eviction threshold of nodefs on the {{$labels.node}} Node at the  {{$labels.mountpoint}} mountpoint.
+      severity: "7"
+      markupFormat: markdown
+    - name: KubeletNodeFSInodesUsage
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-disk-usage.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        Soft eviction of nodefs on the {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+
+        Threshold at: {{ printf "kubelet_eviction_nodefs_inodes{type=\"soft\", node=\"%s\", mountpoint=\"%s\"}" $labels.node $labels.mountpoint | query | first | value }}%
+
+        Currently at: {{ .Value }}%
+      summary: |
+        Soft eviction of nodefs on the  {{$labels.node}} Node at the {{$labels.mountpoint}} mountpoint is in progress.
+      severity: "9"
+      markupFormat: markdown
     - name: KubernetesAPFRejectRequests
       sourceFile: modules/011-flow-schema/monitoring/prometheus-rules/flow-schema.yaml
       moduleUrl: 011-flow-schema
@@ -2353,6 +3362,150 @@ alerts:
       summary: |
         APF flow schema d8-serviceaccounts has rejected API requests.
       severity: "9"
+      markupFormat: markdown
+    - name: KubernetesCoreDNSHasCriticalErrors
+      sourceFile: modules/042-kube-dns/monitoring/prometheus-rules/kubernetes/dns.yaml
+      moduleUrl: 042-kube-dns
+      module: kube-dns
+      edition: ce
+      description: |-
+        CoreDNS pod {{$labels.pod}} has at least one critical error.
+        To debug the problem, look into container logs: `kubectl -n kube-system logs {{$labels.pod}}`
+      summary: |
+        CoreDNS has critical errors.
+      severity: "5"
+      markupFormat: markdown
+    - name: KubernetesDaemonSetNotUpToDate
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} DaemonSet for the last 15 minutes.
+
+        The recommended course of action:
+        1. Check the DaemonSet's status: `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }}`
+        2. Analyze the DaemonSet's description: `kubectl -n {{ $labels.namespace }} describe ds {{ $labels.daemonset }}`
+        3. If the `Number of Nodes Scheduled with Up-to-date Pods` parameter does not match
+        `Current Number of Nodes Scheduled`, check the DaemonSet's updateStrategy:
+        `kubectl -n {{ $labels.namespace }} get ds {{ $labels.daemonset }} -o json | jq '.spec.updateStrategy'`
+        4. Note that if the OnDelete updateStrategy is set, the DaemonSet gets only updated when Pods are deleted.
+      summary: |
+        There are {{ .Value }} outdated Pods in the {{ $labels.namespace }}/{{ $labels.daemonset }} DaemonSet for the last 15 minutes.
+      severity: "9"
+      markupFormat: markdown
+    - name: KubernetesDaemonSetReplicasUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        Count of available replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place (using label selector for pods might be of help, too):
+
+        ```
+        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        ```
+      summary: |
+        Count of available replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is at zero.
+      severity: "5"
+      markupFormat: markdown
+    - name: KubernetesDaemonSetReplicasUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is above threshold.
+        Currently at: {{ .Value }} unavailable replica(s)
+        Threshold at: {{ printf "extended_monitoring_daemonset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", daemonset=\"%s\"}" $labels.namespace $labels.daemonset | query | first | value }} unavailable replica(s)
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+        This command might help figuring out problematic nodes given you are aware where the DaemonSet should be scheduled in the first place (using label selector for pods might be of help, too):
+
+        ```
+        kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+        ```
+      summary: |
+        Count of unavailable replicas in DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} is above threshold.
+      severity: "6"
+      markupFormat: markdown
+    - name: KubernetesDeploymentReplicasUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+      summary: |
+        Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
+      severity: "5"
+      markupFormat: markdown
+    - name: KubernetesDeploymentReplicasUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        Count of unavailable replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is violating "spec.strategy.rollingupdate.maxunavailable".
+
+        Currently at: {{ .Value }} unavailable replica(s)
+        Threshold at: {{ printf "extended_monitoring_deployment_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", deployment=\"%s\"}" $labels.namespace $labels.deployment | query | first | value }} unavailable replica(s)
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+      summary: |
+        Count of unavailable replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is violating &quot;spec.strategy.rollingupdate.maxunavailable&quot;.
+      severity: "6"
+      markupFormat: markdown
+    - name: KubernetesDnsTargetDown
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/kube-dns.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        Prometheus is unable to collect metrics from kube-dns. Thus its status is unknown.
+
+        To debug the problem, use the following commands:
+        1. `kubectl -n kube-system describe deployment -l k8s-app=kube-dns`
+        2. `kubectl -n kube-system describe pod -l k8s-app=kube-dns`
+      summary: |
+        Kube-dns or CoreDNS are not under monitoring.
+      severity: "5"
+      markupFormat: markdown
+    - name: KubernetesStatefulSetReplicasUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        Count of ready replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} at zero.
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+      summary: |
+        Count of ready replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} at zero.
+      severity: "5"
+      markupFormat: markdown
+    - name: KubernetesStatefulSetReplicasUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
+
+        Currently at: {{ .Value }} unavailable replica(s)
+        Threshold at: {{ printf "extended_monitoring_statefulset_threshold{threshold=\"replicas-not-ready\", namespace=\"%s\", statefulset=\"%s\"}" $labels.namespace $labels.statefulset | query | first | value }} unavailable replica(s)
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+      summary: |
+        Count of unavailable replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} above threshold.
+      severity: "6"
       markupFormat: markdown
     - name: KubernetesVersionEndOfLife
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
@@ -2368,6 +3521,23 @@ alerts:
       summary: |
         Kubernetes version &quot;{{ $labels.k8s_version }}&quot; has reached End Of Life.
       severity: "4"
+      markupFormat: markdown
+    - name: KubeStateMetricsDown
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kube-state-metrics.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        There are no metrics about cluster resources for 5 minutes.
+
+        Most alerts an monitroing panels aren't working.
+
+        To debug the problem:
+        1. Check kube-state-metrics pods: `kubectl -n d8-monitoring describe pod -l app=kube-state-metrics`
+        2. Check its logs: `kubectl -n d8-monitoring describe deploy kube-state-metrics`
+      summary: |
+        Kube-state-metrics is not working in the cluster.
+      severity: "3"
       markupFormat: markdown
     - name: L2LoadBalancerModuleDeprecated
       sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
@@ -2393,6 +3563,42 @@ alerts:
         Found orphan service with irrelevant L2LoadBalancer name
       severity: "4"
       markupFormat: markdown
+    - name: LoadAverageHigh
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/node.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: For the last 5 minutes, the load average on the {{ $labels.node }} Node has been higher than {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-critical\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
+      summary: |
+        The load average on the {{ $labels.node }} Node is too high.
+      severity: "4"
+      markupFormat: markdown
+    - name: LoadAverageHigh
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/node.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: For the last 30 minutes, the load average on the {{ $labels.node }} Node has been higher or equal to {{ printf "extended_monitoring_node_threshold{threshold=\"load-average-per-core-warning\", node=\"%s\"}" $labels.node | query | first | value }} per core. There are more processes in the queue than the CPU can handle; probably, some process has created too many threads or child processes, or the CPU is overloaded.
+      summary: |
+        The load average on the {{ $labels.node }} Node is too high.
+      severity: "5"
+      markupFormat: markdown
+    - name: LoadBalancerServiceWithoutExternalIP
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/loadbalancer.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        One or more services with the LoadBalancer type cannot get an external address.
+
+        The list of services can be obtained with the following command:
+        kubectl get svc -Ao json | jq -r '.items[] | select(.spec.type == "LoadBalancer") | select(.status.loadBalancer.ingress[0].ip == null) | "namespace: \(.metadata.namespace), name: \(.metadata.name), ip: \(.status.loadBalancer.ingress[0].ip)"'
+        Check the cloud-controller-manager logs in the 'd8-cloud-provider-*' namespace
+        If you are using a bare-metal cluster with the metallb module enabled, check that the address space of the pool has not been exhausted.
+      summary: |
+        A load balancer has not been created.
+      severity: "4"
+      markupFormat: default
     - name: MigrationRequiredFromRBDInTreeProvisionerToCSIDriver
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/migration-alerts.tpl
       moduleUrl: 340-monitoring-deckhouse
@@ -2642,6 +3848,106 @@ alerts:
         Certificate expires soon.
       severity: "5"
       markupFormat: markdown
+    - name: NodeConntrackTableFull
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        The `conntrack` table on the {{ $labels.node }} Node is full!
+
+        No new connections are created or accepted on the Node; note that this may result in strange software issues.
+
+        The recommended course of action is to identify the source of "excess" `conntrack` entries using Okmeter or Grafana charts.
+      summary: |
+        The conntrack table is full.
+      severity: "3"
+      markupFormat: markdown
+    - name: NodeConntrackTableFull
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        The conntrack table on the {{ $labels.node }} is {{ $value }}% of the maximum size.
+
+        There's nothing to worry about yet if the `conntrack` table is only 70-80 percent full. However, if it runs out, you will experience problems with new connections while the software will behave strangely.
+
+        The recommended course of action is to identify the source of "excess" `conntrack` entries using Okmeter or Grafana charts.
+      summary: |
+        The conntrack table is close to the maximum size.
+      severity: "4"
+      markupFormat: markdown
+    - name: NodeDiskBytesUsage
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/node.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: ""
+      summary: |
+        Node disk &quot;{{$labels.device}}&quot; on mountpoint &quot;{{$labels.mountpoint}}&quot; is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-bytes-critical&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of storage capacity. Currently at: {{ .Value }}%
+      severity: "5"
+      markupFormat: markdown
+    - name: NodeDiskBytesUsage
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/node.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        Node disk "{{$labels.device}}" on mountpoint "{{$labels.mountpoint}}" is using more than {{ printf "extended_monitoring_node_threshold{threshold=\"disk-bytes-warning\", node=\"%s\"}" $labels.node | query | first | value }}% of the storage capacity.
+        Currently at: {{ .Value }}%
+
+        Retrieve the disk usage info on the node: `ncdu -x {{$labels.mountpoint}}'
+
+        If the output shows high disk usage in the /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/ directory, use the following command to show the pods with the highest usage:
+        `crictl stats -o json | jq '.stats[] | select((.writableLayer.usedBytes.value | tonumber) > 1073741824) | { meta: .attributes.labels, diskUsage: ((.writableLayer.usedBytes.value | tonumber) / 1073741824 * 100 | round / 100 | tostring + " GiB")}'`
+      summary: |
+        Node disk &quot;{{$labels.device}}&quot; on mountpoint &quot;{{$labels.mountpoint}}&quot; is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-bytes-warning&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of the storage capacity. Currently at: {{ .Value }}%
+      severity: "6"
+      markupFormat: markdown
+    - name: NodeDiskInodesUsage
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/node.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: ""
+      summary: |
+        Node disk &quot;{{$labels.device}}&quot; on mountpoint &quot;{{$labels.mountpoint}}&quot; is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-inodes-critical&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of storage capacity. Currently at: {{ .Value }}%
+      severity: "5"
+      markupFormat: markdown
+    - name: NodeDiskInodesUsage
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/node.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: ""
+      summary: |
+        Node disk &quot;{{$labels.device}}&quot; on mountpoint &quot;{{$labels.mountpoint}}&quot; is using more than {{ printf &quot;extended_monitoring_node_threshold{threshold=&quot;disk-inodes-warning&quot;, node=&quot;%s&quot;}&quot; $labels.node | query | first | value }}% of storage capacity. Currently at: {{ .Value }}%
+      severity: "6"
+      markupFormat: markdown
+    - name: NodeExporterDown
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: Prometheus could not scrape a node-exporter for more than 10m, or node-exporters have disappeared from discovery
+      summary: |
+        Prometheus could not scrape a node-exporter
+      severity: "3"
+      markupFormat: default
+    - name: NodeFilesystemIsRO
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node-ro-fs.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        The file system on the node has switched to read-only mode.
+
+        See the node logs to find out the cause and fix it.
+      summary: |
+        The file system of the node is in read-only mode.
+      severity: "4"
+      markupFormat: default
     - name: NodeGroupHasStaticInternalNetworkCIDRsField
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-deprecate.yaml
       moduleUrl: 040-node-manager
@@ -2854,6 +4160,39 @@ alerts:
         The {{ $labels.node }} Node is stuck in draining.
       severity: "6"
       markupFormat: markdown
+    - name: NodeSUnreclaimBytesUsageHigh
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        The {{ $labels.node }} Node has potential kernel memory leak. There is one known issue that can be reason for it.
+
+        You should check cgroupDriver on the {{ $labels.node }} Node:
+        - `cat /var/lib/kubelet/config.yaml | grep 'cgroupDriver: systemd'`
+
+        If cgroupDriver is set to systemd then reboot is required to roll back to cgroupfs driver. Please, drain and reboot the node.
+
+        You can check this [issue](https://github.com/deckhouse/deckhouse/issues/2152) for extra information.
+      summary: |
+        The {{ $labels.node }} Node has high kernel memory usage.
+      severity: "4"
+      markupFormat: markdown
+    - name: NodeSystemExporterDoesNotExistsForNode
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        Some of the Node system exporters don't work correctly for the {{ $labels.node }} Node.
+
+        The recommended course of action:
+        1. Find the Node exporter Pod for this Node: `kubectl -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"`;
+        2. Describe the Node exporter Pod: `kubectl -n d8-monitoring describe pod <pod_name>`;
+        3. Check that kubelet is running on the {{ $labels.node }} node.
+      summary: ""
+      severity: "4"
+      markupFormat: markdown
     - name: NodeTimeOutOfSync
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
       moduleUrl: 470-chrony
@@ -2864,6 +4203,23 @@ alerts:
       summary: |
         Node's {{$labels.node}} clock is drifting.
       severity: "5"
+      markupFormat: markdown
+    - name: NodeUnschedulable
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        The {{ $labels.node }} Node is cordon-protected; no new Pods can be scheduled onto it.
+
+        This means that someone has executed one of the following commands on that Node:
+        - `kubectl cordon {{ $labels.node }}`
+        - `kubectl drain {{ $labels.node }}` that runs for more than 20 minutes
+
+        Probably, this is due to the maintenance of this Node.
+      summary: |
+        The {{ $labels.node }} Node is cordon-protected; no new Pods can be scheduled onto it.
+      severity: "8"
       markupFormat: markdown
     - name: NTPDaemonOnNodeDoesNotSynchronizeTime
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
@@ -2898,6 +4254,62 @@ alerts:
         At least one object violates configured cluster Operation Policies.
       severity: "7"
       markupFormat: markdown
+    - name: PersistentVolumeClaimBytesUsage
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume storage capacity.
+        Currently at: {{ .Value }}%
+
+        PersistentVolumeClaim is used by the following pods: {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+      summary: |
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-bytes-critical&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of volume storage capacity.
+      severity: "4"
+      markupFormat: markdown
+    - name: PersistentVolumeClaimBytesUsage
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume storage capacity.
+        Currently at: {{ .Value }}%
+
+        PersistentVolumeClaim is used by the following pods: {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+      summary: |
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-bytes-warning&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of volume storage capacity.
+      severity: "5"
+      markupFormat: markdown
+    - name: PersistentVolumeClaimInodesUsed
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume inode capacity.
+        Currently at: {{ .Value }}%
+
+        PersistentVolumeClaim is used by the following pods: {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+      summary: |
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-inodes-critical&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of volume inode capacity.
+      severity: "4"
+      markupFormat: markdown
+    - name: PersistentVolumeClaimInodesUsed
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |-
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of volume inode capacity.
+        Currently at: {{ .Value }}%
+
+        PersistentVolumeClaim is used by the following pods: {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+      summary: |
+        PersistentVolumeClaim {{$labels.namespace}}/{{$labels.persistentvolumeclaim}} is using more than {{ printf &quot;extended_monitoring_pod_threshold{threshold=&quot;disk-inodes-warning&quot;, namespace=&quot;%s&quot;, pod=&quot;%s&quot;}&quot; $labels.namespace $labels.pod | query | first | value }}% of volume inode capacity.
+      severity: "5"
+      markupFormat: markdown
     - name: PodSecurityStandardsViolation
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/audit.yaml
       moduleUrl: 015-admission-policy-engine
@@ -2911,6 +4323,24 @@ alerts:
       summary: |
         At least one pod violates configured cluster pod security standards.
       severity: "7"
+      markupFormat: markdown
+    - name: PodStatusIsIncorrect
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/pod-status.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        There is a {{ $labels.namespace }}/{{ $labels.pod }} Pod in the cluster that runs on the {{ $labels.node }} and listed as NotReady while all the Pod's containers are Ready.
+
+        This could be due to the [Kubernetes bug](https://github.com/kubernetes/kubernetes/issues/80968).
+
+        The recommended course of action:
+        1. Find all the Pods having this state: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | "\(.spec.nodeName)/\(.metadata.namespace)/\(.metadata.name)"'`;
+        2. Find all the Nodes affected: `kubectl get pod -o json --all-namespaces | jq '.items[] | select(.status.phase == "Running") | select(.status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | select(.status.conditions[] | select(.type == "Ready" and .status == "False")) | .spec.nodeName' -r | sort | uniq -c`;
+        3. Restart `kubelet` on each Node: `systemctl restart kubelet`.
+      summary: |
+        The state of the {{ $labels.namespace }}/{{ $labels.pod }} Pod running on the {{ $labels.node }} Node is incorrect. You need to restart kubelet.
+      severity: undefined
       markupFormat: markdown
     - name: PrometheusDiskUsage
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/prometheus-storage.yaml
@@ -3002,6 +4432,107 @@ alerts:
         At least one object violates configured cluster Security Policies.
       severity: "7"
       markupFormat: markdown
+    - name: StatefulSetAuthenticationFailure
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Unable to login to the container registry using `imagePullSecrets` for the `{{ $labels.image }}` image in the `{{ $labels.namespace }}` Namespace; in the StatefulSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        Unable to login to the container registry using imagePullSecrets for the {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: StatefulSetAuthorizationFailure
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Insufficient privileges to pull the `{{ $labels.image }}` image using the `imagePullSecrets` specified in the `{{ $labels.namespace }}` Namespace; in the StatefulSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        Insufficient privileges to pull the {{ $labels.image }} image using the imagePullSecrets specified.
+      severity: "7"
+      markupFormat: markdown
+    - name: StatefulSetBadImageFormat
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        You should check whether the `{{ $labels.image }}` image name is spelled correctly: in the `{{ $labels.namespace }}` Namespace; in the StatefulSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The {{ $labels.image }} image has incorrect name.
+      severity: "7"
+      markupFormat: markdown
+    - name: StatefulSetImageAbsent
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        You should check whether the `{{ $labels.image }}` image is available: in the `{{ $labels.namespace }}` Namespace; in the StatefulSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The {{ $labels.image }} image is missing from the registry.
+      severity: "7"
+      markupFormat: markdown
+    - name: StatefulSetRegistryUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        The container registry is not available for the `{{ $labels.image }}` image: in the `{{ $labels.namespace }}` Namespace; in the StatefulSet `{{ $labels.name }}` in the `{{ $labels.container }}` container in the registry.
+      summary: |
+        The container registry is not available for the {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: StatefulSetUnknownError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        An unknown error occurred for the  `{{ $labels.image }}` image
+        in the `{{ $labels.namespace }}` Namespace;
+        in the StatefulSet `{{ $labels.name }}`
+        in the `{{ $labels.container }}` container in the registry.
+
+        Refer to the exporter logs: `kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter`
+      summary: |
+        An unknown error occurred for the  {{ $labels.image }} image.
+      severity: "7"
+      markupFormat: markdown
+    - name: StorageClassCloudManual
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/storage-class.tpl
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        StorageClass having a cloud-provider provisioner shouldn't be deployed manually.
+        They are managed by the cloud-provider module, you only need to change the module configuration to fit your needs.
+
+
+        [Find storage configuration documentation for your cloud-provider here](http://documentation.example.com/kubernetes.html).
+      summary: |
+        Manually deployed StorageClass {{ $labels.name }} found in the cluster
+      severity: "6"
+      markupFormat: markdown
+    - name: StorageClassDefaultDuplicate
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/storage-class.tpl
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        More than one StorageClass in the cluster annotated as a default.
+        Probably manually deployed StorageClass exists, that overlaps with cloud-provider module default Storage configuration.
+
+
+        [Find storage configuration documentation for your cloud-provider here](http://documentation.example.com/kubernetes.html).
+      summary: |
+        Multiple default StorageClasses found in the cluster
+      severity: "6"
+      markupFormat: markdown
     - name: TargetDown
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
       moduleUrl: 300-prometheus
@@ -3054,6 +4585,22 @@ alerts:
         The sampling limit is close.
       severity: "7"
       markupFormat: markdown
+    - name: UnsupportedContainerRuntimeVersion
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/cri-version.tpl
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        Unsupported version {{$labels.container_runtime_version}} of CRI installed on {{$labels.node}} node.
+        Supported version of CRI for kubernetes {{$labels.kubelet_version}} version:
+        * Containerd 1.4.*
+        * Containerd 1.5.*
+        * Containerd 1.6.*
+        * Containerd 1.7.*
+      summary: |
+        Unsupported version of CRI {{$labels.container_runtime_version}} installed for Kubernetes version: {{$labels.kubelet_version}}
+      severity: undefined
+      markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
     - cert-manager
@@ -3062,15 +4609,18 @@ modules-having-alerts:
     - cni-cilium
     - control-plane-manager
     - documentation
-    - flant-integration
+    - extended-monitoring
     - flow-schema
     - ingress-nginx
     - istio
+    - kube-dns
     - l2-load-balancer
     - log-shipper
     - metallb
+    - monitoring-applications
     - monitoring-custom
     - monitoring-deckhouse
+    - monitoring-kubernetes
     - monitoring-kubernetes-control-plane
     - monitoring-ping
     - node-manager
@@ -3080,5 +4630,6 @@ modules-having-alerts:
     - runtime-audit-engine
     - secret-copier
     - snapshot-controller
+    - terraform-manager
     - upmeter
     - user-authn

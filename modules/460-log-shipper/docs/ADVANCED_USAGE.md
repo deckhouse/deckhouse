@@ -1,5 +1,6 @@
 ---
 title: "The log-shipper module: advanced usage"
+description: "Advanced configuration of the log-shipper Deckhouse Kubernetes Platform module, including log debugging, data transmission channel exploration, and the addition of new sources/receivers."
 ---
 
 ## How to enable debugging logs?

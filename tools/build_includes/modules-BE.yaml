@@ -24,8 +24,3 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/be/modules/600-flant-integration
-  to: /deckhouse/modules/600-flant-integration
-  stageDependencies:
-    setup:
-        - '**/*.go'

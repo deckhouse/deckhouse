@@ -46,6 +46,7 @@ func setupFakeController(
 	t *testing.T,
 	filename, values string,
 	mup *v1alpha1.ModuleUpdatePolicySpec,
+	options ...reconcilerOption,
 ) (*deckhouseReleaseReconciler, client.Client) {
 	ds := &helpers.DeckhouseSettings{
 		ReleaseChannel: mup.ReleaseChannel,
@@ -53,7 +54,15 @@ func setupFakeController(
 	ds.Update.Mode = mup.Update.Mode
 	ds.Update.Windows = mup.Update.Windows
 	ds.Update.DisruptionApprovalMode = "Auto"
-	return setupControllerSettings(t, filename, values, ds)
+	return setupControllerSettings(t, filename, values, ds, options...)
+}
+
+type reconcilerOption func(r *deckhouseReleaseReconciler)
+
+func withDependencyContainer(dc dependency.Container) reconcilerOption {
+	return func(r *deckhouseReleaseReconciler) {
+		r.dc = dc
+	}
 }
 
 func setupControllerSettings(
@@ -61,11 +70,12 @@ func setupControllerSettings(
 	filename,
 	values string,
 	ds *helpers.DeckhouseSettings,
+	options ...reconcilerOption,
 ) (*deckhouseReleaseReconciler, client.Client) {
 	yamlDoc := fetchTestFileData(t, filename, values)
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
-	var initObjects = make([]client.Object, 0, len(manifests))
+	initObjects := make([]client.Object, 0, len(manifests))
 	for _, manifest := range manifests {
 		obj := assembleInitObject(t, manifest)
 		initObjects = append(initObjects, obj)
@@ -90,6 +100,15 @@ func setupControllerSettings(
 		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
 		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true),
 	}
+	rec.clusterUUID = rec.getClusterUUID(context.Background())
+
+	for _, option := range options {
+		option(rec)
+	}
+
+	for _, option := range options {
+		option(rec)
+	}
 
 	return rec, cl
 }
@@ -99,7 +118,7 @@ func assembleInitObject(t *testing.T, obj string) client.Object {
 	var typ runtime.TypeMeta
 
 	err := yaml.Unmarshal([]byte(obj), &typ)
-	require.NoError(t, err)
+	require.NoErrorf(t, err, "try unmarshal yaml\n%s", obj)
 
 	switch typ.Kind {
 	case "Secret":

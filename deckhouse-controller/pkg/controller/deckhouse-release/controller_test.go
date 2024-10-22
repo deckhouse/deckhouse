@@ -38,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -123,6 +124,10 @@ func (suite *ControllerTestSuite) TearDownSuite() {
 }
 
 func (suite *ControllerTestSuite) TearDownSubTest() {
+	if suite.T().Skipped() {
+		return
+	}
+
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
 
@@ -145,9 +150,10 @@ func (suite *ControllerTestSuite) setupController(
 	filename string,
 	initValues string,
 	mup *v1alpha1.ModuleUpdatePolicySpec,
+	options ...reconcilerOption,
 ) {
 	suite.testDataFileName = filename
-	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename, initValues, mup)
+	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), filename, initValues, mup, options...)
 }
 
 func (suite *ControllerTestSuite) setupControllerSettings(
@@ -199,9 +205,19 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("Loop until deploy: canary", func() {
+		dc := newDependencyContainer(suite.T())
+
+		mup := embeddedMUP.DeepCopy()
+		mup.Update.Windows = update.Windows{{From: "8:00", To: "23:00", Days: []string{"Mon", "Tue"}}}
+
+		suite.setupController("loop-until-deploy-canary.yaml", initValues, mup, withDependencyContainer(dc))
+		suite.loopUntilDeploy(dc, "v1.26.0")
+	})
+
 	suite.Run("Update in day window", func() {
 		mup := embeddedMUP.DeepCopy()
-		mup.Update.Windows = update.Windows{{From: "8:00", To: "23:00", Days: []string{"Fri", "Sun"}}}
+		mup.Update.Windows = update.Windows{{From: "8:00", To: "23:00", Days: []string{"Fri", "Sun", "Thu"}}}
 
 		suite.setupController("update-in-day-window.yaml", initValues, mup)
 		dr := suite.getDeckhouseRelease("v1.26.0")
@@ -471,7 +487,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available. Release will be applied at: Friday, 01-Jan-21 14:30:00 UTC")
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available. Release will be applied at: Thursday, 17-Oct-19 16:33:00 UTC")
 		require.Contains(suite.T(), httpBody, `"version":"1.26.0"`)
 		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
@@ -606,58 +622,107 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.25.1 is available. Release will be applied at: Friday, 01-Jan-21 15:30:00 UTC")
+		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.25.1 is available. Release will be applied at: Thursday, 17-Oct-19 17:33:00 UTC")
 		require.Contains(suite.T(), httpBody, `"version":"1.25.1"`)
 		require.Contains(suite.T(), httpBody, `"subject":"Deckhouse"`)
 	})
 
-	suite.Run("Release with apply-now annotation out of window", func() {
-		mup := embeddedMUP.DeepCopy()
-		mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
+	suite.Run("apply now annotation", func() {
+		suite.Run("Minor update out of window", func() {
+			mup := embeddedMUP.DeepCopy()
+			mup.Update.Mode = updater.ModeAuto.String()
+			mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
 
-		suite.setupController("release-with-apply-now-annotation-out-of-window.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
+			suite.setupController("release-with-apply-now-annotation-out-of-window.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
 
-	suite.Run("ApplyNow: Deckhouse previous release is not ready", func() {
-		mup := embeddedMUP.DeepCopy()
-		mup.Update.Windows = update.Windows{{From: "8:00", To: "23:59"}}
+		suite.Run("Minor update respect requirements", func() {
+			mup := embeddedMUP.DeepCopy()
+			mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
 
-		dependency.TestDC.HTTPClient.DoMock.
-			Expect(&http.Request{}).
-			Return(&http.Response{
-				StatusCode: http.StatusInternalServerError,
-			}, errors.New("some internal error"))
+			requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+				v, _ := getter.Get("global.discovery.kubernetesVersion")
+				if v != requirementValue {
+					return false, errors.New("min k8s version failed")
+				}
 
-		suite.setupController("apply-now-deckhouse-previous-release-is-not-ready.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
+				return true, nil
+			})
+			requirements.SaveValue("global.discovery.kubernetesVersion", "1.16.0")
 
-	suite.Run("ApplyNow: Manual approval mode is set", func() {
-		mup := embeddedMUP.DeepCopy()
-		mup.Update.Mode = updater.ModeManual.String()
+			suite.setupController("release-with-apply-now-annotation-requirements.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
 
-		dependency.TestDC.HTTPClient.DoMock.
-			Expect(&http.Request{}).
-			Return(&http.Response{
-				StatusCode: http.StatusOK,
-			}, nil)
+		suite.Run("Minor update respect disruption", func() {
+			mup := embeddedMUP.DeepCopy()
+			mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
 
-		suite.setupController("apply-now-manual-approval-mode-is-set.yaml", initValues, mup)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
-	})
+			var df requirements.DisruptionFunc = func(_ requirements.ValueGetter) (bool, string) {
+				return true, "some test reason"
+			}
+			requirements.RegisterDisruption("testme", df)
 
-	suite.Run("Applied now postponed release", func() {
-		suite.setupController("applied-now-postponed-release.yaml", initValues, embeddedMUP)
-		dr := suite.getDeckhouseRelease("v1.25.1")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-		require.NoError(suite.T(), err)
+			suite.setupController("release-with-apply-now-annotation-disruption.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("Patch update out of window", func() {
+			mup := embeddedMUP.DeepCopy()
+			mup.Update.Mode = updater.ModeAutoPatch.String()
+			mup.Update.Windows = update.Windows{{From: "8:00", To: "10:00"}}
+
+			suite.setupController("patch-release-with-apply-now-annotation-out-of-window.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.25.1")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("Deckhouse previous release is not ready", func() {
+			mup := embeddedMUP.DeepCopy()
+			mup.Update.Windows = update.Windows{{From: "8:00", To: "23:59"}}
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusInternalServerError,
+				}, errors.New("some internal error"))
+
+			suite.setupController("apply-now-deckhouse-previous-release-is-not-ready.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("Manual approval mode is set", func() {
+			mup := embeddedMUP.DeepCopy()
+			mup.Update.Mode = updater.ModeManual.String()
+
+			dependency.TestDC.HTTPClient.DoMock.
+				Expect(&http.Request{}).
+				Return(&http.Response{
+					StatusCode: http.StatusOK,
+				}, nil)
+
+			suite.setupController("apply-now-manual-approval-mode-is-set.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("Postponed release", func() {
+			suite.setupController("applied-now-postponed-release.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.25.1")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
 	})
 
 	suite.Run("Test auto-mode for postponed release", func() {
@@ -778,6 +843,52 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("AutoPatch", func() {
+		suite.Run("patch update respect window", func() {
+			mup := &v1alpha1.ModuleUpdatePolicySpec{
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode:    "AutoPatch",
+					Windows: update.Windows{{From: "10:00", To: "11:00"}},
+				},
+				ReleaseChannel: "Stable",
+			}
+
+			suite.setupController("auto-patch-patch-update.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.26.3")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("minor update don't respect window", func() {
+			mup := &v1alpha1.ModuleUpdatePolicySpec{
+				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+					Mode:    "AutoPatch",
+					Windows: update.Windows{{From: "10:00", To: "11:00"}},
+				},
+				ReleaseChannel: "Stable",
+			}
+
+			suite.setupController("auto-patch-minor-update.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.27.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+	})
+}
+
+func newDependencyContainer(t *testing.T) *dependency.MockedContainer {
+	t.Helper()
+
+	dc := dependency.NewMockedContainer()
+	dc.CRClient = cr.NewClientMock(t)
+	dc.HTTPClient.DoMock.
+		Expect(&http.Request{}).
+		Return(&http.Response{
+			StatusCode: http.StatusOK,
+		}, nil)
+
+	return dc
 }
 
 func (suite *ControllerTestSuite) fetchResults() []byte {
@@ -843,6 +954,37 @@ func (suite *ControllerTestSuite) getDeckhouseRelease(name string) *v1alpha1.Dec
 	require.NoError(suite.T(), err)
 
 	return &release
+}
+
+func (suite *ControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
+	const maxIterations = 3
+	suite.T().Skip("TODO: requeue all releases after got deckhouse module config update")
+
+	var (
+		result = ctrl.Result{Requeue: true}
+		err    error
+		i      int
+	)
+
+	for result.Requeue || result.RequeueAfter > 0 {
+		dc.GetFakeClock().Advance(result.RequeueAfter)
+
+		dr := suite.getDeckhouseRelease(releaseName)
+		if dr.Status.Phase == v1alpha1.PhaseDeployed {
+			suite.T().Log("Deployed")
+			return
+		}
+
+		result, err = suite.ctr.createOrUpdateReconcile(context.TODO(), dr)
+		require.NoError(suite.T(), err)
+
+		i++
+		if i > maxIterations {
+			suite.T().Fatal("Too many iterations")
+		}
+	}
+
+	suite.T().Fatal("Loop was broken")
 }
 
 type stubModulesManager struct{}
