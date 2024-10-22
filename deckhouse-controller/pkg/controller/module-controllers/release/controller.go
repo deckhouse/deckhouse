@@ -546,7 +546,9 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 }
 
 func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
+	var result ctrl.Result
 	var notReadyErr *updater.NotReadyForDeployError
+
 	if errors.As(err, &notReadyErr) {
 		r.logger.Infoln(err.Error())
 		// TODO: requeue all releases if deckhouse update settings is changed
@@ -559,7 +561,7 @@ func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result,
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
+	return result, fmt.Errorf("apply predicted release: %w", err)
 }
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
@@ -963,7 +965,9 @@ func syncModuleRegistrySpec(downloadedModulesDir, moduleName, moduleVersion stri
 
 	registrySpec := openAPISpec.Properties.Registry.Properties
 
-	if moduleSource.Spec.Registry.CA != registrySpec.CA.Default || moduleSource.Spec.Registry.DockerCFG != registrySpec.DockerCFG.Default || moduleSource.Spec.Registry.Repo != registrySpec.Base.Default || moduleSource.Spec.Registry.Scheme != registrySpec.Scheme.Default {
+	dockercfg := downloader.DockerCFGForModules(moduleSource.Spec.Registry.Repo, moduleSource.Spec.Registry.DockerCFG)
+
+	if moduleSource.Spec.Registry.CA != registrySpec.CA.Default || dockercfg != registrySpec.DockerCFG.Default || moduleSource.Spec.Registry.Repo != registrySpec.Base.Default || moduleSource.Spec.Registry.Scheme != registrySpec.Scheme.Default {
 		err = downloader.InjectRegistryToModuleValues(filepath.Join(downloadedModulesDir, moduleName, moduleVersion), moduleSource)
 	}
 

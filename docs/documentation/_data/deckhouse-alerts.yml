@@ -918,6 +918,25 @@ alerts:
         Prometheus is unable to scrape Grafana metrics.
       severity: "6"
       markupFormat: markdown
+    - name: D8HasModuleConfigAllowedToDisable
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        ModuleConfig is waiting for disable.
+
+        It is recommended to keep clean your module configurations from approve annotations.
+
+        If you ignore this alert and do not clear the annotation, it may cause the module to be accidentally removed from the cluster.
+
+        Removing a module from a cluster can lead to a number of irreparable consequences.
+
+        Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disable-` to stop this alert.
+      summary: |
+        ModuleConfig annotation for allow to disable is setted.
+      severity: "4"
+      markupFormat: markdown
     - name: D8ImageAvailabilityExporterMalfunctioning
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
@@ -1532,20 +1551,7 @@ alerts:
       description: |-
         Some nodes have deprecated OS versions. Please update nodes to actual OS version.
 
-        To observe affected nodes use the expr `kube_node_info{os_image=~"Debian GNU/Linux 10.*"}` in Prometheus.
-      summary: |
-        Nodes have deprecated OS versions.
-      severity: "4"
-      markupFormat: markdown
-    - name: D8NodeHasDeprecatedOSVersion
-      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/node-os-requirements.yaml
-      moduleUrl: 340-monitoring-deckhouse
-      module: monitoring-deckhouse
-      edition: ce
-      description: |-
-        Some nodes have deprecated OS versions. Please update nodes to actual OS version.
-
-        To observe affected nodes use the expr `kube_node_info{os_image=~"Ubuntu 18.04.*"}` in Prometheus.
+        To observe affected nodes use the expr `kube_node_info{os_image=~"Ubuntu 18.04.*|Debian GNU/Linux 10.*|CentOS Linux 7.*"}` in Prometheus.
       summary: |
         Nodes have deprecated OS versions.
       severity: "4"
