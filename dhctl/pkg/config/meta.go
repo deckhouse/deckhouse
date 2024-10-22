@@ -82,6 +82,7 @@ type ProxyModeRegistryData struct {
 }
 
 type DetachedModeRegistryData struct {
+	RegistryPath           string             `json:"-"`
 	ImagesBundlePath       string             `json:"-"`
 	InternalRegistryAccess RegistryAccessData `json:"-"`
 	RegistryStorageMode    string             `json:"-"`
@@ -139,6 +140,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 			}
 		}
 
+		embeddedRegistryPath := "/system/deckhouse"
 		switch m.RegistryConfig.Mode {
 		case "Direct":
 			properties := m.RegistryConfig.DirectModeProperties
@@ -177,7 +179,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 				Mode: m.RegistryConfig.Mode,
 				Data: RegistryData{
 					Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
-					Path:    "/system/deckhouse",
+					Path:    embeddedRegistryPath,
 					// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
 					// Scheme:       "",
 					// DockerCfg:    "",
@@ -208,13 +210,14 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 				Mode: m.RegistryConfig.Mode,
 				Data: RegistryData{
 					Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
-					Path:    "/system/deckhouse",
+					Path:    embeddedRegistryPath,
 					// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
 					// Scheme:       "",
 					// DockerCfg:    "",
 					// CA:           "",
 				},
 				ModeSpecificFields: DetachedModeRegistryData{
+					RegistryPath:        embeddedRegistryPath,
 					ImagesBundlePath:    properties.ImagesBundlePath,
 					RegistryStorageMode: properties.StorageMode,
 				},
@@ -826,6 +829,7 @@ func (rData ProxyModeRegistryData) DeepCopy() ProxyModeRegistryData {
 
 func (rData DetachedModeRegistryData) DeepCopy() DetachedModeRegistryData {
 	return DetachedModeRegistryData{
+		RegistryPath:           rData.RegistryPath,
 		ImagesBundlePath:       rData.ImagesBundlePath,
 		InternalRegistryAccess: rData.InternalRegistryAccess,
 		RegistryStorageMode:    rData.RegistryStorageMode,
@@ -925,8 +929,8 @@ func (r Registry) DeepCopy() Registry {
 		modeSpecificFieldsCopy = modeSpecificFields.DeepCopy()
 	}
 	return Registry{
-		Mode:             r.Mode,
-		Data:             r.Data,
+		Mode:               r.Mode,
+		Data:               r.Data,
 		ModeSpecificFields: modeSpecificFieldsCopy,
 	}
 }
