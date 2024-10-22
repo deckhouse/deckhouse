@@ -44,4 +44,4 @@ shell:
   - go mod download
   - go build -ldflags '-s -w' .
   - chown -R 64535:64535 /src
-  - chmod 0700 /src/oom-kills-exporter
+  - chmod 0755 /src/oom-kills-exporter
