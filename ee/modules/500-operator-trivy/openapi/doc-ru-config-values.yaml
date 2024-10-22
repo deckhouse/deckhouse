@@ -2,9 +2,12 @@ type: object
 properties:
   storageClass:
     description: |
-      Имя StorageClass.
+      Имя storageClass'а, который будет использоваться.
 
-      `false` — принудительное использование `emptyDir`. После установки необходимо вручную удалить старый PVC и перезапустить под.
+      * Используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в emptyDir.
+      * `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
+      * **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск будет перезаказан, а все данные удалены.
+      * Если указать `false`, будет форсироваться использование emptyDir'а.
 
   severities:
     description: |
