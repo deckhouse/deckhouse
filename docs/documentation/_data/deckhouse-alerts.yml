@@ -2687,16 +2687,6 @@ alerts:
         The {{$labels.pod}} Pod has detected unavailable PSI subsystem. Check logs for additional information: kubectl -n d8-cloud-instance-manager logs {{$labels.pod}} Possible actions to resolve the problem: * Upgrade kernel to version 4.20 or higher. * Enable Pressure Stall Information. * Disable early oom.
       severity: "8"
       markupFormat: markdown
-    - name: EbpfExporterKernelNotSupported
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/ebpf-exporter.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: ""
-      summary: |
-        The BTF module required for ebpf_exporter is missing in the kernel. Possible actions to resolve the problem: * Built kernel with BTF type information info. * Disable ebpf_exporter
-      severity: "8"
-      markupFormat: markdown
     - name: ExtendedMonitoringDeprecatatedAnnotation
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/deprecated-annotation.yaml
       moduleUrl: 340-extended-monitoring

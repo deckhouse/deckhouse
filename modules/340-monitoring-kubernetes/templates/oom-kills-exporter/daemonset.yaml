@@ -1,4 +1,4 @@
-{{- define "ebpf_exporter_resources" }}
+{{- define "oom_kills_exporter_resources" }}
 cpu: 10m
 memory: 100Mi
 {{- end }}
@@ -10,21 +10,21 @@ memory: 100Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: ebpf-exporter
+  name: oom-kills-exporter
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "ebpf-exporter" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "oom-kills-exporter" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
-    name: ebpf-exporter
+    name: oom-kills-exporter
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: ebpf-exporter
+    - containerName: oom-kills-exporter
       minAllowed:
-        {{- include "ebpf_exporter_resources" . | nindent 8 }}
+        {{- include "oom_kills_exporter_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 20m
         memory: 150Mi
@@ -34,9 +34,9 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: ebpf-exporter
+  name: oom-kills-exporter
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "ebpf-exporter")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "oom-kills-exporter")) | nindent 2 }}
 spec:
   updateStrategy:
     rollingUpdate:
@@ -44,45 +44,34 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: ebpf-exporter
+      app: oom-kills-exporter
   template:
     metadata:
       labels:
-        app: ebpf-exporter
-      name: ebpf-exporter
+        app: oom-kills-exporter
+      name: oom-kills-exporter
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       hostPID: true
-      serviceAccountName: ebpf-exporter
+      serviceAccountName: oom-kills-exporter
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       containers:
-      - image: {{ include "helm_lib_module_image" (list . "ebpfExporter") }}
-        name: ebpf-exporter
+      - image: {{ include "helm_lib_module_image" (list . "oomKillsExporter") }}
+        name: oom-kills-exporter
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
-        args:
-        - --config.dir=/metrics
-        - --config.names=oomkill
-        - --web.listen-address=127.0.0.1:{{ $port }}
         readinessProbe:
           httpGet:
             path: /healthz
             port: {{ $port }}
             scheme: HTTPS
-        volumeMounts:
-        - name: host-sys
-          mountPath: /sys
-          readOnly: true
-        - name: host-usr-share-misc
-          mountPath: /usr/share/misc
-          readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "ebpf_exporter_resources" . | nindent 12 }}
+            {{- include "oom_kills_exporter_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -111,7 +100,7 @@ spec:
                   apiVersion: v1
                   resource: daemonsets
                   subresource: prometheus-metrics
-                  name: ebpf-exporter
+                  name: oom-kills-exporter
         ports:
         - containerPort: {{ $port }}
           name: https-metrics
@@ -121,15 +110,6 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
-      volumes:
-      - name: host-sys
-        hostPath:
-          path: /sys
-          type: Directory
-      - name: host-usr-share-misc
-        hostPath:
-          path: /usr/share/misc/
-          type: Directory
       imagePullSecrets:
       - name: deckhouse-registry
 {{- end }}

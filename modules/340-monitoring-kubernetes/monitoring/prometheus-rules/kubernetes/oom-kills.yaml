@@ -1,0 +1,20 @@
+- name: oom-kills
+  rules:
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod, container) (
+        kube_pod_container_info * on (uid) group_left
+        max by (uid) (label_replace(ebpf_exporter_oom_kills{task_memcg=~".*burstable/pod.*"}, "uid", "$1", "task_memcg", ".+burstable/pod(.*)"))
+      )
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod, container) (
+        kube_pod_container_info * on (uid) group_left
+        max by (uid) (label_replace(ebpf_exporter_oom_kills{task_memcg=~".*burstable/pod.*"}, "uid", "$1", "task_memcg", ".+burstable/pod(.*)/.+"))
+      )
+  - record: oom_kills:normalized
+    expr: |-
+      max by (namespace, pod, container) (
+        kube_pod_container_info * on (uid) group_left
+        max by (uid) (label_replace(ebpf_exporter_oom_kills{task_memcg=~".*kubepods/pod.*"}, "uid", "$1", "task_memcg", ".+kubepods/pod(.*)"))
+      )

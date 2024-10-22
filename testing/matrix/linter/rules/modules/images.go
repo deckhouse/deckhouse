@@ -98,7 +98,6 @@ func skipDistrolessImageCheckIfNeeded(image string) bool {
 		"cni-v1x13x7/Dockerfile",
 		"cni-v1x16x2/Dockerfile",
 		"cni-v1x19x7/Dockerfile",
-		"ebpf-exporter/Dockerfile",
 		"controller-1-1/Dockerfile",
 		"easyrsa-migrator/Dockerfile",
 		"pmacct/Dockerfile",
