@@ -54,7 +54,6 @@ const globalValues = `
       worker: 1
     podSubnet: 10.0.1.0/16
     kubernetesVersion: "%s.4"
-    defaultStorageClass: fastssd
 `
 
 const moduleValues = `

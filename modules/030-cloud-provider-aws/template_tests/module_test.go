@@ -63,7 +63,6 @@ const globalValues = `
       worker: 1
       master:
         __ConstantChoices__: "3"
-    defaultStorageClass: gp2
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.27.0
 `

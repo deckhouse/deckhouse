@@ -69,7 +69,6 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
-    defaultStorageClass: pd-standard-not-replicated
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.29.0
 `

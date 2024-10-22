@@ -52,7 +52,6 @@ const globalValues = `
     d8SpecificNodeCountByRole:
       worker: 1
       master: 3
-    defaultStorageClass: mydsname1
     podSubnet: 10.0.1.0/16
     kubernetesVersion: "%s.1"
 `
