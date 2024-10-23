@@ -230,16 +230,6 @@ alerts:
         Job {{$labels.namespace}}/{{$labels.job_name}} failed in CronJob {{$labels.namespace}}/{{$labels.owner_name}}.
       severity: "5"
       markupFormat: default
-    - name: CronJobHungs
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: ""
-      summary: |
-        CronJob {{$labels.namespace}}/{{$labels.job_name}} hungs.
-      severity: "5"
-      markupFormat: markdown
     - name: CronJobImageAbsent
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
       moduleUrl: 340-extended-monitoring
@@ -250,6 +240,16 @@ alerts:
       summary: |
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
+      markupFormat: markdown
+    - name: CronJobPodsNotCreated
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: ""
+      summary: |
+        CronJob {{$labels.namespace}}/{{$labels.job_name}} pods still not created.
+      severity: "5"
       markupFormat: markdown
     - name: CronJobRegistryUnavailable
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
