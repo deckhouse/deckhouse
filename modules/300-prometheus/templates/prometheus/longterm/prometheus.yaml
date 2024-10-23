@@ -113,7 +113,7 @@ spec:
   {{- end }}
   affinity:
     podAntiAffinity:
-      {{- if eq .Values.prometheus.longtermPodAntiAffinity "required" }}
+      {{- if eq .Values.prometheus.longtermPodAntiAffinity "Required" }}
       requiredDuringSchedulingIgnoredDuringExecution:
         - labelSelector:
             matchLabels:
