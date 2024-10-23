@@ -26,6 +26,32 @@ spec:
   nodeType: CloudEphemeral
 ---
 apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system-b
+spec:
+  chaos:
+    mode: Disabled
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: system
+    maxPerZone: 1
+    minPerZone: 1
+    zones:
+    - eu-central-1a
+  disruptions:
+    approvalMode: Manual
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+    taints:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: system
+  nodeType: CloudPermanent
+---
+apiVersion: deckhouse.io/v1
 kind: AWSInstanceClass
 metadata:
   name: system
