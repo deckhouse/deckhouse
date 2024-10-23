@@ -35,31 +35,31 @@ func v2testCase() testCase {
 		name: "should convert from 1 to 2 version",
 		settings: `
 auth:
-status:
-password: password
-allowedUserGroups:
-  - group
-  - group2
-whitelistSourceRange:
-  - source1
-webui:
-password: password
-allowedUserGroups:
-  - group
-  - group2
+  status:
+    password: password
+    allowedUserGroups:
+      - group
+      - group2
+    whitelistSourceRange:
+      - source1
+  webui:
+    password: password
+    allowedUserGroups:
+      - group
+      - group2
 `,
 		expected: `
 auth:
-status:
-allowedUserGroups:
-  - group
-  - group2
-whitelistSourceRange:
-  - source1
-webui:
-allowedUserGroups:
-  - group
-  - group2
+  status:
+    allowedUserGroups:
+      - group
+      - group2
+    whitelistSourceRange:
+      - source1
+  webui:
+    allowedUserGroups:
+      - group
+      - group2
 `,
 		currentVersion:  1,
 		expectedVersion: 2,
