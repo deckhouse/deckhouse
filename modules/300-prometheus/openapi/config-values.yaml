@@ -296,7 +296,7 @@ properties:
       When set to `preferred`, the anti-affinity rule is soft, in some cases allowing scheduling longterm Prometheus instance alongside the main instance.
       When set to `required`, the anti-affinity rule is strict, preventing the scheduling of the longterm Prometheus instance on the same node as the main instance.
       If the parameter is omitted or set to false, the default behavior is `preferred`.
-    pattern: '^(preffered|required)?$'
+    pattern: '^(preferred|required)?$'
   tolerations:
     type: array
     items:
