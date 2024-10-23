@@ -207,7 +207,7 @@ The new model facilities the principles of aggregation, it combines smaller role
     * Names of the scope roles must be this way, because the last word after ':' defines the use role witch will be created in namespaces
     * No restrictions on names of capabilities, but for readability keep them this way.
 
-3. Extend exising manage scope roles.
+3. Extend existing manage scope roles.
 
    If we want to extend an existing scope role, we can use the way above, but change the aggregation label and name.
    Example to extend the deckhouse scope role(```d8:manage:deckhouse:admin```):
