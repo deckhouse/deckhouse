@@ -52,6 +52,7 @@ spec:
   selector:
     matchLabels:
       app: dex-authenticator
+      name: {{ $crd.name }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -71,11 +72,13 @@ spec:
     {{- end }}
   selector:
     matchLabels:
-      app: dex-authenticator 
+      app: dex-authenticator
+      name: {{ $crd.name }}
   template:
     metadata:
       labels:
         app: dex-authenticator
+        name: {{ $crd.name }}
       annotations:
         checksum/config: {{ $crd.credentials | toJson | b64enc | sha256sum }}
     spec:
@@ -93,7 +96,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $context "system") | nindent 6 }}
 {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator")) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name)) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
       - name: registry-dex-authenticator

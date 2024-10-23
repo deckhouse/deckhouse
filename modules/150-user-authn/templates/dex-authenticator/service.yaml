@@ -1,6 +1,5 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
-  {{- range $app := $crd.spec.applications }}
 ---
 apiVersion: v1
 kind: Service
@@ -15,5 +14,5 @@ spec:
     targetPort: dex-https
   selector:
     app: dex-authenticator
+    name: {{ $crd.name }}
   {{- end }}
-{{- end }}
