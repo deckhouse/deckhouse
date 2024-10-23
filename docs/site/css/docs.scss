@@ -1067,7 +1067,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs code {
-    font-size: 15px;
     font-weight: 500;
     line-height: 22px;
     padding: 2px 4px;
@@ -1085,7 +1084,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-radius: 4px;
     padding: 10px;
     overflow-x: auto;
-    margin: 5px 0 25px 0px;
+    margin: 5px 0 25px 0;
     display: block;
     font-size: 13px;
     line-height: 1.428571429;
@@ -1099,7 +1098,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-size: 100%;
     background: transparent;
     white-space: pre;
-    border-radius: 0px;
+    border-radius: 0;
 }
 
 .docs .details {
