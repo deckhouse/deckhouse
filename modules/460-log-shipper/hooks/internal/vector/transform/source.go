@@ -103,7 +103,7 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 		return nil, err
 	}
 	transforms = append(transforms, logFilterTransforms...)
-	
+
 	transforms = append(transforms, CleanUpAfterSourceTransform())
 
 	sTransforms, err := BuildFromMapSlice("source", name, transforms)
