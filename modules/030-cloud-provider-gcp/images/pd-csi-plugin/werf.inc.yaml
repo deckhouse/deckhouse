@@ -29,7 +29,7 @@ import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /src/deploy/kubernetes/udev/google_nvme_id 
   to: /lib/udev_containerized/google_nvme_id
-  before: setup 
+  after: install 
     {{- end }} 
 docker:
   ENTRYPOINT: ["/gce-pd-csi-driver"]
