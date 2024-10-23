@@ -154,14 +154,18 @@ oom_score = 0
   {{- if .registry.ca }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
           ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+      {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."localhost:5001".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+      {{- end }}
   {{- end }}
   {{- if eq .registry.scheme "http" }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
           insecure_skip_verify = true
-        {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+      {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."localhost:5001".tls]
           insecure_skip_verify = true
-    {{- end }}
+      {{- end }}
   {{- end }}
   {{- if eq .runType "Normal" }}
     {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
