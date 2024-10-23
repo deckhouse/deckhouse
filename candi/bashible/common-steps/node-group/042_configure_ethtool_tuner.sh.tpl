@@ -25,7 +25,7 @@ bb-sync-file /opt/deckhouse/bin/ethtool-tuner - << "EOF"
 #!/bin/bash
 
 if ! [ -x "$(command -v /opt/deckhouse/bin/ethtool)" ]; then
-  echo "ethtool is not founded"
+  echo "ethtool is not found"
   exit 0
 fi
 ifaces=( $(ip -json a | /opt/deckhouse/bin/jq -r '.[].ifname') )

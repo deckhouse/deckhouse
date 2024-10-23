@@ -1,5 +1,5 @@
 {{/* Important! The iptables binaries from artifact are also used in kube-router image of network-policy-engine module and cni-simple-bridge. */}}
-{{- $version := "6.9" }}
+{{- $version := "6.11" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -35,7 +35,7 @@ shell:
     - ./autogen.sh
     - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
     - make && make install
-    - git clone -b v{{ $version }} --depth 1  https://git.kernel.org/pub/scm/network/ethtool/ethtool.git /src
+    - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/ethtool/ethtool.git /src
     - cd /src
     - ./autogen.sh
     - ./configure LDFLAGS=-static --libdir=/opt/deckhouse/bin/.libs
