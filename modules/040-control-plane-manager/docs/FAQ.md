@@ -107,7 +107,7 @@ The steps described below must be performed with the first master node of the cl
    >
    > To illustrate, with three master nodes (`masterNodeGroup.replicas: 1`) and automatic address reservation, the `masterNodeGroup.instanceClass.externalIPAddresses` parameter would look as follows:
    >
-   > ```bash
+   > ```yaml
    > externalIPAddresses:
    > - "Auto"
    > ```
