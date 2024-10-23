@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -29,6 +30,39 @@ import (
 var (
 	local = prometheus.NewRegistry()
 )
+
+func findMetricValue(metricName string, labels map[string]string, r *prometheus.Registry) bool {
+	mfs, err := r.Gather()
+	if err != nil {
+		log.Println("Error gathering metrics:", err)
+		return false
+	}
+
+	for _, mf := range mfs {
+		if mf.GetName() == metricName {
+			for _, metric := range mf.Metric {
+				// Нада оптимизировать. можно вложить один цикл в другой.
+				labelMap := make(map[string]string)
+				for _, label := range metric.Label {
+					labelMap[*label.Name] = *label.Value
+				}
+
+				match := true
+				for key, value := range labels {
+					if labelMap[key] != value {
+						match = false
+						break
+					}
+				}
+
+				if match {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
 
 func getContainerIDFromLog(line string) (string, string, string, error) {
 	var globalOom, oomMemcg, taskMemcg string
@@ -82,9 +116,24 @@ func main() {
 	}
 
 	for item := range logCh {
-		globalOom, oomMemcg, taskMemcg, err := getContainerIDFromLog(item.Message)
-		if err == nil {
-			klogOomkill.WithLabelValues(globalOom, taskMemcg, oomMemcg).Add(1)
+		if globalOom, oomMemcg, taskMemcg, err := getContainerIDFromLog(item.Message); err == nil {
+			labels := map[string]string{
+				"global_oom": globalOom,
+				"oom_memcg":  oomMemcg,
+				"task_memcg": taskMemcg,
+			}
+			sleep := 0 * time.Second
+			if !findMetricValue("klog_oomkill", labels, local) {
+				if _, err := klogOomkill.GetMetricWith(labels); err != nil {
+					log.Fatal("Could not create metrics")
+				}
+				sleep = 31 * time.Second
+			}
+
+			go func() {
+				time.Sleep(sleep)
+				klogOomkill.With(labels).Inc()
+			}()
 		}
 	}
 }
