@@ -51,8 +51,6 @@ apiVersions:
             type: string
           ca:
             type: string
-          dockerCfg:
-            type: string
       images:
         type: object
       clusterBootstrap:
@@ -83,20 +81,6 @@ apiVersions:
               '^[0-9.]+$':
                 type: object
                 properties:
-                  docker:
-                    type: object
-                    properties:
-                      desiredVersion:
-                        type: string
-                      allowedPattern:
-                        type: string
-                      containerd:
-                        type: object
-                        properties:
-                          desiredVersion:
-                            type: string
-                          allowedPattern:
-                            type: string
                   containerd:
                     type: object
                     properties:

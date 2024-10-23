@@ -25,7 +25,7 @@ fi
 mkdir -p /var/lib/kubelet
 
 # Check CRI type and set appropriated parameters.
-# cgroup default is `systemd`, only for docker cri we use `cgroupfs`.
+# cgroup default is `systemd`.
 cgroup_driver="systemd"
 {{- if eq .cri "Containerd" }}
 # Overriding cgroup type from external config file
@@ -38,7 +38,7 @@ fi
   {{- if .nodeGroup.cri.notManaged.criSocketPath }}
 cri_socket_path={{ .nodeGroup.cri.notManaged.criSocketPath | quote }}
   {{- else }}
-for socket_path in /var/run/docker.sock /run/containerd/containerd.sock; do
+for socket_path in /run/containerd/containerd.sock; do
   if [[ -S "${socket_path}" ]]; then
     cri_socket_path="${socket_path}"
     break
@@ -51,28 +51,10 @@ if [[ -z "${cri_socket_path}" ]]; then
   exit 1
 fi
 
-if grep -q "docker" <<< "${cri_socket_path}"; then
-  cri_type="NotManagedDocker"
-else
-  cri_type="NotManagedContainerd"
-fi
-{{- else if eq .cri "Docker" }}
-cri_type="Docker"
-{{- else }}
+{{- else if eq .cri "Containerd" }}
 cri_type="Containerd"
 {{- end }}
 
-if [[ "${cri_type}" == "Docker" || "${cri_type}" == "NotManagedDocker" ]]; then
-  cgroup_driver="cgroupfs"
-  criDir=$(docker info --format '{{`{{.DockerRootDir}}`}}')
-  if [ -d "${criDir}/overlay2" ]; then
-    criDir="${criDir}/overlay2"
-  else
-    if [ -d "${criDir}/aufs" ]; then
-      criDir="${criDir}/aufs"
-    fi
-  fi
-fi
 
 if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "NotManagedContainerd" ]]; then
   criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
