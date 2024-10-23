@@ -172,7 +172,7 @@ spec:
         - name: OAUTH2_PROXY_COOKIE_SECRET
           valueFrom:
             secretKeyRef:
-              name: dex-authenticator-{{ $crd.name }}-
+              name: dex-authenticator-{{ $crd.name }}-{{ $app.applicationName }}
               key: cookie-secret
         - name: TRUSTED_ROOT_CA_FILE
           value: /certs/ca.crt
