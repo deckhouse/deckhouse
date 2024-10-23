@@ -266,6 +266,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	var result ctrl.Result
 
 	if moduleName, err := deckhouseversion.Instance().ValidateBaseVersion(dr.Spec.Version); err != nil {
+		// invalid deckhouse version in deckhouse release
+		if moduleName == "" {
+			return ctrl.Result{}, err
+		}
 		if r.moduleManager.IsModuleEnabled(moduleName) {
 			dr.Status.Message = err.Error()
 			if e := r.client.Status().Update(ctx, dr); e != nil {
@@ -277,6 +281,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	if r.isKubernetesVersionAutomatic(ctx) && len(dr.Spec.Requirements["autoK8sVersion"]) > 0 {
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(dr.Spec.Requirements["autoK8sVersion"]); err != nil {
+			// invalid auto kubernetes version in deckhouse release
+			if moduleName == "" {
+				return ctrl.Result{}, err
+			}
 			if r.moduleManager.IsModuleEnabled(moduleName) {
 				dr.Status.Message = err.Error()
 				if e := r.client.Status().Update(ctx, dr); e != nil {
@@ -335,18 +343,19 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 		r.metricStorage.GroupedVault.GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, labels)
 	}
+	{
+		var releases v1alpha1.DeckhouseReleaseList
+		err = r.client.List(ctx, &releases)
+		if err != nil {
+			return result, fmt.Errorf("get deckhouse releases: %w", err)
+		}
 
-	var releases v1alpha1.DeckhouseReleaseList
-	err = r.client.List(ctx, &releases)
-	if err != nil {
-		return result, fmt.Errorf("get deckhouse releases: %w", err)
+		pointerReleases := make([]*v1alpha1.DeckhouseRelease, 0, len(releases.Items))
+		for _, rl := range releases.Items {
+			pointerReleases = append(pointerReleases, &rl)
+		}
+		deckhouseUpdater.SetReleases(pointerReleases)
 	}
-
-	pointerReleases := make([]*v1alpha1.DeckhouseRelease, 0, len(releases.Items))
-	for _, rl := range releases.Items {
-		pointerReleases = append(pointerReleases, &rl)
-	}
-	deckhouseUpdater.SetReleases(pointerReleases)
 
 	if deckhouseUpdater.ReleasesCount() == 0 {
 		r.logger.Debug("releases count is zero")
@@ -401,6 +410,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 }
 
 func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
+	var result ctrl.Result
 	var notReadyErr *updater.NotReadyForDeployError
 	if errors.As(err, &notReadyErr) {
 		r.logger.Infoln(err.Error())
@@ -414,7 +424,7 @@ func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
+	return result, fmt.Errorf("apply predicted release: %w", err)
 }
 
 func (r *deckhouseReleaseReconciler) getDeckhouseLatestPod(ctx context.Context) (*corev1.Pod, error) {

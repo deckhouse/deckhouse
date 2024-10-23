@@ -314,7 +314,11 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 					maxUsedControlPlaneVersion: "1.30",
 					configVersion:              "1.28",
 					controlPlaneVersions:       []string{"1.28", "1.28", "1.28"},
+<<<<<<< HEAD
 					defaultVersionInSecret:     "1.27",
+=======
+					defaultVersionInSecret:     "1.28",
+>>>>>>> 05c58a9ef89215fe1921824994f9333b646d8722
 				},
 				output{
 					maxUsedControlPlaneVersion: "1.30",

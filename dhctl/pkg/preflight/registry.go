@@ -294,8 +294,9 @@ func prepareAuthRequest(
 	if err != nil {
 		return nil, fmt.Errorf("prepare auth request: %w", err)
 	}
-
-	req.Header.Add("Authorization", "Basic "+authData)
+	if authData != "" {
+		req.Header.Add("Authorization", "Basic "+authData)
+	}
 
 	return req, nil
 }

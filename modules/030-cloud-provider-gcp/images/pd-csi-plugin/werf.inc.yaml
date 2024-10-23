@@ -25,6 +25,10 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev_containerized/scsi_id
   before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib/udev/google_nvme_id
+  to: /lib/udev_containerized/google_nvme_id
+  before: setup 
 docker:
   ENTRYPOINT: ["/gce-pd-csi-driver"]
 ---

@@ -127,10 +127,14 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 
 func (e *Extender) ValidateBaseVersion(baseVersion string) (string, error) {
 	if name, err := e.versionMatcher.ValidateBaseVersion(baseVersion); err != nil {
-		e.logger.Errorf("requirements of the '%s' module are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
-		return name, fmt.Errorf("requirements of the '%s' module are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
+		if name != "" {
+			e.logger.Errorf("requirements of the '%s' module are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
+			return name, fmt.Errorf("requirements of the '%s' module are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
+		}
+		e.logger.Errorf("modules requirements cannot be checked: deckhouse version is invalid: %s", err.Error())
+		return "", fmt.Errorf("modules requirements cannot be checked: deckhouse version is invalid: %s", err.Error())
 	}
-	e.logger.Debugf("requirements of the '%s' module are satisfied", baseVersion)
+	e.logger.Debugf("modules requirements for '%s' deckhouse version are satisfied", baseVersion)
 	return "", nil
 }
 

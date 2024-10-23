@@ -67,6 +67,9 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
 			log.Debugf("failed to validate base version: %v", err)
+			if moduleName == "" {
+				return rejectResult(err.Error())
+			}
 			if mm.IsModuleEnabled(moduleName) {
 				log.Debugf("module %s has unsatisfied requierements", moduleName)
 				return rejectResult(err.Error())

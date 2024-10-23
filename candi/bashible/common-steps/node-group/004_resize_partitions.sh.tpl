@@ -74,7 +74,7 @@ for partition in $(mount | grep -vE "kubernetes.io" | grep "ext4" | awk '{print 
   fi
 
   # partition = /dev/mapper/vgubuntu-root. LVM partition.
-  if [[ "${partition}" =~ ^/dev/mapper/[a-z\-]+$ ]]; then
+  if [[ "${partition}" =~ ^/dev/mapper/[A-Za-z0-9-]+$ ]]; then
     if grow_lvm "${partition}"; then
       resize2fs "${partition}"
     fi

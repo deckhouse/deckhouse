@@ -1,4 +1,4 @@
-{{/* Important! The iptables binaries from artifact are also used in kube-router image of network-policy-engine module and cni-simple-bridge. */}}
+{{/* Important! The iptables binaries from artifact are also used in other modules: kube-proxy, cni-simple-bridge, cni-cilium, cni-flannel, node-local-dns, ingress-nginx, openvpn, network-policy-engine and network-gateway. */}}
 {{- $version := "1.8.9" }}
 {{- $image_version := $version | replace "." "-" }}
 ---

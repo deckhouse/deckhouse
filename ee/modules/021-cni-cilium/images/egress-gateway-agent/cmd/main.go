@@ -11,6 +11,8 @@ import (
 	"flag"
 	"os"
 
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -73,6 +75,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         false,
+		Metrics:                metricsserver.Options{BindAddress: ":0"},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
