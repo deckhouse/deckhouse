@@ -130,8 +130,9 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: The {{ $labels.node }} Node has high TCP stack memory usage.
+      summary: The {{ $labels.node }} node has high TCP stack memory usage.
       description: |-
-        The {{ $labels.node }} Node TCP stack is under memory pressure.
-
-        Source of the problem can be application with TCP networking functionality.
+        The TCP stack on the {{ $labels.node }} node is experiencing high memory pressure.
+        This could be caused by applications with intensive TCP networking functionality.
+        Investigate the relevant applications and consider adjusting the system's TCP memory configuration
+        or addressing the source of increased network traffic.
