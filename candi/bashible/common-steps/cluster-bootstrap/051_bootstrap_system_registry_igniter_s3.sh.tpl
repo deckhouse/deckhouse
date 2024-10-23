@@ -275,7 +275,7 @@ check_and_run "auth_server" "/opt/deckhouse/bin/auth_server -logtostderr $IGNITE
 check_and_run "registry" "/opt/deckhouse/bin/registry serve $IGNITER_DIR/distribution_config.yaml" "$IGNITER_DIR/logs/distribution.log"
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
-    response=\$(d8-curl -s -o /dev/null -w "%{http_code}" https://localhost:5001)
+    response=\$(d8-curl -k -s -o /dev/null -w "%{http_code}" https://localhost:5001)
     if [[ "\$response" == "200" ]]; then
         docker_registry_started=true
         break
