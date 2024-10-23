@@ -11,44 +11,14 @@ osDistributions:
     en_support: 'false'
     note_content:
       ru: |
-        В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b><br>
-        Таблица поддержки некоторыми модулями DKP версий ядра Linux в Astra 1.8:<br>
-        <table>
-          <thead>
-            <tr>
-              <th>Версия ядра</th>
-              <th>Модуль cni-cilium</th>
-              <th>Модуль runtime-audit-engine</th>
-              <th>Поддержка eBPF</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>linux-image-6.1</td>
-              <td>✓</td>
-              <td></td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>linux-image-6.1-debug</td>
-              <td>✓</td>
-              <td>✓</td>
-              <td>✓</td>
-            </tr>
-            <tr>
-              <td>linux-image-6.6</td>
-              <td>✓</td>
-              <td></td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>linux-image-6.6-debug</td>
-              <td></td>
-              <td></td>
-              <td>✓</td>
-            </tr>
-          </tbody>
-        </table>
+        В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>.<br>
+        Перечень поддержки некоторыми модулями DKP версий ядра Linux в Astra 1.8:<br>
+        <ul>
+          <li><b>linux-image-6.1</b> – cni-cilium;</li>
+          <li><b>linux-image-6.1-debug</b> – cni-cilium, runtime-audit-engine, поддержка eBPF;</li>
+          <li><b>linux-image-6.6</b> – cni-cilium;</li>
+          <li><b>linux-image-6.6-debug</b> – поддержка eBPF;</li>
+        </ul>
   centos:
     name: CentOS
     url: https://www.centos.org/download/
