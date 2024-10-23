@@ -135,5 +135,3 @@
         The {{ $labels.node }} Node TCP stack is under memory pressure.
 
         Source of the problem can be application with TCP networking functionality.
-
-        You can check this [issue](https://github.com/deckhouse/deckhouse/issues/4605) for extra information.
