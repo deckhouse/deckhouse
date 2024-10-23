@@ -1,4 +1,4 @@
-x-config-version: 2
+x-config-version: 3
 type: object
 required:
   - auth
