@@ -10,20 +10,20 @@ memory: 25Mi
 
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
-  {{- range $app := $crd.spec.applications }}
+  {{- $hashedDomain := sha256sum $app.domainName | trunc 8 }}
   {{- if $context.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator
+  name: {{ $crd.name }}-dex-authenticator
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator
+    name: {{ $crd.name }}-dex-authenticator
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -45,7 +45,7 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator
+  name: {{ $crd.name }}-dex-authenticator
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
@@ -53,12 +53,11 @@ spec:
   selector:
     matchLabels:
       app: dex-authenticator
-      applicationName: {{ $app.applicationName }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator
+  name: {{ $crd.name }}-dex-authenticator
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
@@ -73,13 +72,11 @@ spec:
     {{- end }}
   selector:
     matchLabels:
-      app: dex-authenticator
-      applicationName: {{ $app.applicationName }}
+      app: dex-authenticator 
   template:
     metadata:
       labels:
         app: dex-authenticator
-        applicationName: {{ $app.applicationName }}
       annotations:
         checksum/config: {{ $crd.credentials | toJson | b64enc | sha256sum }}
     spec:
@@ -97,7 +94,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $context "system") | nindent 6 }}
 {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "applicationName" $app.applicationName)) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
       - name: registry-dex-authenticator
@@ -106,8 +103,8 @@ spec:
         emptyDir: {}
       initContainers:
       - args:
-        - {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator.{{ $crd.namespace }}
-        - {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator.{{ $crd.namespace }}.svc
+        - {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}
+        - {{ $crd.name }}-dex-authenticator.{{ $crd.namespace }}.svc
         image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
         name: self-signed-generator
         volumeMounts:
@@ -123,11 +120,13 @@ spec:
         image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
         args:
         - --provider=oidc
-        - --client-id={{ $crd.name }}-{{ $app.applicationName }}-{{ $crd.namespace }}-dex-authenticator
+        - --client-id={{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
         - --cookie-secure=false
     {{- end }}
+    {{- range $app := $crd.spec.applications }}
         - --redirect-url=https://{{ $app.domainName }}
+    {{- end }}
         - --oidc-issuer-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
         # Skip oidc issuer validation and discovery to avoid CrashLoopBackoffs
         - --skip-oidc-discovery
@@ -142,7 +141,9 @@ spec:
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
+    {{- range $app := $crd.spec.applications }}
         - --whitelist-domain={{ $app.domainName }}
+    {{- end }}
         - --upstream=file:///dev/null
         - --https-address=0.0.0.0:8443
         - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
@@ -167,12 +168,12 @@ spec:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
-              name: dex-authenticator-{{ $crd.name }}-{{ $app.applicationName }}
+              name: dex-authenticator-{{ $crd.name }}
               key: client-secret
         - name: OAUTH2_PROXY_COOKIE_SECRET
           valueFrom:
             secretKeyRef:
-              name: dex-authenticator-{{ $crd.name }}-{{ $app.applicationName }}
+              name: dex-authenticator-{{ $crd.name }}
               key: cookie-secret
         - name: TRUSTED_ROOT_CA_FILE
           value: /certs/ca.crt
@@ -222,4 +223,3 @@ spec:
             {{- include "redis_resources" . | nindent 12 }}
   {{- end }}
 {{- end }}
-  {{- end }}
