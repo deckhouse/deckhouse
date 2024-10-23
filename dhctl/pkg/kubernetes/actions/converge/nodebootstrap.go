@@ -124,6 +124,7 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 	var (
 		nodesToWait []string
 		wg          sync.WaitGroup
+		mu          sync.Mutex
 	)
 
 	type checkResult struct {
@@ -152,7 +153,7 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 		candidateName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, indexCandidate)
 		var buffLog bytes.Buffer
 		wg.Add(1)
-		go func() {
+		go func(i, indexCandidate int, candidateName string) {
 			defer wg.Done()
 			if i == 0 {
 				saveLogToBuffer = false
@@ -164,9 +165,10 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 				buffLog: &buffLog,
 				err:     err,
 			}
-
+			mu.Lock()
 			nodesToWait = append(nodesToWait, candidateName)
-		}()
+			mu.Unlock()
+		}(i, indexCandidate, candidateName)
 	}
 
 	go func() {
