@@ -16,14 +16,14 @@ memory: 25Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator
-  namespace: {{ $crd.metadata.namespace }}
+  name: {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator
+  namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator
+    name: {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
@@ -45,8 +45,8 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator
-  namespace: {{ $crd.metadata.namespace }}
+  name: {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator
+  namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list $context 1 0) }}
@@ -58,8 +58,8 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator
-  namespace: {{ $crd.metadata.namespace }}
+  name: {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator
+  namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}
@@ -106,8 +106,8 @@ spec:
         emptyDir: {}
       initContainers:
       - args:
-        - {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator.{{ $crd.metadata.namespace }}
-        - {{ $crd.metadata.name }}-{{ $app.applicationName }}-dex-authenticator.{{ $crd.metadata.namespace }}.svc
+        - {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator.{{ $crd.namespace }}
+        - {{ $crd.name }}-{{ $app.applicationName }}-dex-authenticator.{{ $crd.namespace }}.svc
         image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
         name: self-signed-generator
         volumeMounts:
@@ -123,7 +123,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
         args:
         - --provider=oidc
-        - --client-id={{ $crd.metadata.name }}-{{ $app.applicationName }}-{{ $crd.metadata.namespace }}-dex-authenticator
+        - --client-id={{ $crd.name }}-{{ $app.applicationName }}-{{ $crd.namespace }}-dex-authenticator
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
         - --cookie-secure=false
     {{- end }}
@@ -167,12 +167,12 @@ spec:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
-              name: dex-authenticator-{{ $crd.metadata.name }}-{{ $app.applicationName }}
+              name: dex-authenticator-{{ $crd.name }}-{{ $app.applicationName }}
               key: client-secret
         - name: OAUTH2_PROXY_COOKIE_SECRET
           valueFrom:
             secretKeyRef:
-              name: dex-authenticator-{{ $crd.metadata.name }}-
+              name: dex-authenticator-{{ $crd.name }}-
               key: cookie-secret
         - name: TRUSTED_ROOT_CA_FILE
           value: /certs/ca.crt
