@@ -274,10 +274,10 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 		if properties == nil {
 			return fmt.Errorf("unable to get the properties of the direct registry mode")
 		}
-		if err := validateRegistryDockerCfg(properties.DockerCfg); err != nil {
+		address, path := getRegistryAddressAndPath(properties.ImagesRepo)
+		if err := validateRegistryDockerCfg(properties.DockerCfg, address); err != nil {
 			return err
 		}
-		address, path := getRegistryAddressAndPath(properties.ImagesRepo)
 		m.Registry = Registry{
 			Mode: m.RegistryConfig.Mode,
 			Data: RegistryData{
@@ -294,14 +294,14 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 		if properties == nil {
 			return fmt.Errorf("unable to get the properties of the proxy registry mode")
 		}
-		if err := validateRegistryDockerCfg(properties.DockerCfg); err != nil {
+		address, path := getRegistryAddressAndPath(properties.ImagesRepo)
+		if err := validateRegistryDockerCfg(properties.DockerCfg, address); err != nil {
 			return err
 		}
 		clusterDomain, err := m.GetClusterDomain()
 		if err != nil {
 			return err
 		}
-		address, path := getRegistryAddressAndPath(properties.ImagesRepo)
 		m.Registry = Registry{
 			Mode: m.RegistryConfig.Mode,
 			Data: RegistryData{
