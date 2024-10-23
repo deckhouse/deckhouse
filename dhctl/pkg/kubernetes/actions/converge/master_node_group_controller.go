@@ -369,7 +369,7 @@ func (c *MasterNodeGroupController) updateNode(nodeName string) error {
 		return ErrConvergeInterrupted
 	}
 
-	err = SaveMasterNodeTerraformState(c.client, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+	err = SaveMasterNodeTerraformState(c.client, nodeName, outputs.TerraformState, outputs.GetDataDevices())
 	if err != nil {
 		return err
 	}

@@ -17,10 +17,15 @@ limitations under the License.
 package config
 
 import (
+	"strings"
+
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 const (

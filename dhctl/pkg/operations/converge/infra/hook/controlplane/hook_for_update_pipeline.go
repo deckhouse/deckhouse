@@ -152,6 +152,10 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 	if err != nil {
 		return fmt.Errorf("failed to save kubernetes data device path: %v", err)
 	}
+	err = h.saveSystemRegistryDataDevicePath(outputs.SystemRegistryDataDevicePath)
+	if err != nil {
+		return fmt.Errorf("failed to save System registry data device path: %v", err)
+	}
 
 	err = waitEtcdHasMember(h.kubeCl.KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
 	if err != nil {
@@ -183,7 +187,7 @@ func (h *HookForUpdatePipeline) IsReady() error {
 
 func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(devicePath string) error {
 	getDevicePathManifest := func() interface{} {
-		return manifests.SecretMasterDevicePath(h.nodeToConverge, []byte(devicePath))
+		return manifests.SecretMasterKubernetesDataDevicePath(h.nodeToConverge, []byte(devicePath))
 	}
 
 	task := actions.ManifestTask{
@@ -219,6 +223,53 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(devicePath string) 
 	}
 
 	return retry.NewLoop(fmt.Sprintf("Save Kubernetes data device path for node '%s'", h.nodeToConverge), 45, 10*time.Second).Run(func() error {
+		err := task.CreateOrUpdate()
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func (h *HookForUpdatePipeline) saveSystemRegistryDataDevicePath(devicePath string) error {
+	getDevicePathManifest := func() interface{} {
+		return manifests.SecretMasterSystemRegistryDataDevicePath(h.nodeToConverge, []byte(devicePath))
+	}
+
+	task := actions.ManifestTask{
+		Name:     `Secret "d8-masters-system-registry-data-device-path"`,
+		Manifest: getDevicePathManifest,
+		CreateFunc: func(manifest interface{}) error {
+			_, err := h.kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			data, err := json.Marshal(manifest.(*apiv1.Secret))
+			if err != nil {
+				return err
+			}
+
+			_, err = h.kubeCl.CoreV1().Secrets("d8-system").Patch(
+				context.TODO(),
+				"d8-masters-system-registry-data-device-path",
+				types.MergePatchType,
+				data,
+				metav1.PatchOptions{},
+			)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	return retry.NewLoop(fmt.Sprintf("Save System registry data device path for node '%s'", h.nodeToConverge), 45, 10*time.Second).Run(func() error {
 		err := task.CreateOrUpdate()
 		if err != nil {
 			return err
