@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/api/v1alpha1"
@@ -224,11 +225,19 @@ func periodicalRunEventReconcile(
 type RouteEntry struct {
 	destination string
 	gateway     string
+	dev         string
+	devId       int
 	table       int
 }
 
 func (re *RouteEntry) String() string {
-	return fmt.Sprintf("%d#%s#%s", re.table, re.destination, re.gateway)
+	hashRaw := make([]string, 0)
+	hashRaw = append(hashRaw, strconv.Itoa(re.table))
+	hashRaw = append(hashRaw, re.destination)
+	hashRaw = append(hashRaw, re.gateway)
+	hashRaw = append(hashRaw, strconv.Itoa(re.devId))
+	hashRaw = append(hashRaw, re.dev)
+	return strings.Join(hashRaw, "#")
 }
 
 func (re *RouteEntry) getHash() string {
@@ -238,6 +247,68 @@ func (re *RouteEntry) getHash() string {
 	}
 
 	return fmt.Sprintf("%v", hash)
+}
+
+func (re *RouteEntry) getNetlinkRoute() (*netlink.Route, error) {
+	// Prepare route for netlink
+	PreparedRoute := new(netlink.Route)
+
+	if re.table > 0 {
+		PreparedRoute.Table = re.table
+	}
+	if re.destination != "" {
+		ip, dstnetIPNet, err := net.ParseCIDR(re.destination)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse destination in route %v, err: %w",
+				*re,
+				err,
+			)
+		}
+		if !ip.Equal(dstnetIPNet.IP) {
+			return nil, fmt.Errorf("route %v is incorrect, destination is not a valid network address. perhaps %v was meant",
+				*re,
+				dstnetIPNet.String(),
+			)
+		}
+		PreparedRoute.Dst = dstnetIPNet
+	}
+	if re.gateway != "" {
+		PreparedRoute.Gw = net.ParseIP(re.gateway)
+	}
+	if re.dev != "" && re.devId != 0 {
+		PreparedRoute.LinkIndex = re.devId
+	}
+
+	return PreparedRoute, nil
+}
+
+func getRouteEntryFromNetlinkRoute(route netlink.Route) RouteEntry {
+	PreparedRoute := RouteEntry{}
+
+	if route.Dst != nil {
+		PreparedRoute.destination = route.Dst.String()
+	}
+	if route.Gw != nil {
+		PreparedRoute.gateway = route.Gw.String()
+	}
+	if route.LinkIndex > 0 {
+		PreparedRoute.devId = route.LinkIndex
+		link, err := netlink.LinkByIndex(route.LinkIndex)
+		if err == nil {
+			PreparedRoute.dev = link.Attrs().Name
+		} else {
+			fmt.Errorf("can not find Name for Link with Index %v, err: %w",
+				route.LinkIndex,
+				err,
+			)
+			PreparedRoute.dev = ""
+		}
+	}
+	if route.Table > 0 {
+		PreparedRoute.table = route.Table
+	}
+
+	return PreparedRoute
 }
 
 // RouteEntryMap: type, service functions and methods
@@ -260,6 +331,19 @@ func (rem *RouteEntryMap) AppendR(route v1alpha1.Route, tbl int) {
 		gateway:     route.Gateway,
 		table:       tbl,
 	}
+	if route.Dev != "" {
+		link, err := netlink.LinkByName(route.Dev)
+		if err != nil {
+			fmt.Errorf("can not find Link by Name %v, err: %w",
+				route.Dev,
+				err,
+			)
+			return
+		}
+		re.dev = route.Dev
+		re.devId = link.Attrs().Index
+	}
+
 	(*rem)[re.getHash()] = re
 }
 
@@ -488,11 +572,7 @@ func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
 	ar := make(RouteEntryMap)
 
 	for _, route := range routes {
-		re := RouteEntry{
-			destination: route.Dst.String(),
-			gateway:     route.Gw.String(),
-			table:       route.Table,
-		}
+		re := getRouteEntryFromNetlinkRoute(route)
 		ar.AppendRE(re)
 	}
 
@@ -500,36 +580,19 @@ func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
 }
 
 func addRouteToNode(route RouteEntry) error {
-	ip, dstnetIPNet, err := net.ParseCIDR(route.destination)
+	PreparedRoute, err := route.getNetlinkRoute()
 	if err != nil {
-		return fmt.Errorf("unable to parse destination in route %v gw %v tbl %v, err: %w",
-			route.destination,
-			route.gateway,
-			route.table,
+		return fmt.Errorf("unable to parse Route %v, err: %w",
+			route,
 			err,
 		)
 	}
-	if !ip.Equal(dstnetIPNet.IP) {
-		return fmt.Errorf("route %v gw %v tbl %v is incorrect, destination is not a valid network address. perhaps %v was meant",
-			route.destination,
-			route.gateway,
-			route.table,
-			dstnetIPNet.String(),
-		)
-	}
-	gwNetIP := net.ParseIP(route.gateway)
+	PreparedRoute.Realm = v1alpha1.D8Realm
 
-	err = netlink.RouteAdd(&netlink.Route{
-		Realm: v1alpha1.D8Realm,
-		Table: route.table,
-		Dst:   dstnetIPNet,
-		Gw:    gwNetIP,
-	})
+	err = netlink.RouteAdd(PreparedRoute)
 	if err != nil {
-		return fmt.Errorf("unable to add route %v gw %v tbl %v, err: %w",
-			route.destination,
-			route.gateway,
-			route.table,
+		return fmt.Errorf("unable to add route %v, err: %w",
+			route,
 			err,
 		)
 	}
@@ -537,36 +600,19 @@ func addRouteToNode(route RouteEntry) error {
 }
 
 func delRouteFromNode(route RouteEntry) error {
-	ip, dstnetIPNet, err := net.ParseCIDR(route.destination)
+	PreparedRoute, err := route.getNetlinkRoute()
 	if err != nil {
-		return fmt.Errorf("unable to parse destination in route %v gw %v tbl %v, err: %w",
-			route.destination,
-			route.gateway,
-			route.table,
+		return fmt.Errorf("unable to parse Route %v, err: %w",
+			route,
 			err,
 		)
 	}
-	if !ip.Equal(dstnetIPNet.IP) {
-		return fmt.Errorf("route %v gw %v tbl %v is incorrect, destination is not a valid network address. perhaps %v was meant",
-			route.destination,
-			route.gateway,
-			route.table,
-			dstnetIPNet.String(),
-		)
-	}
-	gwNetIP := net.ParseIP(route.gateway)
+	PreparedRoute.Realm = v1alpha1.D8Realm
 
-	err = netlink.RouteDel(&netlink.Route{
-		Realm: v1alpha1.D8Realm,
-		Table: route.table,
-		Dst:   dstnetIPNet,
-		Gw:    gwNetIP,
-	})
+	err = netlink.RouteDel(PreparedRoute)
 	if err != nil {
-		return fmt.Errorf("unable to del route %v gw %v tbl %v, err: %w",
-			route.destination,
-			route.gateway,
-			route.table,
+		return fmt.Errorf("unable to del route %v, err: %w",
+			route,
 			err,
 		)
 	}

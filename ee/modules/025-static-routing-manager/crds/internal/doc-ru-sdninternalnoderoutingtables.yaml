@@ -30,3 +30,6 @@ spec:
                     gateway:
                       description: |
                         Шлюз, через который достижима целевая подсеть.
+                    dev:
+                      description: |
+                        Bynthatqc, через который достижима подсеть.
