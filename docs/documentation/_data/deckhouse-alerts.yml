@@ -241,6 +241,16 @@ alerts:
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
       markupFormat: markdown
+    - name: CronJobPodsNotCreated
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: ""
+      summary: |
+        CronJob {{$labels.namespace}}/{{$labels.job_name}} pods still not created.
+      severity: "5"
+      markupFormat: markdown
     - name: CronJobRegistryUnavailable
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
       moduleUrl: 340-extended-monitoring
