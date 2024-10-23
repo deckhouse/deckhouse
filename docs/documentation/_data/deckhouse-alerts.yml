@@ -4186,9 +4186,11 @@ alerts:
       module: monitoring-kubernetes
       edition: ce
       description: |
-        The target is close to TCP memory pressure state. Less than 5% left to the threshold.
+        The {{ $labels.node }} Node TCP stack is under memory pressure.
+
+        Source of the problem can be application with TCP networking functionality.
       summary: |
-        High TCP stack memory usage.
+        The {{ $labels.node }} Node has high TCP stack memory usage.
       severity: "4"
       markupFormat: markdown
     - name: NodeTimeOutOfSync
