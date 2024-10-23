@@ -3,7 +3,7 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": null,
+
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -20,7 +20,7 @@
   "panels": [
     {
       "collapsed": false,
-      "datasource": null,
+
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -31,7 +31,7 @@
       "panels": [],
       "targets": [
         {
-          "datasource": null,
+
           "refId": "A"
         }
       ],
@@ -39,7 +39,7 @@
       "type": "row"
     },
     {
-      "datasource": null,
+
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -117,7 +117,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "sum(istio_build{component=\"pilot\"}) by (tag)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -130,7 +130,7 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
+
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -141,7 +141,7 @@
       "panels": [],
       "targets": [
         {
-          "datasource": null,
+
           "refId": "A"
         }
       ],
@@ -149,7 +149,7 @@
       "type": "row"
     },
     {
-      "datasource": null,
+
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -227,7 +227,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "process_virtual_memory_bytes{app=\"istiod\"}",
           "format": "time_series",
           "instant": false,
@@ -237,7 +237,7 @@
           "step": 2
         },
         {
-          "datasource": null,
+
           "expr": "process_resident_memory_bytes{app=\"istiod\"}",
           "format": "time_series",
           "intervalFactor": 1,
@@ -246,7 +246,7 @@
           "step": 2
         },
         {
-          "datasource": null,
+
           "expr": "go_memstats_heap_sys_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
@@ -255,7 +255,7 @@
           "refId": "A"
         },
         {
-          "datasource": null,
+
           "expr": "go_memstats_heap_alloc_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
@@ -264,7 +264,7 @@
           "refId": "D"
         },
         {
-          "datasource": null,
+
           "expr": "go_memstats_alloc_bytes{app=\"istiod\"}",
           "format": "time_series",
           "intervalFactor": 1,
@@ -273,7 +273,7 @@
           "step": 2
         },
         {
-          "datasource": null,
+
           "expr": "go_memstats_heap_inuse_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": false,
@@ -283,7 +283,7 @@
           "step": 2
         },
         {
-          "datasource": null,
+
           "expr": "go_memstats_stack_inuse_bytes{app=\"istiod\"}",
           "format": "time_series",
           "intervalFactor": 1,
@@ -292,7 +292,7 @@
           "step": 2
         },
         {
-          "datasource": null,
+
           "expr": "container_memory_working_set_bytes{container=~\"discovery\", pod=~\"istiod-.*|istio-pilot-.*\"}",
           "format": "time_series",
           "hide": false,
@@ -302,7 +302,7 @@
           "step": 2
         },
         {
-          "datasource": null,
+
           "expr": "container_memory_working_set_bytes{container=~\"istio-proxy\", pod=~\"istiod-.*|istio-pilot-.*\"}",
           "format": "time_series",
           "intervalFactor": 1,
@@ -314,7 +314,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -392,7 +392,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"discovery\", pod=~\"istiod-.*|istio-pilot-.*\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -400,7 +400,7 @@
           "refId": "A"
         },
         {
-          "datasource": null,
+
           "expr": "rate(process_cpu_seconds_total{app=\"istiod\"}[$__rate_interval])",
           "format": "time_series",
           "hide": false,
@@ -410,7 +410,7 @@
           "step": 2
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\", pod=~\"istiod-.*|istio-pilot-.*\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
@@ -428,7 +428,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -465,7 +465,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "datasource": null,
+
           "expr": "container_fs_usage_bytes{container=\"discovery\", pod=~\"istiod-.*|istio-pilot-.*\"}",
           "format": "time_series",
           "intervalFactor": 1,
@@ -474,7 +474,7 @@
           "step": 2
         },
         {
-          "datasource": null,
+
           "expr": "container_fs_usage_bytes{container=\"istio-proxy\", pod=~\"istiod-.*|istio-pilot-.*\"}",
           "format": "time_series",
           "intervalFactor": 1,
@@ -515,7 +515,7 @@
       }
     },
     {
-      "datasource": null,
+
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -593,7 +593,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "go_goroutines{app=\"istiod\"}",
           "format": "time_series",
           "intervalFactor": 1,
@@ -607,7 +607,7 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
+
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -618,7 +618,7 @@
       "panels": [],
       "targets": [
         {
-          "datasource": null,
+
           "refId": "A"
         }
       ],
@@ -626,7 +626,7 @@
       "type": "row"
     },
     {
-      "datasource": null,
+
       "description": "Shows the rate of pilot pushes",
       "fieldConfig": {
         "defaults": {
@@ -706,7 +706,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_xds_pushes{type=\"cds\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -714,7 +714,7 @@
           "refId": "C"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_xds_pushes{type=\"eds\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -722,7 +722,7 @@
           "refId": "D"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_xds_pushes{type=\"lds\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -730,7 +730,7 @@
           "refId": "A"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_xds_pushes{type=\"rds\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -738,13 +738,13 @@
           "refId": "E"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_xds_pushes{type=\"sds\"}[$__rate_interval]))",
           "legendFormat": "Secrets",
           "refId": "B"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_xds_pushes{type=\"nds\"}[$__rate_interval]))",
           "legendFormat": "Nametables",
           "refId": "F"
@@ -754,7 +754,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+
       "description": "Captures a variety of pilot errors",
       "fieldConfig": {
         "defaults": {
@@ -874,7 +874,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "sum(pilot_xds_cds_reject{app=\"istiod\"}) or (absent(pilot_xds_cds_reject{app=\"istiod\"}) - 1)",
           "format": "time_series",
           "hide": false,
@@ -883,7 +883,7 @@
           "refId": "C"
         },
         {
-          "datasource": null,
+
           "expr": "sum(pilot_xds_eds_reject{app=\"istiod\"}) or (absent(pilot_xds_eds_reject{app=\"istiod\"}) - 1)",
           "format": "time_series",
           "hide": false,
@@ -892,7 +892,7 @@
           "refId": "D"
         },
         {
-          "datasource": null,
+
           "expr": "sum(pilot_xds_rds_reject{app=\"istiod\"}) or (absent(pilot_xds_rds_reject{app=\"istiod\"}) - 1)",
           "format": "time_series",
           "hide": false,
@@ -901,7 +901,7 @@
           "refId": "A"
         },
         {
-          "datasource": null,
+
           "expr": "sum(pilot_xds_lds_reject{app=\"istiod\"}) or (absent(pilot_xds_lds_reject{app=\"istiod\"}) - 1)",
           "format": "time_series",
           "hide": false,
@@ -910,7 +910,7 @@
           "refId": "B"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_xds_write_timeout{app=\"istiod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -918,7 +918,7 @@
           "refId": "F"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_total_xds_internal_errors{app=\"istiod\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
@@ -927,7 +927,7 @@
           "refId": "H"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_total_xds_rejects{app=\"istiod\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
@@ -936,7 +936,7 @@
           "refId": "E"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_xds_push_context_errors{app=\"istiod\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
@@ -945,7 +945,7 @@
           "refId": "K"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(pilot_xds_write_timeout{app=\"istiod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -957,7 +957,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+
       "description": "Shows the total time it takes to push a config update to a proxy",
       "fieldConfig": {
         "defaults": {
@@ -1036,7 +1036,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "histogram_quantile(0.5, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1044,7 +1044,7 @@
           "refId": "A"
         },
         {
-          "datasource": null,
+
           "expr": "histogram_quantile(0.9, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1052,7 +1052,7 @@
           "refId": "B"
         },
         {
-          "datasource": null,
+
           "expr": "histogram_quantile(0.99, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1060,7 +1060,7 @@
           "refId": "C"
         },
         {
-          "datasource": null,
+
           "expr": "histogram_quantile(0.999, sum(rate(pilot_proxy_convergence_time_bucket[$__rate_interval])) by (le))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1072,7 +1072,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1191,7 +1191,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "pilot_conflict_inbound_listener{app=\"istiod\"}",
           "format": "time_series",
           "hide": false,
@@ -1200,7 +1200,7 @@
           "refId": "B"
         },
         {
-          "datasource": null,
+
           "expr": "pilot_conflict_outbound_listener_tcp_over_current_tcp{app=\"istiod\"}",
           "format": "time_series",
           "hide": false,
@@ -1213,7 +1213,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1291,7 +1291,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "avg(pilot_virt_services{app=\"istiod\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1299,7 +1299,7 @@
           "refId": "A"
         },
         {
-          "datasource": null,
+
           "expr": "avg(pilot_services{app=\"istiod\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1307,7 +1307,7 @@
           "refId": "B"
         },
         {
-          "datasource": null,
+
           "expr": "sum(pilot_xds{app=\"istiod\"}) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1320,7 +1320,7 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
+
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1331,7 +1331,7 @@
       "panels": [],
       "targets": [
         {
-          "datasource": null,
+
           "refId": "A"
         }
       ],
@@ -1339,7 +1339,7 @@
       "type": "row"
     },
     {
-      "datasource": null,
+
       "description": "Shows details about Envoy proxies in the mesh",
       "fieldConfig": {
         "defaults": {
@@ -1418,7 +1418,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "sum(rate(envoy_cluster_upstream_cx_total{cluster_name=\"xds-grpc\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
@@ -1427,7 +1427,7 @@
           "refId": "C"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(envoy_cluster_upstream_cx_connect_fail{cluster_name=\"xds-grpc\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
@@ -1436,7 +1436,7 @@
           "refId": "A"
         },
         {
-          "datasource": null,
+
           "expr": "sum(increase(envoy_server_hot_restart_epoch[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1448,7 +1448,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1526,7 +1526,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "sum(envoy_cluster_upstream_cx_active{cluster_name=\"xds-grpc\"})",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1539,7 +1539,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+
       "description": "Shows the size of XDS requests and responses",
       "fieldConfig": {
         "defaults": {
@@ -1618,7 +1618,7 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "max(rate(envoy_cluster_upstream_cx_rx_bytes_total{cluster_name=\"xds-grpc\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
@@ -1627,7 +1627,7 @@
           "refId": "D"
         },
         {
-          "datasource": null,
+
           "expr": "quantile(0.5, rate(envoy_cluster_upstream_cx_rx_bytes_total{cluster_name=\"xds-grpc\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
@@ -1636,7 +1636,7 @@
           "refId": "B"
         },
         {
-          "datasource": null,
+
           "expr": "max(rate(envoy_cluster_upstream_cx_tx_bytes_total{cluster_name=\"xds-grpc\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1644,7 +1644,7 @@
           "refId": "A"
         },
         {
-          "datasource": null,
+
           "expr": "quantile(.5, rate(envoy_cluster_upstream_cx_tx_bytes_total{cluster_name=\"xds-grpc\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
@@ -1657,7 +1657,7 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
+
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1668,7 +1668,7 @@
       "panels": [],
       "targets": [
         {
-          "datasource": null,
+
           "refId": "A"
         }
       ],
@@ -1676,7 +1676,7 @@
       "type": "row"
     },
     {
-      "datasource": null,
+
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1755,13 +1755,13 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "sum(rate(galley_validation_passed[$__rate_interval]))",
           "legendFormat": "Validations (Success)",
           "refId": "A"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(galley_validation_failed[$__rate_interval]))",
           "legendFormat": "Validation (Failure)",
           "refId": "B"
@@ -1771,7 +1771,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": null,
+
       "description": "",
       "fieldConfig": {
         "defaults": {
@@ -1851,13 +1851,13 @@
       "pluginVersion": "10.4.5",
       "targets": [
         {
-          "datasource": null,
+
           "expr": "sum(rate(sidecar_injection_success_total[$__rate_interval]))",
           "legendFormat": "Injections (Success)",
           "refId": "A"
         },
         {
-          "datasource": null,
+
           "expr": "sum(rate(sidecar_injection_failure_total[$__rate_interval]))",
           "legendFormat": "Injections (Failure)",
           "refId": "B"
