@@ -4180,6 +4180,17 @@ alerts:
       summary: ""
       severity: "4"
       markupFormat: markdown
+    - name: NodeTCPMemoryExhaust
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |
+        The target is close to TCP memory pressure state. Less than 5% left to the threshold.
+      summary: |
+        High TCP stack memory usage.
+      severity: "4"
+      markupFormat: markdown
     - name: NodeTimeOutOfSync
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
       moduleUrl: 470-chrony
@@ -4587,17 +4598,6 @@ alerts:
       summary: |
         Unsupported version of CRI {{$labels.container_runtime_version}} installed for Kubernetes version: {{$labels.kubelet_version}}
       severity: undefined
-      markupFormat: markdown
-    - name: NodeTCPMemoryExhaust
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
-      moduleUrl: 340-monitoring-kubernetes
-      module: monitoring-kubernetes
-      edition: ce
-      description: |
-        The target is close to TCP memory pressure state. Less than 5% left to the threshold.
-      summary: |
-        High TCP stack memory usage.
-      severity: "4"
       markupFormat: markdown
 modules-having-alerts:
     - admission-policy-engine
