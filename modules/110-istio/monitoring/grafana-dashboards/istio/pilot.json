@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 47,
+  "id": 50,
   "links": [],
   "panels": [
     {
@@ -231,7 +231,7 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 6,
+        "w": 8,
         "x": 0,
         "y": 7
       },
@@ -426,8 +426,8 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 6,
-        "x": 6,
+        "w": 8,
+        "x": 8,
         "y": 7
       },
       "id": 6,
@@ -548,8 +548,8 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 6,
-        "x": 18,
+        "w": 8,
+        "x": 16,
         "y": 7
       },
       "id": 4,
