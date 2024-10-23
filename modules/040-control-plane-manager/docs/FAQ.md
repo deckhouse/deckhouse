@@ -72,7 +72,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 ## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
 
 {% alert level="warning" %}
-The steps described below must be performed with the first master node of the cluster (master-0). This is because the cluster is always scaled in order: for example, it is impossible to delete nodes master-0 and master-1, leaving master-2.
+The steps described below must be performed from the first in order of the master node of the cluster (master-0). This is because the cluster is always scaled in order: for example, it is impossible to delete nodes master-0 and master-1, leaving master-2.
 {% endalert %}
 
 1. Make a [backup of etcd](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
