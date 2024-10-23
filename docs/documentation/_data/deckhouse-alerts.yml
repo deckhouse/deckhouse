@@ -4185,7 +4185,7 @@ alerts:
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
-      description: |
+      description: |-
         The {{ $labels.node }} Node TCP stack is under memory pressure.
 
         Source of the problem can be application with TCP networking functionality.
