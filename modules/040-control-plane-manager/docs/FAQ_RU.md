@@ -99,7 +99,7 @@ title: "Управление control plane: FAQ"
    >
    > Например, при одном master-узле (`masterNodeGroup.replicas: 1`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
    >
-   > ```bash
+   > ```yaml
    > externalIPAddresses:
    > - "Auto"
    > ```
