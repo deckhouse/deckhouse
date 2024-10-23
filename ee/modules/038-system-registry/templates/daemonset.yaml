@@ -129,6 +129,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: IMAGE_DOCKER_AUTH
+          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}"
+        - name: IMAGE_DOCKER_DISTRIBUTION
+          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
+        - name: IMAGE_SEAWEEDFS
+          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
         ports:
         - name: http-healthz
           protocol: TCP
