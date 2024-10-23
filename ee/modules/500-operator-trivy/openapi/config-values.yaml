@@ -10,7 +10,7 @@ properties:
 
       `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
 
-      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in disk re-provisioning and data loss.
+      **Warning.** Setting this value to one that differs from the current one (in the existing PVC) will result in disk re-provisioning and data loss.
 
       Setting it to `false` forces the use of an emptyDir volume.
 
