@@ -178,6 +178,15 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 		panic("Node interface is not ssh")
 	}
 
+	privateKeys := make([]session.AgentPrivateKey, len(sshCl.PrivateKeys), len(sshCl.PrivateKeys)+1)
+
+	copy(privateKeys, sshCl.PrivateKeys)
+
+	privateKeys = append(privateKeys, session.AgentPrivateKey{
+		Key:        privateKeyPath,
+		Passphrase: c.convergeState.NodeUserCredentials.Password,
+	})
+
 	settings := sshCl.Settings
 
 	for nodeName, stateBytes := range state {
@@ -215,12 +224,7 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 		ExtraArgs:      settings.ExtraArgs,
 		AvailableHosts: settings.AvailableHosts(),
 		BecomePass:     c.convergeState.NodeUserCredentials.Password,
-	}), []session.AgentPrivateKey{
-		{
-			Key:        privateKeyPath,
-			Passphrase: c.convergeState.NodeUserCredentials.Password,
-		},
-	}).Start()
+	}), privateKeys).Start()
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
