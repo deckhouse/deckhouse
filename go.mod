@@ -11,9 +11,8 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.5.0
+	github.com/flant/addon-operator v0.0.0-20241024135242-a1a67d882298
 	github.com/flant/kube-client v1.2.0
-	github.com/flant/shell-operator v1.4.12
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
@@ -61,6 +60,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/ettle/strcase v0.2.0
+	github.com/flant/shell-operator v0.0.0-20241024135129-957d65112c34
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.1
 	github.com/go-openapi/errors v0.19.7

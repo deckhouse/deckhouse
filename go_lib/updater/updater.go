@@ -76,9 +76,16 @@ type Updater[R v1alpha1.Release] struct {
 	releaseData              DeckhouseReleaseData
 }
 
-func NewUpdater[R v1alpha1.Release](dc dependency.Container, logger logger.Logger, settings *Settings,
-	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater[R],
-	webhookDataSource WebhookDataSource[R], enabledModules []string,
+func NewUpdater[R v1alpha1.Release](
+	dc dependency.Container,
+	logger logger.Logger,
+	settings *Settings,
+	data DeckhouseReleaseData,
+	podIsReady, isBootstrapping bool,
+	kubeAPI KubeAPI[R],
+	metricsUpdater MetricsUpdater[R],
+	webhookDataSource WebhookDataSource[R],
+	enabledModules []string,
 ) *Updater[R] {
 	return &Updater[R]{
 		now:            dc.GetClock().Now().UTC(),
@@ -102,8 +109,8 @@ func NewUpdater[R v1alpha1.Release](dc dependency.Container, logger logger.Logge
 
 // for patch, we check fewer conditions, then for minor release
 // - Canary settings
-func (u *Updater[R]) checkPatchReleaseConditions(release R) error {
-	applyTime, reason, err := u.calculatePatchResultDeployTime(release)
+func (u *Updater[R]) checkPatchReleaseConditions(release R, metricLabels MetricLabels) error {
+	applyTime, reason, err := u.calculatePatchResultDeployTime(release, metricLabels)
 	if err != nil {
 		return fmt.Errorf("calculate patch result deploy time: %w", err)
 	}
@@ -161,22 +168,22 @@ func (u *Updater[R]) sendReleaseNotification(release R, releaseApplyTime time.Ti
 // - Canary settings
 // - Update windows or manual approval
 // - Deckhouse pod is ready
-func (u *Updater[R]) checkMinorReleaseConditions(release R) error {
+func (u *Updater[R]) checkMinorReleaseConditions(release R, metricLabels MetricLabels) error {
 	// check: release requirements (hard lock)
 	passed := u.checkReleaseRequirements(release)
 	if !passed {
-		u.metricsUpdater.ReleaseBlocked(release.GetName(), "requirement")
+		metricLabels[RequirementsNotMet] = "true"
 		return fmt.Errorf("release %s requirements are not met: %w", release.GetName(), ErrDeployConditionsNotMet)
 	}
 
 	// check: release disruptions (hard lock)
 	passed = u.checkReleaseDisruptions(release)
 	if !passed {
-		u.metricsUpdater.ReleaseBlocked(release.GetName(), "disruption")
+		metricLabels[DisruptionApprovalRequired] = "true"
 		return fmt.Errorf("release %s disruption approval required: %w", release.GetName(), ErrDeployConditionsNotMet)
 	}
 
-	resultDeployTime, delayReason, err := u.calculateMinorResultDeployTime(release)
+	resultDeployTime, delayReason, err := u.calculateMinorResultDeployTime(release, metricLabels)
 	if err != nil {
 		return fmt.Errorf("calculate minor result deploy time: %w", err)
 	}
@@ -206,12 +213,9 @@ func (u *Updater[R]) checkMinorReleaseConditions(release R) error {
 	return u.postponeDeploy(release, delayReason, resultDeployTime)
 }
 
-func (u *Updater[R]) calculateMinorResultDeployTime(release R) (time.Time, deployDelayReason, error) {
-	var (
-		newApplyAfter    time.Time
-		releaseApplyTime = u.now
-		reason           deployDelayReason
-	)
+func (u *Updater[R]) calculateMinorResultDeployTime(release R, metricLabels MetricLabels) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
+	var newApplyAfter time.Time
+	releaseApplyTime = u.now
 
 	if release.GetApplyNow() {
 		return releaseApplyTime, reason, nil
@@ -252,10 +256,8 @@ func (u *Updater[R]) calculateMinorResultDeployTime(release R) (time.Time, deplo
 	// check: release is approved in Manual mode
 	if u.settings.Mode != ModeAuto && !release.GetManuallyApproved() {
 		u.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
-		u.metricsUpdater.WaitingManual(release, 1)
+		metricLabels[ManualApprovalRequired] = "true"
 		releaseApplyTime, reason = u.now, manualApprovalRequiredReason
-	} else {
-		u.metricsUpdater.WaitingManual(release, 0)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -270,12 +272,9 @@ func (u *Updater[R]) calculateMinorResultDeployTime(release R) (time.Time, deplo
 	return releaseApplyTime, reason, nil
 }
 
-func (u *Updater[R]) calculatePatchResultDeployTime(release R) (time.Time, deployDelayReason, error) {
-	var (
-		newApplyAfter    time.Time
-		releaseApplyTime = u.now
-		reason           deployDelayReason
-	)
+func (u *Updater[R]) calculatePatchResultDeployTime(release R, metricLabels MetricLabels) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
+	var newApplyAfter time.Time
+	releaseApplyTime = u.now
 
 	if release.GetApplyNow() {
 		return releaseApplyTime, reason, nil
@@ -306,10 +305,8 @@ func (u *Updater[R]) calculatePatchResultDeployTime(release R) (time.Time, deplo
 
 	if u.settings.Mode == ModeManual && !release.GetManuallyApproved() {
 		u.logger.Infof("Release %s is waiting for manual approval", release.GetName())
-		u.metricsUpdater.WaitingManual(release, 1)
+		metricLabels[ManualApprovalRequired] = "true"
 		releaseApplyTime, reason = u.now, manualApprovalRequiredReason
-	} else {
-		u.metricsUpdater.WaitingManual(release, 0)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -351,11 +348,14 @@ func (u *Updater[R]) ApplyPredictedRelease() (err error) {
 		return u.runReleaseDeploy(predictedRelease, currentRelease)
 	}
 
+	metricLabels := newReleaseMetricLabels(predictedRelease)
+
 	if u.PredictedReleaseIsPatch() {
-		err = u.checkPatchReleaseConditions(predictedRelease)
+		err = u.checkPatchReleaseConditions(predictedRelease, metricLabels)
 	} else {
-		err = u.checkMinorReleaseConditions(predictedRelease)
+		err = u.checkMinorReleaseConditions(predictedRelease, metricLabels)
 	}
+	u.metricsUpdater.UpdateReleaseMetric(predictedRelease.GetName(), metricLabels)
 	if err != nil {
 		return fmt.Errorf("check release %s conditions: %w", predictedRelease.GetName(), err)
 	}
@@ -671,6 +671,11 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 func (u *Updater[R]) updateStatus(release R, msg, phase string) error {
 	if phase == release.GetPhase() && msg == release.GetMessage() {
 		return nil
+	}
+
+	switch phase {
+	case PhaseSuperseded, PhaseSuspended, PhaseSkipped, PhaseDeployed:
+		u.metricsUpdater.PurgeReleaseMetric(release.GetName())
 	}
 
 	return u.kubeAPI.UpdateReleaseStatus(release, msg, phase)

@@ -16,7 +16,30 @@ package updater
 
 import "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 
+type MetricLabels map[string]string
+
+const (
+	ManualApprovalRequired     = "manualApproval"
+	DisruptionApprovalRequired = "disruptionApproval"
+	RequirementsNotMet         = "requirementsNotMet"
+)
+
+func newReleaseMetricLabels(release v1alpha1.Release) MetricLabels {
+	labels := make(map[string]string, 5)
+	labels[ManualApprovalRequired] = "false"
+	labels[DisruptionApprovalRequired] = "false"
+	labels[RequirementsNotMet] = "false"
+	labels["name"] = release.GetName()
+
+	switch any(release).(type) {
+	case *v1alpha1.ModuleRelease:
+		labels["moduleName"] = release.GetModuleName()
+	}
+
+	return labels
+}
+
 type MetricsUpdater[R v1alpha1.Release] interface {
-	ReleaseBlocked(name, reason string)
-	WaitingManual(release R, totalPendingManualReleases float64)
+	UpdateReleaseMetric(string, MetricLabels)
+	PurgeReleaseMetric(string)
 }

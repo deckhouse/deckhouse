@@ -26,6 +26,7 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	log "github.com/sirupsen/logrus"
@@ -325,6 +326,7 @@ type: Opaque
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		moduleManager:        stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
+		metricStorage:        metric_storage.NewMetricStorage(context.Background(), "", true),
 
 		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
