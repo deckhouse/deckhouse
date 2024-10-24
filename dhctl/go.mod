@@ -10,7 +10,7 @@ require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/alessio/shellescape v1.4.1
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
-	github.com/flant/addon-operator v0.0.0-20241024125013-6574134d46d2
+	github.com/flant/addon-operator v0.0.0-20241024135242-a1a67d882298
 	github.com/flant/kube-client v1.2.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-openapi/spec v0.19.8
@@ -72,7 +72,7 @@ require (
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee // indirect
-	github.com/flant/shell-operator v0.0.0-20241024095912-0042bd087c7d // indirect
+	github.com/flant/shell-operator v0.0.0-20241024135129-957d65112c34 // indirect
 	github.com/go-chi/chi/v5 v5.1.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
