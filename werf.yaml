@@ -604,19 +604,6 @@ shell:
     ' > /images_digests.json
 
 ---
-image: deckhouse-image-hash
-from: {{ .Images.BASE_ALPINE }}
-dependencies:
-- image: dev
-  before: setup
-  imports:
-  - type: ImageDigest
-    targetEnv: MODULE_IMAGE_DIGEST
-shell:
-  setup:
-  - echo ${MODULE_IMAGE_DIGEST} >> /deckhouse_digest.txt
-
----
 artifact: version-map-artifact
 from: {{ .Images.BASE_ALPINE }}
 import:
