@@ -32,6 +32,10 @@ on:
       comment_id:
         description: 'Id of comment in issue where to put workflow run status'
         required: false
+      editions:
+        description: 'Comma-separated list of editions to build'
+        required: false
+        type: string
 
 env:
 {!{ tmpl.Exec "werf_envs"               | strings.Indent 2 }!}
@@ -95,7 +99,7 @@ jobs:
       - git_info
       - go_generate
       - workflow_render
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'ee') }}
     env:
       WERF_ENV: "EE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -108,7 +112,7 @@ jobs:
       - git_info
       - go_generate
       - workflow_render
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'se') }}
     env:
       WERF_ENV: "SE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -121,7 +125,7 @@ jobs:
       - git_info
       - go_generate
       - workflow_render
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'be') }}
     env:
       WERF_ENV: "BE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -134,7 +138,7 @@ jobs:
       - git_info
       - go_generate
       - workflow_render
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'ce') }}
     env:
       WERF_ENV: "CE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
