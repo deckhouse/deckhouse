@@ -124,7 +124,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	// Create internal value with spec
 	value, ok := r.servicesWithHealthchecks.Load(req.NamespacedName)
 	if !ok || !reflect.DeepEqual(value.(networkv1alpha1.ServiceWithHealthchecksSpec), serviceWithHC.Spec) {
-		r.servicesWithHealthchecks.Store(req.NamespacedName, serviceWithHC)
+		r.servicesWithHealthchecks.Store(req.NamespacedName, serviceWithHC.Spec)
 	}
 
 	// sync internal probes targets with exsiting pods
