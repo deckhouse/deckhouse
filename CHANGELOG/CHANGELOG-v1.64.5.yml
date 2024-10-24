@@ -1,0 +1,12 @@
+deckhouse:
+  fixes:
+    - summary: Fix validation policy for update windows in kubernetes 1.26
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10235
+dhctl:
+  features:
+    - summary: Options to skip preflight checks for dhctl-server operations.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10043
+  fixes:
+    - summary: Fix empty registry credentials preflight check failure.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10226
+
