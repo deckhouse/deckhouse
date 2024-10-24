@@ -98,9 +98,6 @@ func skipDistrolessImageCheckIfNeeded(image string) bool {
 		"cni-v1x13x7/Dockerfile",
 		"cni-v1x16x2/Dockerfile",
 		"cni-v1x19x7/Dockerfile",
-		"controller-1-1/Dockerfile",
-		"easyrsa-migrator/Dockerfile",
-		"pmacct/Dockerfile",
 		"argocd/Dockerfile",
 		"argocd-image-updater/Dockerfile",
 		"werf-argocd-cmp-sidecar/Dockerfile":
@@ -215,10 +212,10 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 				fromTrimmed := strings.TrimPrefix(line, "from: ")
 				// "from:" right after "image:"
 				if linePos-lastWerfImagePos == 1 {
-					if skipDistrolessImageCheckIfNeeded(relativeFilePath) {
-						log.Printf("WARNING!!! SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n\n", name, relativeFilePath, fromTrimmed)
-						continue
-					}
+					// if skipDistrolessImageCheckIfNeeded(relativeFilePath) {
+					// 	log.Printf("WARNING!!! SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n\n", name, relativeFilePath, fromTrimmed)
+					// 	continue
+					// }
 
 					result, message := isWerfInstructionUnacceptable(fromTrimmed)
 					if result {
@@ -241,10 +238,10 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 
 	for i, fromInstruction := range dockerfileFromInstructions {
 		lastInstruction := i == len(dockerfileFromInstructions)-1
-		if skipDistrolessImageCheckIfNeeded(relativeFilePath) {
-			log.Printf("WARNING!!! SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n\n", name, relativeFilePath, fromInstruction)
-			continue
-		}
+		// if skipDistrolessImageCheckIfNeeded(relativeFilePath) {
+		// 	log.Printf("WARNING!!! SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n\n", name, relativeFilePath, fromInstruction)
+		// 	continue
+		// }
 
 		result, message := isDockerfileInstructionUnacceptable(fromInstruction, lastInstruction)
 		if result {
