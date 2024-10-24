@@ -221,6 +221,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		log.DebugLn("Cache was dropped")
 	}
 
+	// Post initialization of metaconfig (global cache is used)
+	if err := metaConfig.PrepareAfterGlobalCacheInit(); err != nil {
+		return err
+	}
+
 	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
@@ -273,10 +278,17 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	var nodeIP string
-	var devicePath string
+	var dataDevices terraform.DataDevices
 	var resourcesTemplateData map[string]interface{}
 
 	if metaConfig.ClusterType == config.CloudClusterType {
+		if metaConfig.Registry.Mode != "Direct" {
+			return fmt.Errorf(
+				"Registry mode '%s' is supported only by a static cluster. Use the 'Direct' registry mode for the cluster in cloud providers",
+				metaConfig.Registry.Mode,
+			)
+		}
+
 		err = preflightChecker.Cloud()
 		if err != nil {
 			return err
@@ -331,7 +343,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			}
 
 			nodeIP = masterOutputs.NodeInternalIP
-			devicePath = masterOutputs.KubeDataDevicePath
+			dataDevices = masterOutputs.GetDataDevices()
 
 			deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
 			deckhouseInstallConfig.NodesTerraformState[masterNodeName] = masterOutputs.TerraformState
@@ -397,7 +409,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, nodeIP, devicePath); err != nil {
+	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, nodeIP, dataDevices); err != nil {
 		return err
 	}
 
