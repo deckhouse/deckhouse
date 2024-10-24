@@ -1,0 +1,12 @@
+positive:
+  configValues:
+    - debug: true
+      numberOfWorkers: 16
+    - debug: false
+      numberOfWorkers: 100
+negative:
+  configValues:
+    - debug: true
+      numberOfWorkers: -16
+    - debug: "bbb"
+      numberOfWorkers: 1024
