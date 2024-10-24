@@ -50,8 +50,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-// reconciler is the controller implementation for ModulePullOverride resources
-type reconciler struct {
+// modulePullOverrideReconciler is the controller implementation for ModulePullOverride resources
+type modulePullOverrideReconciler struct {
 	client             client.Client
 	dc                 dependency.Container
 	preflightCountDown *sync.WaitGroup
@@ -73,7 +73,7 @@ func NewController(
 ) error {
 	lg := log.WithField("component", "ModulePullOverrideController")
 
-	rc := &reconciler{
+	rc := &modulePullOverrideReconciler{
 		client: mgr.GetClient(),
 		dc:     dc,
 		logger: lg,
@@ -108,7 +108,7 @@ func NewController(
 		Complete(ctr)
 }
 
-func (c *reconciler) PreflightCheck(ctx context.Context) (err error) {
+func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) (err error) {
 	defer func() {
 		if err == nil {
 			c.preflightCountDown.Done()
@@ -131,7 +131,7 @@ func (c *reconciler) PreflightCheck(ctx context.Context) (err error) {
 	return nil
 }
 
-func (c *reconciler) getClusterUUID(ctx context.Context) string {
+func (c *modulePullOverrideReconciler) getClusterUUID(ctx context.Context) string {
 	var secret corev1.Secret
 	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
 	err := c.client.Get(ctx, key, &secret)
@@ -147,7 +147,7 @@ func (c *reconciler) getClusterUUID(ctx context.Context) string {
 	return uuid.Must(uuid.NewV4()).String()
 }
 
-func (c *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (c *modulePullOverrideReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	var result ctrl.Result
 	mpo := new(v1alpha1.ModulePullOverride)
 
@@ -165,7 +165,7 @@ func (c *reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.
 	return c.moduleOverrideReconcile(ctx, mpo)
 }
 
-func (c *reconciler) moduleOverrideReconcile(ctx context.Context, mo *v1alpha1.ModulePullOverride) (ctrl.Result, error) {
+func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Context, mo *v1alpha1.ModulePullOverride) (ctrl.Result, error) {
 	var result ctrl.Result
 	var metaUpdateRequired bool
 
@@ -326,7 +326,7 @@ func (c *reconciler) moduleOverrideReconcile(ctx context.Context, mo *v1alpha1.M
 	return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
 }
 
-func (c *reconciler) enableModule(moduleName, symlinkPath string) error {
+func (c *modulePullOverrideReconciler) enableModule(moduleName, symlinkPath string) error {
 	currentModuleSymlink, err := module.FindExistingSymlink(c.symlinksDir, moduleName)
 	if err != nil {
 		currentModuleSymlink = "900-" + moduleName // fallback
@@ -335,13 +335,13 @@ func (c *reconciler) enableModule(moduleName, symlinkPath string) error {
 	return module.Enable(c.downloadedModulesDir, currentModuleSymlink, symlinkPath, path.Join("../", moduleName, downloader.DefaultDevVersion))
 }
 
-func (c *reconciler) updateModulePullOverrideStatus(ctx context.Context, mo *v1alpha1.ModulePullOverride) error {
+func (c *modulePullOverrideReconciler) updateModulePullOverrideStatus(ctx context.Context, mo *v1alpha1.ModulePullOverride) error {
 	mo.Status.UpdatedAt = metav1.NewTime(c.dc.GetClock().Now().UTC())
 	return c.client.Status().Update(ctx, mo)
 }
 
 // restoreAbsentModulesFromOverrides checks ModulePullOverrides and restore them on the FS
-func (c *reconciler) restoreAbsentModulesFromOverrides(ctx context.Context) error {
+func (c *modulePullOverrideReconciler) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 	currentNodeName := os.Getenv("DECKHOUSE_NODE_NAME")
 	if len(currentNodeName) == 0 {
 		return fmt.Errorf("couldn't determine the node name deckhouse pod is running on: missing or empty DECKHOUSE_NODE_NAME env")
@@ -446,7 +446,7 @@ func (c *reconciler) restoreAbsentModulesFromOverrides(ctx context.Context) erro
 	return nil
 }
 
-func (c *reconciler) createModuleSymlink(moduleName, moduleImageTag string, moduleSource *v1alpha1.ModuleSource, moduleWeight uint32) error {
+func (c *modulePullOverrideReconciler) createModuleSymlink(moduleName, moduleImageTag string, moduleSource *v1alpha1.ModuleSource, moduleWeight uint32) error {
 	// removing possible symlink doubles
 	err := module.WipeSymlinks(c.symlinksDir, moduleName)
 	if err != nil {

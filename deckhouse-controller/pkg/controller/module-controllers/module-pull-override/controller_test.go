@@ -94,7 +94,7 @@ type PullOverrideControllerTestSuite struct {
 	suite.Suite
 
 	kubeClient client.Client
-	ctr        *reconciler
+	ctr        *modulePullOverrideReconciler
 
 	testDataFileName string
 	testMPOName      string
@@ -588,10 +588,10 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	})
 }
 
-type controllerOption func(*reconciler)
+type controllerOption func(*modulePullOverrideReconciler)
 
 func withDependencyContainer(dc dependency.Container) controllerOption {
-	return func(r *reconciler) {
+	return func(r *modulePullOverrideReconciler) {
 		r.dc = dc
 	}
 }
@@ -611,7 +611,7 @@ func (suite *PullOverrideControllerTestSuite) setupPullOverrideController(yamlDo
 	_ = corev1.AddToScheme(sc)
 	cl := fake.NewClientBuilder().WithScheme(sc).WithObjects(initObjects...).WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha1.ModulePullOverride{}).Build()
 
-	rec := &reconciler{
+	rec := &modulePullOverrideReconciler{
 		client:               cl,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
