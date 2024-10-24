@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -45,28 +46,29 @@ type ServiceWithHealthchecksReconciler struct {
 	mu           sync.RWMutex
 	muInProcess  sync.RWMutex
 	client.Client
-	Scheme              *runtime.Scheme
-	logger              logr.Logger
-	healthecksByService map[types.NamespacedName][]HealthcheckTarget
-	tasksInProcess      map[ProbeTaskIdentity]bool
-	tasks               chan ProbeTask
-	tasksResults        chan ProbeResult
-	events              chan event.GenericEvent
-	cancelFunc          context.CancelFunc
+	Scheme                     *runtime.Scheme
+	logger                     logr.Logger
+	tasksInProcess             map[ProbeTaskIdentity]bool
+	tasks                      chan ProbeTask
+	tasksResults               chan ProbeResult
+	events                     chan event.GenericEvent
+	cancelFunc                 context.CancelFunc
+	servicesWithHealthchecks   sync.Map
+	healthecksResultsByService map[types.NamespacedName][]HealthcheckTarget
 }
 
 func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int, nodeName string, scheme *runtime.Scheme, logger logr.Logger) *ServiceWithHealthchecksReconciler {
 	return &ServiceWithHealthchecksReconciler{
-		workersCount:        workersCount,
-		nodeName:            nodeName,
-		Client:              client,
-		Scheme:              scheme,
-		logger:              logger,
-		tasks:               make(chan ProbeTask, workersCount*10),
-		tasksResults:        make(chan ProbeResult, workersCount*10),
-		events:              make(chan event.GenericEvent),
-		healthecksByService: make(map[types.NamespacedName][]HealthcheckTarget),
-		tasksInProcess:      make(map[ProbeTaskIdentity]bool),
+		workersCount:               workersCount,
+		nodeName:                   nodeName,
+		Client:                     client,
+		Scheme:                     scheme,
+		logger:                     logger,
+		tasks:                      make(chan ProbeTask, workersCount*10),
+		tasksResults:               make(chan ProbeResult, workersCount*10),
+		events:                     make(chan event.GenericEvent),
+		tasksInProcess:             make(map[ProbeTaskIdentity]bool),
+		healthecksResultsByService: make(map[types.NamespacedName][]HealthcheckTarget),
 	}
 }
 
@@ -87,6 +89,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	var (
 		serviceWithHC networkv1alpha1.ServiceWithHealthchecks
 		podList       corev1.PodList
+		err           error
 	)
 	r.logger.Info("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 	if err := r.Get(ctx, req.NamespacedName, &serviceWithHC); err != nil {
@@ -97,124 +100,53 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 		return ctrl.Result{}, err
 	}
 
-	// delete helthchecks from internal map because service was deleted
+	// Delete helthchecks from internal map because service was deleted
 	if serviceWithHC.DeletionTimestamp != nil {
 		r.logger.Info("ServiceWithHealthchecks is being deleted")
+		r.servicesWithHealthchecks.Delete(req.NamespacedName)
 		r.mu.Lock()
-		delete(r.healthecksByService, req.NamespacedName)
+		delete(r.healthecksResultsByService, req.NamespacedName)
 		r.mu.Unlock()
 		return ctrl.Result{}, nil
 	}
 
-	// only pods in target namespace, with specified label and on current node
+	// Select only pods in target namespace, with specified label and on current node
 	if err := r.List(ctx, &podList, client.InNamespace(serviceWithHC.GetNamespace()), client.MatchingLabels(serviceWithHC.Spec.Selector), client.MatchingFields{"spec.nodeName": r.nodeName}); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	podsReadinessMap := getPodsReadinessMap(podList)
-
-	// clean unused pod IPs from targets slice
-	r.mu.Lock()
-	n := 0
-	if len(r.healthecksByService[req.NamespacedName]) > 0 {
-		for _, target := range r.healthecksByService[req.NamespacedName] {
-			targetFound := false
-			for _, pod := range podList.Items {
-				if pod.Status.PodIP == target.targetHost {
-					targetFound = true
-					// TODO: need to deep compare healthchecks?
-					break
-				}
-			}
-			if targetFound {
-				// delete target from targets slice
-				r.healthecksByService[req.NamespacedName][n] = target
-				n++
-			}
-		}
-		r.healthecksByService[req.NamespacedName] = r.healthecksByService[req.NamespacedName][:n]
+	// Do not attempt to further reconcile the ServiceWithHealthchecks if PodList on target Node is empty.
+	if len(podList.Items) == 0 {
+		r.logger.Info("no pods found", "name", req.Name, "namespace", req.Namespace, "node", r.nodeName)
+		return ctrl.Result{}, nil
 	}
 
-	// add new pods IPs to targets slice
-	for _, pod := range podList.Items {
-		targetNotFound := true
-		var oldTarget HealthcheckTarget
-		var oldIndex int
-		for i, target := range r.healthecksByService[req.NamespacedName] {
-			if target.targetHost == pod.Status.PodIP {
-				targetNotFound = false
-				oldTarget = target
-				oldIndex = i
-				break
-			}
-		}
-
-		if len(r.healthecksByService[req.NamespacedName]) == 0 {
-			r.healthecksByService[req.NamespacedName] = make([]HealthcheckTarget, 0, 4)
-		}
-
-		newTarget := HealthcheckTarget{
-			targetHost:         pod.Status.PodIP,
-			creationTime:       pod.CreationTimestamp.Time,
-			periodSeconds:      int64(serviceWithHC.Spec.Healthcheck.PeriodSeconds),
-			initialDelay:       time.Duration(serviceWithHC.Spec.Healthcheck.InitialDelaySeconds) * time.Second,
-			probes:             r.getProbesFromServiceWithHealthchecks(serviceWithHC, pod.Status.PodIP),
-			probeResultDetails: []ProbeResultDetail{},
-			podName:            pod.GetName(),
-			podUID:             pod.GetUID(),
-			podReady:           podsReadinessMap[types.NamespacedName{Name: pod.GetName(), Namespace: req.Namespace}],
-		}
-		if targetNotFound {
-			r.logger.Info("append target pod for service", "podName", newTarget.podName, "serviceName", req.Name, "namespace", req.Namespace)
-			r.healthecksByService[req.NamespacedName] = append(r.healthecksByService[req.NamespacedName], newTarget)
-		}
-
-		// Update target if needed
-		if !targetNotFound && !newTarget.EqualTo(oldTarget) {
-			r.logger.Info("update target pod for service", "podName", newTarget.podName, "serviceName", req.Name, "namespace", req.Namespace)
-			r.healthecksByService[req.NamespacedName][oldIndex] = newTarget
-		}
+	// Create internal value with spec
+	value, ok := r.servicesWithHealthchecks.Load(req.NamespacedName)
+	if !ok || !reflect.DeepEqual(value.(networkv1alpha1.ServiceWithHealthchecksSpec), serviceWithHC.Spec) {
+		r.servicesWithHealthchecks.Store(req.NamespacedName, serviceWithHC)
 	}
-	r.mu.Unlock()
 
-	// update EPS
-	err := r.updateEPSForServiceWithHealthchecks(ctx, serviceWithHC)
-	if err != nil {
-		r.logger.Error(err, "unable to update EPS")
-		return ctrl.Result{}, err
-	}
+	// sync internal probes targets with exsiting pods
+	r.syncResultsMapWithPodList(serviceWithHC, podList)
 
 	// update status
 	updatedServiceWithHC := serviceWithHC.DeepCopy()
 	patch := client.MergeFrom(serviceWithHC.DeepCopy())
 	isNew := len(updatedServiceWithHC.Status.Conditions) == 0
-	updatedServiceWithHC.Status.EndpointStatuses = r.buildEndpointStatuses(updatedServiceWithHC)
-	updatedServiceWithHC.Status.HealthcheckCondition.ObservedGeneration = updatedServiceWithHC.Generation
-	updatedServiceWithHC.Status.HealthcheckCondition.Endpoints = int32(len(updatedServiceWithHC.Status.EndpointStatuses))
-	updatedServiceWithHC.Status.HealthcheckCondition.ReadyEndpoints = onlyReadyEndpoints(updatedServiceWithHC.Status.EndpointStatuses)
 
-	updatedServiceWithHC.Status.Conditions = []metav1.Condition{
-		{
-			Type:               "Ready",
-			LastTransitionTime: metav1.Now(),
-			Status:             isEqualReadyAndAll(updatedServiceWithHC.Status.HealthcheckCondition.Endpoints, updatedServiceWithHC.Status.HealthcheckCondition.ReadyEndpoints),
-			Reason:             "AllEndpointsAreReady",
-			Message:            "All endpoints are ready",
-		},
-	}
+	newStatus := r.buildRenewedStatus(updatedServiceWithHC)
+	isNeedToUpdateStatus := reflect.DeepEqual(newStatus.EndpointStatuses, updatedServiceWithHC.Status.EndpointStatuses)
 
-	if isNew {
-		r.logger.Info("creating status of service with healthchecks", "name", updatedServiceWithHC.GetName(), "namespace", updatedServiceWithHC.GetNamespace())
-		err = r.Status().Update(ctx, updatedServiceWithHC)
-	} else {
+	if isNew || isNeedToUpdateStatus {
 		r.logger.Info("updating status of service with healthchecks", "name", updatedServiceWithHC.GetName(), "namespace", updatedServiceWithHC.GetNamespace())
+		updatedServiceWithHC.Status = *newStatus
 		err = r.Status().Patch(ctx, updatedServiceWithHC, patch)
 	}
 	if err != nil {
 		r.logger.Error(err, "unable to update status of service with healthchecks", "name", updatedServiceWithHC.GetName(), "namespace", updatedServiceWithHC.GetNamespace())
 		return ctrl.Result{}, err
 	}
-
 	return ctrl.Result{}, nil
 }
 
@@ -252,7 +184,7 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 	endpointStatuses = svc.Status.EndpointStatuses[:n]
 
 	// add new healthchecks probes results
-	for _, result := range r.healthecksByService[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
+	for _, result := range r.healthecksResultsByService[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
 		endpointStatuses = append(endpointStatuses, networkv1alpha1.EndpointStatus{
 			PodName:          result.podName,
 			NodeName:         r.nodeName,
@@ -273,31 +205,23 @@ func (r *ServiceWithHealthchecksReconciler) getExposedServiceWithHCForPod(ctx co
 		return requests // it is not a pod or pod is on different node
 	}
 
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	// iterate over saved services specifications and check if it matches pod labels
+	r.servicesWithHealthchecks.Range(func(key, value any) bool {
+		svcWithHCName := key.(types.NamespacedName)
+		svcWithHCSpec := value.(networkv1alpha1.ServiceWithHealthchecksSpec)
+		podsLabels := pod.GetLabels()
 
-	// check if pod labels matches services selectors
-	for serviceName := range r.healthecksByService {
-		// get service labels
-		service := &networkv1alpha1.ServiceWithHealthchecks{}
-		if err := r.Client.Get(ctx, serviceName, service); err != nil {
-			r.logger.Error(err, "failed to get service", "serviceName", serviceName)
-			continue
-		}
-
-		//get pod labels
-		podLabels := pod.GetLabels()
-
-		if labels.ValidatedSetSelector(service.Spec.Selector).Matches(labels.Set(podLabels)) {
+		if labels.ValidatedSetSelector(svcWithHCSpec.Selector).Matches(labels.Set(podsLabels)) {
 			requests = append(requests, reconcile.Request{
 				NamespacedName: types.NamespacedName{
-					Name:      service.GetName(),
-					Namespace: service.GetNamespace(),
+					Name:      svcWithHCName.Name,
+					Namespace: svcWithHCName.Namespace,
 				},
 			})
+			return true
 		}
-
-	}
+		return false
+	})
 	return requests
 }
 
@@ -334,9 +258,9 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 		case <-ticker.C:
 			// write task to channel
 			r.mu.RLock()
-			for serviceName := range r.healthecksByService {
-				for i := range r.healthecksByService[serviceName] {
-					healthcheckTarget := r.healthecksByService[serviceName][i]
+			for serviceName := range r.healthecksResultsByService {
+				for i := range r.healthecksResultsByService[serviceName] {
+					healthcheckTarget := r.healthecksResultsByService[serviceName][i]
 					if !healthcheckTarget.podReady {
 						// skip pods which are not ready
 						continue
@@ -350,16 +274,22 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 					if diff < float64(healthcheckTarget.periodSeconds) {
 						continue // skip task while period elapsed
 					}
-					//result := r.addTask(ProbeTask{
-					//	host:        healthcheckTarget.targetHost,
-					//	serviceName: serviceName,
-					//	probes:      healthcheckTarget.GetRenewedProbes(),
-					//})
-					r.tasks <- ProbeTask{
+
+					value, ok := r.servicesWithHealthchecks.Load(serviceName)
+					if !ok {
+						continue // can not receive stored service spec
+					}
+					svcWithHCSpec, ok := value.(networkv1alpha1.ServiceWithHealthchecksSpec)
+					if !ok {
+						continue // can not receive stored service spec
+					}
+
+					probes := r.getProbesFromServiceWithHealthchecks(svcWithHCSpec, healthcheckTarget.targetHost, healthcheckTarget.podNamespace)
+					r.addTask(ProbeTask{
 						host:        healthcheckTarget.targetHost,
 						serviceName: serviceName,
-						probes:      healthcheckTarget.GetRenewedProbes(),
-					}
+						probes:      healthcheckTarget.GetRenewedProbes(probes),
+					})
 				}
 			}
 			r.mu.RUnlock()
@@ -373,18 +303,17 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 	r.logger.Info("analyzing results")
 	for result := range r.tasksResults {
 		r.mu.Lock()
-		if _, exists := r.healthecksByService[result.serviceName]; !exists {
+		if _, exists := r.healthecksResultsByService[result.serviceName]; !exists {
 			r.logger.Info("Could not update probes result for service - service is not founded", "name", result.serviceName.String())
 			r.mu.Unlock()
 			continue
 		}
 
-		for i, target := range r.healthecksByService[result.serviceName] {
+		for i, target := range r.healthecksResultsByService[result.serviceName] {
 			if target.targetHost == result.host {
-				r.healthecksByService[result.serviceName][i].lastCheck = time.Now()
-				r.healthecksByService[result.serviceName][i].probeResultDetails = result.probeDetails
+				r.healthecksResultsByService[result.serviceName][i].lastCheck = time.Now()
+				r.healthecksResultsByService[result.serviceName][i].probeResultDetails = result.probeDetails
 				//generate event for watcher
-				//TODO: add comprasion between old and new events?
 				r.events <- event.GenericEvent{Object: &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: result.serviceName.Name, Namespace: result.serviceName.Namespace}}}
 			}
 		}
@@ -518,7 +447,7 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpoints(svc networkv1alpha1.S
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	for _, probeResult := range r.healthecksByService[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
+	for _, probeResult := range r.healthecksResultsByService[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
 		if svc.Spec.PublishNotReadyAddresses || *areAllProbesSucceeed(probeResult.probeResultDetails) {
 			isReady := probeResult.podReady && *areAllProbesSucceeed(probeResult.probeResultDetails)
 			endpoint := discoveryv1.Endpoint{
@@ -553,9 +482,9 @@ func getPodsReadinessMap(podList corev1.PodList) map[types.NamespacedName]bool {
 	return podsReadinessMap
 }
 
-func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks(svc networkv1alpha1.ServiceWithHealthchecks, targetHost string) []Prober {
-	probes := make([]Prober, 0, len(svc.Spec.Healthcheck.Probes))
-	for _, serviceProbe := range svc.Spec.Healthcheck.Probes {
+func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks(svcSpec networkv1alpha1.ServiceWithHealthchecksSpec, targetHost, namespace string) []Prober {
+	probes := make([]Prober, 0, len(svcSpec.Healthcheck.Probes))
+	for _, serviceProbe := range svcSpec.Healthcheck.Probes {
 		switch strings.ToLower(serviceProbe.Mode) {
 		case "http":
 			probes = append(probes, FastHTTPProbeTarget{
@@ -579,7 +508,7 @@ func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks
 				timeoutSeconds:   serviceProbe.TimeoutSeconds,
 			})
 		case "postgresql":
-			creds, err := r.getPostgreSQLCredentials(serviceProbe.PostgreSQL, svc.GetNamespace())
+			creds, err := r.getPostgreSQLCredentials(serviceProbe.PostgreSQL, namespace)
 			if err != nil {
 				r.logger.Error(err, "Failed to get PostgreSQL credentials")
 				continue
@@ -620,7 +549,7 @@ func (r *ServiceWithHealthchecksReconciler) getPostgreSQLCredentials(sqlHandler 
 	return creds, nil
 }
 
-func (r *ServiceWithHealthchecksReconciler) addTask(task ProbeTask) bool {
+func (r *ServiceWithHealthchecksReconciler) addTask(task ProbeTask) {
 	taskIdentity := ProbeTaskIdentity{
 		host:        task.host,
 		serviceName: task.serviceName,
@@ -629,11 +558,11 @@ func (r *ServiceWithHealthchecksReconciler) addTask(task ProbeTask) bool {
 	r.muInProcess.Lock()
 	defer r.muInProcess.Unlock()
 	if _, exists := r.tasksInProcess[taskIdentity]; exists {
-		return false
+		return
 	}
 	r.tasksInProcess[taskIdentity] = true
 	r.tasks <- task
-	return true
+	return
 }
 
 func (r *ServiceWithHealthchecksReconciler) deleteTask(task ProbeTask) {
@@ -644,6 +573,79 @@ func (r *ServiceWithHealthchecksReconciler) deleteTask(task ProbeTask) {
 	r.muInProcess.Lock()
 	delete(r.tasksInProcess, taskIdentity)
 	r.muInProcess.Unlock()
+}
+
+func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc networkv1alpha1.ServiceWithHealthchecks, podList corev1.PodList) {
+	serviceWithHCKey := types.NamespacedName{Namespace: hc.Namespace, Name: hc.Name}
+	podsReadinessMap := getPodsReadinessMap(podList)
+	r.mu.Lock()
+	// clean unused pod IPs from result slice
+	n := 0
+	for _, target := range r.healthecksResultsByService[serviceWithHCKey] {
+		if _, exists := podsReadinessMap[types.NamespacedName{Namespace: hc.Namespace, Name: target.podName}]; exists {
+			r.healthecksResultsByService[serviceWithHCKey][n] = target
+			n++
+		}
+	}
+	if len(r.healthecksResultsByService[serviceWithHCKey]) > 0 {
+		r.healthecksResultsByService[serviceWithHCKey] = r.healthecksResultsByService[serviceWithHCKey][:n]
+	} else {
+		r.healthecksResultsByService[serviceWithHCKey] = make([]HealthcheckTarget, 0, 4)
+	}
+
+	// add new pods IPs to targets slice
+	for _, pod := range podList.Items {
+		targetNotFound := true
+		var oldIndex int
+		for i, target := range r.healthecksResultsByService[serviceWithHCKey] {
+			if target.podName == pod.Name {
+				targetNotFound = false
+				oldIndex = i
+				break
+			}
+		}
+
+		if targetNotFound {
+			// append new target
+			r.logger.Info("append target pod for service", "podName", pod.GetName(), "serviceName", hc.Name, "namespace", hc.Namespace)
+			r.healthecksResultsByService[serviceWithHCKey] = append(r.healthecksResultsByService[serviceWithHCKey], HealthcheckTarget{
+				targetHost:         pod.Status.PodIP,
+				creationTime:       pod.CreationTimestamp.Time,
+				probeResultDetails: []ProbeResultDetail{},
+				podName:            pod.GetName(),
+				podNamespace:       pod.GetNamespace(),
+				podUID:             pod.GetUID(),
+				podReady:           podsReadinessMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}],
+			})
+		} else {
+			// or update existing one
+			r.healthecksResultsByService[serviceWithHCKey][oldIndex].podUID = pod.GetUID()
+			r.healthecksResultsByService[serviceWithHCKey][oldIndex].podReady = podsReadinessMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}]
+			r.healthecksResultsByService[serviceWithHCKey][oldIndex].targetHost = pod.Status.PodIP
+			r.healthecksResultsByService[serviceWithHCKey][oldIndex].creationTime = pod.CreationTimestamp.Time
+		}
+	}
+	r.mu.Unlock()
+}
+
+func (r *ServiceWithHealthchecksReconciler) buildRenewedStatus(hc *networkv1alpha1.ServiceWithHealthchecks) *networkv1alpha1.ServiceWithHealthchecksStatus {
+	return &networkv1alpha1.ServiceWithHealthchecksStatus{
+		EndpointStatuses: r.buildEndpointStatuses(hc),
+		HealthcheckCondition: networkv1alpha1.HealthcheckCondition{
+			ObservedGeneration: hc.Generation,
+			Endpoints:          int32(len(hc.Status.EndpointStatuses)),
+			ReadyEndpoints:     onlyReadyEndpoints(hc.Status.EndpointStatuses),
+		},
+		Conditions: []metav1.Condition{
+			{
+				Type:               "Ready",
+				LastTransitionTime: metav1.Now(),
+				Status:             isEqualReadyAndAll(hc.Status.HealthcheckCondition.Endpoints, hc.Status.HealthcheckCondition.ReadyEndpoints),
+				Reason:             "AllEndpointsAreReady",
+				Message:            "All endpoints are ready",
+			},
+		},
+	}
 }
 
 func areAllProbesSucceeed(probeResultDetail []ProbeResultDetail) *bool {

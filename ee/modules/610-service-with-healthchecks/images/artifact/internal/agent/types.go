@@ -30,14 +30,12 @@ type Prober interface {
 
 type HealthcheckTarget struct {
 	creationTime       time.Time
-	initialDelay       time.Duration
 	lastCheck          time.Time
-	periodSeconds      int64
 	targetHost         string
 	podName            string
+	podNamespace       string
 	podUID             types.UID
 	podReady           bool
-	probes             []Prober
 	probeResultDetails []ProbeResultDetail
 }
 
@@ -57,10 +55,10 @@ func (ht HealthcheckTarget) GetProbeResultDetailsMap() map[string]ProbeCounts {
 	return result
 }
 
-func (ht HealthcheckTarget) GetRenewedProbes() []Prober {
-	newProbes := make([]Prober, 0, len(ht.probes))
+func (ht HealthcheckTarget) GetRenewedProbes(probes []Prober) []Prober {
+	newProbes := make([]Prober, 0, len(probes))
 	probesResultDetailsMap := ht.GetProbeResultDetailsMap()
-	for _, prob := range ht.probes {
+	for _, prob := range probes {
 		counts := probesResultDetailsMap[prob.GetID()]
 		newProbes = append(newProbes, prob.SetSuccessCount(counts.successCount).SetFailureCount(counts.failureCount))
 	}
@@ -69,12 +67,6 @@ func (ht HealthcheckTarget) GetRenewedProbes() []Prober {
 
 func (ht HealthcheckTarget) EqualTo(target HealthcheckTarget) bool {
 	if !ht.creationTime.Equal(target.creationTime) {
-		return false
-	}
-	if ht.initialDelay != target.initialDelay {
-		return false
-	}
-	if ht.periodSeconds != target.periodSeconds {
 		return false
 	}
 	if ht.targetHost != target.targetHost {
@@ -86,7 +78,7 @@ func (ht HealthcheckTarget) EqualTo(target HealthcheckTarget) bool {
 	if ht.podUID != target.podUID {
 		return false
 	}
-	if !reflect.DeepEqual(ht.probes, target.probes) {
+	if !reflect.DeepEqual(ht.probeResultDetails, target.probeResultDetails) {
 		return false
 	}
 	return true
