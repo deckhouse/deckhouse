@@ -1,6 +1,6 @@
 {{- define "oom_kills_exporter_resources" }}
-cpu: 10m
-memory: 100Mi
+cpu: 1m
+memory: 10Mi
 {{- end }}
 {{- $port := "4205" -}}
 
