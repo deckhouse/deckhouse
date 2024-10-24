@@ -265,16 +265,6 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 						// skip pods which are not ready
 						continue
 					}
-					now := time.Now()
-					diff := now.Sub(healthcheckTarget.creationTime).Seconds()
-					if diff < healthcheckTarget.initialDelay.Seconds() {
-						continue // skip task while initial delay
-					}
-					diff = now.Sub(healthcheckTarget.lastCheck).Seconds()
-					if diff < float64(healthcheckTarget.periodSeconds) {
-						continue // skip task while period elapsed
-					}
-
 					value, ok := r.servicesWithHealthchecks.Load(serviceName)
 					if !ok {
 						continue // can not receive stored service spec
@@ -282,6 +272,16 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 					svcWithHCSpec, ok := value.(networkv1alpha1.ServiceWithHealthchecksSpec)
 					if !ok {
 						continue // can not receive stored service spec
+					}
+
+					now := time.Now()
+					diff := now.Sub(healthcheckTarget.creationTime).Seconds()
+					if diff < float64(svcWithHCSpec.Healthcheck.InitialDelaySeconds) {
+						continue // skip task while initial delay
+					}
+					diff = now.Sub(healthcheckTarget.lastCheck).Seconds()
+					if diff < float64(svcWithHCSpec.Healthcheck.PeriodSeconds) {
+						continue // skip task while period elapsed
 					}
 
 					probes := r.getProbesFromServiceWithHealthchecks(svcWithHCSpec, healthcheckTarget.targetHost, healthcheckTarget.podNamespace)
