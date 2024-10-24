@@ -66,6 +66,7 @@ type ChangeActionSettings struct {
 	AutoDismissDestructive bool
 	AutoApprove            bool
 	SkipChangesOnDeny      bool
+	LogToBuffer            bool
 }
 
 type Runner struct {
@@ -225,6 +226,11 @@ func (r *Runner) WithSingleShotMode(enabled bool) RunnerInterface {
 
 func (r *Runner) withTerraformExecutor(t Executor) *Runner {
 	r.terraformExecutor = t
+	return r
+}
+
+func (r *Runner) WithCatchOutput(flag bool) *Runner {
+	r.changeSettings.LogToBuffer = flag
 	return r
 }
 
@@ -601,6 +607,14 @@ func (r *Runner) GetTerraformExecutor() Executor {
 	return r.terraformExecutor
 }
 
+func (r *Runner) IsLogToBuffer() bool {
+	return r.changeSettings.LogToBuffer
+}
+
+func (r *Runner) GetLog() []string {
+	return r.terraformExecutor.GetStdout()
+}
+
 // Stop interrupts the current runner command and sets
 // a flag to prevent executions of next runner commands.
 func (r *Runner) Stop() {
@@ -627,7 +641,7 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	r.switchTerraformIsRunning()
 	defer r.switchTerraformIsRunning()
 
-	exitCode, err := r.terraformExecutor.Exec(args...)
+	exitCode, err := r.terraformExecutor.Exec(r.changeSettings.LogToBuffer, args...)
 	log.InfoF("Terraform runner %q process exited.\n", r.step)
 
 	return exitCode, err
