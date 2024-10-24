@@ -34,7 +34,7 @@ type IstioFederationDiscoveryCrdInfo struct {
 	PublicMetadataEndpoint  string
 	PrivateMetadataEndpoint string
 	//                       map[hostname]IP
-	PublicServicesVirtualIPs map[string]string
+	//PublicServicesVirtualIPs map[string]string
 }
 
 func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_hook.MetricsCollector, endpoint string, isError float64) {
@@ -108,12 +108,12 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		}
 	}
 	return IstioFederationDiscoveryCrdInfo{
-		Name:                     federation.GetName(),
-		TrustDomain:              federation.Spec.TrustDomain,
-		ClusterUUID:              clusterUUID,
-		PublicMetadataEndpoint:   me + "/public/public.json",
-		PrivateMetadataEndpoint:  me + "/private/federation.json",
-		PublicServicesVirtualIPs: psvips,
+		Name:                    federation.GetName(),
+		TrustDomain:             federation.Spec.TrustDomain,
+		ClusterUUID:             clusterUUID,
+		PublicMetadataEndpoint:  me + "/public/public.json",
+		PrivateMetadataEndpoint: me + "/private/federation.json",
+		//PublicServicesVirtualIPs: psvips,
 	}, nil
 }
 
@@ -145,15 +145,15 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
 
-	var virtualIPInUseMap = make(map[string]bool)
+	//var virtualIPInUseMap = make(map[string]bool)
 	for _, federation := range input.Snapshots["federations"] {
 		federationInfo := federation.(IstioFederationDiscoveryCrdInfo)
 		if federationInfo.TrustDomain == myTrustDomain {
 			continue
 		}
-		for _, vip := range federationInfo.PublicServicesVirtualIPs {
-			virtualIPInUseMap[vip] = true
-		}
+		//for _, vip := range federationInfo.PublicServicesVirtualIPs {
+		//	virtualIPInUseMap[vip] = true
+		//}
 	}
 	//var ipi = ipIterator{
 	//	IPInUseMap: virtualIPInUseMap,
@@ -234,15 +234,15 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
-		for i, ps := range *privateMetadata.PublicServices {
-			if vip, ok := federationInfo.PublicServicesVirtualIPs[ps.Hostname]; ok {
-				(*privateMetadata.PublicServices)[i].VirtualIP = vip
-			} else {
-				input.LogEntry.Warnf("can't get VirtualIP for service %s in IstioFederation %s", ps.Hostname, federationInfo.Name)
-				federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
-				continue
-			}
-		}
+		//for i, ps := range *privateMetadata.PublicServices {
+		//	if vip, ok := federationInfo.PublicServicesVirtualIPs[ps.Hostname]; ok {
+		//		(*privateMetadata.PublicServices)[i].VirtualIP = vip
+		//	} else {
+		//		input.LogEntry.Warnf("can't get VirtualIP for service %s in IstioFederation %s", ps.Hostname, federationInfo.Name)
+		//		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
+		//		continue
+		//	}
+		//}
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
