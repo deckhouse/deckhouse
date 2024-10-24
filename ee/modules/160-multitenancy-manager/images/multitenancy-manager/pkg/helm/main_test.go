@@ -142,7 +142,7 @@ func render(templates map[string][]byte, project *v1alpha2.Project, projectTempl
 		return nil, err
 	}
 
-	valuesToRender, err := chartutil.ToRenderValues(ch, valuesFromProjectAndTemplate(project, projectTemplate), chartutil.ReleaseOptions{
+	valuesToRender, err := chartutil.ToRenderValues(ch, buildValues(project, projectTemplate), chartutil.ReleaseOptions{
 		Name:      project.Name,
 		Namespace: project.Name,
 	}, nil)
