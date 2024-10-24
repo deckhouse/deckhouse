@@ -75,7 +75,11 @@ properties:
         - ["sc.*", "st1"]
       default:
         type: string
+        deprecated: true
+        x-doc-deprecated: true
         description: |
+          > **DEPRECATED**. Use [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass) instead.
+
           The name of StorageClass that will be used by default in the cluster:
             * If the parameter is omitted, the default StorageClass is either:
               * an arbitrary StorageClass present in the cluster that has the default annotation;

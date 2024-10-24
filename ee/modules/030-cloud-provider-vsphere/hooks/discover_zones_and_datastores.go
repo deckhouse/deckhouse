@@ -103,11 +103,5 @@ func doDiscover(input *go_hook.HookInput, dc dependency.Container) error {
 
 	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
 
-	if v, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.default"); ok {
-		input.Values.Set("cloudProviderVsphere.internal.defaultStorageClass", v.String())
-	} else {
-		input.Values.Remove("cloudProviderVsphere.internal.defaultStorageClass")
-	}
-
 	return nil
 }

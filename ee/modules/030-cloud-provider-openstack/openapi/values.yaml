@@ -101,8 +101,6 @@ properties:
               type: string
             name:
               type: string
-      defaultStorageClass:
-        type: string
       cniSecretData:
         type: string
       discoveryData:

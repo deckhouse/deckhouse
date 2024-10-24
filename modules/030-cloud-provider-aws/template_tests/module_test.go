@@ -197,7 +197,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
-			f.ValuesSetFromYaml("cloudProviderAws.internal.defaultStorageClass", `iops-foo`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `iops-foo`)
 			f.HelmRender()
 		})
 
