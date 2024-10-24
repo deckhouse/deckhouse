@@ -3,10 +3,11 @@ properties:
   ebpfExporterEnabled:
     type: boolean
     default: true
+    x-doc-deprecated: true
     x-examples:
     - false
     description: |
-      Set to 'false' to disable ebpf_exporter in case it behaves incorrectly.
+      Does not affect the operation of module components.
   highAvailability:
     type: boolean
     x-examples: [true, false]
