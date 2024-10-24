@@ -56,6 +56,10 @@ properties:
                   gateway:
                     type: string
                     format: ipv4
+                  dev:
+                    type: string
+                    maxLength: 15
+                    pattern: '^[^\s\\]{1,15}$'
       nodeIPRuleSets:
         type: array
         default: []

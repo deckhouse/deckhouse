@@ -79,7 +79,7 @@ spec:
                     Desired routes.
                   required:
                     - destination
-                    - gateway
+                  minProperties: 2
                   properties:
                     destination:
                       type: string
@@ -91,6 +91,12 @@ spec:
                       format: ipv4
                       description: |
                         Nexthop.
+                    dev:
+                      type: string
+                      maxLength: 15
+                      pattern: '^[^\s\\]{1,15}$'
+                      description: |
+                        The output device name.
           status:
             type: object
             properties:
