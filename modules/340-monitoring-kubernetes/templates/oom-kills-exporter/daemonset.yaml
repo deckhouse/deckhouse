@@ -61,8 +61,11 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list . "oomKillsExporter") }}
         name: oom-kills-exporter
-        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
-        # { {- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "CAP_SYSLOG")) | nindent 8 } }
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "CAP_SYSLOG")) | nindent 8 }}
+          # only system root can read /dev/kmsg
+          runAsNonRoot: false
+          runAsUser: 0
+          runAsGroup: 0
         readinessProbe:
           httpGet:
             path: /ready
