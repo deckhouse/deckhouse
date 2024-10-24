@@ -327,7 +327,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
     port: 123
   publicServices:
   - hostname: xxx.yyy
-    virtualIP: 2.2.2.2
     ports:
     - name: aaa
       port: 456
