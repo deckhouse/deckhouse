@@ -1,0 +1,14 @@
+candi:
+  features:
+    - summary: >-
+        Extend regexp in `004_resize_partitions.sh` for detect lvm partition with capital letter and
+        digit in name.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10233
+  fixes:
+    - summary: Check for transparent hugepages before trying to disable them in sysctl-tuner
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10294
+docs:
+  fixes:
+    - summary: Improved documentation on reducing the number of master nodes in the cluster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10265
+
