@@ -3,6 +3,7 @@ properties:
   ebpfExporterEnabled:
     type: boolean
     default: true
+    x-doc-deprecated: true
     x-examples:
     - false
     description: |

@@ -1,4 +1,3 @@
-{{- if .Values.monitoringKubernetes.ebpfExporterEnabled }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -30,4 +29,3 @@ spec:
       targetLabel: node
     - targetLabel: tier
       replacement: cluster
-{{- end }}
