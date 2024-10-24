@@ -176,7 +176,6 @@ properties:
       Доступные варианты: `Preferred` или `Required`.
       `Preferred` правило позволит размещать longterm на одном узле с main, в случае необходимости.
       `Required` правило предотвратит размещение longterm на одном узле с main, при любых условиях.
-      Если параметр не указан или установлен в `false`, по умолчанию используется вариант `Preferred`.
   tolerations:
     type: array
     description: |
