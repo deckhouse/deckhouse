@@ -519,13 +519,27 @@ func (r *Runner) Destroy() error {
 		return nil
 	}
 
+	planDestroyArgs := []string{
+		"plan",
+		"-destroy",
+		"-no-color",
+		fmt.Sprintf("-var-file=%s", r.variablesPath),
+		fmt.Sprintf("-state=%s", r.statePath),
+	}
+	planDestroyArgs = append(planDestroyArgs, r.workingDir)
+
+	_, err := r.execTerraform(planDestroyArgs...)
+	if err != nil {
+		return fmt.Errorf("Cannot prepare terrafrom destroy plan: %w", err)
+	}
+
 	if !r.changeSettings.AutoApprove {
 		if !r.confirm().WithMessage("Do you want to DELETE objects from the cloud?").Ask() {
 			return fmt.Errorf("terraform destroy aborted")
 		}
 	}
 
-	err := r.runBeforeActionAndWaitReady()
+	err = r.runBeforeActionAndWaitReady()
 	if err != nil {
 		return err
 	}
