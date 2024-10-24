@@ -72,7 +72,7 @@ require (
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20151013193312-d6023ce2651d // indirect
 	github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee // indirect
-	github.com/flant/shell-operator v1.4.15 // indirect
+	github.com/flant/shell-operator v1.4.15-fix-logrus-double // indirect
 	github.com/go-chi/chi/v5 v5.1.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
