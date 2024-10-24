@@ -9,11 +9,11 @@ require (
 	github.com/clarketm/json v1.15.7
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
+	github.com/deckhouse/deckhouse/dhctl v0.0.0-20241023094349-4f89e90fa898 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.5.0
+	github.com/flant/addon-operator v1.5.0-fix-leak
 	github.com/flant/kube-client v1.2.0
-	github.com/flant/shell-operator v1.4.12
+	github.com/flant/shell-operator v1.4.15
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8

@@ -44,5 +44,5 @@ func (mu metricUpdater) WaitingManual(release *v1alpha1.DeckhouseRelease, totalP
 }
 
 func (mu metricUpdater) ReleaseBlocked(name, reason string) {
-	mu.metricStorage.GroupedVault.GaugeSet(metricReleasesGroup, "d8_release_blocked", 1, map[string]string{"name": name, "reason": reason})
+	mu.metricStorage.Grouped().GaugeSet(metricReleasesGroup, "d8_release_blocked", 1, map[string]string{"name": name, "reason": reason})
 }
