@@ -164,6 +164,15 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 						},
 					},
 				},
+				// for deckhouse.io apis
+				&v1alpha1.Module{}:              {},
+				&v1alpha1.ModuleConfig{}:        {},
+				&v1alpha1.ModuleDocumentation{}: {},
+				&v1alpha1.ModuleRelease{}:       {},
+				&v1alpha1.ModuleSource{}:        {},
+				&v1alpha1.ModuleUpdatePolicy{}:  {},
+				&v1alpha1.ModulePullOverride{}:  {},
+				&v1alpha1.DeckhouseRelease{}:    {},
 			},
 		},
 	})
@@ -433,7 +442,7 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
-			dml.metricStorage.GroupedVault.ExpireGroupMetrics(metricGroup)
+			dml.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 			moduleConfig, moduleErr := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, configName, v1.GetOptions{})
 
 			// if module config found
@@ -460,7 +469,7 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 				converter := conversion.Store().Get(moduleConfig.Name)
 
 				if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
-					dml.metricStorage.GroupedVault.GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
+					dml.metricStorage.Grouped().GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
 						"name":    moduleConfig.Name,
 						"version": strconv.Itoa(moduleConfig.Spec.Version),
 						"latest":  strconv.Itoa(converter.LatestVersion()),
