@@ -4192,7 +4192,7 @@ alerts:
         or addressing the source of increased network traffic.
       summary: |
         The {{ $labels.node }} node has high TCP stack memory usage.
-      severity: "4"
+      severity: "6"
       markupFormat: markdown
     - name: NodeTimeOutOfSync
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
