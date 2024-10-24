@@ -72,7 +72,16 @@ func (pc *Checker) CheckRegistryAccessThroughProxy() error {
 		return nil
 	}
 
-	if tryToSkippingCheck(pc.metaConfig.Registry.Data.Address, noProxyAddresses) {
+	registryData, registryMode := pc.GetRegistryData()
+	if registryData == nil {
+		if registryMode != "Detached" {
+			return fmt.Errorf("Empty registry data for registry mode %s", registryMode)
+		}
+		log.DebugLn("Registry mode is %s, skipping check", registryMode)
+		return nil
+	}
+
+	if tryToSkippingCheck(registryData.Address, noProxyAddresses) {
 		log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
 		return nil
 	}
@@ -85,8 +94,8 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	defer tun.Stop()
 
 	registryURL := &url.URL{
-		Scheme: pc.metaConfig.Registry.Data.Scheme,
-		Host:   pc.metaConfig.Registry.Data.Address,
+		Scheme: registryData.Scheme,
+		Host:   registryData.Address,
 		Path:   "/v2/",
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -245,16 +254,13 @@ func (pc *Checker) CheckRegistryCredentials() error {
 	ctx, cancel := context.WithTimeout(context.Background(), httpClientTimeoutSec*time.Second)
 	defer cancel()
 
-	var registryData config.RegistryData
-
-	switch pc.metaConfig.Registry.ModeSpecificFields.(type) {
-	case config.DetachedModeRegistryData:
+	registryData, registryMode := pc.GetRegistryData()
+	if registryData == nil {
+		if registryMode != "Detached" {
+			return fmt.Errorf("Empty registry data for registry mode %s", registryMode)
+		}
+		log.DebugLn("Registry mode is %s, skipping check", registryMode)
 		return nil
-	case config.ProxyModeRegistryData:
-		modeSpecificFields := pc.metaConfig.Registry.ModeSpecificFields.(config.ProxyModeRegistryData)
-		registryData = modeSpecificFields.UpstreamRegistryData
-	default:
-		registryData = pc.metaConfig.Registry.Data
 	}
 
 	authData, err := registryData.Auth()
@@ -262,7 +268,19 @@ func (pc *Checker) CheckRegistryCredentials() error {
 		return err
 	}
 
-	return checkRegistryAuth(ctx, &registryData, authData)
+	return checkRegistryAuth(ctx, registryData, authData)
+}
+
+func (pc *Checker) GetRegistryData() (*config.RegistryData, string) {
+	switch pc.metaConfig.Registry.ModeSpecificFields.(type) {
+	case config.DetachedModeRegistryData:
+		return nil, pc.metaConfig.Registry.Mode
+	case config.ProxyModeRegistryData:
+		modeSpecificFields := pc.metaConfig.Registry.ModeSpecificFields.(config.ProxyModeRegistryData)
+		return &modeSpecificFields.UpstreamRegistryData, pc.metaConfig.Registry.Mode
+	default:
+		return &pc.metaConfig.Registry.Data, pc.metaConfig.Registry.Mode
+	}
 }
 
 func prepareRegistryRequest(
