@@ -66,6 +66,7 @@ func findMetricValue(metricName string, labels map[string]string, r *prometheus.
 func getContainerIDFromLog(line string) (string, error) {
 	var taskMemcg string
 	if matches := regexp.MustCompile(`^oom-kill:(.+)`).FindStringSubmatch(line); matches != nil {
+		log.Print(line)
 		for _, word := range strings.Split(matches[0], ",") {
 			if strings.Contains(word, "task_memcg") {
 				if idx := strings.Index(word, "="); idx != -1 {
