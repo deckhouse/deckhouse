@@ -2,7 +2,7 @@ type: object
 properties:
   ebpfExporterEnabled:
     description: |
-      Флаг отключения ebpf_exporter для случаев, когда его работа создает проблемы в нормальной работе узлов.
+      Не влияет на работу компонентов модуля.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
