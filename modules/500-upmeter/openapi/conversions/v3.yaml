@@ -1,0 +1,3 @@
+version: 3
+conversions:
+  - del(.smokeMini.ingressClass) | if .smokeMini == {} then del(.smokeMini) end
