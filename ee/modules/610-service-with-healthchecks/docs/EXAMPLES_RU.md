@@ -46,6 +46,7 @@ spec:
       configMap:
         name: node-app-config
 ```
+
 ### создание Secret с данными для доступа к PostgreSQL
 
 ```shell
