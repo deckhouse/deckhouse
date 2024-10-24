@@ -41,7 +41,6 @@ func findMetricValue(metricName string, labels map[string]string, r *prometheus.
 	for _, mf := range mfs {
 		if mf.GetName() == metricName {
 			for _, metric := range mf.Metric {
-				// Нада оптимизировать. можно вложить один цикл в другой.
 				labelMap := make(map[string]string)
 				for _, label := range metric.Label {
 					labelMap[*label.Name] = *label.Value
@@ -64,27 +63,19 @@ func findMetricValue(metricName string, labels map[string]string, r *prometheus.
 	return false
 }
 
-func getContainerIDFromLog(line string) (string, string, string, error) {
-	var globalOom, oomMemcg, taskMemcg string
-	globalOom = "0"
+func getContainerIDFromLog(line string) (string, error) {
+	var taskMemcg string
 	if matches := regexp.MustCompile(`^oom-kill:(.+)`).FindStringSubmatch(line); matches != nil {
 		for _, word := range strings.Split(matches[0], ",") {
-			switch {
-			case strings.Contains(word, "global_oom"):
-				globalOom = "1"
-			case strings.Contains(word, "oom_memcg"):
-				if idx := strings.Index(word, "="); idx != -1 {
-					oomMemcg = word[idx+1:]
-				}
-			case strings.Contains(word, "task_memcg"):
+			if strings.Contains(word, "task_memcg") {
 				if idx := strings.Index(word, "="); idx != -1 {
 					taskMemcg = word[idx+1:]
 				}
 			}
 		}
-		return globalOom, oomMemcg, taskMemcg, nil
+		return taskMemcg, nil
 	}
-	return "", "", "", errors.New("Don't oom-kill log")
+	return "", errors.New("Don't oom-kill log")
 }
 
 func main() {
@@ -95,7 +86,7 @@ func main() {
 		})
 	klogOomkill := prometheus.NewCounterVec(
 		prometheus.CounterOpts{Name: "klog_oomkill"},
-		[]string{"global_oom", "task_memcg", "oom_memcg"},
+		[]string{"task_memcg"},
 	)
 	local.MustRegister(klogOomkill)
 
@@ -116,10 +107,8 @@ func main() {
 	}
 
 	for item := range logCh {
-		if globalOom, oomMemcg, taskMemcg, err := getContainerIDFromLog(item.Message); err == nil {
+		if taskMemcg, err := getContainerIDFromLog(item.Message); err == nil {
 			labels := map[string]string{
-				"global_oom": globalOom,
-				"oom_memcg":  oomMemcg,
 				"task_memcg": taskMemcg,
 			}
 			sleep := 0 * time.Second
