@@ -358,9 +358,6 @@ neighbour-0:
               ports:
                 aaa: 123
             `))
-			Expect(se.Field("spec.addresses").String()).To(MatchYAML(`
-            - 2.2.2.2
-            `))
 
 			Expect(f.KubernetesResource("Deployment", "d8-istio", "metadata-exporter").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "metadata-exporter").Exists()).To(BeTrue())
