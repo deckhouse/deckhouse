@@ -292,10 +292,10 @@ properties:
     type: string
     default: "Preferred"
     description: |
-      Defines the podAntiAffinity configuration for the longterm Prometheus instance relative to the main Prometheus instance. The options are either `Preferred` or `Required`.
-      When set to `Preferred`, the anti-affinity rule is soft, in some cases allowing scheduling longterm Prometheus instance alongside the main instance.
-      When set to `Required`, the anti-affinity rule is strict, preventing the scheduling of the longterm Prometheus instance on the same node as the main instance.
-      If the parameter is omitted or set to false, the default behavior is `Preferred`.
+      Defines the podAntiAffinity configuration for the Prometheus longterm instance relative to the Prometheus main instance.
+
+      - `Preferred` — allows scheduling Prometheus longterm instance alongside the Prometheus main instance if it is not possible to place them on different nodes.
+      - `Required` — does not allow scheduling Prometheus longterm instance on the same node as the Prometheus main instance.
     enum: [Preferred, Required]
   tolerations:
     type: array
