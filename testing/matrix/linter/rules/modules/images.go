@@ -19,7 +19,7 @@ package modules
 import (
 	"bufio"
 	"fmt"
-	"log"
+	// "log"
 	"os"
 	"path/filepath"
 	"regexp"
