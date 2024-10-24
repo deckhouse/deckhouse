@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package module_pull_override
+package modulepulloverride
 
 import (
 	"context"
@@ -249,7 +249,7 @@ func (c *reconciler) moduleOverrideReconcile(ctx context.Context, mo *v1alpha1.M
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, fmt.Errorf("got an empty module definition for %s module pull override", mo.Name)
 	}
 
-	var values = make(addonutils.Values)
+	values := make(addonutils.Values)
 	if module := c.moduleManager.GetModule(moduleDef.Name); module != nil {
 		values = module.GetConfigValues(false)
 	}
