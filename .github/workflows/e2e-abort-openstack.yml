@@ -1548,7 +1548,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_31:
     name: "destroy cluster: OpenStack, Containerd, Kubernetes 1.31"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.31' && github.event.inputs.layout == 'Standard' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && github.event.inputs.k8s_version == '1.31' && github.event.inputs.layout == 'Standard' }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
