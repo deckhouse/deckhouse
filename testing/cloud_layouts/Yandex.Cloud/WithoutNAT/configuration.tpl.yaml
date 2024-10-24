@@ -82,4 +82,4 @@ spec:
   version: 1
   enabled: true
   settings:
-    ebpfExporterEnabled: false
+    ebpfExporterEnabled: false # openSUSE
