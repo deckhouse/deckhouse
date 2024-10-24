@@ -13,7 +13,7 @@ Kubernetes finds out if a pod is available and ready to receive traffic by using
 
 - **Configuration**: A readiness probe is configured via the pod specification. It can take the form of an HTTP request, an attempt to establish a TCP connection, or a command line (exec) check. For example, an HTTP probe sends a request to a specific URL, and if the response is successful (usually HTTP code 200 OK), the pod is considered "ready".
 
-- **Behavior**: If the readiness probe fails, the pod will be marked as "not ready," and all requests to the service will be reruouted to other running pods. Once the pod successfully passes the check, it will be able to receive traffic again.
+- **Behavior**: If the readiness probe fails, the pod will be marked as "not ready," and all requests to the service will be rerouted to other running pods. Once the pod successfully passes the check, it will be able to receive traffic again.
 
 - **Importance**: Readiness probes are critical for maintaining high availability and optimal load distribution among pods. This is especially important in distributed systems where application state is prone to rapid changes.
 
