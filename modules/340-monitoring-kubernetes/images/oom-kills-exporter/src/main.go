@@ -31,7 +31,7 @@ var (
 	local = prometheus.NewRegistry()
 )
 
-func findMetricValue(metricName string, labels map[string]string, r *prometheus.Registry) bool {
+func checkMetricExistenceByLabels(metricName string, labels map[string]string, r *prometheus.Registry) bool {
 	mfs, err := r.Gather()
 	if err != nil {
 		log.Println("Error gathering metrics:", err)
@@ -113,7 +113,7 @@ func main() {
 				"task_memcg": taskMemcg,
 			}
 			sleep := 0 * time.Second
-			if !findMetricValue("klog_oomkill", labels, local) {
+			if !checkMetricExistenceByLabels("klog_oomkill", labels, local) {
 				if _, err := klogOomkill.GetMetricWith(labels); err != nil {
 					log.Fatal("Could not create metrics")
 				}
