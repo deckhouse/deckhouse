@@ -172,10 +172,10 @@ properties:
   longtermPodAntiAffinity:
     type: string
     description: |
-      Устанавливает podAntiAffinity конфигурацию для longterm Prometheus по отношению к main Prometheus.
-      Доступные варианты: `Preferred` или `Required`.
-      `Preferred` правило позволит размещать longterm на одном узле с main, в случае необходимости.
-      `Required` правило предотвратит размещение longterm на одном узле с main, при любых условиях.
+      Устанавливает конфигурацию podAntiAffinity для Prometheus longterm по отношению к Prometheus main.
+
+      - `Preferred` — позволяет размещать Prometheus longterm на одном узле с Prometheus main, если нет возможности их разместить на разных узлах.
+      - `Required` — не позволяет размещать Prometheus longterm на одном узле с Prometheus main ни при каких условиях.
   tolerations:
     type: array
     description: |
