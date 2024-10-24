@@ -2,17 +2,11 @@ type: object
 properties:
   storageClass:
     description: |
-      Имя StorageClass`а, который будет использоваться.
-
-      
-      * Используется [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`. Если ни один из них не задан, данные сохраняются в emptyDir.
-      
-      * `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
-      
+      Имя StorageClass, который будет использоваться.
+      * Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
+      * Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
       * **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
-      
-      * Если указать `false`, будет форсироваться использование emptyDir'а.
-      
+      * Если указать `false`, будет принудительно использоваться emptyDir.
 
   severities:
     description: |
