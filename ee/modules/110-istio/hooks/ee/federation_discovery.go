@@ -7,7 +7,6 @@ package ee
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -61,28 +60,28 @@ func (i *IstioFederationDiscoveryCrdInfo) PatchMetadataCache(pc *object_patch.Pa
 	return nil
 }
 
-type ipIterator struct {
-	IPInUseMap map[string]bool
-	Octet3     int
-	Octet4     int
-}
-
-func (i *ipIterator) Next() (string, error) {
-	i.Octet4++
-	if i.Octet4 == 256 {
-		i.Octet3++
-		i.Octet4 = 0
-	}
-	if i.Octet3 == 256 {
-		return "", fmt.Errorf("IP pool for ServiceEntries is over. Too many remote public services")
-	}
-	ip := fmt.Sprintf("169.254.%d.%d", i.Octet3, i.Octet4)
-
-	if _, ok := i.IPInUseMap[ip]; ok {
-		return i.Next()
-	}
-	return ip, nil
-}
+//type ipIterator struct {
+//	IPInUseMap map[string]bool
+//	Octet3     int
+//	Octet4     int
+//}
+//
+//func (i *ipIterator) Next() (string, error) {
+//	i.Octet4++
+//	if i.Octet4 == 256 {
+//		i.Octet3++
+//		i.Octet4 = 0
+//	}
+//	if i.Octet3 == 256 {
+//		return "", fmt.Errorf("IP pool for ServiceEntries is over. Too many remote public services")
+//	}
+//	ip := fmt.Sprintf("169.254.%d.%d", i.Octet3, i.Octet4)
+//
+//	if _, ok := i.IPInUseMap[ip]; ok {
+//		return i.Next()
+//	}
+//	return ip, nil
+//}
 
 func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var federation eeCrd.IstioFederation
@@ -156,11 +155,11 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			virtualIPInUseMap[vip] = true
 		}
 	}
-	var ipi = ipIterator{
-		IPInUseMap: virtualIPInUseMap,
-		Octet3:     0,
-		Octet4:     0,
-	}
+	//var ipi = ipIterator{
+	//	IPInUseMap: virtualIPInUseMap,
+	//	Octet3:     0,
+	//	Octet4:     0,
+	//}
 
 	for _, federation := range input.Snapshots["federations"] {
 		federationInfo := federation.(IstioFederationDiscoveryCrdInfo)
@@ -239,12 +238,9 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			if vip, ok := federationInfo.PublicServicesVirtualIPs[ps.Hostname]; ok {
 				(*privateMetadata.PublicServices)[i].VirtualIP = vip
 			} else {
-				(*privateMetadata.PublicServices)[i].VirtualIP, err = ipi.Next()
-				if err != nil {
-					input.LogEntry.Warnf("can't get VirtualIP for service %s in IstioFederation %s, error: %s", ps.Hostname, federationInfo.Name, err.Error())
-					federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
-					continue
-				}
+				input.LogEntry.Warnf("can't get VirtualIP for service %s in IstioFederation %s", ps.Hostname, federationInfo.Name)
+				federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
+				continue
 			}
 		}
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
