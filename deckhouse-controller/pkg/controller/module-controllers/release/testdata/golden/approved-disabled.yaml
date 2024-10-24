@@ -46,7 +46,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1002"
+  resourceVersion: "1000"
 spec:
   changelog:
     features:
@@ -56,9 +56,8 @@ spec:
   weight: 900
 status:
   approved: false
-  message: "validation failed: validate module: 1 error occurred:\n\t* parca must
-    be of type : \"object\"\n\n"
-  phase: Suspended
-  pullDuration: 9m15s
-  size: 3
-  transitionTime: "2019-10-17T15:33:00Z"
+  message: ""
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2024-05-03T20:55:49Z"

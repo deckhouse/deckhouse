@@ -91,7 +91,7 @@ func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alph
 		return err
 	}
 
-	valuesData, err = MutateOpenapiSchema(valuesData, moduleSource)
+	valuesData, err = mutateOpenapiSchema(valuesData, moduleSource)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alph
 	return os.WriteFile(valuesFile, valuesData, 0o666)
 }
 
-func MutateOpenapiSchema(sourceValuesData []byte, moduleSource *v1alpha1.ModuleSource) ([]byte, error) {
+func mutateOpenapiSchema(sourceValuesData []byte, moduleSource *v1alpha1.ModuleSource) ([]byte, error) {
 	reg := new(registrySchemaForValues)
 	reg.SetBase(moduleSource.Spec.Registry.Repo)
 	reg.SetDockerCfg(moduleSource.Spec.Registry.DockerCFG)
