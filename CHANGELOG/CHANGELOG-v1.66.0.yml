@@ -1,0 +1,26 @@
+candi:
+  fixes:
+    - summary: Added explicit addition of basible-server address into the NO_PROXY parameter
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10283
+    - summary: Change permissions for containerd dir
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10133
+ci:
+  features:
+    - summary: new CloudPermanent nodes starts on e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10269
+  fixes:
+    - summary: Updated TESTS_IMAGE_NAME to BASE_GOLANG_23_BULLSEYE in github workflow
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10282
+dhctl:
+  features:
+    - summary: Print cloud objects which will be destroyed when dhctl destroy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10181
+    - summary: Add parallel bootstrap `cloudpermanent` nodes to dhctl.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10015
+node-manager:
+  fixes:
+    - summary: >-
+        Fix handling of machine creation errors in the `machine-controller-manager`(`vsphere`
+        driver).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10225
+
