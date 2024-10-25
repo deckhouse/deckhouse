@@ -169,7 +169,7 @@ storage:
     accesskey: awsaccesskey
     secretkey: awssecretkey
     region: us-west-1
-    regionendpoint: http://localhost:8333
+    regionendpoint: http://127.0.0.1:8333
     bucket: registry
     encrypt: false
     secure: false

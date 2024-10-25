@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-{{- if ne .registry.registryStorageMode "S3" }}
+{{- if eq .registry.registryStorageMode "Fs" }}
 
 # Prepare UPSTREAM_REGISTRY vars for registryMode == Proxy
 {{- if eq .registry.registryMode "Proxy" }}
@@ -92,7 +92,7 @@ fi
 
 bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
 server:
-  addr: "localhost:5051"
+  addr: "127.0.0.1:5051"
   certificate: "$IGNITER_DIR/auth.crt"
   key: "$IGNITER_DIR/auth.key"
 token:
@@ -138,7 +138,7 @@ http:
   prefix: /
   secret: asecretforlocaldevelopment
   debug:
-    addr: localhost:5002
+    addr: 127.0.0.1:5002
     prometheus:
       enabled: true
       path: /metrics
@@ -162,7 +162,7 @@ proxy:
 
 auth:
   token:
-    realm: https://localhost:5051/auth
+    realm: https://127.0.0.1:5051/auth
     service: Docker registry
     issuer: Registry server
     rootcertbundle: "$IGNITER_DIR/auth.crt"
@@ -199,7 +199,7 @@ check_and_run "auth_server" "/opt/deckhouse/bin/auth_server -logtostderr $IGNITE
 check_and_run "registry" "/opt/deckhouse/bin/registry serve $IGNITER_DIR/distribution_config.yaml" "$IGNITER_DIR/logs/distribution.log"
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
-    response=\$(d8-curl -k -s -o /dev/null -w "%{http_code}" https://localhost:5001)
+    response=\$(d8-curl --cacert "$IGNITER_DIR/ca.crt" -s -o /dev/null -w "%{http_code}" https://127.0.0.1:5001)
     if [[ "\$response" == "200" ]]; then
         docker_registry_started=true
         break

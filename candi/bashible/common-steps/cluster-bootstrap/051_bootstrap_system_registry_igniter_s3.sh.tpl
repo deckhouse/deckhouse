@@ -92,7 +92,7 @@ fi
 
 bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
 server:
-  addr: "localhost:5051"
+  addr: "127.0.0.1:5051"
   certificate: "$IGNITER_DIR/auth.crt"
   key: "$IGNITER_DIR/auth.key"
 token:
@@ -147,7 +147,7 @@ storage:
     accesskey: awsaccesskey
     secretkey: awssecretkey
     region: us-west-1
-    regionendpoint: http://localhost:8333
+    regionendpoint: http://127.0.0.1:8333
     bucket: registry
     encrypt: false
     secure: false
@@ -170,7 +170,7 @@ http:
   prefix: /
   secret: asecretforlocaldevelopment
   debug:
-    addr: localhost:5002
+    addr: 127.0.0.1:5002
     prometheus:
       enabled: true
       path: /metrics
@@ -194,7 +194,7 @@ proxy:
 
 auth:
   token:
-    realm: https://localhost:5051/auth
+    realm: https://127.0.0.1:5051/auth
     service: Docker registry
     issuer: Registry server
     rootcertbundle: "$IGNITER_DIR/auth.crt"
@@ -243,9 +243,9 @@ GOGC=20 check_and_run "weed" "/opt/deckhouse/bin/weed -logtostderr=true \
       -master.volumeSizeLimitMB=1024 \
       -s3.allowDeleteBucketNotEmpty=true \
       -master.defaultReplication=000 \
-      -ip=localhost \
-      -ip.bind=localhost \
-      -master.peers=localhost:9333" "$IGNITER_DIR/logs/seaweedfs.log"
+      -ip=127.0.0.1 \
+      -ip.bind=127.0.0.1 \
+      -master.peers=127.0.0.1:9333" "$IGNITER_DIR/logs/seaweedfs.log"
 
 echo "Awaiting the startup of the registry storage and Docker registry..."
 max_attempts=30
@@ -253,7 +253,7 @@ storage_started=false
 docker_registry_started=false
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
-    response=\$(d8-curl -s -o /dev/null -w "%{http_code}" http://localhost:8333)
+    response=\$(d8-curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8333)
     if [[ "\$response" =~ ^2 ]] || [[ "\$response" =~ ^4 ]]; then
         storage_started=true
         break
@@ -275,7 +275,7 @@ check_and_run "auth_server" "/opt/deckhouse/bin/auth_server -logtostderr $IGNITE
 check_and_run "registry" "/opt/deckhouse/bin/registry serve $IGNITER_DIR/distribution_config.yaml" "$IGNITER_DIR/logs/distribution.log"
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
-    response=\$(d8-curl -k -s -o /dev/null -w "%{http_code}" https://localhost:5001)
+    response=\$(d8-curl --cacert "$IGNITER_DIR/ca.crt" -s -o /dev/null -w "%{http_code}" https://127.0.0.1:5001)
     if [[ "\$response" == "200" ]]; then
         docker_registry_started=true
         break

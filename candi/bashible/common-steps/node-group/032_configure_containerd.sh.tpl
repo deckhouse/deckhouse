@@ -140,7 +140,7 @@ oom_score = 0
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
           {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-          endpoint = ["{{ .registry.scheme }}://localhost:5001", "{{ .registry.scheme }}://{{ .registry.address }}"]
+          endpoint = ["{{ .registry.scheme }}://127.0.0.1:5001", "{{ .registry.scheme }}://{{ .registry.address }}"]
           {{- else }}
           endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
           {{- end }}
@@ -148,14 +148,14 @@ oom_score = 0
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
           auth = "{{ .registry.auth | default "" }}"
       {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."localhost:5001".auth]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".auth]
           auth = "{{ .registry.auth | default "" }}"
       {{- end }}
   {{- if .registry.ca }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
           ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
       {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."localhost:5001".tls]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
           ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
       {{- end }}
   {{- end }}
@@ -163,7 +163,7 @@ oom_score = 0
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
           insecure_skip_verify = true
       {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."localhost:5001".tls]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
           insecure_skip_verify = true
       {{- end }}
   {{- end }}
