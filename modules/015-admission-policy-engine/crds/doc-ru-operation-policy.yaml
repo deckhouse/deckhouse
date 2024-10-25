@@ -64,7 +64,7 @@ spec:
                           description: |
                             Список объектов Kubernetes в формате `$apiGroup/$kind` для просмотра аннотаций.
                     requiredProbes:
-                      description: "Список проб, которые необходимы (например, `readinessProbe`)."
+                      description: "Список проб, которые необходимы (например, `readinessProbe` и `livenessProbe`)."
                     maxRevisionHistoryLimit:
                       description: "Максимальное значение для истории ревизий."
                     priorityClassNames:
