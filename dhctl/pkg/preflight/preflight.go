@@ -157,11 +157,6 @@ func (pc *Checker) Cloud() error {
 			successMessage: "cloud master node system requirements are met",
 			skipFlag:       app.SystemRequirementsArgName,
 		},
-		{
-			fun:            pc.CheckCloudAPIAccessibility,
-			successMessage: "Check access to cloud api from master host",
-			skipFlag:       app.CloudAPIAccessibilityArgName,
-		},
 	})
 
 	if err != nil {
