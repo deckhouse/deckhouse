@@ -1,11 +1,7 @@
 {%- unless page.hide_sidebar %}
   {%- if jekyll.environment == "development" %}
     <div class="sidebar__item" style="font-size: 20px; font-weight: bold; color: black;">
-      {%- if page.lang == "ru" %}
-        В режиме dev сборки меню не генерируется
-      {%- else %}
-        Menu is not generated in dev build mode
-      {%- endif %}
+      {{ site.data.i18n.common.dev_menu_message[page.lang] }}
     </div>
   {%- else %}
       {%- assign sidebar = site.data.sidebars[page.sidebar].entries %}
