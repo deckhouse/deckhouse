@@ -1,13 +1,39 @@
+# #####################################################################
+# Based on https://github.com/kubernetes/dashboard/blob/release/v7.9.0/modules/metrics-scraper/Dockerfile
+# #####################################################################
+{{- $dashboardVersion := "7.9.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /metrics-sidecar
+  add: /metrics-scraper
   before: setup
 docker:
-  ENTRYPOINT: ["/metrics-sidecar"]
+  ENTRYPOINT: ["/metrics-scraper"]
 ---
-# Based on https://github.com/kubernetes-sigs/dashboard-metrics-scraper/blob/v1.0.6/Dockerfile
+artifact: {{ .ModuleName }}/src-artifact
+fromArtifact: common/src-artifact
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 -b kubernetes-dashboard-{{ $dashboardVersion }} {{ .SOURCE_REPO }}/kubernetes/dashboard .
+---
+---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: kubernetesui/metrics-scraper:v1.0.6@sha256:1f977343873ed0e2efd4916a6b2f3075f310ff6fe42ee098f54fc58aa7a28ab7
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/src-artifact
+  add: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src/modules/metrics-scraper
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go mod download
+  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/metrics-scraper/pkg/environment.Version={{ $dashboardVersion }}" -o /metrics-scraper .
+  - chown 64535:64535 /metrics-scraper
+  - chmod 0755 /metrics-scraper
