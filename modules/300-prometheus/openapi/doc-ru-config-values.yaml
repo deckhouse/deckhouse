@@ -2,25 +2,27 @@ properties:
   retentionDays:
     description: Сколько дней хранить данные.
   storageClass:
-    description: |
-      Имя StorageClass'а, который предполагается использовать.
+    description: |-
+      Имя StorageClass, который будет использован.
 
-      Если не указано, используется StorageClass существующей PVC Prometheus, а если PVC пока нет, используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в `emptyDir`.
+      Если не указано, используется StorageClass существующей PVC Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
 
-      `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
+      Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 
-      `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть под придется вручную.
+      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск Longterm Prometheus будет перезаказан, и все данные удалены.
 
-      **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Prometheus будет перезаказан, а все данные удалены.
+      Если указать `false`, будет принудительно использоваться emptyDir.
   longtermStorageClass:
-    description: |
-      Имя StorageClass'а, который предполагается использовать для Longterm Prometheus.
+    description: |-
+      Имя StorageClass, который будет использован для Longterm Prometheus.
 
-      Если не указано, используется StorageClass существующей PVC Longterm Prometheus, а если PVC пока нет, используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в `emptyDir`.
+      Если значение не указано, используется StorageClass существующей PVC Longterm Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
 
-      `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
+      Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
+    
+      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск Longterm Prometheus будет перезаказан, и все данные удалены.
 
-      **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Longterm Prometheus будет перезаказан, а все данные удалены.
+      Если указать `false`, будет принудительно использоваться emptyDir.
   longtermRetentionDays:
     description: |
       Сколько дней хранить данные в Longterm Prometheus.

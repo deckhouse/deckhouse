@@ -75,12 +75,16 @@ properties:
         - [".*-lun101-.*", "slow-lun103-1c280603"]
       default:
         type: string
-        description: |
-          The name of StorageClass that will be used by default in the cluster.
+        description: |-
+          The name of the StorageClass to be used.
 
-          If the parameter is omitted, the default StorageClass will be one of the following:
-            * An arbitrary StorageClass present in the cluster that has the default annotation.
-            * The first (in lexicographic order) StorageClass of those created by the module.
+          If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
+          
+          The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
+          
+          **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+          
+          If `false` is specified, emptyDir will be forced to be used.
         x-examples:
         - "fast-lun102-7d0bf578"
       compatibilityFlag:

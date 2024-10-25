@@ -75,10 +75,16 @@ properties:
         - ["sc.*", "st1"]
       default:
         type: string
-        description: |
-          The name of StorageClass that will be used by default in the cluster:
-            * If the parameter is omitted, the default StorageClass is either:
-              * an arbitrary StorageClass present in the cluster that has the default annotation;
-              * the first (in lexicographic order) StorageClass of those created by the module.
+        description: |-
+          The name of StorageClass that will be used:
+          
+          If the parameter is omitted, the default StorageClass is either:
+          
+          * an arbitrary StorageClass present in the cluster that has the default annotation;
+          * the first alphabetically ordered StorageClass created by the module.
+         
+          **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+          
+          If `false` is specified, emptyDir will be forced to be used.
         x-examples:
         - "gp3"
