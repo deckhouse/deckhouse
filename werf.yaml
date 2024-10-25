@@ -502,12 +502,16 @@ dependencies:
 {{- $ExcludedModulesDict := dict }}
 
 # Collect images if desired for editions
+#
+# depending on the rules for skipping modules in the editions.yaml
+#  file and the used assembly mechanism (werf, docker), we form modules for assembly
 {{- $ModulesImagesBuildFiles := dict }}
 {{- range $_, $edition := $.Editions }}
   {{- if not $edition.skipCollectImages }}
     {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles ($.Files.Glob (printf "%s/*/images/*/{Dockerfile,werf.inc.yaml}" $edition.modulesDir)) }}
   {{- end }}
 
+  # fill in "$_" data for assembly
   {{- if eq $.Env $edition.name }}
     {{- if $edition.excludeModules }}
       {{- range $_, $exludeModuleName := $edition.excludeModules }}
