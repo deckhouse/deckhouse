@@ -20,14 +20,12 @@ function __main__() {
   enabled::disable_module_if_cluster_is_not_bootstraped
 
   if values::has global.modules.publicDomainTemplate ; then
-    if ! values::array_has global.enabledModules "user-authz" ; then
-      echo "false" > $MODULE_ENABLED_RESULT
-    else
-      echo "true" > $MODULE_ENABLED_RESULT
+    if values::array_has global.enabledModules "user-authz" ; then
+      if values::array_has global.enabledModules "cert-manager" ; then
+        echo "true" > $MODULE_ENABLED_RESULT
+      fi
     fi
-  else
-    echo "false" > $MODULE_ENABLED_RESULT
-  fi
+  echo "false" > $MODULE_ENABLED_RESULT
 }
 
 enabled::run $@
