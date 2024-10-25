@@ -79,7 +79,7 @@ apiServer:
     feature-gates: {{ $featureGates | quote }}
 {{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true"
-{{- else if semverCompare ">= 1.27" .clusterConfiguration.kubernetesVersion }}
+{{- else if semverCompare "= 1.27" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
 {{- end }}
 {{- if hasKey . "arguments" }}

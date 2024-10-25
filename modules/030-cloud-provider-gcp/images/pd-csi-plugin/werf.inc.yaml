@@ -25,6 +25,12 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev_containerized/scsi_id
   before: setup
+    {{- if semverCompare ">=1.31" $version }}
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /src/deploy/kubernetes/udev/google_nvme_id 
+  to: /lib/udev_containerized/google_nvme_id
+  before: setup 
+    {{- end }} 
 docker:
   ENTRYPOINT: ["/gce-pd-csi-driver"]
 ---
