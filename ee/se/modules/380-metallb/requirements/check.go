@@ -23,18 +23,17 @@ func init() {
 			return true, nil
 		}
 
-		configurationStatus := configurationStatusRaw.(string)
-		switch {
-		case configurationStatus == "nsMismatch":
+		switch configurationStatus := configurationStatusRaw.(string); configurationStatus {
+		case "nsMismatch":
 			return false, errors.New(
 				"[metallb] all L2Advertisement must be in the d8-metallb namespace",
 			)
-		case configurationStatus == "nodeSelectorsMismatch":
+		case "nodeSelectorsMismatch":
 			return false, errors.New(
 				"[metallb] nodeSelectors in L2Advertisement must contain only " +
 					"one matchLabels (not matchExpressions)",
 			)
-		case configurationStatus == "addressPollsMismatch":
+		case "addressPollsMismatch":
 			return false, errors.New(
 				"[metallb] there should not be layer2 and bgp pools in the cluster at the same time",
 			)

@@ -6,7 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	"reflect"
+	"slices"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -154,7 +154,7 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 	// Are only layer2 pools in the cluster?
 	sort.Strings(ipAddressPollNamesFromL2A) // Only layer2 pools
 	sort.Strings(ipAddressPollNamesFromIAP) // All pools of cluster
-	if !reflect.DeepEqual(ipAddressPollNamesFromL2A, ipAddressPollNamesFromIAP) {
+	if !slices.Equal(ipAddressPollNamesFromL2A, ipAddressPollNamesFromIAP) {
 		requirements.SaveValue(metallbConfigurationStatusKey, "addressPollsMismatch")
 		return nil
 	}
