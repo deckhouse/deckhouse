@@ -89,7 +89,6 @@ transparent_hugepage_current=$(grep -o '\[.*\]' /sys/kernel/mm/transparent_hugep
 if [ "$transparent_hugepage_current" != "never" ]; then
   echo never | tee /sys/kernel/mm/transparent_hugepage/enabled >/dev/null
 fi
-echo never | tee /sys/kernel/mm/transparent_hugepage/enabled >/dev/null
 echo never | tee /sys/kernel/mm/transparent_hugepage/defrag >/dev/null
 echo 0 | tee /sys/kernel/mm/transparent_hugepage/use_zero_page >/dev/null
 echo 0 | tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag >/dev/null
