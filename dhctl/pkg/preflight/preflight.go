@@ -113,6 +113,11 @@ func (pc *Checker) Static() error {
 			skipFlag:       app.RegistryThroughProxyCheckArgName,
 		},
 		{
+			fun:            pc.CheckCloudAPIAccessibility,
+			successMessage: "Check access to cloud api",
+			skipFlag:       app.RegistryThroughProxyCheckArgName,
+		},
+		{
 			fun:            pc.CheckAvailabilityPorts,
 			successMessage: "required ports availability",
 			skipFlag:       app.PortsAvailabilityArgName,
