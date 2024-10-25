@@ -1,3 +1,4 @@
 version: 3
 conversions:
+  - if .smokeMini.ingressClass != null then .ingressClass = .smokeMini.ingressClass end
   - del(.smokeMini.ingressClass) | if .smokeMini == {} then del(.smokeMini) end
