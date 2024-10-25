@@ -1,7 +1,6 @@
 # #####################################################################
 # Based on https://github.com/kubernetes/dashboard/blob/release/v7.9.0/modules/metrics-scraper/Dockerfile
 # #####################################################################
-{{- $dashboardVersion := "7.9.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -11,14 +10,6 @@ import:
   before: setup
 docker:
   ENTRYPOINT: ["/dashboard-metrics-scraper"]
----
-artifact: {{ .ModuleName }}/src-artifact
-fromArtifact: common/src-artifact
-shell:
-  install:
-  - cd /src
-  - git clone --depth 1 -b kubernetes-dashboard-{{ $dashboardVersion }} {{ .SOURCE_REPO }}/kubernetes/dashboard .
-  - echo "{{ $dashboardVersion }}" > /src/version
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
