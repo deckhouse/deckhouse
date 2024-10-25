@@ -1,3 +1,30 @@
 # #####################################################################
 # Based on https://github.com/kubernetes/dashboard/blob/release/v7.9.0/modules/auth/Dockerfile
 # #####################################################################
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /auth
+  before: setup
+docker:
+  ENTRYPOINT: ["/auth"]
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/src-artifact
+  add: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src/modules/auth
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go mod download
+  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/auth/pkg/environment.Version=`cat /src/version`" -o /auth .
+  - chown 64535:64535 /auth
+  - chmod 0755 /auth
