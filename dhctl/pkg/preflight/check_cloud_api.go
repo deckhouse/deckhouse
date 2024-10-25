@@ -46,7 +46,6 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 	}
 
 	if cloudApiUrl == nil {
-		log.DebugLn("[Skip] Checking if Cloud Api is accessible from first master host")
 		return nil
 	}
 
@@ -97,7 +96,7 @@ func getCloudApiURLFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, erro
 	case "vsphere":
 		cloudApiURLStr = providerConfig["server"]
 	default:
-		log.DebugF("providerName: %v", providerName)
+		log.DebugLn("[Skip] Checking if Cloud Api is accessible from first master host providerName: %v", cloudApiURLStr)
 		return nil, nil
 	}
 
