@@ -148,6 +148,8 @@ func runEventRouteReconcile(
 		return true, err
 	}
 
+	// TODO: Generate interface map ip:name.
+
 	// Getting all routes from our node
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Getting all routes from our node"))
 	actualRoutesOnNode, err = getActualRouteEntryMapFromNode()
@@ -232,11 +234,11 @@ type RouteEntry struct {
 
 func (re *RouteEntry) String() string {
 	hashRaw := make([]string, 0)
-	hashRaw = append(hashRaw, strconv.Itoa(re.table))
 	hashRaw = append(hashRaw, re.destination)
 	hashRaw = append(hashRaw, re.gateway)
-	hashRaw = append(hashRaw, strconv.Itoa(re.devId))
 	hashRaw = append(hashRaw, re.dev)
+	hashRaw = append(hashRaw, strconv.Itoa(re.devId))
+	hashRaw = append(hashRaw, strconv.Itoa(re.table))
 	return strings.Join(hashRaw, "#")
 }
 
