@@ -100,7 +100,7 @@ func (pc *Checker) Static() error {
 		{
 			fun:            pc.CheckStaticNodeSystemRequirements,
 			successMessage: "that node meets system requirements",
-			skipFlag:       app.SystemRequirementsArgName,
+			skipFlag:       app.RegistryThroughProxyCheckArgName,
 		},
 		{
 			fun:            pc.CheckPythonAndItsModules,
@@ -158,7 +158,7 @@ func (pc *Checker) Cloud() error {
 		{
 			fun:            pc.CheckCloudAPIAccessibility,
 			successMessage: "Check access to cloud api from master host",
-			skipFlag:       app.SystemRequirementsArgName,
+			skipFlag:       app.CloudAPIAccessibilityArgName,
 		},
 	})
 

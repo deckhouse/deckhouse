@@ -46,6 +46,7 @@ const (
 	PythonChecksArgName              = "preflight-skip-python-checks"
 	SudoAllowedCheckArgName          = "preflight-skip-sudo-allowed"
 	SystemRequirementsArgName        = "preflight-skip-system-requirements-check"
+	CloudAPIAccessibilityArgName     = "preflight-cloud-api-accesibility-check"
 	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
 )
 
