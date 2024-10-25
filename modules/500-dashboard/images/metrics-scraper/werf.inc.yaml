@@ -7,10 +7,10 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /metrics-scraper
+  add: /dashboard-metrics-scraper
   before: setup
 docker:
-  ENTRYPOINT: ["/metrics-scraper"]
+  ENTRYPOINT: ["/dashboard-metrics-scraper"]
 ---
 artifact: {{ .ModuleName }}/src-artifact
 fromArtifact: common/src-artifact
@@ -34,6 +34,6 @@ shell:
   - cd /src/modules/metrics-scraper
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go mod download
-  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/metrics-scraper/pkg/environment.Version=`cat /src/version`" -o /metrics-scraper .
-  - chown 64535:64535 /metrics-scraper
-  - chmod 0755 /metrics-scraper
+  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/metrics-scraper/pkg/environment.Version=`cat /src/version`" -o /dashboard-metrics-scraper .
+  - chown 64535:64535 /dashboard-metrics-scraper
+  - chmod 0755 /dashboard-metrics-scraper
