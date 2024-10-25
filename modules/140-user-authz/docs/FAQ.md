@@ -67,12 +67,12 @@ Because `Jane Doe` matches two rules, some calculations will be made:
 
 ## How do I extend a role or create a new one?
 
-[The new role model](./#the-new-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones, 
+[The new role model](./#the-new-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones,
 thus providing easy ways to enhance the model with custom roles.
 
 ### Creating a new role scope
 
-Suppose that the current scopes do not fit the role distribution in the company. You need to create a new [scope](./#scopes-of-the-role-based-model) 
+Suppose that the current scopes do not fit the role distribution in the company. You need to create a new [scope](./#scopes-of-the-role-based-model)
 that includes roles from the `deckhouse` scope, the `kubernetes` scope and the user-authn module.
 
 To meet this need, create the following role:
