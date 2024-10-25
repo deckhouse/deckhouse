@@ -67,12 +67,12 @@ Because `Jane Doe` matches two rules, some calculations will be made:
 
 ## How do I extend a role or create a new one?
 
-The new role model is based on the aggregation principle; it compiles smaller roles into larger ones, 
+[The new role model](./#the-new-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones, 
 thus providing easy ways to enhance the model with custom roles.
 
 ### Creating a new role scope
 
-Suppose that the current scopes do not fit the role distribution in the company. You need to create a new scope 
+Suppose that the current scopes do not fit the role distribution in the company. You need to create a new [scope](./#scopes-of-the-role-based-model) 
 that includes roles from the `deckhouse` scope, the `kubernetes` scope and the user-authn module.
 
 To meet this need, create the following role:
@@ -150,7 +150,7 @@ This way, your role will combine permissions of the `deckhouse` scope, `kubernet
 Notes:
 
 * scope role names must follow the `custom:manage:custom:admin` pattern, since the last word after `:` determines which use-role will be created in the namespaces;
-* there are no restrictions on capability names, but we recommend following the same pattern for the sake of readability;
+* there are no restrictions on role name, but we recommend following the same pattern for the sake of readability;
 * use-roles will be created in aggregate scopes and the module namespace.
 
 ### Extending the custom role
@@ -164,7 +164,7 @@ rbac.deckhouse.io/kind: manage
 rbac.deckhouse.io/aggregate-to-custom-as: admin
 ```
 
-This selector would enable roles (capabilites) to be aggregated to a new scope by specifying this label. After adding the new selector, the role will look as follows:
+This selector would enable roles to be aggregated to a new scope by specifying this label. After adding the new selector, the role will look as follows:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
@@ -193,7 +193,7 @@ This selector would enable roles (capabilites) to be aggregated to a new scope b
  rules: []
  ```
 
- Next, you need to create a new role (capability) and define permissions for the new resource, e. g., the read-only permission:
+ Next, you need to create a new role and define permissions for the new resource, e. g., the read-only permission:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
