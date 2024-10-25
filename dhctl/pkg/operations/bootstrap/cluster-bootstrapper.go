@@ -17,9 +17,10 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"reflect"
 	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	"github.com/google/uuid"
 
@@ -389,6 +390,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		if err := WaitForSSHConnectionOnMaster(wrapper.Client()); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 		}
+	}
+
+	err = preflightChecker.PostCloud()
+	if err != nil {
+		return err
 	}
 
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
