@@ -129,7 +129,7 @@ properties:
                 description: |
                   Имя Secret'а в namespace `d8-system`, который будет использоваться для smoke-mini.
 
-                  Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+                  Secret должен быть в формате [TLS](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   disabledProbes:
     description: |
       Массив строк из названий групп или определенных проб из группы. Названия можно подсмотреть в веб-интерфейсе.
@@ -172,16 +172,16 @@ properties:
         properties:
           secretName:
             description: |
-              Имя Secret'а в namespace `d8-system`, который будет использоваться для webui/status.
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для webui/status.
 
-              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Secret должен быть в формате [TLS](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
