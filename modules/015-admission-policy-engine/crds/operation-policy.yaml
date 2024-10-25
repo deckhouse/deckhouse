@@ -144,8 +144,9 @@ spec:
                     requiredProbes:
                       type: array
                       x-doc-examples: 
-                        - ["readinessProbe"]
-                      description: "The list of probes that are required (e.g. `readinessProbe`)"
+                        - - readinessProbe
+                          - livenessProbe
+                      description: "The list of probes that are required (e.g. `readinessProbe` and `livenessProbe`)"
                       items:
                         type: string
                         enum:
