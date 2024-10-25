@@ -57,4 +57,4 @@ shell:
   - yarn plugin import workspace-tools
   - SKIP_POSTINSTALL=true yarn workspaces focus
   - make build-frontend
-  - rm -r node_modules .angular .yarn /root/.cache /root/.yarn
+  - rm -r node_modules .angular .yarn /root/.cache /root/.yarn #1Gi
