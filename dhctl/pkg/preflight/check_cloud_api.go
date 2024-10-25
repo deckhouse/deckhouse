@@ -92,11 +92,12 @@ func getCloudApiURLFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, erro
 	}
 
 	switch providerName := metaConfig.ProviderName; providerName {
-	case "OpenStack":
+	case "openstack":
 		cloudApiURLStr = providerConfig["authURL"]
-	case "vSphere":
+	case "vsphere":
 		cloudApiURLStr = providerConfig["server"]
 	default:
+		log.DebugF("providerName: %v", providerName)
 		return nil, nil
 	}
 
