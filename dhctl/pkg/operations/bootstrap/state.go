@@ -66,6 +66,11 @@ func (s *State) CloudPreflightchecksWasRan() (bool, error) {
 	return preflightcachefile, err
 }
 
+func (s *State) PostCloudPreflightchecksWasRan() (bool, error) {
+	preflightcachefile, err := s.cache.InCache(PreflightBootstrapPostCloudResultCacheKey)
+	return preflightcachefile, err
+}
+
 func (s *State) SetStaticPreflightchecksWasRan() error {
 	return s.cache.Save(PreflightBootstrapStaticResultCacheKey, []byte("yes"))
 }
