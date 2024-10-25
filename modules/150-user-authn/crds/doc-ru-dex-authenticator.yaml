@@ -10,7 +10,7 @@ spec:
             * Ingress, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону Service;
             * Secret'ы, необходимые для доступа к Dex.
 
-            **Важно!** При перезапуске пода с oauth2-proxy с помощью refresh token'а будут получены и сохранены в память redis актуальные `access token` и `id token`.
+            **Внимание.** При перезапуске пода с oauth2-proxy с помощью refresh token'а будут получены и сохранены в память redis актуальные `access token` и `id token`.
           properties:
             spec:
               properties:
@@ -73,14 +73,14 @@ spec:
                   description: |
                     Определяет `nodeSelector` для подов `dex-authenticator`.
 
-                    Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
                      Определяет `tolerations` для подов `dex-authenticator`.
 
-                     Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                     Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                      **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                   items:
