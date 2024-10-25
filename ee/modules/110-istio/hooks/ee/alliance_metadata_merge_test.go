@@ -90,7 +90,7 @@ status:
   metadataCache:
     private:
       publicServices:
-      - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123}], "virtualIP": "169.0.0.0"}
+      - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123}]}
     public:
       clusterUUID: aaa-bbb-f2
       rootCA: abc-f2
@@ -109,7 +109,7 @@ status:
       ingressGateways:
       - {"address": "bbb", "port": 222}
       publicServices:
-      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}], "virtualIP": "169.0.0.1"}
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
     public:
       clusterUUID: aaa-bbb-f3
       rootCA: abc-f3
@@ -128,8 +128,8 @@ status:
       ingressGateways:
       - {"address": "ccc", "port": 222}
       publicServices:
-      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}], "virtualIP": "169.0.0.2"}
-      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}], "virtualIP": "169.0.0.3"}
+      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}]}
+      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}]}
     public:
       clusterUUID: aaa-bbb-f4
       rootCA: abc-f4
@@ -147,7 +147,7 @@ status:
     private:
       ingressGateways: []
       publicServices:
-      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}], "virtualIP": "169.0.0.3"}
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
     public:
       clusterUUID: aaa-bbb-f5
       rootCA: abc-f5
@@ -166,7 +166,7 @@ status:
       ingressGateways:
       - {"address": "ccc", "port": 222}
       publicServices:
-      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}], "virtualIP": "169.0.0.2"}
+      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}]}
       - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}]} # no virtualIP, federation should be skipped
     public:
       clusterUUID: aaa-bbb-f4
@@ -328,7 +328,6 @@ status:
             "publicServices": [
               {
                 "hostname": "bbb",
-                "virtualIP": "169.0.0.1",
                 "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]
               }
             ],
@@ -346,12 +345,10 @@ status:
             "publicServices": [
               {
                 "hostname": "ccc",
-                "virtualIP": "169.0.0.2",
                 "ports": [{"name": "ppp", "port": 123}]
               },
               {
                 "hostname": "ddd",
-                "virtualIP": "169.0.0.3",
                 "ports": [{"name": "xxx", "port": 555}]
               }
             ],
