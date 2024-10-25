@@ -58,10 +58,6 @@ import:
   add: /version_map_{{ $.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   after: setup
-- image: deckhouse-image-hash
-  add: /deckhouse_digest.txt
-  to: /deckhouse/image_digest
-  after: setup
 - artifact: dev-alt-artifact
   add: /
   to: /

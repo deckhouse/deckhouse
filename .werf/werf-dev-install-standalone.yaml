@@ -46,10 +46,6 @@ import:
   add: /version_map_{{ $.Env }}.yml
   to: /image/deckhouse/candi/version_map.yml
   before: setup
-- image: deckhouse-image-hash
-  add: /deckhouse_digest.txt
-  to: /image/deckhouse/image_digest
-  before: setup
 - artifact: ssh-static
   add: /ssh/bin
   to: /image/bin
