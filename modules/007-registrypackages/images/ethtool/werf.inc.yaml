@@ -1,0 +1,46 @@
+{{/* Important! The iptables binaries from artifact are also used in kube-router image of network-policy-engine module and cni-simple-bridge. */}}
+{{- $version := "6.11" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - ethtool
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    ethtool: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  setup:
+    - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
+    - git clone -b libmnl-1.0.5 --depth 1 {{ $.SOURCE_REPO }}/netfilter/libmnl /src-libmnl
+    - cd /src-libmnl
+    - ./autogen.sh
+    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
+    - make && make install
+    - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/ethtool/ethtool.git /src
+    - cd /src
+    - ./autogen.sh
+    - ./configure LDFLAGS=-static --libdir=/opt/deckhouse/bin/.libs
+    - make
+    - ls -la
+    - strip ./ethtool
+    - mv ./ethtool /ethtool
+    - chmod +x /ethtool /install /uninstall
