@@ -68,7 +68,6 @@ spec:
   version: 1
   enabled: true
   settings:
-    highAvailability: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
