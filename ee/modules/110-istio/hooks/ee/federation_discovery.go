@@ -99,14 +99,14 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	me := federation.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
-	var psvips = make(map[string]string)
-	if federation.Status.MetadataCache.Private != nil && federation.Status.MetadataCache.Private.PublicServices != nil {
-		for _, ps := range *federation.Status.MetadataCache.Private.PublicServices {
-			if ps.VirtualIP != "" {
-				psvips[ps.Hostname] = ps.VirtualIP
-			}
-		}
-	}
+	//var psvips = make(map[string]string)
+	//if federation.Status.MetadataCache.Private != nil && federation.Status.MetadataCache.Private.PublicServices != nil {
+	//	for _, ps := range *federation.Status.MetadataCache.Private.PublicServices {
+	//		if ps.VirtualIP != "" {
+	//			psvips[ps.Hostname] = ps.VirtualIP
+	//		}
+	//	}
+	//}
 	return IstioFederationDiscoveryCrdInfo{
 		Name:                    federation.GetName(),
 		TrustDomain:             federation.Spec.TrustDomain,
@@ -243,7 +243,6 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		//		continue
 		//	}
 		//}
-		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
 			return err
