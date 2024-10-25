@@ -51,4 +51,5 @@ type FederationPublicServices struct {
 		Name string `json:"name"`
 		Port uint   `json:"port"`
 	} `json:"ports"`
+	//VirtualIP string `json:"virtualIP,omitempty"`
 }
