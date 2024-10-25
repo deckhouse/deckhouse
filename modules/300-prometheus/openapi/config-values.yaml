@@ -17,8 +17,8 @@ properties:
 
       `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
 
-      **CAUTION!** When migrating Prometheus with the specified storageClass name, the pods will hang in Pending state and it will be necessary to delete the old PVC and manually restart the pod. Migration of Prometheus to other nodes using emptyDir occurs without the need to restart the pods.
-
+      **CAUTION!** When migrating Prometheus with the specified StorageClass 'localpath' name to other nodes, the pod will hang in the Pending state and it will be necessary to delete the old PVC, preferably saving the Prometheus database and restarting the pod manually.
+      
       **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume re-provisioning and data loss.
   longtermStorageClass:
     type: string
