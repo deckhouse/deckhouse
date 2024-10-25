@@ -45,6 +45,11 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 		log.ErrorF("cannot parse cloudApiUrl from CloudApiConfiguration: %v", err)
 	}
 
+	if cloudApiUrl == nil {
+		log.DebugLn("[Skip] Checking if Cloud Api is accessible from first master host")
+		return nil
+	}
+
 	tun, err := setupSSHTunnelToCloudApi(wrapper.Client(), cloudApiUrl)
 	if err != nil {
 		return fmt.Errorf(`cannot setup tunnel to control-plane host: %w.
@@ -92,7 +97,7 @@ func getCloudApiURLFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, erro
 	case "vSphere":
 		cloudApiURLStr = providerConfig["server"]
 	default:
-		return nil, fmt.Errorf("unsupported provider name: %s", providerName)
+		return nil, nil
 	}
 
 	if cloudApiURLStr == "" {

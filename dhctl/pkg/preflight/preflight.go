@@ -113,11 +113,6 @@ func (pc *Checker) Static() error {
 			skipFlag:       app.RegistryThroughProxyCheckArgName,
 		},
 		{
-			fun:            pc.CheckCloudAPIAccessibility,
-			successMessage: "Check access to cloud api",
-			skipFlag:       app.RegistryThroughProxyCheckArgName,
-		},
-		{
 			fun:            pc.CheckAvailabilityPorts,
 			successMessage: "required ports availability",
 			skipFlag:       app.PortsAvailabilityArgName,
@@ -158,6 +153,11 @@ func (pc *Checker) Cloud() error {
 		{
 			fun:            pc.CheckCloudMasterNodeSystemRequirements,
 			successMessage: "cloud master node system requirements are met",
+			skipFlag:       app.SystemRequirementsArgName,
+		},
+		{
+			fun:            pc.CheckCloudAPIAccessibility,
+			successMessage: "Check access to cloud api from master host",
 			skipFlag:       app.SystemRequirementsArgName,
 		},
 	})
