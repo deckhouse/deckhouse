@@ -4190,6 +4190,20 @@ alerts:
       summary: ""
       severity: "4"
       markupFormat: markdown
+    - name: NodeTCPMemoryExhaust
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        The TCP stack on the {{ $labels.node }} node is experiencing high memory pressure.
+        This could be caused by applications with intensive TCP networking functionality.
+        Investigate the relevant applications and consider adjusting the system's TCP memory configuration
+        or addressing the source of increased network traffic.
+      summary: |
+        The {{ $labels.node }} node has high TCP stack memory usage.
+      severity: "6"
+      markupFormat: markdown
     - name: NodeTimeOutOfSync
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
       moduleUrl: 470-chrony
