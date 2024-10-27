@@ -81,8 +81,9 @@ To meet this need, create the following role:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: custom:manage:custom:admin
+  name: custom:manage:mycustomscope:admin
   labels:
+    rbac.deckhouse.io/use-role: admin
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: scope
     rbac.deckhouse.io/scope: custom
@@ -102,6 +103,12 @@ rules: []
 ```
 
 The labels for the new role listed at the top suggest that:
+
+- the hook will use this use role:
+
+  ```yaml
+  rbac.deckhouse.io/use-role: admin
+  ```
 
 - the role must be treated as a managed one:
 
@@ -149,9 +156,8 @@ This way, your role will combine permissions of the `deckhouse` scope, `kubernet
 
 Notes:
 
-* scope role names must follow the `custom:manage:custom:admin` pattern, since the last word after `:` determines which use-role will be created in the namespaces;
 * there are no restrictions on role name, but we recommend following the same pattern for the sake of readability;
-* use-roles will be created in aggregate scopes and the module namespace.
+* use-roles will be created in aggregate scopes and the module namespace, the role type is specified by the label.
 
 ### Extending the custom role
 
@@ -170,8 +176,9 @@ This selector would enable roles to be aggregated to a new scope by specifying t
  apiVersion: rbac.authorization.k8s.io/v1
  kind: ClusterRole
  metadata:
-   name: custom:manage:custom:admin
+   name: custom:manage:mycustomscope:admin
    labels:
+     rbac.deckhouse.io/use-role: admin
      rbac.deckhouse.io/kind: manage
      rbac.deckhouse.io/level: scope
      rbac.deckhouse.io/scope: custom
@@ -202,7 +209,7 @@ This selector would enable roles to be aggregated to a new scope by specifying t
    labels:
      rbac.deckhouse.io/aggregate-to-custom-as: admin
      rbac.deckhouse.io/kind: manage
-   name: custom:manage:capability:custom:superresource:view
+   name: custom:manage:capability:mycustommodule:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -218,7 +225,6 @@ The role will update the scope role to include its rights, so that the role bear
 
 Notes:
 
-* scope role names must follow the `custom:manage:custom:admin` pattern, since the last word after `:` determines which use-role will be created in the namespaces;
 * there are no restrictions on capability names, but we recommend following the same pattern for the sake of readability.
 
 ### Extending the existing manage scope roles
@@ -234,7 +240,7 @@ metadata:
   labels:
     rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
     rbac.deckhouse.io/kind: manage
-  name: custom:manage:capability:custom:superresource:view
+  name: custom:manage:capability:mycustommodule:superresource:view
 rules:
 - apiGroups:
   - mygroup.io
@@ -248,9 +254,9 @@ rules:
 
 This way, the new role will extend the `d8:manage:deckhouse` role.
 
-### Extending the existing manage scope roles and adding a new namespace
+### Extending manage scope roles and adding a new namespace
 
-If you need to create a new namespace (for example, to create a use role in it using a hook), you only need to add one label:
+If you need to create a new namespace (to create a use role in it by the hook), you only need to add one label:
 
 ```yaml
 "rbac.deckhouse.io/namespace": namespace
@@ -266,7 +272,7 @@ This label instructs the hook to create a use role in this namespace:
      rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
      rbac.deckhouse.io/kind: manage
      rbac.deckhouse.io/namespace: namespace
-   name: custom:manage:capability:custom:superresource:view
+   name: custom:manage:capability:mycustommodule:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -278,7 +284,7 @@ This label instructs the hook to create a use role in this namespace:
    - watch
  ```
 
-The hook monitors `ClusterRoleBinding`, and when creating a bindings, it loops through all the manage roles to find all the aggregated roles by checking the aggregation rule. It then fetches the namespace from the `rbac.deckhouse.io/namespace` label and creates a use role in that namespace. The use role is defined by the last word after `:` in the scope role (`admin` in the example above).
+The hook monitors `ClusterRoleBinding`, and when creating a bindings, it loops through all the manage roles to find all the aggregated roles by checking the aggregation rule. It then fetches the namespace from the `rbac.deckhouse.io/namespace` label and creates a use role in that namespace.
 
 ### Extending the existing use roles
 
@@ -291,7 +297,7 @@ If the resource belongs to a namespace, you need to extend the use role instead 
    labels:
      rbac.deckhouse.io/aggregate-to-role: user
      rbac.deckhouse.io/kind: use
-   name: custom:use:capability:custom:superresource:view
+   name: custom:use:capability:mycustommodule:superresource:view
  rules:
  - apiGroups:
    - mygroup.io

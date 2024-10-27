@@ -81,8 +81,9 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: custom:manage:custom:admin
+  name: custom:manage:mycustomscope:admin
   labels:
+    rbac.deckhouse.io/use-role: admin
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: scope
     rbac.deckhouse.io/scope: custom
@@ -102,6 +103,12 @@ rules: []
 ```
 
 В начале указаны лейблы для новой роли:
+
+- показывает, какую роль хук должен использовать при создании use ролей:
+
+  ```yaml
+  rbac.deckhouse.io/use-role: admin
+  ```
 
 - показывает, что роль должна обрабатываться как manage-роль:
 
@@ -149,9 +156,8 @@ rules: []
 
 Особенности:
 
-* имена роли области должны придерживаться стилистики `custom:manage:custom:admin`, т. к. последнее слово после `:` определяет, какая use-роль будет создана в пространствах имён;
 * ограничений на имя роли нет, но для читаемости лучше использовать этот стиль;
-* use-роли будут созданы в агрегированных областях и пространстве имён модуля.
+* use-роли будут созданы в пространстве имён агрегированных областях и модуля, тип роль выбран лейблом.
 
 ### Расширение пользовательской роли
 
@@ -170,8 +176,9 @@ rbac.deckhouse.io/aggregate-to-custom-as: admin
  apiVersion: rbac.authorization.k8s.io/v1
  kind: ClusterRole
  metadata:
-   name: custom:manage:custom:admin
+   name: custom:manage:mycustomscope:admin
    labels:
+     rbac.deckhouse.io/use-role: admin
      rbac.deckhouse.io/kind: manage
      rbac.deckhouse.io/level: scope
      rbac.deckhouse.io/scope: custom
@@ -202,7 +209,7 @@ rbac.deckhouse.io/aggregate-to-custom-as: admin
    labels:
      rbac.deckhouse.io/aggregate-to-custom-as: admin
      rbac.deckhouse.io/kind: manage
-   name: custom:manage:capability:custom:superresource:view
+   name: custom:manage:capability:mycustommodule:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -218,7 +225,6 @@ rbac.deckhouse.io/aggregate-to-custom-as: admin
 
 Особенности:
 
-* имена роли области должны придерживаться стилистики `custom:manage:custom:admin`, т. к. последнее слово после `:` определяет, какая use-роль будет создана в пространствах имён;
 * ограничений на имя роли нет, но для читаемости лучше использовать этот стиль.
 
 ### Расширение существующих manage scope-ролей
@@ -234,7 +240,7 @@ metadata:
   labels:
     rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
     rbac.deckhouse.io/kind: manage
-  name: custom:manage:capability:custom:superresource:view
+  name: custom:manage:capability:mycustommodule:superresource:view
 rules:
 - apiGroups:
   - mygroup.io
@@ -248,9 +254,9 @@ rules:
 
 Таким образом новая роль расширит роль `d8:manage:deckhouse`.
 
-### Расширение существующих manage scope-ролей с добавлением нового пространства имён
+### Расширение manage scope-ролей с добавлением нового пространства имён
 
-Если необходимо добавить новое пространство имён (например, для создания в нём use-роли с помощью хука), потребуется добавить лишь один лейбл:
+Если необходимо добавить новое пространство имён (для создания в нём use-роли с помощью хука), потребуется добавить лишь один лейбл:
 
 ```yaml
 "rbac.deckhouse.io/namespace": namespace
@@ -266,7 +272,7 @@ rules:
      rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
      rbac.deckhouse.io/kind: manage
      rbac.deckhouse.io/namespace: namespace
-   name: custom:manage:capability:custom:superresource:view
+   name: custom:manage:capability:mycustommodule:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -278,7 +284,7 @@ rules:
    - watch
  ```
 
-Хук мониторит `ClusterRoleBinding` и при создании биндинга ходит по всем manage-ролям, чтобы найти все сагрерированные роли с помощью проверки правила агрегации. Затем он берёт пространство имён из лейбла `rbac.deckhouse.io/namespace` и создает use-роль в этом пространстве имён. Use-роль определяется последним словом после `:` в областной роли (в примере выше — `admin`).
+Хук мониторит `ClusterRoleBinding` и при создании биндинга ходит по всем manage-ролям, чтобы найти все сагрерированные роли с помощью проверки правила агрегации. Затем он берёт пространство имён из лейбла `rbac.deckhouse.io/namespace` и создает use-роль в этом пространстве имён.
 
 ### Расширение существующих use-ролей
 
@@ -291,7 +297,7 @@ rules:
    labels:
      rbac.deckhouse.io/aggregate-to-role: user
      rbac.deckhouse.io/kind: use
-   name: custom:use:capability:custom:superresource:view
+   name: custom:use:capability:mycustommodule:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
