@@ -52,6 +52,10 @@ metadata:
   name: d8:{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name )) | nindent 2 }}
 rules:
+  - apiGroups: ["deckhouse.io"]
+    resources: ["moduleconfigs"]
+    resourceNames: ["system-registry"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch"]
