@@ -18,8 +18,6 @@ package hooks
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -127,8 +125,9 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 func syncBindings(input *go_hook.HookInput) error {
 	expected := make(map[string]bool)
 	for _, snap := range input.Snapshots["manageBindings"] {
-		for namespace := range namespacesByRole(input.Snapshots["manageRoles"], snap.(*filteredManageBinding).RoleName) {
-			input.PatchCollector.Create(createBinding(snap.(*filteredManageBinding), namespace), object_patch.UpdateIfExists())
+		role, namespaces := roleAndNamespacesByBinding(input.Snapshots["manageRoles"], snap.(*filteredManageBinding).RoleName)
+		for namespace := range namespaces {
+			input.PatchCollector.Create(createBinding(snap.(*filteredManageBinding), role, namespace), object_patch.UpdateIfExists())
 			expected[fmt.Sprintf("d8:use:binding:%s", snap.(*filteredManageBinding).Name)] = true
 		}
 	}
@@ -144,16 +143,21 @@ func syncBindings(input *go_hook.HookInput) error {
 	return nil
 }
 
-func namespacesByRole(manageRoles []go_hook.FilterResult, roleName string) map[string]bool {
+func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName string) (string, map[string]bool) {
+	var useRole string
 	var found *filteredManageRole
 	for _, snap := range manageRoles {
 		if role := snap.(*filteredManageRole); role.Name == roleName {
 			found = role
+			var ok bool
+			if useRole, ok = found.Labels["rbac.deckhouse.io/use-role"]; !ok {
+				return "", nil
+			}
 			break
 		}
 	}
 	if found == nil {
-		return nil
+		return "", nil
 	}
 
 	var namespaces = make(map[string]bool)
@@ -175,7 +179,7 @@ func namespacesByRole(manageRoles []go_hook.FilterResult, roleName string) map[s
 		}
 	}
 
-	return namespaces
+	return useRole, namespaces
 }
 
 func matchAggregationRule(rule *rbacv1.AggregationRule, roleLabels map[string]string) bool {
@@ -192,8 +196,7 @@ func matchAggregationRule(rule *rbacv1.AggregationRule, roleLabels map[string]st
 	return false
 }
 
-func createBinding(binding *filteredManageBinding, namespace string) *rbacv1.RoleBinding {
-	splits := strings.Split(binding.RoleName, ":")
+func createBinding(binding *filteredManageBinding, useRoleName string, namespace string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RoleBinding",
@@ -211,7 +214,7 @@ func createBinding(binding *filteredManageBinding, namespace string) *rbacv1.Rol
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     fmt.Sprintf("d8:use:role:%s", splits[len(splits)-1]),
+			Name:     fmt.Sprintf("d8:use:role:%s", useRoleName),
 		},
 		Subjects: binding.Subjects,
 	}
