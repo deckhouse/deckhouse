@@ -1037,7 +1037,7 @@
           "step": 240
         },
         {
-          "expr": "sum (rate(node_cpu_seconds_total{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
+          "expr": "sum (rate(node_cpu_seconds_total{mode!='idle',mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq', mode!='steal', node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Busy Other",
@@ -1050,6 +1050,14 @@
           "intervalFactor": 1,
           "legendFormat": "Idle",
           "refId": "F",
+          "step": 240
+        },
+        {
+          "expr": "sum by (mode)(rate(node_cpu_seconds_total{mode='steal',node=~\"$node\",job=\"node-exporter\"}[$__rate_interval])) * 100",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Steal",
+          "refId": "G",
           "step": 240
         }
       ],
