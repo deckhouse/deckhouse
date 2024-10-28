@@ -50,9 +50,10 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     appDexSecret: dexSecret
     cookieSecret: cookieSecret
   spec:
-    applicationDomain: authenticator.example.com
-    applicationIngressCertificateSecretName: test
-    applicationIngressClassName: test
+    applications:
+    - domainName: authenticator.example.com
+      ingressClassName: test
+      ingressSecretName: test
     sendAuthorizationHeader: true
     keepUsersLoggedInFor: "1020h"
     whitelistSourceRanges:
@@ -75,9 +76,10 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     cookieSecret: cookieSecret
   allowAccessToKubernetes: true
   spec:
-    applicationDomain: authenticator.com
-    applicationIngressCertificateSecretName: test
-    applicationIngressClassName: test
+    applications:
+    - domainName: authenticator.example.com
+      ingressClassName: test
+      ingressSecretName: test
     sendAuthorizationHeader: false
 - name: test-3
   encodedName: justForTest3
