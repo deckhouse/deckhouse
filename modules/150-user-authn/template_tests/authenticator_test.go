@@ -77,7 +77,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
   allowAccessToKubernetes: true
   spec:
     applications:
-    - domainName: authenticator.example.com
+    - domainName: authenticator.com
       ingressClassName: test
       ingressSecretName: test
     sendAuthorizationHeader: false
