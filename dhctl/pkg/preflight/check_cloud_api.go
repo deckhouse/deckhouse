@@ -91,9 +91,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	defer cancel()
 
 	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiConfig)
-	if err != nil {
-		return ErrCloudApiUnreachable
-	}
+
 	if resp.StatusCode >= 500 || err != nil {
 		return ErrCloudApiUnreachable
 	}
