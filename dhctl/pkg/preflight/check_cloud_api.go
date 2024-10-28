@@ -22,9 +22,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -103,34 +103,41 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	return nil
 }
 
-func buildCloudApiHTTPClientTransport(client *http.Client, cloudApiConfig *CloudApiConfig) (*http.Client, error) {
-	defaultTransport, ok := client.Transport.(*http.Transport)
-	if !ok {
-		return nil, fmt.Errorf("unexpected transport type")
+func buildCloudApiHTTPClient(cloudApiConfig *CloudApiConfig) (*http.Client, error) {
+
+	tlsConfig := &tls.Config{
+		ServerName: cloudApiConfig.URL.Host,
 	}
-	httpTransport := defaultTransport.Clone()
 
-	if strings.ToLower(cloudApiConfig.URL.Scheme) == "https" {
-		tlsConfig := &tls.Config{}
+	if cloudApiConfig.Insecure {
+		tlsConfig.InsecureSkipVerify = true
+	}
 
-		tlsConfig.ServerName = cloudApiConfig.URL.Host
-
-		if cloudApiConfig.Insecure {
-			tlsConfig.InsecureSkipVerify = true
+	if len(cloudApiConfig.CACert) > 0 {
+		certPool := x509.NewCertPool()
+		if ok := certPool.AppendCertsFromPEM([]byte(cloudApiConfig.CACert)); !ok {
+			return nil, fmt.Errorf("invalid cert in CA PEM")
 		}
+		tlsConfig.RootCAs = certPool
+	}
 
-		if len(cloudApiConfig.CACert) > 0 {
-			certPool := x509.NewCertPool()
-			if ok := certPool.AppendCertsFromPEM([]byte(cloudApiConfig.CACert)); !ok {
-				return nil, fmt.Errorf("invalid cert in CA PEM")
+	transport := &http.Transport{
+		TLSClientConfig:   tlsConfig,
+		DisableKeepAlives: true,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			localhostAddr := net.JoinHostPort("localhost", ProxyTunnelPort)
+			d := net.Dialer{
+				Timeout:   20 * time.Second,
+				KeepAlive: 20 * time.Second,
 			}
-			tlsConfig.RootCAs = certPool
-		}
-
-		httpTransport.TLSClientConfig = tlsConfig
+			return d.DialContext(ctx, network, localhostAddr)
+		},
 	}
 
-	client.Transport = httpTransport
+	client := &http.Client{
+		Transport: transport,
+	}
+
 	return client, nil
 }
 
@@ -144,10 +151,9 @@ func executeHTTPRequest(ctx context.Context, method string, cloudApiConfig *Clou
 		return nil, fmt.Errorf("request creation failed: %w", err)
 	}
 
-	client := buildHTTPClientWithLocalhostProxy(cloudApiUrl)
-	client, err = buildCloudApiHTTPClientTransport(client, cloudApiConfig)
+	client, err := buildCloudApiHTTPClient(cloudApiConfig)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, fmt.Errorf("failed to build HTTP client: %w", err)
 	}
 
 	resp, err := client.Do(req)
