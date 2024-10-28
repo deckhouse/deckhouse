@@ -54,7 +54,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     - domainName: authenticator.example.com
       ingressClassName: test
       ingressSecretName: test
-	  whitelistSourceRanges:
+      whitelistSourceRanges:
       - 1.1.1.1
       - 192.168.0.0/24
     sendAuthorizationHeader: true
