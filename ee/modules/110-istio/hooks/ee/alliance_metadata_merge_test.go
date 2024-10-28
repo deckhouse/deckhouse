@@ -416,7 +416,7 @@ status:
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioMulticluster multicluster-no-public wasn't fetched yet"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-only-public wasn't fetched yet"))
 
-			// there should be 11 log messages
+			// there should be 10 log messages
 			Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(10))
 		})
 	})

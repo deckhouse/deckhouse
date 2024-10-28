@@ -124,7 +124,7 @@ status:
       publicServices:
       - {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111}]} # should be saved
       - {"hostname": "some-outdated.host-2", "ports": [{"name": "ppp", "port": 111}]} # should be deleted
-      - {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 111}]} # virtualIP should be saved, port should be changed to 222
+      - {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 111}]} # port should be changed to 222
 `))
 
 			respMap := map[string]map[string]HTTPMockResponse{

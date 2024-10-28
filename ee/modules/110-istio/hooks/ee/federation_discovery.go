@@ -243,6 +243,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		//		continue
 		//	}
 		//}
+		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
 			return err
