@@ -63,35 +63,30 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	resp, _, err := executeHTTPRequest(ctx, http.MethodHead, cloudApiUrl)
-	if err != nil {
-		log.ErrorF("Error reading response: %v", err)
-	}
-
-	if err = checkResponseIsFromCloudApi(resp); err != nil {
-		return err
+	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiUrl)
+	if resp.StatusCode >= 500 || err != nil {
+		return ErrCloudApiUnreachable
 	}
 
 	return nil
 }
 
-func executeHTTPRequest(ctx context.Context, method string, cloudApiUrl *url.URL) (*http.Response, int, error) {
+func executeHTTPRequest(ctx context.Context, method string, cloudApiUrl *url.URL) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, cloudApiUrl.String(), nil)
 	if err != nil {
-		return nil, 0, fmt.Errorf("request creation failed: %w", err)
+		return nil, fmt.Errorf("request creation failed: %w", err)
 	}
 
 	httpCl := buildHTTPClientWithLocalhostProxy(cloudApiUrl)
 
-	transport, _ := httpCl.Transport.(*http.Transport)
-	transport.TLSClientConfig = &tls.Config{
+	httpCl.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
 		ServerName: cloudApiUrl.Host,
 	}
 
 	resp, err := httpCl.Do(req)
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("HTTP request failed: %w", err)
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
 
 	// debug
@@ -104,7 +99,7 @@ func executeHTTPRequest(ctx context.Context, method string, cloudApiUrl *url.URL
 	fmt.Printf("status, response: %d %s\n", statusCode, body)
 	// debug
 
-	return resp, statusCode, nil
+	return resp, nil
 }
 
 func getCloudApiURLFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, error) {
@@ -139,23 +134,4 @@ func getCloudApiURLFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, erro
 	}
 
 	return cloudApiURL, nil
-}
-
-func checkResponseIsFromCloudApi(resp *http.Response) error {
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
-		return fmt.Errorf(
-			"%w: got %d status code from the Cloud Api, this is not a valid registry API response.\n"+
-				"Check blah blah blah",
-			ErrCloudApiUnreachable,
-			resp.StatusCode,
-		)
-	}
-	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
-		return fmt.Errorf(
-			"%w: expected blah header in response from the Cloud Api.\n"+
-				"Check blah blah blah",
-			ErrCloudApiUnreachable,
-		)
-	}
-	return nil
 }
