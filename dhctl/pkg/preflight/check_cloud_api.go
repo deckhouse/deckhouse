@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	ErrCloudApiUnreachable = errors.New("could not reach Cloud API over proxy")
+	ErrCloudApiUnreachable = errors.New("could not reach Cloud API from master node")
 )
 
 type OpenStackProvider struct {
@@ -90,6 +90,7 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 	}
 
 	if proxyUrl == nil || shouldSkipProxyCheck(cloudApiConfig.URL.Hostname(), noProxyAddresses) {
+		proxyUrl = nil
 		tun, err = setupSSHTunnelToProxyAddr(wrapper.Client(), cloudApiConfig.URL)
 	} else {
 		tun, err = setupSSHTunnelToProxyAddr(wrapper.Client(), proxyUrl)
