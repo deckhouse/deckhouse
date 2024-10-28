@@ -62,7 +62,7 @@ function prepare_environment() {
   export AWS_DEFAULT_REGION="$LAYOUT_AWS_DEFAULT_REGION"
   export INITIAL_IMAGE_TAG="$INITIAL_IMAGE_TAG"
   export DECKHOUSE_IMAGE_TAG="$DECKHOUSE_IMAGE_TAG"
-  export PREFIX="$GITHUB_RUN_NUMBER"
+  export PREFIX="$PREFIX"
 
   if [[ -z "$KUBERNETES_VERSION" ]]; then
     # shellcheck disable=SC2016
