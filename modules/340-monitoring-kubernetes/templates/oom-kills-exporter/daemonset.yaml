@@ -4,7 +4,8 @@ memory: 20Mi
 {{- end }}
 {{- $port := "4205" -}}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if .Values.monitoringKubernetes.oomKillsExporter }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -111,3 +112,4 @@ spec:
 {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
+{{- end }}

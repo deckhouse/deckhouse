@@ -3,6 +3,9 @@ properties:
   ebpfExporterEnabled:
     description: |
       Не влияет на работу компонентов модуля.
+  oomKillExporterEnabled:
+    description: |
+      Флаг отключения oomKillExporter для случаев, когда его работа создает проблемы в нормальной работе узлов.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
