@@ -75,7 +75,6 @@ smokeMini:
   ingressClass: nginx
 `,
 		expected: `
-ingressClass: nginx
 smokeMini:
   auth:
 `,
