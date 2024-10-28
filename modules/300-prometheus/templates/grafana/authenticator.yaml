@@ -12,7 +12,7 @@ spec:
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
-  dditionalApplications:
+  additionalApplications:
     - domainName: {{ include "helm_lib_module_public_domain" (list . "grafana-v8") }}
       {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
       ingressSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
