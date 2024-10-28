@@ -57,17 +57,13 @@ spec:
                   type: string
                   description: Custom token sent as a value of the X-Auth-Token header.
                 headers:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      key:
-                        type: string
-                        enum: 
-                          - X-Prometheus-Remote-Write-Version
-                          - X-Scope-OrgID
-                      value:
-                        type: string
+                  description: Custom HTTP headers to be sent along with each remote write request.
+                  type: object
+                  properties:
+                    X-Scope-OrgID:
+                      type: string
+                  required: ["X-Scope-OrgID"]
+                  additionalProperties: false
                 writeRelabelConfigs:
                   description: |
                     The list of remote write relabel configurations.

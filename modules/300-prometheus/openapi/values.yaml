@@ -235,6 +235,13 @@ properties:
                   type: string
                 customAuthToken:
                   type: string
+                headers:
+                  type: object
+                  properties:
+                    X-Scope-OrgID:
+                      type: string
+                  required: ["X-Scope-OrgID"]
+                  additionalProperties: false
                 writeRelabelConfigs:
                   type: array
                   items:
@@ -276,6 +283,8 @@ properties:
                   password: password
                   username: username
                 customAuthToken: test
+                headers:
+                  X-Scope-OrgID: "org_id_value_test"
                 url: https://test-victoriametrics.domain.com/api/v1/write
                 writeRelabelConfigs:
                 - action: keep

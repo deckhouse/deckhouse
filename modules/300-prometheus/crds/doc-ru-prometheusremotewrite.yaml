@@ -24,6 +24,8 @@ spec:
                   description: Bearer-токен.
                 customAuthToken:
                   description: Пользовательский токен, передаваемый в качестве заголовка `X-Auth-Token`.
+                headers:
+                  description: Заголовки, которые будут переданы при каждом запросе на удаленную запись
                 writeRelabelConfigs:
                   description: |
                     Параметры для relabel'инга данных для отправки.
