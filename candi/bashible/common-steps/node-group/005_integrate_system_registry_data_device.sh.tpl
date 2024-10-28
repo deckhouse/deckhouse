@@ -49,7 +49,11 @@ fi
 if [ -f /var/lib/bashible/system_registry_data_device_path ]; then
   DATA_DEVICE="$(</var/lib/bashible/system_registry_data_device_path)"
 else
-  DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname]' | base64 -d)"
+  DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d)"
+  if [ -z "$DATA_DEVICE" ]; then
+    >&2 echo "failed to get data device path"
+    exit 1
+  fi
 fi
 
 {{- /*
@@ -85,7 +89,12 @@ fi
 */}}
 if ! [ -b "$DATA_DEVICE" ]; then
   >&2 echo "failed to find $DATA_DEVICE disk. Trying to detect the correct one"
-  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '.blockdevices[] | select (.type == "disk" and .mountpoint == null and .children == null) | .path')
+  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '[ .blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path ] | first')
+fi
+
+if [ $(wc -l <<< $DATA_DEVICE) -ne 1 ]; then
+  >&2 echo "failed to detect the correct disk: more than one or no matching disks found: $DATA_DEVICE"
+  return 1
 fi
 
 mkdir -p /mnt/system-registry-data
