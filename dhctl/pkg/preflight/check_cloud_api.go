@@ -16,6 +16,7 @@ package preflight
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -73,6 +74,11 @@ func executeHTTPRequest(ctx context.Context, method string, cloudApiUrl *url.URL
 	}
 
 	httpCl := buildHTTPClientWithLocalhostProxy(cloudApiUrl)
+
+	transport, _ := httpCl.Transport.(*http.Transport)
+	transport.TLSClientConfig = &tls.Config{
+		ServerName: cloudApiUrl.Host,
+	}
 
 	resp, err := httpCl.Do(req)
 
