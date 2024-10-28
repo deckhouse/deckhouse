@@ -183,6 +183,16 @@ spec:
                         type: string
                         description: 'Ingress class that serves your application ingress resources.'
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      signOutURL:
+                        type: string
+                        description: 'Provide the URL from which requests will be proxied to the Dex authenticator sign out URL.'
+                      whitelistSourceRanges:
+                        type: array
+                        description: |
+                          CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, If not specified.
+                        items:
+                          type: string
+                          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.applicationDomain
           name: Domain
@@ -223,6 +233,16 @@ spec:
                         type: string
                         description: 'Ingress class that serves your application ingress resources.'
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      signOutURL:
+                        type: string
+                        description: 'Provide the URL from which requests will be proxied to the Dex authenticator sign out URL.'
+                      whitelistSourceRanges:
+                        type: array
+                        description: |
+                          CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, If not specified.
+                        items:
+                          type: string
+                          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
                 sendAuthorizationHeader:
                   type: boolean
                   description: 'Request to application will be sent with "Authorization: Bearer" header when the option is switched to true.'

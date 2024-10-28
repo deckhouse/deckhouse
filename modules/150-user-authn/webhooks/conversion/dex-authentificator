@@ -49,8 +49,10 @@ function __on_conversion::v2alpha1_to_v1alpha1() {
       .apiVersion = "deckhouse.io/v1alpha1" |
       .spec += {
         applicationDomain: .spec.applications[0].domainName,
-        applicationIngressCertificateSecretName: .spec.applications[0].ingressSecretName,
         applicationIngressClassName: .spec.applications[0].ingressClassName,
+        applicationIngressCertificateSecretName: (.spec.applications[0].ingressSecretName // null),
+        signOutURL: (.spec.applications[0].signOutURL // null),
+        whitelistSourceRanges: (.spec.applications[0].whitelistSourceRanges // null),
         additionalApplications: (
           if (.spec.applications | length) > 1 then
             .spec.applications[1:]
@@ -61,7 +63,8 @@ function __on_conversion::v2alpha1_to_v1alpha1() {
       } |
       del(.spec.applications) |
       (if .spec.additionalApplications == null then del(.spec.additionalApplications) else . end)
-    else .
+    else
+      .
     end
   )'); then
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
@@ -110,12 +113,16 @@ function __on_conversion::v1alpha1_to_v2alpha1() {
   if converted=$(context::jq -r '.review.request.objects//[] | map(
     if .apiVersion == "deckhouse.io/v1alpha1" then
       .apiVersion = "deckhouse.io/v2alpha1" |
+      .spec.sendAuthorizationHeader = .spec.sendAuthorizationHeader |
       .spec.applications = [{
         domainName: .spec.applicationDomain,
-        ingressSecretName: .spec.applicationIngressCertificateSecretName,
         ingressClassName: .spec.applicationIngressClassName
-      }] + (.spec.additionalApplications // []) |
-      del(.spec.applicationDomain, .spec.applicationIngressCertificateSecretName, .spec.applicationIngressClassName, .spec.additionalApplications)
+      } +
+      (if .spec.applicationIngressCertificateSecretName then {ingressSecretName: .spec.applicationIngressCertificateSecretName} else {} end) +
+      (if .spec.signOutURL then {signOutURL: .spec.signOutURL} else {} end) +
+      (if .spec.whitelistSourceRanges then {whitelistSourceRanges: .spec.whitelistSourceRanges} else {} end)] +
+      (.spec.additionalApplications // []) |
+      del(.spec.applicationDomain, .spec.applicationIngressClassName, .spec.applicationIngressCertificateSecretName, .spec.additionalApplications, .spec.signOutURL, .spec.whitelistSourceRanges)
     else
       .
     end
