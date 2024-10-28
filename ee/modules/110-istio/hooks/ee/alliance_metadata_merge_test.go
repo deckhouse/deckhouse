@@ -406,7 +406,6 @@ status:
 `))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-empty wasn't fetched yet"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-full-empty-ig-0 wasn't fetched yet"))
-			//Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("virtualIP wasn't set for publicService ddd of IstioFederation federation-full-no-virtualip-0"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-only-ingress wasn't fetched yet"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-only-services wasn't fetched yet"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-empty-ig weren't fetched yet"))

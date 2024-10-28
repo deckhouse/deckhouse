@@ -164,12 +164,6 @@ federationsLoop:
 			input.LogEntry.Warnf("private metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
 			continue
 		}
-		//for _, ps := range *federationInfo.PublicServices {
-		//	if ps.VirtualIP == "" {
-		//		input.LogEntry.Warnf("virtualIP wasn't set for publicService %s of IstioFederation %s", ps.Hostname, federationInfo.Name)
-		//		continue federationsLoop
-		//	}
-		//}
 
 		if federationInfo.IngressGateways == nil || len(*federationInfo.IngressGateways) == 0 {
 			input.LogEntry.Warnf("private metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
