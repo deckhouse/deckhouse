@@ -59,22 +59,36 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	req, _ := http.NewRequestWithContext(ctx, http.MethodHead, cloudApiUrl.String(), nil)
+	body, status, err := executeHTTPRequest(ctx, http.MethodHead, cloudApiUrl)
+	if err != nil {
+		log.ErrorF("Error reading response body: %v", err)
+	}
+
+	fmt.Printf("status, response: %d %s\n", status, body)
+	return nil
+}
+
+func executeHTTPRequest(ctx context.Context, method string, cloudApiUrl *url.URL) (string, int, error) {
+	req, err := http.NewRequestWithContext(ctx, method, cloudApiUrl.String(), nil)
+	if err != nil {
+		return "", 0, fmt.Errorf("request creation failed: %w", err)
+	}
+
 	httpCl := buildHTTPClientWithLocalhostProxy(cloudApiUrl)
+
 	resp, err := httpCl.Do(req)
 
 	if err != nil {
-		log.ErrorF("Error making request: %v", err)
+		return "", 0, fmt.Errorf("HTTP request failed: %w", err)
 	}
-
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.ErrorF("Error reading response body: %v", err)
 	}
 	body := string(bodyBytes)
+	statusCode := resp.StatusCode
 
-	fmt.Printf("status, response: %s %s\n", resp.Status, body)
-	return nil
+	return body, statusCode, nil
 }
 
 func getCloudApiURLFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, error) {

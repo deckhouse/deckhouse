@@ -183,7 +183,7 @@ func (pc *Checker) PostCloud() error {
 	err = pc.do("Cloud deployment preflight checks", []checkStep{
 		{
 			fun:            pc.CheckCloudAPIAccessibility,
-			successMessage: "Check access to cloud api from master host",
+			successMessage: "access to cloud api from master host",
 			skipFlag:       app.CloudAPIAccessibilityArgName,
 		},
 	})
