@@ -64,6 +64,7 @@ type CloudApiConfig struct {
 func (pc *Checker) CheckCloudAPIAccessibility() error {
 	log.DebugLn("Checking if Cloud Api is accessible from first master host")
 	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	var tun *frontend.Tunnel
 
 	if !ok {
 		log.InfoLn("Checking if Cloud Api is accessible through proxy was skipped (local run)")
@@ -87,9 +88,8 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 	if cloudApiConfig == nil {
 		return nil
 	}
-	var tun *frontend.Tunnel
 
-	if proxyUrl != nil {
+	if proxyUrl == nil || shouldSkipProxyCheck(cloudApiConfig.URL.Hostname(), noProxyAddresses) {
 		tun, err = setupSSHTunnelToProxyAddr(wrapper.Client(), cloudApiConfig.URL)
 	} else {
 		tun, err = setupSSHTunnelToProxyAddr(wrapper.Client(), proxyUrl)
@@ -100,9 +100,6 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	}
 	defer tun.Stop()
 
-	if proxyUrl != nil || shouldSkipProxyCheck(cloudApiConfig.URL.Hostname(), noProxyAddresses) {
-		proxyUrl = nil
-	}
 	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiConfig, proxyUrl)
 
 	if err != nil {
