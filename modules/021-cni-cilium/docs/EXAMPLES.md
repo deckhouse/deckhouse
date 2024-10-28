@@ -62,6 +62,10 @@ spec:
       # In case of failure of the active node, traffic will be redirected through the backup node and
       # the source IP address of the network packets will not change.
       ip: 172.18.18.242
+      # List of interfaces for Virtual IP
+      interfaces:
+      - eth1
+      - eth2
 ```
 
 #### EgressGatewayPolicy
