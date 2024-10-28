@@ -15,7 +15,7 @@
 name: Check Milestone
 on:
   pull_request:
-    types: [opened, milestoned, demilestoned]
+    types: [opened, synchronize, reopened, milestoned, demilestoned]
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
