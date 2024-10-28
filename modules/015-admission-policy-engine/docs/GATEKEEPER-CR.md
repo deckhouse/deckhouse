@@ -1,5 +1,5 @@
 ---
-title:  "Модуль admission-policy-engine: Custom Resources (от Gatekeeper)"
+title: "The admission-policy-engine module: Custom Resources (by Gatekeeper)"
 ---
 
 ## Mutation
