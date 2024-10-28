@@ -96,7 +96,7 @@ function prepare_environment() {
       envsubst '${DECKHOUSE_DOCKERCFG} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI}' \
       <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
-  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" PREFIX="$PREFIX" \
       envsubst '${DECKHOUSE_DOCKERCFG} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${PREFIX}' \
       <"$cwd/infra.tf.tpl" >"$cwd/infra.tf"
 

@@ -135,7 +135,7 @@ module "eks" {
 
   eks_managed_node_groups = {
     system = {
-      name = "system-node-group"
+      name = "${local.cluster_name}-system"
 
       instance_types = ["m5a.xlarge"]
 
