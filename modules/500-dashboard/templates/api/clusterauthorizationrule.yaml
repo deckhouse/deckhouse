@@ -11,7 +11,7 @@ metadata:
 spec:
   subjects:
   - kind: ServiceAccount
-    name: dashboard
+    name: api
     namespace: d8-{{ .Chart.Name }}
   accessLevel: {{ .Values.dashboard.accessLevel }}
   portForwarding: false

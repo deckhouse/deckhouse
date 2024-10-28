@@ -68,16 +68,10 @@ spec:
             port: 8000
           initialDelaySeconds: 30
           timeoutSeconds: 30
-        volumeMounts:
-        - mountPath: /tmp
-          name: tmp
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "metrics_scraper_resources" . | nindent 12 }}
 {{- end }}
-      serviceAccountName: dashboard
-      volumes:
-        - name: tmp
-          emptyDir: {}
+      serviceAccountName: metrics-scraper

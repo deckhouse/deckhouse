@@ -42,10 +42,38 @@ spec:
       paths:
       - backend:
           service:
-            name: dashboard
+            name: web
             port:
               name: https
         path: /
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: auth
+            port:
+              name: https
+        path: /api/v1/login
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: auth
+            port:
+              name: https
+        path: /api/v1/csrftoken/login
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: auth
+            port:
+              name: https
+        path: /api/v1/me
+        pathType: ImplementationSpecific
+      - backend:
+          service:
+            name: api
+            port:
+              name: https
+        path: /api
         pathType: ImplementationSpecific
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   tls:

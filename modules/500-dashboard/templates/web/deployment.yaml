@@ -1,4 +1,4 @@
-{{- define "dashboard_resources" }}
+{{- define "web_resources" }}
 cpu: 30m
 memory: 50Mi
 {{- end }}
@@ -8,21 +8,21 @@ memory: 50Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: dashboard
+  name: web
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "web")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: dashboard
+    name: web
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: dashboard
+    - containerName: web
       minAllowed:
-        {{- include "dashboard_resources" . | nindent 8 }}
+        {{- include "web_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 50m
         memory: 100Mi
@@ -32,37 +32,37 @@ spec:
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: dashboard
+  name: web
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "web")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: dashboard
+      app: web
   template:
     metadata:
       labels:
-        app: dashboard
+        app: web
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "dashboard")) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "web")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-      - name: dashboard
+      - name: web
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "dashboard") }}
+        image: {{ include "helm_lib_module_image" (list . "web") }}
         args:
+        - --namespace=d8-{{ .Chart.Name }}
+        - --settings-config-map-name=settings
         - --port=8443
         - --insecure-port=8080
         - --insecure-bind-address=127.0.0.1
-        - --logtostderr
-        - --namespace=d8-{{ .Chart.Name }}
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication  }}
         - --auto-generate-certificates
         - --bind-address=0.0.0.0
@@ -80,14 +80,11 @@ spec:
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
         - containerPort: 8443
     {{- end }}
-        volumeMounts:
-        - mountPath: /tmp
-          name: tmp
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "dashboard_resources" . | nindent 12 }}
+            {{- include "web_resources" . | nindent 12 }}
 {{- end }}
     {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
       - name: kube-rbac-proxy
@@ -119,7 +116,7 @@ spec:
                   apiVersion: v1
                   resource: deployments
                   subresource: http
-                  name: dashboard
+                  name: web
         ports:
         - containerPort: 8443
           name: https
@@ -143,10 +140,8 @@ spec:
         - name: kube-rbac-proxy-ca
           mountPath: /etc/kube-rbac-proxy
     {{- end }}
-      serviceAccountName: dashboard
+      serviceAccountName: web
       volumes:
-      - name: tmp
-        emptyDir: {}
       - name: kube-rbac-proxy-ca
         configMap:
           defaultMode: 420
