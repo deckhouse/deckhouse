@@ -169,6 +169,12 @@ properties:
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
       Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  longtermPodAntiAffinity:
+    type: string
+    description: |
+      Устанавливает конфигурацию podAntiAffinity для Prometheus longterm по отношению к Prometheus main.
+      - `Preferred` — позволяет размещать Prometheus longterm на одном узле с Prometheus main, если нет возможности их разместить на разных узлах.
+      - `Required` — не позволяет размещать Prometheus longterm на одном узле с Prometheus main ни при каких условиях.
   tolerations:
     type: array
     description: |
