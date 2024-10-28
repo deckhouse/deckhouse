@@ -69,16 +69,19 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 		return nil
 	}
 
-	cloudApiConfig, err := getCloudApiConfigFromMetaConfig(pc.metaConfig)
+	proxyUrl, noProxyAddresses, err := getProxyFromMetaConfig(pc.metaConfig)
+	if err != nil {
+		return fmt.Errorf("get proxy config: %w", err)
+	}
 
+	cloudApiConfig, err := getCloudApiConfigFromMetaConfig(pc.metaConfig)
 	if err != nil {
 		log.ErrorF("Cannot parse CloudApiConfiguration: %v", err)
 		return err
 	}
 
-	if cloudApiConfig == nil {
-		return nil
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
 
 	tun, err := setupSSHTunnelToProxyAddr(wrapper.Client(), cloudApiConfig.URL)
 	if err != nil {
@@ -87,26 +90,36 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	}
 	defer tun.Stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-
-	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiConfig)
-
-	if err != nil {
-		log.ErrorF("Error while accessing Cloud API: %v", err)
-		return ErrCloudApiUnreachable
-	}
-	if resp.StatusCode >= 500 {
-		return ErrCloudApiUnreachable
+	if cloudApiConfig == nil {
+		return nil
 	}
 
+	if proxyUrl == nil {
+		log.DebugLn("Proxy is not defined. Checking Cloud API via ssh tunnel and proxy")
+		resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiConfig)
+
+		if err != nil {
+			log.ErrorF("Error while accessing Cloud API: %v", err)
+			return ErrCloudApiUnreachable
+		}
+		if resp.StatusCode >= 500 {
+			return ErrCloudApiUnreachable
+		}
+	} else {
+		if shouldSkipProxyCheck(cloudApiConfig.URL.Hostname(), noProxyAddresses) {
+			log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
+			return nil
+		}
+
+		//todo
+	}
 	return nil
 }
 
 func buildCloudApiHTTPClient(cloudApiConfig *CloudApiConfig) (*http.Client, error) {
 
 	tlsConfig := &tls.Config{
-		ServerName: cloudApiConfig.URL.Host,
+		ServerName: cloudApiConfig.URL.Hostname(),
 	}
 
 	if cloudApiConfig.Insecure {

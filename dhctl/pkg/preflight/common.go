@@ -15,11 +15,13 @@
 package preflight
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 )
@@ -43,4 +45,78 @@ func setupSSHTunnelToProxyAddr(sshCl *ssh.Client, proxyUrl *url.URL) (*frontend.
 		return nil, err
 	}
 	return tun, nil
+}
+
+func getProxyFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, []string, error) {
+	proxyConfig, err := metaConfig.EnrichProxyData()
+	switch {
+	case err != nil:
+		return nil, nil, err
+	case proxyConfig == nil:
+		return nil, nil, nil
+	}
+
+	var proxyAddrClause any
+	if proxyAddr, hasHTTPSProxy := proxyConfig["httpsProxy"]; hasHTTPSProxy {
+		proxyAddrClause = proxyAddr
+	} else if proxyAddr, hasHTTPProxy := proxyConfig["httpProxy"]; hasHTTPProxy {
+		proxyAddrClause = proxyAddr
+	} else {
+		return nil, nil, fmt.Errorf("%w: no proxy address was given", ErrBadProxyConfig)
+	}
+
+	noProxyClause, hasNoProxy := proxyConfig["noProxy"]
+	var noProxyAddresses []string
+	if hasNoProxy {
+		addrs, isStringSlice := noProxyClause.([]string)
+		if !isStringSlice {
+			return nil, nil, fmt.Errorf("proxy.noProxy is not a set of addresses")
+		}
+		noProxyAddresses = addrs
+	}
+
+	proxyAddr, proxyAddrIsString := proxyAddrClause.(string)
+	if !proxyAddrIsString {
+		return nil, nil, fmt.Errorf(
+			`%w: malformed proxy address: "%v"`,
+			ErrBadProxyConfig,
+			proxyAddr,
+		)
+	}
+
+	proxyUrl, err := url.Parse(proxyAddr)
+	if err != nil {
+		return nil, nil, fmt.Errorf(`%s: %w`, ErrBadProxyConfig, err)
+	}
+
+	return proxyUrl, noProxyAddresses, nil
+}
+
+func shouldSkipProxyCheck(serviceAddress string, noProxyAddresses []string) bool {
+	for _, noProxyAddress := range noProxyAddresses {
+		if serviceAddress == noProxyAddress {
+			return true
+		}
+
+		registryIPAddr, _ := net.ResolveIPAddr("ip", serviceAddress)
+		if registryIPAddr == nil {
+			continue
+		}
+
+		noProxyAddressIPAddr, _ := net.ResolveIPAddr("ip", noProxyAddress)
+		if noProxyAddressIPAddr != nil {
+			if noProxyAddressIPAddr.IP.Equal(registryIPAddr.IP) {
+				return true
+			}
+
+			continue
+		}
+
+		_, noProxyIPNet, _ := net.ParseCIDR(noProxyAddress)
+		if noProxyIPNet != nil && noProxyIPNet.Contains(registryIPAddr.IP) {
+			return true
+		}
+	}
+
+	return false
 }
