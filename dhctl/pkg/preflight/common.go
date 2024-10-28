@@ -45,6 +45,7 @@ func setupSSHTunnelToProxyAddr(sshCl *ssh.Client, proxyUrl *url.URL) (*frontend.
 			port = "80"
 		case "https":
 			port = "443"
+		}
 	}
 	tunnel := strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
 	tun := sshCl.Tunnel("L", tunnel)
