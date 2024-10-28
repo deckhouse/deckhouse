@@ -1,7 +1,12 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
-  {{- range $app := $crd.spec.applications }}
+  {{- range $idx, $app := $crd.spec.applications }}
   {{- $hashedDomain := sha256sum $app.domainName | trunc 8 }}
+  {{- if eq $idx 0 }}
+    {{- $nameSuffix := "" }}
+  {{- else }}
+    {{- $nameSuffix := "-" $hashedDomain }}
+  {{- end }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -14,7 +19,7 @@ metadata:
   {{- if $crd.spec.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ $crd.spec.whitelistSourceRanges | join "," }}
   {{- end }}
-  name: {{ $crd.name }}-{{ $hashedDomain }}-dex-authenticator
+  name: {{ $crd.name }}{{ $nameSuffix }}-dex-authenticator
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
@@ -47,7 +52,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
-  name: {{ $crd.name }}-{{ $hashedDomain }}-dex-authenticator-sign-out
+  name: {{ $crd.name }}{{ $nameSuffix }}-dex-authenticator-sign-out
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:

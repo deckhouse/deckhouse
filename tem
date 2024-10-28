@@ -1,0 +1,19 @@
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  labels:
+    app: dex-authenticator
+    heritage: deckhouse
+    module: prometheus
+    name: grafana
+  name: grafana
+  namespace: d8-monitoring
+spec:
+  applicationDomain: grafana-v8.k8s.smoke.flant.com
+  applicationIngressCertificateSecretName: ingress-tls
+  applicationIngressClassName: nginx
+  signOutURL: /logout
+  additionalApplications:
+    - domainName: grafana.k8s.smoke.flant.com
+      ingressSecretName: ingress-tls
+      ingressClassName: nginx
