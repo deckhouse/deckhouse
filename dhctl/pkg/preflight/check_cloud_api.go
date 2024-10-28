@@ -92,7 +92,10 @@ Please check connectivity to control-plane host and that the sshd config paramet
 
 	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiConfig)
 
-	if resp.StatusCode >= 500 || err != nil {
+	if err != nil {
+		return ErrCloudApiUnreachable
+	}
+	if resp.StatusCode >= 500 {
 		return ErrCloudApiUnreachable
 	}
 
@@ -191,7 +194,7 @@ func getCloudApiConfigFromMetaConfig(metaConfig *config.MetaConfig) (*CloudApiCo
 		insecure = vsphereConfig.Insecure
 
 	default:
-		log.DebugLn("[Skip] Checking if Cloud Api is accessible from first master host. Unsupported provider: %v", providerName)
+		log.DebugF("[Skip] Checking if Cloud Api is accessible from first master host. Unsupported provider: %v", providerName)
 		return nil, nil
 	}
 
