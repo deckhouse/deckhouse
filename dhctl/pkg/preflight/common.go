@@ -38,7 +38,15 @@ func buildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {
 }
 
 func setupSSHTunnelToProxyAddr(sshCl *ssh.Client, proxyUrl *url.URL) (*frontend.Tunnel, error) {
-	tunnel := strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), proxyUrl.Port()}, ":")
+	port := proxyUrl.Port()
+	if port == "" {
+		switch proxyUrl.Scheme {
+		case "http":
+			port = "80"
+		case "https":
+			port = "443"
+	}
+	tunnel := strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
 	tun := sshCl.Tunnel("L", tunnel)
 	err := tun.Up()
 	if err != nil {
