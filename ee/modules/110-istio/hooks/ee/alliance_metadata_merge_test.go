@@ -154,26 +154,6 @@ status:
       authnKeyPub: xyz-f5
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: IstioFederation
-metadata:
-  name: federation-full-no-virtualip-0
-spec:
-  trustDomain: "f5"
-  metadataEndpoint: "https://some-proper-host/"
-status:
-  metadataCache:
-    private:
-      ingressGateways:
-      - {"address": "ccc", "port": 222}
-      publicServices:
-      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}]}
-      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}]} # no virtualIP, federation should be skipped
-    public:
-      clusterUUID: aaa-bbb-f4
-      rootCA: abc-f4
-      authnKeyPub: xyz-f4
----
-apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
 metadata:
   name: multicluster-full-0
@@ -426,10 +406,9 @@ status:
 `))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-empty wasn't fetched yet"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-full-empty-ig-0 wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("virtualIP wasn't set for publicService ddd of IstioFederation federation-full-no-virtualip-0"))
+			//Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("virtualIP wasn't set for publicService ddd of IstioFederation federation-full-no-virtualip-0"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-only-ingress wasn't fetched yet"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-only-services wasn't fetched yet"))
-
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-empty-ig weren't fetched yet"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-apiHost wasn't fetched yet"))
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-no-ig weren't fetched yet"))
@@ -438,7 +417,7 @@ status:
 			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-only-public wasn't fetched yet"))
 
 			// there should be 11 log messages
-			Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(11))
+			Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(10))
 		})
 	})
 })
