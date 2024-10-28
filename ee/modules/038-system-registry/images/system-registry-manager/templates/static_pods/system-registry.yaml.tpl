@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   labels:
+    app: system-registry
     component: system-registry
     tier: control-plane
   annotations:
