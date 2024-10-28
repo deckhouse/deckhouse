@@ -157,15 +157,15 @@ Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parame
 </tbody>
 </table>
 
-### Features of working with a set of Minimal modules on bare metal
+### Things to keep in mind when working with the Minimal module set on bare metal
 
 {% alert level="warning" %}
-**Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module).
+**Note** that several basic modules are not included in the `Minimal` set of modules (for example, the CNI module).
 
-Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
+Deckhouse with the `Minimal` module set and no basic modules included will only be able to operate in an already deployed cluster.
 {% endalert %}
 
-To install a Deckhouse with a set of `Minimal` modules the following modules must be enabled on bare metal by specifying them in the installer configuration file:
+To install Deckhouse with the `Minimal` module set on bare metal, you must be sure to enable the following modules by specifying them in the installer configuration file:
 
 * registry-packages-proxy;
 * cloud-data-crd;
