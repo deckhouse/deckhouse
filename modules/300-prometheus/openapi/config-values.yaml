@@ -288,6 +288,14 @@ properties:
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  longtermPodAntiAffinity:
+    type: string
+    default: "Preferred"
+    description: |
+      Defines the podAntiAffinity configuration for the Prometheus longterm instance relative to the Prometheus main instance.
+      - `Preferred` — allows scheduling Prometheus longterm instance alongside the Prometheus main instance if it is not possible to place them on different nodes.
+      - `Required` — does not allow scheduling Prometheus longterm instance on the same node as the Prometheus main instance.
+    enum: [Preferred, Required]
   tolerations:
     type: array
     items:
