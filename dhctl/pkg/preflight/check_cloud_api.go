@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 )
 
 var (
@@ -83,40 +84,39 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	tun, err := setupSSHTunnelToProxyAddr(wrapper.Client(), cloudApiConfig.URL)
+	if cloudApiConfig == nil {
+		return nil
+	}
+	var tun *frontend.Tunnel
+
+	if proxyUrl != nil {
+		tun, err = setupSSHTunnelToProxyAddr(wrapper.Client(), cloudApiConfig.URL)
+	} else {
+		tun, err = setupSSHTunnelToProxyAddr(wrapper.Client(), proxyUrl)
+	}
 	if err != nil {
 		return fmt.Errorf(`cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameter 'AllowTcpForwarding' set to 'yes' on control-plane node`, err)
 	}
 	defer tun.Stop()
 
-	if cloudApiConfig == nil {
-		return nil
+	if proxyUrl != nil || shouldSkipProxyCheck(cloudApiConfig.URL.Hostname(), noProxyAddresses) {
+		proxyUrl = nil
+	}
+	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiConfig, proxyUrl)
+
+	if err != nil {
+		log.ErrorF("Error while accessing Cloud API: %v", err)
+		return ErrCloudApiUnreachable
+	}
+	if resp.StatusCode >= 500 {
+		return ErrCloudApiUnreachable
 	}
 
-	if proxyUrl == nil {
-		log.DebugLn("Proxy is not defined. Checking Cloud API via ssh tunnel and proxy")
-		resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiConfig)
-
-		if err != nil {
-			log.ErrorF("Error while accessing Cloud API: %v", err)
-			return ErrCloudApiUnreachable
-		}
-		if resp.StatusCode >= 500 {
-			return ErrCloudApiUnreachable
-		}
-	} else {
-		if shouldSkipProxyCheck(cloudApiConfig.URL.Hostname(), noProxyAddresses) {
-			log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
-			return nil
-		}
-
-		//todo
-	}
 	return nil
 }
 
-func buildCloudApiHTTPClient(cloudApiConfig *CloudApiConfig) (*http.Client, error) {
+func buildSSHTunnelHTTPClient(cloudApiConfig *CloudApiConfig) (*http.Client, error) {
 
 	tlsConfig := &tls.Config{
 		ServerName: cloudApiConfig.URL.Hostname(),
@@ -154,17 +154,23 @@ func buildCloudApiHTTPClient(cloudApiConfig *CloudApiConfig) (*http.Client, erro
 	return client, nil
 }
 
-func executeHTTPRequest(ctx context.Context, method string, cloudApiConfig *CloudApiConfig) (*http.Response, error) {
+func executeHTTPRequest(ctx context.Context, method string, cloudApiConfig *CloudApiConfig, proxyUrl *url.URL) (*http.Response, error) {
 
 	cloudApiUrl := cloudApiConfig.URL
 	cloudApiUrlString := cloudApiUrl.String()
+	var client *http.Client
 
 	req, err := http.NewRequestWithContext(ctx, method, cloudApiUrlString, nil)
 	if err != nil {
 		return nil, fmt.Errorf("request creation failed: %w", err)
 	}
 
-	client, err := buildCloudApiHTTPClient(cloudApiConfig)
+	if proxyUrl == nil {
+		client, err = buildSSHTunnelHTTPClient(cloudApiConfig)
+	} else {
+		client = buildHTTPClientWithLocalhostProxy(proxyUrl)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to build HTTP client: %w", err)
 	}
@@ -173,9 +179,10 @@ func executeHTTPRequest(ctx context.Context, method string, cloudApiConfig *Clou
 	if err != nil {
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
-	defer resp.Body.Close()
 
 	// Debug
+	defer resp.Body.Close()
+
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.ErrorF("Error reading response body: %v", err)
