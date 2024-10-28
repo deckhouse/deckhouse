@@ -93,6 +93,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiConfig)
 
 	if err != nil {
+		log.ErrorF("Error while accessing Cloud API: %v", err)
 		return ErrCloudApiUnreachable
 	}
 	if resp.StatusCode >= 500 {
