@@ -18,7 +18,7 @@ func TestGetCloudApiURLFromMetaConfig(t *testing.T) {
 	}{
 		{
 			name:         "OpenStack provider",
-			providerName: "OpenStack",
+			providerName: "openstack",
 			providerConfigJSON: `{
 				"authURL": "https://openstack.example.com/v3/auth",
 				"domainName": "provider.local",
@@ -31,7 +31,7 @@ func TestGetCloudApiURLFromMetaConfig(t *testing.T) {
 		},
 		{
 			name:         "vSphere provider",
-			providerName: "vSphere",
+			providerName: "vsphere",
 			providerConfigJSON: `{
 				"server": "https://vsphere.example.com/sdk",
 				"username": "vsphereUser",
@@ -60,7 +60,11 @@ deckhouse:
 				"provider": json.RawMessage(tt.providerConfigJSON),
 			}
 			s.Equal(tt.providerName, metaConfig.ProviderName)
-			cloudApiURL, err := getCloudApiURLFromMetaConfig(metaConfig)
+			cloudApiConfig, err := getCloudApiConfigFromMetaConfig(metaConfig)
+			t.Logf("cloudApiConfig: %+v, error: %v", cloudApiConfig, err)
+			s.NoError(err, "getCloudApiConfigFromMetaConfig must be not nil")
+			s.NotNil(cloudApiConfig, "cloudApiConfig must be not nil")
+			cloudApiURL := cloudApiConfig.URL.String()
 			s.NoError(err)
 			s.Equal(tt.expectedURL, cloudApiURL)
 		})

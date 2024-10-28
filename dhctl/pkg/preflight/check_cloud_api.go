@@ -17,12 +17,14 @@ package preflight
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -31,8 +33,32 @@ import (
 )
 
 var (
-	ErrCloudApiUnreachable = errors.New("Could not reach Cloud API over proxy")
+	ErrCloudApiUnreachable = errors.New("could not reach Cloud API over proxy")
 )
+
+type OpenStackProvider struct {
+	AuthURL    string `json:"authURL,omitempty" yaml:"authURL,omitempty"`
+	CACert     string `json:"caCert,omitempty" yaml:"caCert,omitempty"`
+	DomainName string `json:"domainName,omitempty" yaml:"domainName,omitempty"`
+	TenantName string `json:"tenantName,omitempty" yaml:"tenantName,omitempty"`
+	TenantID   string `json:"tenantID,omitempty" yaml:"tenantID,omitempty"`
+	Username   string `json:"username,omitempty" yaml:"username,omitempty"`
+	Password   string `json:"password,omitempty" yaml:"password,omitempty"`
+	Region     string `json:"region,omitempty" yaml:"region,omitempty"`
+}
+
+type VSphereProvider struct {
+	Server   string `json:"server"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Insecure bool   `json:"insecure"`
+}
+
+type CloudApiConfig struct {
+	URL      *url.URL
+	Insecure bool
+	CACert   string
+}
 
 func (pc *Checker) CheckCloudAPIAccessibility() error {
 	log.DebugLn("Checking if Cloud Api is accessible from first master host")
@@ -43,17 +69,18 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 		return nil
 	}
 
-	cloudApiUrl, err := getCloudApiURLFromMetaConfig(pc.metaConfig)
+	cloudApiConfig, err := getCloudApiConfigFromMetaConfig(pc.metaConfig)
 
 	if err != nil {
-		log.ErrorF("cannot parse cloudApiUrl from CloudApiConfiguration: %v", err)
+		log.ErrorF("Cannot parse CloudApiConfiguration: %v", err)
+		return err
 	}
 
-	if cloudApiUrl == nil {
+	if cloudApiConfig == nil {
 		return nil
 	}
 
-	tun, err := setupSSHTunnelToProxyAddr(wrapper.Client(), cloudApiUrl)
+	tun, err := setupSSHTunnelToProxyAddr(wrapper.Client(), cloudApiConfig.URL)
 	if err != nil {
 		return fmt.Errorf(`cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameter 'AllowTcpForwarding' set to 'yes' on control-plane node`, err)
@@ -63,7 +90,10 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiUrl)
+	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiConfig)
+	if err != nil {
+		return ErrCloudApiUnreachable
+	}
 	if resp.StatusCode >= 500 || err != nil {
 		return ErrCloudApiUnreachable
 	}
@@ -71,67 +101,116 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	return nil
 }
 
-func executeHTTPRequest(ctx context.Context, method string, cloudApiUrl *url.URL) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, cloudApiUrl.String(), nil)
+func buildCloudApiHTTPClientTransport(client *http.Client, cloudApiConfig *CloudApiConfig) (*http.Client, error) {
+	cloudApiUrl := cloudApiConfig.URL
+
+	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, fmt.Errorf("unexpected transport type")
+	}
+	httpTransport := defaultTransport.Clone()
+
+	if strings.ToLower(cloudApiUrl.Scheme) == "https" {
+		tlsConfig := &tls.Config{}
+
+		if cloudApiConfig.Insecure {
+			tlsConfig.InsecureSkipVerify = true
+		}
+
+		if len(cloudApiConfig.CACert) > 0 {
+			certPool := x509.NewCertPool()
+			if ok := certPool.AppendCertsFromPEM([]byte(cloudApiConfig.CACert)); !ok {
+				return nil, fmt.Errorf("invalid cert in CA PEM")
+			}
+			tlsConfig.RootCAs = certPool
+		}
+
+		httpTransport.TLSClientConfig = tlsConfig
+	}
+
+	client.Transport = httpTransport
+	return client, nil
+}
+
+func executeHTTPRequest(ctx context.Context, method string, cloudApiConfig *CloudApiConfig) (*http.Response, error) {
+
+	cloudApiUrl := cloudApiConfig.URL
+	cloudApiUrlString := cloudApiUrl.String()
+
+	req, err := http.NewRequestWithContext(ctx, method, cloudApiUrlString, nil)
 	if err != nil {
 		return nil, fmt.Errorf("request creation failed: %w", err)
 	}
 
-	httpCl := buildHTTPClientWithLocalhostProxy(cloudApiUrl)
-
-	httpCl.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
-		ServerName: cloudApiUrl.Host,
+	client := buildHTTPClientWithLocalhostProxy(cloudApiUrl)
+	client, err = buildCloudApiHTTPClientTransport(client, cloudApiConfig)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
 	}
 
-	resp, err := httpCl.Do(req)
-
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
+	defer resp.Body.Close()
 
-	// debug
+	// Debug
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.ErrorF("Error reading response body: %v", err)
 	}
 	body := string(bodyBytes)
 	statusCode := resp.StatusCode
-	fmt.Printf("status, response: %d %s\n", statusCode, body)
-	// debug
+	log.DebugF("status, response: %d %s", statusCode, body)
+	// Debug
 
 	return resp, nil
 }
 
-func getCloudApiURLFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, error) {
+func getCloudApiConfigFromMetaConfig(metaConfig *config.MetaConfig) (*CloudApiConfig, error) {
 	providerClusterConfig, exists := metaConfig.ProviderClusterConfig["provider"]
-	var cloudApiURLStr string
-	var providerConfig map[string]string
-
 	if !exists {
 		return nil, fmt.Errorf("provider configuration not found in ProviderClusterConfig")
 	}
 
-	if err := json.Unmarshal(providerClusterConfig, &providerConfig); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal provider from ProviderClusterConfig: %v", err)
-	}
+	var cloudApiURLStr string
+	var insecure bool
+	var cacert string
 
 	switch providerName := metaConfig.ProviderName; providerName {
 	case "openstack":
-		cloudApiURLStr = providerConfig["authURL"]
+		var openStackConfig OpenStackProvider
+		if err := json.Unmarshal(providerClusterConfig, &openStackConfig); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal provider config for OpenStack: %v", err)
+		}
+		cloudApiURLStr = openStackConfig.AuthURL
+		cacert = openStackConfig.CACert
+
 	case "vsphere":
-		cloudApiURLStr = providerConfig["server"]
+		var vsphereConfig VSphereProvider
+		if err := json.Unmarshal(providerClusterConfig, &vsphereConfig); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal provider config for vSphere: %v", err)
+		}
+		cloudApiURLStr = vsphereConfig.Server
+		insecure = vsphereConfig.Insecure
+
 	default:
-		log.DebugLn("[Skip] Checking if Cloud Api is accessible from first master host providerName: %v", cloudApiURLStr)
+		log.DebugLn("[Skip] Checking if Cloud Api is accessible from first master host. Unsupported provider: %v", providerName)
 		return nil, nil
 	}
 
 	if cloudApiURLStr == "" {
 		return nil, fmt.Errorf("cloud API URL is empty for provider: %s", metaConfig.ProviderName)
 	}
+
 	cloudApiURL, err := url.Parse(cloudApiURLStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid cloud API URL '%s': %v", cloudApiURLStr, err)
 	}
 
-	return cloudApiURL, nil
+	return &CloudApiConfig{
+		URL:      cloudApiURL,
+		Insecure: insecure,
+		CACert:   cacert,
+	}, nil
 }
