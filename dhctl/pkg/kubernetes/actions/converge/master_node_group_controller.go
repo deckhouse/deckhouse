@@ -112,9 +112,15 @@ func (c *MasterNodeGroupController) Run() error {
 		}
 	}
 
-	err := c.replaceKubeClient(c.state.State)
-	if err != nil {
-		return fmt.Errorf("failed to replace kube client: %w", err)
+	if !c.commanderMode {
+		if err := c.replaceKubeClient(c.state.State); err != nil {
+			return fmt.Errorf("failed to replace kube client: %w", err)
+		}
+	}
+
+	c.lockRunner = NewInLockLocalRunner(c.client, "local-converger")
+	if err := c.lockRunner.Run(c.run); err != nil {
+		return fmt.Errorf("failed to run lock runner: %w", err)
 	}
 
 	return nil
@@ -203,7 +209,6 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 	c.client.KubeProxy.StopAll()
 	if sshCl != nil {
 		sshCl.Stop()
-
 	}
 
 	newSSHClient, err := ssh.NewClient(session.NewSession(session.Input{
@@ -231,16 +236,6 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 	}
 
 	c.client = kubeClient
-
-	if c.lockRunner != nil {
-		c.lockRunner = NewInLockLocalRunner(c.client, "local-converger")
-
-		err := c.lockRunner.Run(c.run)
-		if err != nil {
-			return fmt.Errorf("failed to start lock runner: %w", err)
-		}
-	}
-
 	return nil
 }
 
@@ -400,7 +395,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(convergedNode strin
 		}
 	}
 
-	return controlplane.NewHookForUpdatePipeline(c.client, nodesToCheck, c.config.UUID).
+	return controlplane.NewHookForUpdatePipeline(c.client, nodesToCheck, c.config.UUID, c.commanderMode).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
 		WithConfirm(confirm)
