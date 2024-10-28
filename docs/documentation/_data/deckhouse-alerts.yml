@@ -241,6 +241,16 @@ alerts:
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
       markupFormat: markdown
+    - name: CronJobPodsNotCreated
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: ""
+      summary: |
+        CronJob {{$labels.namespace}}/{{$labels.job_name}} pods still not created.
+      severity: "5"
+      markupFormat: markdown
     - name: CronJobRegistryUnavailable
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
       moduleUrl: 340-extended-monitoring
@@ -4179,6 +4189,20 @@ alerts:
         3. Check that kubelet is running on the {{ $labels.node }} node.
       summary: ""
       severity: "4"
+      markupFormat: markdown
+    - name: NodeTCPMemoryExhaust
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        The TCP stack on the {{ $labels.node }} node is experiencing high memory pressure.
+        This could be caused by applications with intensive TCP networking functionality.
+        Investigate the relevant applications and consider adjusting the system's TCP memory configuration
+        or addressing the source of increased network traffic.
+      summary: |
+        The {{ $labels.node }} node has high TCP stack memory usage.
+      severity: "6"
       markupFormat: markdown
     - name: NodeTimeOutOfSync
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
