@@ -725,7 +725,7 @@ entries:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/610-service-with-healthchecks/
+              url: /modules/610-service-with-healthchecks/  
             - title:
                 en: Reference
                 ru: Справка
@@ -736,6 +736,10 @@ entries:
                   url: /modules/610-service-with-healthchecks/configuration.html
                 - title: Custom Resources
                   url: /modules/610-service-with-healthchecks/cr.html
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/610-service-with-healthchecks/examples.html      
     - title:
         en: Monitoring
         ru: Мониторинг

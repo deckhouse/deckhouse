@@ -1,5 +1,5 @@
 ---
-title: "The static-routing-manager module: examples"
+title: "The service-with-healthchecks: examples"
 ---
 
 ## Creating multi-container pod with (union) healthcheck
@@ -47,13 +47,13 @@ spec:
         name: node-app-config
 ```
 
-### create the Secret with credentials for PostgreSQL
+## Create the Secret with credentials for PostgreSQL
 
 ```shell
 kubectl -n test create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
 ```
 
-### deploy ServiceWithHealthchecks
+## Deploy ServiceWithHealthchecks
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1

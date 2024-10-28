@@ -1,5 +1,5 @@
 ---
-title: "The static-routing-manager module: examples"
+title: "Модуль service-with-healthchecks: примеры"
 ---
 
 ## Создание многоконтейнерного пода с единой проверкой работоспособности
@@ -47,13 +47,13 @@ spec:
         name: node-app-config
 ```
 
-### создание Secret с данными для доступа к PostgreSQL
+## Создание Secret'а с данными для доступа к PostgreSQL
 
 ```shell
 kubectl -n test create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
 ```
 
-### развертывание в кластер ServiceWithHealthchecks
+## Развертывание в кластере модуля ServiceWithHealthchecks
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -92,7 +92,7 @@ spec:
         authSecretName: cred-secret
 ```
 
-Согласно этому ресурсу, будут запущены проверки, и если результат будет успешным, трафик будет направлен на Pod.
+Проверки будут запущены согласно данному ресурсу, и если результат будет успешным, трафик будет направлен на под.
 
 ```shell
 $ kubectl -n test get servicewithhealthchecks.network.deckhouse.io nodejs-app -o jsonpath={.status.conditions[0]}
