@@ -15,7 +15,6 @@
 package preflight
 
 import (
-	"crypto/tls"
 	"net"
 	"net/http"
 	"net/url"
@@ -32,9 +31,6 @@ func buildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {
 		Transport: &http.Transport{
 			Proxy:             http.ProxyURL(localhostProxy),
 			DisableKeepAlives: true,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
 		},
 	}
 }
