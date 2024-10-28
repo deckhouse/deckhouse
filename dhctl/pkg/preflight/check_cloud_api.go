@@ -112,6 +112,8 @@ func buildCloudApiHTTPClientTransport(client *http.Client, cloudApiConfig *Cloud
 	if strings.ToLower(cloudApiConfig.URL.Scheme) == "https" {
 		tlsConfig := &tls.Config{}
 
+		tlsConfig.ServerName = cloudApiConfig.URL.Host
+
 		if cloudApiConfig.Insecure {
 			tlsConfig.InsecureSkipVerify = true
 		}
