@@ -110,15 +110,11 @@ function __on_conversion::v1alpha1_to_v2alpha1() {
   if converted=$(context::jq -r '.review.request.objects//[] | map(
     if .apiVersion == "deckhouse.io/v1alpha1" then
       .apiVersion = "deckhouse.io/v2alpha1" |
-      .spec |= {
-        applications: ([
-          {
-            domainName: .applicationDomain,
-            ingressSecretName: .applicationIngressCertificateSecretName,
-            ingressClassName: .applicationIngressClassName
-          }
-        ] + (.additionalApplications // []))
-      } |
+      .spec.applications = [{
+        domainName: .spec.applicationDomain,
+        ingressSecretName: .spec.applicationIngressCertificateSecretName,
+        ingressClassName: .spec.applicationIngressClassName
+      }] + (.spec.additionalApplications // []) |
       del(.spec.applicationDomain, .spec.applicationIngressCertificateSecretName, .spec.applicationIngressClassName, .spec.additionalApplications)
     else
       .
