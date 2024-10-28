@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,6 +28,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+)
+
+var (
+	ErrCloudApiUnreachable = errors.New("Could not reach Cloud API over proxy")
 )
 
 func (pc *Checker) CheckCloudAPIAccessibility() error {
@@ -58,19 +63,22 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	body, status, err := executeHTTPRequest(ctx, http.MethodHead, cloudApiUrl)
+	resp, _, err := executeHTTPRequest(ctx, http.MethodHead, cloudApiUrl)
 	if err != nil {
-		log.ErrorF("Error reading response body: %v", err)
+		log.ErrorF("Error reading response: %v", err)
 	}
 
-	fmt.Printf("status, response: %d %s\n", status, body)
+	if err = checkResponseIsFromCloudApi(resp); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func executeHTTPRequest(ctx context.Context, method string, cloudApiUrl *url.URL) (string, int, error) {
+func executeHTTPRequest(ctx context.Context, method string, cloudApiUrl *url.URL) (*http.Response, int, error) {
 	req, err := http.NewRequestWithContext(ctx, method, cloudApiUrl.String(), nil)
 	if err != nil {
-		return "", 0, fmt.Errorf("request creation failed: %w", err)
+		return nil, 0, fmt.Errorf("request creation failed: %w", err)
 	}
 
 	httpCl := buildHTTPClientWithLocalhostProxy(cloudApiUrl)
@@ -83,16 +91,20 @@ func executeHTTPRequest(ctx context.Context, method string, cloudApiUrl *url.URL
 	resp, err := httpCl.Do(req)
 
 	if err != nil {
-		return "", 0, fmt.Errorf("HTTP request failed: %w", err)
+		return nil, 0, fmt.Errorf("HTTP request failed: %w", err)
 	}
+
+	// debug
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.ErrorF("Error reading response body: %v", err)
 	}
 	body := string(bodyBytes)
 	statusCode := resp.StatusCode
+	fmt.Printf("status, response: %d %s\n", statusCode, body)
+	// debug
 
-	return body, statusCode, nil
+	return resp, statusCode, nil
 }
 
 func getCloudApiURLFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, error) {
@@ -127,4 +139,23 @@ func getCloudApiURLFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, erro
 	}
 
 	return cloudApiURL, nil
+}
+
+func checkResponseIsFromCloudApi(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusUnauthorized {
+		return fmt.Errorf(
+			"%w: got %d status code from the Cloud Api, this is not a valid registry API response.\n"+
+				"Check blah blah blah",
+			ErrCloudApiUnreachable,
+			resp.StatusCode,
+		)
+	}
+	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
+		return fmt.Errorf(
+			"%w: expected blah header in response from the Cloud Api.\n"+
+				"Check blah blah blah",
+			ErrCloudApiUnreachable,
+		)
+	}
+	return nil
 }
