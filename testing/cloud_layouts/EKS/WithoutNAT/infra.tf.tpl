@@ -37,7 +37,7 @@ provider "aws" {
 data "aws_availability_zones" "available" {}
 
 locals {
-  cluster_name = "e2e-eks-${KUBERNETES_VERSION}-${PREFIX}"
+  cluster_name = replace("e2e-eks-${KUBERNETES_VERSION}-${PREFIX}", ".", "-")
 }
 
 
