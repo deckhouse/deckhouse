@@ -1312,21 +1312,21 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__rate_interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
               "refId": "A"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__rate_interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Free",
               "refId": "B"
             },
             {
-              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__rate_interval])\n  )",
+              "expr": "sum by (node) \n  (\n    avg_over_time(node_memory_MemTotal_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_MemFree_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__rate_interval])\n    -\n    avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__rate_interval])\n  )",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -1337,14 +1337,14 @@
               "step": 10
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=\"$node\"}[$__rate_interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Cached_bytes{node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Cached",
               "refId": "D"
             },
             {
-              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=\"$node\"}[$__rate_interval]))",
+              "expr": "sum by (node) (avg_over_time(node_memory_Buffers_bytes{node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Buffered",
