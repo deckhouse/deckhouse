@@ -100,15 +100,13 @@ Please check connectivity to control-plane host and that the sshd config paramet
 }
 
 func buildCloudApiHTTPClientTransport(client *http.Client, cloudApiConfig *CloudApiConfig) (*http.Client, error) {
-	cloudApiUrl := cloudApiConfig.URL
-
-	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+	defaultTransport, ok := client.Transport.(*http.Transport)
 	if !ok {
 		return nil, fmt.Errorf("unexpected transport type")
 	}
 	httpTransport := defaultTransport.Clone()
 
-	if strings.ToLower(cloudApiUrl.Scheme) == "https" {
+	if strings.ToLower(cloudApiConfig.URL.Scheme) == "https" {
 		tlsConfig := &tls.Config{}
 
 		if cloudApiConfig.Insecure {
