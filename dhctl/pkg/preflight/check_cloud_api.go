@@ -21,13 +21,11 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 )
 
 func (pc *Checker) CheckCloudAPIAccessibility() error {
@@ -49,7 +47,7 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 		return nil
 	}
 
-	tun, err := setupSSHTunnelToCloudApi(wrapper.Client(), cloudApiUrl)
+	tun, err := setupSSHTunnelToProxyAddr(wrapper.Client(), cloudApiUrl)
 	if err != nil {
 		return fmt.Errorf(`cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameter 'AllowTcpForwarding' set to 'yes' on control-plane node`, err)
@@ -123,14 +121,4 @@ func getCloudApiURLFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, erro
 	}
 
 	return cloudApiURL, nil
-}
-
-func setupSSHTunnelToCloudApi(sshCl *ssh.Client, cloudApiUrl *url.URL) (*frontend.Tunnel, error) {
-	tunnel := strings.Join([]string{ProxyTunnelPort, cloudApiUrl.Hostname(), cloudApiUrl.Port()}, ":")
-	tun := sshCl.Tunnel("L", tunnel)
-	err := tun.Up()
-	if err != nil {
-		return nil, err
-	}
-	return tun, nil
 }

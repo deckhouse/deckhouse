@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 )
 
 var (
@@ -139,20 +138,6 @@ func tryToSkippingCheck(registryAddress string, noProxyAddresses []string) bool 
 	return false
 }
 
-func buildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {
-	localhostProxy := proxyUrl
-	localhostProxy.Host = net.JoinHostPort("localhost", ProxyTunnelPort)
-	return &http.Client{
-		Transport: &http.Transport{
-			Proxy:             http.ProxyURL(localhostProxy),
-			DisableKeepAlives: true,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-}
-
 func getProxyFromMetaConfig(metaConfig *config.MetaConfig) (*url.URL, []string, error) {
 	proxyConfig, err := metaConfig.EnrichProxyData()
 	switch {
@@ -218,16 +203,6 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	}
 
 	return nil
-}
-
-func setupSSHTunnelToProxyAddr(sshCl *ssh.Client, proxyUrl *url.URL) (*frontend.Tunnel, error) {
-	tunnel := strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), proxyUrl.Port()}, ":")
-	tun := sshCl.Tunnel("L", tunnel)
-	err := tun.Up()
-	if err != nil {
-		return nil, err
-	}
-	return tun, nil
 }
 
 func (pc *Checker) CheckRegistryCredentials() error {
