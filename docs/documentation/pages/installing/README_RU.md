@@ -358,7 +358,7 @@ dhctl bootstrap \
 ### Single-master инсталляция
 
 {% alert %}
-Отсутствует отказоусточйивость, не рекомендуется в production-окружениях
+Отсутствует отказоустойчивость, не рекомендуется в production-окружениях
 {% endalert %}
 
 [Быстрый старт](https://deckhouse.ru/products/kubernetes-platform/gs/bm/step5.html) разрешает запустить Deckhouse на одной мастер ноде для тестирования функционала, убрав с нее taints.
