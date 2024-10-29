@@ -159,6 +159,8 @@ Add the following firewall rules:
 The provider is confirmed to work with Ubuntu 22.04-based virtual machine templates only.
 {% endalert %}
 
+{% include notice_envinronment.liquid %}
+
 The example below uses the OVA file provided by Ubuntu, updated to include two fixes.
 Those fixes are essential for CloudPermanent nodes to be provisioned correctly and to be able to mount CSI-created disks.
 

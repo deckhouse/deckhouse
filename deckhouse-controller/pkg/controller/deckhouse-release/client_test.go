@@ -100,6 +100,11 @@ func setupControllerSettings(
 		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
 		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true),
 	}
+	rec.clusterUUID = rec.getClusterUUID(context.Background())
+
+	for _, option := range options {
+		option(rec)
+	}
 
 	for _, option := range options {
 		option(rec)
@@ -113,7 +118,7 @@ func assembleInitObject(t *testing.T, obj string) client.Object {
 	var typ runtime.TypeMeta
 
 	err := yaml.Unmarshal([]byte(obj), &typ)
-	require.NoError(t, err)
+	require.NoErrorf(t, err, "try unmarshal yaml\n%s", obj)
 
 	switch typ.Kind {
 	case "Secret":

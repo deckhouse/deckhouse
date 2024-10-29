@@ -1067,7 +1067,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs code {
-    font-size: 15px;
     font-weight: 500;
     line-height: 22px;
     padding: 2px 4px;
@@ -1085,7 +1084,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-radius: 4px;
     padding: 10px;
     overflow-x: auto;
-    margin: 5px 0 25px 0px;
+    margin: 5px 0 25px 0;
     display: block;
     font-size: 13px;
     line-height: 1.428571429;
@@ -1099,7 +1098,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-size: 100%;
     background: transparent;
     white-space: pre;
-    border-radius: 0px;
+    border-radius: 0;
 }
 
 .docs .details {
@@ -1153,61 +1152,159 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-spacing: 0;
     border: none;
     border-collapse: collapse;
+    font-size: 16px;
 }
 
-.docs table th, .docs table td {
-    padding: 0 10px;
+.docs table th,
+.docs table td {
+    padding: 1em 1.5em;
+    border-bottom: 1px solid #C4CAD4;
+}
+
+.docs table tr:last-child td {
+    border-bottom: none;
 }
 
 .docs table tr.highlight-default {
     background: #dfebff;
 }
 
+.docs table thead {
+  background: $background-blue;
+}
+
 .docs table thead tr th {
     text-align: left;
-    background: #0066FF;
-    color: #fff;
-    font-size: 16px;
-    height: 40px;
-    line-height: 40px;
-    font-weight: 600;
+    color: $color-text-secondary;
+    font-size: 0.8750em;
+    font-weight: 700;
+    line-height: 1.5em;
+    letter-spacing: 0.3px;
     font-style: normal;
     font-stretch: normal;
-    letter-spacing: -0.3px;
-    padding: 0 10px;
 }
 
 .docs table thead tr th:first-child {
-    border-top-left-radius: 10px;
+    border-top-left-radius: 4px;
 }
 
 .docs table thead tr th:last-child {
-    border-top-right-radius: 10px;
+    border-top-right-radius: 4px;
 }
 
 .docs table thead tr th a {
-    color: #fff;
+    color: currentColor;
     text-decoration: underline;
 }
 
 .docs table tbody tr td {
-    padding: 8px 10px;
-    border-bottom: 2px solid #eef2ff;
     text-align: left;
-    font-size: 16px;
-    line-height: 24px;
+    font-size: 0.875em;
+    line-height: 1.5em;
     font-weight: normal;
     font-style: normal;
     font-stretch: normal;
     letter-spacing: -0.3px;
 }
 
-.docs table tbody tr td:last-child {
-    border-right: 2px solid #eef2ff;
-}
+.docs table.versioning-table {
+  table-layout: fixed;
 
-.docs table tbody tr td:first-child {
-    border-left: 2px solid #eef2ff;
+  th, td {
+    word-wrap: break-word;
+  }
+
+  th {
+    background: $background-blue;
+    font-weight: bold;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 0.8125em;
+  }
+
+  tbody tr td {
+    font-size: 0.8125em;
+    text-align: center;
+    vertical-align: top;
+    line-height: 16px;
+
+    &:first-child {
+      text-align: start;
+    }
+  }
+
+  tbody tr td strong {
+    font-size: 1.167em;
+  }
+
+  tbody tr td i {
+    font-size: 0.75em;
+  }
+
+  .header-row {
+    background-color: #e0e0e0;
+    font-weight: bold;
+  }
+
+  .header-row th {
+    &:first-child {
+      text-align: start;
+    }
+
+    &:last-child {
+      border: none;
+      text-align: center;
+    }
+  }
+
+  .sub-header {
+    background-color: #f9f9f9;
+  }
+
+  .sub-header th {
+    position: relative;
+    text-align: center;
+  }
+
+  .sub-header th {
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: block;
+      width: 100%;
+      height: 1px;
+      background: #C4CAD4;
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      display: block;
+      width: 1px;
+      height: 4px;
+      background: #C4CAD4;
+    }
+  }
+
+  .sub-header th {
+    :first-child::before {
+      left: 50%;
+    }
+
+    &:last-child::before {
+      right: 50%;
+      left: auto;
+    }
+
+    &.middle::after {
+      top: -4px;
+      height: 8px;
+    }
+  }
 }
 
 .docs img {
