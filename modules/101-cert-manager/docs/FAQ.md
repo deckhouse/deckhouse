@@ -49,7 +49,7 @@ In this way, an additional `ClusterIssuer` may be required in the following case
 
 To verify domain ownership via LetsEncrypt using the `DNS-01` method, you need to configure the ability to create TXT records in a public DNS.
 
-`сert-manager` has support for mechanisms for creating TXT records in some popular DNS: AzureDNS, Cloudflare, Google Cloud DNS, etc.  
+`cert-manager` has support for mechanisms for creating TXT records in some popular DNS: `AzureDNS`, `Cloudflare`, `Google Cloud DNS`, etc.  
 The full list is available [in the cert-manager documentation](https://cert-manager.io/docs/configuration/acme/dns01/).
 
 The module automatically creates `ClusterIssuer` of supported cloud providers when filling in the module settings related to the cloud used.  
