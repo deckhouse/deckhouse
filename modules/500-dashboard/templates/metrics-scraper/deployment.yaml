@@ -55,6 +55,7 @@ spec:
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
+      # разобраться почему здесь нет kube-rbac-proxy в старом варианте. навесить если возможно
       - name: metrics-scraper
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "metricsScraper") }}
