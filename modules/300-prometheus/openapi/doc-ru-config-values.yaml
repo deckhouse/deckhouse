@@ -9,7 +9,7 @@ properties:
 
       Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 
-      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск Longterm Prometheus будет перезаказан, и все данные удалены.
+      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск Prometheus будет перезаказан, а все данные удалены.
 
       Если указать `false`, будет принудительно использоваться emptyDir.
   longtermStorageClass:
@@ -21,8 +21,6 @@ properties:
       Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
     
       **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск Longterm Prometheus будет перезаказан, и все данные удалены.
-
-      Если указать `false`, будет принудительно использоваться emptyDir.
   longtermRetentionDays:
     description: |
       Сколько дней хранить данные в Longterm Prometheus.
@@ -165,24 +163,30 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   longtermNodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  longtermPodAntiAffinity:
+    type: string
+    description: |
+      Устанавливает конфигурацию podAntiAffinity для Prometheus longterm по отношению к Prometheus main.
+      - `Preferred` — позволяет размещать Prometheus longterm на одном узле с Prometheus main, если нет возможности их разместить на разных узлах.
+      - `Required` — не позволяет размещать Prometheus longterm на одном узле с Prometheus main ни при каких условиях.
   tolerations:
     type: array
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   longtermTolerations:
     type: array
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   mainMaxDiskSizeGigabytes:
     description: |
       Устарел и будет удален. Ни на что не влияет.
