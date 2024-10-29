@@ -1,6 +1,6 @@
 {{- define "metrics_scraper_resources" }}
 cpu: 20m
-memory: 50Mi
+memory: 200Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -24,8 +24,8 @@ spec:
       minAllowed:
         {{- include "metrics_scraper_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 40m
-        memory: 100Mi
+        cpu: 250m
+        memory: 400Mi
 {{- end }}
 ---
 kind: Deployment
@@ -59,6 +59,8 @@ spec:
       - name: metrics-scraper
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "metricsScraper") }}
+        args:
+        - -v=9
         ports:
         - containerPort: 8000
           protocol: TCP
