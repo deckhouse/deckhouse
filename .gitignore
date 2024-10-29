@@ -24,7 +24,6 @@
 __debug_bin*
 venv/
 out/
-.envrc
 
 # local development deckhouse binary
 /deckhouse/deckhouse
