@@ -89,6 +89,7 @@ var stageDependenciesFile = map[string][]string{
 		"**/*",
 	},
 }
+
 type writeSettings struct {
 	Edition           string
 	Prefix            string
@@ -153,7 +154,9 @@ func writeSections(settings writeSettings) {
 		if settings.SaveTo == modulesWithExcludeFileName && hooksPathRegex.Match([]byte(file)) {
 			return
 		}
-		if strings.HasSuffix(file, ".yaml") || strings.HasSuffix(file, ".go") {
+
+		info, err := os.Stat(file)
+		if err == nil && !info.IsDir() {
 			addEntries = append(addEntries, addEntry{
 				Add:               strings.TrimPrefix(file, workDir),
 				To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
