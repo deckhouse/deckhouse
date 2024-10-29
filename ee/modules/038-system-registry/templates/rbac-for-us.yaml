@@ -19,13 +19,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name )) | nindent 2 }}
 rules:
 - apiGroups: [""]
-  resources: ["pods", "services", "endpoints", "secrets"]
+  resources: ["secrets"]
   verbs: ["get", "watch", "list", "delete", "update", "create"]
-- apiGroups: ["apps"]
-  resources: ["daemonsets"]
-  verbs: ["get", "watch", "list"]
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
+  resourceNames: ["embedded-registry-manager-leader"]
   verbs: ["get", "watch", "list", "delete", "update", "create"]
 - apiGroups: [""]
   resources: ["events"]
