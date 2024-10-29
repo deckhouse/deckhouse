@@ -117,8 +117,9 @@ func manageScopeRole(name, level, scope string) string {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				"rbac.deckhouse.io/level": level,
-				"rbac.deckhouse.io/kind":  "manage",
+				"rbac.deckhouse.io/use-role": "admin",
+				"rbac.deckhouse.io/level":    level,
+				"rbac.deckhouse.io/kind":     "manage",
 			},
 		},
 		AggregationRule: &rbacv1.AggregationRule{ClusterRoleSelectors: []metav1.LabelSelector{

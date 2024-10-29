@@ -21,6 +21,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"slices"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -123,19 +124,21 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 func syncBindings(input *go_hook.HookInput) error {
-	expected := make(map[string]bool)
+	var expected []string
 	for _, snap := range input.Snapshots["manageBindings"] {
-		role, namespaces := roleAndNamespacesByBinding(input.Snapshots["manageRoles"], snap.(*filteredManageBinding).RoleName)
+		binding := snap.(*filteredManageBinding)
+		role, namespaces := roleAndNamespacesByBinding(input.Snapshots["manageRoles"], binding.RoleName)
+		useBindingName := fmt.Sprintf("d8:use:binding:%s", binding.Name)
 		for namespace := range namespaces {
-			input.PatchCollector.Create(createBinding(snap.(*filteredManageBinding), role, namespace), object_patch.UpdateIfExists())
-			expected[fmt.Sprintf("d8:use:binding:%s", snap.(*filteredManageBinding).Name)] = true
+			input.PatchCollector.Create(createBinding(binding, role, namespace), object_patch.UpdateIfExists())
+			expected = append(expected, useBindingName)
 		}
 	}
 
 	// delete excess use bindings
 	for _, snap := range input.Snapshots["useBindings"] {
 		existing := snap.(*filteredUseBinding)
-		if _, ok := expected[existing.Name]; !ok {
+		if !slices.Contains(expected, existing.RoleName) {
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
 	}
@@ -169,8 +172,9 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 			}
 			if role.Rule != nil {
 				for _, nestedSnap := range manageRoles {
-					if matchAggregationRule(role.Rule, nestedSnap.(*filteredManageRole).Labels) {
-						if namespace, ok := nestedSnap.(*filteredManageRole).Labels["rbac.deckhouse.io/namespace"]; ok {
+					nested := nestedSnap.(*filteredManageRole)
+					if matchAggregationRule(role.Rule, nested.Labels) {
+						if namespace, ok := nested.Labels["rbac.deckhouse.io/namespace"]; ok {
 							namespaces[namespace] = true
 						}
 					}
