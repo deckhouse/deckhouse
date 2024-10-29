@@ -50,7 +50,7 @@ properties:
         description: |
           Update mode of Deckhouse on the selected [release channel](#parameters-releasechannel).
 
-          - `AutoPatch` – automatic update mode for patch releases.
+          - `AutoPatch` — automatic update mode for patch releases.
 
             To change a minor version (for example, from `v1.65.*` to `v1.66.*`), confirmation is required.
 
