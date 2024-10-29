@@ -18,10 +18,10 @@ package hooks
 
 import (
 	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"slices"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,21 +124,21 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 func syncBindings(input *go_hook.HookInput) error {
-	var expected []string
+	expected := make(map[string]bool)
 	for _, snap := range input.Snapshots["manageBindings"] {
 		binding := snap.(*filteredManageBinding)
 		role, namespaces := roleAndNamespacesByBinding(input.Snapshots["manageRoles"], binding.RoleName)
 		useBindingName := fmt.Sprintf("d8:use:binding:%s", binding.Name)
 		for namespace := range namespaces {
 			input.PatchCollector.Create(createBinding(binding, role, namespace), object_patch.UpdateIfExists())
-			expected = append(expected, useBindingName)
+			expected[useBindingName] = true
 		}
 	}
 
 	// delete excess use bindings
 	for _, snap := range input.Snapshots["useBindings"] {
 		existing := snap.(*filteredUseBinding)
-		if !slices.Contains(expected, existing.RoleName) {
+		if _, ok := expected[existing.RoleName]; !ok {
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
 	}
