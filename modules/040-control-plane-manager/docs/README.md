@@ -83,6 +83,6 @@ By default, in a cluster with Deckhouse, a basic policy is created for logging e
 - committed from the names of ServiceAccounts from the "system" Namespace `kube-system`, `d8-*`;
 - committed with resources in the "system" Namespace `kube-system`, `d8-*`.
 
-A basic policy can be disabled by setting the [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) flag to `false`.
+A basic policy can be disabled by setting the [basicAuditPolicyEnabled](cconfiguration.html#parameters-apiserver-basicauditpolicyenabled) flag to `false`.
 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
