@@ -392,9 +392,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		}
 	}
 
-	err = preflightChecker.PostCloud()
-	if err != nil {
-		return err
+	if metaConfig.ClusterType == config.CloudClusterType {
+		err = preflightChecker.PostCloud()
+		if err != nil {
+			return err
+		}
 	}
 
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
