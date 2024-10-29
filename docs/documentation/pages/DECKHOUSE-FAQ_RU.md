@@ -475,7 +475,7 @@ echo "$MYRESULTSTRING"
 {% endalert %}
 
 {% alert level="info" %}
-О текущем статусе версий на каналах обновлений можно узнать на [releases.deckhouse.io](https://releases.deckhouse.io).
+О текущем статусе версий на каналах обновлений можно узнать на [releases.deckhouse.ru](https://releases.deckhouse.ru).
 {% endalert %}
 
 1. [Скачайте и установите утилиту Deckhouse CLI](deckhouse-cli/).
