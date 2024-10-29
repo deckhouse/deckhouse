@@ -198,17 +198,17 @@
   to: /deckhouse/modules/150-user-authn/hooks/common_test.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/150-user-authn/hooks/custom_logo.go
   to: /deckhouse/modules/150-user-authn/hooks/custom_logo.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/150-user-authn/hooks/custom_logo_test.go
   to: /deckhouse/modules/150-user-authn/hooks/custom_logo_test.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/160-multitenancy-manager
   to: /deckhouse/modules/160-multitenancy-manager
   stageDependencies:
@@ -218,17 +218,17 @@
   to: /deckhouse/modules/300-prometheus/hooks/common_test.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/300-prometheus/hooks/custom_logo.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/381-l2-load-balancer
   to: /deckhouse/modules/381-l2-load-balancer
   stageDependencies:
@@ -278,7 +278,7 @@
   to: /deckhouse/modules/500-okmeter/hooks/update_agent_image.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/fe/modules/500-okmeter/templates/daemonset.yaml
   to: /deckhouse/modules/500-okmeter/templates/daemonset.yaml
   stageDependencies:
