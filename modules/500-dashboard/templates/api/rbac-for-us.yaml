@@ -16,7 +16,7 @@ rules:
 # Allow Dashboard API to get metrics from metrics-scraper.
 - apiGroups: [""]
   resources: ["services/proxy"]
-  resourceNames: ["dashboard-metrics-scraper", "http:dashboard-metrics-scraper"]
+  resourceNames: ["metrics-scraper", "http:metrics-scraper"]
   verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

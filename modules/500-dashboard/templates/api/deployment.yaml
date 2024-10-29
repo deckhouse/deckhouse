@@ -63,7 +63,7 @@ spec:
         - --port=8443
         - --insecure-port=8080
         - --insecure-bind-address=127.0.0.1
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication  }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
         - --auto-generate-certificates
         - --bind-address=0.0.0.0
     {{- else }}
@@ -75,13 +75,13 @@ spec:
             secretKeyRef:
               name: kubernetes-dashboard-csrf
               key: private.key
-        livenessProbe:
-          initialDelaySeconds: 30
-          timeoutSeconds: 30
-          httpGet:
-            path: /config
-            port: 8443
-            scheme: HTTPS
+        # readinessProbe:
+        #   initialDelaySeconds: 30
+        #   timeoutSeconds: 30
+        #   httpGet:
+        #     path: /metrics
+        #     port: 8443
+        #     scheme: HTTPS
         ports:
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
         - containerPort: 8443

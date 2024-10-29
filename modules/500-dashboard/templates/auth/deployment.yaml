@@ -59,13 +59,10 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "auth") }}
         args:
         - --port=8443
-        - --insecure-port=8080
-        - --insecure-bind-address=127.0.0.1
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication  }}
-        - --auto-generate-certificates
-        - --bind-address=0.0.0.0
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
+        - --address=0.0.0.0
     {{- else }}
-        - --bind-address=127.0.0.1
+        - --address=127.0.0.1
     {{- end }}
         env:
         - name: CSRF_KEY

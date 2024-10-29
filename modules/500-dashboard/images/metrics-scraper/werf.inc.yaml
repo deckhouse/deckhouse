@@ -3,7 +3,11 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+# fromImage: common/distroless
+from: {{ .Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+  - apk add --no-cache bash curl wget lsof
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /dashboard-metrics-scraper
@@ -25,6 +29,6 @@ shell:
   - cd /src/modules/metrics-scraper
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go mod download
-  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/metrics-scraper/pkg/environment.Version=`cat /src/version`" -o /dashboard-metrics-scraper .
+  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/metrics-scraper/pkg/environment.Version=v`cat /src/version`" -o /dashboard-metrics-scraper .
   - chown 64535:64535 /dashboard-metrics-scraper
   - chmod 0755 /dashboard-metrics-scraper

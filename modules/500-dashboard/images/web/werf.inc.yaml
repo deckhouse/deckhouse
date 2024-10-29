@@ -3,7 +3,11 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+# fromImage: common/distroless
+from: {{ .Images.BASE_ALPINE }}
+shell:
+  beforeInstall:
+  - apk add --no-cache bash curl wget lsof
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /dashboard-web
@@ -33,7 +37,7 @@ shell:
   - cd /src/modules/web
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - go mod download
-  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/web/pkg/environment.Version=`cat /src/version`" -o /dashboard-web .
+  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/web/pkg/environment.Version=v`cat /src/version`" -o /dashboard-web .
   - chown 64535:64535 /dashboard-web
   - chmod 0755 /dashboard-web
 ---

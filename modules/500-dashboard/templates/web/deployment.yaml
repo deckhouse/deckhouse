@@ -63,19 +63,19 @@ spec:
         - --port=8443
         - --insecure-port=8080
         - --insecure-bind-address=127.0.0.1
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication  }}
+    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
         - --auto-generate-certificates
         - --bind-address=0.0.0.0
     {{- else }}
         - --bind-address=127.0.0.1
     {{- end }}
-        livenessProbe:
-          initialDelaySeconds: 30
-          timeoutSeconds: 30
-          httpGet:
-            path: /config
-            port: 8443
-            scheme: HTTPS
+        # livenessProbe:
+        #   initialDelaySeconds: 30
+        #   timeoutSeconds: 30
+        #   httpGet:
+        #     path: /config
+        #     port: 8443
+        #     scheme: HTTPS
         ports:
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
         - containerPort: 8443
@@ -86,6 +86,9 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "web_resources" . | nindent 12 }}
 {{- end }}
+        # volumeMounts:
+        # - mountPath: /tmp
+        #   name: tmp
     {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -142,6 +145,8 @@ spec:
     {{- end }}
       serviceAccountName: web
       volumes:
+      # - name: tmp
+      #   emptyDir: {}
       - name: kube-rbac-proxy-ca
         configMap:
           defaultMode: 420
