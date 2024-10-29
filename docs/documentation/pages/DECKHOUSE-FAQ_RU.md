@@ -206,7 +206,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 ### Как узнать, какая версия Deckhouse находится на каком канале обновлений?
 
-Информацию о том, какая версия Deckhouse находится на каком канале обновлений, можно получить на <https://releases.deckhouse.io>.
+Информацию о том, какая версия Deckhouse находится на каком канале обновлений, можно получить на <https://releases.deckhouse.ru>.
 
 ### Как работает автоматическое обновление Deckhouse?
 
@@ -475,7 +475,7 @@ echo "$MYRESULTSTRING"
 {% endalert %}
 
 {% alert level="info" %}
-О текущем статусе версий на каналах обновлений можно узнать на [releases.deckhouse.io](https://releases.deckhouse.io).
+О текущем статусе версий на каналах обновлений можно узнать на [releases.deckhouse.ru](https://releases.deckhouse.ru).
 {% endalert %}
 
 1. [Скачайте и установите утилиту Deckhouse CLI](deckhouse-cli/).
