@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2024 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,8 @@ func setupSSHTunnelToProxyAddr(sshCl *ssh.Client, proxyUrl *url.URL) (*frontend.
 	}
 	tunnel := strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
 	tun := sshCl.Tunnel("L", tunnel)
+	fmt.Printf("tun.String(): %s", tun.String())
+	fmt.Printf("tunnel: %s", tunnel)
 	err := tun.Up()
 	if err != nil {
 		return nil, err
