@@ -36,6 +36,8 @@ ceph-csi:
       pull_request: https://github.com/deckhouse/deckhouse/pull/10009
 ci:
   features:
+    - summary: Build other editions only after FE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10348
     - summary: add Kubernetes 1.31 e2e tests.
       pull_request: https://github.com/deckhouse/deckhouse/pull/9731
   fixes:
