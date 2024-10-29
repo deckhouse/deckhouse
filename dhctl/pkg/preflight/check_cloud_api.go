@@ -25,6 +25,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -228,9 +229,11 @@ func getCloudApiConfigFromMetaConfig(metaConfig *config.MetaConfig) (*CloudApiCo
 	if cloudApiURLStr == "" {
 		return nil, fmt.Errorf("cloud API URL is empty for provider: %s", metaConfig.ProviderName)
 	}
+	if !strings.Contains(cloudApiURLStr, "://") {
+		cloudApiURLStr = "https://" + cloudApiURLStr
+	}
 
 	cloudApiURL, err := url.Parse(cloudApiURLStr)
-	ensureUrlHasScheme(cloudApiURL)
 
 	if err != nil {
 		return nil, fmt.Errorf("invalid cloud API URL '%s': %v", cloudApiURLStr, err)
@@ -241,10 +244,4 @@ func getCloudApiConfigFromMetaConfig(metaConfig *config.MetaConfig) (*CloudApiCo
 		Insecure: insecure,
 		CACert:   cacert,
 	}, nil
-}
-
-func ensureUrlHasScheme(u *url.URL) {
-	if u.Scheme == "" {
-		u.Scheme = "https"
-	}
 }

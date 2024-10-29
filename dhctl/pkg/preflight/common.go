@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 )
@@ -48,9 +49,8 @@ func setupSSHTunnelToProxyAddr(sshCl *ssh.Client, proxyUrl *url.URL) (*frontend.
 		}
 	}
 	tunnel := strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
+	log.DebugF("tunnel string: %s", tunnel)
 	tun := sshCl.Tunnel("L", tunnel)
-	fmt.Printf("tun.String(): %s", tun.String())
-	fmt.Printf("tunnel: %s", tunnel)
 	err := tun.Up()
 	if err != nil {
 		return nil, err
