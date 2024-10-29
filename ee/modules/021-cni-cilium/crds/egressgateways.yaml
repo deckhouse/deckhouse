@@ -78,7 +78,7 @@ spec:
                           type: string
                         interfaces:
                           x-doc-d8Revision: ee
-                          description: he list of network interfaces to which the _virtual_ IP will be simulated.
+                          description: The list of network interfaces to which the _virtual_ IP will be simulated.
                           type: array
                           default: []
                           items:
