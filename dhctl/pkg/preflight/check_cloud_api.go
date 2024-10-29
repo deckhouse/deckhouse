@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
@@ -63,6 +64,12 @@ type CloudApiConfig struct {
 }
 
 func (pc *Checker) CheckCloudAPIAccessibility() error {
+
+	if app.PreflightSkipCloudAPIAccessibility {
+		log.InfoLn("Checking  Cloud Api is accessible from first master host was skipped (via skip flag)")
+		return nil
+	}
+
 	log.DebugLn("Checking if Cloud Api is accessible from first master host")
 	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
 	var tun *frontend.Tunnel
@@ -83,9 +90,6 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-
 	if cloudApiConfig == nil {
 		return nil
 	}
@@ -100,6 +104,8 @@ func (pc *Checker) CheckCloudAPIAccessibility() error {
 		return fmt.Errorf(`cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameter 'AllowTcpForwarding' set to 'yes' on control-plane node`, err)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
 	defer tun.Stop()
 
 	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudApiConfig, proxyUrl)
@@ -155,8 +161,8 @@ func buildSSHTunnelHTTPClient(cloudApiConfig *CloudApiConfig) (*http.Client, err
 
 func executeHTTPRequest(ctx context.Context, method string, cloudApiConfig *CloudApiConfig, proxyUrl *url.URL) (*http.Response, error) {
 
-	cloudApiUrl := cloudApiConfig.URL
-	cloudApiUrlString := cloudApiUrl.String()
+	cloudApiUrlString := cloudApiConfig.URL.String()
+
 	var client *http.Client
 
 	req, err := http.NewRequestWithContext(ctx, method, cloudApiUrlString, nil)

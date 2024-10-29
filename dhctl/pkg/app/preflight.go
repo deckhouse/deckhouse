@@ -31,6 +31,7 @@ var (
 	PreflightSkipSudoIsAllowedForUserCheck = false
 	PreflightSkipSystemRequirementsCheck   = false
 	PreflightSkipOneSSHHost                = false
+	PreflightSkipCloudAPIAccessibility     = false
 )
 
 const (
@@ -60,6 +61,7 @@ var (
 		PublicDomainTemplateCheckArgName: &PreflightSkipPublicDomainTemplateCheck,
 		SSHCredentialsCheckArgName:       &PreflightSkipSSHCredentialsCheck,
 		RegistryCredentialsCheckArgName:  &PreflightSkipRegistryCredentials,
+		CloudAPIAccessibilityArgName:     &PreflightSkipCloudAPIAccessibility,
 		ContainerdExistCheckArgName:      &PreflightSkipContainerdExistCheck,
 		PythonChecksArgName:              &PreflightSkipPythonChecks,
 		SudoAllowedCheckArgName:          &PreflightSkipSudoIsAllowedForUserCheck,
@@ -104,6 +106,9 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(RegistryCredentialsCheckArgName, "Skip verifying registry credentials").
 		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_CREDENTIALS")).
 		BoolVar(PreflightSkipOptionsMap[RegistryCredentialsCheckArgName])
+	cmd.Flag(CloudAPIAccessibilityArgName, "Skip verifying Cloud API").
+		Envar(configEnvName("PREFLIGHT_SKIP_CLOUD_API_CHECK")).
+		BoolVar(PreflightSkipOptionsMap[CloudAPIAccessibilityArgName])
 	cmd.Flag(ContainerdExistCheckArgName, "Skip verifying contanerd exist").
 		Envar(configEnvName("PREFLIGHT_SKIP_CONTAINERD_EXIST")).
 		BoolVar(PreflightSkipOptionsMap[ContainerdExistCheckArgName])
