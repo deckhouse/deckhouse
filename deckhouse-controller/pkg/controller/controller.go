@@ -186,17 +186,17 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	})
 	dsContainer := helpers.NewDeckhouseSettingsContainer(nil)
 
-	var preflightCountDown sync.WaitGroup
-
-	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer, metricStorage, &preflightCountDown)
+	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer, metricStorage)
 	if err != nil {
 		return nil, fmt.Errorf("new Deckhouse release controller: %w", err)
 	}
 
-	err = source.NewModuleSourceController(mgr, dc, embeddedDeckhousePolicy, &preflightCountDown)
+	err = source.NewModuleSourceController(mgr, dc, embeddedDeckhousePolicy)
 	if err != nil {
 		return nil, err
 	}
+
+	var preflightCountDown sync.WaitGroup
 
 	err = release.NewModuleReleaseController(mgr, dc, embeddedDeckhousePolicy, mm, metricStorage, &preflightCountDown)
 	if err != nil {

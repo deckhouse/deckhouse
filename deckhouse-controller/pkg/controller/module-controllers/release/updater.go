@@ -40,12 +40,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-func newModuleUpdater(dc dependency.Container, logger logger.Logger, settings *updater.Settings,
+func newModuleUpdater(dc dependency.Container, logger logger.Logger, nConfig updater.NotificationConfig, mode string,
 	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
 ) *updater.Updater[*v1alpha1.ModuleRelease] {
-	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, settings,
+	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, nConfig, mode,
 		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage),
-		newWebhookDataSource(logger), enabledModules)
+		newSettings(), newWebhookDataSource(logger), enabledModules)
 }
 
 func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
@@ -74,7 +74,7 @@ func (s *webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.
 }
 
 func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client, downloadedModulesDir string, symlinksDir string,
-	moduleManager moduleManager, dc dependency.Container, clusterUUID string,
+	moduleManager moduleManager, dc dependency.Container,
 ) *kubeAPI {
 	return &kubeAPI{
 		ctx:                  ctx,
@@ -84,7 +84,6 @@ func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client,
 		symlinksDir:          symlinksDir,
 		moduleManager:        moduleManager,
 		dc:                   dc,
-		clusterUUID:          clusterUUID,
 	}
 }
 
@@ -97,7 +96,6 @@ type kubeAPI struct {
 	symlinksDir          string
 	moduleManager        moduleManager
 	dc                   dependency.Container
-	clusterUUID          string
 }
 
 func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phase string) error {
@@ -151,8 +149,7 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 		}
 	}()
 
-	options := utils.GenerateRegistryOptionsFromModuleSource(&ms, k.clusterUUID)
-	md := downloader.NewModuleDownloader(k.dc, tmpDir, &ms, options)
+	md := downloader.NewModuleDownloader(k.dc, tmpDir, &ms, utils.GenerateRegistryOptionsFromModuleSource(&ms))
 	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
 		return fmt.Errorf("download module: %w", err)
@@ -260,4 +257,14 @@ func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
 
 func (m *metricsUpdater) WaitingManual(name string, _ float64) {
 	m.metricStorage.GaugeSet("d8_module_release_waiting_manual", 1, map[string]string{"name": name})
+}
+
+type settings struct{}
+
+func (s *settings) GetDisruptionApprovalMode() (string, bool) {
+	return "", false
+}
+
+func newSettings() *settings {
+	return &settings{}
 }

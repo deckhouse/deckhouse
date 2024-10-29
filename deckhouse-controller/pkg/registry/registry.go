@@ -375,31 +375,12 @@ func getModuleRegistry(ctx context.Context, moduleSource string) (string, *utils
 		return "", nil, fmt.Errorf("get ModuleSource %s got an error: %w", moduleSource, err)
 	}
 
-	clusterUUID, _ := getClusterUUID(ctx, k8sClient)
-	// TODO: add debug error logging
-
 	rconf := &utils.RegistryConfig{
 		DockerConfig: ms.Spec.Registry.DockerCFG,
 		Scheme:       ms.Spec.Registry.Scheme,
 		CA:           ms.Spec.Registry.CA,
-		UserAgent:    clusterUUID,
+		UserAgent:    "deckhouse-controller/ModuleControllers",
 	}
 
 	return ms.Spec.Registry.Repo, rconf, nil
-}
-
-func getClusterUUID(ctx context.Context, client client.Client) (string, error) {
-	var secret corev1.Secret
-	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
-	err := client.Get(ctx, key, &secret)
-	if err != nil {
-		return "", fmt.Errorf("read clusterUUID from secret %s failed: %w", key, err)
-	}
-
-	clusterUUID, ok := secret.Data["clusterUUID"]
-	if !ok {
-		return "", fmt.Errorf("key \"clusterUUID\" not defined")
-	}
-
-	return string(clusterUUID), nil
 }

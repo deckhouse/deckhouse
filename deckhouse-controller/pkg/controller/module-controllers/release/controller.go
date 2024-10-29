@@ -36,7 +36,6 @@ import (
 	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	openapierrors "github.com/go-openapi/errors"
-	"github.com/gofrs/uuid/v5"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -64,6 +63,7 @@ import (
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
@@ -86,7 +86,6 @@ type moduleReleaseReconciler struct {
 	m             sync.Mutex
 	delayTimer    *time.Timer
 	restartReason string
-	clusterUUID   string
 }
 
 const (
@@ -184,16 +183,14 @@ func (r *moduleReleaseReconciler) restartLoop(ctx context.Context) {
 }
 
 // only ModuleRelease with active finalizer can get here, we have to remove the module on filesystem and remove the finalizer
-func (r *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	var result ctrl.Result
-
+func (r *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (res ctrl.Result, err error) {
 	// deleted release
 	// also cleanup the filesystem
 	modulePath := path.Join(r.downloadedModulesDir, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
 
-	err := os.RemoveAll(modulePath)
+	err = os.RemoveAll(modulePath)
 	if err != nil {
-		return result, fmt.Errorf("remove all in %s: %w", modulePath, err)
+		return res, fmt.Errorf("remove all in %s: %w", modulePath, err)
 	}
 
 	if mr.Status.Phase == v1alpha1.PhaseDeployed {
@@ -201,7 +198,7 @@ func (r *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 		symlinkPath := filepath.Join(r.downloadedModulesDir, "modules", fmt.Sprintf("%d-%s", mr.Spec.Weight, mr.Spec.ModuleName))
 		err := os.RemoveAll(symlinkPath)
 		if err != nil {
-			return result, err
+			return ctrl.Result{}, err
 		}
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
@@ -212,27 +209,25 @@ func (r *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 	}
 
 	if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
-		return result, nil
+		return res, nil
 	}
 
 	controllerutil.RemoveFinalizer(mr, fsReleaseFinalizer)
 	err = r.client.Update(ctx, mr)
 	if err != nil {
-		return result, err
+		return res, err
 	}
 
-	return result, nil
+	return res, nil
 }
 
-func (r *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	var result ctrl.Result
-
+func (r *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (res ctrl.Result, err error) {
 	switch mr.Status.Phase {
 	case "":
 		mr.Status.Phase = v1alpha1.PhasePending
 		mr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		if err := r.client.Status().Update(ctx, mr); err != nil {
-			return result, fmt.Errorf("update status: %w", err)
+			return ctrl.Result{}, fmt.Errorf("update status: %w", err)
 		}
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
@@ -242,11 +237,11 @@ func (r *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 			// update labels
 			addLabels(mr, map[string]string{"status": strings.ToLower(mr.Status.Phase)})
 			if err := r.client.Update(ctx, mr); err != nil {
-				return result, fmt.Errorf("update status: %w", err)
+				return ctrl.Result{}, fmt.Errorf("update status: %w", err)
 			}
 		}
 
-		return result, nil
+		return res, nil
 
 	case v1alpha1.PhaseDeployed:
 		return r.reconcileDeployedRelease(ctx, mr)
@@ -255,7 +250,7 @@ func (r *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 	// if ModulePullOverride is set, don't process pending release, to avoid fs override
 	exists, err := r.isModulePullOverrideExists(ctx, mr.GetModuleSource(), mr.Spec.ModuleName)
 	if err != nil {
-		return result, err
+		return res, err
 	}
 
 	if exists {
@@ -278,16 +273,14 @@ func (r *moduleReleaseReconciler) isModulePullOverrideExists(ctx context.Context
 }
 
 func (r *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	var result ctrl.Result
 	var metaUpdateRequired bool
-
 	// check if RegistrySpecChangedAnnotation annotation is set and processes it
 	if _, set := mr.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
 		// if module is enabled - push runModule task in the main queue
 		r.logger.Infof("Applying new registry settings to the %s module", mr.Spec.ModuleName)
 		err := r.moduleManager.RunModuleWithNewOpenAPISchema(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(r.downloadedModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
 		if err != nil {
-			return result, fmt.Errorf("run module with new OpenAPI schema: %w", err)
+			return ctrl.Result{Requeue: true}, err
 		}
 		// delete annotation and requeue
 		delete(mr.ObjectMeta.Annotations, RegistrySpecChangedAnnotation)
@@ -306,11 +299,7 @@ func (r *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 	}
 
 	if metaUpdateRequired {
-		err := r.client.Update(ctx, mr)
-		if err != nil {
-			return result, fmt.Errorf("update release: %w", err)
-		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true}, r.client.Update(ctx, mr)
 	}
 
 	// at least one release for module source is deployed, add finalizer to prevent module source deletion
@@ -333,7 +322,7 @@ func (r *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 	err = r.client.Get(ctx, types.NamespacedName{Name: mr.GetModuleName()}, mpo)
 	// mpo has been found and mpo version must be used as the source of the documentation
 	if err == nil {
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 
 	// some other error apart from IsNotFound
@@ -365,7 +354,6 @@ func (r *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 }
 
 func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	var result ctrl.Result
 	moduleName := mr.Spec.ModuleName
 
 	r.logger.Debugf("checking requirements of '%s' for module '%s' by extenders", mr.GetName(), mr.GetModuleName())
@@ -393,7 +381,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	nConfig, err := r.parseNotificationConfig(ctx)
 	if err != nil {
-		return result, fmt.Errorf("parse notification config: %w", err)
+		return ctrl.Result{}, fmt.Errorf("parse notification config: %w", err)
 	}
 
 	policy := new(v1alpha1.ModuleUpdatePolicy)
@@ -420,16 +408,16 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 					"module":         mr.GetModuleName(),
 				})
 
-				if err := r.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy %s not found", policyName)); err != nil {
-					return result, fmt.Errorf("update module release status message: %w", err)
+				if e := r.updateModuleReleaseStatusMessage(ctx, mr, fmt.Sprintf("Update policy %s not found", policyName)); e != nil {
+					return ctrl.Result{Requeue: true}, e
 				}
 				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 			}
 		}
 
 		if policy.Spec.Update.Mode == "Ignore" {
-			if err := r.updateModuleReleaseStatusMessage(ctx, mr, disabledByIgnorePolicy); err != nil {
-				return result, fmt.Errorf("update module release status message: %w", err)
+			if e := r.updateModuleReleaseStatusMessage(ctx, mr, disabledByIgnorePolicy); e != nil {
+				return ctrl.Result{Requeue: true}, e
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval * 4}, nil
 		}
@@ -442,8 +430,8 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		}
 		policy, err = r.getReleasePolicy(mr.GetModuleSource(), mr.GetModuleName(), policies.Items)
 		if err != nil {
-			if err := r.updateModuleReleaseStatusMessage(ctx, mr, "Update policy not set. Create a suitable ModuleUpdatePolicy object"); err != nil {
-				return result, fmt.Errorf("update module release status message: %w", err)
+			if e := r.updateModuleReleaseStatusMessage(ctx, mr, "Update policy not set. Create a suitable ModuleUpdatePolicy object"); e != nil {
+				return ctrl.Result{Requeue: true}, e
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
@@ -470,13 +458,8 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		}
 	}
 
-	k8 := newKubeAPI(ctx, r.logger, r.client, r.downloadedModulesDir, r.symlinksDir, r.moduleManager, r.dc, r.clusterUUID)
-	settings := &updater.Settings{
-		NotificationConfig: nConfig,
-		Mode:               updater.ParseUpdateMode(policy.Spec.Update.Mode),
-		Windows:            policy.Spec.Update.Windows,
-	}
-	releaseUpdater := newModuleUpdater(r.dc, r.logger, settings, k8, r.moduleManager.GetEnabledModuleNames(), r.metricStorage)
+	k8 := newKubeAPI(ctx, r.logger, r.client, r.downloadedModulesDir, r.symlinksDir, r.moduleManager, r.dc)
+	releaseUpdater := newModuleUpdater(r.dc, r.logger, nConfig, policy.Spec.Update.Mode, k8, r.moduleManager.GetEnabledModuleNames(), r.metricStorage)
 
 	otherReleases := new(v1alpha1.ModuleReleaseList)
 	err = r.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
@@ -490,7 +473,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	releaseUpdater.SetReleases(pointerReleases)
 
 	if releaseUpdater.ReleasesCount() == 0 {
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 
 	releaseUpdater.PredictNextRelease()
@@ -508,8 +491,8 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			err = enableModule(r.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 			if err != nil {
 				r.logger.Errorf("Module restore failed: %v", err)
-				if err := r.suspendModuleVersionForRelease(ctx, &deployedRelease, err); err != nil {
-					return result, fmt.Errorf("suspend module version for release: %w", err)
+				if e := r.suspendModuleVersionForRelease(ctx, &deployedRelease, err); e != nil {
+					return ctrl.Result{Requeue: true}, e
 				}
 
 				return ctrl.Result{Requeue: true}, err
@@ -518,25 +501,30 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			modulesChangedReason = "one of modules is not enabled"
 		}
 
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 
 	if releaseUpdater.GetPredictedReleaseIndex() == -1 {
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 
 	if releaseUpdater.PredictedReleaseIsPatch() {
 		// patch release does not respect update windows or ManualMode
-		err = releaseUpdater.ApplyPredictedRelease()
+		err = releaseUpdater.ApplyPredictedRelease(nil)
 		if err != nil {
 			return r.wrapApplyReleaseError(err)
 		}
 
 		modulesChangedReason = "a new module release found"
-		return result, nil
+		return ctrl.Result{}, nil
 	}
 
-	err = releaseUpdater.ApplyPredictedRelease()
+	var windows update.Windows
+	if !releaseUpdater.InManualMode() {
+		windows = policy.Spec.Update.Windows
+	}
+
+	err = releaseUpdater.ApplyPredictedRelease(windows)
 	if err != nil {
 		return r.wrapApplyReleaseError(err)
 	}
@@ -555,8 +543,7 @@ func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result,
 		// requeueAfter = defaultCheckInterval
 		// }
 		// r.logger.Infof("%s: retry after %s", err.Error(), requeueAfter)
-		// return ctrl.Result{RequeueAfter: requeueAfter}, nil
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: notReadyErr.RetryDelay()}, nil
 	}
 
 	return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
@@ -609,15 +596,14 @@ func (r *moduleReleaseReconciler) getReleasePolicy(sourceName, moduleName string
 	return &matchedPolicy, nil
 }
 
-func (r *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	var result ctrl.Result
+func (r *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Request) (res ctrl.Result, err error) {
 	// Get the ModuleRelease resource with this name
 	mr := new(v1alpha1.ModuleRelease)
-	err := r.client.Get(ctx, types.NamespacedName{Name: request.Name}, mr)
+	err = r.client.Get(ctx, types.NamespacedName{Name: request.Name}, mr)
 	if err != nil {
 		// The ModuleRelease resource may no longer exist, in which case we stop
 		// processing.
-		return result, client.IgnoreNotFound(err)
+		return res, client.IgnoreNotFound(err)
 	}
 
 	if !mr.DeletionTimestamp.IsZero() {
@@ -744,8 +730,6 @@ func (r *moduleReleaseReconciler) PreflightCheck(ctx context.Context) (err error
 		return nil
 	}
 
-	r.clusterUUID = r.getClusterUUID(ctx)
-
 	// Check if controller's dependencies have been initialized
 	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
 		func(context.Context) (bool, error) {
@@ -765,22 +749,6 @@ func (r *moduleReleaseReconciler) PreflightCheck(ctx context.Context) (err error
 	}
 
 	return r.registerMetrics(ctx)
-}
-
-func (r *moduleReleaseReconciler) getClusterUUID(ctx context.Context) string {
-	var secret corev1.Secret
-	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
-	err := r.client.Get(ctx, key, &secret)
-	if err != nil {
-		r.logger.Warnf("Read clusterUUID from secret %s failed: %v. Generating random uuid", key, err)
-		return uuid.Must(uuid.NewV4()).String()
-	}
-
-	if clusterUUID, ok := secret.Data["clusterUUID"]; ok {
-		return string(clusterUUID)
-	}
-
-	return uuid.Must(uuid.NewV4()).String()
 }
 
 func (r *moduleReleaseReconciler) deleteModulesWithAbsentRelease(ctx context.Context) error {
@@ -1009,8 +977,7 @@ func (r *moduleReleaseReconciler) createModuleSymlink(moduleName, moduleVersion 
 	if err != nil || !info.IsDir() {
 		r.logger.Infof("Downloading module %q from registry", moduleName)
 		// download the module to fs
-		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, r.clusterUUID)
-		md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, moduleSource, options)
+		md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, moduleSource, utils.GenerateRegistryOptionsFromModuleSource(moduleSource))
 		_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
 		if err != nil {
 			return fmt.Errorf("download module %v with version %v failed: %w. Skipping", moduleName, moduleVersion, err)
@@ -1204,12 +1171,11 @@ func createOrUpdateModuleDocumentationCR(
 
 // cleanUpModuleReleases finds and deletes all outdated releases of the module in Suspend, Skipped or Superseded phases, except for <outdatedReleasesKeepCount> most recent ones
 func (r *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	var result ctrl.Result
 	// get related releases
 	var moduleReleasesFromSource v1alpha1.ModuleReleaseList
 	err := r.client.List(ctx, &moduleReleasesFromSource, client.MatchingLabels{"source": mr.GetModuleSource(), "module": mr.GetModuleName()})
 	if err != nil {
-		return result, fmt.Errorf("couldn't list module releases to clean up: %w", err)
+		return ctrl.Result{}, fmt.Errorf("couldn't list module releases to clean up: %w", err)
 	}
 
 	type outdatedRelease struct {
@@ -1242,12 +1208,12 @@ func (r *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr 
 				}
 				err = r.client.Delete(ctx, releaseObj)
 				if err != nil && !apierrors.IsNotFound(err) {
-					return result, fmt.Errorf("couldn't clean up outdated release %q of %s module: %w", releases[i].name, moduleName, err)
+					return ctrl.Result{}, fmt.Errorf("couldn't clean up outdated release %q of %s module: %w", releases[i].name, moduleName, err)
 				}
 				r.logger.Infof("cleaned up outdated release %q of %q module", releases[i].name, moduleName)
 			}
 		}
 	}
 
-	return result, nil
+	return ctrl.Result{}, nil
 }

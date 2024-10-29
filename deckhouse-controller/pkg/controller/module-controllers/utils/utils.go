@@ -19,8 +19,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
@@ -30,12 +28,12 @@ const (
 )
 
 // GenerateRegistryOptionsFromModuleSource fetches settings from ModuleSource and generate registry options from them
-func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource, clusterUUID string) []cr.Option {
+func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource) []cr.Option {
 	rconf := &RegistryConfig{
 		DockerConfig: ms.Spec.Registry.DockerCFG,
 		Scheme:       ms.Spec.Registry.Scheme,
 		CA:           ms.Spec.Registry.CA,
-		UserAgent:    clusterUUID,
+		UserAgent:    "deckhouse-controller/ModuleControllers",
 	}
 
 	return GenerateRegistryOptions(rconf)
@@ -49,16 +47,6 @@ type RegistryConfig struct {
 }
 
 func GenerateRegistryOptions(ri *RegistryConfig) []cr.Option {
-	if ri.UserAgent == "" {
-		if log.IsLevelEnabled(log.DebugLevel) {
-			loggerCopy := *log.StandardLogger()
-			loggerCopy.ReportCaller = true
-			loggerCopy.Debugln("got empty user agent")
-		}
-
-		ri.UserAgent = "deckhouse-controller"
-	}
-
 	opts := []cr.Option{
 		cr.WithAuth(ri.DockerConfig),
 		cr.WithUserAgent(ri.UserAgent),
@@ -79,7 +67,9 @@ type DeckhouseRegistrySecret struct {
 	CA                    string
 }
 
-var ErrCAFieldIsNotFound = errors.New("secret has no ca field")
+var (
+	ErrCAFieldIsNotFound = errors.New("secret has no ca field")
+)
 
 func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySecret, error) {
 	var err error

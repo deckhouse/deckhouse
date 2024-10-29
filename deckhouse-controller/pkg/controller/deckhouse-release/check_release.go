@@ -67,6 +67,10 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Conte
 }
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) error {
+	if r.clusterUUID == "" {
+		r.clusterUUID = r.getClusterUUID(ctx)
+	}
+
 	if r.updateSettings.Get().ReleaseChannel == "" {
 		r.logger.Debug("Release channel does not set.")
 		return nil
@@ -95,8 +99,8 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		rconf := &utils.RegistryConfig{
 			DockerConfig: drs.DockerConfig,
 			Scheme:       drs.Scheme,
-			CA:           drs.CA,
 			UserAgent:    r.clusterUUID,
+			CA:           drs.CA,
 		}
 
 		opts = utils.GenerateRegistryOptions(rconf)

@@ -41,12 +41,12 @@ const (
 )
 
 func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependency.Container,
-	updateSettings *updater.Settings, releaseData updater.DeckhouseReleaseData, metricStorage *metric_storage.MetricStorage,
+	updateSettings *updater.DeckhouseUpdateSettings, releaseData updater.DeckhouseReleaseData, metricStorage *metric_storage.MetricStorage,
 	podIsReady, clusterBootstrapping bool, imagesRegistry string, enabledModules []string,
 ) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
-	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](dc, logger, updateSettings, releaseData,
+	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](dc, logger, updateSettings.NotificationConfig, updateSettings.Mode, releaseData,
 		podIsReady, clusterBootstrapping, NewKubeAPI(client, dc, imagesRegistry),
-		newMetricUpdater(metricStorage), newWebhookDataSource(logger), enabledModules), nil
+		newMetricUpdater(metricStorage), newValueSettings(updateSettings.DisruptionApprovalMode), newWebhookDataSource(logger), enabledModules), nil
 }
 
 func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
@@ -159,4 +159,16 @@ func (api *KubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.Deckh
 		IsUpdatingAnnotation: strconv.FormatBool(data.IsUpdating),
 		NotifiedAnnotation:   strconv.FormatBool(data.Notified),
 	})
+}
+
+func newValueSettings(disruptionApprovalMode string) *ValueSettings {
+	return &ValueSettings{disruptionApprovalMode: disruptionApprovalMode}
+}
+
+type ValueSettings struct {
+	disruptionApprovalMode string
+}
+
+func (v *ValueSettings) GetDisruptionApprovalMode() (string, bool) {
+	return v.disruptionApprovalMode, true
 }

@@ -26,10 +26,8 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/utils/logger"
-	"github.com/gofrs/uuid/v5"
 	cp "github.com/otiai10/copy"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -60,7 +58,6 @@ type modulePullOverrideReconciler struct {
 	moduleManager        moduleManager
 	downloadedModulesDir string
 	symlinksDir          string
-	clusterUUID          string
 }
 
 // NewModulePullOverrideController returns a new sample controller
@@ -113,8 +110,6 @@ func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) (err 
 			c.preflightCountDown.Done()
 		}
 	}()
-	c.clusterUUID = c.getClusterUUID(ctx)
-
 	// Check if controller's dependencies have been initialized
 	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
 		func(context.Context) (bool, error) {
@@ -130,27 +125,10 @@ func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) (err 
 	return nil
 }
 
-func (c *modulePullOverrideReconciler) getClusterUUID(ctx context.Context) string {
-	var secret corev1.Secret
-	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
-	err := c.client.Get(ctx, key, &secret)
-	if err != nil {
-		c.logger.Warnf("Read clusterUUID from secret %s failed: %v. Generating random uuid", key, err)
-		return uuid.Must(uuid.NewV4()).String()
-	}
-
-	if clusterUUID, ok := secret.Data["clusterUUID"]; ok {
-		return string(clusterUUID)
-	}
-
-	return uuid.Must(uuid.NewV4()).String()
-}
-
 func (c *modulePullOverrideReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	var result ctrl.Result
 
 	mpo := new(v1alpha1.ModulePullOverride)
-
 	err := c.client.Get(ctx, types.NamespacedName{Name: request.Name}, mpo)
 	if err != nil {
 		// The ModulePullOverride resource may no longer exist, in which case we stop
@@ -222,8 +200,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		}
 	}()
 
-	options := utils.GenerateRegistryOptionsFromModuleSource(ms, c.clusterUUID)
-	md := downloader.NewModuleDownloader(c.dc, tmpDir, ms, options)
+	md := downloader.NewModuleDownloader(c.dc, tmpDir, ms, utils.GenerateRegistryOptionsFromModuleSource(ms))
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()
@@ -374,7 +351,7 @@ func (c *modulePullOverrideReconciler) restoreAbsentModulesFromOverrides(ctx con
 
 		// mpo's status.weight field isn't set - get it from the module's definition
 		if moduleWeight == 0 {
-			md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, utils.GenerateRegistryOptionsFromModuleSource(ms, c.clusterUUID))
+			md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, utils.GenerateRegistryOptionsFromModuleSource(ms))
 			def, err := md.DownloadModuleDefinitionByVersion(moduleName, moduleImageTag)
 			if err != nil {
 				return fmt.Errorf("couldn't get the %s module definition from repository: %w", moduleName, err)
@@ -458,8 +435,7 @@ func (c *modulePullOverrideReconciler) createModuleSymlink(moduleName, moduleIma
 	if err != nil || !info.IsDir() {
 		// download the module to fs
 		c.logger.Infof("Downloading module %q from registry", moduleName)
-		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, c.clusterUUID)
-		md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, moduleSource, options)
+		md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, moduleSource, utils.GenerateRegistryOptionsFromModuleSource(moduleSource))
 		_, _, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
 		if err != nil {
 			return fmt.Errorf("couldn't get module %q pull override definition: %s", moduleName, err)
