@@ -8,6 +8,6 @@ metadata:
 spec:
   ports:
   - name: https
-    port: 8443
+    port: 8000
   selector:
     app: web

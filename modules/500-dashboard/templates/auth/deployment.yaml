@@ -70,13 +70,13 @@ spec:
             secretKeyRef:
               name: kubernetes-dashboard-csrf
               key: private.key
-        livenessProbe:
-          initialDelaySeconds: 30
-          timeoutSeconds: 30
-          httpGet:
-            path: /config
-            port: 8443
-            scheme: HTTPS
+        # livenessProbe:
+        #   initialDelaySeconds: 30
+        #   timeoutSeconds: 30
+        #   httpGet:
+        #     path: /config
+        #     port: 8443
+        #     scheme: HTTPS
         ports:
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
         - containerPort: 8443
