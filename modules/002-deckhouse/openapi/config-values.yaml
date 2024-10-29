@@ -48,16 +48,22 @@ properties:
         type: string
         default: 'AutoPatch'
         description: |
-          Deckhouse minor version update mode (release change). **Does not affect patch version updates.**
-          - `AutoPatch` – all patch releases are applied automatically. For minor updates  manual confirmation is required.
+          Update mode of Deckhouse on the selected [release channel](#parameters-releasechannel).
 
-            To confirm the update, set the `approved' field to 'true' in the corresponding [custom resource 'DeckhouseRelease'](../../cr.html#deckhouserelease).
-          - `Auto` — all updates are applied automatically.
+          - `AutoPatch` – automatic update mode for patch releases.
 
-            Deckhouse minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
-          - `Manual` — to change a minor version of Deckhouse (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required.
+            To change a minor version (for example, from `v1.65.*` to `v1.66.*`), confirmation is required.
 
-            To confirm the update, edit [custom resource 'DeckhouseRelease'](../../cr.html#deckhouserelease), which corresponds to the version by setting the `approved' field to 'true'.
+          - `Auto` — automatic update mode for all versions.
+
+            A minor version update (for example, from `v1.65.*` to `v1.66.*`) is applied according to the [update windows](#parameters-update-windows), if they are set.
+
+            A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied regardless of the [update windows](#parameters-update-windows) (immediately).
+          - `Manual` — manual update mode for all versions.
+
+            Confirmation is required for updating both minor and patch versions.
+
+          To confirm the version  update, it is necessary to set the `approved` field to `true` in the corresponding resource [DeckhouseRelease](../../cr.html#deckhouserelease).
         enum:
           - 'AutoPatch'
           - 'Auto'
