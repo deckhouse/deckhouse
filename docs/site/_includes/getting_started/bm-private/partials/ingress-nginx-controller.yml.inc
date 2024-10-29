@@ -21,8 +21,6 @@ spec:
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: ""
   tolerations:
-  - effect: NoSchedule
-    key: node-role.kubernetes.io/control-plane
-    operator: Exists
+  - operator: Exists
