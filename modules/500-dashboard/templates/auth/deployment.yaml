@@ -58,7 +58,6 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "auth") }}
         args:
-        - --namespace=d8-{{ .Chart.Name }}
         - --port=8443
         - --insecure-port=8080
         - --insecure-bind-address=127.0.0.1
