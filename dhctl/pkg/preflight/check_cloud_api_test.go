@@ -39,6 +39,16 @@ func TestGetCloudApiURLFromMetaConfig(t *testing.T) {
 			}`,
 			expectedURL: "https://vsphere.example.com/sdk",
 		},
+		{
+			name:         "vSphere provider",
+			providerName: "vsphere",
+			providerConfigJSON: `{
+				"server": "vcenter.bob.com",
+				"username": "vsphereUser",
+				"password": "vspherePass"
+			}`,
+			expectedURL: "https://vcenter.bob.com",
+		},
 	}
 
 	for _, tt := range tests {

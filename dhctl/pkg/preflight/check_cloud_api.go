@@ -230,6 +230,8 @@ func getCloudApiConfigFromMetaConfig(metaConfig *config.MetaConfig) (*CloudApiCo
 	}
 
 	cloudApiURL, err := url.Parse(cloudApiURLStr)
+	ensureUrlHasScheme(cloudApiURL)
+
 	if err != nil {
 		return nil, fmt.Errorf("invalid cloud API URL '%s': %v", cloudApiURLStr, err)
 	}
@@ -239,4 +241,11 @@ func getCloudApiConfigFromMetaConfig(metaConfig *config.MetaConfig) (*CloudApiCo
 		Insecure: insecure,
 		CACert:   cacert,
 	}, nil
+}
+
+func ensureUrlHasScheme(u *url.URL) {
+	if u.Scheme == "" {
+		u.Scheme = "https"
+	}
+	fmt.Printf("port: %v\n", u.Port())
 }
