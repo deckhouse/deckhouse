@@ -102,7 +102,7 @@ func (pc *Checker) Static() error {
 		{
 			fun:            pc.CheckStaticNodeSystemRequirements,
 			successMessage: "that node meets system requirements",
-			skipFlag:       app.RegistryThroughProxyCheckArgName,
+			skipFlag:       app.SystemRequirementsArgName,
 		},
 		{
 			fun:            pc.CheckPythonAndItsModules,

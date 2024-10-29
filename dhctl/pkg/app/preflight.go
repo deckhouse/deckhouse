@@ -18,7 +18,7 @@ import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
 	PreflightSkipAll                       = false
-	PreflightSkipSSHForword                = false
+	PreflightSkipSSHForward                = false
 	PreflightSkipAvailabilityPorts         = false
 	PreflightSkipResolvingLocalhost        = false
 	PreflightSkipDeckhouseVersionCheck     = false
@@ -53,7 +53,7 @@ const (
 
 var (
 	PreflightSkipOptionsMap = map[string]*bool{
-		SSHForwardArgName:                &PreflightSkipSSHForword,
+		SSHForwardArgName:                &PreflightSkipSSHForward,
 		PortsAvailabilityArgName:         &PreflightSkipAvailabilityPorts,
 		ResolvingLocalhostArgName:        &PreflightSkipResolvingLocalhost,
 		DeckhouseVersionCheckArgName:     &PreflightSkipDeckhouseVersionCheck,
