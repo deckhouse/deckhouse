@@ -85,7 +85,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge",
 	"system:serviceaccount:d8-dashboard:api",
 	"system:serviceaccount:d8-dashboard:auth",
-	"system:serviceaccount:d8-dashboard:dashboard",
 	"system:serviceaccount:d8-dashboard:metrics-scraper",
 	"system:serviceaccount:d8-dashboard:web",
 	"system:serviceaccount:d8-descheduler:descheduler",
