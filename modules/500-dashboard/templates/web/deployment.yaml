@@ -60,6 +60,7 @@ spec:
         args:
         - --namespace=d8-{{ .Chart.Name }}
         - --settings-config-map-name=settings
+        - --insecure-bind-address=0.0.0.0
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
