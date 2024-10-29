@@ -100,7 +100,8 @@ func main() {
 	}
 
 	grafanaArgs := []string{
-		"grafana-server",
+		"grafana",
+		"server",
 		fmt.Sprintf("--homepath=%s", gfPathsHome),
 		fmt.Sprintf("--config=%s", gfPathsConfig),
 		"--packaging=docker",
@@ -111,7 +112,7 @@ func main() {
 		fmt.Sprintf("cfg:default.paths.provisioning=%s", gfPathsProvisioning),
 	}
 
-	grafanaBin := "/usr/share/grafana/bin/grafana-server"
+	grafanaBin := "/usr/share/grafana/bin/grafana"
 
 	err = syscall.Exec(grafanaBin, grafanaArgs, os.Environ())
 	if err != nil {
@@ -163,7 +164,8 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 		if strings.Contains(plugin, ";") {
 			part := strings.Split(plugin, ";")
 			cmd := exec.Command(
-				"grafana-cli",
+				"grafana",
+				"cli",
 				"--pluginUrl",
 				part[0],
 				"--pluginsDir",
@@ -179,7 +181,8 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 			continue
 		}
 		cmd := exec.Command(
-			"grafana-cli",
+			"grafana",
+			"cli",
 			"--pluginsDir",
 			gfPathsPlugins,
 			"plugins",
