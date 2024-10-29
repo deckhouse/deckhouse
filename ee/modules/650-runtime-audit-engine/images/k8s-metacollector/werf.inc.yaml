@@ -14,7 +14,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - git clone --depth 1 --branch feature/debug {{ .SOURCE_REPO }}/juev/k8s-metacollector.git /src
+  - git clone --depth 1 --branch feature/debug https://github.com/juev/k8s-metacollector.git /src
   install:
   - cd /src
   - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
