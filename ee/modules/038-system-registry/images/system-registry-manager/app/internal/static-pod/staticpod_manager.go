@@ -66,7 +66,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	var data EmbeddedRegistryConfig
 	// Decode request body to struct EmbeddedRegistryConfig and return error if decoding fails
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		ctrl.Log.Error(err, "Error decoding request body", "component", "static pod manager")
+		ctrl.Log.Info("Error decoding request body", "error", err, "component", "static pod manager")
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -82,7 +82,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 
 	// Validate the request data
 	if err := data.validate(); err != nil {
-		ctrl.Log.Error(err, "Validation error", "component", "static pod manager")
+		ctrl.Log.Info("Request validation error", "error", err, "component", "static pod manager")
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

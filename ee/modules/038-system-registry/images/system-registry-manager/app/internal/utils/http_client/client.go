@@ -32,7 +32,7 @@ type Client struct {
 	userAgent string
 }
 
-func NewDefaulHttpClient() (*Client, error) {
+func NewDefaultHttpClient() (*Client, error) {
 	config := ClientConfig{
 		CAPath:     defaultCaPath,
 		UserAgent:  defaultUserAgent,
