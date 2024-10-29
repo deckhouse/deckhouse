@@ -65,7 +65,6 @@ spec:
       # List of interfaces for Virtual IP
       interfaces:
       - eth1
-      - eth2
 ```
 
 #### EgressGatewayPolicy

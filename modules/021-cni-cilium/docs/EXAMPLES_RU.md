@@ -65,7 +65,6 @@ spec:
       # Список сетевых интерфейсов для _виртуального_ IP.
       interfaces:
       - eth1
-      - eth2
 ```
 
 #### EgressGatewayPolicy
