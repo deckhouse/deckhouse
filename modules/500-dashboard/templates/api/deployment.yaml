@@ -59,7 +59,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "api") }}
         args:
         - --namespace=d8-{{ .Chart.Name }}
-        - --settings-config-map-name=settings
+        - --metrics-scraper-service-name=metrics-scraper
         - --port=8443
         - --insecure-port=8080
         - --insecure-bind-address=127.0.0.1
