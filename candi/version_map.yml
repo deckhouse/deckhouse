@@ -18,7 +18,7 @@ bashible: &bashible
     '15.6':
 k8s:
   '1.26':
-    status: available
+    status: end-of-life
     patch: 15
     bashible: *bashible
     clusterAutoscalerPatch: 2
