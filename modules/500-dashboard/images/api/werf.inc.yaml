@@ -1,7 +1,7 @@
 # #####################################################################
 # Based on https://github.com/kubernetes/dashboard/blob/web/v1.5.2/modules/api/Dockerfile
 # #####################################################################
-{{- $version := "1.5.2" }}
+{{- $version := "1.10.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 # fromImage: common/distroless
