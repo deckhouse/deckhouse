@@ -137,6 +137,8 @@ module "eks" {
     system = {
       name = "${local.cluster_name}-system"
 
+      iam_role_use_name_prefix = false
+
       instance_types = ["m5a.xlarge"]
 
       min_size     = 1
