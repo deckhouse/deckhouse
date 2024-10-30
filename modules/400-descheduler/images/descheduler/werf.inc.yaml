@@ -1,34 +1,42 @@
 {{- $version := "v0.31.0" }}
 ---
-artifact: {{ .ModuleName }}/build-artifact
-from: {{ .Images.BASE_GOLANG_22_ALPINE }}
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
 git:
-  - add: /{{ $.ModulePath }}modules/400-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
+- add: /{{ $.ModulePath }}modules/400-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+
 shell:
-  beforeInstall:
-    - apk add --no-cache git
   install:
-    - mkdir /src
-    - cd /src
-    - git clone {{ $.SOURCE_REPO }}/kubernetes-sigs/descheduler.git .
-    - git checkout {{ $version }}
-    - git apply /patches/*.patch --verbose
-    - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version={{ $version }} -X main.gitCommit=9f7e7fd5bb64989f5188eb42152370602c1c9eda" -o descheduler sigs.k8s.io/descheduler/cmd/descheduler
-    - chown 64535:64535 descheduler
-    - chmod 0700 descheduler
+  - git clone --depth 1 -b {{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/descheduler.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+---
+artifact: {{ .ModuleName }}/build-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X sigs.k8s.io/descheduler/pkg/version.version={{ $version }}" -o /descheduler sigs.k8s.io/descheduler/cmd/descheduler
+  - chown 64535:64535 /descheduler
+  - chmod 0700 /descheduler
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
   - artifact: {{ .ModuleName }}/build-artifact
-    add: /src/descheduler
+    add: /descheduler
     to: /descheduler
     before: setup
 docker:
