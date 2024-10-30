@@ -28,7 +28,7 @@ provider:
 masterNodeGroup:
   replicas: ${MASTERS_COUNT}
   instanceClass:
-    instanceType: m5.xlarge
+    instanceType: m5a.xlarge
     ami: ami-0022e2e80fa74c5d7 # Centos 9
 nodeGroups:
 - name: cloud-permanent
