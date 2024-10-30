@@ -113,6 +113,7 @@ spec:
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
         - name: CLUSTER_DOMAIN
           value: "{{ $.Values.global.discovery.clusterDomain}}"
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz
           protocol: TCP
