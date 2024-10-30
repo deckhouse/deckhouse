@@ -58,36 +58,19 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "auth") }}
         args:
-        - --port=8443
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
-        - --address=0.0.0.0
-    {{- else }}
         - --address=127.0.0.1
-    {{- end }}
         env:
         - name: CSRF_KEY
           valueFrom:
             secretKeyRef:
               name: kubernetes-dashboard-csrf
               key: private.key
-        # livenessProbe:
-        #   initialDelaySeconds: 30
-        #   timeoutSeconds: 30
-        #   httpGet:
-        #     path: /config
-        #     port: 8443
-        #     scheme: HTTPS
-        ports:
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
-        - containerPort: 8443
-    {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "auth_resources" . | nindent 12 }}
 {{- end }}
-    {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -108,7 +91,7 @@ spec:
             excludePaths:
             - /config
             upstreams:
-            - upstream: http://127.0.0.1:8080/
+            - upstream: http://127.0.0.1:8000/
               path: /
               authorization:
                 resourceAttributes:
@@ -145,5 +128,4 @@ spec:
         configMap:
           defaultMode: 420
           name: kube-rbac-proxy-ca.crt
-    {{- end }}
       serviceAccountName: auth
