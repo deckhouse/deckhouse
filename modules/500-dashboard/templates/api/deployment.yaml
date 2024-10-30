@@ -60,28 +60,13 @@ spec:
         args:
         - --namespace=d8-{{ .Chart.Name }}
         - --metrics-scraper-service-name=metrics-scraper
-        - --port=8443
-        - --insecure-port=8080
         - --insecure-bind-address=127.0.0.1
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
-        - --auto-generate-certificates
-        - --bind-address=0.0.0.0
-    {{- else }}
-        - --bind-address=127.0.0.1
-    {{- end }}
         env:
         - name: CSRF_KEY
           valueFrom:
             secretKeyRef:
               name: kubernetes-dashboard-csrf
               key: private.key
-        # readinessProbe:
-        #   initialDelaySeconds: 30
-        #   timeoutSeconds: 30
-        #   httpGet:
-        #     path: /metrics
-        #     port: 8443
-        #     scheme: HTTPS
         ports:
     {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
         - containerPort: 8443
@@ -92,7 +77,6 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "api_resources" . | nindent 12 }}
 {{- end }}
-    {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -113,7 +97,7 @@ spec:
             excludePaths:
             - /config
             upstreams:
-            - upstream: http://127.0.0.1:8080/
+            - upstream: http://127.0.0.1:8000/
               path: /
               authorization:
                 resourceAttributes:
@@ -150,5 +134,4 @@ spec:
         configMap:
           defaultMode: 420
           name: kube-rbac-proxy-ca.crt
-    {{- end }}
       serviceAccountName: api

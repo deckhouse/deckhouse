@@ -59,7 +59,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "web") }}
         args:
         - --namespace=d8-{{ .Chart.Name }}
-        - --settings-config-map-name=settings
+        - --settings-config-map-name=web-settings
         - --insecure-bind-address=127.0.0.1
         resources:
           requests:

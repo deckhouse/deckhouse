@@ -31,7 +31,7 @@ rules:
   # Allow Dashboard to get and update 'kubernetes-dashboard-settings' config map.
 - apiGroups: [""]
   resources: ["configmaps"]
-  resourceNames: ["settings"]
+  resourceNames: ["web-settings"]
   verbs: ["get", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
