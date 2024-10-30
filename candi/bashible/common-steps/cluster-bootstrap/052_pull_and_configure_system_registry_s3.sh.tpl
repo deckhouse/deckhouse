@@ -243,6 +243,21 @@ spec:
     args:
       - serve
       - /config/config.yaml
+    {{- if and (.proxy) (eq .registry.registryMode "Proxy") }}
+    env:
+    - name: HTTP_PROXY
+      value: "${HTTP_PROXY}"
+    - name: http_proxy
+      value: "${HTTP_PROXY}"
+    - name: HTTPS_PROXY
+      value: "${HTTPS_PROXY}"
+    - name: https_proxy
+      value: "${HTTPS_PROXY}"
+    - name: NO_PROXY
+      value: "${NO_PROXY}"
+    - name: no_proxy
+      value: "${NO_PROXY}"
+    {{- end }}
     volumeMounts:
       - mountPath: /config
         name: distribution-config-volume
