@@ -17,27 +17,6 @@ bashible: &bashible
     '15.5':
     '15.6':
 k8s:
-  '1.26':
-    status: end-of-life
-    patch: 15
-    bashible: *bashible
-    clusterAutoscalerPatch: 2
-    ccm:
-      openstack: v1.26.1
-      yandex: v0.26.1
-      aws: v1.26.0
-      vsphere: v1.26.0
-      azure: v1.26.17
-      gcp: ccm/v26.0.4
-    csi:
-      vsphere: v3.0.3
-      openstack: v1.26.1
-      provisioner: v3.4.1
-      attacher: v4.2.0
-      resizer: v1.7.0
-      registrar: v2.7.0
-      snapshotter: v6.3.1
-      livenessprobe: v2.11.0        
   '1.27':
     status: end-of-life
     patch: 16
@@ -120,7 +99,7 @@ k8s:
       snapshotter: v6.3.3
       livenessprobe: v2.12.0
   '1.30':
-    status: preview
+    status: available
     patch: 5
     bashible: *bashible
     clusterAutoscalerPatch: 1
