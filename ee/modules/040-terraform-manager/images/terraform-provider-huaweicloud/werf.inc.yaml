@@ -6,7 +6,7 @@ git:
 import:
   - artifact: terraform-provider-huaweicloud
     add: /terraform-provider-huaweicloud
-    to: /plugins/registry.terraform.io/{{ .TF.huaweycloud.namespace }}/{{ .TF.huaweycloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
+    to: /plugins/registry.terraform.io/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
     before: setup
 ---
 artifact: terraform-provider-huaweicloud
@@ -25,4 +25,3 @@ shell:
     - mv /src/terraform-provider-huaweicloud /terraform-provider-huaweicloud
     - chmod -R 755 /terraform-provider-huaweicloud
     - chown 64535:64535 /terraform-provider-huaweicloud
-

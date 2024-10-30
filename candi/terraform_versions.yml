@@ -77,4 +77,3 @@ huaweicloud:
   artifact: terraform-provider-huaweicloud
   artifactBinary: terraform-provider-huaweicloud
   destinationBinary: terraform-provider-huaweicloud
-

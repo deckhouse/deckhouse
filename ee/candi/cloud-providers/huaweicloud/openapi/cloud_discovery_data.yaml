@@ -1,32 +1,29 @@
-kind: ZvirtCloudProviderDiscoveryData
+kind: HuaweiCloudDiscoveryData
 apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind]
+    required: [apiVersion, kind, layout, podNetworkMode, instances, zones]
     properties:
       apiVersion:
         type: string
         enum: [deckhouse.io/v1]
       kind:
         type: string
-        enum: [ZvirtCloudProviderDiscoveryData]
+        enum: [HuaweiCloudDiscoveryData]
+      layout:
+        type: string
+        enum: [Standard]
+      podNetworkMode:
+        type: string
+        enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
       zones:
         type: array
         items:
           type: string
-      storageDomains:
-        type: array
-        items:
-          type: object
-          required: [name]
-          properties:
-            name:
-              type: string
-              minLength: 1
-            isEnabled:
-              type: boolean
-            isDefault:
-              type: boolean
-        description: List of storage classes.
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+      instances:
+        type: object
