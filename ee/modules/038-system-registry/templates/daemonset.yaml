@@ -135,7 +135,7 @@ spec:
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
         - name: IMAGE_SEAWEEDFS
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
-        - name CLUSTER_DOMAIN
+        - name: CLUSTER_DOMAIN
           value: "{{ $.Values.global.discovery.clusterDomain}}"
         ports:
         - name: http-healthz
