@@ -42,6 +42,13 @@ spec:
       paths:
       - backend:
           service:
+            name: web
+            port:
+              name: https
+        path: /
+        pathType: ImplementationSpecific
+      - backend:
+          service:
             name: auth
             port:
               name: https
