@@ -36,15 +36,23 @@ data:
           priorityThreshold:
             {{- $d.priorityClassThreshold | toYaml | nindent 12 }}
           {{- end }}
-      {{- if dig "strategies" "lowNodeUtilization" false $d }}
+      {{- if dig "strategies" "lowNodeUtilization" "enabled" false $d }}
       - name: "LowNodeUtilization"
         args:
-          {{- $d.strategies.lowNodeUtilization | toYaml | nindent 10 }}
+          {{- $s := unset ($d.strategies.lowNodeUtilization | deepCopy) "enabled" }}
+          {{- $s | toYaml | nindent 10 }}
       {{- end }}
-      {{- if dig "strategies" "highNodeUtilization" false $d }}
+      {{- if dig "strategies" "highNodeUtilization" "enabled" false $d }}
       - name: "HighNodeUtilization"
         args:
-          {{- $d.strategies.highNodeUtilization | toYaml | nindent 10 }}
+          {{- $s := unset ($d.strategies.highNodeUtilization | deepCopy) "enabled" }}
+          {{- $s | toYaml | nindent 10 }}
+      {{- end }}
+      {{- if dig "strategies" "removePodsViolatingNodeAffinity" "enabled" false $d }}
+      - name: "RemovePodsViolatingNodeAffinity"
+        args:
+          {{- $s := unset ($d.strategies.removePodsViolatingNodeAffinity | deepCopy) "enabled" }}
+          {{- $s | toYaml | nindent 10 }}
       {{- end }}
       plugins:
         # DefaultEvictor is enabled for both `filter` and `preEvictionFilter`
@@ -54,14 +62,27 @@ data:
         preEvictionFilter:
           enabled:
           - "DefaultEvictor"
-        {{- if $d.strategies }}
+        {{- if or (dig "strategies" "removePodsViolatingNodeAffinity" "enabled" false $d) (dig "strategies" "removePodsViolatingInterPodAntiAffinity" "enabled" false $d) }}
+        deschedule:
+          enabled:
+          {{- if dig "strategies" "removePodsViolatingNodeAffinity" "enabled" false $d }}
+          - "RemovePodsViolatingNodeAffinity"
+          {{- end }}
+          {{- if dig "strategies" "removePodsViolatingInterPodAntiAffinity" "enabled" false $d }}
+          - "RemovePodsViolatingInterPodAntiAffinity"
+          {{- end }}
+        {{- end }}
+        {{- if or (or (dig "strategies" "highNodeUtilization" "enabled" false $d) (dig "strategies" "lowNodeUtilization" "enabled" false $d)) (dig "strategies" "removeDuplicates" "enabled" false $d) }}
         balance:
           enabled:
-          {{- if dig "strategies" "highNodeUtilization" false $d }}
+          {{- if dig "strategies" "highNodeUtilization" "enabled" false $d }}
           - "HighNodeUtilization"
           {{- end }}
-          {{- if dig "strategies" "lowNodeUtilization" false $d }}
+          {{- if dig "strategies" "lowNodeUtilization" "enabled" false $d }}
           - "LowNodeUtilization"
+          {{- end }}
+          {{- if dig "strategies" "removeDuplicates" "enabled" false $d }}
+          - "RemoveDuplicates"
           {{- end }}
         {{- end }}
     {{- end }}

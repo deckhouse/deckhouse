@@ -51,6 +51,7 @@ internal:
   - name: test1
     strategies:
       lowNodeUtilization:
+        enabled: true
         thresholds:
           cpu: 10
           memory: 20
@@ -63,6 +64,7 @@ internal:
   - name: test2
     strategies:
       lowNodeUtilization:
+        enabled: true
         thresholds:
           cpu: 10
           memory: 20
@@ -73,6 +75,7 @@ internal:
           pods: 50
           gpu: "gpuNode"
       highNodeUtilization:
+        enabled: true
         thresholds:
           cpu: 14
           memory: 23
@@ -101,6 +104,7 @@ internal:
       value: 1000
     strategies:
       highNodeUtilization:
+        enabled: true
         thresholds:
           cpu: 14
           memory: 23
