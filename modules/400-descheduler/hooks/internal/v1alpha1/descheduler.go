@@ -50,17 +50,35 @@ type PriorityClassThreshold struct {
 }
 
 type Strategies struct {
-	LowNodeUtilization  *LowNodeUtilization  `json:"lowNodeUtilization,omitempty" yaml:"lowNodeUtilization,omitempty"`
-	HighNodeUtilization *HighNodeUtilization `json:"highNodeUtilization,omitempty" yaml:"highNodeUtilization,omitempty"`
+	LowNodeUtilization                      *LowNodeUtilization                      `json:"lowNodeUtilization,omitempty" yaml:"lowNodeUtilization,omitempty"`
+	HighNodeUtilization                     *HighNodeUtilization                     `json:"highNodeUtilization,omitempty" yaml:"highNodeUtilization,omitempty"`
+	RemoveDuplicates                        *RemoveDuplicates                        `json:"removeDuplicates,omitempty" yaml:"removeDuplicates,omitempty"`
+	RemovePodsViolatingNodeAffinity         *RemovePodsViolatingNodeAffinity         `json:"removePodsViolatingNodeAffinity,omitempty" yaml:"removePodsViolatingNodeAffinity,omitempty"`
+	RemovePodsViolatingInterPodAntiAffinity *RemovePodsViolatingInterPodAntiAffinity `json:"removePodsViolatingInterPodAntiAffinity" yaml:"removePodsViolatingInterPodAntiAffinity"`
 }
 
 type LowNodeUtilization struct {
+	Enabled          bool                   `json:"enabled" yaml:"enabled"`
 	Thresholds       map[string]interface{} `json:"thresholds" yaml:"thresholds"`
 	TargetThresholds map[string]interface{} `json:"targetThresholds" yaml:"targetThresholds"`
 }
 
 type HighNodeUtilization struct {
+	Enabled    bool                   `json:"enabled" yaml:"enabled"`
 	Thresholds map[string]interface{} `json:"thresholds" yaml:"thresholds"`
+}
+
+type RemoveDuplicates struct {
+	Enabled bool `json:"enabled" yaml:"enabled"`
+}
+
+type RemovePodsViolatingNodeAffinity struct {
+	Enabled          bool     `json:"enabled" yaml:"enabled"`
+	NodeAffinityType []string `json:"nodeAffinityType"`
+}
+
+type RemovePodsViolatingInterPodAntiAffinity struct {
+	Enabled bool `json:"enabled" yaml:"enabled"`
 }
 
 type deschedulerKind struct{}

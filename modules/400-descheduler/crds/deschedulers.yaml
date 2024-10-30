@@ -236,6 +236,9 @@ spec:
                         This approach is chosen in order to maintain consistency with the kube-scheduler, which follows the same design for scheduling pods onto nodes.
                         This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated consumption, due to these components reporting actual usage metrics.
                       properties:
+                        enabled:
+                          type: boolean
+                          default: false
                         thresholds:
                           type: object
                           properties:
@@ -294,6 +297,9 @@ spec:
                         which follows the same design for scheduling pods onto nodes. This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated
                         consumption, due to these components reporting actual usage metrics.
                       properties:
+                        enabled:
+                          type: boolean
+                          default: false
                         thresholds:
                           type: object
                           properties:
@@ -313,10 +319,57 @@ spec:
                               maximal: 100
                               description: Pods count in percents
                           additionalProperties: true
+                    removeDuplicates:
+                      type: object
+                      description: |
+                        This strategy plugin makes sure that there is only one pod associated with a ReplicaSet (RS), ReplicationController (RC), StatefulSet, or Job running on the same node.
+                        If there are more, those duplicate pods are evicted for better spreading of pods in a cluster. This issue could happen if some nodes went down due to whatever reasons,
+                        and pods on them were moved to other nodes leading to more than one pod associated with a RS or RC, for example, running on the same node.
+                        Once the failed nodes are ready again, this strategy could be enabled to evict those duplicate pods.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                    removePodsViolatingNodeAffinity:
+                      type: object
+                      description: |
+                        This strategy makes sure all pods violating node affinity are eventually removed from nodes. Node affinity rules allow a pod to specify requiredDuringSchedulingIgnoredDuringExecution
+                        and/or preferredDuringSchedulingIgnoredDuringExecution.
+                        The requiredDuringSchedulingIgnoredDuringExecution type tells the scheduler to respect node affinity when scheduling the pod but kubelet to ignore in case node changes over time
+                        and no longer respects the affinity. When enabled, the strategy serves as a temporary implementation of requiredDuringSchedulingRequiredDuringExecution and evicts pod for kubelet
+                        that no longer respects node affinity.
+                        For example, there is podA scheduled on nodeA which satisfies the node affinity rule requiredDuringSchedulingIgnoredDuringExecution at the time of scheduling.
+                        Over time nodeA stops to satisfy the rule. When the strategy gets executed and there is another node available that satisfies the node affinity rule, podA gets evicted from nodeA.
+                        The preferredDuringSchedulingIgnoredDuringExecution type tells the scheduler to respect node affinity when scheduling if that's possible.
+                        If not, the pod gets scheduled anyway. It may happen that, over time, the state of the cluster changes and now the pod can be scheduled on a node that actually fits
+                        its preferred node affinity. When enabled, the strategy serves as a temporary implementation of preferredDuringSchedulingPreferredDuringExecution, so the pod will be evicted
+                        if it can be scheduled on a "better" node.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                        nodeAffinityType:
+                          type: array
+                          items:
+                            type: string
+                            enum: ["requiredDuringSchedulingIgnoredDuringExecution", "preferredDuringSchedulingIgnoredDuringExecution"]
+                          default: ["requiredDuringSchedulingIgnoredDuringExecution"]
+                    removePodsViolatingInterPodAntiAffinity:
+                      type: object
+                      description: |
+                        This strategy makes sure that pods violating interpod anti-affinity are removed from nodes. For example, if there is podA on a node and podB and podC (running on the same node)
+                        have anti-affinity rules which prohibit them to run on the same node, then podA will be evicted from the node so that podB and podC could run.
+                        This issue could happen, when the anti-affinity rules for podB and podC are created when they are already running on node.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
                   anyOf:
-                    - required: ["lowNodeUtilization", "highNodeUtilization"]
                     - required: ["lowNodeUtilization"]
                     - required: ["highNodeUtilization"]
+                    - required: ["removeDuplicates"]
+                    - required: ["removePodsViolatingNodeAffinity"]
+                    - required: ["removePodsViolatingInterPodAntiAffinity"]
               required:
                 - strategies
           required:

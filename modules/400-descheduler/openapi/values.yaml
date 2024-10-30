@@ -204,10 +204,36 @@ properties:
                           maximal: 100
                           description: Pods count in percents
                       additionalProperties: true
+                removeDuplicates:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: false
+                removePodsViolatingNodeAffinity:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: false
+                    nodeAffinityType:
+                      type: array
+                      items:
+                        type: string
+                        enum: ["requiredDuringSchedulingIgnoredDuringExecution", "preferredDuringSchedulingIgnoredDuringExecution"]
+                      default: ["requiredDuringSchedulingIgnoredDuringExecution"]
+                removePodsViolatingInterPodAntiAffinity:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: false
               anyOf:
-                - required: [ "lowNodeUtilization", "highNodeUtilization" ]
-                - required: [ "lowNodeUtilization" ]
-                - required: [ "highNodeUtilization" ]
+                - required: ["lowNodeUtilization"]
+                - required: ["highNodeUtilization"]
+                - required: ["removeDuplicates"]
+                - required: ["removePodsViolatingNodeAffinity"]
+                - required: ["removePodsViolatingInterPodAntiAffinity"]
           required:
             - name
             - strategies
