@@ -122,19 +122,19 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 		l2Advertisement := l2AdvertisementSnap.(L2AdvertisementInfo)
 		// Check a namespace
 		if l2Advertisement.Namespace != "d8-metallb" {
-			requirements.SaveValue(metallbConfigurationStatusKey, "nsMismatch")
+			requirements.SaveValue(metallbConfigurationStatusKey, "NSMismatch")
 			return nil
 		}
 
 		// There should only be one matchLabels (not matchExpressions) in nodeSelectors
 		if len(l2Advertisement.NodeSelectors) > 0 {
 			if len(l2Advertisement.NodeSelectors) != 1 {
-				requirements.SaveValue(metallbConfigurationStatusKey, "nodeSelectorsMismatch")
+				requirements.SaveValue(metallbConfigurationStatusKey, "NodeSelectorsMismatch")
 				return nil
 			}
 			nodeSelector := l2Advertisement.NodeSelectors[0]
 			if len(nodeSelector.MatchExpressions) > 0 {
-				requirements.SaveValue(metallbConfigurationStatusKey, "nodeSelectorsMismatch")
+				requirements.SaveValue(metallbConfigurationStatusKey, "NodeSelectorsMismatch")
 				return nil
 			}
 		}
@@ -155,7 +155,7 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 	sort.Strings(ipAddressPollNamesFromL2A) // Only layer2 pools
 	sort.Strings(ipAddressPollNamesFromIAP) // All pools of cluster
 	if !slices.Equal(ipAddressPollNamesFromL2A, ipAddressPollNamesFromIAP) {
-		requirements.SaveValue(metallbConfigurationStatusKey, "addressPollsMismatch")
+		requirements.SaveValue(metallbConfigurationStatusKey, "AddressPoolsMismatch")
 		return nil
 	}
 	requirements.SaveValue(metallbConfigurationStatusKey, "OK")

@@ -22,22 +22,22 @@ func TestKubernetesVersionRequirement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("fail: nsMismatch", func(t *testing.T) {
-		requirements.SaveValue(metallbConfigurationStatusKey, "nsMismatch")
+	t.Run("fail: NSMismatch", func(t *testing.T) {
+		requirements.SaveValue(metallbConfigurationStatusKey, "NSMismatch")
 		ok, err := requirements.CheckRequirement(metallbConfigurationStatusRequirementsKey, "")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
-	t.Run("fail: nodeSelectorsMismatch", func(t *testing.T) {
-		requirements.SaveValue(metallbConfigurationStatusKey, "nodeSelectorsMismatch")
+	t.Run("fail: NodeSelectorsMismatch", func(t *testing.T) {
+		requirements.SaveValue(metallbConfigurationStatusKey, "NodeSelectorsMismatch")
 		ok, err := requirements.CheckRequirement(metallbConfigurationStatusRequirementsKey, "")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
-	t.Run("fail: addressPollsMismatch", func(t *testing.T) {
-		requirements.SaveValue(metallbConfigurationStatusKey, "nodeSelectorsMismatch")
+	t.Run("fail: AddressPoolsMismatch", func(t *testing.T) {
+		requirements.SaveValue(metallbConfigurationStatusKey, "AddressPoolsMismatch")
 		ok, err := requirements.CheckRequirement(metallbConfigurationStatusRequirementsKey, "")
 		assert.False(t, ok)
 		require.Error(t, err)

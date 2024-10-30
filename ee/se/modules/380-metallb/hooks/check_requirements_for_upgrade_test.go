@@ -133,7 +133,7 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 		})
 	})
 
-	Context("Check addressPollsMismatch error", func() {
+	Context("Check AddressPoolsMismatch error", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(l2Advertisement + ipAddressPolls2))
 			f.RunHook()
@@ -144,11 +144,11 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 			configurationStatusRaw, exists := requirements.GetValue(metallbConfigurationStatusKey)
 			Expect(exists).To(BeTrue())
 			configurationStatus := configurationStatusRaw.(string)
-			Expect(configurationStatus).To(Equal("addressPollsMismatch"))
+			Expect(configurationStatus).To(Equal("AddressPoolsMismatch"))
 		})
 	})
 
-	Context("Check nsMismatch error", func() {
+	Context("Check NSMismatch error", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(l2Advertisement2 + l2Advertisement3))
 			f.RunHook()
@@ -159,11 +159,11 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 			configurationStatusRaw, exists := requirements.GetValue(metallbConfigurationStatusKey)
 			Expect(exists).To(BeTrue())
 			configurationStatus := configurationStatusRaw.(string)
-			Expect(configurationStatus).To(Equal("nsMismatch"))
+			Expect(configurationStatus).To(Equal("NSMismatch"))
 		})
 	})
 
-	Context("Check nodeSelectorsMismatch error", func() {
+	Context("Check NodeSelectorsMismatch error", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(l2Advertisement3 + l2Advertisement4))
 			f.RunHook()
@@ -174,7 +174,7 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 			configurationStatusRaw, exists := requirements.GetValue(metallbConfigurationStatusKey)
 			Expect(exists).To(BeTrue())
 			configurationStatus := configurationStatusRaw.(string)
-			Expect(configurationStatus).To(Equal("nodeSelectorsMismatch"))
+			Expect(configurationStatus).To(Equal("NodeSelectorsMismatch"))
 		})
 	})
 })
