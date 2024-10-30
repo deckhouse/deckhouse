@@ -128,6 +128,7 @@ spec:
       proxyMetadata:
         CLOUD_PLATFORM: {{ $cloudPlatform }}
         ISTIO_META_DNS_CAPTURE: "true"
+        ISTIO_META_DNS_AUTO_ALLOCATE: "true"
         PROXY_CONFIG_XDS_AGENT: "true"
         ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.proxyConfig.idleTimeout }}
       holdApplicationUntilProxyStarts: {{ $.Values.istio.proxyConfig.holdApplicationUntilProxyStarts }}
