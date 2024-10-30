@@ -25,6 +25,10 @@ spec:
     args:
       - serve
       - /config/config.yaml
+    ports:
+      - name: emb-reg-dist
+        containerPort: 5001
+        hostPort: 5001
     volumeMounts:
       - mountPath: /data
         name: distribution-data-volume

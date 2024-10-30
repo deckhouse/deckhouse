@@ -16,11 +16,11 @@ spec:
   ports:
   - name: http-healthz
     protocol: TCP
-    targetPort: 8097
+    targetPort: http-healthz
     port: 8097
   - name: https-api
     protocol: TCP
-    targetPort: 4577
+    targetPort: https-api
     port: 4577
   selector:
     app: system-registry-manager
@@ -36,10 +36,10 @@ spec:
   selector:
     component: system-registry
   ports:
-    - protocol: TCP
+    - name: embedded-registry
       port: 5001
-      targetPort: 5001
-
+      protocol: TCP
+      targetPort: emb-reg-dist
 
 ##### For specific mode
 {{- end }}
