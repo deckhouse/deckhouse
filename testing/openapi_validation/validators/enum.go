@@ -195,6 +195,10 @@ var (
 			// ignore enum values
 			"properties.addressPools.items.properties.protocol",
 		},
+		"modules/400-descheduler/openapi/values.yaml": {
+			// ignore enum values
+			"properties.internal.properties.deschedulers.items.properties.strategies.properties.removePodsViolatingNodeAffinity.properties.nodeAffinityType",
+		},
 		"ee/modules/380-metallb/openapi/config-values.yaml": {
 			// ignore enum values
 			"properties.addressPools.items.properties.protocol",
