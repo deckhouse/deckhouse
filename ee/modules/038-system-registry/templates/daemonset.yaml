@@ -44,6 +44,7 @@ spec:
         cpu: 10m
         memory: 10Mi
     {{- end }}
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 
 ---
@@ -78,7 +79,7 @@ spec:
       containers:
       - name: system-registry-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "SYS_CHROOT")) | nindent 8 }}
-        {{- if $.Values.systemRegistry.imagesOverride.registryManager  }}
+        {{- if and (hasKey $.Values.systemRegistry "imagesOverride") (hasKey $.Values.systemRegistry.imagesOverride "registryManager") (ne $.Values.systemRegistry.imagesOverride.registryManager "") }}
         image: {{ $.Values.systemRegistry.imagesOverride.registryManager }}
         imagePullPolicy: Always
         {{- else }}
@@ -164,6 +165,12 @@ spec:
                   resource: daemonset
                   subresource: api
                   name: system-registry-manager
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
         ports:
         - name: https-api
           protocol: TCP
