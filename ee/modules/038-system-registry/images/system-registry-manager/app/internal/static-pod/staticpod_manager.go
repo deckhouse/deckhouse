@@ -91,20 +91,18 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 
 	anyFileChanged := false
 
-	// If PKI is provided, save PKI files
-	if data.Pki != nil {
-		changed, err := data.Pki.savePkiFiles("/etc/kubernetes/system-registry/pki", &data.ConfigHashes)
-		if err != nil {
-			ctrl.Log.Error(err, "Error saving PKI files", "component", "static pod manager")
-			http.Error(w, "Error saving PKI files", http.StatusInternalServerError)
-			return
-		}
-		anyFileChanged = anyFileChanged || changed
+	// Save the PKI files
+	changed, err := data.Pki.savePkiFiles("/etc/kubernetes/system-registry/pki", &data.ConfigHashes)
+	if err != nil {
+		ctrl.Log.Error(err, "Error saving PKI files", "component", "static pod manager")
+		http.Error(w, "Error saving PKI files", http.StatusInternalServerError)
+		return
 	}
+	anyFileChanged = anyFileChanged || changed
 
 	// Process the templates with the given data and create the static pod and configuration files
 
-	changed, err := data.processTemplate(authTemplatePath, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
+	changed, err = data.processTemplate(authTemplatePath, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
 	if err != nil {
 		ctrl.Log.Error(err, "Error processing auth template", "component", "static pod manager")
 		http.Error(w, "Error processing auth template", http.StatusInternalServerError)

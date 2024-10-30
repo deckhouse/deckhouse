@@ -18,7 +18,8 @@ type EmbeddedRegistryConfig struct {
 	Registry     RegistryDetails
 	Images       Images
 	ConfigHashes ConfigHashes
-	Pki          *Pki
+	Pki          Pki
+	Proxy        *Proxy
 }
 
 // Pki holds the configuration for the PKI
@@ -68,6 +69,12 @@ type UpstreamRegistry struct {
 type Images struct {
 	DockerDistribution string
 	DockerAuth         string
+}
+
+type Proxy struct {
+	HttpProxy  string
+	HttpsProxy string
+	NoProxy    string
 }
 
 // processTemplate processes the given template file and saves the rendered result to the specified path
@@ -223,22 +230,33 @@ func (config *EmbeddedRegistryConfig) validate() error {
 		missingFields = append(missingFields, "Images.DockerAuth")
 	}
 
-	// Validate PKI if present
-	if config.Pki != nil {
-		if config.Pki.CaCert == "" {
-			missingFields = append(missingFields, "Pki.CaCert")
+	// Validate node PKI
+	if config.Pki.CaCert == "" {
+		missingFields = append(missingFields, "Pki.CaCert")
+	}
+	if config.Pki.AuthCert == "" {
+		missingFields = append(missingFields, "Pki.AuthCert")
+	}
+	if config.Pki.AuthKey == "" {
+		missingFields = append(missingFields, "Pki.AuthKey")
+	}
+	if config.Pki.DistributionCert == "" {
+		missingFields = append(missingFields, "Pki.DistributionCert")
+	}
+	if config.Pki.DistributionKey == "" {
+		missingFields = append(missingFields, "Pki.DistributionKey")
+	}
+
+	// Validate proxy if present
+	if config.Proxy != nil {
+		if config.Proxy.HttpProxy == "" {
+			missingFields = append(missingFields, "Proxy.HttpProxy")
 		}
-		if config.Pki.AuthCert == "" {
-			missingFields = append(missingFields, "Pki.AuthCert")
+		if config.Proxy.HttpsProxy == "" {
+			missingFields = append(missingFields, "Proxy.HttpsProxy")
 		}
-		if config.Pki.AuthKey == "" {
-			missingFields = append(missingFields, "Pki.AuthKey")
-		}
-		if config.Pki.DistributionCert == "" {
-			missingFields = append(missingFields, "Pki.DistributionCert")
-		}
-		if config.Pki.DistributionKey == "" {
-			missingFields = append(missingFields, "Pki.DistributionKey")
+		if config.Proxy.NoProxy == "" {
+			missingFields = append(missingFields, "Proxy.NoProxy")
 		}
 	}
 

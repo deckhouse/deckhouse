@@ -25,6 +25,21 @@ spec:
     args:
       - serve
       - /config/config.yaml
+{{- if .Proxy }}
+    env:
+      - name: HTTP_PROXY
+        value: {{ .Proxy.HttpProxy }}
+      - name: http_proxy
+        value: {{ .Proxy.HttpProxy }}
+      - name: HTTPS_PROXY
+        value: {{ .Proxy.HttpsProxy }}
+      - name: https_proxy
+        value: {{ .Proxy.HttpsProxy }}
+      - name: NO_PROXY
+        value: {{ .Proxy.NoProxy }}
+      - name: no_proxy
+        value: {{ .Proxy.NoProxy }}
+{{- end }}
     ports:
       - name: emb-reg-dist
         containerPort: 5001
