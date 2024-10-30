@@ -122,9 +122,9 @@ func (s *Service) check(
 	app.CacheDir = s.cacheDir
 	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
+	log.InfoF("Task is running by DHCTL Server pod/%s (DEV BRANCH v1)\n", s.podName)
 	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
+		log.InfoF("Task done by DHCTL Server pod/%s (DEV BRANCH v1)\n", s.podName)
 	}()
 
 	var metaConfig *config.MetaConfig
