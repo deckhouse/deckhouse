@@ -22,6 +22,7 @@ positive:
                 kubernetes.io/metadata.name: test
             strategies:
               highNodeUtilization:
+                enabled: true
                 thresholds:
                   cpu: 14
                   memory: 23
@@ -29,6 +30,7 @@ positive:
           - name: test2
             strategies:
               lowNodeUtilization:
+                enabled: true
                 thresholds:
                   cpu: 10
                   memory: 20

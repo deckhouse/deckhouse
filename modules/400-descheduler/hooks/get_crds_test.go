@@ -33,6 +33,7 @@ metadata:
 spec:
   strategies:
     lowNodeUtilization:
+      enabled: true
       thresholds:
         cpu: 10
         memory: 20
@@ -81,6 +82,7 @@ spec:
       values: ["test1", "test2"]
   strategies:
     highNodeUtilization:
+      enabled: true
       thresholds:
         cpu: 14
         memory: 23
@@ -170,6 +172,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 - name: test
   strategies:
     lowNodeUtilization:
+      enabled: true
       targetThresholds:
         cpu: 40
         gpu: gpuNode
@@ -196,6 +199,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 - name: test
   strategies:
     lowNodeUtilization:
+      enabled: true
       targetThresholds:
         cpu: 40
         gpu: gpuNode
@@ -208,11 +212,13 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 - name: test2
   strategies:
     highNodeUtilization:
+      enabled: false
       thresholds:
         cpu: 14
         memory: 23
         pods: 3
     lowNodeUtilization:
+      enabled: false
       targetThresholds:
         cpu: 40
         gpu: gpuNode
@@ -240,6 +246,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
   name: test3
   strategies:
     highNodeUtilization:
+      enabled: true
       thresholds:
         cpu: 14
         memory: 23
@@ -262,6 +269,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
   name: test4
   strategies:
     highNodeUtilization:
+      enabled: false
       thresholds:
         cpu: 14
         memory: 23
@@ -298,6 +306,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
       kubernetes.io/metadata.name: test
   strategies:
     highNodeUtilization:
+      enabled: false
       thresholds:
         cpu: 14
         memory: 23

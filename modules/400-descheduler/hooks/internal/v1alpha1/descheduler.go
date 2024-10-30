@@ -54,7 +54,7 @@ type Strategies struct {
 	HighNodeUtilization                     *HighNodeUtilization                     `json:"highNodeUtilization,omitempty" yaml:"highNodeUtilization,omitempty"`
 	RemoveDuplicates                        *RemoveDuplicates                        `json:"removeDuplicates,omitempty" yaml:"removeDuplicates,omitempty"`
 	RemovePodsViolatingNodeAffinity         *RemovePodsViolatingNodeAffinity         `json:"removePodsViolatingNodeAffinity,omitempty" yaml:"removePodsViolatingNodeAffinity,omitempty"`
-	RemovePodsViolatingInterPodAntiAffinity *RemovePodsViolatingInterPodAntiAffinity `json:"removePodsViolatingInterPodAntiAffinity" yaml:"removePodsViolatingInterPodAntiAffinity"`
+	RemovePodsViolatingInterPodAntiAffinity *RemovePodsViolatingInterPodAntiAffinity `json:"removePodsViolatingInterPodAntiAffinity,omitempty" yaml:"removePodsViolatingInterPodAntiAffinity,omitempty"`
 }
 
 type LowNodeUtilization struct {

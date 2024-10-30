@@ -144,6 +144,9 @@ properties:
                 lowNodeUtilization:
                   type: object
                   properties:
+                    enabled:
+                      type: boolean
+                      default: false
                     thresholds:
                       type: object
                       properties:
@@ -185,6 +188,9 @@ properties:
                 highNodeUtilization:
                   type: object
                   properties:
+                    enabled:
+                      type: boolean
+                      default: false
                     thresholds:
                       type: object
                       properties:
