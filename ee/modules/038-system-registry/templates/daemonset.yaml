@@ -13,7 +13,6 @@ memory: 10Mi
 {{- $_ := set $images "dockerDistribution" $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
 {{- $_ := set $images "seaweedfs" $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
 
-
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -68,9 +67,6 @@ spec:
       labels:
         app: system-registry-manager
       annotations:
-        {{- range $configFilesInfo.secrets }}
-        {{ .annotationNameForCheckSum }}: {{ include .templateName $ | sha256sum }}
-        {{- end }}
         checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
@@ -92,16 +88,8 @@ spec:
           - start
           - --config=/config/config.yaml
         volumeMounts:
-        {{- range $configFilesInfo.files }}
-        - name: configs
-          mountPath: {{ .filePath }}
-          subPath: {{ .templateName }}
-          readOnly: true
-        {{- end }}
         - mountPath: /etc/kubernetes
           name: etc-kubernetes
-        - mountPath: /root/.kube/
-          name: root-kube
         - mountPath: /tmp
           name: tmp
         env:
@@ -193,8 +181,6 @@ spec:
             {{- include "image_holder_resources" $ | nindent 12 }}
   {{- end }}
 {{- end }}
-      # hostNetwork: true
-      # dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical
       volumes:
       - name: kube-rbac-proxy-ca
