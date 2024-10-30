@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	//_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"embeded-registry-manager/internal/controllers"
@@ -140,23 +139,8 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 func loadKubeConfig() (*rest.Config, error) {
 	// Try to load in-cluster configuration
 	cfg, err := rest.InClusterConfig()
-	/*	if err != nil {
-			// If not in cluster, try to load kubeconfig from home directory
-			cfg, err = clientcmd.BuildConfigFromFlags("", filepath.Join(homeDir(), ".kube", "config"))
-		}
-	*/
 	return cfg, err
 }
-
-/*
-// homeDir returns the home directory of the current user
-func homeDir() string {
-	if h := os.Getenv("HOME"); h != "" {
-		return h
-	}
-	return os.Getenv("USERPROFILE")
-}
-*/
 
 // handleShutdown listens for system termination signals and cancels the context for graceful shutdown
 func handleShutdown(cancel context.CancelFunc) {
