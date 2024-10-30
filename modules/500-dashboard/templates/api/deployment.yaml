@@ -145,10 +145,10 @@ spec:
         volumeMounts:
         - name: kube-rbac-proxy-ca
           mountPath: /etc/kube-rbac-proxy
-    {{- end }}
-      serviceAccountName: api
       volumes:
       - name: kube-rbac-proxy-ca
         configMap:
           defaultMode: 420
           name: kube-rbac-proxy-ca.crt
+    {{- end }}
+      serviceAccountName: api
