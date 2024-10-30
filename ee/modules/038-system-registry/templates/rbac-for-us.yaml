@@ -1,9 +1,3 @@
-##### For specific mode
-{{- if $.Values.systemRegistry.mode }}
-{{- if not (eq $.Values.systemRegistry.mode "Direct")  }}
-#####
-
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -86,8 +80,3 @@ subjects:
   - kind: ServiceAccount
     name: {{ .Chart.Name }}
     namespace: d8-system
-
-##### For specific mode
-{{- end }}
-{{- end }}
-#####

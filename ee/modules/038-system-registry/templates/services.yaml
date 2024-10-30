@@ -1,9 +1,3 @@
-##### For specific mode
-{{- if $.Values.systemRegistry.mode }}
-{{- if not (eq $.Values.systemRegistry.mode "Direct")  }}
-#####
-
----
 apiVersion: v1
 kind: Service
 metadata:
@@ -40,8 +34,3 @@ spec:
       port: 5001
       protocol: TCP
       targetPort: emb-reg-dist
-
-##### For specific mode
-{{- end }}
-{{- end }}
-#####

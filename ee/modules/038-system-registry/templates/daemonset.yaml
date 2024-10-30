@@ -8,13 +8,6 @@ cpu: 10m
 memory: 10Mi
 {{- end }}
 
-##### For specific mode
-{{- if $.Values.systemRegistry.mode }}
-{{- if not (eq $.Values.systemRegistry.mode "Direct")  }}
-#####
-
-{{- $configFilesInfo := (include "config-files-info" $ ) | fromYaml }}
-
 {{- $images := dict }}
 {{- $_ := set $images "dockerAuth" $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
 {{- $_ := set $images "dockerDistribution" $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
@@ -54,11 +47,6 @@ spec:
     {{- end }}
 {{- end }}
 
-
-#########################
-#       For test        #
-#########################
-{{- if $.Values.systemRegistry.enableRegistryManager  }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -220,19 +208,5 @@ spec:
         hostPath:
           path: /etc/kubernetes/
           type: DirectoryOrCreate
-      - name: root-kube
-        hostPath:
-          path: /root/.kube/
-          type: DirectoryOrCreate
       - name: tmp
         emptyDir: {}
-
-#########################
-#       For test        #
-#########################
-{{- end  }}
-
-##### For specific mode
-{{- end }}
-{{- end }}
-#####
