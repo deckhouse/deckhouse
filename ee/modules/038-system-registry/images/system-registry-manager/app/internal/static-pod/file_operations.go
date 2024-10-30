@@ -130,9 +130,7 @@ func readTemplate(path string) (string, error) {
 // RenderTemplate renders the provided template content with the given data
 func renderTemplate(templateContent string, data interface{}) (string, error) {
 	funcMap := template.FuncMap{
-		"quote":      func(s string) string { return strconv.Quote(s) },
-		"trimSuffix": strings.TrimSuffix,
-		"trimPrefix": strings.TrimPrefix,
+		"quote": func(s string) string { return strconv.Quote(s) },
 	}
 
 	tmpl, err := template.New("template").Funcs(funcMap).Parse(templateContent)
