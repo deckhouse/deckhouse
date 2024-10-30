@@ -47,6 +47,28 @@ spec:
                 signOutURL:
                   description: |
                     Передайте URL приложения, запросы с которого будут проксированы на URL выхода у `dex-authenticator`.
+                addirionalApplications:
+                  description: |
+                    Список дополнительных приложений (ingress ресурсов) для которых пользовательский запрос будет перенаправлен для авторизации в Dex
+                  items:
+                    properties:
+                      domainName:
+                        description: |
+                          Внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
+
+                          **Не должен** содержать HTTP-схему.
+                      ingressSecretName:
+                        description: |
+                          Имя Secret'а с TLS-сертификатом (от домена `domainName`), который используется в Ingress-объекте приложения. Secret должен обязательно находиться в том же namespace, что и DexAuthenticator.
+                      ingressClassName:
+                        description: |
+                          Название Ingress-класса, которое будет использоваться в Ingress-объекте (должно совпадать с названием Ingress-класса для `applicationDomain` и `domainName`).
+                      signOutURL:
+                        description: |
+                          Передайте URL приложения, запросы с которого будут проксированы на URL выхода у `dex-authenticator`.
+                      whitelistSourceRanges:
+                        description: |
+                          Список адресов в формате CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
                 nodeSelector:
                   description: |
                     Определяет `nodeSelector` для подов `dex-authenticator`.
@@ -117,12 +139,6 @@ spec:
                     Внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
 
                     **Не должен** содержать HTTP-схему.
-                ingressSecretName:
-                  description: |
-                    Имя Secret'а с TLS-сертификатом (от домена `applicationDomain`), который используется в Ingress-объекте приложения. Secret должен обязательно находиться в том же namespace, что и DexAuthenticator.
-                ingressClassName:
-                  description: |
-                    Название Ingress-класса, которое будет использоваться в Ingress-объекте (должно совпадать с названием Ingress-класса для `applicationDomain`).
                 sendAuthorizationHeader:
                   description: |
                     Флаг, который отвечает за отправку конечному приложению заголовка `Authorization: Bearer`.
@@ -139,12 +155,28 @@ spec:
 
                     Например, в случае если у пользователя более 50 групп, но приложению Grafana мы хотим передать только определенные 5 групп.
                   x-doc-default: Разрешены все группы.
-                whitelistSourceRanges:
+                applications:
                   description: |
-                    Список адресов в формате CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
-                signOutURL:
-                  description: |
-                    Передайте URL приложения, запросы с которого будут проксированы на URL выхода у `dex-authenticator`.
+                    Список приложений (ingress ресурсов) для которых пользовательский запрос будет перенаправлен для авторизации в Dex
+                  items:
+                    properties:
+                      domainName:
+                        description: |
+                          Внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
+
+                          **Не должен** содержать HTTP-схему.
+                      ingressSecretName:
+                        description: |
+                          Имя Secret'а с TLS-сертификатом (от домена `applicationDomain`), который используется в Ingress-объекте приложения. Secret должен обязательно находиться в том же namespace, что и DexAuthenticator.
+                      ingressClassName:
+                        description: |
+                          Название Ingress-класса, которое будет использоваться в Ingress-объекте (должно совпадать с названием Ingress-класса для `applicationDomain`).
+                      signOutURL:
+                        description: |
+                          Передайте URL приложения, запросы с которого будут проксированы на URL выхода у `dex-authenticator`.
+                      whitelistSourceRanges:
+                        description: |
+                          Список адресов в формате CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
                 nodeSelector:
                   description: |
                     Определяет `nodeSelector` для подов `dex-authenticator`.
