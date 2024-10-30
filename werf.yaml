@@ -324,8 +324,10 @@ shell:
 
 ---
 artifact: golangci-lint-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 shell:
+  beforeInstall:
+  - apk add --no-cache git
   install:
   # Use v1.60.1 - https://github.com/golangci/golangci-lint/issues/4837
   - export GOPROXY={{ .GOPROXY }}
