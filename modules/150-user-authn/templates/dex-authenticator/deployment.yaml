@@ -126,9 +126,7 @@ spec:
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
         - --cookie-secure=false
     {{- end }}
-    {{- range $app := $crd.spec.applications }}
-        - --redirect-url=https://{{ $app.domainName }}
-    {{- end }}
+        - --redirect-url=/dex-authenticator/callback
         - --oidc-issuer-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
         # Skip oidc issuer validation and discovery to avoid CrashLoopBackoffs
         - --skip-oidc-discovery
