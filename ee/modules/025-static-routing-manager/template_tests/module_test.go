@@ -48,6 +48,8 @@ internal:
       routes:
         - destination: 0.0.0.0/0
           gateway: 192.168.199.1
+        - destination: 192.168.100.0/24
+          dev: eth0
 `
 	desiredNRTSpecA = `
 ipRoutingTableID: 100500
@@ -55,6 +57,8 @@ nodeName: sandbox-worker-02334ee2-7694f-mt9rm
 routes:
   - destination: 0.0.0.0/0
     gateway: 192.168.199.1
+  - destination: 192.168.100.0/24
+    dev: eth0
 `
 	desiredNIRSSpecA = `
 nodeName: sandbox-worker-02334ee2-7694f-mt9rm
@@ -112,6 +116,8 @@ internal:
           gateway: 192.168.199.1
         - destination: 192.168.0.0/24
           gateway: 192.168.199.1
+        - destination: 192.168.100.0/24
+          dev: eth0
 `
 	desiredNRTSpecB = `
 ipRoutingTableID: 100500
@@ -121,6 +127,8 @@ routes:
     gateway: 192.168.199.1
   - destination: 192.168.0.0/24
     gateway: 192.168.199.1
+  - destination: 192.168.100.0/24
+    dev: eth0
 `
 	desiredNIRSSpecB = `
 nodeName: sandbox-worker-02334ee2-7694f-mt9rm
