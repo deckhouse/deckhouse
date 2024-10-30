@@ -70,4 +70,3 @@ shell:
   install:
   - cd /src
   - git clone --depth 1 -b web/v{{ $version }} {{ .SOURCE_REPO }}/kubernetes/dashboard .
-  
