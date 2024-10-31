@@ -62,11 +62,21 @@ shell:
   - yarn plugin import workspace-tools
   - SKIP_POSTINSTALL=true yarn workspaces focus
   - make build-frontend
+  - ./install_logout.sh
   - rm -r node_modules .angular .yarn /root/.cache /root/.yarn #1Gi
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromArtifact: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*'
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - cd /src
   - git clone --depth 1 -b web/v{{ $version }} {{ .SOURCE_REPO }}/kubernetes/dashboard .
+  - cp /patches/* /src/modules/web/
