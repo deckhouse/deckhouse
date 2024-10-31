@@ -230,7 +230,7 @@ type RouteEntry struct {
 }
 
 func (re *RouteEntry) String() string {
-	hashRaw := make([]string, 0)
+	hashRaw := make([]string, 0, 5)
 	hashRaw = append(hashRaw, strconv.Itoa(re.table))
 	hashRaw = append(hashRaw, re.destination)
 	hashRaw = append(hashRaw, re.gateway)
