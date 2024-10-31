@@ -252,7 +252,7 @@ func (re *RouteEntry) getHash() string {
 }
 
 func (re *RouteEntry) getShaHash() string {
-	return fmt.Sprintf("%v", sha1.Sum([]byte(re.String())))
+	return fmt.Sprintf("%x", sha1.Sum([]byte(re.String())))
 }
 
 func (re *RouteEntry) getRoute() v1alpha1.Route {
@@ -399,7 +399,7 @@ func (rem *RouteEntryMap) AppendRE(re RouteEntry) {
 	if len(*rem) == 0 {
 		*rem = make(map[string]RouteEntry)
 	}
-	(*rem)[re.getHash()] = re
+	(*rem)[re.getShaHash()] = re
 }
 
 // nrtSummary: type, service functions and methods
@@ -515,7 +515,7 @@ func (ns *nrtSummary) addRoutes(actualRoutesOnNode *RouteEntryMap, log logr.Logg
 	status := ns.newReconciliationStatus
 	for _, re := range ns.desiredRoutesToAddByNRT {
 		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Route %v should be added", re))
-		if _, ok := (*actualRoutesOnNode)[re.getHash()]; ok {
+		if _, ok := (*actualRoutesOnNode)[re.getShaHash()]; ok {
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] but it is already present on Node"))
 			continue
 		}
