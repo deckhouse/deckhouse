@@ -79,15 +79,13 @@ spec:
                             properties:
                               host:
                                 description: |-
-                                  Host name to connect to, defaults to the pod IP. You can set `Host` in httpHeaders instead.
+                                  Hostname to connect to, defaults to the pod's IP address.
                                 type: string
                                 format: hostname
                               httpHeaders:
-                                description: Custom headers to set in the request. HTTP
-                                  allows repeated headers.
+                                description: Custom headers that will be added to the HTTP request and used when performing the probe. Duplicate headers are allowed.
                                 items:
-                                  description: HTTPHeader describes a custom header
-                                    to be used in HTTP probes.
+                                  description: HTTPHeader describes a custom header to be used in HTTP probes.
                                   properties:
                                     name:
                                       description: |-
@@ -156,7 +154,7 @@ spec:
                                 description: |-
                                   Query to PostgreSQL for testing.
 
-                                  Must return one of the values TRUE: 't', 'true', 'y', 'yes','1'
+                                  Must return one of the values `TRUE`: `t`, `true`, `y`, `yes`,`1`.
                                   to be considered successful.
 
                                   > **Warining.** The privileges for the user under whom the requests are executed should be minimal.
@@ -203,7 +201,6 @@ spec:
 
                     If the caller requests specific NodePorts (by specifying a
                     value), those requests will be respected, regardless of this field.
-
                     This parameter can be set only for services of LoadBalancer type and is automatically reset when the type is changed to another.
                   type: boolean
                 clusterIP:
@@ -219,14 +216,11 @@ spec:
                     optionally be specified, as describe above).
 
                     Valid values are `None`,
-                    empty string (""), or a valid IP address.
-
-                    Setting this to `None` makes a
+                    empty string (""), or a valid IP address. Setting this to `None` makes a
                     "headless service" (no virtual IP), which is useful when direct endpoint
                     connections are preferred and proxying is not required.  Only applies to
                     types ClusterIP, NodePort, and LoadBalancer. If this field is specified
                     when creating a Service of type ExternalName, creation will fail.
-
                     This field will be wiped when updating a Service to type ExternalName.
                     [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
                   type: string
@@ -234,23 +228,20 @@ spec:
                   description: |-
                     The list of IP addresses assigned to the service is usually allocated randomly.
                     If an IP address is manually specified, it must be within a valid range (specified by the system configuration) and free for assignment; otherwise, service creation will fail. 
-                    
                     This field may not be changed through updates unless the type field is
                     also being changed to `ExternalName` (which requires this field to be
                     empty) or the type field is being changed from `ExternalName` (in which
                     case this field may optionally be specified, as describe above).
 
-                    Valid
-                    values are `None`, empty string (""), or a valid IP address.
-
-                    Setting
-                    this to `None` makes a "headless service" (no virtual IP), which is
+                    Valid values are `None`, empty string (""), or a valid IP address.
+                    Setting this to `None` makes a "headless service" (no virtual IP), which is
                     useful when direct endpoint connections are preferred and proxying is
                     not required.  Only applies to types ClusterIP, NodePort, and
                     LoadBalancer.
-
                     If this field is specified when creating a Service of type
-                    `ExternalName`, creation will fail. This field will be wiped when updating
+                    `ExternalName`, creation will fail.
+                    
+                    This field will be wiped when updating
                     a Service to type `ExternalName`.  If this field is not specified, it will
                     be initialized from the clusterIP field.
 
@@ -269,11 +260,10 @@ spec:
                 externalIPs:
                   description: |-
                     A list of IP addresses where nodes in the cluster will also accept traffic for this service.
-
-                    These IPs are not managed by
-                    Kubernetes.  The user is responsible for ensuring that traffic arrives
-                    at a node with this IP.  A common example is external load-balancers
-                    that are not part of the Kubernetes system.
+                    These IPs are not managed by Kubernetes.  The user is responsible for ensuring that traffic arrives
+                    at a node with this IP.  
+                    
+                    A common example is external load-balancers that are not part of the Kubernetes system.
                   items:
                     type: string
                   type: array
@@ -289,13 +279,14 @@ spec:
                     Describes how nodes distribute service traffic they
                     receive on one of the Service's "externally-facing" addresses (NodePorts,
                     ExternalIPs, and LoadBalancer IPs).
-                    
                     If set to `Local`, the proxy will configure
                     the service in a way that assumes that external load balancers will take care
                     of balancing the service traffic between nodes, and so each node will deliver
                     traffic only to the node-local endpoints of the service, without masquerading
-                    the client source IP. (Traffic mistakenly sent to a node with no endpoints will
-                    be dropped.) The default value, `Cluster`, uses the standard behavior of
+                    the client source IP. Traffic mistakenly sent to a node with no endpoints will
+                    be dropped.
+                    
+                    The default value, `Cluster`, uses the standard behavior of
                     routing to all endpoints evenly (possibly modified by topology and other
                     features).
 
@@ -326,7 +317,9 @@ spec:
                 internalTrafficPolicy:
                   description: |-
                     Describes how nodes distribute service traffic they
-                    receive on the ClusterIP. If set to `Local`, the proxy will assume that pods
+                    receive on the ClusterIP. 
+                    
+                    If set to `Local`, the proxy will assume that pods
                     only want to talk to endpoints of the service on the same node as the pod,
                     dropping the traffic if there are no local endpoints.
 
@@ -344,21 +337,24 @@ spec:
                     and `ipFamilyPolicy` allows it, it will be used; otherwise creation of
                     the service will fail. This field is conditionally mutable: it allows
                     for adding or removing a secondary IP family, but it does not allow
-                    changing the primary IP family of the Service. Valid values are `IPv4`
-                    and `IPv6`.
-
-                    This field only applies to Services of types ClusterIP,
+                    changing the primary IP family of the Service. 
+                    
+                    Valid values are `IPv4`
+                    and `IPv6`.This field only applies to Services of types ClusterIP,
                     NodePort, and LoadBalancer, and does apply to "headless" services.
+
                     This field will be wiped when updating a Service to type `ExternalName`.
+                    
                     This field may hold a maximum of two entries (dual-stack families, in
                     either order).
-
                     These families must correspond to the values of the
                     `clusterIPs` field, if specified. Both `clusterIPs` and `ipFamilies` are
                     governed by the `ipFamilyPolicy` field.
                   items:
                     description: |-
-                      Represents the IP Family (IPv4 or IPv6). This type is used
+                      Represents the IP Family (IPv4 or IPv6). 
+                      
+                      This type is used
                       to express the family of an IP expressed by a type (e.g. service.spec.ipFamilies).
                     type: string
                   type: array
@@ -366,10 +362,9 @@ spec:
                 ipFamilyPolicy:
                   description: |-
                     Required or requested dual stack support for the service.
-                    If there is no value provided, then this field will be set
-                    to `SingleStack`.
 
-                    Services can be `SingleStack` (a single IP family),
+                    If there is no value provided, then this field will be set
+                    to `SingleStack`. Services can be `SingleStack` (a single IP family),
                     `PreferDualStack` (two IP families on dual-stack configured clusters or
                     a single IP family on single-stack clusters), or `RequireDualStack`
                     (two IP families on dual-stack configured clusters, otherwise fail).
@@ -383,17 +378,19 @@ spec:
                     The class of the load balancer implementation this Service belongs to.
                     If specified, the value of this field must be a label-style identifier, with an optional prefix,
                     e.g. `internal-vip` or `example.com/internal-vip`. Unprefixed names are reserved for end-users.
+                    
                     This field can only be set when the Service type is `LoadBalancer`.
 
                     If not set, the default load
                     balancer implementation is used, today this is typically done through the cloud provider integration,
-                    but should apply for any default implementation. If set, it is assumed that a load balancer
+                    but should apply for any default implementation. 
+                    
+                    If set, it is assumed that a load balancer
                     implementation is watching for Services with a matching class.
-
                     Any default load balancer
                     implementation (e.g. cloud providers) should ignore Services that set this field.
-
                     This field can only be set when creating or updating a Service to type `LoadBalancer`.
+                    
                     Once set, it can not be changed. This field will be wiped when a service is updated to a non `LoadBalancer` type.
                   type: string
                 loadBalancerIP:
@@ -403,15 +400,13 @@ spec:
                     the loadBalancerIP when a load balancer is created.
 
                     This field will be ignored if the cloud-provider does not support the feature.
-
-                    Deprecated: This field was under-specified and its meaning varies across implementations.
-                    Using it is non-portable and it may not support dual-stack.
-                    Users are encouraged to use implementation-specific annotations when available.
                   type: string
                 loadBalancerSourceRanges:
                   description: |-
                     If specified and supported by the platform, this will restrict traffic through the cloud-provider
-                    load-balancer will be restricted to the specified client IPs. This field will be ignored if the
+                    load-balancer will be restricted to the specified client IPs. 
+                    
+                    This field will be ignored if the
                     cloud-provider does not support the feature.
                     [More info.](https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/)
                   items:
@@ -428,27 +423,25 @@ spec:
                       appProtocol:
                         description: |-
                           The application protocol for this port.
-
                           This is used as a hint for implementations to offer richer behavior for protocols that they understand.
-
                           This field follows standard Kubernetes label syntax.
                           Valid values are either:
                           * Un-prefixed protocol names - reserved for IANA standard service names as
                           [RFC-6335](https://www.iana.org/assignments/service-names).
                           * Kubernetes-defined prefixed names:
-                            * 'kubernetes.io/h2c' — HTTP/2 prior knowledge over cleartext as described in [RFC](https://www.rfc-editor.org/rfc/rfc9113.html#name-starting-http-2-with-prior-);
-                            * 'kubernetes.io/ws'  — WebSocket over cleartext as described in [RFC](https://www.rfc-editor.org/rfc/rfc6455);
-                            * 'kubernetes.io/wss' — WebSocket over TLS as described in [RFC](https://www.rfc-editor.org/rfc/rfc6455).
+                            * `kubernetes.io/h2c` — HTTP/2 prior knowledge over cleartext as described in [RFC](https://www.rfc-editor.org/rfc/rfc9113.html#name-starting-http-2-with-prior-);
+                            * `kubernetes.io/ws`  — WebSocket over cleartext as described in [RFC](https://www.rfc-editor.org/rfc/rfc6455);
+                            * `kubernetes.io/wss` — WebSocket over TLS as described in [RFC](https://www.rfc-editor.org/rfc/rfc6455).
                           * Other protocols should use implementation-defined prefixed names such as
                           `mycompany.com/my-custom-protocol`.
                         type: string
                       name:
                         description: |-
                           The name of this port within the service. This must be a `DNS_LABEL`.
+                          
                           All ports within a ServiceSpec must have unique names. When considering
                           the endpoints for a Service, this must match the 'name' field in the
                           `EndpointPort`.
-
                           Optional if only one `ServicePort` is defined on this service.
                         type: string
                       nodePort:
@@ -485,7 +478,8 @@ spec:
                           - type: string
                         description: |-
                           Number or name of the port to access on the pods targeted by the service.
-                          Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
+                          Name must be an `IANA_SVC_NAME`.
+                          
                           If this is a string, it will be looked up as a named port in the
                           target Pod's container ports.
 
@@ -509,12 +503,11 @@ spec:
                     Indicates that any agent which deals with endpoints for this
                     Service should disregard any indications of ready/not-ready.
                     The primary use case for setting this field is for a StatefulSet's Headless Service to
-                    propagate `SRV` DNS records for its Pods for the purpose of peer discovery.
+                    propagate SRV DNS records for its Pods for the purpose of peer discovery.
 
                     The Kubernetes controllers that generate `Endpoints` and `EndpointSlice` resources for
                     Services interpret this to mean that all endpoints are considered "ready" even if the
                     Pods themselves are not.
-
                     Agents which consume only Kubernetes generated endpoints
                     through the `Endpoints` or `EndpointSlice` resources can safely assume this behavior.
                   type: boolean
@@ -525,7 +518,9 @@ spec:
                     Route service traffic to pods with label keys and values matching this
                     selector. If empty or not present, the service is assumed to have an
                     external process managing its endpoints, which Kubernetes will not
-                    modify. Only applies to types ClusterIP, NodePort, and LoadBalancer.
+                    modify. 
+                    
+                    Only applies to types ClusterIP, NodePort, and LoadBalancer.
 
                     Ignored if type is `ExternalName`.
                     [More info.](https://kubernetes.io/docs/concepts/services-networking/service/)
@@ -533,12 +528,9 @@ spec:
                   x-kubernetes-map-type: atomic
                 sessionAffinity:
                   description: |-
-                    Supports `ClientIP` and `None`. Used to maintain session affinity.
+                    Used to maintain session affinity.
                     Enable client IP based session affinity.
-
                     Must be `ClientIP` or `None`.
-
-                    Defaults to `None`.
                     [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies)
                   type: string
                 sessionAffinityConfig:
@@ -552,7 +544,7 @@ spec:
                         timeoutSeconds:
                           description: |-
                             Specifies the seconds of `ClientIP` type session sticky time.
-                            The value must be `>0 && <=86400(for 1 day)` if `ServiceAffinity` == `ClientIP`.
+                            The value must be `>0 && <=86400` (for 1 day) if `ServiceAffinity == ClientIP`.
                           format: int32
                           type: integer
                       type: object
@@ -565,30 +557,32 @@ spec:
 
                     If the field is
                     not set, the implementation will apply its default routing strategy.
-
                     If set
                     to `PreferClose`, implementations should prioritize endpoints that are
                     topologically close (e.g., same zone).
                   type: string
                 type:
                   description: |-
-                    Determines how the Service is exposed. Defaults to ClusterIP. Valid
+                    Determines how the Service is exposed. 
+                    
+                    Defaults to ClusterIP. Valid
                     options are ExternalName, ClusterIP, NodePort, and LoadBalancer.
-                    ClusterIP allocates a cluster-internal IP address for load-balancing
-                    to endpoints. Endpoints are determined by the selector or if that is not
-                    specified, by manual construction of an Endpoints object or
-                    EndpointSlice objects.
 
-                    If clusterIP is `None`, no virtual IP is
+                    ClusterIP allocates a cluster-internal IP address for load-balancing
+                    to endpoints. Endpoints are determined by the `selector` or if that is not
+                    specified, by manual construction of an `Endpoints` object or
+                    `EndpointSlice` objects.
+
+                    If `clusterIP` is `None`, no virtual IP is
                     allocated and the endpoints are published as a set of endpoints rather
                     than a virtual IP.
 
                     NodePort builds on ClusterIP and allocates a port on every node which
-                    routes to the same endpoints as the clusterIP.
+                    routes to the same endpoints as the `clusterIP`.
 
                     LoadBalancer builds on NodePort and creates an external load-balancer
                     (if supported in the current cloud) which routes to the same endpoints
-                    as the clusterIP.
+                    as the `clusterIP`.
 
                     ExternalName aliases this service to the specified `externalName`.
                     Several other fields do not apply to ExternalName services.
