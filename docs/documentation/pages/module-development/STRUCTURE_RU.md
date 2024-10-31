@@ -451,7 +451,7 @@ dependencies:
 
 - `tags: string` — дополнительные теги для модуля, которые преобразуются в лейблы модуля: `module.deckhouse.io/$tag=""`.
 - `weight: integer` — вес модуля. Вес по-умолчанию: 900, можно задать собственный вес в диапазоне 900 – 999.
-- `stage: string` — [cтадия жизненного цикла модуля](../versioning/#стадия-жизненного-цикла-модуля). Может быть `Sandbox`, `Incubating`, `Graduated` или `Deprecated`.
+- `stage: string` — [cтадия жизненного цикла модуля](../versioning/#как-понять-насколько-модуль-стабилен). Может быть `Sandbox`, `Incubating`, `Graduated` или `Deprecated`.
 - `description: string` — описание модуля.
 
 Например:
