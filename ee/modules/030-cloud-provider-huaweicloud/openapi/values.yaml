@@ -66,7 +66,7 @@ properties:
             enum: [deckhouse.io/v1]
           kind:
             type: string
-            enum: [HuaweicloudClusterConfiguration]
+            enum: [HuaweiCloudClusterConfiguration]
           sshPublicKey:
             type: string
             description: A public key for accessing nodes.
@@ -320,7 +320,7 @@ properties:
         required: [ apiVersion, kind ]
         x-examples:
         - apiVersion: deckhouse.io/v1
-          kind: HuaweicloudCloudProviderDiscoveryData
+          kind: HuaweiCloudDiscoveryData
           storageDomains:
           - name: Default
         properties:
@@ -329,11 +329,22 @@ properties:
             enum: [ deckhouse.io/v1 ]
           kind:
             type: string
-            enum: [ HuaweicloudCloudProviderDiscoveryData ]
+            enum: [ HuaweiCloudDiscoveryData ]
+          layout:
+            type: string
+            enum: [Standard]
+          podNetworkMode:
+            type: string
+            enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
           zones:
             type: array
             items:
               type: string
+              minLength: 1
+            minItems: 1
+            uniqueItems: true
+          instances:
+            type: object
           storageDomains:
             type: array
             items:
