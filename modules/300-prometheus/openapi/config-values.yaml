@@ -17,7 +17,9 @@ properties:
 
       `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
 
-      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume re-provisioning and data loss.
+      **Caution.** When migrating Prometheus with local storage to other nodes, the pod will hang in the Pending state. In this case, it will be necessary to save the Prometheus database, delete the old PVC and restart the pod manually.  Local storage refers to a StorageClass that is associated not with network storage, but with a local volume on a node (for example, StorageClass created by the local-path-provider module).
+
+      **Caution.** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume re-provisioning and data loss.
   longtermStorageClass:
     type: string
     x-examples: ["ceph-ssd"]
