@@ -443,7 +443,9 @@ func (ns *nrtSummary) discoverFacts(nrt v1alpha1.SDNInternalNodeRoutingTable, gl
 			)
 		}
 	}
+	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] DEBUG Contert Routes+Table to REM. Resuilt: %v", remFromNRTSpecRoutes))
 	if !ns.newReconciliationStatus.IsSuccess {
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] DEBUG Some thing went wrong, need requeue"))
 		return true
 	}
 
@@ -485,6 +487,7 @@ func (ns *nrtSummary) discoverFacts(nrt v1alpha1.SDNInternalNodeRoutingTable, gl
 	// Filling desiredRoutesToAddByNRT
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starting filling map routesToAdd"))
 	for hash, desiredRoute := range ns.desiredRoutesByNRT {
+
 		if _, ok := (*actualRoutesOnNode)[hash]; !ok {
 			ns.desiredRoutesToAddByNRT = append(ns.desiredRoutesToAddByNRT, desiredRoute)
 		}
@@ -506,16 +509,16 @@ func (ns *nrtSummary) discoverFacts(nrt v1alpha1.SDNInternalNodeRoutingTable, gl
 func (ns *nrtSummary) addRoutes(actualRoutesOnNode *RouteEntryMap, log logr.Logger) {
 	status := ns.newReconciliationStatus
 	for _, re := range ns.desiredRoutesToAddByNRT {
-		log.V(config.DebugLvl).Info(fmt.Sprintf("Route %v should be added", re))
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Route %v should be added", re))
 		if _, ok := (*actualRoutesOnNode)[re.getHash()]; ok {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("but it is already present on Node"))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] but it is already present on Node"))
 			continue
 		}
 		err := addRouteToNode(re)
 		if err == nil {
 			actualRoutesOnNode.AppendRE(re)
 		} else {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("err: %v", err))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] err: %v", err))
 			status.AppendError(err)
 		}
 	}
@@ -590,7 +593,7 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 	for nrtName, ns := range *nm {
 		// Wipe the finalizer if necessary
 		if ns.needToWipeFinalizer && ns.k8sResources.DeletionTimestamp != nil {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("Wipe finalizer on NRT: %v", nrtName))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Wipe finalizer on NRT: %v", nrtName))
 
 			tmpNRTFinalizers := make([]string, 0)
 			for _, fnlzr := range ns.k8sResources.Finalizers {
@@ -607,17 +610,17 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 				},
 			)
 			if err != nil {
-				log.Error(err, fmt.Sprintf("unable to marshal patch for finalizers %v, err: %v", tmpNRTFinalizers, err))
+				log.Error(err, fmt.Sprintf("[NRTReconciler] unable to marshal patch for finalizers %v, err: %v", tmpNRTFinalizers, err))
 			}
 
 			err = cl.Patch(ctx, ns.k8sResources, client.RawPatch(types.MergePatchType, patch))
 			if err != nil {
-				log.Error(err, fmt.Sprintf("unable to patch CR SDNInternalNodeRoutingTable %v, err: %v", nrtName, err))
+				log.Error(err, fmt.Sprintf("[NRTReconciler] unable to patch CR SDNInternalNodeRoutingTable %v, err: %v", nrtName, err))
 			}
 		}
 
 		// Update(patch) status every time
-		log.V(config.DebugLvl).Info(fmt.Sprintf("Update status of NRT: %v", nrtName))
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Update status of NRT: %v", nrtName))
 
 		patch, err := json.Marshal(
 			map[string]interface{}{
@@ -625,12 +628,12 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 			},
 		)
 		if err != nil {
-			log.Error(err, fmt.Sprintf("unable to marshal patch for status %v, err: %v", ns.k8sResources.Status, err))
+			log.Error(err, fmt.Sprintf("[NRTReconciler] unable to marshal patch for status %v, err: %v", ns.k8sResources.Status, err))
 		}
 
 		err = cl.Status().Patch(ctx, ns.k8sResources, client.RawPatch(types.MergePatchType, patch))
 		if err != nil {
-			log.Error(err, fmt.Sprintf("unable to patch status for CR SDNInternalNodeIPRuleSet %v, err: %v", nrtName, err))
+			log.Error(err, fmt.Sprintf("[NRTReconciler] unable to patch status for CR SDNInternalNodeIPRuleSet %v, err: %v", nrtName, err))
 		}
 	}
 }
@@ -698,20 +701,20 @@ func delRouteFromNode(re RouteEntry) error {
 
 func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryMap, status utils.ReconciliationStatus, log logr.Logger) utils.ReconciliationStatus {
 	for hash, re := range delREM {
-		log.V(config.DebugLvl).Info(fmt.Sprintf("Route %v should be deleted", re))
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Route %v should be deleted", re))
 		if _, ok := (gdREM)[hash]; ok {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("but it is present in other NRT"))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] but it is present in other NRT"))
 			continue
 		}
 		if _, ok := (*actREM)[hash]; !ok {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("but it is not present on Node"))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] but it is not present on Node"))
 			continue
 		}
 		err := delRouteFromNode(re)
 		if err == nil {
 			delete(*actREM, hash)
 		} else {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("err: %v", err))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] err: %v", err))
 			status.AppendError(err)
 		}
 	}
@@ -724,10 +727,10 @@ func deleteOrphanRoutes(gdREM, actREM RouteEntryMap, log logr.Logger) {
 		if _, ok := (gdREM)[hash]; ok {
 			continue
 		}
-		log.V(config.DebugLvl).Info(fmt.Sprintf("Route %v should be deleted.", re))
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Route %v should be deleted.", re))
 		err := delRouteFromNode(re)
 		if err != nil {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("Unable to delete route %v,err: %v", re, err))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Unable to delete route %v,err: %v", re, err))
 		}
 	}
 }
