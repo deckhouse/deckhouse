@@ -4,11 +4,7 @@
 {{- $version := "1.2.2" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-# fromImage: common/distroless
-from: {{ .Images.BASE_ALPINE }}
-shell:
-  beforeInstall:
-  - apk add --no-cache bash curl wget lsof
+fromImage: common/distroless
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /dashboard-auth
