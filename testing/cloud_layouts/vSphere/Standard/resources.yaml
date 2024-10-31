@@ -15,7 +15,7 @@ spec:
       networkAddress: "172.16.25.0/24"
     virtualIPAddresses:
     - address: "172.16.25.1/24"
-    - address: "10.220.203.240/24"
+    - address: "192.168.240.0/24"
       interface:
         detectionStrategy: DefaultRoute
 ---
@@ -27,10 +27,10 @@ spec:
   numCPUs: 4
   memory: 8192
   rootDiskSize: 20
-  mainNetwork: msk3-k8s-1203
+  mainNetwork: DPortGroup-lab-vms
   additionalNetworks:
-    - DEVOPS_36
-  datastore: 3par_4_Lun105
+    - DPortGroup-internal-private-vms[DONT-USE]
+  datastore: vsan-spb-5-datastore
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -40,7 +40,7 @@ spec:
   nodeType: CloudEphemeral
   cloudInstances:
     zones:
-    - X2-A
+    - ClusterDeckHouse-SPB5
     minPerZone: 1
     maxPerZone: 1
     classReference:

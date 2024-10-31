@@ -25,13 +25,13 @@ layout: Standard
 vmFolderPath: 'flant-e2e-tests/${PREFIX}'
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
-region: X2
+region: DatacenterLAB
 zones:
-- X2-A
+- ClusterDeckHouse-SPB5
 externalNetworkNames:
-- msk3-k8s-1203
+- DPortGroup-lab-vms
 internalNetworkNames:
-- DEVOPS_36
+- DPortGroup-internal-private-vms[DONT-USE]
 internalNetworkCIDR: 172.16.25.0/24
 baseResourcePool: kubernetes-stage/cloud-layout-tests
 masterNodeGroup:
@@ -39,17 +39,17 @@ masterNodeGroup:
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template: Templates/ubuntu-jammy-22.04-packer
-    mainNetwork: msk3-k8s-1203
+    template:  MAIN-SPB5/ubuntu-noble-server-cloudimg-amd64
+    mainNetwork: DPortGroup-lab-vms
     additionalNetworks:
-    - DEVOPS_36
-    datastore: 3par_4_Lun105
+    - DPortGroup-internal-private-vms[DONT-USE]
+    datastore: vsan-spb-5-datastore
     rootDiskSize: 50
     runtimeOptions:
       nestedHardwareVirtualization: false
 provider:
-  server: p-vc-3.${VSPHERE_BASE_DOMAIN}
-  username: dvadm@vsphere.local
+  server: vcenter01.mvp.lab
+  username: e2e-autotests@vsphere.local
   password: '${VSPHERE_PASSWORD}'
   insecure: true
 ---
@@ -89,12 +89,11 @@ spec:
       node-role.kubernetes.io/control-plane: ""
     tolerations:
       - operator: Exists
-    publicAddress: 10.220.203.240
+    publicAddress: 192.168.240.0/24
     subnet: 172.16.25.0/24
     dns:
       servers:
-        - 10.80.44.235
-        - 10.220.8.235
+        - 192.168.230.11
       search:
         - ${VSPHERE_BASE_DOMAIN}
 ---
