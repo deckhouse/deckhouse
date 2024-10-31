@@ -85,7 +85,7 @@ spec:
                               httpHeaders:
                                 description: Custom headers that will be added to the HTTP request and used when performing the probe. Duplicate headers are allowed.
                                 items:
-                                  description: HTTPHeader describes a custom header to be used in HTTP probes.
+                                  description:
                                   properties:
                                     name:
                                       description: |-
