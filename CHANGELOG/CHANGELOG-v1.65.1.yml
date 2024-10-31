@@ -4,6 +4,10 @@ candi:
       pull_request: https://github.com/deckhouse/deckhouse/pull/10327
     - summary: Check for transparent hugepages before trying to disable them in sysctl-tuner
       pull_request: https://github.com/deckhouse/deckhouse/pull/10299
+ci:
+  fixes:
+    - summary: Updated TESTS_IMAGE_NAME to BASE_GOLANG_23_BULLSEYE in github workflow
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10282
 cloud-provider-zvirt:
   fixes:
     - summary: Add to the instance a status about zvirtinstance.
