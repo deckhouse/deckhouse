@@ -114,6 +114,7 @@ func applyEgressGatewayFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 			VirtualIPAddress: VirtualIPAddress{
 				IP:               eg.Spec.SourceIP.VirtualIPAddress.IP,
 				RoutingTableName: eg.Spec.SourceIP.VirtualIPAddress.RoutingTableName,
+				Interfaces:       eg.Spec.SourceIP.VirtualIPAddress.Interfaces,
 			},
 			PrimaryIPFromEgressGatewayNodeInterface: PrimaryIPFromEgressGatewayNodeInterface{
 				InterfaceName: eg.Spec.SourceIP.PrimaryIPFromEgressGatewayNodeInterface.InterfaceName,
@@ -581,8 +582,9 @@ type EgressGatewaySourceIP struct {
 }
 
 type VirtualIPAddress struct {
-	IP               string `json:"ip"`
-	RoutingTableName string `json:"routingTableName"`
+	IP               string   `json:"ip"`
+	RoutingTableName string   `json:"routingTableName"`
+	Interfaces       []string `json:"interfaces"`
 }
 
 type PrimaryIPFromEgressGatewayNodeInterface struct {
