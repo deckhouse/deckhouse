@@ -67,14 +67,6 @@ spec:
             secretKeyRef:
               name: kubernetes-dashboard-csrf
               key: private.key
-        readinessProbe:
-          httpGet:
-            path: /metrics
-            port: 8000
-            host: "127.0.0.1"
-          initialDelaySeconds: 30
-          timeoutSeconds: 30
-          periodSeconds: 60
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
