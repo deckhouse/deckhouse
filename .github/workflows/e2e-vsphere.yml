@@ -468,7 +468,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -507,6 +507,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -577,7 +578,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -598,6 +599,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -954,7 +956,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -993,6 +995,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -1063,7 +1066,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -1084,6 +1087,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1440,7 +1444,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -1479,6 +1483,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -1549,7 +1554,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -1570,6 +1575,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -1926,7 +1932,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -1965,6 +1971,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -2035,7 +2042,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -2056,6 +2063,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -2412,7 +2420,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -2451,6 +2459,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -2521,7 +2530,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -2542,6 +2551,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -2898,7 +2908,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -2937,6 +2947,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -3007,7 +3018,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -3028,6 +3039,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup
@@ -3384,7 +3396,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           echo "Start waiting ssh connection string script"
           comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
           echo "Full comment url for updating ${comment_url}"
@@ -3423,6 +3435,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh run-test
@@ -3493,7 +3506,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
 
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
@@ -3514,6 +3527,7 @@ jobs:
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
+            -u ${user_runner_id} \
             -w /deckhouse \
           ${INSTALL_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script.sh cleanup

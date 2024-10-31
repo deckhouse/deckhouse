@@ -310,7 +310,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -328,6 +328,7 @@ jobs:
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
+          -u ${user_runner_id} \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
@@ -602,7 +603,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -620,6 +621,7 @@ jobs:
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
+          -u ${user_runner_id} \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
@@ -894,7 +896,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -912,6 +914,7 @@ jobs:
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
+          -u ${user_runner_id} \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
@@ -1186,7 +1189,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -1204,6 +1207,7 @@ jobs:
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
+          -u ${user_runner_id} \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
@@ -1478,7 +1482,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -1496,6 +1500,7 @@ jobs:
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
+          -u ${user_runner_id} \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
@@ -1770,7 +1775,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -1788,6 +1793,7 @@ jobs:
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
+          -u ${user_runner_id} \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 
@@ -2062,7 +2068,7 @@ jobs:
           echo "DHCTL log file: $dhctl_log_file"
 
           user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
+          echo "running Docker with user_runner_id $user_runner_id"
           chmod 755 $(pwd)/testing/cloud_layouts/script_eks.sh
 
           docker run --rm \
@@ -2080,6 +2086,7 @@ jobs:
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
+          -u ${user_runner_id} \
           ${TERRAFORM_IMAGE_NAME} \
           bash /deckhouse/testing/cloud_layouts/script_eks.sh cleanup
 

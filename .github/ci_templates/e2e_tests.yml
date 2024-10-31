@@ -123,7 +123,7 @@ run: |
   echo "DHCTL log file: $dhctl_log_file"
 
   user_runner_id=$(id -u):$(id -g)
-  echo "user_runner_id $user_runner_id"
+  echo "running Docker with user_runner_id $user_runner_id"
 
 
 {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}
@@ -164,6 +164,7 @@ run: |
   -v $(pwd)/testing:/deckhouse/testing \
   -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   -v ${TMP_DIR_PATH}:/tmp \
+  -u ${user_runner_id} \
   ${TERRAFORM_IMAGE_NAME} \
   bash /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} {!{ $script_arg }!}
 
@@ -180,6 +181,7 @@ run: |
   -v "$PWD/resources.yml:/resources.yml" \
   -v $(pwd)/testing:/deckhouse/testing \
   -v $(pwd)/release.yaml:/deckhouse/release.yaml \
+  -u ${user_runner_id} \
   ${INSTALL_IMAGE_NAME} \
   bash -c "dhctl bootstrap-phase install-deckhouse \
     --kubeconfig=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
@@ -204,6 +206,7 @@ run: |
   -v $(pwd)/testing:/deckhouse/testing \
   -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   -v ${TMP_DIR_PATH}:/tmp \
+  -u ${user_runner_id} \
   ${TERRAFORM_IMAGE_NAME} \
   bash -c "/deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_deckhouse_ready && \
   /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready"
@@ -257,6 +260,7 @@ run: |
     -v $(pwd)/testing:/deckhouse/testing \
     -v $(pwd)/release.yaml:/deckhouse/release.yaml \
     -v ${TMP_DIR_PATH}:/tmp \
+    -u ${user_runner_id} \
     -w /deckhouse \
   ${INSTALL_IMAGE_NAME} \
   bash /deckhouse/testing/cloud_layouts/{!{ $script }!} {!{ $script_arg }!}
