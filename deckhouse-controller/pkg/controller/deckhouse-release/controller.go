@@ -41,7 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
@@ -338,14 +337,8 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		windows = r.updateSettings.Get().Update.Windows
 	}
 
-	err = deckhouseUpdater.ApplyPredictedRelease(windows)
-
-	if err != nil {
-		if errors.Is(err, updater.ErrNotReadyForDeploy) || errors.Is(err, updater.ErrRequirementsNotMet) {
-			// TODO: create custom error type with additional fields like reason end requeueAfter
-			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
+	if !deckhouseUpdater.ApplyPredictedRelease(windows) {
+		r.logger.Errorln("apply predicted release failed")
 	}
 
 	return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil

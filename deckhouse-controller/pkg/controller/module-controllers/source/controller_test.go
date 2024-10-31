@@ -93,7 +93,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	got := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, got, 0666)
+		err := os.WriteFile(goldenFile, got, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
 		exp, err := os.ReadFile(goldenFile)
@@ -427,7 +427,7 @@ spec:
 func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
-	var initObjects = make([]client.Object, 0, len(manifests))
+	initObjects := make([]client.Object, 0, len(manifests))
 	for _, manifest := range manifests {
 		obj := suite.assembleInitObject(manifest)
 		initObjects = append(initObjects, obj)

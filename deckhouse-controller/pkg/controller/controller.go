@@ -167,7 +167,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	}
 
 	// create a default policy, it'll be filled in with relevant settings from the deckhouse moduleConfig, see runDeckhouseConfigObserver method
-	embeddedDeckhousePolicy := helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
+	embeddedDeckhousePolicy := v1alpha1.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
 		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
 		},

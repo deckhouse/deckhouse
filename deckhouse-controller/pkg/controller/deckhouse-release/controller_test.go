@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -29,7 +30,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/tidwall/sjson"
@@ -111,11 +111,15 @@ func (suite *ControllerTestSuite) SetupSubTest() {
 }
 
 func (suite *ControllerTestSuite) TearDownSubTest() {
+	if suite.T().Skipped() {
+		return
+	}
+
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	got := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, gotB, 0o666)
+		err := os.WriteFile(goldenFile, got, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
 		exp, err := os.ReadFile(goldenFile)

@@ -27,7 +27,7 @@ metadata:
 spec:
   version: v1.26.0
 status:
-  approved: true
+  approved: false
   message: ""
   phase: Deployed
   transitionTime: "2019-10-17T15:33:00Z"
