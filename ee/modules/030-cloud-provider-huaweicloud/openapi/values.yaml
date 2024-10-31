@@ -12,7 +12,7 @@ properties:
         type: object
         additionalProperties: false
         description: |
-          Describes the configuration of a cloud cluster in zVirt.
+          Describes the configuration of a cloud cluster in HuaweiCloud.
 
           Used by the cloud provider if a cluster's control plane is hosted in the cloud.
 
@@ -66,7 +66,7 @@ properties:
             enum: [deckhouse.io/v1]
           kind:
             type: string
-            enum: [ZvirtClusterConfiguration]
+            enum: [HuaweiCloudClusterConfiguration]
           sshPublicKey:
             type: string
             description: A public key for accessing nodes.
