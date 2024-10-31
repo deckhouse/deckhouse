@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -164,6 +165,7 @@ func getFsInfo(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (
 
 func execToPodThroughAPI(kubeClient k8s.Client, command, containerName, podName, namespace string) (string, string, error) {
 	req := kubeClient.CoreV1().RESTClient().Post().
+		Timeout(time.Duration(10) * time.Second).
 		Resource("pods").
 		Name(podName).
 		Namespace(namespace).
