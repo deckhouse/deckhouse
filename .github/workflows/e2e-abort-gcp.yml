@@ -213,7 +213,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -501,7 +501,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -789,7 +789,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -1077,7 +1077,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -1365,7 +1365,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -1653,7 +1653,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -1941,7 +1941,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
