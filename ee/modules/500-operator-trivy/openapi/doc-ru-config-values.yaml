@@ -2,7 +2,7 @@ type: object
 properties:
   storageClass:
     description: |-
-      Имя StorageClass, который будет использоваться.
+      Имя StorageClass, который будет использоваться по умолчанию в кластере.
       
       Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
       
@@ -10,7 +10,7 @@ properties:
       
       **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
       
-      Если указать `false`, будет принудительно использоваться emptyDir.
+      Если указать `false`, будет принудительно использоваться `emptyDir`.
 
   severities:
     description: |

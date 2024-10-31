@@ -17,7 +17,7 @@ properties:
       
       **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
       
-      If `false` is specified, emptyDir will be forced to be used.
+      If `false` is specified, `emptyDir` will be forced to be used.
   longtermStorageClass:
     type: string
     x-examples: ["ceph-ssd"]
@@ -28,7 +28,9 @@ properties:
 
       The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
 
-      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in Longterm Prometheus volume reprovisioning and data loss.
+      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+
+      **Warning.** When migrating Prometheus with local storage to other nodes, the pod will hang in the Pending state. In this case, it will be necessary to save the Prometheus database, delete the old PVC and restart the pod manually.  Local storage refers to a StorageClass that is associated not with network storage, but with a local volume on a node (for example, StorageClass created by the local-path-provider module).
 
       If `false` is specified, emptyDir will be forced to be used.
   longtermRetentionDays:

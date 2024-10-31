@@ -72,7 +72,7 @@ properties:
           
           **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
 
-          If `false` is specified, emptyDir will be forced to be used. Manually delete the old PVC and restart Pod, after setting the parameter.
+          If `false` is specified, `emptyDir` will be forced to be used.
       enabled:
         type: boolean
         default: false

@@ -154,20 +154,18 @@ properties:
         x-examples:
           - "ceph-ssd"
         description: |-
-          The name of StorageClass that will be used.
+          The name of StorageClass that will be used in the cluster by default.
 
           If the parameter is omitted, the default StorageClass is either:
             
           * an arbitrary StorageClass present in the cluster that has the default annotation;
           * the first StorageClass created by the module (in accordance with the order in OpenStack).
 
-          **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
-
-          If `false` is specified, emptyDir will be forced to be used.  
+          **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.  
       topologyEnabled:
         type: boolean
         description: |
           This feature enables driver to consider the topology constraints while creating the volume. It is used only during volume provisioning, existing PersistentVolumes are not affected.
 
-          > **Note!** If it is set to `false` all-new PersistentVolumes are provisioned without topology constraints.
+          > **Warning.** If it is set to `false` all-new PersistentVolumes are provisioned without topology constraints.
         default: true

@@ -18,11 +18,9 @@ properties:
 
           If the parameter is omitted, the default StorageClass is either:
           
-          * existing default StorageClass (that has the annotation ([storageclass.kubernetes.io/is-default-class: "true"](https://kubernetes.io/docs/tasks/administer-cluster/change-default-storage-class/#changing-the-default-storageclass)).
+          * existing StorageClass present in the cluster that has the default annotation;
           * the first StorageClass created by the module (in accordance with the order listed in the table above).
 
           **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
-          
-          If `false` is specified, emptyDir will be forced to be used.
         x-examples:
         - "pd-ssd-not-replicated"

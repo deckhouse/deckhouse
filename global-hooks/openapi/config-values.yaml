@@ -14,7 +14,7 @@ properties:
 
       **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
       
-      If `false` is specified, emptyDir will be forced to be used.  
+      If `false` is specified, `emptyDir` will be forced to be used.  
   highAvailability:
     type: boolean
     description: |
