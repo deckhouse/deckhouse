@@ -10,12 +10,20 @@ import (
 	"sync"
 )
 
-const authTemplatePath = "/templates/auth_config/config.yaml.tpl"
-const distributionTemplatePath = "/templates/distribution_config/config.yaml.tpl"
-const staticPodTemplatePath = "/templates/static_pods/system-registry.yaml.tpl"
-const authConfigPath = "/etc/kubernetes/system-registry/auth_config/config.yaml"
-const distributionConfigPath = "/etc/kubernetes/system-registry/distribution_config/config.yaml"
-const staticPodConfigPath = "/etc/kubernetes/manifests/system-registry.yaml"
+const (
+	authTemplatePath         = "/templates/auth_config/config.yaml.tpl"
+	distributionTemplatePath = "/templates/distribution_config/config.yaml.tpl"
+	staticPodTemplatePath    = "/templates/static_pods/system-registry.yaml.tpl"
+	authConfigPath           = "/etc/kubernetes/system-registry/auth_config/config.yaml"
+	distributionConfigPath   = "/etc/kubernetes/system-registry/distribution_config/config.yaml"
+	staticPodConfigPath      = "/etc/kubernetes/manifests/system-registry.yaml"
+	pkiConfigDirectoryPath   = "/etc/kubernetes/system-registry/pki"
+
+	distributionConfiguration = "distributionConfiguration"
+	authConfiguration         = "authConfiguration"
+	pkiFiles                  = "pkiFiles"
+	staticPodConfiguration    = "staticPodConfiguration"
+)
 
 type Server struct {
 	KubeClient   *kubernetes.Clientset
@@ -53,6 +61,9 @@ func Run(ctx context.Context, kubeClient *kubernetes.Clientset) error {
 }
 
 func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) {
+
+	ctrl.Log.Info("Received request to create/update static pod and configuration", "Client address:", r.RemoteAddr, "component", "static pod manager")
+
 	if r.Method != http.MethodPost {
 		ctrl.Log.Info("method not allowed", "component", "static pod manager", "endpoint", r.RequestURI, "method", r.Method)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -87,56 +98,59 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ctrl.Log.Info("Received request to create static pod from: %s, data: %v", r.RemoteAddr, data, "component", "static pod manager")
-
-	anyFileChanged := false
+	changes := make(map[string]bool)
 
 	// Save the PKI files
-	changed, err := data.Pki.savePkiFiles("/etc/kubernetes/system-registry/pki", &data.ConfigHashes)
+	changes[pkiFiles], err = data.Pki.savePkiFiles(pkiConfigDirectoryPath, &data.ConfigHashes)
 	if err != nil {
 		ctrl.Log.Error(err, "Error saving PKI files", "component", "static pod manager")
 		http.Error(w, "Error saving PKI files", http.StatusInternalServerError)
 		return
 	}
-	anyFileChanged = anyFileChanged || changed
 
 	// Process the templates with the given data and create the static pod and configuration files
 
-	changed, err = data.processTemplate(authTemplatePath, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
+	changes[authConfiguration], err = data.processTemplate(authTemplatePath, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
 	if err != nil {
 		ctrl.Log.Error(err, "Error processing auth template", "component", "static pod manager")
 		http.Error(w, "Error processing auth template", http.StatusInternalServerError)
 		return
 	}
-	anyFileChanged = anyFileChanged || changed
 
-	changed, err = data.processTemplate(distributionTemplatePath, distributionConfigPath, &data.ConfigHashes.DistributionTemplateHash)
+	changes[distributionConfiguration], err = data.processTemplate(distributionTemplatePath, distributionConfigPath, &data.ConfigHashes.DistributionTemplateHash)
 	if err != nil {
 		ctrl.Log.Error(err, "Error processing distribution template", "component", "static pod manager")
 		http.Error(w, "Error processing distribution template", http.StatusInternalServerError)
 		return
 	}
-	anyFileChanged = anyFileChanged || changed
 
-	changed, err = data.processTemplate(staticPodTemplatePath, staticPodConfigPath, nil)
+	changes[staticPodConfiguration], err = data.processTemplate(staticPodTemplatePath, staticPodConfigPath, nil)
 	if err != nil {
 		ctrl.Log.Error(err, "Error processing static pod template", "component", "static pod manager")
 		http.Error(w, "Error processing static pod template", http.StatusInternalServerError)
 		return
 	}
-	anyFileChanged = anyFileChanged || changed
 
-	if anyFileChanged {
+	if hasChanges(changes) {
 		ctrl.Log.Info("Static pod and configuration created/updated successfully", "component", "static pod manager")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "Static pod and configuration created/updated successfully"})
 	} else {
 		ctrl.Log.Info("No changes in static pod and configuration", "component", "static pod manager")
-		w.WriteHeader(http.StatusNoContent)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(map[string]interface{}{
+		"changes": changes,
+	})
+	if err != nil {
+		ctrl.Log.Error(err, "Error encoding response", "component", "static pod manager")
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}
 }
 
 func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) {
+
+	ctrl.Log.Info("Received request to delete static pod and configuration", "Client address:", r.RemoteAddr, "component", "static pod manager")
+
 	if r.Method != http.MethodDelete {
 		ctrl.Log.Info("method not allowed", "component", "static pod manager", "endpoint", r.RequestURI, "method", r.Method)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -147,42 +161,61 @@ func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	s.requestMutex.Lock()
 	defer s.requestMutex.Unlock()
 
-	anyFileDeleted := false
+	var err error
+	changes := make(map[string]bool)
 
 	// Delete the static pod file
-	deleted, err := deleteFile(staticPodConfigPath)
+	changes[staticPodConfiguration], err = deleteFile(staticPodConfigPath)
 	if err != nil {
 		ctrl.Log.Error(err, "Error deleting static pod file", "component", "static pod manager")
 		http.Error(w, "Error deleting static pod file", http.StatusInternalServerError)
 		return
 	}
-	anyFileDeleted = anyFileDeleted || deleted
 
 	// Delete the auth config file
-	deleted, err = deleteFile(authConfigPath)
+	changes[authConfiguration], err = deleteFile(authConfigPath)
 	if err != nil {
 		ctrl.Log.Error(err, "Error deleting auth config file", "component", "static pod manager")
 		http.Error(w, "Error deleting auth config file", http.StatusInternalServerError)
 		return
 	}
-	anyFileDeleted = anyFileDeleted || deleted
 
 	// Delete the distribution config file
-	deleted, err = deleteFile(distributionConfigPath)
+	changes[distributionConfiguration], err = deleteFile(distributionConfigPath)
 	if err != nil {
 		ctrl.Log.Error(err, "Error deleting distribution config file", "component", "static pod manager")
 		http.Error(w, "Error deleting distribution config file", http.StatusInternalServerError)
 		return
 	}
-	anyFileDeleted = anyFileDeleted || deleted
 
-	// Return 204 if no file was deleted, otherwise 200
-	if anyFileDeleted {
+	changes[pkiFiles], err = deleteDirectory(pkiConfigDirectoryPath)
+	if err != nil {
+		ctrl.Log.Error(err, "Error deleting registry pki directory", "component", "static pod manager")
+		http.Error(w, "Error deleting registry pki directory", http.StatusInternalServerError)
+		return
+	}
+
+	if hasChanges(changes) {
 		ctrl.Log.Info("Static pod and configuration deleted successfully", "component", "static pod manager")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "Static pod and configuration deleted successfully"})
 	} else {
 		ctrl.Log.Info("No static pod and configuration to delete", "component", "static pod manager")
-		w.WriteHeader(http.StatusNoContent)
 	}
+
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(map[string]interface{}{
+		"changes": changes,
+	})
+	if err != nil {
+		ctrl.Log.Error(err, "Error encoding response", "component", "static pod manager")
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	}
+}
+
+func hasChanges(changes map[string]bool) bool {
+	for _, changed := range changes {
+		if changed {
+			return true
+		}
+	}
+	return false
 }

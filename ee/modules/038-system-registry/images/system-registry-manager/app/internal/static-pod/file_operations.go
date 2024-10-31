@@ -174,6 +174,21 @@ func deleteFile(path string) (bool, error) {
 	return true, nil
 }
 
+// deleteDirectory deletes the directory at the specified path
+func deleteDirectory(path string) (bool, error) {
+
+	// Check if the file exists
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false, nil
+	}
+
+	if err := os.RemoveAll(path); err != nil {
+		return false, fmt.Errorf("error deleting directory %s: %v", path, err)
+	}
+
+	return true, nil
+}
+
 func (config *EmbeddedRegistryConfig) validate() error {
 	var missingFields []string
 
