@@ -243,38 +243,37 @@ properties:
 
               Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/layouts.html) about possible provider layouts.
             x-unsafe: true
-            standard:
-              type: object
-              description: |
-                Settings for the [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html#standard) layout.
-              additionalProperties: false
-              required: [internalNetworkCIDR]
-              properties:
-                internalNetworkCIDR: &internalNetworkCIDR
-                  description: |
-                    Routing for the internal cluster network.
-                  type: string
-                  pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
-                  x-unsafe: true
-                internalNetworkDNSServers:
-                  description: |
-                    A list of addresses of the recursive DNSs of the internal cluster network.
-                type: array
-                items:
-                  type: string
-                  pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
-              internalNetworkSecurity: &internalNetworkSecurity
+          standard:
+            type: object
+            description: |
+              Settings for the [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html#standard) layout.
+            additionalProperties: false
+            required: [internalNetworkCIDR]
+            properties:
+              internalNetworkCIDR: &internalNetworkCIDR
                 description: |
-                  Defines whether [SecurityGroups](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network.
-                type: boolean
-                default: true
-              enableEIP:
-                description: |
-                    Enable Elastic IP for the master nodes.
-                type: boolean
+                  Routing for the internal cluster network.
+                type: string
                 pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                 x-unsafe: true
-
+              internalNetworkDNSServers:
+                description: |
+                  A list of addresses of the recursive DNSs of the internal cluster network.
+              type: array
+              items:
+                type: string
+                pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+            internalNetworkSecurity: &internalNetworkSecurity
+              description: |
+                Defines whether [SecurityGroups](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network.
+              type: boolean
+              default: true
+            enableEIP:
+              description: |
+                  Enable Elastic IP for the master nodes.
+              type: boolean
+              pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+              x-unsafe: true
           provider:
             description: |
               Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/environment.html) to the HuaweiCloud API.
