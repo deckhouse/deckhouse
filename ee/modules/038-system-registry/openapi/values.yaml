@@ -11,7 +11,7 @@ properties:
         oneOf:
           - type: string
           - type: boolean
-      selfSignedCA:
+      registryCA:
         type: object
         default: { }
         x-examples:
