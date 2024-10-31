@@ -7,28 +7,29 @@ function setupLogoutButton() {
       let r = new XMLHttpRequest();
       r.open('GET', window.location.origin + "/dex-authenticator/userinfo", false);
       r.onload  = function() {
-        let payload = JSON.parse(r.response);
+        if (r.status === 200) {
+          let payload = JSON.parse(r.response);
 
-        node.innerHTML = '' +
-          '<div>' +
-          '<button class="mat-focus-indicator mat-raised-button mat-button-base mat-primary" color="primary">' +
-          '<span class="mat-button-wrapper">' +
-          '<a href="/logout" style="color:#ffffff;">Click to logout</a>' +
-          '</span>' +
-          '</button>' +
-          '</div>' +
-          '<p><hr/></p>';
-        node.innerHTML += '<div><h3>Logged in as </h3> Username: <b>' + payload.email + '</b></div>'
+          node.innerHTML = '' +
+            '<div>' +
+            '<button class="mat-focus-indicator mat-raised-button mat-button-base mat-primary" color="primary">' +
+            '<span class="mat-button-wrapper">' +
+            '<a href="/logout" style="color:#ffffff;">Click to logout</a>' +
+            '</span>' +
+            '</button>' +
+            '</div>' +
+            '<p><hr/></p>';
+          node.innerHTML += '<div><h3>Logged in as </h3> Username: <b>' + payload.email + '</b></div>'
 
-        if (payload.groups.length > 0) {
-          node.innerHTML += '<br> Groups: <br><ul>'
-          for (const group of payload.groups) {
-            let fgroup = '<li>' + group  + '</li>';
-            node.innerHTML += fgroup
+          if (payload.groups.length > 0) {
+            node.innerHTML += '<br> Groups: <br><ul>'
+            for (const group of payload.groups) {
+              let fgroup = '<li>' + group  + '</li>';
+              node.innerHTML += fgroup
+            }
           }
+          flag = true;
         }
-
-        flag = true;
       };
       r.send(null);
     }

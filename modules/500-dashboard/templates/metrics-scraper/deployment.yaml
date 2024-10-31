@@ -68,6 +68,7 @@ spec:
             port: 8000
           initialDelaySeconds: 30
           timeoutSeconds: 30
+          periodSeconds: 60
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
