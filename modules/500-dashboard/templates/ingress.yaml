@@ -31,6 +31,7 @@ metadata:
   {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
     {{- if and $secret (hasKey $secret "data") (hasKey $secret.data "token") (index $secret.data "token") }}
       proxy_set_header Authorization "Bearer {{ index $secret.data "token" | b64dec }}";
+    nginx.ingress.kubernetes.io/server-snippet: |
       location /dex-authenticator/userinfo {
         return 404;
       }
