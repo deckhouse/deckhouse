@@ -1,6 +1,6 @@
 {{- define "metrics_scraper_resources" }}
-cpu: 20m
-memory: 200Mi
+cpu: 1m
+memory: 25Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}

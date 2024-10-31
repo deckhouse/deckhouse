@@ -1,6 +1,6 @@
 {{- define "api_resources" }}
-cpu: 30m
-memory: 50Mi
+cpu: 1m
+memory: 15Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -24,8 +24,8 @@ spec:
       minAllowed:
         {{- include "api_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 50m
-        memory: 100Mi
+        cpu: 250m
+        memory: 400Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
@@ -67,10 +67,6 @@ spec:
             secretKeyRef:
               name: kubernetes-dashboard-csrf
               key: private.key
-        ports:
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
-        - containerPort: 8443
-    {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

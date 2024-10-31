@@ -1,6 +1,6 @@
 {{- define "auth_resources" }}
-cpu: 30m
-memory: 50Mi
+cpu: 1m
+memory: 15Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -24,8 +24,8 @@ spec:
       minAllowed:
         {{- include "auth_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 50m
-        memory: 100Mi
+        cpu: 250m
+        memory: 400Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---

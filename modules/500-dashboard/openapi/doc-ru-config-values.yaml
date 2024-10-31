@@ -14,6 +14,8 @@ properties:
           Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
           > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/).
+
+          > **Важно!** Из соображений безопасности этот режим работает только если `https.mode` (глобальный или в модуле) не установлен в значение `Disabled`.
         properties:
           authURL:
             description: |
@@ -24,10 +26,6 @@ properties:
           useBearerTokens:
             description: |
               Токены авторизации. dashboard должен работать с Kubernetes API от имени пользователя (сервис аутентификации при этом должен обязательно возвращать в своих ответах HTTP-заголовок Authorization, в котором должен быть bearer-token — именно под этим токеном dashboard будет производить запросы к API-серверу Kubernetes).
-
-              * Значение по умолчанию: `false`.
-
-              > **Важно!** Из соображений безопасности этот режим работает только если `https.mode` (глобальный или в модуле) не установлен в значение `Disabled`.
       whitelistSourceRanges:
         description: |
           Массив адресов в формате CIDR, которым разрешено проходить аутентификацию для доступа в dashboard.

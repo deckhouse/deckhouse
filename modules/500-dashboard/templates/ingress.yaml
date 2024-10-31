@@ -1,3 +1,4 @@
+{{- $secret := lookup "v1" "Secret" (printf "d8-%s" .Chart.Name) "dashboard" -}}
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
 apiVersion: networking.k8s.io/v1
@@ -27,6 +28,11 @@ metadata:
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
+{{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
+  {{- if and $secret (hasKey $secret "data") (hasKey $secret.data "token") (index $secret.data "token") }}
+      more_set_headers "Authorization: Bearer {{ index $secret.data "token" | b64enc }}";
+  {{- end }}
+{{- end }}
 {{- if .Values.dashboard.auth.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.dashboard.auth.whitelistSourceRanges | join "," }}
 {{- end }}
