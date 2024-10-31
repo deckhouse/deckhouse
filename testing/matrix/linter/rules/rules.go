@@ -509,7 +509,8 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("GetPodSecurityContext failed: %v", err),
+			"GetPodSecurityContext failed: %v",
+			err,
 		)
 	}
 
@@ -651,7 +652,8 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("IsHostNetwork failed: %v", err),
+			"IsHostNetwork failed: %v",
+			err,
 		)
 	}
 
@@ -661,7 +663,8 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("GetContainers failed: %v", err),
+			"GetContainers failed: %v",
+			err,
 		)
 	}
 	initContainers, err := object.GetInitContainers()
@@ -670,7 +673,8 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("GetInitContainers failed: %v", err),
+			"GetInitContainers failed: %v",
+			err,
 		)
 	}
 	containers = append(containers, initContainers...)
