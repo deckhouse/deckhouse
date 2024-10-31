@@ -7,7 +7,6 @@ package controller
 
 import (
 	"context"
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -21,8 +20,6 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/utils"
 
 	"github.com/go-logr/logr"
-
-	"github.com/mitchellh/hashstructure/v2"
 
 	"github.com/vishvananda/netlink"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -243,16 +240,7 @@ func (re *RouteEntry) String() string {
 }
 
 func (re *RouteEntry) getHash() string {
-	hash, err := hashstructure.Hash(*re, hashstructure.FormatV2, nil)
-	if err != nil {
-		return re.String()
-	}
-
-	return fmt.Sprintf("%v", hash)
-}
-
-func (re *RouteEntry) getShaHash() string {
-	return fmt.Sprintf("%x", sha1.Sum([]byte(re.String())))
+	return re.String()
 }
 
 func (re *RouteEntry) getRoute() v1alpha1.Route {
@@ -399,7 +387,7 @@ func (rem *RouteEntryMap) AppendRE(re RouteEntry) {
 	if len(*rem) == 0 {
 		*rem = make(map[string]RouteEntry)
 	}
-	(*rem)[re.getShaHash()] = re
+	(*rem)[re.getHash()] = re
 }
 
 // nrtSummary: type, service functions and methods
@@ -448,9 +436,7 @@ func (ns *nrtSummary) discoverFacts(nrt v1alpha1.SDNInternalNodeRoutingTable, gl
 			)
 		}
 	}
-	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] DEBUG Contert Routes+Table to REM. Resuilt: %v", remFromNRTSpecRoutes))
 	if !ns.newReconciliationStatus.IsSuccess {
-		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] DEBUG Some thing went wrong, need requeue"))
 		return true
 	}
 
@@ -515,7 +501,7 @@ func (ns *nrtSummary) addRoutes(actualRoutesOnNode *RouteEntryMap, log logr.Logg
 	status := ns.newReconciliationStatus
 	for _, re := range ns.desiredRoutesToAddByNRT {
 		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Route %v should be added", re))
-		if _, ok := (*actualRoutesOnNode)[re.getShaHash()]; ok {
+		if _, ok := (*actualRoutesOnNode)[re.getHash()]; ok {
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] but it is already present on Node"))
 			continue
 		}

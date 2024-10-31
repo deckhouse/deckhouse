@@ -20,8 +20,6 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/mitchellh/hashstructure/v2"
-
 	"github.com/vishvananda/netlink"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -266,12 +264,7 @@ func (ire *IPRuleEntry) String() string {
 }
 
 func (ire *IPRuleEntry) getHash() string {
-	hash, err := hashstructure.Hash(*ire, hashstructure.FormatV2, nil)
-	if err != nil {
-		return ire.String()
-	}
-
-	return fmt.Sprintf("%v", hash)
+	return ire.String()
 }
 
 func (ire *IPRuleEntry) getNetlinkRule() (*netlink.Rule, error) {
