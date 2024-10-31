@@ -17,12 +17,14 @@
     containerd service will restart.
  - **[ceph-csi]** Make ceph-csi module deprecated. [#10009](https://github.com/deckhouse/deckhouse/pull/10009)
  - **[cloud-provider-aws]** Added the ability to specify your IAM role. [#9530](https://github.com/deckhouse/deckhouse/pull/9530)
+ - **[cni-cilium]** Add ability to explicitly specify network interfaces for Virtual IP in EgressGateway. [#10326](https://github.com/deckhouse/deckhouse/pull/10326)
  - **[cni-cilium]** Adding support for configuring each node individually using CiliumNodeConfig resources. [#9754](https://github.com/deckhouse/deckhouse/pull/9754)
  - **[control-plane-manager]** patch etcd to support outputting of snapshots to stdout [#9948](https://github.com/deckhouse/deckhouse/pull/9948)
  - **[control-plane-manager]** Add CronJob that does etcd backup. [#9637](https://github.com/deckhouse/deckhouse/pull/9637)
  - **[deckhouse]** Prohibit to change resources with the label `heritage: deckhouse` even from the `kubernetes-admin` user. [#9852](https://github.com/deckhouse/deckhouse/pull/9852)
  - **[deckhouse]** Get rid of the rbacgen tool. [#9622](https://github.com/deckhouse/deckhouse/pull/9622)
  - **[deckhouse]** Extend Deckhouse update settings. [#9314](https://github.com/deckhouse/deckhouse/pull/9314)
+    Changed logic of automatic updates modes (read parameter [settings.update.mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1.65/modules/002-deckhouse/configuration.html#parameters-update-mode) description of module deckhouse ).
  - **[deckhouse-controller]** Added `backup.deckhouse.io/cluster-config` label to Deckhouse CRD. [#10111](https://github.com/deckhouse/deckhouse/pull/10111)
  - **[deckhouse-controller]** Add disable confirmation settings for critical modules. [#10098](https://github.com/deckhouse/deckhouse/pull/10098)
  - **[deckhouse-controller]** Ability to watch info about deckhouse release and module releases in the registry from cli. [#10046](https://github.com/deckhouse/deckhouse/pull/10046)
@@ -53,9 +55,11 @@
  - **[candi]** Added the ability to configure Node DNS servers via the Azure Cloud Provider. [#9554](https://github.com/deckhouse/deckhouse/pull/9554)
  - **[cloud-provider-vcd]** Fix vCloudDirector catalogs sharing. [#9802](https://github.com/deckhouse/deckhouse/pull/9802)
  - **[cloud-provider-yandex]** Add support a hybrid cluster in yandex CSI driver [#9861](https://github.com/deckhouse/deckhouse/pull/9861)
+ - **[cloud-provider-zvirt]** Add to the instance a status about zvirtinstance. [#10236](https://github.com/deckhouse/deckhouse/pull/10236)
  - **[cloud-provider-zvirt]** 401 Unauthorized error fixed in zvirt csi-node. [#10035](https://github.com/deckhouse/deckhouse/pull/10035)
  - **[cni-cilium]** Disable the metrics server in the "egress-gateway-agent" because we don't use it. [#10208](https://github.com/deckhouse/deckhouse/pull/10208)
     The pods of the egress-gateway-agent will be restarted.
+ - **[common]** Add `/bin/true` to `init` image [#10372](https://github.com/deckhouse/deckhouse/pull/10372)
  - **[control-plane-manager]** Seamless change of clusterDomain. [#9739](https://github.com/deckhouse/deckhouse/pull/9739)
  - **[control-plane-manager]** Automatically regenerate kubeconfig for control plane components if validation fails, preventing crashes. [#9445](https://github.com/deckhouse/deckhouse/pull/9445)
  - **[deckhouse]** Fix extenders message logs. [#10212](https://github.com/deckhouse/deckhouse/pull/10212)
@@ -66,6 +70,7 @@
  - **[deckhouse-controller]** Fixed update logic in various modes [#10105](https://github.com/deckhouse/deckhouse/pull/10105)
  - **[deckhouse-controller]** Update the documentation about the list of data the `collect-debug-info` command collects. [#10028](https://github.com/deckhouse/deckhouse/pull/10028)
  - **[deckhouse-controller]** Clean up module documentation when deleting module [#9985](https://github.com/deckhouse/deckhouse/pull/9985)
+ - **[deckhouse-tools]** Rebuild d8-cli images when used version changes [#10267](https://github.com/deckhouse/deckhouse/pull/10267)
  - **[dhctl]** Deny use defaultCRI type as Docker [#10022](https://github.com/deckhouse/deckhouse/pull/10022)
  - **[dhctl]** Fix lease locking. [#9982](https://github.com/deckhouse/deckhouse/pull/9982)
  - **[dhctl]** Add validation for ClusterConfiguration.cloud.prefix [#9858](https://github.com/deckhouse/deckhouse/pull/9858)
@@ -94,8 +99,14 @@
 ## Chore
 
 
+ - **[candi]** Bump patch versions of Kubernetes images: `v1.28.15`, `v1.29.10`, `v1.30.6` [#10340](https://github.com/deckhouse/deckhouse/pull/10340)
+    Kubernetes control-plane components will restart, kubelet will restart.
+ - **[cni-cilium]** Replacing iptables with precompiled binaries. [#10103](https://github.com/deckhouse/deckhouse/pull/10103)
+    The pods will be restarted.
  - **[cni-cilium]** Updating `cilium` and its components to version 1.14.14 [#9650](https://github.com/deckhouse/deckhouse/pull/9650)
     All cilium pods will be restarted.
+ - **[cni-flannel]** Replacing iptables with precompiled binaries. [#10103](https://github.com/deckhouse/deckhouse/pull/10103)
+    The pods will be restarted.
  - **[common]** Create image for init containers. [#9992](https://github.com/deckhouse/deckhouse/pull/9992)
  - **[common]** Bump shell-operator to optimize conversion hooks in the webhook-handler. [#9983](https://github.com/deckhouse/deckhouse/pull/9983)
  - **[dashboard]** Change the images to distroless. [#10192](https://github.com/deckhouse/deckhouse/pull/10192)
@@ -106,22 +117,34 @@
  - **[deckhouse-controller]** Remove the flant-integration internal module. [#8392](https://github.com/deckhouse/deckhouse/pull/8392)
  - **[dhctl]** Remove support for deprecated `InitConfiguration.configOverrides` parameter. [#9920](https://github.com/deckhouse/deckhouse/pull/9920)
  - **[documentation]** Change images to distroless. [#10040](https://github.com/deckhouse/deckhouse/pull/10040)
+ - **[ingress-nginx]** Replacing iptables with precompiled binaries. [#10103](https://github.com/deckhouse/deckhouse/pull/10103)
+    The pods will be restarted.
  - **[ingress-nginx]** Remove v1.6 IngressNginxController. [#9935](https://github.com/deckhouse/deckhouse/pull/9935)
  - **[ingress-nginx]** Update kruise controller to v1.7.2. [#9898](https://github.com/deckhouse/deckhouse/pull/9898)
     kriuse controller will be restarted, pods of an ingress nginx controller of v1.10 will be recreated.
  - **[istio]** Restoring the operation of the audit logs. To see your AuthorizationPolicies AUDIT results, restart application pods with istio sidecars. [#10204](https://github.com/deckhouse/deckhouse/pull/10204)
  - **[istio]** Migrate istio and kiali containers to Alt Linux and Distroless distribution [#9984](https://github.com/deckhouse/deckhouse/pull/9984)
     All pods in the `d8-istio` namespace will be automatically restarted. Other pods with istio-sidecars will apply changes after a manual restart.
+ - **[kube-proxy]** Replacing iptables with precompiled binaries. [#10103](https://github.com/deckhouse/deckhouse/pull/10103)
+    The pods will be restarted.
  - **[monitoring-deckhouse]** Add CentOS 7 to the `D8NodeHasDeprecatedOSVersion` alert. [#10110](https://github.com/deckhouse/deckhouse/pull/10110)
  - **[monitoring-deckhouse]** Add Debian 10 to the `D8NodeHasDeprecatedOSVersion` alert. [#9798](https://github.com/deckhouse/deckhouse/pull/9798)
  - **[monitoring-kubernetes]** Update kube-state-metrics to 2.13 [#10003](https://github.com/deckhouse/deckhouse/pull/10003)
+ - **[network-gateway]** Replacing iptables with precompiled binaries. [#10103](https://github.com/deckhouse/deckhouse/pull/10103)
+    The pods will be restarted.
+ - **[node-local-dns]** Replacing iptables with precompiled binaries. [#10103](https://github.com/deckhouse/deckhouse/pull/10103)
+    The pods will be restarted.
  - **[node-manager]** marked the old api *.deckhouse.io as deprecated [#10021](https://github.com/deckhouse/deckhouse/pull/10021)
  - **[node-manager]** Fix the module's snapshots debugging. [#9995](https://github.com/deckhouse/deckhouse/pull/9995)
  - **[node-manager]** Declarative binding of SSHCredentials and StaticInstance [#9369](https://github.com/deckhouse/deckhouse/pull/9369)
+ - **[openvpn]** Replacing iptables with precompiled binaries. [#10103](https://github.com/deckhouse/deckhouse/pull/10103)
+    The pods will be restarted.
  - **[openvpn]** changed the images to distroless [#9981](https://github.com/deckhouse/deckhouse/pull/9981)
     Updating openvpn to 2.6.*
+ - **[prometheus]** Update information about migration Prometheus and Upmeter pods with the local storage to other nodes. [#10194](https://github.com/deckhouse/deckhouse/pull/10194)
  - **[prometheus]** marked the old api *.deckhouse.io as deprecated [#10021](https://github.com/deckhouse/deckhouse/pull/10021)
  - **[prometheus]** move externalLabels to remoteWrite section [#9752](https://github.com/deckhouse/deckhouse/pull/9752)
+ - **[upmeter]** Update information about migration Prometheus and Upmeter pods with the local storage to other nodes. [#10194](https://github.com/deckhouse/deckhouse/pull/10194)
  - **[upmeter]** marked the old api *.deckhouse.io as deprecated [#10021](https://github.com/deckhouse/deckhouse/pull/10021)
  - **[user-authn]** marked the old api *.deckhouse.io as deprecated [#10021](https://github.com/deckhouse/deckhouse/pull/10021)
  - **[user-authz]** marked the old api *.deckhouse.io as deprecated [#10021](https://github.com/deckhouse/deckhouse/pull/10021)
