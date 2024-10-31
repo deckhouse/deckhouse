@@ -11,13 +11,13 @@ metadata:
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/affinity-mode: persistent
     nginx.ingress.kubernetes.io/session-cookie-name: d8-dashboard-affinity
+    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
 {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.dashboard.auth.externalAuthentication.authSignInURL | quote }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.dashboard.auth.externalAuthentication.authURL | quote }}
  {{- if .Values.dashboard.auth.externalAuthentication.useBearerTokens }}
     nginx.ingress.kubernetes.io/auth-response-headers: "authorization"
  {{- end }}
-    nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
 {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: basic-auth
