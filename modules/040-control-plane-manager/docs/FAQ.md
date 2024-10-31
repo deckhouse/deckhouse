@@ -75,7 +75,7 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 The steps described below must be performed from the first in order of the master node of the cluster (master-0). This is because the cluster is always scaled in order: for example, it is impossible to delete nodes master-0 and master-1, leaving master-2.
 {% endalert %}
 
-1. Make a [backup of etcd](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Make a [backup of etcd](#etc-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
@@ -160,7 +160,7 @@ The steps described below must be performed from the first in order of the maste
 
 ## How do I dismiss the master role while keeping the node?
 
-1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Make a [backup of `etcd`](#etc-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
@@ -188,7 +188,7 @@ The steps described below must be performed from the first in order of the maste
 
 ## How do I switch to a different OS image in a multi-master cluster?
 
-1. Make a [backup of `etcd`](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
+1. Make a [backup of `etcd`](#etc-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
 1. Make sure that [Deckhouse queue is empty](../../deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse).
@@ -647,12 +647,12 @@ Follow these steps to restore a multi-master cluster:
 
 To get cluster objects data from an etcd backup, you need:
 1. Start an temporary instance of etcd.
-2. Fill it with data from the [backup](#how-to-manually-backup-etcd).
+2. Fill it with data from the [backup](#how-do-make-etcd-backup).
 3. Get desired objects using `etcdhelper`.
 
 #### Example of steps to restore objects from an etcd backup
 
-In the example below, `etcd-snapshot.bin` is a [etcd shapshot](#how-to-manually-backup-etcd), `infra-production` is the namespace in which objects need to be restored.
+In the example below, `etcd-snapshot.bin` is a [etcd shapshot](#how-do-make-etcd-backup), `infra-production` is the namespace in which objects need to be restored.
 
 1. Start the Pod, with a temporary instance of etcd.
    - Prepare the file `etcd.pod.yaml` of the Pod template by executing the following commands:
