@@ -44,21 +44,21 @@ properties:
               imageName: "debian-11-genericcloud-amd64-20220911-1135"
           nodeGroups:
             - name: front
-            replicas: 2
-            instanceClass:
-              flavorName: m1.large
-              imageName: "debian-11-genericcloud-amd64-20220911-1135"
-              rootDiskSize: 50
-              configDrive: false
-              floatingIPPools:
-                - public
-                - shared
-              additionalSecurityGroups:
-                - sec_group_1
-                - sec_group_2
-            zones:
-              - eu-1a
-              - eu-1b
+              replicas: 2
+              instanceClass:
+                flavorName: m1.large
+                imageName: "debian-11-genericcloud-amd64-20220911-1135"
+                rootDiskSize: 50
+                configDrive: false
+                floatingIPPools:
+                  - public
+                  - shared
+                additionalSecurityGroups:
+                  - sec_group_1
+                  - sec_group_2
+              zones:
+                - eu-1a
+                - eu-1b
         required: [apiVersion, kind, layout, provider, sshPublicKey, masterNodeGroup]
         properties:
           apiVersion:
