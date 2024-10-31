@@ -329,7 +329,7 @@ shell:
   beforeInstall:
   - apk add --no-cache git
   install:
-  # Use v1.60.1 - https://github.com/golangci/golangci-lint/issues/4837
+  # Use v1.60.1 for go1.23 - https://github.com/golangci/golangci-lint/issues/4837
   - export GOPROXY={{ .GOPROXY }}
   - git clone --depth 1 {{ .SOURCE_REPO }}/golangci/golangci-lint --branch v1.60.1
   - cd golangci-lint/
