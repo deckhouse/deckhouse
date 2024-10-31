@@ -90,5 +90,5 @@ func (l *LintRuleErrorsList) ConvertToError() error {
 		}
 		builder.WriteString("\n")
 	}
-	return fmt.Errorf(builder.String())
+	return fmt.Errorf("%s", builder.String())
 }

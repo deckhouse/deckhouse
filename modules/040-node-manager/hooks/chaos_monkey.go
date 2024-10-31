@@ -97,7 +97,7 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 
 	nodeGroups, machines, nodes, err := prepareChaosData(input)
 	if err != nil {
-		input.LogEntry.Infof(err.Error()) // just info message, already have a victim
+		input.LogEntry.Info(err.Error()) // just info message, already have a victim
 		return nil
 	}
 

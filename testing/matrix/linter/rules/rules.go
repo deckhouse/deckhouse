@@ -199,7 +199,8 @@ func containerImageDigestCheck(object storage.StoreObject, containers []v1.Conta
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Cannot parse repository from image: "+c.Image,
+				"Cannot parse repository from image: %s",
+				c.Image,
 			)
 		}
 
@@ -207,7 +208,9 @@ func containerImageDigestCheck(object storage.StoreObject, containers []v1.Conta
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"All images must be deployed from the same default registry: "+defaultRegistry+" current:"+repo.RepositoryStr(),
+				"All images must be deployed from the same default registry: %s current: %s",
+				defaultRegistry,
+				repo.RepositoryStr(),
 			)
 		}
 	}
