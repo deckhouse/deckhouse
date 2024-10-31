@@ -66,7 +66,7 @@ properties:
             enum: [deckhouse.io/v1]
           kind:
             type: string
-            enum: [HuaweiCloudClusterConfiguration]
+            enum: [HuaweicloudClusterConfiguration]
           sshPublicKey:
             type: string
             description: A public key for accessing nodes.
