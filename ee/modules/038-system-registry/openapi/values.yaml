@@ -11,3 +11,14 @@ properties:
         oneOf:
           - type: string
           - type: boolean
+      selfSignedCA:
+        type: object
+        default: { }
+        x-examples:
+          - cert: "-----BEGIN CERTIFICATE-----....-----END CERTIFICATE-----"
+            key: "-----BEGIN RSA PRIVATE KEY-----....-----END RSA PRIVATE KEY----"
+        properties:
+          cert:
+            type: string
+          key:
+            type: string
