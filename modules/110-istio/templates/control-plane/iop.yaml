@@ -272,6 +272,12 @@ spec:
               securityContext:
                 seccompProfile:
                   type: RuntimeDefault
+              livenessProbe:
+                httpGet:
+                  path: /healthz/ready
+                  port: 15021
+                initialDelaySeconds: 5
+                periodSeconds: 10
 {{- if ($.Values.global.enabledModules | has "cni-cilium") }}
         d8-check-kernel-version: |
           spec:
