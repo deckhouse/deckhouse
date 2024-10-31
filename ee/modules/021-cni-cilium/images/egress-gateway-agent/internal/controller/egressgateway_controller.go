@@ -60,7 +60,7 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		}
 	}
 
-	desiredVirtualIPsToAnnounce := make(map[string]struct{})
+	desiredVirtualIPsToAnnounce := make(map[string][]string)
 
 	// Get list of EG by label
 	var egressGatewayInstanceList eeInternalCrd.SDNInternalEgressGatewayInstanceList
@@ -73,7 +73,7 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 		if egressGatewayInstance.Spec.SourceIP.Mode != eeCommon.VirtualIPAddress {
 			continue
 		}
-		desiredVirtualIPsToAnnounce[egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP] = struct{}{}
+		desiredVirtualIPsToAnnounce[egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP] = egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.Interfaces
 	}
 
 	virtualIPsToAdd := make([]string, 0, 4)
@@ -98,9 +98,16 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	logger.Info("IPs chosen for deletion", "count", len(virtualIPsToDel))
 
 	for _, ip := range virtualIPsToAdd {
-		ipAdvertisement := layer2.NewIPAdvertisement(net.ParseIP(ip), true, sets.Set[string]{})
+		var ipAdvertisement layer2.IPAdvertisement
+		interfaces := desiredVirtualIPsToAnnounce[ip]
+		if len(interfaces) == 0 {
+			// if the interface slice is empty, then IP will be announced from all interfaces
+			ipAdvertisement = layer2.NewIPAdvertisement(net.ParseIP(ip), true, sets.Set[string]{})
+		} else {
+			ipAdvertisement = layer2.NewIPAdvertisement(net.ParseIP(ip), false, sets.New[string](interfaces...))
+		}
 		r.VirtualIPAnnounces.SetBalancer(ip, ipAdvertisement)
-		logger.Info("added virtual IP", "ip", ip)
+		logger.Info("added virtual IP", "ip", ip, "interfaces", interfaces)
 	}
 
 	for _, ip := range virtualIPsToDel {

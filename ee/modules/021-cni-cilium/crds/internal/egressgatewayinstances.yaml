@@ -66,6 +66,11 @@ spec:
                           type: string
                           description: |-
                             "Virtual" IP address that will be assigned to outgoing requests through the egress gateway.
+                        interfaces:
+                          description: The list of network interfaces to which the _virtual_ IP will be simulated.
+                          type: array
+                          items:
+                            type: string
                         routingTableName:
                           type: string
                           description: |-
