@@ -74,7 +74,7 @@ spec:
       containers:
         - name: huaweicloud-cloud-controller-manager
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
-          image: {{ $ccmImage }}
+          image: {{ include "helm_lib_module_image" (list . "cloudControllerManager") }}
           args:
           - --leader-elect=true
           - --cluster-cidr={{ .Values.global.discovery.podSubnet }}
