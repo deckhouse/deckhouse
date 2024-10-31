@@ -7,6 +7,7 @@ package controller
 
 import (
 	"context"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -248,6 +249,10 @@ func (re *RouteEntry) getHash() string {
 	}
 
 	return fmt.Sprintf("%v", hash)
+}
+
+func (re *RouteEntry) getShaHash() string {
+	return fmt.Sprintf("%v", sha1.Sum([]byte(re.String())))
 }
 
 func (re *RouteEntry) getRoute() v1alpha1.Route {
