@@ -29,7 +29,7 @@ spec:
   - matchLabels:
       zone: a
 `
-	ipAddressPolls = `
+	ipAddressPools = `
 ---
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -49,7 +49,7 @@ spec:
   addresses:
   - 22.22.22.22/32
 `
-	ipAddressPolls2 = `
+	ipAddressPools2 = `
 ---
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -121,7 +121,7 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 
 	Context("Check correct configurations", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(l2Advertisement + ipAddressPolls))
+			f.BindingContexts.Set(f.KubeStateSet(l2Advertisement + ipAddressPools))
 			f.RunHook()
 		})
 		It("Check the set variable", func() {
@@ -135,7 +135,7 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 
 	Context("Check AddressPoolsMismatch error", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(l2Advertisement + ipAddressPolls2))
+			f.BindingContexts.Set(f.KubeStateSet(l2Advertisement + ipAddressPools2))
 			f.RunHook()
 		})
 

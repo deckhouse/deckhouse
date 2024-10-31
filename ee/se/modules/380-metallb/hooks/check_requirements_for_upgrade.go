@@ -116,7 +116,7 @@ func applyIPAddressPoolFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 }
 
 func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
-	ipAddressPollNamesFromL2A := make([]string, 0, 8)
+	ipAddressPoolNamesFromL2A := make([]string, 0, 8)
 	l2AdvertisementSnaps := input.Snapshots["l2advertisements"]
 	for _, l2AdvertisementSnap := range l2AdvertisementSnaps {
 		l2Advertisement := l2AdvertisementSnap.(L2AdvertisementInfo)
@@ -139,22 +139,22 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 			}
 		}
 
-		// Collect names of ipAddressPolls from L2Advertisement
-		ipAddressPollNamesFromL2A = append(ipAddressPollNamesFromL2A, l2Advertisement.IPAddressPools...)
+		// Collect names of ipAddressPools from L2Advertisement
+		ipAddressPoolNamesFromL2A = append(ipAddressPoolNamesFromL2A, l2Advertisement.IPAddressPools...)
 	}
 
-	ipAddressPollNamesFromIAP := make([]string, 0, 8)
+	ipAddressPoolNamesFromIAP := make([]string, 0, 8)
 	ipAddressPoolSnaps := input.Snapshots["ipaddresspools"]
 	for _, ipAddressPoolSnap := range ipAddressPoolSnaps {
 		ipAddressPoolName := ipAddressPoolSnap.(string)
-		// Collect names of ipAddressPolls from IPAddressPools
-		ipAddressPollNamesFromIAP = append(ipAddressPollNamesFromIAP, ipAddressPoolName)
+		// Collect names of ipAddressPools from IPAddressPools
+		ipAddressPoolNamesFromIAP = append(ipAddressPoolNamesFromIAP, ipAddressPoolName)
 	}
 
 	// Are only layer2 pools in the cluster?
-	sort.Strings(ipAddressPollNamesFromL2A) // Only layer2 pools
-	sort.Strings(ipAddressPollNamesFromIAP) // All pools of cluster
-	if !slices.Equal(ipAddressPollNamesFromL2A, ipAddressPollNamesFromIAP) {
+	sort.Strings(ipAddressPoolNamesFromL2A) // Only layer2 pools
+	sort.Strings(ipAddressPoolNamesFromIAP) // All pools of cluster
+	if !slices.Equal(ipAddressPoolNamesFromL2A, ipAddressPoolNamesFromIAP) {
 		requirements.SaveValue(metallbConfigurationStatusKey, "AddressPoolsMismatch")
 		return nil
 	}
