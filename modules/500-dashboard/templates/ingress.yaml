@@ -30,7 +30,7 @@ metadata:
       proxy_ssl_session_reuse on;
 {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
   {{- if and $secret (hasKey $secret "data") (hasKey $secret.data "token") (index $secret.data "token") }}
-      more_set_headers "Authorization: Bearer {{ index $secret.data "token" | b64enc }}";
+      proxy_set_header Authorization "Bearer {{ index $secret.data "token" | b64enc }}";
   {{- end }}
 {{- end }}
 {{- if .Values.dashboard.auth.whitelistSourceRanges }}
