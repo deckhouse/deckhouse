@@ -333,7 +333,6 @@ metadata:
 spec:
   email: admin@yourcompany.com
   password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
-  ttl: 24h
 ```
 
 {% endraw %}
