@@ -273,21 +273,23 @@ spec:
                 seccompProfile:
                   type: RuntimeDefault
 {{- if ($.Values.global.enabledModules | has "admission-policy-engine") }}
-  {{- if hasKey $.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies "requiredProbes" }}
-    {{- $requiredProbes := $.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies.requiredProbes }}
-    {{- range $index, $probe := $requiredProbes }}
-      {{- if eq $probe "livenessProbe" }}
-            livenessProbe:
-              httpGet:
-                path: /healthz/ready
-                port: 15021
-              initialDelaySeconds: 10
-              periodSeconds: 2
-              timeoutSeconds: 3
-              failureThreshold: 30
+  {{- if hasKey $.Values.admissionPolicyEngine "internal" }}
+    {{- if hasKey $.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies "requiredProbes" }}
+      {{- $requiredProbes := $.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies.requiredProbes }}
+      {{- range $index, $probe := $requiredProbes }}
+        {{- if eq $probe "livenessProbe" }}
+              livenessProbe:
+                httpGet:
+                  path: /healthz/ready
+                  port: 15021
+                initialDelaySeconds: 10
+                periodSeconds: 2
+                timeoutSeconds: 3
+                failureThreshold: 30
+        {{- end }}
       {{- end }}
+    {{- else }}
     {{- end }}
-  {{- else }}
   {{- end }}
 {{- end }}
 {{- if ($.Values.global.enabledModules | has "cni-cilium") }}
