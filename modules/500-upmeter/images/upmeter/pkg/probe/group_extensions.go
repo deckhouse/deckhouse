@@ -82,7 +82,7 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 			},
 		}, {
 			group:  groupExtensions,
-			probe:  "grafana",
+			probe:  "grafana-v10",
 			check:  "pod",
 			period: 10 * time.Second,
 			config: checker.AtLeastOnePodReady{
