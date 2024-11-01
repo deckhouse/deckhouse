@@ -89,7 +89,7 @@ spec:
       node-role.kubernetes.io/control-plane: ""
     tolerations:
       - operator: Exists
-    publicAddress: 192.168.240.0/24
+    publicAddress: 192.168.240.241
     subnet: 172.16.25.0/24
     dns:
       servers:
