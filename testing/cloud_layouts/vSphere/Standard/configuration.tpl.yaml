@@ -25,9 +25,9 @@ layout: Standard
 vmFolderPath: 'flant-e2e-tests/${PREFIX}'
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
-region: DatacenterLAB
+region: test-region
 zones:
-- ClusterDeckHouse-SPB5
+- spb5
 externalNetworkNames:
 - DPortGroup-lab-vms
 internalNetworkNames:
