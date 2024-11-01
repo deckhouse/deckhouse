@@ -111,11 +111,15 @@ func (suite *ControllerTestSuite) SetupSubTest() {
 }
 
 func (suite *ControllerTestSuite) TearDownSubTest() {
+	if suite.T().Skipped() {
+		return
+	}
+
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	got := suite.fetchResults()
 
 	if golden {
-		err := os.WriteFile(goldenFile, got, 0666)
+		err := os.WriteFile(goldenFile, got, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
 		exp, err := os.ReadFile(goldenFile)
@@ -123,6 +127,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 		assert.YAMLEq(suite.T(), string(exp), string(got))
 	}
 }
+
 func (suite *ControllerTestSuite) setupController(
 	filename string,
 	initValues string,
@@ -524,9 +529,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Notification: bearer token auth", func() {
-		var (
-			headerValue string
-		)
+		var headerValue string
 		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			headerValue = r.Header.Get("Authorization")
 		}))

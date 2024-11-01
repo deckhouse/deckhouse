@@ -26,7 +26,7 @@ metadata:
   resourceVersion: "1002"
 spec:
   version: v1.25.1
-status:v1.26.0
+status:
   approved: false
   message: ""
   phase: Deployed
