@@ -274,7 +274,7 @@ spec:
                   type: RuntimeDefault
 {{- if ($.Values.global.enabledModules | has "admission-policy-engine") }}
   {{- if $.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies.requiredProbes }}
-    {{- $requiredProbes := ($.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies.requiredProbes) }}
+    {{- $requiredProbes := $.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies.requiredProbes }}
     {{- range $index, $probe := $requiredProbes }}
       {{- if eq $probe "livenessProbe" }}
             livenessProbe:
