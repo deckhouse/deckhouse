@@ -274,7 +274,7 @@ spec:
                   type: RuntimeDefault
 {{- if ($.Values.global.enabledModules | has "admission-policy-engine") }}
   {{- if ($.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies.requiredProbes) }}
-  {{- $requiredProbes := ($.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies.requiredProbes) }}
+    {{- $requiredProbes := ($.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies.requiredProbes) }}
     {{- range $index, $probe := $requiredProbes }}
       {{- if eq $probe "livenessProbe" }}
             livenessProbe:
@@ -287,6 +287,8 @@ spec:
               failureThreshold: 30
       {{- end }}
     {{- end }}
+  {{- else }}
+  {{- end }}
 {{- end }}
 {{- if ($.Values.global.enabledModules | has "cni-cilium") }}
         d8-check-kernel-version: |
