@@ -273,9 +273,9 @@ spec:
                 seccompProfile:
                   type: RuntimeDefault
 {{- if ($.Values.global.enabledModules | has "admission-policy-engine") }}
-  {{- if hasKey $.Values.admissionPolicyEngine "internal" }}
-    {{- if hasKey $.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies "requiredProbes" }}
-      {{- $requiredProbes := $.Values.admissionPolicyEngine.internal.operationPolicies.spec.policies.requiredProbes }}
+  {{- range $cr := .Values.admissionPolicyEngine.internal.operationPolicies }}
+    {{- if hasKey $cr.spec.policies "requiredProbes" }}
+      {{- $requiredProbes := $cr.spec.policies.requiredProbes }}
       {{- range $index, $probe := $requiredProbes }}
         {{- if eq $probe "livenessProbe" }}
               livenessProbe:
