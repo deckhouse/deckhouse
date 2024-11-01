@@ -33,7 +33,7 @@ externalNetworkNames:
 internalNetworkNames:
 - DPortGroup-internal-private-vms[DONT-USE]
 internalNetworkCIDR: 172.16.25.0/24
-baseResourcePool: kubernetes-stage/cloud-layout-tests
+baseResourcePool: cloud-layout-tests
 masterNodeGroup:
   replicas: ${MASTERS_COUNT}
   instanceClass:
