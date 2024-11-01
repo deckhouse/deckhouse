@@ -31,7 +31,7 @@ zones:
 externalNetworkNames:
 - DPortGroup-lab-vms
 internalNetworkNames:
-- DPortGroup-internal-private-vms[DONT-USE]
+- DPortGroup-internal-private-vms
 internalNetworkCIDR: 172.16.25.0/24
 baseResourcePool: cloud-layout-tests
 masterNodeGroup:
@@ -39,10 +39,10 @@ masterNodeGroup:
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template:  vm-templates/ubuntu-noble-server-cloudimg-amd64
+    template:  vm-templates/ubuntu-noble-24.04-cloudimg
     mainNetwork: DPortGroup-lab-vms
     additionalNetworks:
-    - DPortGroup-internal-private-vms[DONT-USE]
+    - DPortGroup-internal-private-vms
     datastore: vsan-spb-5-datastore
     rootDiskSize: 50
     runtimeOptions:

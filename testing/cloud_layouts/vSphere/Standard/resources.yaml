@@ -29,7 +29,7 @@ spec:
   rootDiskSize: 20
   mainNetwork: DPortGroup-lab-vms
   additionalNetworks:
-    - DPortGroup-internal-private-vms[DONT-USE]
+    - DPortGroup-internal-private-vms
   datastore: vsan-spb-5-datastore
 ---
 apiVersion: deckhouse.io/v1
