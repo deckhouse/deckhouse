@@ -38,31 +38,17 @@ function __on_conversion::alpha1_to_alpha2() {
      if .apiVersion ==  "deckhouse.io/v1alpha1" then
        .apiVersion = "deckhouse.io/v1alpha2" |
        if .spec.deschedulerPolicy.globalParameters.nodeSelector then .spec.nodeLabelSelector.matchLabels = .spec.deschedulerPolicy.globalParameters.nodeSelector end |
-       del(.spec.deschedulerPolicy.globalParameters) |
        del(.spec.deschedulerPolicy.strategies.removeFailedPods) |
        del(.spec.deschedulerPolicy.strategies.removePodsHavingTooManyRestarts) |
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeTaints) |
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingTopologySpreadConstraint) |
-       del(.spec.deschedulerPolicy.strategies.removeDuplicates.nodeFilter) |
-       del(.spec.deschedulerPolicy.strategies.removeDuplicates.priorityFilter) |
-       del(.spec.deschedulerPolicy.strategies.removeDuplicates.namespaceFilter) |
-       del(.spec.deschedulerPolicy.strategies.removeDuplicates.nodeFit) |
-       del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.nodeFilter) |
-       del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.priorityFilter) |
-       del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.namespaceFilter) |
-       del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.nodeFit) |
-       del(.spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.nodeFilter) |
-       del(.spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.priorityFilter) |
-       del(.spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.namespaceFilter) |
-       del(.spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.nodeFit) |
-       del(.spec.deschedulerPolicy.strategies.highNodeUtilization.nodeFilter) |
-       del(.spec.deschedulerPolicy.strategies.highNodeUtilization.priorityFilter) |
-       del(.spec.deschedulerPolicy.strategies.highNodeUtilization.namespaceFilter) |
-       del(.spec.deschedulerPolicy.strategies.highNodeUtilization.nodeFit) |
-       del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.nodeFilter) |
-       del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.priorityFilter) |
-       del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.namespaceFilter) |
-       del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.nodeFit)
+       if .spec.deschedulerPolicy.strategies.removeDuplicates.enabled then .spec.strategies.removeDuplicates.enabled = .spec.deschedulerPolicy.strategies.removeDuplicates.enabled end |
+       if .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled then .spec.strategies.removePodsViolatingNodeAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled end |
+       if .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled then .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled = .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled end |
+       if .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled then .spec.strategies.highNodeUtilization.enabled = .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled end |
+       if .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled then .spec.strategies.lowNodeUtilization.enabled = .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled end |
+       del(.spec.deploymentTemplate) |
+       del(.spec.deschedulerPolicy)
      else . end
   )')
   then
@@ -84,7 +70,13 @@ function __on_conversion::alpha2_to_alpha1() {
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.nodeAffinityType) |
        del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.thresholds) |
        del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.targetThresholds) |
-       del(.spec.deschedulerPolicy.strategies.highNodeUtilization.thresholds)
+       del(.spec.deschedulerPolicy.strategies.highNodeUtilization.thresholds) |
+       if .spec.strategies.removeDuplicates.enabled then .spec.deschedulerPolicy.strategies.removeDuplicates.enabled = .spec.strategies.removeDuplicates.enabled end |
+       if .spec.strategies.removePodsViolatingNodeAffinity.enabled then .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled = .spec.strategies.removePodsViolatingNodeAffinity.enabled end |
+       if .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled then .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled = .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled end |
+       if .spec.strategies.highNodeUtilization.enabled then .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled = .spec.strategies.highNodeUtilization.enabled end |
+       if .spec.strategies.lowNodeUtilization.enabled then .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled = .spec.strategies.lowNodeUtilization.enabled end
+
      else . end
   )')
   then
