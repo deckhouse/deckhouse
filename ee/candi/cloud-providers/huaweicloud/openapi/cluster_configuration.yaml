@@ -241,3 +241,7 @@ apiVersions:
             type: string
             description: |
               The Account name of IAM to scope to.
+          projectID:
+            type: string
+            description: |
+              The project id.
