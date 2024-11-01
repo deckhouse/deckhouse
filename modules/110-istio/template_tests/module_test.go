@@ -943,4 +943,32 @@ updatePolicy:
 			Expect(podMonitor.Field("spec.namespaceSelector.matchNames")).To(MatchJSON(`["myns","review-123"]`))
 		})
 	})
+
+	Context("istiod with sidecar enabled livenessProbe", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.19.7"]`)
+			f.ValuesSetFromYaml("istio.sidecar.livenessProbe", `
+enabled: true
+`)
+			f.HelmRender()
+		})
+
+		It("", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			iopV19 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x19x7")
+			Expect(iopV19.Field("spec.values.global.sidecarInjectorWebhook.templates.d8-seccomp.spec").String()).To(MatchYAML(`
+livenessProbe:
+  httpGet:
+    path: /healthz/ready
+    port: 15021
+initialDelaySeconds: 10
+periodSeconds: 2
+timeoutSeconds: 3
+failureThreshold: 30
+`))
+		})
+	})
 })
