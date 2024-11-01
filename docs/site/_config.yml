@@ -83,6 +83,7 @@ defaults:
       multilang: true
       comparable: true
       lang: en
+      pdf: false
   - scope:
       path: "pages/includes"
       type: "pages"
