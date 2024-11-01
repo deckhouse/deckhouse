@@ -82,6 +82,10 @@ entries:
             ru: Поддерживаемые версии K8s и ОС
           url: /supported_versions.html
         - title:
+            en: Web interfaces
+            ru: Веб-интерфейсы
+          url: /web-interfaces.html
+        - title:
             en: Revision comparison
             ru: Сравнение редакций
           url: /revision-comparison.html

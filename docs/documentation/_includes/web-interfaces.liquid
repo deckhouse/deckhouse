@@ -1,0 +1,55 @@
+{%- assign modules = site.data.modules.modules %}
+<table>
+<thead>
+<tr>
+  <th>{{ site.data.i18n.common.web_iface[page.lang] }}</th>
+  <th>{{ site.data.i18n.common.description[page.lang] | capitalize }}</th>
+  {% comment %}<th>{{ site.data.i18n.common.howtoget-interface[page.lang] | capitalize }}</th>{% endcomment %}
+</tr>
+</thead>
+<tbody>
+{% for iface in site.data.web-ifaces %}
+<tr>
+<td style="vertical-align: text-top;"><p><strong>{%  if  iface.name[page.lang] %}{{ iface.name[page.lang] }}{% else %}{{ iface.name }}{% endif %}</strong></p></td>
+<td>
+<p>{{ iface.description[page.lang] }}</p>
+<p>
+  {%- if page.lang == "ru"%}
+    Чтобы попасть в веб-интерфейс:
+    <ul>
+      <li>Включите модуль <a href='{{ modules[iface.module].path }}'>{{ iface.module }}</a>:
+<div markdown="1">
+```shell
+kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module enable {{ iface.module }}
+```
+</div>
+      </li>
+    {% if iface.additionalSetupSteps %}<li>{{ iface.additionalSetupSteps[page.lang] }}</li>{% endif %}
+    <li>Веб интерфейс будет доступен по доменному имени <code>{{ iface.domain }}</code>{% if iface.location %} и адресу <code>{{ iface.location }}</code>{% endif %}, согласно параметру <a href="deckhouse-configure-global.html#parameters-modules-publicdomaintemplate">publicDomainTemplate</a>.
+      Например <code>{{ iface.domain }}.example.com{% if iface.location %}{{ iface.location }}{% endif %}</code> для <i>publicDomainTemplate</i>
+      <code>%s.example.com</code>.
+    </li>
+  </ul>
+  {%- else %}
+    To get into the web interface:
+    <ul>
+      <li>Enable the <a href='{{ modules[iface.module].path }}'>{{ iface.module }}</a> module:
+<div markdown="1">
+```shell
+kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module enable {{ iface.module }}
+```
+</div>
+      </li>
+    {% if iface.additionalSetupSteps %}<li>{{ iface.additionalSetupSteps[page.lang] }}</li>{% endif %}
+      <li>The web interface will be available on the <code>{{ iface.domain }}</code> domain {% if iface.location %} and <code>{{ iface.location }}</code> location{% endif %}, according to the <a
+          href="deckhouse-configure-global.html#parameters-modules-publicdomaintemplate">publicDomainTemplate</a> parameter. For example, on the <code>{{ iface.domain }}.example.com{% if iface.location %}{{ iface.location }}{% endif %}</code> URL, if the <i>publicDomainTemplate</i> is <code>%s.example.com</code>.
+      </li>
+    </ul>
+  {%- endif %}
+</p>
+{% if iface.additionalInfo %}<p>{{ iface.additionalInfo[page.lang] }}</p>{% endif %}
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>

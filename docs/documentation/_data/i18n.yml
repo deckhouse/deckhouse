@@ -119,6 +119,9 @@ common:
   empty_search_parameters_resources_result:
     en: Parameters and resources not found.
     ru: Параметров и ресурсов не найдено.
+  description:
+    en: description
+    ru: описание
   no_description:
     en: There is no description...
     ru: Нет описания...
@@ -176,6 +179,12 @@ common:
   for_domain_template:
     en: for the domain template
     ru: для шаблона доменов
+  howtoget-interface:
+    en: How to get into the web interface
+    ru: Как попасть в веб-интерфейс
+  web_iface:
+    en: Web interface
+    ru: Веб-интерфейс
   module_web_ifaces:
     en: Web interfaces associated with the module
     ru: Веб-интерфейсы, связанные с модулем
