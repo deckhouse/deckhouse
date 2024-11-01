@@ -547,6 +547,7 @@ d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
 
 ```bash
 #!/usr/bin/env bash
+set -e
 
 pod=etcd-`hostname`
 kubectl -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
