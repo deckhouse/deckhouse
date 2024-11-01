@@ -153,6 +153,18 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				logger.Info("Registry PKI was deleted", "Secret Name", req.NamespacedName.Name)
+
+				// Recreate the registry PKI secret with existing CA data if it exists
+				if r.embeddedRegistry.CaPKI.Cert != nil && r.embeddedRegistry.CaPKI.Key != nil {
+					err := k8s.CreateCASecret(ctx, r.KubeClient, r.embeddedRegistry.CaPKI.Cert, r.embeddedRegistry.CaPKI.Key)
+					if err != nil {
+						return ctrl.Result{}, err
+					} else {
+						logger.Info("Recreated registry PKI secret with existing CA data")
+						return ctrl.Result{}, nil
+					}
+				}
+
 				_, caCertPEM, caKeyPEM, err := k8s.EnsureCASecret(ctx, r.KubeClient)
 				//
 				if err != nil {
@@ -198,29 +210,30 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		nodeName := strings.TrimPrefix(strings.TrimSuffix(req.NamespacedName.Name, "-pki"), "registry-node-")
 
 		if err != nil {
+			// Recreate the node PKI secret if it was deleted
 			if apierrors.IsNotFound(err) {
 				logger.Info("Node PKI secret was deleted", "Secret Name", req.NamespacedName.Name)
 				err := r.recreateNodePKISecret(ctx, nodeName)
 				if err != nil {
 					return ctrl.Result{}, err
 				} else {
-					// TODO ???
-					return ctrl.Result{}, nil
+					// If no error occurred, break the switch statement and go to api request
+					break
 				}
 			} else {
 				return ctrl.Result{}, err
 			}
 		}
 
-		// Check if the secret is the registry-node-*-pki secret
+		// Check if the secret changed and update the master node struct
 		nodeChanged, err := r.checkAndUpdateNodePKISecret(ctx, secret, nodeName)
 		if err != nil {
 			return ctrl.Result{}, err
 		} else if !nodeChanged {
 			return ctrl.Result{}, nil
 		} else {
-			// TODO ???
-			return ctrl.Result{}, nil
+			// If no error occurred, break the switch statement and go to api request
+			break
 		}
 
 	// Check if the secret is the registry-user-rw secret
@@ -231,9 +244,6 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		if !secretChanged {
 			return ctrl.Result{}, nil
-		} else {
-			// TODO do not return, but pass to the end of the function to call static pod update api
-			return ctrl.Result{}, nil
 		}
 	// Check if the secret is the registry-user-ro secret
 	case req.NamespacedName.Name == "registry-user-ro":
@@ -243,13 +253,10 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		if !secretChanged {
 			return ctrl.Result{}, nil
-		} else {
-			// TODO do not return, but pass to the end of the function to call static pod update api
-			return ctrl.Result{}, nil
 		}
 	}
 
-	logger.Info("UNHANDLED event", "secret", req.NamespacedName.Name)
+	logger.Info("FAKE API Request to static pod", "Initiator", req.NamespacedName.Name)
 
 	return ctrl.Result{}, nil
 }
@@ -344,18 +351,26 @@ func (r *RegistryReconciler) reconcileRegistryUser(ctx context.Context, req ctrl
 	err := r.Get(ctx, req.NamespacedName, secret)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Create the registry user secret if it doesn't exist
+			// Recreate the registry user secret with existing data if user is not empty
+			if user.UserName != "" && user.Password != "" && user.HashedPassword != "" {
+				_, err := k8s.CreateRegistryUserSecret(ctx, r.KubeClient, user.UserName, user.Password, user.HashedPassword)
+				if err != nil {
+					return false, err
+				}
+				logger.Info("Recreated registry user secret with existing data", "secretName", secretName)
+				return false, nil
+			}
+
+			// Create the registry user secret with new credentials if user struct is empty
 			newUserSecret, err := k8s.CreateRegistryUser(ctx, r.KubeClient, secretName)
 			if err != nil {
-				return false, err
+				return false, fmt.Errorf("failed to create new registry user secret: %w", err)
 			}
 			*user = *newUserSecret
-			logger.Info("Created registry user secret", "secretName", secretName)
+			logger.Info("Created registry user secret with new credentials", "secretName", secretName)
 			return true, nil
-		} else {
-			// Return the error if other error occurred
-			return false, err
 		}
+		return false, err // Return the error if other error occurred
 	}
 
 	// Check if the registry user secret has changed
@@ -364,21 +379,21 @@ func (r *RegistryReconciler) reconcileRegistryUser(ctx context.Context, req ctrl
 		string(secret.Data["passwordHash"]) == user.HashedPassword {
 		logger.Info("Registry user password not changed", "Secret Name", req.NamespacedName.Name)
 		return false, nil
-	} else {
-		// If the secret has changed, update the user struct
-		user.UserName = string(secret.Data["name"])
-		user.Password = string(secret.Data["password"])
-		user.HashedPassword = string(secret.Data["passwordHash"])
-		logger.Info("Registry user password changed", "Secret Name", req.NamespacedName.Name)
-		return true, nil
 	}
+
+	// Update the user struct if the secret has changed
+	user.UserName = string(secret.Data["name"])
+	user.Password = string(secret.Data["password"])
+	user.HashedPassword = string(secret.Data["passwordHash"])
+	logger.Info("Registry user password changed", "Secret Name", req.NamespacedName.Name)
+	return true, nil
 }
 
 func (r *RegistryReconciler) secretsStartupCheckCreate(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
-	logger.Info("Embedded registry startup certificates check", "component", "registry-controller")
+	logger.Info("Embedded registry startup secrets check", "component", "registry-controller")
 
-	// Ensure CA certificate exists and create if not
+	// Ensure	 CA certificate exists and create if not
 	isGenerated, caCertPEM, caKeyPEM, err := k8s.EnsureCASecret(ctx, r.KubeClient)
 	if err != nil {
 		return err
