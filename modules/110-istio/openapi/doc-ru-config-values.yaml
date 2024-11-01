@@ -130,6 +130,13 @@ properties:
         items:
           type: string
           pattern: '^[0-9]{1,5}$'
+      livenessProbe:
+          description: Параметры трассировки.
+          properties:
+            enabled:
+              description: |
+                Включение livenessProbe для sidecar контейнеров.
+              type: boolean
       resourcesManagement:
         description: |
           Управляет ресурсами sidecar-контейнера Istio.
