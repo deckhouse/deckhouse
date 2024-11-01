@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -125,7 +126,7 @@ func GetRegistryUser(ctx context.Context, kubeClient *kubernetes.Clientset, user
 
 // CreateRegistryUser creates a new registry user in the cluster
 func CreateRegistryUser(ctx context.Context, kubeClient *kubernetes.Clientset, userName string) (*RegistryUser, error) {
-	// Get the secret by name
+	// Check if the secret already exists
 	_, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Get(ctx, userName, metav1.GetOptions{})
 	if err == nil {
 		return nil, fmt.Errorf("secret %s already exists", userName)
@@ -140,6 +141,12 @@ func CreateRegistryUser(ctx context.Context, kubeClient *kubernetes.Clientset, u
 		return nil, err
 	}
 
+	// Create the secret
+	return CreateRegistryUserSecret(ctx, kubeClient, userName, password, hashedPassword)
+}
+
+// CreateRegistryUserSecret creates a new secret in the cluster with the given user data
+func CreateRegistryUserSecret(ctx context.Context, kubeClient *kubernetes.Clientset, userName, password, hashedPassword string) (*RegistryUser, error) {
 	// Create secret data and object
 	secretData := map[string][]byte{
 		"name":         []byte(userName),
@@ -170,4 +177,59 @@ func CreateRegistryUser(ctx context.Context, kubeClient *kubernetes.Clientset, u
 		Password:       string(createdSecret.Data["password"]),
 		HashedPassword: string(createdSecret.Data["passwordHash"]),
 	}, nil
+}
+
+// CreateNodePKISecret creates a new PKI secret for the provided node.
+func CreateNodePKISecret(ctx context.Context, kubeClient *kubernetes.Clientset, node MasterNode, caCertPEM []byte, caKeyPEM []byte) ([]byte, []byte, []byte, []byte, error) {
+
+	labelSelector := client.MatchingLabels(map[string]string{
+		labelHeritageKey: labelHeritageValue,
+		labelModuleKey:   labelModuleValue,
+		labelTypeKey:     labelNodeSecretTypeValue,
+	})
+
+	nodeSecretName := fmt.Sprintf("registry-node-%s-pki", node.Name)
+
+	hosts := []string{
+		"127.0.0.1",
+		"localhost",
+		node.Address,
+		fmt.Sprintf("embedded-registry.%s.svc.%s", RegistryNamespace, InternalClusterName),
+	}
+
+	// generate registry node distribution certificates
+	distributionCert, distributionKey, err := GenerateCertificate("embedded-registry-distribution", hosts, caCertPEM, caKeyPEM)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	// generate registry node auth certificates
+	authCert, authKey, err := GenerateCertificate("embedded-registry-auth", hosts, caCertPEM, caKeyPEM)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	// create secret object
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nodeSecretName,
+			Namespace: RegistryNamespace,
+			Labels:    labelSelector,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			AuthCert:         authCert,
+			AuthKey:          authKey,
+			DistributionCert: distributionCert,
+			DistributionKey:  distributionKey,
+		},
+	}
+
+	// create secret in k8s
+	secret, err = kubeClient.CoreV1().Secrets(RegistryNamespace).Create(ctx, secret, metav1.CreateOptions{})
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	return distributionCert, distributionKey, authCert, authKey, nil
 }

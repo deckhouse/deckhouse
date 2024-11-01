@@ -7,7 +7,6 @@ package k8s
 
 import (
 	"context"
-	"fmt"
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/cloudflare/cfssl/helpers"
 	"github.com/cloudflare/cfssl/initca"
@@ -18,7 +17,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
@@ -138,13 +136,23 @@ func EnsureCASecret(ctx context.Context, kubeClient *kubernetes.Clientset) (bool
 		return false, nil, nil, err
 	}
 
+	// Create the CA secret
+	if err := CreateCASecret(ctx, kubeClient, caCertPEM, caKeyPEM); err != nil {
+		return false, nil, nil, err
+	}
+
+	return true, caCertPEM, caKeyPEM, nil
+}
+
+// CreateCASecret creates a new CA secret in the specified namespace
+func CreateCASecret(ctx context.Context, kubeClient *kubernetes.Clientset, caCertPEM, caKeyPEM []byte) error {
 	labels := map[string]string{
 		labelHeritageKey: labelHeritageValue,
 		labelModuleKey:   labelModuleValue,
 		labelTypeKey:     labelCaSecretTypeValue,
 	}
 
-	registryCASecretToCreate := &corev1.Secret{
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "registry-pki",
 			Namespace: RegistryNamespace,
@@ -152,71 +160,12 @@ func EnsureCASecret(ctx context.Context, kubeClient *kubernetes.Clientset) (bool
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"registry-ca.crt": caCertPEM,
-			"registry-ca.key": caKeyPEM,
+			RegistryCACert: caCertPEM,
+			RegistryCAKey:  caKeyPEM,
 		},
 	}
 
-	// create secret in k8s
-	_, err = kubeClient.CoreV1().Secrets(RegistryNamespace).Create(ctx, registryCASecretToCreate, metav1.CreateOptions{})
-	if err != nil {
-		return false, nil, nil, err
-	}
-
-	return true, caCertPEM, caKeyPEM, nil
-}
-
-// CreateNodePKISecret creates a new PKI secret for the provided node.
-func CreateNodePKISecret(ctx context.Context, kubeClient *kubernetes.Clientset, node MasterNode, caCertPEM []byte, caKeyPEM []byte) ([]byte, []byte, []byte, []byte, error) {
-
-	labelSelector := client.MatchingLabels(map[string]string{
-		labelHeritageKey: labelHeritageValue,
-		labelModuleKey:   labelModuleValue,
-		labelTypeKey:     labelNodeSecretTypeValue,
-	})
-
-	nodeSecretName := fmt.Sprintf("registry-node-%s-pki", node.Name)
-
-	hosts := []string{
-		"127.0.0.1",
-		"localhost",
-		node.Address,
-		fmt.Sprintf("embedded-registry.%s.svc.%s", RegistryNamespace, InternalClusterName),
-	}
-
-	// generate registry node distribution certificates
-	distributionCert, distributionKey, err := GenerateCertificate("embedded-registry-distribution", hosts, caCertPEM, caKeyPEM)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	// generate registry node auth certificates
-	authCert, authKey, err := GenerateCertificate("embedded-registry-auth", hosts, caCertPEM, caKeyPEM)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	// create secret object
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nodeSecretName,
-			Namespace: RegistryNamespace,
-			Labels:    labelSelector,
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			AuthCert:         authCert,
-			AuthKey:          authKey,
-			DistributionCert: distributionCert,
-			DistributionKey:  distributionKey,
-		},
-	}
-
-	// create secret in k8s
-	secret, err = kubeClient.CoreV1().Secrets(RegistryNamespace).Create(ctx, secret, metav1.CreateOptions{})
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
-	return distributionCert, distributionKey, authCert, authKey, nil
+	// Create the secret in Kubernetes
+	_, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Create(ctx, secret, metav1.CreateOptions{})
+	return err
 }
