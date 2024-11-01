@@ -29,7 +29,7 @@ bb-flag-unset reboot
 # If it is first run bashible on bootstrap simple reboot node
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
   bb-flag-unset disruption
-  shutdown -r now
+  shutdown -r -t 5
   exit 0
 fi
 
@@ -42,7 +42,7 @@ fi
 # We want bootstrap the node fully, reboot it and after reboot join the node into the cluster.
 if [ ! -f "/etc/kubernetes/kubelet.conf" ]; then
   bb-flag-unset disruption
-  shutdown -r now
+  shutdown -r -t 5
   exit 0
 fi
 
@@ -108,4 +108,4 @@ while true; do
 done
 
 bb-flag-unset disruption
-shutdown -r now
+shutdown -r -t 5
