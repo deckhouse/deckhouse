@@ -135,12 +135,12 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(ingressTest.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator.example.com"]`))
 			Expect(ingressTest.Field("spec.tls.0.secretName").String()).To(Equal("test"))
 
-			ingressTestTwo := hec.KubernetesResource("Ingress", "d8-test", "test-8f5ddea5d-dex-authenticator")
+			ingressTestTwo := hec.KubernetesResource("Ingress", "d8-test", "test-05f0e90e-dex-authenticator")
 			Expect(ingressTestTwo.Exists()).To(BeTrue())
 			Expect(ingressTestTwo.Field("spec.ingressClassName").String()).To(Equal("test-two"))
 			Expect(ingressTestTwo.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-buffer-size").String()).To(Equal("32k"))
 			Expect(ingressTestTwo.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").Exists()).To(BeFalse())
-			Expect(ingressTestTwo.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["test-8f5ddea5d-dex-authenticatorcom"]`))
+			Expect(ingressTestTwo.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator-two.example.com"]`))
 			Expect(ingressTestTwo.Field("spec.tls.0.secretName").String()).To(Equal("test"))
 
 			deploymentTest := hec.KubernetesResource("Deployment", "d8-test", "test-dex-authenticator")
@@ -185,7 +185,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(ingressTest2Two.Exists()).To(BeTrue())
 			Expect(ingressTest2Two.Field("spec.ingressClassName").String()).To(Equal("test-two"))
 
-			Expect(ingressTest2Two.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator.com"]`))
+			Expect(ingressTest2Two.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator-two.com"]`))
 			Expect(ingressTest2Two.Field("spec.tls.0.secretName").String()).To(Equal("test"))
 			Expect(ingressTest2Two.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-buffer-size").Exists()).To(BeFalse())
 			Expect(ingressTest2Two.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").Exists()).To(BeFalse())
