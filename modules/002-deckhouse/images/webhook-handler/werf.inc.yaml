@@ -1,7 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
-fromCacheVersion: "2024-11-01 20:57"
 import:
   - artifact: yq4-artifact
     add: /usr/local/bin/yq
