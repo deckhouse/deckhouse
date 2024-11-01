@@ -14,6 +14,28 @@ webIfaces:
 
 <sup>*</sup> — the Kubernetes version **is NOT supported** in the current Deckhouse Kubernetes Platform release.
 
+## Istio configuration
+
+When you deploy Cilium and Istio together, be aware of:
+
+Either Cilium or Istio L7 HTTP policy controls can be used, but it is not recommended to use both Cilium and Istio L7 HTTP policy controls at the same time, to avoid split-brain problems.
+
+In order to use Cilium L7 HTTP policy controls (for example, [Layer 7 Examples](https://docs.cilium.io/en/latest/security/policy/language/#l7-policy)) with Istio (sidecar or ambient modes), you must:
+
+* Sidecar: Disable Istio mTLS for the workloads you wish to manage with Cilium L7 policy by configuring `mtls.mode=DISABLE` under Istio’s [PeerAuthentication.](https://istio.io/latest/docs/reference/config/security/peer_authentication/#PeerAuthentication)
+
+* Ambient: Remove the workloads you wish to manage with Cilium L7 policy from Istio ambient by removing either the `istio.io/dataplane-mode` label from the namespace, or annotating the pods you wish to manage with Cilium L7 with `ambient.istio.io/redirection: disabled`.
+
+as otherwise the traffic between Istio-managed workloads will be encrypted by Istio with mTLS, and not accessible to Cilium for the purposes of L7 policy enforcement.
+
+If using Istio L7 HTTP policy controls, policy will be managed in Istio and disabling mTLS between workloads is not required.
+
+If using Istio mTLS in ambient mode with Istio L7 HTTP policy controls, traffic between ambient workloads will be [encrypted and tunneled in and out of the pods by Istio over port 15008.](https://istio.io/latest/docs/ops/ambient/usage/traffic-redirection/) In this scenario, Cilium NetworkPolicy will still apply to the encrypted and tunneled L4 traffic entering and leaving the Istio-managed pods, but Cilium will have no visibility into the actual source and destination of that tunneled and encrypted L4 traffic, or any L7 information. This means that Istio should be used to enforce policy for traffic between Istio-managed, mTLS-secured workloads at L4 or above. Traffic ingressing to Istio-managed workloads from non-Istio-managed workloads will continue to be fully subjected to Cilium-enforced Kubernetes NetworkPolicy, as it would not be tunneled or encrypted.
+
+When using Istio in sidecar mode with [automatic sidecar injection](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#automatic-sidecar-injection), together with Cilium overlay mode (VXLAN or GENEVE), `istiod` pods must be running with `hostNetwork: true` in order to be reachable by the API server.
+
+More information could be find [here.](https://docs.cilium.io/en/latest/network/servicemesh/istio/#istio-configuration)
+
 ## What issues does Istio help to resolve?
 
 [Istio](https://istio.io/) is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach.
