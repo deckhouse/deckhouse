@@ -98,6 +98,8 @@ spec:
           - name: KUBERNETES_SERVICE_PORT
             value: "6443"
       {{- end }}
+          - name: HUAWEICLOUD_SDK_CREDENTIALS_FILE
+            value: /etc/cloud/cloud-config
           - name: HUAWEICLOUD_SDK_IAM_ENDPOINT
             value: "https://iam.{{ $providerClusterConfiguration.provider.region }}.{{ $providerClusterConfiguration.provider.cloud }}"
           - name: HOST_IP
