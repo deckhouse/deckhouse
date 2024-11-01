@@ -435,9 +435,6 @@ func getIPRuleEntryFromNetlinkRule(nlRule netlink.Rule) IPRuleEntry {
 type IPRuleEntryMap map[string]IPRuleEntry
 
 func (irem *IPRuleEntryMap) AppendIRE(ire IPRuleEntry) {
-	if len(*irem) == 0 {
-		*irem = make(map[string]IPRuleEntry)
-	}
 	(*irem)[ire.getHash()] = ire
 }
 
@@ -517,10 +514,10 @@ func nirsSummaryInit() *nirsSummary {
 	return &nirsSummary{
 		k8sResources:              new(v1alpha1.SDNInternalNodeIPRuleSet),
 		newReconciliationStatus:   utils.ReconciliationStatus{},
-		desiredIPRulesByNIRS:      IPRuleEntryMap{},
-		lastAppliedIPRulesByNIRS:  IPRuleEntryMap{},
+		desiredIPRulesByNIRS:      make(IPRuleEntryMap),
+		lastAppliedIPRulesByNIRS:  make(IPRuleEntryMap),
 		desiredIPRulesToAddByNIRS: make([]IPRuleEntry, 0),
-		desiredIPRulesToDelByNIRS: IPRuleEntryMap{},
+		desiredIPRulesToDelByNIRS: make(IPRuleEntryMap),
 		nirsWasDeleted:            false,
 		needToWipeFinalizer:       false,
 	}

@@ -384,9 +384,6 @@ func (rem *RouteEntryMap) getRoutes() v1alpha1.Routes {
 }
 
 func (rem *RouteEntryMap) AppendRE(re RouteEntry) {
-	if len(*rem) == 0 {
-		*rem = make(map[string]RouteEntry)
-	}
 	(*rem)[re.getHash()] = re
 }
 
@@ -407,10 +404,10 @@ func nrtSummaryInit() *nrtSummary {
 	return &nrtSummary{
 		k8sResources:            new(v1alpha1.SDNInternalNodeRoutingTable),
 		newReconciliationStatus: utils.ReconciliationStatus{},
-		desiredRoutesByNRT:      RouteEntryMap{},
-		lastAppliedRoutesByNRT:  RouteEntryMap{},
+		desiredRoutesByNRT:      make(RouteEntryMap),
+		lastAppliedRoutesByNRT:  make(RouteEntryMap),
 		desiredRoutesToAddByNRT: make([]RouteEntry, 0),
-		desiredRoutesToDelByNRT: RouteEntryMap{},
+		desiredRoutesToDelByNRT: make(RouteEntryMap),
 		nrtWasDeleted:           false,
 		needToWipeFinalizer:     false,
 	}
