@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	dsv1alpha1 "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/internal/v1alpha1"
+	dsv1alpha1 "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/internal/v1alpha2"
 )
 
 const (
@@ -35,7 +35,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "deschedulers",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "deckhouse.io/v1alpha2",
 			Kind:       "Descheduler",
 			FilterFunc: applyDeschedulerFilter,
 		},

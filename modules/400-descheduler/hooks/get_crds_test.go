@@ -26,7 +26,7 @@ import (
 const (
 	deschedulerCR1 = `---
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Descheduler
 metadata:
   name: test
@@ -46,7 +46,7 @@ spec:
 `
 	deschedulerCR2 = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Descheduler
 metadata:
   name: test2
@@ -70,7 +70,7 @@ spec:
 `
 	deschedulerCR3 = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Descheduler
 metadata:
   name: test3
@@ -91,7 +91,7 @@ spec:
 
 	deschedulerCR4 = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Descheduler
 metadata:
   name: test4
@@ -111,7 +111,7 @@ spec:
 
 	deschedulerCR5 = `
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Descheduler
 metadata:
   name: test5
@@ -144,7 +144,7 @@ spec:
 
 var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 	f := HookExecutionConfigInit(`{"descheduler":{"internal":{}}}`, ``)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "Descheduler", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "Descheduler", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
