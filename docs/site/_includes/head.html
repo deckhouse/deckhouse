@@ -37,12 +37,14 @@
 <title>{{ generated_title }} | {{ site.site_title }}</title>
 {%- if page.description %}
     {%- assign description = page.description | strip_html | strip_newlines | strip | truncate: 200 %}
-{%- else %}
+{% else %}
     {%- assign pageCommonName = page.name | replace: '_RU.md', '' | replace: '.md', '' | downcase %}
     {%- if pageCommonName == "configuration" or pageCommonName == "cr" or pageCommonName == "examples" or pageCommonName == "usage" or pageCommonName == "faq"  %}
         {%- assign i18nKey = 'description_' | append: pageCommonName %}
         {%- assign description = site.data.i18n.common[i18nKey][page.lang] | replace: '<MODULENAME>', page['module-kebab-name'] %}
-    {%- else %}
+    {%- elsif page.platform_type %}
+        {%- assign description = site.data.i18n.common['gs_description'][page.lang] | replace: '<TITLE>', page.title_main | replace: '<STEP>', page.step_name %}
+    {% else %}
         {%- assign description = page.content | markdownify | strip_html | normalizeSearchContent | strip_newlines | strip | truncate: 200 %}
     {%- endif %}
 {%- endif %}
