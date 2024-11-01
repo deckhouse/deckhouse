@@ -42,6 +42,7 @@ spec:
     matchLabels:
       app: cloud-controller-manager
 ---
+{{- $providerClusterConfiguration := .Values.cloudProviderHuaweicloud.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -97,6 +98,8 @@ spec:
           - name: KUBERNETES_SERVICE_PORT
             value: "6443"
       {{- end }}
+          - name: HUAWEICLOUD_SDK_IAM_ENDPOINT
+            value: "https://iam.{{ $providerClusterConfiguration.provider.region }}.{{ $providerClusterConfiguration.provider.cloud }}"
           - name: HOST_IP
             valueFrom:
               fieldRef:
