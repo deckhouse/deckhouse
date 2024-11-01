@@ -51,12 +51,15 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     cookieSecret: cookieSecret
   spec:
     applications:
-    - domainName: authenticator.example.com
+    - domain: authenticator.example.com
       ingressClassName: test
       ingressSecretName: test
       whitelistSourceRanges:
       - 1.1.1.1
       - 192.168.0.0/24
+    - domain: authenticator-two.example.com
+      ingressClassName: test-two
+      ingressSecretName: test
     sendAuthorizationHeader: true
     keepUsersLoggedInFor: "1020h"
     allowedGroups:
@@ -77,8 +80,11 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
   allowAccessToKubernetes: true
   spec:
     applications:
-    - domainName: authenticator.com
+    - domain: authenticator.com
       ingressClassName: test
+      ingressSecretName: test
+    - domain: authenticator-two.com
+      ingressClassName: test-two
       ingressSecretName: test
     sendAuthorizationHeader: false
 - name: test-3
@@ -116,7 +122,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			oauth2clientTest := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "justForTest")
 			Expect(oauth2clientTest.Exists()).To(BeTrue())
-			Expect(oauth2clientTest.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.example.com/dex-authenticator/callback"]`))
+			Expect(oauth2clientTest.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.example.com/dex-authenticator/callback","https://authenticator-two.example.com/dex-authenticator/callback"]`))
 			Expect(oauth2clientTest.Field("secret").String()).To(Equal("dexSecret"))
 			Expect(oauth2clientTest.Field("allowedGroups").String()).To(MatchJSON(`["everyone","admins"]`))
 
@@ -128,6 +134,14 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			Expect(ingressTest.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator.example.com"]`))
 			Expect(ingressTest.Field("spec.tls.0.secretName").String()).To(Equal("test"))
+
+			ingressTestTwo := hec.KubernetesResource("Ingress", "d8-test", "test-8f5ddea5d-dex-authenticator")
+			Expect(ingressTestTwo.Exists()).To(BeTrue())
+			Expect(ingressTestTwo.Field("spec.ingressClassName").String()).To(Equal("test-two"))
+			Expect(ingressTestTwo.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-buffer-size").String()).To(Equal("32k"))
+			Expect(ingressTestTwo.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").Exists()).To(BeFalse())
+			Expect(ingressTestTwo.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["test-8f5ddea5d-dex-authenticatorcom"]`))
+			Expect(ingressTestTwo.Field("spec.tls.0.secretName").String()).To(Equal("test"))
 
 			deploymentTest := hec.KubernetesResource("Deployment", "d8-test", "test-dex-authenticator")
 			Expect(deploymentTest.Exists()).To(BeTrue())
@@ -150,11 +164,12 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(oauth2proxyArgTest).Should(ContainElement("--cookie-expire=1020h"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--cookie-refresh=2h20m4s"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--whitelist-domain=authenticator.example.com"))
+			Expect(oauth2proxyArgTest).Should(ContainElement("--whitelist-domain=authenticator-two.example.com"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--scope=groups email openid offline_access"))
 
 			oauth2client2 := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "justForTest2")
 			Expect(oauth2client2.Exists()).To(BeTrue())
-			Expect(oauth2client2.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.com/dex-authenticator/callback"]`))
+			Expect(oauth2client2.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.com/dex-authenticator/callback","https://authenticator-two.com/dex-authenticator/callback"]`))
 			Expect(oauth2client2.Field("secret").String()).To(Equal("dexSecret"))
 
 			ingressTest2 := hec.KubernetesResource("Ingress", "d8-test", "test-2-dex-authenticator")
@@ -165,6 +180,15 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(ingressTest2.Field("spec.tls.0.secretName").String()).To(Equal("test"))
 			Expect(ingressTest2.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-buffer-size").Exists()).To(BeFalse())
 			Expect(ingressTest2.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").Exists()).To(BeFalse())
+
+			ingressTest2Two := hec.KubernetesResource("Ingress", "d8-test", "test-2-3230e1af-dex-authenticator")
+			Expect(ingressTest2Two.Exists()).To(BeTrue())
+			Expect(ingressTest2Two.Field("spec.ingressClassName").String()).To(Equal("test-two"))
+
+			Expect(ingressTest2Two.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator.com"]`))
+			Expect(ingressTest2Two.Field("spec.tls.0.secretName").String()).To(Equal("test"))
+			Expect(ingressTest2Two.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-buffer-size").Exists()).To(BeFalse())
+			Expect(ingressTest2Two.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").Exists()).To(BeFalse())
 
 			deploymentTest2 := hec.KubernetesResource("Deployment", "d8-test", "test-2-dex-authenticator")
 			Expect(deploymentTest2.Exists()).To(BeTrue())
@@ -183,6 +207,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--cookie-expire=168h"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--cookie-refresh=2h20m4s"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--whitelist-domain=authenticator.com"))
+			Expect(oauth2proxyArgTest2).Should(ContainElement("--whitelist-domain=authenticator-two.com"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--scope=groups email openid offline_access audience:server:client_id:kubernetes"))
 
 			deploymentTest3 := hec.KubernetesResource("Deployment", "d8-test", "test-3-dex-authenticator")
