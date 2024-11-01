@@ -536,7 +536,7 @@ When deciding on the appropriate threshold values, consider resources consumed b
 
 ### What is done automatically
 
-CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. The result is saved in `/var/lib/etcd/etcd-backup.snapshot` on all nodes with `control-plane` in the cluster (master nodes).
+CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. The result is saved in `/var/lib/etcd/etcd-backup.tar.gz` on all nodes with `control-plane` in the cluster (master nodes).
 
 ### How to manually backup etcd
 
@@ -563,7 +563,7 @@ tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
 rm -r ./kubernetes ./etcd-backup.snapshot
 ```
 
-In the current directory etcd snapshot file `etcd-backup.snapshot` will be created from one of an etcd cluster members.
+In the current directory etcd snapshot file `kube-backup.tar.gz` will be created from one of an etcd cluster members.
 From this file, you can restore the previous etcd cluster state in the future.
 
 Also, we recommend making a backup of the `/etc/kubernetes` directory, which contains:
