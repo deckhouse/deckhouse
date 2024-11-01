@@ -127,4 +127,4 @@ spec:
       volumes:
       - name: ccm-controller-config-volume
         secret:
-          secretName: ccm-controller-manager
+          secretName: cloud-controller-manager
