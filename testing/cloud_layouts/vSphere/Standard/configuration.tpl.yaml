@@ -39,7 +39,7 @@ masterNodeGroup:
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template:  MAIN-SPB5/ubuntu-noble-server-cloudimg-amd64
+    template:  vm-templates/ubuntu-noble-server-cloudimg-amd64
     mainNetwork: DPortGroup-lab-vms
     additionalNetworks:
     - DPortGroup-internal-private-vms[DONT-USE]
