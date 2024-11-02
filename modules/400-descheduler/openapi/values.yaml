@@ -8,7 +8,7 @@ properties:
     properties:
       deschedulers:
         type: array
-        default: []
+        default: [{}]
         items:
           type: object
           default: {}
