@@ -30,6 +30,8 @@ zones:
 - spb5
 externalNetworkNames:
 - DPortGroup-lab-vms
+internalNetworkNames:
+- DPortGroup-internal-private-vms
 internalNetworkCIDR: 172.16.25.0/24
 baseResourcePool: cloud-layout-tests
 masterNodeGroup:
@@ -37,8 +39,10 @@ masterNodeGroup:
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template: vm-teamplates/ubuntu-24.04-template
+    template: vm-teamplates/ubuntu-22.04-template
     mainNetwork: DPortGroup-lab-vms
+    additionalNetworks:
+    - DPortGroup-internal-private-vms
     datastore: vsan-spb-5-datastore
     rootDiskSize: 50
     runtimeOptions:
