@@ -529,7 +529,7 @@ spec:
 
 ### Что делается автоматически
 
-Автоматически запускаются CronJob `kube-system/d8-etcd-backup-*` в 00:00 по UTC+0. Результат сохраняется в `/var/lib/etcd/etcd-backup.snapshot` на всех узлах с `control-plane` в кластере (мастер-узлы).
+Автоматически запускаются CronJob `kube-system/d8-etcd-backup-*` в 00:00 по UTC+0. Результат сохраняется в `/var/lib/etcd/etcd-backup.tar.gz` на всех узлах с `control-plane` в кластере (мастер-узлы).
 
 ### Как сделать бэкап etcd вручную
 
@@ -547,6 +547,7 @@ d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
 
 ```bash
 #!/usr/bin/env bash
+set -e
 
 pod=etcd-`hostname`
 kubectl -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
@@ -556,7 +557,7 @@ tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
 rm -r ./kubernetes ./etcd-backup.snapshot
 ```
 
-В текущей директории будет создан файл `etcd-backup.snapshot` со снимком базы etcd одного из членов etcd-кластера.
+В текущей директории будет создан файл `kube-backup.tar.gz` со снимком базы etcd одного из членов etcd-кластера.
 Из полученного снимка можно будет восстановить состояние кластера etcd.
 
 Также рекомендуем сделать бэкап директории `/etc/kubernetes`, в которой находятся:
