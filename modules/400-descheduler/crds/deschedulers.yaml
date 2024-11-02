@@ -511,6 +511,7 @@ spec:
                           default: false
                         thresholds:
                           type: object
+                          default: {}
                           properties:
                             cpu:
                               type: integer
@@ -533,6 +534,7 @@ spec:
                           additionalProperties: true
                         targetThresholds:
                           type: object
+                          default: {}
                           properties:
                             cpu:
                               type: integer
@@ -578,6 +580,7 @@ spec:
                           default: false
                         thresholds:
                           type: object
+                          default: {}
                           properties:
                             cpu:
                               type: integer
