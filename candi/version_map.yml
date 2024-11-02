@@ -73,7 +73,7 @@ k8s:
       livenessprobe: v2.11.0
   '1.29':
     status: available
-    patch: 9
+    patch: 10
     bashible: *bashible
     clusterAutoscalerPatch: 1
     ccm:
@@ -100,7 +100,7 @@ k8s:
       livenessprobe: v2.12.0
   '1.30':
     status: available
-    patch: 5
+    patch: 6
     bashible: *bashible
     clusterAutoscalerPatch: 1
     ccm:
@@ -153,4 +153,4 @@ k8s:
       snapshotter: v8.1.0
       livenessprobe: v2.14.0
 d8:
-  d8CliVersion: v0.3.2
+  d8CliVersion: v0.3.7
