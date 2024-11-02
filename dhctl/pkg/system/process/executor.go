@@ -573,7 +573,7 @@ func (e *Executor) Stop() {
 		return
 	}
 	if e.cmd == nil {
-		log.DebugF("Possible BUG: Call Executor.Stop with Cmd==nil\n")
+		log.WarnF("Possible BUG: Call Executor.Stop with Cmd==nil\n")
 		return
 	}
 
