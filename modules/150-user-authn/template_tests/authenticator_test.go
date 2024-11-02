@@ -50,14 +50,15 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     appDexSecret: dexSecret
     cookieSecret: cookieSecret
   spec:
-    applicationDomain: authenticator.example.com
-    applicationIngressCertificateSecretName: test
-    applicationIngressClassName: test
+    applications:
+    - domainName: authenticator.example.com
+      ingressClassName: test
+      ingressSecretName: test
+      whitelistSourceRanges:
+      - 1.1.1.1
+      - 192.168.0.0/24
     sendAuthorizationHeader: true
     keepUsersLoggedInFor: "1020h"
-    whitelistSourceRanges:
-    - 1.1.1.1
-    - 192.168.0.0/24
     allowedGroups:
     - everyone
     - admins
@@ -75,9 +76,10 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     cookieSecret: cookieSecret
   allowAccessToKubernetes: true
   spec:
-    applicationDomain: authenticator.com
-    applicationIngressCertificateSecretName: test
-    applicationIngressClassName: test
+    applications:
+    - domainName: authenticator.com
+      ingressClassName: test
+      ingressSecretName: test
     sendAuthorizationHeader: false
 - name: test-3
   encodedName: justForTest3
@@ -143,7 +145,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			Expect(oauth2proxyArgTest).Should(ContainElement("--client-id=test-d8-test-dex-authenticator"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--oidc-issuer-url=https://dex.example.com/"))
-			Expect(oauth2proxyArgTest).Should(ContainElement("--redirect-url=https://authenticator.example.com"))
+			Expect(oauth2proxyArgTest).Should(ContainElement("--redirect-url=/dex-authenticator/callback"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--set-authorization-header=true"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--cookie-expire=1020h"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--cookie-refresh=2h20m4s"))
@@ -176,7 +178,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--client-id=test-2-d8-test-dex-authenticator"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--oidc-issuer-url=https://dex.example.com/"))
-			Expect(oauth2proxyArgTest2).Should(ContainElement("--redirect-url=https://authenticator.com"))
+			Expect(oauth2proxyArgTest2).Should(ContainElement("--redirect-url=/dex-authenticator/callback"))
 			Expect(oauth2proxyArgTest2).ShouldNot(ContainElement("--set-authorization-header=true"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--cookie-expire=168h"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--cookie-refresh=2h20m4s"))
