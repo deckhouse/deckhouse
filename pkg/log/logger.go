@@ -167,20 +167,6 @@ func (l *Logger) WithGroup(name string) *Logger {
 	}
 }
 
-func (l *Logger) Trace(msg string, args ...any) {
-	ctx := logContext.SetCustomKeyContext(context.Background())
-	ctx = logContext.SetStackTraceContext(ctx, getStack())
-
-	l.Log(ctx, LevelTrace.Level(), msg, args...)
-}
-
-func (l *Logger) Tracef(format string, args ...any) {
-	ctx := logContext.SetCustomKeyContext(context.Background())
-	ctx = logContext.SetStackTraceContext(ctx, getStack())
-
-	l.Log(ctx, LevelTrace.Level(), fmt.Sprintf(format, args...))
-}
-
 func (l *Logger) Logf(ctx context.Context, level Level, format string, args ...any) {
 	ctx = logContext.SetCustomKeyContext(ctx)
 	l.Log(ctx, level.Level(), fmt.Sprintf(format, args...))

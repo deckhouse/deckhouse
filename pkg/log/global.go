@@ -58,27 +58,6 @@ func LogAttrs(ctx context.Context, level Level, msg string, attrs ...slog.Attr) 
 	Default().LogAttrs(ctx, level.Level(), msg, attrs...)
 }
 
-func Trace(msg string, args ...any) {
-	ctx := logContext.SetCustomKeyContext(context.Background())
-	ctx = logContext.SetStackTraceContext(ctx, getStack())
-
-	Default().Log(ctx, LevelTrace.Level(), msg, args...)
-}
-
-func Tracef(format string, args ...any) {
-	ctx := logContext.SetCustomKeyContext(context.Background())
-	ctx = logContext.SetStackTraceContext(ctx, getStack())
-
-	Default().Log(ctx, LevelTrace.Level(), fmt.Sprintf(format, args...))
-}
-
-func TraceContext(ctx context.Context, msg string, args ...any) {
-	ctx = logContext.SetCustomKeyContext(ctx)
-	ctx = logContext.SetStackTraceContext(ctx, getStack())
-
-	Default().Log(ctx, LevelTrace.Level(), msg, args...)
-}
-
 func Debug(msg string, args ...any) {
 	ctx := logContext.SetCustomKeyContext(context.Background())
 	Default().Log(ctx, LevelDebug.Level(), msg, args...)

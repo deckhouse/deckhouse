@@ -51,17 +51,16 @@ func Test_Logger(t *testing.T) {
 	})
 
 	t.Run("log output without error", func(t *testing.T) {
-		logger.Trace(message, slog.String(argKey, argValue))
 		logger.Debug(message, slog.String(argKey, argValue))
 		logger.Info(message, slog.String(argKey, argValue))
 		logger.Warn(message, slog.String(argKey, argValue))
 		//test fatal
 		logger.Log(context.Background(), log.LevelFatal.Level(), message, slog.String(argKey, argValue))
 
-		assert.Equal(t, buf.String(), `{"level":"debug","msg":"stub msg","source":"log/logger_test.go:55","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"info","msg":"stub msg","source":"log/logger_test.go:56","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"warn","msg":"stub msg","source":"log/logger_test.go:57","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
-			`{"level":"fatal","msg":"stub msg","source":"log/logger_test.go:59","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n")
+		assert.Equal(t, buf.String(), `{"level":"debug","msg":"stub msg","source":"log/logger_test.go:54","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
+			`{"level":"info","msg":"stub msg","source":"log/logger_test.go:55","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
+			`{"level":"warn","msg":"stub msg","source":"log/logger_test.go:56","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n"+
+			`{"level":"fatal","msg":"stub msg","source":"log/logger_test.go:58","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}`+"\n")
 	})
 
 	t.Run("log output with error", func(t *testing.T) {
@@ -83,7 +82,6 @@ func Test_LoggerFormat(t *testing.T) {
 	)
 
 	defaultLogFn := func(logger *log.Logger) {
-		logger.Trace(message, slog.String(argKey, argValue))
 		logger.Debug(message, slog.String(argKey, argValue))
 		logger.Info(message, slog.String(argKey, argValue))
 		logger.Warn(message, slog.String(argKey, argValue))
@@ -93,7 +91,6 @@ func Test_LoggerFormat(t *testing.T) {
 	}
 
 	logfFn := func(logger *log.Logger) {
-		logger.Tracef("stub msg: %s", argValue)
 		logger.Debugf("stub msg: %s", argValue)
 		logger.Infof("stub msg: %s", argValue)
 		logger.Warnf("stub msg: %s", argValue)
