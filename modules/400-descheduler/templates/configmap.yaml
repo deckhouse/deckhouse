@@ -55,10 +55,10 @@ data:
           {{- $s | toYaml | nindent 10 }}
       {{- end }}
       {{- if dig "strategies" "removePodsViolatingInterPodAntiAffinity" "enabled" false $d }}
-      - name: "removePodsViolatingInterPodAntiAffinity"
+      - name: "RemovePodsViolatingInterPodAntiAffinity"
       {{- end }}
       {{- if dig "strategies" "removeDuplicates" "enabled" false $d }}
-      - name: "removeDuplicates"
+      - name: "RemoveDuplicates"
       {{- end }}
       plugins:
         # DefaultEvictor is enabled for both `filter` and `preEvictionFilter`
