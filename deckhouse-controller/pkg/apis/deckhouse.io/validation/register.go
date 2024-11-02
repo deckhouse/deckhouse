@@ -20,11 +20,11 @@ import (
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 )
 
 type ModuleStorage interface {
-	GetModuleByName(name string) (*models.DeckhouseModule, error)
+	GetModuleByName(name string) (*moduleloader.Module, error)
 }
 
 // RegisterAdmissionHandlers register validation webhook handlers for admission server built-in in addon-operator

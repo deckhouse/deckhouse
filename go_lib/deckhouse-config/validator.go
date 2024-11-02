@@ -67,7 +67,7 @@ func (c *ConfigValidator) validateCR(cfg *v1alpha1.ModuleConfig) ValidationResul
 
 	if cfg.Spec.Version == 0 {
 		// Resource is not valid when spec.settings are specified without version.
-		if cfg.Spec.Settings != nil {
+		if len(cfg.Spec.Settings) > 0 {
 			result.Error = "spec.version is required when spec.settings are specified"
 		}
 		// Resource is valid without spec.version and spec.settings.
@@ -75,7 +75,7 @@ func (c *ConfigValidator) validateCR(cfg *v1alpha1.ModuleConfig) ValidationResul
 	}
 
 	// Can run conversions and validations if spec.version and spec.settings are specified.
-	if cfg.Spec.Settings == nil {
+	if len(cfg.Spec.Settings) == 0 {
 		// Warn about spec.version without spec.settings.
 		result.Warning = "spec.version has no effect without spec.settings, defaults from the latest version of settings schema will be applied"
 	}
@@ -131,6 +131,12 @@ func (c *ConfigValidator) Validate(cfg *v1alpha1.ModuleConfig) ValidationResult 
 		return result
 	}
 
+	module := c.valuesValidator.GetModule(cfg.Name)
+	if module == nil {
+		result.Warning = "module not installed"
+		return result
+	}
+
 	err := c.validateSettings(cfg.GetName(), result.Settings)
 	if err != nil {
 		convMsg := ""
@@ -164,9 +170,6 @@ func (c *ConfigValidator) validateSettings(cfgName string, cfgSettings map[strin
 		schemaStorage = c.valuesValidator.GetGlobal().GetSchemaStorage()
 	} else {
 		module := c.valuesValidator.GetModule(cfgName)
-		if module == nil {
-			return fmt.Errorf("module %s not found", cfgName)
-		}
 		schemaStorage = module.GetSchemaStorage()
 	}
 

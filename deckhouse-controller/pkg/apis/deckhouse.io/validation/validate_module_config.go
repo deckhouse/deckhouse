@@ -138,6 +138,10 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 			allowedToDisableMetric = 1
 		}
 
+		if cfg.Spec.Source == v1alpha1.ModuleSourceEmbedded {
+			return rejectResult(fmt.Sprintf("module config cannot have Embedded source"))
+		}
+
 		// Allow changing configuration for unknown modules.
 		if !d8config.Service().PossibleNames().Has(cfg.Name) {
 			metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", allowedToDisableMetric, map[string]string{"module": cfg.GetName()})

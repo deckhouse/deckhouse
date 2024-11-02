@@ -15,6 +15,7 @@
 package source
 
 import (
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"os"
 	"testing"
 
@@ -34,8 +35,8 @@ import (
 )
 
 func TestGetReleasePolicy(t *testing.T) {
-	embeddedDeckhousePolicy := &v1alpha1.ModuleUpdatePolicySpec{
-		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+	embeddedDeckhousePolicy := &v1alpha2.ModuleUpdatePolicySpec{
+		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
 		},
 		ReleaseChannel: "Stable",
@@ -44,14 +45,12 @@ func TestGetReleasePolicy(t *testing.T) {
 	_ = v1alpha1.SchemeBuilder.AddToScheme(sc)
 	cl := fake.NewClientBuilder().WithScheme(sc).WithStatusSubresource(&v1alpha1.ModuleSource{}).Build()
 
-	c := &moduleSourceReconciler{
-		client:                  cl,
-		downloadedModulesDir:    d8env.GetDownloadedModulesDir(),
-		dc:                      dependency.NewDependencyContainer(),
-		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedDeckhousePolicy),
-		logger:                  log.NewNop(),
-
-		moduleSourcesChecksum: make(sourceChecksum),
+	c := &reconciler{
+		client:               cl,
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		dependencyContainer:  dependency.NewDependencyContainer(),
+		embeddedPolicy:       helpers.NewModuleUpdatePolicySpecContainer(embeddedDeckhousePolicy),
+		log:                  log.NewNop(),
 	}
 
 	t.Run("Exact match policy", func(t *testing.T) {

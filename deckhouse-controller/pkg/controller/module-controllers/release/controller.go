@@ -42,7 +42,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
@@ -53,10 +52,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
@@ -253,7 +253,7 @@ func (r *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 	}
 
 	// if ModulePullOverride is set, don't process pending release, to avoid fs override
-	exists, err := r.isModulePullOverrideExists(ctx, mr.GetModuleSource(), mr.Spec.ModuleName)
+	exists, err := utils.ModulePullOverrideExists(ctx, r.client, mr.GetModuleSource(), mr.Spec.ModuleName)
 	if err != nil {
 		return result, err
 	}
@@ -265,16 +265,6 @@ func (r *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 
 	// process only pending releases
 	return r.reconcilePendingRelease(ctx, mr)
-}
-
-func (r *moduleReleaseReconciler) isModulePullOverrideExists(ctx context.Context, sourceName, moduleName string) (bool, error) {
-	var res v1alpha1.ModulePullOverrideList
-	err := r.client.List(ctx, &res, client.MatchingLabels{"source": sourceName, "module": moduleName}, client.Limit(1))
-	if err != nil {
-		return false, err
-	}
-
-	return len(res.Items) > 0, nil
 }
 
 func (r *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
@@ -396,14 +386,14 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		return result, fmt.Errorf("parse notification config: %w", err)
 	}
 
-	policy := new(v1alpha1.ModuleUpdatePolicy)
+	policy := new(v1alpha2.ModuleUpdatePolicy)
 	// if release has associated update policy
 	if policyName, found := mr.GetObjectMeta().GetLabels()[UpdatePolicyLabel]; found {
 		if policyName == "" {
-			policy = &v1alpha1.ModuleUpdatePolicy{
+			policy = &v1alpha2.ModuleUpdatePolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
-					APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+					Kind:       v1alpha2.ModuleUpdatePolicyGVK.Kind,
+					APIVersion: v1alpha2.ModuleUpdatePolicyGVK.GroupVersion().String(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "",
@@ -434,13 +424,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			return ctrl.Result{RequeueAfter: defaultCheckInterval * 4}, nil
 		}
 	} else {
-		// get all policies regardless of their labels
-		policies := new(v1alpha1.ModuleUpdatePolicyList)
-		err = r.client.List(ctx, policies)
-		if err != nil {
-			return ctrl.Result{Requeue: true}, err
-		}
-		policy, err = r.getReleasePolicy(mr.GetModuleSource(), mr.GetModuleName(), policies.Items)
+		policy, err = utils.UpdatePolicy(ctx, r.client, r.deckhouseEmbeddedPolicy, mr.GetModuleName())
 		if err != nil {
 			if err := r.updateModuleReleaseStatusMessage(ctx, mr, "Update policy not set. Create a suitable ModuleUpdatePolicy object"); err != nil {
 				return result, fmt.Errorf("update module release status message: %w", err)
@@ -499,7 +483,6 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	if releaseUpdater.LastReleaseDeployed() {
 		// latest release deployed
 		deployedRelease := *releaseUpdater.DeployedRelease()
-		deckhouseconfig.Service().AddModuleNameToSource(deployedRelease.Spec.ModuleName, deployedRelease.GetModuleSource())
 
 		// check symlink exists on FS, relative symlink
 		modulePath := generateModulePath(moduleName, deployedRelease.Spec.Version.String())
@@ -549,53 +532,6 @@ func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result,
 	}
 
 	return result, fmt.Errorf("apply predicted release: %w", err)
-}
-
-// getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
-// if several policies match the module release labels, conflict=true is returned
-func (r *moduleReleaseReconciler) getReleasePolicy(sourceName, moduleName string, policies []v1alpha1.ModuleUpdatePolicy) (*v1alpha1.ModuleUpdatePolicy, error) {
-	var releaseLabelsSet labels.Set = map[string]string{"module": moduleName, "source": sourceName}
-	var matchedPolicy v1alpha1.ModuleUpdatePolicy
-	var found bool
-
-	for _, policy := range policies {
-		if policy.Spec.ModuleReleaseSelector.LabelSelector != nil {
-			selector, err := metav1.LabelSelectorAsSelector(policy.Spec.ModuleReleaseSelector.LabelSelector)
-			if err != nil {
-				return nil, err
-			}
-			selectorSourceName, sourceLabelExists := selector.RequiresExactMatch("source")
-			if sourceLabelExists && selectorSourceName != sourceName {
-				// 'source' label is set, but does not match the given ModuleSource
-				continue
-			}
-
-			if selector.Matches(releaseLabelsSet) {
-				// ModuleUpdatePolicy matches ModuleSource and specified Module
-				if found {
-					return nil, fmt.Errorf("more than one update policy matches the module: %s and %s", matchedPolicy.Name, policy.Name)
-				}
-				found = true
-				matchedPolicy = policy
-			}
-		}
-	}
-
-	if !found {
-		r.logger.Infof("ModuleUpdatePolicy for ModuleSource: %q, Module: %q not found, using Embedded policy: %+v", sourceName, moduleName, *r.deckhouseEmbeddedPolicy.Get())
-		return &v1alpha1.ModuleUpdatePolicy{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
-				APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "", // special empty default policy, inherits Deckhouse settings for update mode
-			},
-			Spec: *r.deckhouseEmbeddedPolicy.Get(),
-		}, nil
-	}
-
-	return &matchedPolicy, nil
 }
 
 func (r *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
@@ -839,7 +775,7 @@ func (r *moduleReleaseReconciler) restoreAbsentModulesFromReleases(ctx context.C
 		moduleSource := item.GetModuleSource()
 
 		// if ModulePullOverride is set, don't check and restore overridden release
-		exists, err := r.isModulePullOverrideExists(ctx, moduleSource, moduleName)
+		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleSource, moduleName)
 		if err != nil {
 			r.logger.Errorf("Couldn't check module pull override for module %s: %s", moduleName, err)
 		}
@@ -1033,7 +969,7 @@ func (r *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 	return settings.NotificationConfig, nil
 }
 
-func validateModule(def models.DeckhouseModuleDefinition, values addonutils.Values, logger *log.Logger) error {
+func validateModule(def moduleloader.Definition, values addonutils.Values, logger *log.Logger) error {
 	if def.Weight < 900 || def.Weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
 	}

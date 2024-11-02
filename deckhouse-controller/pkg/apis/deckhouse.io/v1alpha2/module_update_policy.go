@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,16 +76,13 @@ type ModuleUpdatePolicy struct {
 // +k8s:deepcopy-gen=true
 
 type ModuleUpdatePolicySpec struct {
-	Update                ModuleUpdatePolicySpecUpdate          `json:"update"`
-	ReleaseChannel        string                                `json:"releaseChannel"`
-	ModuleReleaseSelector ModuleUpdatePolicySpecReleaseSelector `json:"moduleReleaseSelector"`
+	Update         ModuleUpdatePolicySpecUpdate `json:"update"`
+	ReleaseChannel string                       `json:"releaseChannel"`
 }
+
+// +k8s:deepcopy-gen=true
 
 type ModuleUpdatePolicySpecUpdate struct {
 	Mode    string         `json:"mode"`
 	Windows update.Windows `json:"windows"`
-}
-
-type ModuleUpdatePolicySpecReleaseSelector struct {
-	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
 }

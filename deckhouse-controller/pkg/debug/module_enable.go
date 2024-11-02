@@ -15,12 +15,19 @@
 package debug
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/kube-client/client"
 	"gopkg.in/alecthomas/kingpin.v2"
+	k8errors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
-	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -62,10 +69,56 @@ func moduleSwitch(kubeClient *client.Client, moduleName string, enabled bool, ac
 	// log.SetFormatter(&log.TextFormatter{DisableTimestamp: true, ForceColors: true})
 	logger.SetLevel(log.LevelError)
 
-	err := deckhouse_config.SetModuleConfigEnabledFlag(kubeClient, moduleName, enabled)
-	if err != nil {
+	if err := setModuleConfigEnabled(kubeClient, moduleName, enabled); err != nil {
 		return fmt.Errorf("%s module failed: %v", actionDesc, err)
 	}
 	fmt.Printf("Module %s %sd\n", moduleName, actionDesc)
+	return nil
+}
+
+// setModuleConfigEnabled updates spec.enabled flag or creates a new ModuleConfig with spec.enabled flag.
+func setModuleConfigEnabled(kubeClient k8s.Client, name string, enabled bool) error {
+	// this should not happen, but check it anyway.
+	if kubeClient == nil {
+		return fmt.Errorf("kubernetes client is not initialized")
+	}
+
+	unstructuredObj, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil && !k8errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get the '%s' module config: %v", name, err)
+	}
+
+	if unstructuredObj != nil {
+		if err = unstructured.SetNestedField(unstructuredObj.Object, enabled, "spec", "enabled"); err != nil {
+			return fmt.Errorf("failed to change spec.enabled to %v in the '%s' module config/: %v", enabled, name, err)
+		}
+		if _, err = kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Update(context.TODO(), unstructuredObj, metav1.UpdateOptions{}); err != nil {
+			return fmt.Errorf("failed to update the '%s' module config: %v", name, err)
+		}
+		return nil
+	}
+
+	// create new ModuleConfig if absent.
+	newCfg := &v1alpha1.ModuleConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v1alpha1.ModuleConfigGVK.Kind,
+			APIVersion: v1alpha1.ModuleConfigGVK.GroupVersion().String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: v1alpha1.ModuleConfigSpec{
+			Enabled: ptr.To(enabled),
+		},
+	}
+
+	obj, err := sdk.ToUnstructured(newCfg)
+	if err != nil {
+		return fmt.Errorf("failed to convert the '%s' module config: %v", name, err)
+	}
+
+	if _, err = kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Create(context.TODO(), obj, metav1.CreateOptions{}); err != nil {
+		return fmt.Errorf("failed to create the '%s' module config: %v", name, err)
+	}
 	return nil
 }

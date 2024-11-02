@@ -19,6 +19,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -46,7 +48,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
@@ -61,13 +62,13 @@ import (
 var (
 	mDelimiter = regexp.MustCompile("(?m)^---$")
 
-	embeddedMUP = &v1alpha1.ModuleUpdatePolicySpec{
-		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+	embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
+		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 			Mode:    updater.ModeAuto.String(),
 			Windows: make(update.Windows, 0),
 		},
 		ReleaseChannel: "Stable",
-		ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+		ModuleReleaseSelector: v1alpha2.ModuleUpdatePolicySpecReleaseSelector{
 			LabelSelector: &metav1.LabelSelector{
 				// defined only for the purpose of schema validation
 				MatchLabels: map[string]string{"*": "true"},
@@ -607,7 +608,7 @@ func Test_validateModule(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			path := filepath.Join("./testdata", name)
 			err := validateModule(
-				models.DeckhouseModuleDefinition{
+				moduleloader.Definition{
 					Name:   name,
 					Weight: 900,
 					Path:   path,
