@@ -310,28 +310,36 @@ Use the `etcdctl member list` command.
 
 Example:
 
-   ```shell
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
+```shell
+kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+--cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+--endpoints https://127.0.0.1:2379/ member list -w table
+```
 
 Warning! The last parameter in the output table shows etcd member is in [**learner**](https://etcd.io/docs/v3.5/learning/design-learner/) state, is not in *leader* state.
 
 ### Option 2
 
-Use the `etcdctl endpoint status` command. The fifth parameter in the output table will be `true` for the leader.
+Use the `etcdctl endpoint status` command. For this command, every control-plane address must be passed after `--endpoints` flag.
+The fifth parameter in the output table will be `true` for the leader.
 
-Example:
+Example of a script that automatically passes all control-plane nodes to the command:
 
 ```shell
-$ kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl \ 
---cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt  \ 
---key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ endpoint status -w table
-
-https://10.2.1.101:2379, ade526d28b1f92f7, 3.5.3, 177 MB, false, false, 42007, 406566258, 406566258,
-https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 406566258, 406566258,
+MASTER_NODE_IPS=($(kubectl get nodes -l \
+node-role.kubernetes.io/control-plane="" \
+-o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
+--no-headers))
+unset ENDPOINTS_STRING
+for master_node_ip in ${MASTER_NODE_IPS[@]}
+do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
+done
+kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod \
+-l component=etcd,tier=control-plane -o name | head -n1) \
+-- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
+--key /etc/kubernetes/pki/etcd/ca.key \
+$(echo -n $ENDPOINTS_STRING) endpoint status -w table
 ```
 
 ## What if something went wrong?
