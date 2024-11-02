@@ -60,7 +60,6 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- end }}
       containers:
-      containers:
       - name: okagent
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $.Values.okmeter.internal.currentReleaseImage }}
