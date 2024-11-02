@@ -615,7 +615,7 @@ Follow these steps to restore a single-master cluster:
    rm -rf /var/lib/etcd/member/
    ```
 
-1. Transfer and rename the backup to `~/etcd-backup.snapshot`.
+1. Put the etcd backup to `~/etcd-backup.snapshot` file.
 
 1. Restore the etcd database.
 
