@@ -59,6 +59,7 @@ type Script interface {
 	Sudo()
 	WithStdoutHandler(handler func(string))
 	WithTimeout(timeout time.Duration)
+	WithContext(ctx context.Context)
 	WithEnvs(envs map[string]string)
 	WithCleanupAfterExec(doCleanup bool)
 }

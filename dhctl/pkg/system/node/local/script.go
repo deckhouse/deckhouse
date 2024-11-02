@@ -15,6 +15,7 @@
 package local
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -32,6 +33,7 @@ type Script struct {
 	sudo              bool
 	stdoutLineHandler func(line string)
 	timeout           time.Duration
+	ctx               context.Context
 	cleanupAfterRun   bool
 }
 
@@ -51,6 +53,11 @@ func (s *Script) Execute() (stdout []byte, err error) {
 	if s.timeout > 0 {
 		cmd.WithTimeout(s.timeout)
 	}
+
+	if s.ctx != nil {
+		cmd.WithContext(s.ctx)
+	}
+
 	if s.env != nil {
 		cmd.WithEnv(s.env)
 	}
@@ -115,6 +122,10 @@ func (s *Script) WithStdoutHandler(handler func(string)) {
 
 func (s *Script) WithTimeout(timeout time.Duration) {
 	s.timeout = timeout
+}
+
+func (s *Script) WithContext(ctx context.Context) {
+	s.ctx = ctx
 }
 
 func (s *Script) WithEnvs(envs map[string]string) {
