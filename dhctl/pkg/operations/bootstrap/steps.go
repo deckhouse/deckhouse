@@ -730,6 +730,9 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 
 		}).
 		Run(func() error {
+			log.DebugLn("=== Execute bundle: Loop cycle start ===")
+			defer log.DebugLn("=== Execute bundle: Loop cycle end ===")
+
 			// we do not need to restart tunnel because we have HealthMonitor
 
 			ctx, ctxCancel := context.WithCancel(context.Background())
