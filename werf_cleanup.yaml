@@ -11,11 +11,11 @@ cleanup:
   - references:
       branch: /release-.*/
       limit:
-        last: 2
+        last: 3
   - references:
       tag: /.*/
       limit:
-        last: 2
+        last: 3
   - references:
       branch: main
     imagesPerReference:
