@@ -27,7 +27,7 @@ etcdctl \
 tar -czvf "${archive}" "${etcd}"
 # Check that there will be 25% free space left after adding the file
 if [ $(df /var/lib/etcd/ | tail -1 | awk '{printf "%.0f\n", $4 - ($2 * 0.25)}') -ge $(du -k "${archive}" | awk '{print $1}') ]; then
-    chmod 0500 "${archive}"
+    chmod 0600 "${archive}"
     mv "${archive}" "/var/lib/etcd/${archive}"
     # remove after 1.66 Old version.
     rm -f /var/lib/etcd/etcd-backup.snapshot
