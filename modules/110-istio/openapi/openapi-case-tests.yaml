@@ -24,8 +24,7 @@ positive:
             requests:
               memory: "2G"
     - sidecar:
-        livenessProbe:
-          enabled: true
+        livenessProbeEnabled: true
         resourcesManagement:
           static:
             limits:

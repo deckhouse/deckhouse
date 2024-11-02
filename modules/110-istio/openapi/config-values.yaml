@@ -265,16 +265,11 @@ properties:
         example: ["8080", "8443"]
         x-examples:
         - ["8080", "8443"]
-      livenessProbe:
-        type: object
-        description: sidecar livenessProbe parameters.
-        default: {}
-        properties:
-          enabled:
-            description: Turn on or off livenessProbe for sidecar container.
-            type: boolean
-            default: false
-            x-examples: [true]
+      livenessProbeEnabled:
+        type: boolean
+        description: Turn on or off livenessProbe for sidecar container.
+        default: false
+        x-examples: [ true ]
       resourcesManagement:
         description: |
           Manages Istio sidecar container resources.
