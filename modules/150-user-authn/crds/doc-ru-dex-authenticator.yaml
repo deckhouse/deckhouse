@@ -223,4 +223,3 @@ spec:
         - jsonPath: .spec.applications[*].domain
           name: Domain
           type: string
-  
