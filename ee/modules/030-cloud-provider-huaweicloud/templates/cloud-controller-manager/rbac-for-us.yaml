@@ -105,6 +105,22 @@ rules:
   - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cloud-provider-huaweicloud:cloud-controller-manager-configmap
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cloud-provider-huaweicloud:cloud-controller-manager
@@ -117,3 +133,17 @@ subjects:
 - kind: ServiceAccount
   name: cloud-controller-manager
   namespace: d8-cloud-provider-huaweicloud
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:cloud-provider-huaweicloud:cloud-controller-manager-configmap
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:cloud-provider-huaweicloud:cloud-controller-manager-configmap
+subjects:
+- kind: ServiceAccount
+  name: cloud-controller-manager
+  namespace: kube-system
