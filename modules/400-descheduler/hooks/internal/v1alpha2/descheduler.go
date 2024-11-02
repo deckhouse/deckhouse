@@ -41,7 +41,7 @@ type DeschedulerSpec struct {
 	PodLabelSelector       *metav1.LabelSelector   `json:"podLabelSelector,omitempty" yaml:"podLabelSelector,omitempty"`
 	NamespaceLabelSelector *metav1.LabelSelector   `json:"namespaceLabelSelector,omitempty" yaml:"namespaceLabelSelector,omitempty"`
 	PriorityClassThreshold *PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
-	Strategies             Strategies              `json:"strategies" yaml:"strategies"`
+	Strategies             Strategies              `json:"strategies,omitempty" yaml:"strategies,omitempty"`
 }
 
 type PriorityClassThreshold struct {
@@ -58,27 +58,27 @@ type Strategies struct {
 }
 
 type LowNodeUtilization struct {
-	Enabled          bool                   `json:"enabled" yaml:"enabled"`
+	Enabled          bool                   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Thresholds       map[string]interface{} `json:"thresholds,omitempty" yaml:"thresholds,omitempty"`
 	TargetThresholds map[string]interface{} `json:"targetThresholds,omitempty" yaml:"targetThresholds,omitempty"`
 }
 
 type HighNodeUtilization struct {
-	Enabled    bool                   `json:"enabled" yaml:"enabled"`
+	Enabled    bool                   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Thresholds map[string]interface{} `json:"thresholds,omitempty" yaml:"thresholds,omitempty"`
 }
 
 type RemoveDuplicates struct {
-	Enabled bool `json:"enabled" yaml:"enabled"`
+	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 }
 
 type RemovePodsViolatingNodeAffinity struct {
-	Enabled          bool     `json:"enabled" yaml:"enabled"`
+	Enabled          bool     `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	NodeAffinityType []string `json:"nodeAffinityType,omitempty" yaml:"nodeAffinityType,omitempty"`
 }
 
 type RemovePodsViolatingInterPodAntiAffinity struct {
-	Enabled bool `json:"enabled" yaml:"enabled"`
+	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 }
 
 type deschedulerKind struct{}

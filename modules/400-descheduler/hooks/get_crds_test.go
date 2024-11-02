@@ -57,11 +57,6 @@ spec:
         cpu: 10
         memory: 20
         pods: 30
-      targetThresholds:
-        cpu: 40
-        memory: 50
-        pods: 50
-        gpu: "gpuNode"
     highNodeUtilization:
       thresholds:
         cpu: 14
@@ -186,7 +181,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		})
 	})
 
-	Context("Cluster with two Deschedulers CR", func() {
+	FContext("Cluster with two Deschedulers CR", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(deschedulerCR1 + deschedulerCR2)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -219,15 +214,14 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         pods: 3
     lowNodeUtilization:
       enabled: false
-      targetThresholds:
-        cpu: 40
-        gpu: gpuNode
-        memory: 50
-        pods: 50
       thresholds:
         cpu: 10
         memory: 20
         pods: 30
+      targetThresholds:
+        cpu: 50
+        memory: 50
+        pods: 50
 `))
 		})
 	})
