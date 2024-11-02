@@ -29,7 +29,7 @@ type Input struct {
 	BastionPort    string
 	BastionUser    string
 	ExtraArgs      string
-	AvailableHosts []string
+	AvailableHosts []string //добавить hostname
 	BecomePass     string
 }
 
@@ -125,6 +125,7 @@ func (s *Session) AddAvailableHosts(hosts ...string) {
 
 	availableHosts := make([]string, 0, len(availableHostsMap))
 
+	// надо обходить по списку а не по мапе
 	for host := range availableHostsMap {
 		availableHosts = append(availableHosts, host)
 	}
