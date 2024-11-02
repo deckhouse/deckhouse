@@ -3,7 +3,7 @@
   {{- $image_version := $version | replace "." "-" }}
   {{- $patch := toString $value.patch }}
   {{- $v := semver $version }}
-  {{- $full_version := printf "%s.%s" $version $patch }}
+  {{- $full_version := printf "%s.%s" $version $crictlPatch }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -37,8 +37,7 @@ git:
 shell:
   setup:
   - export GOPROXY={{ $.GOPROXY }}
-  - latestTag=$(git ls-remote --tags  {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git | grep refs/tags/v{{ $version }} | grep -o '[^\/]*$' | tail -n1)
-  - git clone --depth 1 --branch $latestTag {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
+  - git clone --depth 1 --branch $full_version {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
   - cd /cri-tools
   - make install crictl
   - mv /usr/local/bin/crictl /crictl
