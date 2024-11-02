@@ -155,16 +155,19 @@ properties:
                           minimal: 0
                           maximal: 100
                           description: CPU fraction in percents
+                          default: 20
                         memory:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Memory fraction in percents
+                          default: 20
                         pods:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Pods count in percents
+                          default: 20
                       additionalProperties: true
                     targetThresholds:
                       type: object
@@ -174,16 +177,19 @@ properties:
                           minimal: 0
                           maximal: 100
                           description: CPU fraction in percents
+                          default: 50
                         memory:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Memory fraction in percents
+                          default: 50
                         pods:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Pods count in percents
+                          default: 50
                       additionalProperties: true
                 highNodeUtilization:
                   type: object
@@ -199,16 +205,19 @@ properties:
                           minimal: 0
                           maximal: 100
                           description: CPU fraction in percents
+                          default: 20
                         memory:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Memory fraction in percents
+                          default: 20
                         pods:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Pods count in percents
+                          default: 20
                       additionalProperties: true
                 removeDuplicates:
                   type: object
