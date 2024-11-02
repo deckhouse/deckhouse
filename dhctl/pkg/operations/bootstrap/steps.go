@@ -359,7 +359,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 			ctxCancel()
 
 			if err != nil {
-				panic(fmt.Sprintf("error re-creating ssh tunnel for remote docker auth service: %s", err.Error()))
+				log.ErrorF("error re-creating ssh tunnel for remote docker auth service: %s", err.Error())
 			}
 		}()
 
@@ -382,7 +382,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 				ctxCancel()
 
 				if err != nil {
-					panic(fmt.Sprintf("error re-creating ssh tunnel for remote docker distribution service: %s", err.Error()))
+					log.ErrorF("error re-creating ssh tunnel for remote docker distribution service: %s", err.Error())
 				}
 			}()
 		}
@@ -627,13 +627,16 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 }
 
 func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP string, dataDevices terraform.DataDevices) error {
+	log.DebugLn("RunBashiblePipeline: Start")
+	defer log.DebugLn("RunBashiblePipeline: Done")
+
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
 		return err
 	}
 
-	log.DebugF("Got cluster domain: %s", clusterDomain)
+	log.DebugF("Got cluster domain: %s\n", clusterDomain)
 	log.DebugLn("Starting registry packages proxy")
 
 	// we need clusterDomain to generate proper certificate for packages proxy
@@ -744,7 +747,7 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 
 				go func(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) {
 					if err := waitAndPushDockerImages(ctx, nodeInterface, registryData); err != nil {
-						log.ErrorF("RegistryImagePusher: got error: %v\n", err)
+						log.ErrorF("RegistryImagesPusher: got error: %v\n", err)
 						panic(err)
 					}
 				}(ctx, nodeInterface, &registryData)
