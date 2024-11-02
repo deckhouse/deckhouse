@@ -42,7 +42,6 @@ spec:
     matchLabels:
       app: cloud-controller-manager
 ---
-{{- $providerClusterConfiguration := .Values.cloudProviderHuaweicloud.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
