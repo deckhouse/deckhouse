@@ -39,6 +39,6 @@ shell:
     KUBE_GIT_TREE_STATE='archive'
     EOF
   - export KUBE_GIT_VERSION_FILE=.kube-version
-  - find /patches/*/{{ $version }} -name '*.patch' | xargs git apply --verbose
+  - git apply /patches/*/{{ $version }}/*.patch --verbose
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
 {{- end }}
