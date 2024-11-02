@@ -59,10 +59,10 @@ properties:
           * `kubernetes.default`;
           * `kubernetes.default.svc`;
           * `kubernetes.default.svc.cluster.local`;
-          * `192.168.0.1`;
+          * Адрес API-сервера кластера;
           * `127.0.0.1`;
-          * *текущий_hostname*;
-          * *hostIP*.
+          * DNS-имя хоста (hostname);
+          * IP-адрес хоста.
       authn:
         description: |
           Опциональные параметры аутентификации клиентов Kubernetes API.

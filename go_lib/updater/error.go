@@ -34,7 +34,7 @@ type NotReadyForDeployError struct {
 func (n *NotReadyForDeployError) Error() string {
 	message := "not ready for deploy"
 	if n.message != "" {
-		return ": " + n.message
+		message += ": " + n.message
 	}
 
 	return message

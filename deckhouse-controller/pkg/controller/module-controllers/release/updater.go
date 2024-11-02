@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"time"
 
@@ -40,12 +41,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
-func newModuleUpdater(dc dependency.Container, logger logger.Logger, nConfig updater.NotificationConfig, mode string,
+func newModuleUpdater(dc dependency.Container, logger logger.Logger, settings *updater.Settings,
 	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
 ) *updater.Updater[*v1alpha1.ModuleRelease] {
-	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, nConfig, mode,
-		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage),
-		newSettings(), newWebhookDataSource(logger), enabledModules)
+	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, settings,
+		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage, enabledModules),
+		newWebhookDataSource(logger), enabledModules)
 }
 
 func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
@@ -74,7 +75,7 @@ func (s *webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.
 }
 
 func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client, downloadedModulesDir string, symlinksDir string,
-	moduleManager moduleManager, dc dependency.Container,
+	moduleManager moduleManager, dc dependency.Container, clusterUUID string,
 ) *kubeAPI {
 	return &kubeAPI{
 		ctx:                  ctx,
@@ -84,6 +85,7 @@ func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client,
 		symlinksDir:          symlinksDir,
 		moduleManager:        moduleManager,
 		dc:                   dc,
+		clusterUUID:          clusterUUID,
 	}
 }
 
@@ -96,6 +98,7 @@ type kubeAPI struct {
 	symlinksDir          string
 	moduleManager        moduleManager
 	dc                   dependency.Container
+	clusterUUID          string
 }
 
 func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phase string) error {
@@ -149,7 +152,8 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 		}
 	}()
 
-	md := downloader.NewModuleDownloader(k.dc, tmpDir, &ms, utils.GenerateRegistryOptionsFromModuleSource(&ms))
+	options := utils.GenerateRegistryOptionsFromModuleSource(&ms, k.clusterUUID)
+	md := downloader.NewModuleDownloader(k.dc, tmpDir, &ms, options)
 	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
 		return fmt.Errorf("download module: %w", err)
@@ -243,28 +247,32 @@ func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, rele
 }
 
 type metricsUpdater struct {
-	metricStorage *metric_storage.MetricStorage
+	metricStorage  *metric_storage.MetricStorage
+	enabledModules []string
 }
 
-func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpdater {
+func newMetricsUpdater(metricStorage *metric_storage.MetricStorage, enabledModules []string) *metricsUpdater {
 	return &metricsUpdater{
-		metricStorage: metricStorage,
+		enabledModules: enabledModules,
+		metricStorage:  metricStorage,
 	}
 }
 
 func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
 }
 
-func (m *metricsUpdater) WaitingManual(name string, _ float64) {
-	m.metricStorage.GaugeSet("d8_module_release_waiting_manual", 1, map[string]string{"name": name})
-}
+func (m *metricsUpdater) WaitingManual(release *v1alpha1.ModuleRelease, totalPendingManualReleases float64) {
+	if !slices.Contains(m.enabledModules, release.GetModuleName()) {
+		return
+	}
 
-type settings struct{}
-
-func (s *settings) GetDisruptionApprovalMode() (string, bool) {
-	return "", false
-}
-
-func newSettings() *settings {
-	return &settings{}
+	m.metricStorage.GaugeSet(
+		"d8_module_release_waiting_manual",
+		totalPendingManualReleases,
+		map[string]string{
+			"name":       release.GetName(),
+			"kind":       "module",
+			"moduleName": release.GetModuleName(),
+			"version":    "v" + release.Spec.Version.String(),
+		})
 }

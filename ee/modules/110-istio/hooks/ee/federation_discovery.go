@@ -7,7 +7,6 @@ package ee
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -34,8 +33,6 @@ type IstioFederationDiscoveryCrdInfo struct {
 	TrustDomain             string
 	PublicMetadataEndpoint  string
 	PrivateMetadataEndpoint string
-	//                       map[hostname]IP
-	PublicServicesVirtualIPs map[string]string
 }
 
 func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_hook.MetricsCollector, endpoint string, isError float64) {
@@ -61,29 +58,6 @@ func (i *IstioFederationDiscoveryCrdInfo) PatchMetadataCache(pc *object_patch.Pa
 	return nil
 }
 
-type ipIterator struct {
-	IPInUseMap map[string]bool
-	Octet3     int
-	Octet4     int
-}
-
-func (i *ipIterator) Next() (string, error) {
-	i.Octet4++
-	if i.Octet4 == 256 {
-		i.Octet3++
-		i.Octet4 = 0
-	}
-	if i.Octet3 == 256 {
-		return "", fmt.Errorf("IP pool for ServiceEntries is over. Too many remote public services")
-	}
-	ip := fmt.Sprintf("169.254.%d.%d", i.Octet3, i.Octet4)
-
-	if _, ok := i.IPInUseMap[ip]; ok {
-		return i.Next()
-	}
-	return ip, nil
-}
-
 func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var federation eeCrd.IstioFederation
 
@@ -100,21 +74,12 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	me := federation.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
-	var psvips = make(map[string]string)
-	if federation.Status.MetadataCache.Private != nil && federation.Status.MetadataCache.Private.PublicServices != nil {
-		for _, ps := range *federation.Status.MetadataCache.Private.PublicServices {
-			if ps.VirtualIP != "" {
-				psvips[ps.Hostname] = ps.VirtualIP
-			}
-		}
-	}
 	return IstioFederationDiscoveryCrdInfo{
-		Name:                     federation.GetName(),
-		TrustDomain:              federation.Spec.TrustDomain,
-		ClusterUUID:              clusterUUID,
-		PublicMetadataEndpoint:   me + "/public/public.json",
-		PrivateMetadataEndpoint:  me + "/private/federation.json",
-		PublicServicesVirtualIPs: psvips,
+		Name:                    federation.GetName(),
+		TrustDomain:             federation.Spec.TrustDomain,
+		ClusterUUID:             clusterUUID,
+		PublicMetadataEndpoint:  me + "/public/public.json",
+		PrivateMetadataEndpoint: me + "/private/federation.json",
 	}, nil
 }
 
@@ -146,20 +111,11 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
 
-	var virtualIPInUseMap = make(map[string]bool)
 	for _, federation := range input.Snapshots["federations"] {
 		federationInfo := federation.(IstioFederationDiscoveryCrdInfo)
 		if federationInfo.TrustDomain == myTrustDomain {
 			continue
 		}
-		for _, vip := range federationInfo.PublicServicesVirtualIPs {
-			virtualIPInUseMap[vip] = true
-		}
-	}
-	var ipi = ipIterator{
-		IPInUseMap: virtualIPInUseMap,
-		Octet3:     0,
-		Octet4:     0,
 	}
 
 	for _, federation := range input.Snapshots["federations"] {
@@ -234,18 +190,6 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			input.LogEntry.Warnf("bad private metadata format in endpoint %s for IstioFederation %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
-		}
-		for i, ps := range *privateMetadata.PublicServices {
-			if vip, ok := federationInfo.PublicServicesVirtualIPs[ps.Hostname]; ok {
-				(*privateMetadata.PublicServices)[i].VirtualIP = vip
-			} else {
-				(*privateMetadata.PublicServices)[i].VirtualIP, err = ipi.Next()
-				if err != nil {
-					input.LogEntry.Warnf("can't get VirtualIP for service %s in IstioFederation %s, error: %s", ps.Hostname, federationInfo.Name, err.Error())
-					federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
-					continue
-				}
-			}
 		}
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)

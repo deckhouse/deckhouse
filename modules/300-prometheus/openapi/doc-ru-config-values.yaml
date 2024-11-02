@@ -11,7 +11,10 @@ properties:
 
       `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть под придется вручную.
 
-      **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Prometheus будет перезаказан, а все данные удалены.
+      **Внимание.** При переносе Prometheus с локальным хранилищем на другие узлы, поды зависнут в состоянии Pending. В этом случае будет необходимо сохранить базу данных Prometheus, удалить старые PVC и перезапустить под вручную.  Под локальным хранилищем подразумевается StorageClass, связанный не с сетевым хранилищем, а с локальным томом на узле (например, StorageClass, создаваемый модулем local-path-provisioner).
+
+      **Внимание.** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Prometheus будет перезаказан, а все данные удалены.
+
   longtermStorageClass:
     description: |
       Имя StorageClass'а, который предполагается использовать для Longterm Prometheus.
@@ -20,7 +23,7 @@ properties:
 
       `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
 
-      **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Longterm Prometheus будет перезаказан, а все данные удалены.
+      **Внимание.** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Longterm Prometheus будет перезаказан, а все данные удалены.
   longtermRetentionDays:
     description: |
       Сколько дней хранить данные в Longterm Prometheus.
@@ -163,24 +166,30 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   longtermNodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  longtermPodAntiAffinity:
+    type: string
+    description: |
+      Устанавливает конфигурацию podAntiAffinity для Prometheus longterm по отношению к Prometheus main.
+      - `Preferred` — позволяет размещать Prometheus longterm на одном узле с Prometheus main, если нет возможности их разместить на разных узлах.
+      - `Required` — не позволяет размещать Prometheus longterm на одном узле с Prometheus main ни при каких условиях.
   tolerations:
     type: array
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   longtermTolerations:
     type: array
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   mainMaxDiskSizeGigabytes:
     description: |
       Устарел и будет удален. Ни на что не влияет.

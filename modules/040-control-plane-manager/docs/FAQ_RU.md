@@ -16,7 +16,7 @@ title: "Управление control plane: FAQ"
 >
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
 
-1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-etcd-и-восстановление) и папки `/etc/kubernetes`.
+1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../300-prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
 1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
@@ -44,9 +44,9 @@ title: "Управление control plane: FAQ"
      --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > Для **Yandex Cloud**, при использовании внешних адресов на мастер-узлах, количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству мастер-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов), количество элементов в массиве все равно должно соответствовать количеству мастер-узлов.
+   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
    >
-   > Например, при трех мастер-узлах (`masterNodeGroup.replicas: 3`) и автоматическом заказе адресов, параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
+   > Например, при трех master-узлах (`masterNodeGroup.replicas: 3`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
    >
    > ```bash
    > externalIPAddresses:
@@ -71,7 +71,11 @@ title: "Управление control plane: FAQ"
 
 ## Как уменьшить число master-узлов в облачном кластере (multi-master в single-master)?
 
-1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-etcd-и-восстановление) и папки `/etc/kubernetes`.
+{% alert level="warning" %}
+Описанные ниже шаги необходимо выполнять с первого по порядку master-узла кластера (master-0). Это связано с тем, что кластер всегда масштабируется по порядку: например, невозможно удалить узлы master-0 и master-1, оставив master-2.
+{% endalert %}
+
+1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../300-prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
@@ -90,6 +94,15 @@ title: "Управление control plane: FAQ"
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
+
+   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](../030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
+   >
+   > Например, при одном master-узле (`masterNodeGroup.replicas: 1`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
+   >
+   > ```yaml
+   > externalIPAddresses:
+   > - "Auto"
+   > ```
 
 1. Снимите следующие лейблы с удаляемых master-узлов:
    * `node-role.kubernetes.io/control-plane`
@@ -139,7 +152,7 @@ title: "Управление control plane: FAQ"
 
 ## Как убрать роль master-узла, сохранив узел?
 
-1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-etcd-и-восстановление) и папки `/etc/kubernetes`.
+1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../300-prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
@@ -167,7 +180,7 @@ title: "Управление control plane: FAQ"
 
 ## Как изменить образ ОС в multi-master-кластере?
 
-1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-etcd-и-восстановление) и папки `/etc/kubernetes`.
+1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../300-prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
@@ -516,7 +529,7 @@ spec:
 
 ### Что делается автоматически
 
-Автоматически запускаются CronJob `kube-system/d8-etcd-backup-*` в 00:00 по UTC+0. Результат сохраняется в `/var/lib/etcd/etcd-backup.snapshot` на всех узлах с `control-plane` в кластере (мастер-узлы).
+Автоматически запускаются CronJob `kube-system/d8-etcd-backup-*` в 00:00 по UTC+0. Результат сохраняется в `/var/lib/etcd/etcd-backup.tar.gz` на всех узлах с `control-plane` в кластере (мастер-узлы).
 
 ### Как сделать бэкап etcd вручную
 
@@ -534,6 +547,7 @@ d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
 
 ```bash
 #!/usr/bin/env bash
+set -e
 
 pod=etcd-`hostname`
 kubectl -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
@@ -543,14 +557,12 @@ tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
 rm -r ./kubernetes ./etcd-backup.snapshot
 ```
 
-В текущей директории будет создан файл `etcd-backup.snapshot` со снимком базы etcd одного из членов etcd-кластера.
+В текущей директории будет создан файл `kube-backup.tar.gz` со снимком базы etcd одного из членов etcd-кластера.
 Из полученного снимка можно будет восстановить состояние кластера etcd.
 
 Также рекомендуем сделать бэкап директории `/etc/kubernetes`, в которой находятся:
 - манифесты и конфигурация компонентов [control-plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components);
 - [PKI кластера Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/).
-Данная директория поможет быстро восстановить кластер при полной потере control-plane-узлов без создания нового кластера
-и без повторного присоединения узлов в новый кластер.
 
 Мы рекомендуем хранить резервные копии снимков состояния кластера etcd, а также бэкап директории `/etc/kubernetes/` в зашифрованном виде вне кластера Deckhouse.
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т. д.
@@ -641,12 +653,12 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Чтобы получить данные определенных объектов кластера из резервной копии etcd:
 1. Запустите временный экземпляр etcd.
-2. Наполните его данными из [резервной копии](#как-сделать-бэкап-etcd).
+2. Наполните его данными из [резервной копии](#как-сделать-бэкап-etcd-вручную).
 3. Получите описания нужных объектов с помощью `etcdhelper`.
 
 #### Пример шагов по восстановлению объектов из резервной копии etcd
 
-В примере далее `etcd-snapshot.bin` — [резервная копия](#как-сделать-бэкап-etcd) etcd (snapshot), `infra-production` — namespace, в котором нужно восстановить объекты.
+В примере далее `etcd-snapshot.bin` — [резервная копия](#как-сделать-бэкап-etcd-вручную) etcd (snapshot), `infra-production` — namespace, в котором нужно восстановить объекты.
 
 1. Запустите под с временным экземпляром etcd.
    - Подготовьте файл `etcd.pod.yaml` шаблона пода, выполнив следующие команды:
