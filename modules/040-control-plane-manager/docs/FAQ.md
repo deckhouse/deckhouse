@@ -549,7 +549,7 @@ tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
 rm -r ./kubernetes ./etcd-backup.snapshot
 ```
 
-In the current directory etcd snapshot file `etcd-backup.snapshot` will be created from one of an etcd cluster members.
+In the current directory etcd snapshot file `kube-backup.tar.gz` will be created from one of an etcd cluster members.
 From this file, you can restore the previous etcd cluster state in the future.
 
 Also, we recommend making a backup of the `/etc/kubernetes` directory, which contains:
@@ -600,7 +600,7 @@ Follow these steps to restore a single-master cluster:
    rm -rf /var/lib/etcd/member/
    ```
 
-1. Transfer and rename the backup to `~/etcd-backup.snapshot`.
+1. Put the etcd backup to `~/etcd-backup.snapshot` file.
 
 1. Restore the etcd database.
 
