@@ -181,7 +181,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		})
 	})
 
-	FContext("Cluster with two Deschedulers CR", func() {
+	Context("Cluster with two Deschedulers CR", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(deschedulerCR1 + deschedulerCR2)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -218,10 +218,6 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         cpu: 10
         memory: 20
         pods: 30
-      targetThresholds:
-        cpu: 50
-        memory: 50
-        pods: 50
 `))
 		})
 	})

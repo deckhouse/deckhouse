@@ -54,6 +54,12 @@ data:
           {{- $s := unset ($d.strategies.removePodsViolatingNodeAffinity | deepCopy) "enabled" }}
           {{- $s | toYaml | nindent 10 }}
       {{- end }}
+      {{- if dig "strategies" "removePodsViolatingInterPodAntiAffinity" "enabled" false $d }}
+      - name: "removePodsViolatingInterPodAntiAffinity"
+      {{- end }}
+      {{- if dig "strategies" "removeDuplicates" "enabled" false $d }}
+      - name: "removeDuplicates"
+      {{- end }}
       plugins:
         # DefaultEvictor is enabled for both `filter` and `preEvictionFilter`
         filter:
