@@ -37,11 +37,13 @@
  - **[dhctl]** Reduces code duplication in the gRPC server message handler and log sender, refactors the graceful shutdown mechanism, and adds support for proper log output for multiple parallel instances of the dhctl server. [#9096](https://github.com/deckhouse/deckhouse/pull/9096)
  - **[dhctl]** Reduce manual operations when converging control plane nodes. [#8380](https://github.com/deckhouse/deckhouse/pull/8380)
  - **[go_lib]** Ability to watch info about deckhouse release and module releases in the registry from cli. [#10046](https://github.com/deckhouse/deckhouse/pull/10046)
+ - **[metallb]** Added pre-upgrade compatibility check for metallb configuration. [#10289](https://github.com/deckhouse/deckhouse/pull/10289)
  - **[multitenancy-manager]** Add projects render validation. [#9607](https://github.com/deckhouse/deckhouse/pull/9607)
  - **[operator-trivy]** Add support for insecure registries. [#10124](https://github.com/deckhouse/deckhouse/pull/10124)
  - **[operator-trivy]** Bump operator-trivy version to `0.22.0`. [#10045](https://github.com/deckhouse/deckhouse/pull/10045)
  - **[user-authn]** Allow device flow for Kubernets API [#10140](https://github.com/deckhouse/deckhouse/pull/10140)
  - **[user-authn]** Refresh groups on updating tokens. [#9598](https://github.com/deckhouse/deckhouse/pull/9598)
+ - **[user-authz]** Improve rbacv2 hook to support custom roles, and roles extending and add docs. [#10241](https://github.com/deckhouse/deckhouse/pull/10241)
 
 ## Fixes
 
@@ -53,6 +55,7 @@
  - **[candi]** Seamless change of clusterDomain. [#9739](https://github.com/deckhouse/deckhouse/pull/9739)
  - **[candi]** Use statically built `lsblk`. [#9666](https://github.com/deckhouse/deckhouse/pull/9666)
  - **[candi]** Added the ability to configure Node DNS servers via the Azure Cloud Provider. [#9554](https://github.com/deckhouse/deckhouse/pull/9554)
+ - **[cloud-provider-aws]** revert "Added the ability to specify your IAM role" [#10435](https://github.com/deckhouse/deckhouse/pull/10435)
  - **[cloud-provider-vcd]** Fix vCloudDirector catalogs sharing. [#9802](https://github.com/deckhouse/deckhouse/pull/9802)
  - **[cloud-provider-yandex]** Add support a hybrid cluster in yandex CSI driver [#9861](https://github.com/deckhouse/deckhouse/pull/9861)
  - **[cloud-provider-zvirt]** Add to the instance a status about zvirtinstance. [#10236](https://github.com/deckhouse/deckhouse/pull/10236)
@@ -60,6 +63,7 @@
  - **[cni-cilium]** Disable the metrics server in the "egress-gateway-agent" because we don't use it. [#10208](https://github.com/deckhouse/deckhouse/pull/10208)
     The pods of the egress-gateway-agent will be restarted.
  - **[common]** Add `/bin/true` to `init` image [#10372](https://github.com/deckhouse/deckhouse/pull/10372)
+ - **[control-plane-manager]** Fixed free space sufficiency detection for etcd-backup [#10426](https://github.com/deckhouse/deckhouse/pull/10426)
  - **[control-plane-manager]** Seamless change of clusterDomain. [#9739](https://github.com/deckhouse/deckhouse/pull/9739)
  - **[control-plane-manager]** Automatically regenerate kubeconfig for control plane components if validation fails, preventing crashes. [#9445](https://github.com/deckhouse/deckhouse/pull/9445)
  - **[deckhouse]** Fix extenders message logs. [#10212](https://github.com/deckhouse/deckhouse/pull/10212)
@@ -117,6 +121,7 @@
  - **[deckhouse-controller]** Remove the flant-integration internal module. [#8392](https://github.com/deckhouse/deckhouse/pull/8392)
  - **[dhctl]** Remove support for deprecated `InitConfiguration.configOverrides` parameter. [#9920](https://github.com/deckhouse/deckhouse/pull/9920)
  - **[documentation]** Change images to distroless. [#10040](https://github.com/deckhouse/deckhouse/pull/10040)
+ - **[ingress-nginx]** Remove unnecessary validation and warnings. [#10430](https://github.com/deckhouse/deckhouse/pull/10430)
  - **[ingress-nginx]** Replacing iptables with precompiled binaries. [#10103](https://github.com/deckhouse/deckhouse/pull/10103)
     The pods will be restarted.
  - **[ingress-nginx]** Remove v1.6 IngressNginxController. [#9935](https://github.com/deckhouse/deckhouse/pull/9935)
