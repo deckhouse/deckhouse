@@ -24,6 +24,7 @@ import (
 	libmirrorBundle "github.com/deckhouse/deckhouse-cli/pkg/libmirror/bundle"
 	libmirrorCtx "github.com/deckhouse/deckhouse-cli/pkg/libmirror/contexts"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -35,6 +36,7 @@ const (
 var (
 	imgBundleUnpackMu   sync.Mutex
 	imgBundleUnpackInfo map[string]imageBundleUnpackInfo
+	isValidationNeeded  = true
 )
 
 func init() {
@@ -74,16 +76,21 @@ func unpackAndValidateImgBundle(imgBundlePath string) (string, error) {
 		return unpackPath, fmt.Errorf("failed to unpack img bundle: %w", err)
 	}
 
-	if err := libmirrorBundle.ValidateUnpackedBundle(
-		&libmirrorCtx.PushContext{
-			BaseContext: libmirrorCtx.BaseContext{
-				UnpackedImagesPath: unpackPath,
-				Logger:             &logger,
+	if isValidationNeeded {
+		if err := libmirrorBundle.ValidateUnpackedBundle(
+			&libmirrorCtx.PushContext{
+				BaseContext: libmirrorCtx.BaseContext{
+					UnpackedImagesPath: unpackPath,
+					Logger:             &logger,
+				},
 			},
-		},
-	); err != nil {
-		return unpackPath, fmt.Errorf("invalid bundle: %w", err)
+		); err != nil {
+			return unpackPath, fmt.Errorf("invalid bundle: %w", err)
+		}
+	} else {
+		log.DebugLn("Bundle validation is disabled by build tag")
 	}
+
 	return unpackPath, nil
 }
 
