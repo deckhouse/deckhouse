@@ -14,7 +14,10 @@
 
 package node
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Interface interface {
 	Command(name string, args ...string) Command
@@ -35,6 +38,7 @@ type Command interface {
 	OnCommandStart(fn func())
 	WithEnv(env map[string]string)
 	WithTimeout(timeout time.Duration)
+	WithContext(ctx context.Context)
 	WithStdoutHandler(h func(line string))
 	WithStderrHandler(h func(line string))
 	WithSSHArgs(args ...string)

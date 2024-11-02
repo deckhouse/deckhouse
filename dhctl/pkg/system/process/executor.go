@@ -17,6 +17,7 @@ package process
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -124,7 +125,7 @@ type Executor struct {
 	started bool
 	stop    bool
 	waitCh  chan struct{}
-	stopCh  chan struct{}
+	doStop  context.CancelFunc
 
 	lockWaitError sync.RWMutex
 	waitError     error
@@ -132,6 +133,7 @@ type Executor struct {
 	killError error
 
 	timeout time.Duration
+	ctx     context.Context
 }
 
 func NewDefaultExecutor(cmd *exec.Cmd) *Executor {
@@ -198,6 +200,11 @@ func (e *Executor) CaptureStderr(buf *bytes.Buffer) *Executor {
 
 func (e *Executor) WithTimeout(timeout time.Duration) *Executor {
 	e.timeout = timeout
+	return e
+}
+
+func (e *Executor) WithContext(ctx context.Context) *Executor {
+	e.ctx = ctx
 	return e
 }
 
@@ -474,47 +481,52 @@ func (e *Executor) Start() error {
 func (e *Executor) ProcessWait() {
 	waitErrCh := make(chan error, 1)
 	e.waitCh = make(chan struct{}, 1)
-	e.stopCh = make(chan struct{}, 1)
 
 	// wait for process in go routine
 	go func() {
 		waitErrCh <- e.cmd.Wait()
 	}()
 
-	go func() {
-		if e.timeout > 0 {
-			time.Sleep(e.timeout)
-			if e.stopCh != nil {
-				e.stopCh <- struct{}{}
-			}
-		}
-	}()
+	runCtx := e.ctx
+	if runCtx == nil {
+		runCtx = context.Background()
+	}
+
+	var runCtxCancel context.CancelFunc
+	if e.timeout > 0 {
+		runCtx, runCtxCancel = context.WithTimeout(runCtx, e.timeout)
+	} else {
+		runCtx, runCtxCancel = context.WithCancel(runCtx)
+	}
+
+	e.doStop = runCtxCancel
 
 	// watch for wait or stop
 	go func() {
 		defer func() {
+			runCtxCancel()
 			close(e.waitCh)
 			close(waitErrCh)
 		}()
+
 		// Wait until Stop() is called or/and Wait() is returning.
 		for {
 			select {
 			case err := <-waitErrCh:
 				if e.stop {
 					// Ignore error if Stop() was called.
-					// close(e.waitCh)
+
 					return
 				}
 				e.setWaitError(err)
 				if e.WaitHandler != nil {
 					e.WaitHandler(e.waitError)
 				}
-				// close(e.waitCh)
+
 				return
-			case <-e.stopCh:
+			case <-runCtx.Done():
 				e.stop = true
-				// Prevent next readings from the closed channel.
-				e.stopCh = nil
+
 				// The usual e.cmd.Process.Kill() is not working for the process
 				// started with the new process group (Setpgid: true).
 				// Negative pid number is used to send a signal to all processes in the group.
@@ -567,9 +579,11 @@ func (e *Executor) Stop() {
 
 	e.stop = true
 	log.DebugF("Stop '%s'\n", e.cmd.String())
-	if e.stopCh != nil {
-		close(e.stopCh)
+
+	if e.doStop != nil {
+		e.doStop()
 	}
+
 	<-e.waitCh
 	log.DebugF("Stopped '%s': %d\n", e.cmd.String(), e.cmd.ProcessState.ExitCode())
 	e.closePipes()
