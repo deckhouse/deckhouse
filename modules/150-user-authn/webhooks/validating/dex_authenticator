@@ -33,7 +33,10 @@ kubernetes:
         "name": .metadata.name,
         "namespace": .metadata.namespace,
         "applicationDomain": .spec.applicationDomain,
-        "ingressClass": .spec.applicationIngressClassName
+        "ingressClass": .spec.applicationIngressClassName,
+        "additionalDomains": [
+          .spec.additionalApplications[]? | [.domain, .ingressClassName]
+        ]
       }
 kubernetesValidating:
 - name: dexauthenticators-unique.deckhouse.io
@@ -48,31 +51,54 @@ EOF
 }
 
 function __main__() {
-  newAuthDomain=$(context::jq -r '.review.request.object.spec.applicationDomain')
-  newAuthIngressClass=$(context::jq -r '.review.request.object.spec.applicationIngressClassName')
+  newAuthNamespace=$(context::jq -r '.review.request.object.metadata.namespace')
+  newAuthName=$(context::jq -r '.review.request.object.metadata.name')
+  
+  # Собираем все домены
+  domains_to_check=()
+  
+  # Получаем основной домен
+  main_domain=$(context::jq -r '.review.request.object.spec.applicationDomain')
+  main_ingress_class=$(context::jq -r '.review.request.object.spec.applicationIngressClassName')
+  domains_to_check+=("$main_domain $main_ingress_class")
 
-  result=$(context::jq -r --arg domain "$newAuthDomain" --arg class "$newAuthIngressClass" '.snapshots.dexauthenticators[].filterResult | select(.applicationDomain == $domain and .ingressClass == $class)')
-
-  if [ "$result" ]; then
-    newAuthNamespace=$(context::jq -r '.review.request.object.metadata.namespace')
-    newAuthName=$(context::jq -r '.review.request.object.metadata.name')
-    existingAuth=$(echo "$result" | jq -r '.namespace + "/" + .name')
-    # Update previously existing DexAuthenticator with the same name allowed
-    if [[ "$existingAuth" == "$newAuthNamespace/$newAuthName" ]]; then
-      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":true}
-EOF
-      return 0;
+  # Получаем все дополнительные домены
+  while read -r domain ingressClass; do
+    if [[ "$domain" != "null" && "$ingressClass" != "null" ]]; then
+      domains_to_check+=("$domain $ingressClass")
     fi
-    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"Desired DexAuthenticator '$newAuthNamespace/$newAuthName' conflicts with the existing DexAuthenticator '$existingAuth'" }
+  done < <(context::jq -r '.review.request.object.spec.additionalApplications[]? | "\(.domain) \(.ingressClassName)"')
+  
+  # Проверяем каждый домен на конфликты
+  for domain_pair in "${domains_to_check[@]}"; do
+    read -r domain ingressClass <<< "$domain_pair"
+    
+    result=$(context::jq -r --arg domain "$domain" --arg class "$ingressClass" '
+      .snapshots.dexauthenticators[].filterResult | 
+      select(
+        .applicationDomain == $domain and .ingressClass == $class or
+        (.additionalDomains | arrays | any(.[0] == $domain and .[1] == $class))
+      )
+    ')
+    
+    if [ "$result" ]; then
+      existingAuth=$(echo "$result" | jq -r '.namespace + "/" + .name')
+      
+      # Разрешаем обновление существующего DexAuthenticator
+      if [[ "$existingAuth" == "$newAuthNamespace/$newAuthName" ]]; then
+        continue
+      fi
+      
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"Desired DexAuthenticator '$newAuthNamespace/$newAuthName' conflicts with the existing DexAuthenticator '$existingAuth' for domain '$domain'" }
 EOF
-  else
-    # dexauthenticator with such values does not exist
-    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+      return 0
+    fi
+  done
+  
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF
-  fi
 }
 
 hook::run "$@"
