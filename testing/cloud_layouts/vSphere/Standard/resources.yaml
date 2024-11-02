@@ -28,8 +28,6 @@ spec:
   memory: 8192
   rootDiskSize: 20
   mainNetwork: DPortGroup-lab-vms
-  additionalNetworks:
-    - DPortGroup-internal-private-vms
   datastore: vsan-spb-5-datastore
 ---
 apiVersion: deckhouse.io/v1
