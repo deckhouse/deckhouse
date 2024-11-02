@@ -18,6 +18,6 @@ allowedGroups:
     {{- end }}
 redirectURIs:
   {{- range $app := $crd.spec.applications }}
-- https://{{ $app.domainName }}/dex-authenticator/callback
+- https://{{ $app.domain }}/dex-authenticator/callback
 {{- end }}
 {{- end }}
