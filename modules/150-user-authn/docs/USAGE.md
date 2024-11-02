@@ -323,6 +323,8 @@ echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
 
+Note that in the below example the [`ttl`](cr.html#user-v1-spec-ttl) parameter is set.
+
 {% raw %}
 
 ```yaml
@@ -333,6 +335,7 @@ metadata:
 spec:
   email: admin@yourcompany.com
   password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
+  ttl: 24h
 ```
 
 {% endraw %}
