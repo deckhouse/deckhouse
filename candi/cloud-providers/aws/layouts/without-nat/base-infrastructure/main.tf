@@ -81,7 +81,7 @@ resource "aws_route_table_association" "kube_public" {
 }
 
 resource "aws_iam_role" "node" {
-  name = "${var.prefix}-node"
+  name = "${local.prefix}-node"
 
   assume_role_policy = <<-EOF
   {
@@ -98,11 +98,11 @@ resource "aws_iam_role" "node" {
   }
   EOF
 
-  tags = var.tags
+  tags = local.tags
 }
 
 resource "aws_iam_role_policy" "node" {
-  name = "${var.prefix}-node"
+  name = "${local.prefix}-node"
   role = aws_iam_role.node.id
 
   policy = <<-EOF
@@ -128,7 +128,7 @@ resource "aws_iam_role_policy" "node" {
 }
 
 resource "aws_iam_instance_profile" "node" {
-  name = "${var.prefix}-node"
+  name = "${local.prefix}-node"
   role = lookup(var.providerClusterConfiguration,"iamNodeRole", aws_iam_role.node.id)
 }
 
