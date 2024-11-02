@@ -37,7 +37,7 @@ masterNodeGroup:
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template: vm-teamplates/ubuntu-24.04
+    template: vm-teamplates/ubuntu-24.04-template
     mainNetwork: DPortGroup-lab-vms
     datastore: vsan-spb-5-datastore
     rootDiskSize: 50
