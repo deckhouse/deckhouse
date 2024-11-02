@@ -17,8 +17,6 @@ limitations under the License.
 package migrate
 
 import (
-	"fmt"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -117,7 +115,7 @@ func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
 			},
 		}
 
-		input.LogEntry.Warnf(fmt.Sprintf("Remove label 'heritage: deckhouse' from %s", snapSecretName))
+		input.LogEntry.Warnf("Remove label 'heritage: deckhouse' from %s", snapSecretName)
 		input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", snapSecretName)
 	}
 
