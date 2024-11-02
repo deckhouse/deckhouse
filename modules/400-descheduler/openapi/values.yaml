@@ -8,7 +8,7 @@ properties:
     properties:
       deschedulers:
         type: array
-        default: [{}]
+        default: []
         items:
           type: object
           default: {}
@@ -149,7 +149,6 @@ properties:
                   properties:
                     enabled:
                       type: boolean
-                      default: false
                     thresholds:
                       type: object
                       default: {}
@@ -159,19 +158,16 @@ properties:
                           minimal: 0
                           maximal: 100
                           description: CPU fraction in percents
-                          default: 20
                         memory:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Memory fraction in percents
-                          default: 20
                         pods:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Pods count in percents
-                          default: 20
                       additionalProperties: true
                     targetThresholds:
                       type: object
@@ -182,19 +178,16 @@ properties:
                           minimal: 0
                           maximal: 100
                           description: CPU fraction in percents
-                          default: 50
                         memory:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Memory fraction in percents
-                          default: 50
                         pods:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Pods count in percents
-                          default: 50
                       additionalProperties: true
                 highNodeUtilization:
                   type: object
@@ -202,7 +195,6 @@ properties:
                   properties:
                     enabled:
                       type: boolean
-                      default: false
                     thresholds:
                       type: object
                       default: {}
@@ -212,32 +204,27 @@ properties:
                           minimal: 0
                           maximal: 100
                           description: CPU fraction in percents
-                          default: 20
                         memory:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Memory fraction in percents
-                          default: 20
                         pods:
                           type: integer
                           minimal: 0
                           maximal: 100
                           description: Pods count in percents
-                          default: 20
                       additionalProperties: true
                 removeDuplicates:
                   type: object
                   properties:
                     enabled:
                       type: boolean
-                      default: false
                 removePodsViolatingNodeAffinity:
                   type: object
                   properties:
                     enabled:
                       type: boolean
-                      default: false
                     nodeAffinityType:
                       type: array
                       items:
@@ -249,7 +236,6 @@ properties:
                   properties:
                     enabled:
                       type: boolean
-                      default: false
               anyOf:
                 - required: ["lowNodeUtilization"]
                 - required: ["highNodeUtilization"]
