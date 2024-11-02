@@ -52,17 +52,17 @@ spec:
                     Список дополнительных приложений (ingress ресурсов) для которых пользовательский запрос будет перенаправлен для авторизации в Dex.
                   items:
                     properties:
-                      domainName:
+                      domain:
                         description: |
                           Внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
 
                           **Не должен** содержать HTTP-схему.
                       ingressSecretName:
                         description: |
-                          Имя Secret'а с TLS-сертификатом (от домена `domainName`), который используется в Ingress-объекте приложения. Secret должен обязательно находиться в том же namespace, что и DexAuthenticator.
+                          Имя Secret'а с TLS-сертификатом (от домена `domain`), который используется в Ingress-объекте приложения. Secret должен обязательно находиться в том же namespace, что и DexAuthenticator.
                       ingressClassName:
                         description: |
-                          Название Ingress-класса, которое будет использоваться в Ingress-объекте (должно совпадать с названием Ingress-класса для `applicationDomain` и `domainName`).
+                          Название Ingress-класса, которое будет использоваться в Ingress-объекте (должно совпадать с названием Ingress-класса для `applicationDomain` и `domain`).
                       signOutURL:
                         description: |
                           Передайте URL приложения, запросы с которого будут проксированы на URL выхода у `dex-authenticator`.
@@ -160,7 +160,7 @@ spec:
                     Список приложений (ingress ресурсов) для которых пользовательский запрос будет перенаправлен для авторизации в Dex
                   items:
                     properties:
-                      domainName:
+                      domain:
                         description: |
                           Внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
 

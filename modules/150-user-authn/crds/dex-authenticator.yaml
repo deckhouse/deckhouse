@@ -46,6 +46,10 @@ spec:
                 applicationIngressCertificateSecretName: "ingress-tls"
                 applicationIngressClassName: "nginx"
                 keepUsersLoggedInFor: "720h"
+                additionalApplications:
+                  - domain: "additional-app-name.kube.my-domain.com"
+                    ingressClassName: "nginx"
+                    signOutURL: "/logout"
                 allowedGroups:
                   - everyone
                   - admins
@@ -168,10 +172,10 @@ spec:
                   items:
                     type: object
                     required:
-                      - domainName
+                      - domain
                       - ingressClassName
                     properties:
-                      domainName:
+                      domain:
                         type: string
                         description: 'Public domain for the application. Must be specified **without** HTTP scheme.'
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -218,10 +222,10 @@ spec:
                   items:
                     type: object
                     required:
-                      - domainName
+                      - domain
                       - ingressClassName
                     properties:
-                      domainName:
+                      domain:
                         type: string
                         description: 'Public domain for the application. Must be specified **without** HTTP scheme.'
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
