@@ -63,7 +63,7 @@ metadata:
     dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
   applications:
-  - domain: test
+  - domainName: test
     ingressClassName: "nginx"
   sendAuthorizationHeader: false
   nodeSelector:
@@ -87,7 +87,7 @@ spec:
   "spec": {
     "applications": [
       {
-        "domain": "test",
+        "domainName": "test",
         "ingressClassName": "nginx"
       }
     ],
@@ -138,7 +138,7 @@ metadata:
     dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
   applications:
-  - domain: test
+  - domainName: test
     ingressClassName: "nginx"
   sendAuthorizationHeader: false
 `))
@@ -156,7 +156,7 @@ spec:
   "spec": {
     "applications": [
       {
-        "domain": "test",
+        "domainName": "test",
         "ingressClassName": "nginx"
       }
     ],
@@ -197,7 +197,7 @@ metadata:
     dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
   applications:
-  - domain: test
+  - domainName: test
     ingressClassName: "nginx"
   sendAuthorizationHeader: false
 ---
@@ -227,7 +227,7 @@ data:
   "spec": {
     "applications": [
       {
-        "domain": "test",
+        "domainName": "test",
         "ingressClassName": "nginx"
       }
     ],

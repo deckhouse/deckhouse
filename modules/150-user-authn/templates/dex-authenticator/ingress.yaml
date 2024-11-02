@@ -1,7 +1,7 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
   {{- range $idx, $app := $crd.spec.applications }}
-  {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
+  {{- $hashedDomain := sha256sum $app.domainName | trunc 8 }}
   {{- $nameSuffix := "" }}
   {{- if ne $idx 0 }}
     {{- $nameSuffix = printf "-%s" $hashedDomain }}
@@ -24,7 +24,7 @@ metadata:
 spec:
   ingressClassName: {{ $app.ingressClassName }}
   rules:
-  - host: {{ $app.domain }}
+  - host: {{ $app.domainName }}
     http:
       paths:
       - backend:
@@ -38,7 +38,7 @@ spec:
     {{- if $app.ingressSecretName }}
   tls:
   - hosts:
-    - {{ $app.domain }}
+    - {{ $app.domainName }}
     secretName: {{ $app.ingressSecretName }}
     {{- end }}
   {{- end }}
@@ -57,7 +57,7 @@ metadata:
 spec:
   ingressClassName: {{ $app.ingressClassName }}
   rules:
-  - host: {{ $app.domain }}
+  - host: {{ $app.domainName }}
     http:
       paths:
       - backend:
@@ -71,7 +71,7 @@ spec:
       {{- if $app.ingressSecretName }}
   tls:
   - hosts:
-    - {{ $app.domain }}
+    - {{ $app.domainName }}
     secretName: {{ $app.ingressSecretName }}
       {{- end }}
     {{- end }}

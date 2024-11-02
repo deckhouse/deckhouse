@@ -168,10 +168,10 @@ spec:
                   items:
                     type: object
                     required:
-                      - domain
+                      - domainName
                       - ingressClassName
                     properties:
-                      domain:
+                      domainName:
                         type: string
                         description: 'Public domain for the application. Must be specified **without** HTTP scheme.'
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -218,10 +218,10 @@ spec:
                   items:
                     type: object
                     required:
-                      - domain
+                      - domainName
                       - ingressClassName
                     properties:
-                      domain:
+                      domainName:
                         type: string
                         description: 'Public domain for the application. Must be specified **without** HTTP scheme.'
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -246,6 +246,9 @@ spec:
                 sendAuthorizationHeader:
                   type: boolean
                   description: 'Request to application will be sent with "Authorization: Bearer" header when the option is switched to true.'
+                signOutURL:
+                  type: string
+                  description: 'Provide the URL from which requests will be proxied to the Dex authenticator sign out URL.'
                 keepUsersLoggedInFor:
                   type: string
                   description: |
@@ -262,6 +265,13 @@ spec:
                   x-doc-default: 'All groups are allowed.'
                   items:
                     type: string
+                whitelistSourceRanges:
+                  type: array
+                  description: |
+                    CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, If not specified.
+                  items:
+                    type: string
+                    pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
                 nodeSelector:
                   additionalProperties:
                     type: string

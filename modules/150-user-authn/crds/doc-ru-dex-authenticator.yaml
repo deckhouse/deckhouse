@@ -10,7 +10,7 @@ spec:
             * Ingress, который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону Service;
             * Secret'ы, необходимые для доступа к Dex.
 
-            **Внимание.** При перезапуске пода с oauth2-proxy с помощью refresh token'а будут получены и сохранены в память redis актуальные `access token` и `id token`.
+            **Важно!** При перезапуске пода с oauth2-proxy с помощью refresh token'а будут получены и сохранены в память redis актуальные `access token` и `id token`.
           properties:
             spec:
               properties:
@@ -47,22 +47,22 @@ spec:
                 signOutURL:
                   description: |
                     Передайте URL приложения, запросы с которого будут проксированы на URL выхода у `dex-authenticator`.
-                additionalApplications:
+                addirionalApplications:
                   description: |
-                    Список дополнительных приложений (ingress ресурсов) для которых пользовательский запрос будет перенаправлен для авторизации в Dex.
+                    Список дополнительных приложений (ingress ресурсов) для которых пользовательский запрос будет перенаправлен для авторизации в Dex
                   items:
                     properties:
-                      domain:
+                      domainName:
                         description: |
                           Внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
 
                           **Не должен** содержать HTTP-схему.
                       ingressSecretName:
                         description: |
-                          Имя Secret'а с TLS-сертификатом (от домена `domain`), который используется в Ingress-объекте приложения. Secret должен обязательно находиться в том же namespace, что и DexAuthenticator.
+                          Имя Secret'а с TLS-сертификатом (от домена `domainName`), который используется в Ingress-объекте приложения. Secret должен обязательно находиться в том же namespace, что и DexAuthenticator.
                       ingressClassName:
                         description: |
-                          Название Ingress-класса, которое будет использоваться в Ingress-объекте (должно совпадать с названием Ingress-класса для `applicationDomain` и `domain`).
+                          Название Ingress-класса, которое будет использоваться в Ingress-объекте (должно совпадать с названием Ingress-класса для `applicationDomain` и `domainName`).
                       signOutURL:
                         description: |
                           Передайте URL приложения, запросы с которого будут проксированы на URL выхода у `dex-authenticator`.
@@ -73,14 +73,14 @@ spec:
                   description: |
                     Определяет `nodeSelector` для подов `dex-authenticator`.
 
-                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
                      Определяет `tolerations` для подов `dex-authenticator`.
 
-                     Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                     Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                      **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                   items:
@@ -157,10 +157,10 @@ spec:
                   x-doc-default: Разрешены все группы.
                 applications:
                   description: |
-                    Список приложений (ingress ресурсов) для которых пользовательский запрос будет перенаправлен для авторизации в Dex.
+                    Список приложений (ingress ресурсов) для которых пользовательский запрос будет перенаправлен для авторизации в Dex
                   items:
                     properties:
-                      domain:
+                      domainName:
                         description: |
                           Внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
 

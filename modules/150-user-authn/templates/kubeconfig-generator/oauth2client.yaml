@@ -14,7 +14,6 @@ redirectURIs:
 - https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/
 - http://localhost:8000
 - http://localhost:18000
-- /device/callback
 {{- end }}
 
 {{- if $context.Values.userAuthn.kubeconfigGenerator}}
@@ -33,6 +32,5 @@ redirectURIs:
 - https://{{ include "helm_lib_module_public_domain" (list $context "kubeconfig") }}/callback/{{ $index }}
 - http://localhost:8000
 - http://localhost:18000
-- /device/callback
   {{- end }}
 {{- end }}
