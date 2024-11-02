@@ -94,6 +94,7 @@ spec:
     dns:
       servers:
         - 192.168.230.11
+        - 192.168.240.11
       search:
         - ${VSPHERE_BASE_DOMAIN}
 ---

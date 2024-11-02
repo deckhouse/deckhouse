@@ -203,3 +203,7 @@ resource "vsphere_virtual_machine" "master" {
   }
   wait_for_guest_net_routable = false
 }
+
+output "vm_extra_config" {
+  value = local.vm_extra_config
+}
