@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	dsv1alpha1 "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/internal/v1alpha2"
+	dsv1alpha2 "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/internal/v1alpha2"
 )
 
 const (
@@ -44,11 +44,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 type DeschedulerSnapshotItem struct {
 	Name string
-	Spec dsv1alpha1.DeschedulerSpec
+	Spec dsv1alpha2.DeschedulerSpec
 }
 
 func applyDeschedulerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	ds := &dsv1alpha1.Descheduler{}
+	ds := &dsv1alpha2.Descheduler{}
 
 	err := sdk.FromUnstructured(obj, &ds)
 	if err != nil {
@@ -66,8 +66,8 @@ type InternalValuesDeschedulerSpec struct {
 	NodeLabelSelector      string                             `json:"nodeLabelSelector,omitempty" yaml:"nodeLabelSelector,omitempty"`
 	PodLabelSelector       *metav1.LabelSelector              `json:"podLabelSelector,omitempty" yaml:"podLabelSelector,omitempty"`
 	NamespaceLabelSelector *metav1.LabelSelector              `json:"namespaceLabelSelector,omitempty" yaml:"namespaceLabelSelector,omitempty"`
-	PriorityClassThreshold *dsv1alpha1.PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
-	Strategies             dsv1alpha1.Strategies              `json:"strategies" yaml:"strategies"`
+	PriorityClassThreshold *dsv1alpha2.PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
+	Strategies             dsv1alpha2.Strategies              `json:"strategies" yaml:"strategies"`
 }
 
 func getCRDsHandler(input *go_hook.HookInput) error {

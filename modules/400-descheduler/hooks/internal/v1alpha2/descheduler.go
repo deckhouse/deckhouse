@@ -59,13 +59,13 @@ type Strategies struct {
 
 type LowNodeUtilization struct {
 	Enabled          bool                   `json:"enabled" yaml:"enabled"`
-	Thresholds       map[string]interface{} `json:"thresholds" yaml:"thresholds"`
-	TargetThresholds map[string]interface{} `json:"targetThresholds" yaml:"targetThresholds"`
+	Thresholds       map[string]interface{} `json:"thresholds,omitempty" yaml:"thresholds,omitempty"`
+	TargetThresholds map[string]interface{} `json:"targetThresholds,omitempty" yaml:"targetThresholds,omitempty"`
 }
 
 type HighNodeUtilization struct {
 	Enabled    bool                   `json:"enabled" yaml:"enabled"`
-	Thresholds map[string]interface{} `json:"thresholds" yaml:"thresholds"`
+	Thresholds map[string]interface{} `json:"thresholds,omitempty" yaml:"thresholds,omitempty"`
 }
 
 type RemoveDuplicates struct {
@@ -74,7 +74,7 @@ type RemoveDuplicates struct {
 
 type RemovePodsViolatingNodeAffinity struct {
 	Enabled          bool     `json:"enabled" yaml:"enabled"`
-	NodeAffinityType []string `json:"nodeAffinityType"`
+	NodeAffinityType []string `json:"nodeAffinityType,omitempty" yaml:"nodeAffinityType,omitempty"`
 }
 
 type RemovePodsViolatingInterPodAntiAffinity struct {
