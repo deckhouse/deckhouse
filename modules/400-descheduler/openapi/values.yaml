@@ -150,6 +150,7 @@ properties:
                       default: false
                     thresholds:
                       type: object
+                      default: {}
                       properties:
                         cpu:
                           type: integer
@@ -195,6 +196,7 @@ properties:
                       additionalProperties: true
                 highNodeUtilization:
                   type: object
+                  default: {}
                   properties:
                     enabled:
                       type: boolean
