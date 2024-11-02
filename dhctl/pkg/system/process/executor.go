@@ -580,6 +580,7 @@ func (e *Executor) Stop() {
 	e.stop = true
 	log.DebugF("Stop '%s'\n", e.cmd.String())
 
+	// Let's pray there is no race condition here
 	if e.doStop != nil {
 		e.doStop()
 	}
