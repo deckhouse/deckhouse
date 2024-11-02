@@ -80,27 +80,6 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: network-gateway
-spec:
-  enabled: true
-  version: 1
-  settings:
-    nodeSelector:
-      node-role.kubernetes.io/control-plane: ""
-    tolerations:
-      - operator: Exists
-    publicAddress: 192.168.240.241
-    subnet: 172.16.25.0/24
-    dns:
-      servers:
-        - 192.168.230.11
-        - 192.168.240.11
-      search:
-        - ${VSPHERE_BASE_DOMAIN}
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
   name: global
 spec:
   enabled: true

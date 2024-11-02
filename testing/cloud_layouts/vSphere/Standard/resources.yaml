@@ -40,7 +40,7 @@ spec:
   nodeType: CloudEphemeral
   cloudInstances:
     zones:
-    - ClusterDeckHouse-SPB5
+    - spb5
     minPerZone: 1
     maxPerZone: 1
     classReference:
