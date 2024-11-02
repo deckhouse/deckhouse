@@ -10,17 +10,165 @@ entries:
         ru: Руководства
       folders:
         - title:
-            en: Installation
-            ru: Установка
-          url: /virtualization-platform/guides/installation.html
-        - title:
-            en: Administration
-            ru: Администрирование
-          url: /virtualization-platform/guides/administration.html
+            en: Administration guide
+            ru: Руководство администратора
+          folders:
+            - title:
+                en: Intro
+                ru: Введение
+              url: /virtualization-platform/todo.html
+            - title:
+                en: Platform editions
+                ru: Редакции платформы
+              url: /virtualization-platform/todo.html
+            - title:
+                en: Install
+                ru: Установка платформы
+              folders:
+                - title:
+                    en: Requirements
+                    ru: Требования
+                  url: /virtualization-platform/todo.html
+                - title:
+                    en: Deployment scenarios
+                    ru: Сценарии развертывания
+                  url: /virtualization-platform/todo.html
+                - title:
+                    en: Installation steps
+                    ru: Порядок установки
+                  folders:
+                    - title:
+                        en: Prepare the environment
+                        ru: Подготовка окружения
+                      url: /virtualization-platform/todo.html
+                    - title:
+                        en: Platform installation
+                        ru: Установка платформы
+                      url: /virtualization-platform/todo.html
+                    - title:
+                        en: Initial access configuration
+                        ru: Первичная настройка доступа
+                      url: /virtualization-platform/todo.html
+            - title:
+                en: Platform configuration
+                ru: Настройка платформы
+              folders:
+                - title:
+                    en: Node management
+                    ru: Управление узлами
+                  folders:
+                    - title:
+                        en: TODO
+                        ru: TODO
+                      url: /virtualization-platform/todo.html
+                - title:
+                    en: Control plane settings
+                    ru: Настройки плоскости управления
+                  folders:
+                    - title:
+                        en: TODO
+                        ru: TODO
+                      url: /virtualization-platform/todo.html
+                - title:
+                    en: Traffic control
+                    ru: Управление трафиком
+                  folders:
+                    - title:
+                        en: TODO
+                        ru: TODO
+                      url: /virtualization-platform/todo.html
+                - title:
+                    en: Storage
+                    ru: Хранилища
+                  folders:
+                    - title:
+                        en: TODO
+                        ru: TODO
+                      url: /virtualization-platform/todo.html
+                - title:
+                    en: Virtualization
+                    ru: Виртуализация
+                  folders:
+                    - title:
+                        en: Virtual Machine Classes
+                        ru: Классы виртуальных машин
+                      url: /virtualization-platform/todo.html
+                    - title:
+                        en: Cluster Images
+                        ru: Кластерные образы
+                      url: /virtualization-platform/todo.html
+                - title:
+                    en: Access control
+                    ru: Разграничение доступа
+                  folders:
+                    - title:
+                        en: Projects
+                        ru: Проекты
+                      folders:
+                        - title:
+                            en: TODO
+                            ru: TODO
+                          url: /virtualization-platform/todo.html
+                    - title:
+                        en: Access settings
+                        ru: Настройки доступа
+                      folders:
+                        - title:
+                            en: TODO
+                            ru: TODO
+                          url: /virtualization-platform/todo.html
+            - title:
+                en: Platform update
+                ru: Обновление платформы
+              url: /virtualization-platform/todo.html
+            - title:
+                en: Removing the platform
+                ru: Удаление платформы
+              url: /virtualization-platform/todo.html
         - title:
             en: User guide
             ru: Руководство пользователя
-          url: /virtualization-platform/guides/user-guide.html
+          folders:
+            - title:
+                en: Intro
+                ru: Введение
+              url: /virtualization-platform/todo.html
+            - title:
+                en: Project access settings
+                ru: Настройки доступа к проекту
+              url: /virtualization-platform/todo.html
+            - title:
+                en: Resource management
+                ru: Управление ресурсами
+              folders:
+                - title:
+                    en: Images
+                    ru: Образы
+                  url: /virtualization-platform/todo.html
+                - title:
+                    en: Disks
+                    ru: Диски
+                  url: /virtualization-platform/todo.html
+                - title:
+                    en: Virtual machines
+                    ru: Виртуальные машины
+                  url: /virtualization-platform/todo.html
+                - title:
+                    en: Snapshots
+                    ru: Снимки
+                  url: /virtualization-platform/todo.html
+            - title:
+                en: Networking
+                ru: Сеть
+              folders:
+                - title:
+                    en: Network policies
+                    ru: Сетевые политки
+                  url: /virtualization-platform/todo.html
+                - title:
+                    en: VM Publishing
+                    ru: Публикация ВМ
+                  url: /virtualization-platform/todo.html
     - title:
         en: Documentation
         ru: Документация
