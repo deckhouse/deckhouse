@@ -205,15 +205,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/go_lib/log"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/go_lib/registry-packages-proxy"
   labels:
   - "type/dependencies"
@@ -611,6 +602,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/500-upmeter/images/upmeter"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/pkg/log"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
