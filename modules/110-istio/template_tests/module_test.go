@@ -950,24 +950,33 @@ updatePolicy:
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("istio", istioValues)
 			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.19.7"]`)
-			f.ValuesSetFromYaml("istio.sidecar.livenessProbe", `
-enabled: true
-`)
+			f.ValuesSet("istio.sidecar.livenessProbeEnabled", true)
 			f.HelmRender()
 		})
 
 		It("", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			iopV19 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x19x7")
-			Expect(iopV19.Field("spec.values.global.sidecarInjectorWebhook.templates.d8-seccomp.spec").String()).To(MatchYAML(`
-livenessProbe:
-  httpGet:
-    path: /healthz/ready
-    port: 15021
-initialDelaySeconds: 10
-periodSeconds: 2
-timeoutSeconds: 3
-failureThreshold: 30
+			Expect(iopV19.Field("spec.values.sidecarInjectorWebhook.templates.d8-seccomp").String()).To(MatchYAML(`
+spec:
+  initContainers:
+  - name: istio-validation
+    securityContext:
+      seccompProfile:
+        type: RuntimeDefault
+  containers:
+  - name: istio-proxy
+    securityContext:
+      seccompProfile:
+        type: RuntimeDefault
+    livenessProbe:
+      httpGet:
+        path: /healthz/ready
+        port: 15021
+      initialDelaySeconds: 10
+      periodSeconds: 2
+      timeoutSeconds: 3
+      failureThreshold: 30
 `))
 		})
 	})
