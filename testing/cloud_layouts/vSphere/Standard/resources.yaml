@@ -30,7 +30,7 @@ spec:
   mainNetwork: DPortGroup-lab-vms
   additionalNetworks:
   - DPortGroup-internal-private-vms
-  datastore: vsan-spb-5-datastore
+  datastore: SPB-5/vsan-spb-5-datastore
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
