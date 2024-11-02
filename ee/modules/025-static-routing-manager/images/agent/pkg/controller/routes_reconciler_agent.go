@@ -273,7 +273,7 @@ func (re *RouteEntry) getNetlinkRoute() (*netlink.Route, error) {
 			)
 		}
 		if !ip.Equal(dstnetIPNet.IP) {
-			return nil, fmt.Errorf("route %v is incorrect, destination is not a valid network address. perhaps %v was meant",
+			return nil, fmt.Errorf("route %v is incorrect, destination is not a valid network address. Perhaps %v was meant",
 				*re,
 				dstnetIPNet.String(),
 			)
