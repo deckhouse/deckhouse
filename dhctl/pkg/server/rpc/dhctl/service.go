@@ -184,6 +184,12 @@ func onCheckResult(checkRes *check.CheckResult) error {
 	return nil
 }
 
+func applyPreflightSkips(operationOptions *pb.OperationOptions) {
+	if operationOptions != nil {
+		app.ApplyPreflightSkips(operationOptions.SkipPreflightChecks)
+	}
+}
+
 func portToString(p *int32) string {
 	if p == nil {
 		return ""
