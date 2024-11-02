@@ -301,7 +301,13 @@ spec:
             spec:
               type: object
               description: Defines the behavior of a descheduler instance.
+              oneOf:
+                - required: [ strategies ]
+                - required: [ strategies, nodeSelector ]
+                - required: [ strategies, nodeLabelSelector ]
               properties:
+                nodeSelector:
+                  type: string
                 nodeLabelSelector:
                   description: Limiting the pods which are processed to fit evicted pods by labels.
                   type: object
