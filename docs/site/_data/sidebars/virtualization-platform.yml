@@ -16,7 +16,7 @@ entries:
             - title:
                 en: Intro
                 ru: Введение
-              url: /virtualization-platform/todo.html
+              url: /virtualization-platform/documentation/admin/intro.html
             - title:
                 en: Platform editions
                 ru: Редакции платформы
@@ -30,8 +30,8 @@ entries:
                     ru: Требования
                   url: /virtualization-platform/todo.html
                 - title:
-                    en: Deployment scenarios
-                    ru: Сценарии развертывания
+                    en: Setup scenarios
+                    ru: Сценарии установки
                   url: /virtualization-platform/todo.html
                 - title:
                     en: Installation steps
@@ -74,16 +74,44 @@ entries:
                     ru: Управление трафиком
                   folders:
                     - title:
-                        en: TODO
-                        ru: TODO
+                        en: Ingress
+                        ru: Управление входящим трафиком
+                      url: /virtualization-platform/todo.html
+                    - title:
+                        en: Egress
+                        ru: Управление исходящим трафиком
+                      url: /virtualization-platform/todo.html
+                    - title:
+                        en: Routing
+                        ru: Настройка маршрутизации
                       url: /virtualization-platform/todo.html
                 - title:
                     en: Storage
                     ru: Хранилища
                   folders:
                     - title:
-                        en: TODO
-                        ru: TODO
+                        en: Supported Storage
+                        ru: Поддерживаемые харанилща
+                      url: /virtualization-platform/todo.html
+                    - title:
+                        en: sds-local-volume
+                        ru: sds-local-volume
+                      url: /virtualization-platform/todo.html
+                    - title:
+                        en: sds-replicated-volume
+                        ru: sds-replicated-volume
+                      url: /virtualization-platform/todo.html
+                    - title:
+                        en: csi-nfs
+                        ru: csi-nfs
+                      url: /virtualization-platform/todo.html
+                    - title:
+                        en: csi-ceph
+                        ru: csi-ceph
+                      url: /virtualization-platform/todo.html
+                    - title:
+                        en: csi-yadro
+                        ru: csi-yadro
                       url: /virtualization-platform/todo.html
                 - title:
                     en: Virtualization
@@ -104,19 +132,11 @@ entries:
                     - title:
                         en: Projects
                         ru: Проекты
-                      folders:
-                        - title:
-                            en: TODO
-                            ru: TODO
-                          url: /virtualization-platform/todo.html
+                      url: /virtualization-platform/todo.html
                     - title:
                         en: Access settings
                         ru: Настройки доступа
-                      folders:
-                        - title:
-                            en: TODO
-                            ru: TODO
-                          url: /virtualization-platform/todo.html
+                      url: /virtualization-platform/todo.html
             - title:
                 en: Platform update
                 ru: Обновление платформы
@@ -163,25 +183,25 @@ entries:
               folders:
                 - title:
                     en: Network policies
-                    ru: Сетевые политки
+                    ru: Сетевые политики
                   url: /virtualization-platform/todo.html
                 - title:
                     en: VM Publishing
                     ru: Публикация ВМ
                   url: /virtualization-platform/todo.html
-    - title:
-        en: Documentation
-        ru: Документация
-      folders:
-        - title:
-            en: Functional characteristics
-            ru: Описание функциональных характеристик
-          url: /virtualization-platform/documentation/characteristics.html
-        - title:
-            en: Modules
-            ru: Модули
-          folders:
-            - title:
-                en: virtualization
-                ru: virtualization
-              url: /kubernetes-platform/modules/virtualization/stable/
+    # - title:
+    #     en: Documentation
+    #     ru: Документация
+    #   folders:
+    #     - title:
+    #         en: Functional characteristics
+    #         ru: Описание функциональных характеристик
+    #       url: /virtualization-platform/documentation/characteristics.html
+    #     - title:
+    #         en: Modules
+    #         ru: Модули
+    #       folders:
+    #         - title:
+    #             en: virtualization
+    #             ru: virtualization
+    #           url: /kubernetes-platform/modules/virtualization/stable/
