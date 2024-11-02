@@ -608,7 +608,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    rm -rf /var/lib/etcd/member/
    ```
 
-1. Перенесите и переименуйте резервную копию в `~/etcd-backup.snapshot`.
+1. Положите резервную копию etcd в файл `~/etcd-backup.snapshot`.
 
 1. Восстановите базу данных etcd.
 
