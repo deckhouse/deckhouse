@@ -26,7 +26,7 @@ import (
 	"sync"
 	"time"
 
-	logContext "github.com/deckhouse/deckhouse/go_lib/log/context"
+	logContext "github.com/deckhouse/deckhouse/pkg/log/context"
 )
 
 // Extends default slog with new log levels

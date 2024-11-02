@@ -22,7 +22,7 @@ import (
 	"os"
 	"sync/atomic"
 
-	logContext "github.com/deckhouse/deckhouse/go_lib/log/context"
+	logContext "github.com/deckhouse/deckhouse/pkg/log/context"
 )
 
 var defaultLogger atomic.Pointer[Logger]

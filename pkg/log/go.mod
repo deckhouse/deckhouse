@@ -1,4 +1,4 @@
-module github.com/deckhouse/deckhouse/go_lib/log
+module github.com/deckhouse/deckhouse/pkg/log
 
 go 1.22.8
 

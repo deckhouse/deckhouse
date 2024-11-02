@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/DataDog/gostackparse"
-	logContext "github.com/deckhouse/deckhouse/go_lib/log/context"
+	logContext "github.com/deckhouse/deckhouse/pkg/log/context"
 )
 
 const KeyComponent = "component"
