@@ -37,7 +37,7 @@ function __on_conversion::alpha1_to_alpha2() {
   if converted=$(context::jq -r '.review.request.objects//[] | map(
      if .apiVersion ==  "deckhouse.io/v1alpha1" then
        .apiVersion = "deckhouse.io/v1alpha2" |
-       if .spec.deschedulerPolicy.globalParameters.nodeSelector then .spec.nodeLabelSelector.matchLabels = .spec.deschedulerPolicy.globalParameters.nodeSelector end |
+       if .spec.deschedulerPolicy.globalParameters.nodeSelector then .spec.nodeSelector = .spec.deschedulerPolicy.globalParameters.nodeSelector end |
        del(.spec.deschedulerPolicy.strategies.removeFailedPods) |
        del(.spec.deschedulerPolicy.strategies.removePodsHavingTooManyRestarts) |
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeTaints) |
@@ -66,7 +66,7 @@ function __on_conversion::alpha2_to_alpha1() {
   if converted=$(context::jq -r '.review.request.objects//[] | map(
      if .apiVersion ==  "deckhouse.io/v1alpha2" then
        .apiVersion = "deckhouse.io/v1alpha1" |
-       if .spec.nodeLabelSelector.matchLabels then .spec.deschedulerPolicy.globalParameters.nodeSelector = .spec.nodeLabelSelector.matchLabels end |
+       if .spec.nodeSelector then .spec.deschedulerPolicy.globalParameters.nodeSelector = .spec.nodeSelector end |
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.nodeAffinityType) |
        del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.thresholds) |
        del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.targetThresholds) |
