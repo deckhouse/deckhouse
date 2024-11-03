@@ -37,6 +37,7 @@ type Descheduler struct {
 }
 
 type DeschedulerSpec struct {
+	NodeSelector           string                  `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	NodeLabelSelector      *metav1.LabelSelector   `json:"nodeLabelSelector,omitempty" yaml:"nodeLabelSelector,omitempty"`
 	PodLabelSelector       *metav1.LabelSelector   `json:"podLabelSelector,omitempty" yaml:"podLabelSelector,omitempty"`
 	NamespaceLabelSelector *metav1.LabelSelector   `json:"namespaceLabelSelector,omitempty" yaml:"namespaceLabelSelector,omitempty"`

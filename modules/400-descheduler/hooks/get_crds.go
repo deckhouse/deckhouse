@@ -78,9 +78,12 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			Name:       item.Name,
 			Strategies: item.Spec.Strategies,
 		}
-		if item.Spec.NodeLabelSelector != nil {
+		if item.Spec.NodeSelector != "" {
+			ds.NodeLabelSelector = item.Spec.NodeSelector
+		} else if item.Spec.NodeLabelSelector != nil {
 			ds.NodeLabelSelector = metav1.FormatLabelSelector(item.Spec.NodeLabelSelector)
 		}
+
 		if item.Spec.PodLabelSelector != nil {
 			ds.PodLabelSelector = item.Spec.PodLabelSelector
 		}

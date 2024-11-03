@@ -91,11 +91,7 @@ kind: Descheduler
 metadata:
   name: test4
 spec:
-  nodeLabelSelector:
-    matchExpressions:
-    - key: node.deckhouse.io/group
-      operator: In
-      values: ["test1", "test2"]
+  nodeSelector: node.deckhouse.io/group=test3
   strategies:
     highNodeUtilization:
       thresholds:
@@ -255,7 +251,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 		It("Should run without errors", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
-- nodeLabelSelector: node.deckhouse.io/group in (test1,test2)
+- nodeLabelSelector: node.deckhouse.io/group=test3
   name: test4
   strategies:
     highNodeUtilization:
