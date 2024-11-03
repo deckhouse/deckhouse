@@ -322,9 +322,14 @@ spec:
                     - nodeLabelSelector
               properties:
                 nodeSelector:
+                  description: |
+                    Limiting the pods which are processed to fit evicted pods by labels in equality-based representation.
+                    If set, `nodeLabelSelector` must not be set.
                   type: string
                 nodeLabelSelector:
-                  description: Limiting the pods which are processed to fit evicted pods by labels.
+                  description: |
+                    Limiting the pods which are processed to fit evicted pods by labels in set representation.
+                    If set, `nodeSelector` must not be set.
                   type: object
                   properties:
                       matchExpressions:
