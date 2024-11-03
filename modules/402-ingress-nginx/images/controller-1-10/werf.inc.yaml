@@ -217,6 +217,7 @@ shell:
   - cp -a /usr/share/ca-certificates /chroot/usr/share/ca-certificates
   - cp -a /usr/bin/curl /chroot/usr/bin/curl
   - cp -a /lib64/* /chroot/lib64/
+  - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
   - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
   - cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/
   - cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/
