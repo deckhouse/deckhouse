@@ -301,10 +301,25 @@ spec:
             spec:
               type: object
               description: Defines the behavior of a descheduler instance.
-              oneOf:
-                - required: [ strategies ]
-                - required: [ strategies, nodeSelector ]
-                - required: [ strategies, nodeLabelSelector ]
+              anyOf:
+                - not:
+                    required:
+                      - nodeSelector
+                      - nodeLabelSelector
+                  required:
+                    - strategies
+                - not:
+                    required:
+                      - nodeLabelSelector
+                  required:
+                    - strategies
+                    - nodeSelector
+                - not:
+                    required:
+                      - nodeSelector
+                  required:
+                    - strategies
+                    - nodeLabelSelector
               properties:
                 nodeSelector:
                   type: string
