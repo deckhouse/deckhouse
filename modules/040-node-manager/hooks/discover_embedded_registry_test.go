@@ -129,7 +129,7 @@ data:
 			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth.password").Exists()).To(BeFalse())
 		})
 		It("`nodeManager.internal.systemRegistry.address` should not be set", func() {
-			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.address").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryAddress").Exists()).To(BeFalse())
 		})
 	})
 
@@ -148,7 +148,7 @@ data:
 		})
 
 		It("`nodeManager.internal.systemRegistry.address` must be 'embedded-registry.d8-system.svc:5001'", func() {
-			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.address").String()).To(Equal("embedded-registry.d8-system.svc:5001"))
+			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryAddress").String()).To(Equal("embedded-registry.d8-system.svc:5001"))
 		})
 
 		Context("Add second embedded registry pod", func() {
@@ -163,7 +163,7 @@ data:
 			})
 
 			It("`nodeManager.internal.systemRegistry.address` must be 'embedded-registry.d8-system.svc:5001'", func() {
-				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.address").String()).To(Equal("embedded-registry.d8-system.svc:5001"))
+				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryAddress").String()).To(Equal("embedded-registry.d8-system.svc:5001"))
 			})
 
 			Context("Add third embedded registry pod", func() {
@@ -178,7 +178,7 @@ data:
 				})
 
 				It("`nodeManager.internal.systemRegistry.address` must be 'embedded-registry.d8-system.svc:5001'", func() {
-					Expect(f.ValuesGet("nodeManager.internal.systemRegistry.address").String()).To(Equal("embedded-registry.d8-system.svc:5001"))
+					Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryAddress").String()).To(Equal("embedded-registry.d8-system.svc:5001"))
 				})
 			})
 		})
@@ -211,7 +211,7 @@ data:
 		})
 
 		It("`nodeManager.internal.systemRegistry.address` should not be set", func() {
-			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.address").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryAddress").Exists()).To(BeFalse())
 		})
 
 		Context("Add second embedded registry pod", func() {
@@ -236,7 +236,7 @@ data:
 				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth.password").Exists()).To(BeFalse())
 			})
 			It("`nodeManager.internal.systemRegistry.address` should not be set", func() {
-				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.address").Exists()).To(BeFalse())
+				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryAddress").Exists()).To(BeFalse())
 			})
 
 			Context("Add secrets", func() {
@@ -263,7 +263,7 @@ data:
 				})
 
 				It("`nodeManager.internal.systemRegistry.address` must be 'embedded-registry.d8-system.svc:5001'", func() {
-					Expect(f.ValuesGet("nodeManager.internal.systemRegistry.address").String()).To(Equal("embedded-registry.d8-system.svc:5001"))
+					Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryAddress").String()).To(Equal("embedded-registry.d8-system.svc:5001"))
 				})
 			})
 		})

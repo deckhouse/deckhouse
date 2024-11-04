@@ -191,7 +191,7 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 		})
 		// Set embedded registry embeddedRegistry only if credentials are present
 		input.LogEntry.Infof("setting embedded registry embeddedRegistry to %s", embeddedRegistry)
-		input.Values.Set("nodeManager.internal.systemRegistry.address", embeddedRegistry+":"+embeddedRegistryPort)
+		input.Values.Set("nodeManager.internal.systemRegistry.registryAddress", embeddedRegistry+":"+embeddedRegistryPort)
 	}
 
 	return nil
