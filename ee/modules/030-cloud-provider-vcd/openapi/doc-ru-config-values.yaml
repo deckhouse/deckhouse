@@ -15,4 +15,4 @@ properties:
 
           * произвольный StorageClass в кластере, имеющий default-аннотацию;
           * StorageClass, использующий `default StorageProfile`;
-          * первый StorageClass из тех, что создаются модулем.
+          * первый (по алфавиту) StorageClass из тех, что создаются модулем.

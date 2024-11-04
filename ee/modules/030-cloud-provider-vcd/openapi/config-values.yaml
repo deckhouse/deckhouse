@@ -25,4 +25,4 @@ properties:
 
           * an arbitrary StorageClass present in the cluster that has the default annotation;
           * StorageClass for `default StorageProfile`;
-          * the first StorageClass created by the module.
+          * the first (in lexicographic order) StorageClass created by the module.

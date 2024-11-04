@@ -25,6 +25,6 @@ properties:
           If the parameter is omitted, the default StorageClass will be one of the following:
 
           * an arbitrary StorageClass present in the cluster that has the default annotation;
-          * the first StorageClass created by the module.
+          * the first (in lexicographic order) StorageClass created by the module.
         x-examples:
         - "network-hdd"

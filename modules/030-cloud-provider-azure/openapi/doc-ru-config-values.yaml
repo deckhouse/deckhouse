@@ -11,7 +11,7 @@ properties:
           Если значение не указано, фактический StorageClass по умолчанию будет определен следующим образом:
 
           * присутствующий StorageClass в кластере, имеющий default-аннотацию;
-          * первый StorageClass из тех, что создаются модулем.
+          * первый (по алфавиту) StorageClass из тех, что создаются модулем.
       provision:
         description: |
           Дополнительные StorageClass'ы для Azure ultra disks.
