@@ -101,7 +101,7 @@ properties:
                   Password for authentication.
                 x-examples:
                   - "password"
-          address:
+          registryAddress:
             type: string
             description: |
               Address of the embedded registry.
