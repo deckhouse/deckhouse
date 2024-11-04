@@ -7,14 +7,10 @@ properties:
     default: null
     description: |-
       The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
-        
+
         * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
-
-      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
-      
-      If `false` is specified, `emptyDir` will be forced to be used.  
   highAvailability:
     type: boolean
     description: |

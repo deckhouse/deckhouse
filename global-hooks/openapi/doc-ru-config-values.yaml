@@ -3,14 +3,10 @@ properties:
   storageClass:
     description: |-
       Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
-        
-        * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере. 
+
+        * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
         * Этот параметр имеет смысл использовать только в исключительных ситуациях.
         * Этот параметр применяется в процессе включения модуля.
-
-      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
-      
-      Если указать `false`, будет принудительно использоваться `emptyDir`.
   highAvailability:
     description: |
       Параметр глобального включения *режима отказоустойчивости* для модулей, которые его поддерживают.
