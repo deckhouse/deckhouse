@@ -6,21 +6,6 @@ $( document ).ready(function() {
             else $(".search__results").removeClass("active");
           });
 
-    // Fix second level topnav menu for GS and guides sections.
-    let subUrls = ['/gs/', '/guides/', 'documentation'];
-    subUrls.forEach(function(element) {
-        if (window.location.pathname.toLowerCase().includes(element)) {
-            var menuItems = document.querySelectorAll('.header.header__product-menu ul.nav li');
-            menuItems.forEach(function(item) {
-                var link = item.querySelector('a');
-                if (link && link.getAttribute('href').toLowerCase().includes(element)) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-        }
-    });
 });
 
 document.addEventListener("DOMContentLoaded", function() {

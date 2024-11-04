@@ -236,8 +236,8 @@
       <ul class="nav">
         {%- assign dkpMenuData = site.data.topnav-l2-products[page.lang] | where: "url", "/products/kubernetes-platform/" | first %}
         {%- for item in dkpMenuData.items %}
-        {%- assign itemClass='' %}
-        <li {{ itemClass }}><a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a></li>
+          {%- if item.rel == "doc" %}{% assign itemClass='class="active"' %}{% else %}{% assign itemClass='' %}{% endif %}
+          <li {{ itemClass }}><a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a></li>
         {%- endfor %}
       </ul>
 {%- endif %}
