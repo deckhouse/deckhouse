@@ -138,6 +138,8 @@ func filterRegistryUserRoSecret(obj *unstructured.Unstructured) (go_hook.FilterR
 func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 	endpointsSet := set.NewFromSnapshot(input.Snapshots["system_registry"])
 	endpointsList := endpointsSet.Slice() // sorted
+	var registryCreds registryCredentials
+	exists := false
 
 	if len(endpointsList) == 0 {
 		return nil
@@ -166,7 +168,15 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	registryCreds, exists := credsSnap[0].(registryCredentials)
+	for _, item := range credsSnap {
+		creds, ok := item.(registryCredentials)
+		if ok {
+			registryCreds = creds
+			exists = true
+			break
+		}
+	}
+
 	if !exists {
 		input.LogEntry.Warn("Failed to parse registry-user-ro secret")
 		return nil
