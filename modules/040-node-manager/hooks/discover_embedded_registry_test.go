@@ -121,12 +121,8 @@ data:
 			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryCA").Exists()).To(BeFalse())
 		})
 
-		It("`nodeManager.internal.systemRegistry.auth.username` should not be set", func() {
-			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth.username").Exists()).To(BeFalse())
-		})
-
-		It("`nodeManager.internal.systemRegistry.auth.password` should not be set", func() {
-			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth.password").Exists()).To(BeFalse())
+		It("`nodeManager.internal.systemRegistry.auth` should not be set", func() {
+			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth").Exists()).To(BeFalse())
 		})
 		It("`nodeManager.internal.systemRegistry.address` should not be set", func() {
 			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryAddress").Exists()).To(BeFalse())
@@ -202,14 +198,9 @@ data:
 			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryCA").Exists()).To(BeFalse())
 		})
 
-		It("`nodeManager.internal.systemRegistry.auth.username` should not be set", func() {
-			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth.username").Exists()).To(BeFalse())
+		It("`nodeManager.internal.systemRegistry.auth` should not be set", func() {
+			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth").Exists()).To(BeFalse())
 		})
-
-		It("`nodeManager.internal.systemRegistry.auth.password` should not be set", func() {
-			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth.password").Exists()).To(BeFalse())
-		})
-
 		It("`nodeManager.internal.systemRegistry.address` should not be set", func() {
 			Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryAddress").Exists()).To(BeFalse())
 		})
@@ -228,12 +219,8 @@ data:
 				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryCA").Exists()).To(BeFalse())
 			})
 
-			It("`nodeManager.internal.systemRegistry.auth.username` should not be set", func() {
-				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth.username").Exists()).To(BeFalse())
-			})
-
-			It("`nodeManager.internal.systemRegistry.auth.password` should not be set", func() {
-				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth.password").Exists()).To(BeFalse())
+			It("`nodeManager.internal.systemRegistry.auth` should not be set", func() {
+				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth").Exists()).To(BeFalse())
 			})
 			It("`nodeManager.internal.systemRegistry.address` should not be set", func() {
 				Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryAddress").Exists()).To(BeFalse())
@@ -254,12 +241,8 @@ data:
 					Expect(f.ValuesGet("nodeManager.internal.systemRegistry.registryCA").String()).To(Equal("ca_cert"))
 				})
 
-				It("`nodeManager.internal.systemRegistry.auth.username` must be 'user'", func() {
-					Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth.username").String()).To(Equal("user"))
-				})
-
-				It("`nodeManager.internal.systemRegistry.auth.password` must be 'password'", func() {
-					Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth.password").String()).To(Equal("password"))
+				It("`nodeManager.internal.systemRegistry.auth` must be 'dXNlcjpwYXNzd29yZA==\n'", func() {
+					Expect(f.ValuesGet("nodeManager.internal.systemRegistry.auth").String()).To(Equal("dXNlcjpwYXNzd29yZA=="))
 				})
 
 				It("`nodeManager.internal.systemRegistry.address` must be 'embedded-registry.d8-system.svc:5001'", func() {

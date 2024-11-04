@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -184,11 +185,12 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 
 	// If credentials are present, set them
 	if registryCreds.Name != "" && registryCreds.Password != "" {
+		// Set base64 encoded credentials
+		authStr := fmt.Sprintf("%s:%s", registryCreds.Name, registryCreds.Password)
+		authBase64 := base64.StdEncoding.EncodeToString([]byte(authStr))
 		input.LogEntry.Infof("found embedded registry credentials")
-		input.Values.Set("nodeManager.internal.systemRegistry.auth", map[string]string{
-			"username": registryCreds.Name,
-			"password": registryCreds.Password,
-		})
+		input.Values.Set("nodeManager.internal.systemRegistry.auth", authBase64)
+
 		// Set embedded registry embeddedRegistry only if credentials are present
 		input.LogEntry.Infof("setting embedded registry embeddedRegistry to %s", embeddedRegistry)
 		input.Values.Set("nodeManager.internal.systemRegistry.registryAddress", embeddedRegistry+":"+embeddedRegistryPort)
