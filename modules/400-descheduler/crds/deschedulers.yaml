@@ -283,6 +283,7 @@ spec:
           type: object
       served: true
       storage: false
+      deprecated: true
     - name: v1alpha2
       schema:
         openAPIV3Schema:
@@ -324,6 +325,7 @@ spec:
                 nodeSelector:
                   description: |
                     Limiting the pods which are processed to fit evicted pods by labels in equality-based representation.
+                    This field used for backward compatibility.
                     If set, `nodeLabelSelector` must not be set.
                   type: string
                 nodeLabelSelector:
