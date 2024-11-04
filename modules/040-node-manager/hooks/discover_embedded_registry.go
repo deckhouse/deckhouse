@@ -166,7 +166,7 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	registryCreds, exists := credsSnap[1].(registryCredentials)
+	registryCreds, exists := credsSnap[0].(registryCredentials)
 	if !exists {
 		input.LogEntry.Warn("Failed to parse registry-user-ro secret")
 		return nil
