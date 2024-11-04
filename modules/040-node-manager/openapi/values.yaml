@@ -85,22 +85,11 @@ properties:
                 MIID...
                 -----END CERTIFICATE-----
           auth:
-            type: object
+            type: string
             description: |
-              Authentication credentials for the system registry.
-            properties:
-              username:
-                type: string
-                description: |
-                  Username for authentication.
-                x-examples:
-                  - "user"
-              password:
-                type: string
-                description: |
-                  Password for authentication.
-                x-examples:
-                  - "password"
+              Authentication credentials for the system registry. "user:password" in base64.
+            x-examples:
+                - "dXNlcjpwYXNzd29yZA=="
           registryAddress:
             type: string
             description: |
