@@ -34,8 +34,8 @@ const (
 )
 
 type registryCredentials struct {
-	name     string
-	password string
+	Name     string
+	Password string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -129,8 +129,8 @@ func filterRegistryUserRoSecret(obj *unstructured.Unstructured) (go_hook.FilterR
 	}
 
 	return registryCredentials{
-		name:     string(nameBytes),
-		password: string(passwordBytes),
+		Name:     string(nameBytes),
+		Password: string(passwordBytes),
 	}, nil
 }
 
@@ -172,11 +172,11 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 	}
 
 	// If credentials are present, set them
-	if registryCreds.name != "" && registryCreds.password != "" {
+	if registryCreds.Name != "" && registryCreds.Password != "" {
 		input.LogEntry.Infof("found embedded registry credentials")
 		input.Values.Set("nodeManager.internal.systemRegistry.auth", map[string]string{
-			"username": registryCreds.name,
-			"password": registryCreds.password,
+			"username": registryCreds.Name,
+			"password": registryCreds.Password,
 		})
 		// Set embedded registry embeddedRegistry only if credentials are present
 		input.LogEntry.Infof("setting embedded registry embeddedRegistry to %s", embeddedRegistry)
