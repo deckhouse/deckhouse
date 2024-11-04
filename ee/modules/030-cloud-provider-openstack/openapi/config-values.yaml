@@ -157,11 +157,9 @@ properties:
           The name of StorageClass that will be used in the cluster by default.
 
           If the parameter is omitted, the default StorageClass is either:
-            
+
           * an arbitrary StorageClass present in the cluster that has the default annotation;
           * the first StorageClass created by the module (in accordance with the order in OpenStack).
-
-          **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.  
       topologyEnabled:
         type: boolean
         description: |

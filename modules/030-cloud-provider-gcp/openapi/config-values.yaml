@@ -17,10 +17,8 @@ properties:
           The name of StorageClass that will be used.
 
           If the parameter is omitted, the default StorageClass is either:
-          
+
           * existing StorageClass present in the cluster that has the default annotation;
           * the first StorageClass created by the module (in accordance with the order listed in the table above).
-
-          **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
         x-examples:
         - "pd-ssd-not-replicated"
