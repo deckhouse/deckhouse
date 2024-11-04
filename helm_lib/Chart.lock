@@ -1,6 +1,6 @@
 dependencies:
 - name: deckhouse_lib_helm
   repository: https://deckhouse.github.io/lib-helm
-  version: 1.33.0
-digest: sha256:132c1ceb38ea342daf06eba90660a5b232f4b54d8b88edc124cf1dc74c3efc7b
-generated: "2024-10-22T10:08:42.016830949+04:00"
+  version: 1.35.2
+digest: sha256:19914d541553e4774579d6b3885d9ccfb0095eb612c2560521b3bfddab61ac25
+generated: "2024-11-05T16:51:56.723514231+03:00"
