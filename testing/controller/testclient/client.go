@@ -43,7 +43,7 @@ var schemaBuilder = runtime.NewSchemeBuilder(
 	coordv1.AddToScheme,
 	appsv1.AddToScheme,
 	corev1.AddToScheme,
-	apiextensionsv1.SchemeBuilder.AddToScheme,
+	apiextensionsv1.AddToScheme,
 )
 
 // TODO: implement StatusClient and SubResourceClientConstructor
