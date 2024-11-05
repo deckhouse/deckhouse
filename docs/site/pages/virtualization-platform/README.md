@@ -1,6 +1,6 @@
 ---
 title: "The virtualization module"
-permalink: en/virtualization-platform/documentation/
+permalink: en/virtualization-platform/documentation/readme.html
 ---
 
 
