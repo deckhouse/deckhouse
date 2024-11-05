@@ -29,17 +29,19 @@ func newChannelMappingEditor(baseDir string) *channelMappingEditor {
 	return &channelMappingEditor{baseDir: baseDir}
 }
 
-type channelMappingEditor struct {
-	baseDir string
-	mu      sync.Mutex
-}
+type (
+	channelMappingEditor struct {
+		baseDir string
+		mu      sync.RWMutex
+	}
 
-type versionEntity struct {
-	Version string `json:"version" yaml:"version"`
-}
+	versionEntity struct {
+		Version string `json:"version" yaml:"version"`
+	}
 
-// moduleName - "channels" - channelCode
-type channelMapping map[string]map[string]map[string]versionEntity
+	// moduleName - "channels" - channelCode
+	channelMapping map[string]map[string]map[string]versionEntity
+)
 
 func (m *channelMappingEditor) edit(fn func(channelMapping)) error {
 	m.mu.Lock()
@@ -50,6 +52,7 @@ func (m *channelMappingEditor) edit(fn func(channelMapping)) error {
 	if err != nil {
 		return fmt.Errorf("open %q: %w", path, err)
 	}
+	defer f.Close()
 
 	var cm = make(channelMapping)
 
@@ -76,4 +79,25 @@ func (m *channelMappingEditor) edit(fn func(channelMapping)) error {
 	}
 
 	return nil
+}
+
+func (m *channelMappingEditor) get() channelMapping {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	path := filepath.Join(m.baseDir, modulesDir, "channels.yaml")
+	f, err := os.OpenFile(path, os.O_RDONLY, 0600)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	var cm = make(channelMapping)
+
+	err = yaml.NewDecoder(f).Decode(&cm)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil
+	}
+
+	return cm
 }
