@@ -16,6 +16,7 @@ package controllersuite
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"os/signal"
@@ -144,6 +145,18 @@ func (suite *Suite) SetupSubTest() {
 	}
 }
 
+func (suite *Suite) TearDownSubTest() {
+	tmpDir := suite.TmpDir()
+	if tmpDir != "" {
+		err := os.RemoveAll(tmpDir)
+		if errors.Is(err, os.ErrNotExist) {
+			err = nil
+		}
+
+		suite.Check(err)
+	}
+}
+
 func (suite *Suite) sameFile(a *os.File, b *os.File) bool {
 	aStat, err := a.Stat()
 	suite.Check(err)
@@ -158,4 +171,5 @@ var (
 	_ suite.SetupAllSuite    = (*Suite)(nil)
 	_ suite.TearDownAllSuite = (*Suite)(nil)
 	_ suite.SetupSubTest     = (*Suite)(nil)
+	_ suite.TearDownSubTest  = (*Suite)(nil)
 )

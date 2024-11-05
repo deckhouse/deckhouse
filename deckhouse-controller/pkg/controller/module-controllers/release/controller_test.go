@@ -17,6 +17,7 @@ package release
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -81,10 +82,17 @@ func (suite *ReleaseControllerTestSuite) SetupSubTest() {
 	suite.Suite.SetupSubTest()
 
 	suite.T().Setenv(d8env.DownloadedModulesDir, suite.TmpDir())
-	_ = os.MkdirAll(filepath.Join(suite.TmpDir(), "modules"), 0o777)
+	moduleDir := filepath.Join(suite.TmpDir(), "modules")
+	err := os.MkdirAll(moduleDir, 0o777)
+	if errors.Is(err, os.ErrExist) {
+		err = nil
+	}
+	suite.Check(err)
 }
 
 func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
+	defer suite.Suite.TearDownSubTest()
+
 	if suite.T().Skipped() || suite.T().Failed() {
 		return
 	}
@@ -219,7 +227,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-patch-update.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease(suite.testMRName)
+			mr := suite.getModuleRelease("parca-1.26.3")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
@@ -236,7 +244,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-minor-update.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease(suite.testMRName)
+			mr := suite.getModuleRelease("parca-1.27.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
@@ -253,7 +261,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease(suite.testMRName)
+			mr := suite.getModuleRelease("parca-1.27.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
@@ -265,7 +273,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease(suite.testMRName)
+			mr := suite.getModuleRelease("parca-1.26.3")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
@@ -277,7 +285,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease(suite.testMRName)
+			mr := suite.getModuleRelease("parca-1.27.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
@@ -289,7 +297,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release-approved.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease(suite.testMRName)
+			mr := suite.getModuleRelease("parca-1.27.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 			require.NoError(suite.T(), err)
 		})

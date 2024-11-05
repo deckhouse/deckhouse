@@ -1,4 +1,4 @@
-apiVersion: v1alpha1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   name: parca-1.26.2
@@ -11,7 +11,7 @@ status:
   phase: Deployed
   transitionTime: "2021-12-08T08:34:01Z"
 ---
-apiVersion: v1alpha1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   name: parca-1.26.3
