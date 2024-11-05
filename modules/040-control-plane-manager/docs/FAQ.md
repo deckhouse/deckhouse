@@ -71,6 +71,10 @@ Adding a master node to a static or hybrid cluster has no difference from adding
 
 ## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
 
+{% alert level="warning" %}
+The steps described below must be performed from the first in order of the master node of the cluster (master-0). This is because the cluster is always scaled in order: for example, it is impossible to delete nodes master-0 and master-1, leaving master-2.
+{% endalert %}
+
 1. Make a [backup of etcd](faq.html#etcd-backup-and-restore) and the `/etc/kubernetes` directory.
 1. Transfer the archive to a server outside the cluster (e.g., on a local machine).
 1. Ensure there are no [alerts](../300-prometheus/faq.html#how-to-get-information-about-alerts-in-a-cluster) in the cluster that can prevent the update of the master nodes.
@@ -98,6 +102,15 @@ Adding a master node to a static or hybrid cluster has no difference from adding
    dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
+
+   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](../030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
+   >
+   > To illustrate, with three master nodes (`masterNodeGroup.replicas: 1`) and automatic address reservation, the `masterNodeGroup.instanceClass.externalIPAddresses` parameter would look as follows:
+   >
+   > ```yaml
+   > externalIPAddresses:
+   > - "Auto"
+   > ```
 
 1. Remove the following labels from the master nodes to be deleted:
    * `node-role.kubernetes.io/control-plane`
@@ -297,28 +310,36 @@ Use the `etcdctl member list` command.
 
 Example:
 
-   ```shell
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
+```shell
+kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+--cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+--endpoints https://127.0.0.1:2379/ member list -w table
+```
 
 Warning! The last parameter in the output table shows etcd member is in [**learner**](https://etcd.io/docs/v3.5/learning/design-learner/) state, is not in *leader* state.
 
 ### Option 2
 
-Use the `etcdctl endpoint status` command. The fifth parameter in the output table will be `true` for the leader.
+Use the `etcdctl endpoint status` command. For this command, every control-plane address must be passed after `--endpoints` flag.
+The fifth parameter in the output table will be `true` for the leader.
 
-Example:
+Example of a script that automatically passes all control-plane nodes to the command:
 
 ```shell
-$ kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl \ 
---cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt  \ 
---key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ endpoint status -w table
-
-https://10.2.1.101:2379, ade526d28b1f92f7, 3.5.3, 177 MB, false, false, 42007, 406566258, 406566258,
-https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 406566258, 406566258,
+MASTER_NODE_IPS=($(kubectl get nodes -l \
+node-role.kubernetes.io/control-plane="" \
+-o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
+--no-headers))
+unset ENDPOINTS_STRING
+for master_node_ip in ${MASTER_NODE_IPS[@]}
+do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
+done
+kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod \
+-l component=etcd,tier=control-plane -o name | head -n1) \
+-- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
+--key /etc/kubernetes/pki/etcd/ca.key \
+$(echo -n $ENDPOINTS_STRING) endpoint status -w table
 ```
 
 ## What if something went wrong?
@@ -523,7 +544,7 @@ When deciding on the appropriate threshold values, consider resources consumed b
 
 ### What is done automatically
 
-CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. The result is saved in `/var/lib/etcd/etcd-backup.snapshot` on all nodes with `control-plane` in the cluster (master nodes).
+CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. The result is saved in `/var/lib/etcd/etcd-backup.tar.gz` on all nodes with `control-plane` in the cluster (master nodes).
 
 ### How to manually backup etcd
 
@@ -541,6 +562,7 @@ Login into any control-plane node with `root` user and use next script:
 
 ```bash
 #!/usr/bin/env bash
+set -e
 
 pod=etcd-`hostname`
 kubectl -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
@@ -550,14 +572,12 @@ tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
 rm -r ./kubernetes ./etcd-backup.snapshot
 ```
 
-In the current directory etcd snapshot file `etcd-backup.snapshot` will be created from one of an etcd cluster members.
+In the current directory etcd snapshot file `kube-backup.tar.gz` will be created from one of an etcd cluster members.
 From this file, you can restore the previous etcd cluster state in the future.
 
 Also, we recommend making a backup of the `/etc/kubernetes` directory, which contains:
 - manifests and configurations of [control-plane components](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components);
 - [Kubernetes cluster PKI](https://kubernetes.io/docs/setup/best-practices/certificates/).
-This directory will help to quickly restore a cluster in case of complete loss of control-plane nodes without creating a new cluster
-and without rejoin the remaining nodes into the new cluster.
 
 We recommend encrypting etcd snapshot backups as well as backup of the directory `/etc/kubernetes/` and saving them outside the Deckhouse cluster.
 You can use one of third-party files backup tools, for example: [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/), etc.
@@ -603,7 +623,7 @@ Follow these steps to restore a single-master cluster:
    rm -rf /var/lib/etcd/member/
    ```
 
-1. Transfer and rename the backup to `~/etcd-backup.snapshot`.
+1. Put the etcd backup to `~/etcd-backup.snapshot` file.
 
 1. Restore the etcd database.
 

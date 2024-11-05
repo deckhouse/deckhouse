@@ -19,16 +19,6 @@ title: "Cloud provider — Yandex Cloud: настройки"
 
 Вы можете отфильтровать ненужные StorageClass'ы с помощью параметра [exclude](#parameters-storageclass-exclude).
 
-### Важная информация об увеличении размера PVC
-
-Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer, CSI и Yandex Cloud API после увеличения размера PVC необходимо:
-
-1. На узле, где находится под, выполнить команду `kubectl cordon <имя_узла>`.
-2. Удалить под.
-3. Убедиться, что увеличение размера произошло успешно. В объекте PVC *не будет* condition `Resizing`.
-   > Состояние `FileSystemResizePending` не является проблемой.
-4. На узле, где находится под, выполнить команду `kubectl uncordon <имя_узла>`.
-
 ## LoadBalancer
 
 Модуль подписывается на объекты Service с типом `LoadBalancer` и создает соответствующие `NetworkLoadBalancer` и `TargetGroup` в Yandex Cloud.

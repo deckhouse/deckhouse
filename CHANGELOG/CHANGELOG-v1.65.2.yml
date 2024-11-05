@@ -1,0 +1,34 @@
+candi:
+  fixes:
+    - summary: >-
+        Switch immediately reboot to delayed reboot in reboot step for able to correctly execute all
+        scripts in bundle by bootstrap.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10417
+cloud-provider-aws:
+  fixes:
+    - summary: revert "Added the ability to specify your IAM role"
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10435
+control-plane-manager:
+  fixes:
+    - summary: Fixed free space sufficiency detection for etcd-backup
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10426
+    - summary: Improved documentation on scaling cluster nodes downwards.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10405
+    - summary: Minor documentation updates
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10393
+ingress-nginx:
+  fixes:
+    - summary: fix ingress validation with filled annotation 'kubernetes.io/ingress.class'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10407
+metallb:
+  features:
+    - summary: Added pre-upgrade compatibility check for metallb configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10289
+user-authz:
+  features:
+    - summary: Improve rbacv2 hook to support custom roles, and roles extending and add docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10241
+  fixes:
+    - summary: Lint fix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10411
+

@@ -477,17 +477,18 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		Windows:            policy.Spec.Update.Windows,
 	}
 	releaseUpdater := newModuleUpdater(r.dc, r.logger, settings, k8, r.moduleManager.GetEnabledModuleNames(), r.metricStorage)
-
-	otherReleases := new(v1alpha1.ModuleReleaseList)
-	err = r.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
-	if err != nil {
-		return ctrl.Result{Requeue: true}, err
+	{
+		otherReleases := new(v1alpha1.ModuleReleaseList)
+		err = r.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
+		if err != nil {
+			return ctrl.Result{Requeue: true}, err
+		}
+		pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
+		for _, r := range otherReleases.Items {
+			pointerReleases = append(pointerReleases, &r)
+		}
+		releaseUpdater.SetReleases(pointerReleases)
 	}
-	pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
-	for _, r := range otherReleases.Items {
-		pointerReleases = append(pointerReleases, &r)
-	}
-	releaseUpdater.SetReleases(pointerReleases)
 
 	if releaseUpdater.ReleasesCount() == 0 {
 		return result, nil
@@ -497,20 +498,17 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	if releaseUpdater.LastReleaseDeployed() {
 		// latest release deployed
-		deployedRelease := otherReleases.Items[releaseUpdater.GetCurrentDeployedReleaseIndex()]
+		deployedRelease := *releaseUpdater.DeployedRelease()
 		deckhouseconfig.Service().AddModuleNameToSource(deployedRelease.Spec.ModuleName, deployedRelease.GetModuleSource())
 
 		// check symlink exists on FS, relative symlink
 		modulePath := generateModulePath(moduleName, deployedRelease.Spec.Version.String())
 		if !isModuleExistsOnFS(r.symlinksDir, currentModuleSymlink, modulePath) {
 			newModuleSymlink := path.Join(r.symlinksDir, fmt.Sprintf("%d-%s", deployedRelease.Spec.Weight, moduleName))
-			r.logger.Debugf("Module %q doesn't exist on the filesystem. Restoring", moduleName)
+			r.logger.Warnf("Module %q doesn't exist on the filesystem. Restoring", moduleName)
 			err = enableModule(r.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
 			if err != nil {
-				r.logger.Errorf("Module restore failed: %v", err)
-				if err := r.suspendModuleVersionForRelease(ctx, &deployedRelease, err); err != nil {
-					return result, fmt.Errorf("suspend module version for release: %w", err)
-				}
+				r.logger.Errorf("Module restore for module %q and release %q failed: %v", moduleName, deployedRelease.Spec.Version.String(), err)
 
 				return ctrl.Result{Requeue: true}, err
 			}
@@ -546,7 +544,9 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 }
 
 func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
+	var result ctrl.Result
 	var notReadyErr *updater.NotReadyForDeployError
+
 	if errors.As(err, &notReadyErr) {
 		r.logger.Infoln(err.Error())
 		// TODO: requeue all releases if deckhouse update settings is changed
@@ -559,7 +559,7 @@ func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result,
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	return ctrl.Result{}, fmt.Errorf("apply predicted release: %w", err)
+	return result, fmt.Errorf("apply predicted release: %w", err)
 }
 
 // getReleasePolicy checks if any update policy matches the module release and if it's so - returns the policy and its release channel.
@@ -627,24 +627,12 @@ func (r *moduleReleaseReconciler) Reconcile(ctx context.Context, request ctrl.Re
 	return r.createOrUpdateReconcile(ctx, mr)
 }
 
-func (r *moduleReleaseReconciler) suspendModuleVersionForRelease(ctx context.Context, release *v1alpha1.ModuleRelease, err error) error {
-	if os.IsNotExist(err) {
-		err = errors.New("not found")
-	}
-
-	release.Status.Phase = v1alpha1.PhaseSuspended
-	release.Status.Message = fmt.Sprintf("Desired version of the module met problems: %s", err)
-	release.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
-
-	return r.client.Status().Update(ctx, release)
-}
-
 func enableModule(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
 	if oldSymlinkPath != "" {
 		if _, err := os.Lstat(oldSymlinkPath); err == nil {
 			err = os.Remove(oldSymlinkPath)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "delete old symlink %s", oldSymlinkPath)
 			}
 		}
 	}
@@ -652,7 +640,7 @@ func enableModule(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePa
 	if _, err := os.Lstat(newSymlinkPath); err == nil {
 		err = os.Remove(newSymlinkPath)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "delete new symlink %s", newSymlinkPath)
 		}
 	}
 
@@ -660,7 +648,7 @@ func enableModule(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePa
 	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(modulePath, "../"))
 	// check that module exists on a disk
 	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
-		return err
+		return errors.Wrapf(err, "module absolute path %s not found", moduleAbsPath)
 	}
 
 	return os.Symlink(modulePath, newSymlinkPath)
@@ -963,7 +951,9 @@ func syncModuleRegistrySpec(downloadedModulesDir, moduleName, moduleVersion stri
 
 	registrySpec := openAPISpec.Properties.Registry.Properties
 
-	if moduleSource.Spec.Registry.CA != registrySpec.CA.Default || moduleSource.Spec.Registry.DockerCFG != registrySpec.DockerCFG.Default || moduleSource.Spec.Registry.Repo != registrySpec.Base.Default || moduleSource.Spec.Registry.Scheme != registrySpec.Scheme.Default {
+	dockercfg := downloader.DockerCFGForModules(moduleSource.Spec.Registry.Repo, moduleSource.Spec.Registry.DockerCFG)
+
+	if moduleSource.Spec.Registry.CA != registrySpec.CA.Default || dockercfg != registrySpec.DockerCFG.Default || moduleSource.Spec.Registry.Repo != registrySpec.Base.Default || moduleSource.Spec.Registry.Scheme != registrySpec.Scheme.Default {
 		err = downloader.InjectRegistryToModuleValues(filepath.Join(downloadedModulesDir, moduleName, moduleVersion), moduleSource)
 	}
 

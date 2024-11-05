@@ -28,11 +28,15 @@ properties:
       search:
         description: Список search-доменов.
   storageClass:
-    description: |
-      Имя StorageClass'а, который будет использоваться для хранения DHCP lease.
+    description: |-
+      Имя StorageClass, который будет использоваться для хранения DHCP lease.
 
-      Если не указано, используется StorageClass существующей PVC, а если PVC пока нет, используется или глобальный [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в emptyDir.
+      Если значение не указано, используется StorageClass существующей PVC. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
 
-      `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
+      Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 
-      Dnsmasq, на котором основан наш DHCP-сервер, имеет свои механизмы защиты от дублирования IP-адресов в случае утери базы с lease'ами, но лучше ее не терять.
+      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
+
+      Если указать `false`, будет принудительно использоваться `emptyDir`.
+
+      Dnsmasq, используемый DHCP-сервером, включает механизмы защиты от дублирования IP-адресов при утере базы lease'ов, но лучше избегать ее потери.

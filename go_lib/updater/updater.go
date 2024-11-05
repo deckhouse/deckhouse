@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
@@ -35,139 +34,12 @@ import (
 )
 
 const (
-	cooldownDelayMsg         = "in cooldown"
-	canaryDelayReasonMsg     = "postponed by canary process"
-	waitingManualApprovalMsg = "waiting for the 'release.deckhouse.io/approved: \"true\"' annotation"
-	outOfWindowMsg           = "waiting for the update window"
-	notificationDelayMsg     = "postponed by notification"
-)
-
-const (
 	PhasePending    = "Pending"
 	PhaseDeployed   = "Deployed"
 	PhaseSuperseded = "Superseded"
 	PhaseSuspended  = "Suspended"
 	PhaseSkipped    = "Skipped"
 )
-
-type deployDelayReason byte
-
-const (
-	noDelay             deployDelayReason = 0
-	cooldownDelayReason deployDelayReason = 1 << iota
-	canaryDelayReason
-	notificationDelayReason
-	outOfWindowReason
-	manualApprovalRequiredReason
-)
-
-func (r deployDelayReason) String() string {
-	reasons := r.splitReasons()
-	if len(reasons) != 0 {
-		return strings.Join(reasons, " and ")
-	}
-
-	return r.GoString()
-}
-
-func (r deployDelayReason) Message(applyTime time.Time) string {
-	if r == noDelay {
-		return r.String()
-	}
-
-	var (
-		reasons []string
-		b       strings.Builder
-	)
-	b.WriteString("Release is ")
-
-	if r.contains(cooldownDelayReason) {
-		reasons = append(reasons, cooldownDelayMsg)
-	}
-
-	if r.contains(canaryDelayReason) {
-		reasons = append(reasons, canaryDelayReasonMsg)
-	}
-
-	if r.contains(notificationDelayReason) {
-		reasons = append(reasons, notificationDelayMsg)
-	}
-
-	if r.contains(outOfWindowReason) {
-		reasons = append(reasons, outOfWindowMsg)
-	}
-
-	if r.contains(manualApprovalRequiredReason) {
-		reasons = append(reasons, waitingManualApprovalMsg)
-	}
-
-	if len(reasons) != 0 {
-		b.WriteString(strings.Join(reasons, ", "))
-		if applyTime.IsZero() {
-			return b.String()
-		}
-
-		if r.contains(manualApprovalRequiredReason) {
-			b.WriteString(". After approval the release will be delayed")
-		}
-
-		b.WriteString(" until ")
-		b.WriteString(applyTime.Format(time.RFC822))
-
-		return b.String()
-	}
-
-	return r.GoString()
-}
-
-func (r deployDelayReason) add(flag deployDelayReason) deployDelayReason {
-	return r | flag
-}
-
-func (r deployDelayReason) contains(flag deployDelayReason) bool {
-	if flag == noDelay {
-		return r == noDelay
-	}
-
-	return r&flag != 0
-}
-
-func (r deployDelayReason) GoString() string {
-	reasons := r.splitReasons()
-	if len(reasons) != 0 {
-		return strings.Join(reasons, "|")
-	}
-
-	return fmt.Sprintf("deployDelayReason(0b%b)", byte(r))
-}
-
-func (r deployDelayReason) splitReasons() (reasons []string) {
-	if r == noDelay {
-		return []string{"noDelay"}
-	}
-
-	if r.contains(cooldownDelayReason) {
-		reasons = append(reasons, "cooldownDelayReason")
-	}
-
-	if r.contains(canaryDelayReason) {
-		reasons = append(reasons, "canaryDelayReason")
-	}
-
-	if r.contains(notificationDelayReason) {
-		reasons = append(reasons, "notificationDelayReason")
-	}
-
-	if r.contains(outOfWindowReason) {
-		reasons = append(reasons, "outOfWindowReason")
-	}
-
-	if r.contains(manualApprovalRequiredReason) {
-		reasons = append(reasons, "manualApprovalRequiredReason")
-	}
-
-	return reasons
-}
 
 type UpdateMode string
 
@@ -181,19 +53,18 @@ const (
 	ModeManual UpdateMode = "Manual"
 )
 
-type Updater[R Release] struct {
+type Updater[R v1alpha1.Release] struct {
 	now            time.Time
 	settings       *Settings
 	enabledModules set.Set
 
 	logger            logger.Logger
 	kubeAPI           KubeAPI[R]
-	metricsUpdater    MetricsUpdater
+	metricsUpdater    MetricsUpdater[R]
 	webhookDataSource WebhookDataSource[R]
 
 	// don't modify releases order, logic is based on this sorted slice
-	releases []R
-
+	releases                    []R
 	predictedReleaseIndex       int
 	skippedPatchesIndexes       []int
 	currentDeployedReleaseIndex int
@@ -205,8 +76,8 @@ type Updater[R Release] struct {
 	releaseData              DeckhouseReleaseData
 }
 
-func NewUpdater[R Release](dc dependency.Container, logger logger.Logger, settings *Settings,
-	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater,
+func NewUpdater[R v1alpha1.Release](dc dependency.Container, logger logger.Logger, settings *Settings,
+	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater[R],
 	webhookDataSource WebhookDataSource[R], enabledModules []string,
 ) *Updater[R] {
 	return &Updater[R]{
@@ -335,9 +206,12 @@ func (u *Updater[R]) checkMinorReleaseConditions(release R) error {
 	return u.postponeDeploy(release, delayReason, resultDeployTime)
 }
 
-func (u *Updater[R]) calculateMinorResultDeployTime(release R) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
-	var newApplyAfter time.Time
-	releaseApplyTime = u.now
+func (u *Updater[R]) calculateMinorResultDeployTime(release R) (time.Time, deployDelayReason, error) {
+	var (
+		newApplyAfter    time.Time
+		releaseApplyTime = u.now
+		reason           deployDelayReason
+	)
 
 	if release.GetApplyNow() {
 		return releaseApplyTime, reason, nil
@@ -378,8 +252,10 @@ func (u *Updater[R]) calculateMinorResultDeployTime(release R) (releaseApplyTime
 	// check: release is approved in Manual mode
 	if u.settings.Mode != ModeAuto && !release.GetManuallyApproved() {
 		u.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
-		u.metricsUpdater.WaitingManual(release.GetName(), 1)
+		u.metricsUpdater.WaitingManual(release, 1)
 		releaseApplyTime, reason = u.now, manualApprovalRequiredReason
+	} else {
+		u.metricsUpdater.WaitingManual(release, 0)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -387,14 +263,19 @@ func (u *Updater[R]) calculateMinorResultDeployTime(release R) (releaseApplyTime
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("patch release %s apply after: %w", release.GetName(), err)
 		}
+
+		return releaseApplyTime, notificationDelayReason, nil
 	}
 
 	return releaseApplyTime, reason, nil
 }
 
-func (u *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTime time.Time, reason deployDelayReason, err error) {
-	var newApplyAfter time.Time
-	releaseApplyTime = u.now
+func (u *Updater[R]) calculatePatchResultDeployTime(release R) (time.Time, deployDelayReason, error) {
+	var (
+		newApplyAfter    time.Time
+		releaseApplyTime = u.now
+		reason           deployDelayReason
+	)
 
 	if release.GetApplyNow() {
 		return releaseApplyTime, reason, nil
@@ -425,8 +306,10 @@ func (u *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTime
 
 	if u.settings.Mode == ModeManual && !release.GetManuallyApproved() {
 		u.logger.Infof("Release %s is waiting for manual approval", release.GetName())
-		u.metricsUpdater.WaitingManual(release.GetName(), 1)
+		u.metricsUpdater.WaitingManual(release, 1)
 		releaseApplyTime, reason = u.now, manualApprovalRequiredReason
+	} else {
+		u.metricsUpdater.WaitingManual(release, 0)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -434,6 +317,8 @@ func (u *Updater[R]) calculatePatchResultDeployTime(release R) (releaseApplyTime
 		if err != nil {
 			return time.Time{}, 0, fmt.Errorf("patch release %s apply after: %w", release.GetName(), err)
 		}
+
+		return releaseApplyTime, notificationDelayReason, nil
 	}
 
 	return releaseApplyTime, reason, nil
@@ -490,12 +375,13 @@ func (u *Updater[R]) predictedRelease() *R {
 	return predictedRelease
 }
 
-func (u *Updater[R]) deployedRelease() *R {
+func (u *Updater[R]) DeployedRelease() *R {
 	if u.currentDeployedReleaseIndex == -1 {
 		return nil // has no deployed
 	}
 
 	deployedRelease := &(u.releases[u.currentDeployedReleaseIndex])
+	u.logger.Debugf("Deployed release found by updater: %v", deployedRelease)
 
 	return deployedRelease
 }
@@ -854,6 +740,7 @@ func (u *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyTi
 	}
 
 	var (
+		zeroTime      time.Time
 		retryDelay    time.Duration
 		statusMessage string
 	)
@@ -863,9 +750,9 @@ func (u *Updater[R]) postponeDeploy(release R, reason deployDelayReason, applyTi
 	}
 
 	if applyTime == u.now {
-		applyTime = time.Time{}
+		applyTime = zeroTime
 	}
-	statusMessage = reason.Message(applyTime)
+	statusMessage = reason.Message(release, applyTime)
 
 	err := u.updateStatus(release, statusMessage, PhasePending)
 	if err != nil {

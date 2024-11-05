@@ -327,7 +327,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
     port: 123
   publicServices:
   - hostname: xxx.yyy
-    virtualIP: 2.2.2.2
     ports:
     - name: aaa
       port: 456
@@ -358,9 +357,6 @@ neighbour-0:
             - address: 1.1.1.1
               ports:
                 aaa: 123
-            `))
-			Expect(se.Field("spec.addresses").String()).To(MatchYAML(`
-            - 2.2.2.2
             `))
 
 			Expect(f.KubernetesResource("Deployment", "d8-istio", "metadata-exporter").Exists()).To(BeTrue())
