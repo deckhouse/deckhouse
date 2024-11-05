@@ -331,7 +331,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 		log.InfoLn("PushDockerImagesToSystemRegistry: Stopping")
 		ctxCancel()
 
-		log.InfoLn("PushDockerImagesToSystemRegistry: Waiting goroutines")
+		log.InfoLn("PushDockerImagesToSystemRegistry: Waiting background operations")
 		wg.Wait()
 
 		log.InfoLn("PushDockerImagesToSystemRegistry: Stopped")
@@ -391,6 +391,21 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 		}
 	}
 
+	for i := 0; i < 30; i += 5 {
+		log.WarnF("Sleeping before images push: %v/30\n", i+5)
+
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(5 * time.Second):
+		}
+	}
+
+	if isContextDone(ctx) {
+		return nil
+	}
+
+	log.InfoLn("Unpacking and validating images bundle")
 	unpackedBundlePath, err := mirror.UnpackAndValidateImgBundle(registryData.ImagesBundlePath)
 	if err != nil {
 		return err
@@ -416,6 +431,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 		},
 	}
 
+	log.InfoLn("Pushing images to registry")
 	return mirror.Push(&pushCtx)
 }
 
@@ -745,48 +761,6 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		}).
 		Run(func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
-
-			ctx, ctxCancel := context.WithCancel(tombCtx)
-
-			var wg sync.WaitGroup
-			defer func() {
-				log.InfoLn("Waiting for background operations")
-				ctxCancel()
-				wg.Wait()
-				log.InfoLn("Waiting for background operations done")
-			}()
-
-			if cfg.Registry.Mode == "Detached" {
-				// Run Docker pusher
-				registryData, ok := cfg.Registry.ModeSpecificFields.(config.DetachedModeRegistryData)
-				if !ok {
-					return fmt.Errorf(
-						"%v, incorrect registry extra data, expected detached data type",
-						errorRegistryConfigError,
-					)
-				}
-
-				if cleanLockFileErr := removeSystemRegistryLockFile(ctx, nodeInterface); cleanLockFileErr != nil {
-					return fmt.Errorf("cannot clean images push lock file: %v", cleanLockFileErr)
-				}
-
-				wg.Add(1)
-				go func(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) {
-					defer wg.Done()
-
-					select {
-					case <-tombCtx.Done():
-						return
-					default:
-					}
-
-					if err := waitAndPushDockerImages(ctx, nodeInterface, registryData); err != nil {
-						log.ErrorF("RegistryImagesPusher: got error: %v\n", err)
-						panic(err)
-					}
-				}(ctx, nodeInterface, &registryData)
-			}
-
 			log.DebugLn("Check bundle routine start")
 			ready, err := checkBashibleAlreadyRun(nodeInterface)
 			if err != nil {
@@ -802,8 +776,54 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 				return err
 			}
 
-			log.DebugLn("Start execute bashible bundle routine")
+			ctx, ctxCancel := context.WithCancel(tombCtx)
 
+			var wg sync.WaitGroup
+			defer func() {
+				log.InfoLn("Waiting for background operations")
+				ctxCancel()
+				wg.Wait()
+				log.InfoLn("All background operations done")
+			}()
+
+			if cfg.Registry.Mode == "Detached" {
+				// Run Docker pusher
+				registryData, ok := cfg.Registry.ModeSpecificFields.(config.DetachedModeRegistryData)
+				if !ok {
+					return fmt.Errorf(
+						"%v, incorrect registry extra data, expected detached data type",
+						errorRegistryConfigError,
+					)
+				}
+
+				log.DebugLn("Cleaning previous image push lock file if needed")
+				if cleanLockFileErr := removeSystemRegistryLockFile(ctx, nodeInterface); cleanLockFileErr != nil {
+					return fmt.Errorf("cannot clean images push lock file: %v", cleanLockFileErr)
+				}
+
+				log.DebugLn("Starting SystemRegistry images pusher")
+				wg.Add(1)
+				tombWg.Add(1)
+				go func(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) {
+					defer func() {
+						log.DebugLn("Stopped SystemRegistry images pusher")
+						wg.Done()
+						tombWg.Done()
+					}()
+
+					if err := waitAndPushDockerImages(ctx, nodeInterface, registryData); err != nil {
+						if isContextDone(ctx) {
+							return
+						}
+
+						log.ErrorF("RegistryImagesPusher: got error: %v\n", err)
+
+						panic(err)
+					}
+				}(ctx, nodeInterface, &registryData)
+			}
+
+			log.DebugLn("Start execute bashible bundle routine")
 			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir)
 		})
 }
@@ -1135,4 +1155,13 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 		return nil
 	})
 	return nodesFromCache, err
+}
+
+func isContextDone(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
 }
