@@ -144,16 +144,14 @@ spec:
       addresses:
         {{- $.Values.nodeManager.internal.systemRegistry.addresses | toYaml | nindent 8 }}
       {{- if hasKey $.Values.nodeManager.internal.systemRegistry "auth" }}
-      auth:
-        {{- $.Values.nodeManager.internal.systemRegistry.auth | quote | nindent 8 }}
+      auth: {{ $.Values.nodeManager.internal.systemRegistry.auth | toYaml }}
       {{- end }}
       {{- if hasKey $.Values.nodeManager.internal.systemRegistry "registryAddress" }}
-      registryAddress:
-        {{- $.Values.nodeManager.internal.systemRegistry.registryAddress | quote | nindent 8 }}
+      registryAddress: {{ $.Values.nodeManager.internal.systemRegistry.registryAddress | toYaml }}
       {{- end }}
       {{- if hasKey $.Values.nodeManager.internal.systemRegistry "registryCA" }}
-      registryCA:
-        {{- $.Values.nodeManager.internal.systemRegistry.registryCA | quote | nindent 8 }}
+      registryCA: |
+        {{ $.Values.nodeManager.internal.systemRegistry.registryCA | nindent 8 }}
       {{- end }}
     {{- end }}
     {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
