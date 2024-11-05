@@ -189,6 +189,10 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	c.lastState = nil
 	defer c.PhasedExecutionContext.Finalize(stateCache)
 
+	return &ConvergeResult{
+		Status: ConvergeStatusConverged,
+	}, nil
+
 	runner := converge.NewRunner(kubeCl, inLockRunner, stateCache, c.Params.TerraformContext).
 		WithPhasedExecutionContext(c.PhasedExecutionContext).
 		WithCommanderMode(c.Params.CommanderMode).
