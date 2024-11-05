@@ -2,6 +2,7 @@
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/cloud/cloud-config"
 - "--endpoint=unix:///csi/csi.sock"
+- "--v=5"
 {{- end }}
 
 {{- define "csi_controller_envs" }}
@@ -29,6 +30,7 @@
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/cloud/cloud-config"
 - "--endpoint=unix:///csi/csi.sock"
+- "--v=5"
 {{- end }}
 
 {{- define "csi_node_envs" }}
