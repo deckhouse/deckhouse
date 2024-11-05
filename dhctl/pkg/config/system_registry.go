@@ -67,8 +67,8 @@ func (d *RegistryAccessData) ConvertToMap() map[string]interface{} {
 
 func getRegistryAccessData() (*RegistryAccessData, error) {
 	registryAccessDataCacheName := "system-registry-access-data"
-	registryUserRw := "deckhouse-rw"
-	registryUserRo := "deckhouse-ro"
+	registryUserRw := "registry-user-rw"
+	registryUserRo := "registry-user-ro"
 
 	inCache, err := cache.Global().InCache(registryAccessDataCacheName)
 	if err != nil {
