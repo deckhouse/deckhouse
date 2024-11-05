@@ -62,7 +62,7 @@ spec:
                 description: |
                   ID of the desired routing table.
 
-                  If the value is not explicitly specified, it will be generated automatically.
+                  If the value is not explicitly specified, it will be automatically generated and added to the `status` field.
 
                   Once a resource is created, you can only change the routing table ID by recreating the resource.
               routes:
@@ -85,7 +85,7 @@ spec:
                       type: string
                       format: ipv4
                       description: |
-                        Nexthop.
+                        Next Hop is the gateway through which a subnet is reachable.
                     dev:
                       type: string
                       maxLength: 15
