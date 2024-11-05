@@ -332,4 +332,6 @@ function main() {
   exit $exitCode
 }
 
+trap chmod_dirs_for_cleanup SIGTERM
+
 main "$@"
