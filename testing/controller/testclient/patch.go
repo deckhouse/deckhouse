@@ -1,3 +1,17 @@
+// Copyright 2024 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package testclient
 
 import (
@@ -68,6 +82,7 @@ func patch(input runtime.Object, patchType types.PatchType, patch []byte, scheme
 			patch:              patch,
 			schemaReferenceObj: schemaReferenceObj,
 			fieldManager:       fieldManager,
+			scheme:             scheme,
 		}
 	case types.ApplyPatchType: // TODO: rename to types.ApplyYAMLPatchType:
 		mechanism = &applyPatcher{
@@ -117,7 +132,6 @@ func (p *jsonPatcher) applyPatchToCurrentObject(currentObject runtime.Object) (r
 
 		strictDecodingError := runtime.NewStrictDecodingError(append(appliedStrictErrs, strictError.Errors()...))
 		return nil, field.Invalid(field.NewPath("patch"), string(patchedObjJS), strictDecodingError.Error())
-
 	} else if len(appliedStrictErrs) > 0 {
 		return nil, field.Invalid(field.NewPath("patch"), string(patchedObjJS), runtime.NewStrictDecodingError(appliedStrictErrs).Error())
 	}
@@ -187,13 +201,14 @@ type smpPatcher struct {
 	patch              []byte
 	schemaReferenceObj runtime.Object
 	fieldManager       *managedfields.FieldManager
+	scheme             *runtime.Scheme
 }
 
 func (p *smpPatcher) applyPatchToCurrentObject(currentObject runtime.Object) (runtime.Object, error) {
 	currentVersionedObject := currentObject.DeepCopyObject()
 	versionedObjToUpdate := currentObject.DeepCopyObject()
 	newObj := currentObject.DeepCopyObject()
-	if err := strategicPatchObject(scheme.Scheme, currentVersionedObject, p.patch, versionedObjToUpdate, p.schemaReferenceObj); err != nil {
+	if err := strategicPatchObject(p.scheme, currentVersionedObject, p.patch, versionedObjToUpdate, p.schemaReferenceObj); err != nil {
 		return nil, err
 	}
 
@@ -204,7 +219,7 @@ func (p *smpPatcher) applyPatchToCurrentObject(currentObject runtime.Object) (ru
 type applyPatcher struct {
 	patch        []byte
 	options      *metav1.PatchOptions
-	creater      runtime.ObjectCreater
+	creature     runtime.ObjectCreater
 	kind         schema.GroupVersionKind
 	fieldManager *managedfields.FieldManager
 }
