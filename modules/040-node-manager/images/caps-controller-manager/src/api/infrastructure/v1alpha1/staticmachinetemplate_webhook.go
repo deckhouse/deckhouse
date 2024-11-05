@@ -87,7 +87,7 @@ func isReqFromDeckhouse(userInfo authenticationv1.UserInfo) bool {
 func (w *StaticMachineTemplateWebhook) handleUpdate(newObj, oldObj StaticMachineTemplate, isDeckhouse bool) admission.Response {
 
 	if !reflect.DeepEqual(newObj.Spec, oldObj.Spec) && !isDeckhouse {
-		return admission.Denied("only deckhouse service account can update StaticMachineTemplate.Spec")
+		return admission.Denied("only deckhouse can update StaticMachineTemplate.Spec")
 	}
 	return admission.Allowed("update allowed")
 }
