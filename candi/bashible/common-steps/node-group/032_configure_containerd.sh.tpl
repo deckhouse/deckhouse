@@ -152,7 +152,8 @@ oom_score = 0
       {{- if and (ne .registry.registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address) }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
           endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
-         {{- if .systemRegistry.registryAddress /* sanity check */ }}
+         {{- if .systemRegistry.registryAddress }}
+         {{- /* sanity check */ }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .systemRegistry.registryAddress }}"]
           endpoint = ["https://127.0.0.1:5001", "https://{{ .systemRegistry.registryAddress }}"]
          {{- end }}
