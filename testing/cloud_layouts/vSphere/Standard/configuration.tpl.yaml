@@ -30,7 +30,7 @@ zones:
 - spb5
 externalNetworkNames:
 - DPortGroup-lab-vms
-internalNetworkCIDR: 192.168.240.0/24
+internalNetworkCIDR: 10.90.1.0/24
 baseResourcePool: cloud-layout-tests
 masterNodeGroup:
   replicas: ${MASTERS_COUNT}
