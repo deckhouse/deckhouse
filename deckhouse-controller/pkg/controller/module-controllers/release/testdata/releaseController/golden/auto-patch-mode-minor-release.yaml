@@ -1,10 +1,14 @@
 ---
-apiVersion: v1alpha1
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    status: deployed
   name: parca-1.26.2
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   moduleName: parca
   version: 1.26.2
@@ -21,8 +25,6 @@ apiVersion: v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
-  labels:
-    modules.deckhouse.io/update-policy: ""
   name: parca-1.27.0
   resourceVersion: "1001"
 spec:
