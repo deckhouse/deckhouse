@@ -1,6 +1,6 @@
 ---
 title: "Deckhouse Virtualization Platform"
-permalink: ru/virtualization-platform/documentation/readme.html
+permalink: ru/virtualization-platform/readme.html
 lang: ru
 ---
 

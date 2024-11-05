@@ -9,6 +9,10 @@
 {{- else }}
   {{- $_ := set . "Mode" $.Env }}
 {{- end }}
+
+{{- $context := . }}
+{{- $_ := set $context "ModulePath" "../../" }}
+
 project: deckhouse-web
 configVersion: 1
 cleanup:
@@ -75,18 +79,24 @@ shell:
         bundle --version
   setup:
   - |
+        # "Generating CR schemas..."
+        cd /srv/jekyll-data/site/
+        export MODULES_RAW_DIR=/rawdata/crds
+        export CRD_PATH=virtualization-platform/crds
+        bash ./modules_generate_cr.sh
         # "Build static files"
         cd /srv/jekyll-data/site/
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
-        jekyll build -d /app/_site/ --config _config.yml
+        # jekyll build -d /app/_site/ --config  _config.yml
+        # Revert!
+        jekyll build -d /app/_site/ --config  _config.yml -t --profile
 git:
 - add: /docs/site
   to: /srv/jekyll-data/site
   owner: jekyll
   group: jekyll
   excludePaths:
-  - '**/*.sh'
   - LOCAL_DEV.md
   - werf*.yaml
   - docker-compose*.yml
@@ -94,6 +104,43 @@ git:
   - .helm
   - backends
   - Makefile
+  stageDependencies:
+    install: ['Gemfile','Gemfile.lock']
+    setup: '**/*'
+- add: /{{ .ModulePath }}
+  to: /rawdata/crds
+{{/*  to: /srv/jekyll-data/site/_data/schemas/virtualization-platform/crds*/}}
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "**/*-cni-cilium/crds/*.yaml"
+  - "**/*-control-plane-manager/crds/*.yaml"
+  - "**/*-node-manager/crds/*.yaml"
+  - "**/*-snapshot-controller/crds/*.yaml"
+  - "**/*-cert-manager/crds/*.yaml"
+  - "**/*-user-authz/crds/*.yaml"
+  - "**/*-user-authn/crds/*.yaml"
+  - "**/*-multitenancy-manager/crds/*.yaml"
+  - "**/*-operator-prometheus/crds/*.yaml"
+  - "**/*-prometheus/crds/*.yaml"
+  - "**/*-prometheus-metrics-adapter/crds/*.yaml"
+  - "**/*-vertical-pod-autoscaler/crds/*.yaml"
+  - "**/*-extended-monitoring/crds/*.yaml"
+  - "**/*-monitoring-custom/crds/*.yaml"
+  - "**/*-monitoring-deckhouse/crds/*.yaml"
+  - "**/*-monitoring-kubernetes/crds/*.yaml"
+  - "**/*-monitoring-kubernetes-control-plane/crds/*.yaml"
+  - "**/*-monitoring-ping/crds/*.yaml"
+  - "**/*-node-local-dns/crds/*.yaml"
+  - "**/*-metallb/crds/*.yaml"
+  - "**/*-l2-load-balancer/crds/*.yaml"
+  - "**/*-descheduler/crds/*.yaml"
+  - "**/*-ingress-nginx/crds/*.yaml"
+  - "**/*-log-shipper/crds/*.yaml"
+  - "**/*-loki/crds/*.yaml"
+  - "**/*-chrony/crds/*.yaml"
+  - "**/*-cilium-hubble/crds/*.yaml"
+  - "**/*-upmeter/crds/*.yaml"
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     setup: '**/*'

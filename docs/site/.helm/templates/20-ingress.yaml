@@ -223,6 +223,13 @@ spec:
             name: frontend
             port:
               name: http
+      - path: /products/virtualization-platform/reference/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
       - path: /products/virtualization-platform/guides/
         pathType: Prefix
         backend:

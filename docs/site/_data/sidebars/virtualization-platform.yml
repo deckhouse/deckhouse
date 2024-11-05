@@ -231,16 +231,14 @@ entries:
                     url: /virtualization-platform/documentation/modules/list.html
         - title:
                   en: Reference
-                  ru: Референс
+                  ru: Справка
           folders:
                   - title:
-                      en: Configuration module
-                      ru: Конфигурации модуля
-                    url: /virtualization-platform/documentation/reference/configuration-module.html
-                  - title:
-                      en: API
-                      ru: API
-                    url: /virtualization-platform/documentation/reference/api.html
+                      en: Modules settings
+                      ru: Настройки модулей
+                    url: /virtualization-platform/reference/mc.html
+                  - title: Custom Resources
+                    url: /virtualization-platform/reference/cr.html
                   - title:
                       en: Console utilities
                       ru: Консольные утилиты
@@ -265,21 +263,3 @@ entries:
                   en: FAQ
                   ru: FAQ
           url: /virtualization-platform/documentation/faq.html
-
-
-    # - title:
-    #     en: Documentation
-    #     ru: Документация
-    #   folders:
-    #     - title:
-    #         en: Functional characteristics
-    #         ru: Описание функциональных характеристик
-    #       url: /virtualization-platform/documentation/characteristics.html
-    #     - title:
-    #         en: Modules
-    #         ru: Модули
-    #       folders:
-    #         - title:
-    #             en: virtualization
-    #             ru: virtualization
-    #           url: /kubernetes-platform/modules/virtualization/stable/
