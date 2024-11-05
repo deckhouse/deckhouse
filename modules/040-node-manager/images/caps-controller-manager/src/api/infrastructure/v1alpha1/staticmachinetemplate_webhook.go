@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,63 +17,85 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+	"fmt"
+	"net/http"
 	"reflect"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/validation/field"
+	admissionv1 "k8s.io/api/admission/v1"
+	authenticationv1 "k8s.io/api/authentication/v1"
+
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
-var staticmachinetemplatelog = logf.Log.WithName("staticmachinetemplate-resource")
+var staticmachinetemplatelog = log.Log.WithName("staticmachinetemplate-webhook")
+
+type StaticMachineTemplateWebhook struct {
+	decoder *admission.Decoder
+}
 
 func (r *StaticMachineTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
-		Complete()
+	mw := &StaticMachineTemplateWebhook{}
+	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate", &webhook.Admission{Handler: mw})
+	return nil
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
-///+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachinetemplates,verbs=create;update,versions=v1alpha1,name=mstaticmachinetemplate.deckhouse.io,admissionReviewVersions=v1
-
-var _ webhook.Defaulter = &StaticMachineTemplate{}
-
-// Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *StaticMachineTemplate) Default() {
-	staticmachinetemplatelog.Info("default", "name", r.Name)
+func (w *StaticMachineTemplateWebhook) InjectDecoder(d *admission.Decoder) error {
+	w.decoder = d
+	return nil
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachinetemplates,verbs=update,versions=v1alpha1,name=vstaticmachinetemplate.deckhouse.io,admissionReviewVersions=v1
+func (w *StaticMachineTemplateWebhook) Handle(ctx context.Context, req admission.Request) admission.Response {
+	staticmachinetemplatelog.Info("handle", "operation", req.Operation, "name", req.Name)
 
-var _ webhook.Validator = &StaticMachineTemplate{}
-
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticMachineTemplate) ValidateCreate() (admission.Warnings, error) {
-	staticmachinetemplatelog.Info("validate create", "name", r.Name)
-
-	return nil, nil
-}
-
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticMachineTemplate) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	staticmachinetemplatelog.Info("validate update", "name", r.Name)
-
-	oldStaticMachineTemplate := old.(*StaticMachineTemplate)
-	if !reflect.DeepEqual(r.Spec, oldStaticMachineTemplate.Spec) {
-		return nil, field.Forbidden(field.NewPath("spec"), "StaticMachineTemplate.spec is immutable")
+	var newObj StaticMachineTemplate
+	if err := w.decoder.Decode(req, &newObj); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	return nil, nil
+	var oldObj StaticMachineTemplate
+	if req.Operation == admissionv1.Update {
+		if err := w.decoder.DecodeRaw(req.OldObject, &oldObj); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+	}
+
+	isDeckhouse := isReqFromDeckhouse(req.UserInfo)
+	switch req.Operation {
+	case admissionv1.Create:
+		return w.handleCreate(ctx, newObj)
+	case admissionv1.Update:
+		return w.handleUpdate(newObj, oldObj, isDeckhouse)
+	case admissionv1.Delete:
+		return w.handleDelete(ctx, oldObj)
+	default:
+		return admission.Allowed("operation not handled")
+	}
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticMachineTemplate) ValidateDelete() (admission.Warnings, error) {
-	staticmachinetemplatelog.Info("validate delete", "name", r.Name)
+func isReqFromDeckhouse(userInfo authenticationv1.UserInfo) bool {
+	expectedUsername := "system:serviceaccount:d8-system:deckhouse"
+	//debug
+	fmt.Printf("userInfo.Username %s", userInfo.Username)
+	return userInfo.Username == expectedUsername
+}
 
-	return nil, nil
+func (w *StaticMachineTemplateWebhook) handleUpdate(newObj, oldObj StaticMachineTemplate, isDeckhouse bool) admission.Response {
+
+	if !reflect.DeepEqual(newObj.Spec, oldObj.Spec) && !isDeckhouse {
+		return admission.Denied("only deckhouse service account can update StaticMachineTemplate.Spec")
+	}
+	return admission.Allowed("update allowed")
+}
+
+func (w *StaticMachineTemplateWebhook) handleDelete(ctx context.Context, oldObj StaticMachineTemplate) admission.Response {
+	return admission.Allowed("delete allowed")
+}
+
+func (w *StaticMachineTemplateWebhook) handleCreate(ctx context.Context, newObj StaticMachineTemplate) admission.Response {
+	return admission.Allowed("create allowed")
 }
