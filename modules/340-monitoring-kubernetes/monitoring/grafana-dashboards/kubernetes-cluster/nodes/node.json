@@ -1361,10 +1361,10 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode!='user',mode!='system',mode!='iowait',mode!='irq',mode!='softirq', mode!='steal', mode!='guest'}[$__rate_interval])) by (instance)) * 100",
+          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"steal\"}[$__rate_interval])) by (node)) * 100",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Busy Other",
+          "legendFormat": "Steal",
           "range": true,
           "refId": "E",
           "step": 240
@@ -1389,11 +1389,11 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode=\"steal\"}[$__rate_interval])) by (node)) * 100",
+          "expr": "(avg(irate(node_cpu_seconds_total{node=~\"$node\", mode!~\"(user|idle|system|iowait|irq|softirq|steal)\"}[$__rate_interval])) by (instance)) * 100",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
-          "legendFormat": "Steal",
+          "legendFormat": "Busy Other",
           "range": true,
           "refId": "G",
           "step": 240
