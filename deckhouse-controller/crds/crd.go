@@ -23,26 +23,15 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/go_lib/project"
 )
 
 func List() ([]apiextensionsv1.CustomResourceDefinition, error) {
-	pwd, err := os.Getwd()
+	projectDir, err := project.Dir()
 	if err != nil {
-		return nil, fmt.Errorf("get process working directory: %w", err)
+		return nil, fmt.Errorf("get project directory: %w", err)
 	}
-
-	d8Dir := "deckhouse"
-
-	var projectDir string
-
-	baseDir, _, ok := strings.Cut(pwd, string(filepath.Separator)+d8Dir)
-	if ok {
-		projectDir = filepath.Join(baseDir, d8Dir)
-	} else {
-		projectDir = baseDir
-	}
-	fmt.Println("baseDir: ", baseDir)
-	fmt.Println("projectDir: ", projectDir)
 
 	fsys := os.DirFS(filepath.Join(projectDir, "deckhouse-controller", "crds"))
 	var result []apiextensionsv1.CustomResourceDefinition
