@@ -90,7 +90,7 @@ spec:
                       type: string
                       format: ipv4
                       description: |
-                        Nexthop.
+                        The gateway through which the subnet is reachable.
                     dev:
                       type: string
                       maxLength: 15
@@ -124,7 +124,7 @@ spec:
                       type: string
                       format: ipv4
                       description: |
-                        Nexthop.
+                        The gateway through which the subnet is reachable.
                     dev:
                       type: string
                       maxLength: 15
