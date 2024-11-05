@@ -34,11 +34,15 @@ func List() ([]apiextensionsv1.CustomResourceDefinition, error) {
 	d8Dir := "deckhouse"
 
 	var projectDir string
-	if baseDir, _, ok := strings.Cut(pwd, string(filepath.Separator)+d8Dir); ok {
+
+	baseDir, _, ok := strings.Cut(pwd, string(filepath.Separator)+d8Dir)
+	if ok {
 		projectDir = filepath.Join(baseDir, d8Dir)
 	} else {
 		projectDir = baseDir
 	}
+	fmt.Println("baseDir: ", baseDir)
+	fmt.Println("projectDir: ", projectDir)
 
 	fsys := os.DirFS(filepath.Join(projectDir, "deckhouse-controller", "crds"))
 	var result []apiextensionsv1.CustomResourceDefinition
