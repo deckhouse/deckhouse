@@ -43,7 +43,7 @@ kubernetesValidating:
   group: main
   rules:
   - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["v1", "v1alpha1"]
+    apiVersions: ["v1", "v1alpha1", "v2alpha1"]
     operations:  ["CREATE", "UPDATE"]
     resources:   ["dexauthenticators"]
     scope:       "Namespaced"
@@ -53,23 +53,33 @@ EOF
 function __main__() {
   newAuthNamespace=$(context::jq -r '.review.request.object.metadata.namespace')
   newAuthName=$(context::jq -r '.review.request.object.metadata.name')
+  apiVersion=$(context::jq -r '.review.request.object.apiVersion')
   
-  # Собираем все домены
+
   domains_to_check=()
   
-  # Получаем основной домен
-  main_domain=$(context::jq -r '.review.request.object.spec.applicationDomain')
-  main_ingress_class=$(context::jq -r '.review.request.object.spec.applicationIngressClassName')
-  domains_to_check+=("$main_domain $main_ingress_class")
+  if [[ "$apiVersion" == "deckhouse.io/v2alpha1" ]]; then
 
-  # Получаем все дополнительные домены
-  while read -r domain ingressClass; do
-    if [[ "$domain" != "null" && "$ingressClass" != "null" ]]; then
-      domains_to_check+=("$domain $ingressClass")
-    fi
-  done < <(context::jq -r '.review.request.object.spec.additionalApplications[]? | "\(.domain) \(.ingressClassName)"')
+    while read -r domain ingressClass; do
+      if [[ "$domain" != "null" && "$ingressClass" != "null" ]]; then
+        domains_to_check+=("$domain $ingressClass")
+      fi
+    done < <(context::jq -r '.review.request.object.spec.applications[]? | "\(.domain) \(.ingressClassName)"')
+  else
+
+    main_domain=$(context::jq -r '.review.request.object.spec.applicationDomain')
+    main_ingress_class=$(context::jq -r '.review.request.object.spec.applicationIngressClassName')
+    domains_to_check+=("$main_domain $main_ingress_class")
+
+
+    while read -r domain ingressClass; do
+      if [[ "$domain" != "null" && "$ingressClass" != "null" ]]; then
+        domains_to_check+=("$domain $ingressClass")
+      fi
+    done < <(context::jq -r '.review.request.object.spec.additionalApplications[]? | "\(.domain) \(.ingressClassName)"')
+  fi
   
-  # Проверяем каждый домен на конфликты
+
   for domain_pair in "${domains_to_check[@]}"; do
     read -r domain ingressClass <<< "$domain_pair"
     
@@ -84,7 +94,7 @@ function __main__() {
     if [ "$result" ]; then
       existingAuth=$(echo "$result" | jq -r '.namespace + "/" + .name')
       
-      # Разрешаем обновление существующего DexAuthenticator
+
       if [[ "$existingAuth" == "$newAuthNamespace/$newAuthName" ]]; then
         continue
       fi
