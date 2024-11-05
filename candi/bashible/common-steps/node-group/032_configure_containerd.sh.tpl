@@ -153,7 +153,7 @@ oom_score = 0
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
           endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
          {{- if .systemRegistry.registryAddress }}
-         {{- /* sanity check */ }}
+         {{- /* Sanity check */}}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .systemRegistry.registryAddress }}"]
           endpoint = ["https://127.0.0.1:5001", "https://{{ .systemRegistry.registryAddress }}"]
          {{- end }}
@@ -196,7 +196,7 @@ oom_score = 0
     {{- end }}
     {{- /* Embedded registry configuration if non Direct mode */}}
     {{- if ne .registry.registryMode "Direct" }}
-      {{- /* Kubernetes-api-proxy on 127.0.0.1:5001 acts as registry embedded registry mirror */ }}
+      {{- /* Kubernetes-api-proxy on 127.0.0.1:5001 acts as registry embedded registry mirror */}}
       [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001"]
         {{- if (and (ne .systemRegistry.registryAddress .registry.address) .registry.auth) }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".auth]
@@ -219,7 +219,7 @@ oom_score = 0
         [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
           insecure_skip_verify = false
         {{- end }}
-      {{- /* Embedded registry auth and tls configuration */ }}
+      {{- /* Embedded registry auth and tls configuration */}}
       [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}"]
         {{- if .systemRegistry.auth }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".auth]
