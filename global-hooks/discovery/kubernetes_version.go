@@ -280,7 +280,7 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 		// in bash hook we don't subscribe for deleting pods
 		// it is emulating this behaviour
 		if !versions.Exists() || !minVer.Exists() {
-			return nil, fmt.Errorf(msg)
+			return nil, fmt.Errorf("%s", msg)
 		}
 
 		input.LogEntry.Warnln(msg)

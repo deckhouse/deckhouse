@@ -1,6 +1,7 @@
 ---
 title: Подготовка к production
 permalink: ru/guides/production.html
+description: Рекомендации по подготовке кластера Deckhouse Kubernetes Platform для работы в продуктивной среде.
 lang: ru
 ---
 

@@ -2395,7 +2395,7 @@ alerts:
 
         Some of the objects were left by old upmeter-agent pods due to Upmeter update or downscale.
 
-        Leave only newest objects corresponding to upemter-agent pods, when the reason it investigated.
+        Leave only newest objects corresponding to upmeter-agent pods, when the reason it investigated.
 
         See `kubectl get upmeterhookprobes.deckhouse.io`.
       summary: |
