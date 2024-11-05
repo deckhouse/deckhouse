@@ -18,7 +18,7 @@ spec:
   nodeType: CloudEphemeral
   cloudInstances:
     zones:
-    - spb5
+    - spb5-zone
     minPerZone: 1
     maxPerZone: 1
     classReference:
