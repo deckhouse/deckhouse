@@ -46,16 +46,19 @@ spec:
                 applicationIngressCertificateSecretName: "ingress-tls"
                 applicationIngressClassName: "nginx"
                 keepUsersLoggedInFor: "720h"
-                additionalApplications:
-                  - domain: "additional-app-name.kube.my-domain.com"
-                    ingressClassName: "nginx"
-                    signOutURL: "/logout"
                 allowedGroups:
                   - everyone
                   - admins
                 whitelistSourceRanges:
                   - 1.1.1.1/32
                   - 192.168.0.0/24
+                additionalApplications:
+                  - domain: "additional-app-name.kube.my-domain.com"
+                    ingressSecretName: "ingress-tls"
+                    ingressClassName: "nginx"
+                    signOutURL: "/logout"
+                    whitelistSourceRanges:
+                      - 2.2.2.2/32
           properties:
             spec:
               type: object
