@@ -1,4 +1,4 @@
 ---
 title: "Deckhouse Virtualization Platform"
-permalink: en/virtualization-platform/documentation/user/network-policies.html
+permalink: en/virtualization-platform/documentation/user/network/network-policies.html
 ---
