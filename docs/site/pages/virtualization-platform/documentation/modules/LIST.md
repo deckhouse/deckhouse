@@ -1,4 +1,4 @@
 ---
 title: "Deckhouse Virtualization Platform"
-permalink: en/virtualization-platform/documentation/user/modules/list.html
+permalink: en/virtualization-platform/documentation/modules/list.html
 ---
