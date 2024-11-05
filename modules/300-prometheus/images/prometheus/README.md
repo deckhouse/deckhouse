@@ -16,7 +16,7 @@ Exports gauge metric with the count of successfully sent alerts.
 
 ### How-to build prometheus
 
-Current falco version is `PROMETHEUS_VERSION=v2.45.2`.
+Current falco version is `PROMETHEUS_VERSION=v2.55.1`.
 
 To build prometheus we need to repush used third-party libs to own registry. To do this we need to run specific Dockerfile:
 
