@@ -176,7 +176,6 @@ oom_score = 0
           auth = "{{ .registry.auth }}"
         [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
           ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
-
   {{- else }}
     {{- /* Embedded registry in Direct mode or disable OR Embedded registry in non Direct mode and cluster uses external registry */}}
     {{- if or (eq .registry.registryMode "Direct") (and (ne .registry.registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address)) }}
@@ -222,7 +221,6 @@ oom_score = 0
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".tls]
           ca_file = "/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
         {{- end }}
-    {{- end }}
   {{- end }}
 
   {{- if eq .runType "Normal" }}
