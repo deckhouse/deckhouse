@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"reflect"
 
@@ -31,8 +30,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachinetemplates,verbs=create;update;delete,versions=v1alpha1,name=vstaticmachinetemplate.deckhouse.io,admissionReviewVersions=v1
+
 // log is for logging in this package.
 var staticmachinetemplatelog = log.Log.WithName("staticmachinetemplate-webhook")
+var deckhouseSA = "system:serviceaccount:d8-system:deckhouse"
 
 type StaticMachineTemplateWebhook struct {
 	decoder *admission.Decoder
@@ -55,18 +57,17 @@ func (w *StaticMachineTemplateWebhook) Handle(ctx context.Context, req admission
 	staticmachinetemplatelog.Info("handle", "operation", req.Operation, "name", req.Name)
 
 	var newObj StaticMachineTemplate
+	var oldObj StaticMachineTemplate
+	isDeckhouse := isReqFromDeckhouse(req.UserInfo)
+
 	if err := w.decoder.Decode(req, &newObj); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	var oldObj StaticMachineTemplate
-	if req.Operation == admissionv1.Update {
-		if err := w.decoder.DecodeRaw(req.OldObject, &oldObj); err != nil {
-			return admission.Errored(http.StatusBadRequest, err)
-		}
+	if err := w.decoder.DecodeRaw(req.OldObject, &oldObj); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	isDeckhouse := isReqFromDeckhouse(req.UserInfo)
 	switch req.Operation {
 	case admissionv1.Create:
 		return w.handleCreate(ctx, newObj)
@@ -80,10 +81,7 @@ func (w *StaticMachineTemplateWebhook) Handle(ctx context.Context, req admission
 }
 
 func isReqFromDeckhouse(userInfo authenticationv1.UserInfo) bool {
-	expectedUsername := "system:serviceaccount:d8-system:deckhouse"
-	//debug
-	fmt.Printf("userInfo.Username %s", userInfo.Username)
-	return userInfo.Username == expectedUsername
+	return userInfo.Username == deckhouseSA
 }
 
 func (w *StaticMachineTemplateWebhook) handleUpdate(newObj, oldObj StaticMachineTemplate, isDeckhouse bool) admission.Response {
