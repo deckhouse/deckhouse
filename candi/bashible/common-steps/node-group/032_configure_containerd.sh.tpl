@@ -138,35 +138,101 @@ oom_score = 0
       conf_template = ""
     [plugins."io.containerd.grpc.v1.cri".registry]
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+    {{- /* First node bootstrap and Embedded registry in non Direct mode */}}
+    {{- if and (eq .runType "ClusterBootstrap") (ne .registry.registryMode "Direct") }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
-          {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
           endpoint = ["{{ .registry.scheme }}://127.0.0.1:5001", "{{ .registry.scheme }}://{{ .registry.address }}"]
-          {{- else }}
+      {{- else }}
+      {{- /* Embedded registry in Direct mode or disabled */}}
+      {{- if eq .registry.registryMode "Direct" }}
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
           endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
-          {{- end }}
+      {{- end }}
+      {{- /* Embedded registry in non Direct mode and cluster uses external registry */}}
+      {{- if and (ne .registry.registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address) }}
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
+          endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
+         {{- if .systemRegistry.registryAddress /* sanity check */ }}
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .systemRegistry.registryAddress }}"]
+          endpoint = ["https://127.0.0.1:5001", "https://{{ .systemRegistry.registryAddress }}"]
+         {{- end }}
+      {{- end }}
+      {{- /* Embedded registry in non Direct mode and cluster uses internal embedded registry */}}
+      {{- if and (ne .registry.registryMode "Direct") (eq .systemRegistry.registryAddress .registry.address) }}
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .systemRegistry.registryAddress }}"]
+          endpoint = ["https://127.0.0.1:5001", "https://{{ .systemRegistry.registryAddress }}"]
+      {{- end }}
+    {{- end }}
       [plugins."io.containerd.grpc.v1.cri".registry.configs]
+  {{- /* First node bootstrap and Embedded registry in non Direct mode */}}
+  {{- if and (eq .runType "ClusterBootstrap") (ne .registry.registryMode "Direct") }}
+    [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}"]
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
+        auth = "{{ .registry.auth }}"
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
+        ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".auth]
+          auth = "{{ .registry.auth }}"
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
+        ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+
+  {{- else }}
+    {{- /* Embedded registry in Direct mode or disable OR Embedded registry in non Direct mode and cluster uses external registry */}}
+    {{- if or (eq .registry.registryMode "Direct") (and (ne .registry.registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address)) }}
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}"]
+        {{- if .registry.auth }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
-          auth = "{{ .registry.auth | default "" }}"
-      {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+          auth = "{{ .registry.auth }}"
+        {{- end }}
+        {{- if .registry.ca }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+        {{- end }}
+        {{- if eq .registry.scheme "http" }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
+          insecure_skip_verify = true
+        {{- end }}
+    {{- end }}
+    {{- /* Embedded registry configuration if non Direct mode */}}
+    {{- if ne .registry.registryMode "Direct" }}
+      {{- /* Kubernetes-api-proxy on 127.0.0.1:5001 acts as registry embedded registry mirror */ }}
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001"]
+        {{- if (and (ne .systemRegistry.registryAddress .registry.address) .registry.auth) }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".auth]
-          auth = "{{ .registry.auth | default "" }}"
-      {{- end }}
-  {{- if .registry.ca }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
-          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
-      {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+          auth = "{{ .registry.auth }}"
+        {{- else if .systemRegistry.auth }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".auth]
+          auth = "{{ .systemRegistry.auth }}"
+        {{- end }}
+        {{- if (and (ne .systemRegistry.registryAddress .registry.address) .registry.ca) }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
           ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
-      {{- end }}
-  {{- end }}
-  {{- if eq .registry.scheme "http" }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".tls]
-          insecure_skip_verify = true
-      {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+        {{- else if .systemRegistry.registryCA }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
+        {{- end }}
+        {{- if (and (ne .systemRegistry.registryAddress .registry.address) (eq .registry.scheme "http")) }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
           insecure_skip_verify = true
-      {{- end }}
+        {{- else }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
+          insecure_skip_verify = false
+        {{- end }}
+      {{- /* Embedded registry auth and tls configuration */ }}
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}"]
+        {{- if .systemRegistry.auth }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".auth]
+          auth = "{{ .systemRegistry.auth }}"
+        {{- end }}
+        {{- if .systemRegistry.registryCA }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
+        {{- end }}
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".tls]
+          insecure_skip_verify = false
+    {{- end }}
   {{- end }}
+
   {{- if eq .runType "Normal" }}
     {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
       {{- if $ca }}

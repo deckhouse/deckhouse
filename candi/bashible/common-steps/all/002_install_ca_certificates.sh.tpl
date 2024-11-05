@@ -16,6 +16,8 @@ bb-package-install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater060824 
 
 REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/registry-ca.crt"
 
+EMBEDDED_REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
+
 {{- if .registry.ca }}
 bb-sync-file $REGISTRY_CACERT_PATH - << "EOF"
 {{ .registry.ca }}
@@ -23,5 +25,15 @@ EOF
 {{- else }}
 if [ -f $REGISTRY_CACERT_PATH ]; then
   rm -f $REGISTRY_CACERT_PATH
+fi
+{{- end }}
+
+{{- if .systemRegistry.registryCA }}
+bb-sync-file EMBEDDED_REGISTRY_CACERT_PATH - << "EOF"
+{{ .systemRegistry.registryCA }}
+EOF
+{{- else }}
+if [ -f $EMBEDDED_REGISTRY_CACERT_PATH ]; then
+  rm -f $EMBEDDED_REGISTRY_CACERT_PATH
 fi
 {{- end }}
