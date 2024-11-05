@@ -16,7 +16,7 @@
 #limitations under the License.
 #
 
-version="0.68.0"
+version="0.77.2"
 
 repo="https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v${version}/example/prometheus-operator-crd/monitoring.coreos.com"
 
