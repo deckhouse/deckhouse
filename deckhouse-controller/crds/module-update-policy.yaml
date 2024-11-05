@@ -71,6 +71,7 @@ spec:
                 update:
                   type: object
                   description: Update settings for target modules.
+                  default: {}
                   properties:
                     mode:
                       type: string
