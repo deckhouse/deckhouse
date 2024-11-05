@@ -10,16 +10,13 @@ properties:
       - false
       - default
     description: |
-      The name of the StorageClass to use.
+      The name of StorageClass that will be used in the cluster by default.
 
-      If omitted, the StorageClass of the existing Loki PVC is used. If there is no PVC yet, either the [global StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+      If omitted, the StorageClass of the existing Loki PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
 
-      `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
+      The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
 
-      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
-
-      **CAUTION!** Setting a value other than the current one (in the existing PVC) will cause the Loki volume to be re-provisioned and the data to be
-      lost.
+      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
   diskSizeGigabytes:
     type: integer
     description: >
@@ -59,9 +56,9 @@ properties:
     default: {}
     description: |
       Loki configuration options available for tuning.
-      
+
       See [Loki documentation](https://grafana.com/docs/loki/v2.9.x/configure/) for more information.
-      
+
       > Caution! Incorrect settings may lead to the malfunction of Loki.
     properties:
       ingestionRateMB:

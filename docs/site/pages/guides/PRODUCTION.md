@@ -1,6 +1,7 @@
 ---
 title: Going to Production
 permalink: en/guides/production.html
+description: Recommendations for preparing Deckhouse Kubernetes Platform cluster for production environment.
 ---
 
 The following recommendations may be of less importance for a test or development cluster, but they may be critical for a production one.

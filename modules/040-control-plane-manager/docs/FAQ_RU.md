@@ -302,28 +302,36 @@ title: "Управление control plane: FAQ"
 
 Пример:
 
-   ```shell
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
+```shell
+kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+--cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+--endpoints https://127.0.0.1:2379/ member list -w table
+```
 
 Внимание! Последний параметр в таблице вывода показывает, что член etcd находится в состоянии [**learner**](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии *leader*.
 
 ### Вариант 2
 
-Используйте команду `etcdctl endpoint status`. Пятый параметр в таблице вывода будет `true` у лидера.
+Используйте команду `etcdctl endpoint status`. Для этой команды, после флага `--endpoints` нужно подставить адрес каждого узла control-plane.
+Пятый параметр в таблице вывода будет `true` у лидера.
 
-Пример:
+Пример скрипта, который автоматически передает все адреса узлов control-plane:
 
 ```shell
-$ kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl \ 
---cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt  \ 
---key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ endpoint status -w table
-
-https://10.2.1.101:2379, ade526d28b1f92f7, 3.5.3, 177 MB, false, false, 42007, 406566258, 406566258,
-https://10.2.1.102:2379, d282ac2ce600c1ce, 3.5.3, 182 MB, true, false, 42007, 406566258, 406566258,
+MASTER_NODE_IPS=($(kubectl get nodes -l \
+node-role.kubernetes.io/control-plane="" \
+-o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
+--no-headers))
+unset ENDPOINTS_STRING
+for master_node_ip in ${MASTER_NODE_IPS[@]}
+do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
+done
+kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod \
+-l component=etcd,tier=control-plane -o name | head -n1) \
+-- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
+--key /etc/kubernetes/pki/etcd/ca.key \
+$(echo -n $ENDPOINTS_STRING) endpoint status -w table
 ```
 
 ## Что делать, если что-то пошло не так?
@@ -529,7 +537,7 @@ spec:
 
 ### Что делается автоматически
 
-Автоматически запускаются CronJob `kube-system/d8-etcd-backup-*` в 00:00 по UTC+0. Результат сохраняется в `/var/lib/etcd/etcd-backup.snapshot` на всех узлах с `control-plane` в кластере (мастер-узлы).
+Автоматически запускаются CronJob `kube-system/d8-etcd-backup-*` в 00:00 по UTC+0. Результат сохраняется в `/var/lib/etcd/etcd-backup.tar.gz` на всех узлах с `control-plane` в кластере (мастер-узлы).
 
 ### Как сделать бэкап etcd вручную
 
@@ -547,6 +555,7 @@ d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
 
 ```bash
 #!/usr/bin/env bash
+set -e
 
 pod=etcd-`hostname`
 kubectl -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
@@ -556,14 +565,12 @@ tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
 rm -r ./kubernetes ./etcd-backup.snapshot
 ```
 
-В текущей директории будет создан файл `etcd-backup.snapshot` со снимком базы etcd одного из членов etcd-кластера.
+В текущей директории будет создан файл `kube-backup.tar.gz` со снимком базы etcd одного из членов etcd-кластера.
 Из полученного снимка можно будет восстановить состояние кластера etcd.
 
 Также рекомендуем сделать бэкап директории `/etc/kubernetes`, в которой находятся:
 - манифесты и конфигурация компонентов [control-plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components);
 - [PKI кластера Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/).
-Данная директория поможет быстро восстановить кластер при полной потере control-plane-узлов без создания нового кластера
-и без повторного присоединения узлов в новый кластер.
 
 Мы рекомендуем хранить резервные копии снимков состояния кластера etcd, а также бэкап директории `/etc/kubernetes/` в зашифрованном виде вне кластера Deckhouse.
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т. д.
@@ -609,7 +616,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    rm -rf /var/lib/etcd/member/
    ```
 
-1. Перенесите и переименуйте резервную копию в `~/etcd-backup.snapshot`.
+1. Положите резервную копию etcd в файл `~/etcd-backup.snapshot`.
 
 1. Восстановите базу данных etcd.
 
