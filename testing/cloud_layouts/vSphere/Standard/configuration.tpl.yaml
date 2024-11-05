@@ -71,7 +71,7 @@ kind: ModuleConfig
 metadata:
   name: keepalived
 spec:
-  enabled: false
+  enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
