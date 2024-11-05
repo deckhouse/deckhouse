@@ -578,12 +578,13 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 Для корректного восстановления кластера single-master выполните следующие шаги на master-узле:
 
 1. - Найдите утилиту `etcdctl` на мастер-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
+
      ```shell
      cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
      -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
      etcdctl version
      ```
-   
+
      Должен отобразиться корректный вывод `etcdctl version` без ошибок.
 
    - Альтернативно, вы можете загрузить исполняемый файл [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно чтобы её версия была такая же, как и версия etcd в кластере):
@@ -616,7 +617,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    ```shell
    rm -rf /var/lib/etcd/member/
    ```
-   
+
 5. Перенесите и переименуйте резервную копию в `~/etcd-backup.snapshot`.
 
 6. Восстановите базу данных etcd.

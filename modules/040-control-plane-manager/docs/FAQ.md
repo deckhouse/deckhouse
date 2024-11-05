@@ -585,6 +585,7 @@ The following steps will be described to restore to the previous state of the cl
 Follow these steps to restore a single-master cluster:
 
 1. - Find `etcdctl` utility on the master-node and copy the executable to `/usr/local/bin/`:
+
      ```shell
      cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
      -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
