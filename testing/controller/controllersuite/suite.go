@@ -123,7 +123,6 @@ func (suite *Suite) Context() context.Context {
 }
 
 func (suite *Suite) withDefaults() {
-	suite.tmpDir = suite.T().TempDir()
 	suite.logOutput = defaultLogOutput
 }
 
@@ -143,6 +142,8 @@ func (suite *Suite) SetupSubTest() {
 	if err != nil {
 		suite.T().Fatal(err.Error())
 	}
+
+	suite.tmpDir = suite.T().TempDir()
 }
 
 func (suite *Suite) TearDownSubTest() {
