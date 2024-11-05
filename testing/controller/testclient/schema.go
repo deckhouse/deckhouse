@@ -29,8 +29,6 @@ func addValidator(
 	validators map[schema.GroupVersionKind]validation.SchemaValidator,
 	schemaMap map[string]*spec.Schema,
 ) error {
-	const schemaKey = "TODO"
-
 	var apiServerCRD apiextensions.CustomResourceDefinition
 
 	err := apiextensionsv1.Convert_v1_CustomResourceDefinition_To_apiextensions_CustomResourceDefinition(&crd, &apiServerCRD, nil)
@@ -49,12 +47,17 @@ func addValidator(
 			return fmt.Errorf("new schema validator from %s.%s %w", ver.Name, apiServerCRD.Name, err)
 		}
 
+		gvk := schema.GroupVersionKind{
+			Group:   crd.Spec.Group,
+			Version: ver.Name,
+			Kind:    crd.Spec.Names.Kind,
+		}
 		openAPITypes := new(spec.Schema)
 		err = validation.ConvertJSONSchemaProps(s.OpenAPIV3Schema, openAPITypes)
 		if err != nil {
 			return fmt.Errorf("convert JSON schema props: %w", err)
 		}
-		schemaMap[schemaKey] = openAPITypes
+		schemaMap[gvk.String()] = openAPITypes
 
 		validators[schema.GroupVersionKind{
 			Group:   apiServerCRD.Spec.Group,

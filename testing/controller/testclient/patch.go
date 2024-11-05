@@ -23,13 +23,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	"k8s.io/kube-openapi/pkg/validation/spec"
-	"k8s.io/kubectl/pkg/scheme"
 	kjson "sigs.k8s.io/json"
 )
 
@@ -41,17 +40,13 @@ const (
 )
 
 // based on https://github.com/kubernetes/apiserver/blob/v0.29.8/pkg/endpoints/handlers/patch.go
-func patch(input runtime.Object, patchType types.PatchType, patch []byte, scheme *runtime.Scheme, openAPISchema map[string]*spec.Schema) (runtime.Object, error) {
+func patch(input runtime.Object, patchType types.PatchType, patch []byte, scheme *runtime.Scheme) (runtime.Object, error) {
 	var mechanism interface {
 		applyPatchToCurrentObject(currentObject runtime.Object) (runtime.Object, error)
 	}
 
-	typeConverter, err := managedfields.NewTypeConverter(openAPISchema, true)
-	if err != nil {
-		return nil, fmt.Errorf("new type converter: %w", err)
-	}
-
-	fieldManager, err := managedfields.NewDefaultFieldManager(
+	typeConverter := managedfields.NewDeducedTypeConverter()
+	fieldManager, err := managedfields.NewDefaultCRDFieldManager(
 		typeConverter,
 		scheme,
 		scheme,
@@ -106,7 +101,7 @@ type jsonPatcher struct {
 
 func (p *jsonPatcher) applyPatchToCurrentObject(currentObject runtime.Object) (runtime.Object, error) {
 	groupKind := currentObject.GetObjectKind().GroupVersionKind().GroupKind()
-	codec := scheme.Codecs.LegacyCodec(p.scheme.VersionsForGroupKind(groupKind)...)
+	codec := serializer.NewCodecFactory(p.scheme).LegacyCodec(p.scheme.VersionsForGroupKind(groupKind)...)
 	// Encode will convert & return a versioned object in JSON.
 	currentObjJS, err := runtime.Encode(codec, currentObject)
 	if err != nil {

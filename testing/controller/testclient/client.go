@@ -16,42 +16,28 @@ package testclient
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
-	appsv1 "k8s.io/api/apps/v1"
-	coordv1 "k8s.io/api/coordination/v1"
-	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
 	"k8s.io/kube-openapi/pkg/validation/spec"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/crds"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-)
-
-// TODO: move schemaBuilder to separate package
-var schemaBuilder = runtime.NewSchemeBuilder(
-	v1alpha1.AddToScheme,
-	coordv1.AddToScheme,
-	appsv1.AddToScheme,
-	corev1.AddToScheme,
-	apiextensionsv1.AddToScheme,
+	"github.com/deckhouse/deckhouse/go_lib/project"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // TODO: implement StatusClient and SubResourceClientConstructor
 var _ client.Client = (*Client)(nil)
 
 func New(logger *log.Logger, initObjects []client.Object) (*Client, error) {
-	sc := runtime.NewScheme()
-	err := schemaBuilder.AddToScheme(sc)
+	sc, err := project.Scheme()
 	if err != nil {
 		return nil, fmt.Errorf("build scheme: %w", err)
 	}
@@ -83,30 +69,28 @@ func New(logger *log.Logger, initObjects []client.Object) (*Client, error) {
 		).
 		Build()
 
-	return &Client{logger: logger, Client: cl, validators: validators, openAPISchema: openAPISchema}, nil
+	validator := NewValidator(logger, validators, openAPISchema)
+	return &Client{logger: logger, Client: cl, validator: validator}, nil
 }
 
 type Client struct {
 	logger *log.Logger
 	client.Client
-	validators    map[schema.GroupVersionKind]validation.SchemaValidator
-	openAPISchema map[string]*spec.Schema
+	validator *Validator
+}
+
+func (c *Client) Validator() *Validator {
+	return c.validator
 }
 
 func (c *Client) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
-	k := obj.GetObjectKind()
-	var v validation.SchemaValidator
-	if k != nil {
-		v = c.validators[k.GroupVersionKind()]
-	}
-
-	if v != nil {
-		result := v.Validate(obj)
-
+	result := c.validator.Validate(obj)
+	if result != nil {
 		for _, warn := range result.Warnings {
 			c.logger.Warn(warn.Error())
 		}
 
+		result.Errors = ignoreStatus(result.Errors)
 		if len(result.Errors) > 0 {
 			return fmt.Errorf("custom resource validation: %w", errors.Join(result.Errors...))
 		}
@@ -116,19 +100,13 @@ func (c *Client) Create(ctx context.Context, obj client.Object, opts ...client.C
 }
 
 func (c *Client) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-	k := obj.GetObjectKind()
-	var v validation.SchemaValidator
-	if k != nil {
-		// TODO: 	v = c.validators[k.GroupVersionKind()]
-	}
-
-	if v != nil {
-		result := v.ValidateUpdate(obj, nil)
-
+	result := c.validator.ValidateUpdate(obj, nil)
+	if result != nil {
 		for _, warn := range result.Warnings {
 			c.logger.Warn(warn.Error())
 		}
 
+		result.Errors = ignoreStatus(result.Errors)
 		if len(result.Errors) > 0 {
 			return fmt.Errorf("custom resource validation: %w", errors.Join(result.Errors...))
 		}
@@ -137,48 +115,44 @@ func (c *Client) Update(ctx context.Context, obj client.Object, opts ...client.U
 	return c.Client.Update(ctx, obj, opts...)
 }
 
-func (c *Client) Patch(ctx context.Context, object client.Object, p client.Patch, opts ...client.PatchOption) error {
-	k := object.GetObjectKind()
-	var v validation.SchemaValidator
-	if k != nil {
-		// TODO: v = c.validators[k.GroupVersionKind()]
-	}
-
-	if v == nil {
-		return c.Client.Patch(ctx, object, p, opts...)
-	}
-
-	rawPatch, err := p.Data(object)
+func (c *Client) Patch(ctx context.Context, obj client.Object, p client.Patch, opts ...client.PatchOption) error {
+	rawPatch, err := p.Data(obj)
 	if err != nil {
 		return fmt.Errorf("generate patch: %w", err)
 	}
 
-	err = c.Client.Patch(ctx, object, p, opts...)
-	if err != nil {
-		return fmt.Errorf("patch: %w", err)
-	}
-
-	var tmp any
-	err = json.Unmarshal(rawPatch, &tmp)
-	if err != nil {
-		return fmt.Errorf("unmarshal raw patch: %w", err)
-	}
-
-	c.logger.Debug("validating patch: ", "patch", tmp)
-
-	patched, err := patch(object, p.Type(), rawPatch, c.Scheme(), c.openAPISchema)
+	newObj, err := patch(obj, p.Type(), rawPatch, c.Scheme())
 	if err != nil {
 		return fmt.Errorf("apply patch: %w", err)
 	}
 
-	result := v.ValidateUpdate(patched, object)
-	for _, warn := range result.Warnings {
-		c.logger.Warn(warn.Error())
+	result := c.validator.ValidateUpdate(newObj, obj)
+	if result != nil {
+		for _, warn := range result.Warnings {
+			c.logger.Warn(warn.Error())
+		}
+
+		result.Errors = ignoreStatus(result.Errors)
+		if len(result.Errors) > 0 {
+			return fmt.Errorf("custom resource validation: %w", errors.Join(result.Errors...))
+		}
 	}
 
-	if len(result.Errors) > 0 {
-		return fmt.Errorf("custom resource validation: %w", errors.Join(result.Errors...))
+	return c.Client.Patch(ctx, obj, p, opts...)
+}
+
+func ignoreStatus(errs []error) []error {
+	result := make([]error, 0, len(errs))
+
+	for _, err := range errs {
+		var vErr *validationerrors.Validation
+		ok := errors.As(err, &vErr)
+		if ok && strings.HasPrefix(vErr.Name, "status.") {
+			continue
+		}
+
+		result = append(result, err)
 	}
 
-	return nil
+	return result
 }
