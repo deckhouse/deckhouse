@@ -24,7 +24,7 @@ metadata:
   labels:
     modules.deckhouse.io/update-policy: ""
   name: parca-1.26.3
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   moduleName: parca
   version: 1.26.3
