@@ -281,12 +281,14 @@ func (c *MasterNodeGroupController) addNodes() error {
 	}
 
 	if len(masterIPForSSHList) > 0 {
-		sshCl := c.client.NodeInterfaceAsSSHClient()
-		if sshCl == nil {
-			panic("NodeInterface is not ssh")
-		}
+		if !c.commanderMode {
+			sshCl := c.client.NodeInterfaceAsSSHClient()
+			if sshCl == nil {
+				panic("NodeInterface is not ssh")
+			}
 
-		sshCl.Settings.AddAvailableHosts(masterIPForSSHList...)
+			sshCl.Settings.AddAvailableHosts(masterIPForSSHList...)
+		}
 
 		// we hide deckhouse logs because we always have config
 		nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs, nodeInternalIPList...)
