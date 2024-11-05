@@ -156,12 +156,6 @@ func storageClasses(input *go_hook.HookInput) error {
 		input.Values.Set("cloudProviderAws.internal.storageClasses", []StorageClass{})
 	}
 
-	if input.Values.Exists("cloudProviderAws.storageClass.default") {
-		input.Values.Set("cloudProviderAws.internal.defaultStorageClass", input.Values.Get("cloudProviderAws.storageClass.default").String())
-	} else {
-		input.Values.Remove("cloudProviderAws.internal.defaultStorageClass")
-	}
-
 	var existedStorageClasses []StorageClass
 	for _, v := range input.Snapshots["module_storageclasses"] {
 		sc := v.(*storagev1.StorageClass)

@@ -54,14 +54,6 @@ func storageClasses(input *go_hook.HookInput, pathFunc func(path string) string,
 
 	input.Values.Set(pathFunc("internal.storageClasses"), storageClassesFiltered)
 
-	defaultClass := input.Values.Get(pathFunc("storageClass.default")).String()
-	defaultClassPath := pathFunc("internal.defaultStorageClass")
-	if defaultClass != "" {
-		input.Values.Set(defaultClassPath, defaultClass)
-	} else {
-		input.Values.Remove(defaultClassPath)
-	}
-
 	return nil
 }
 

@@ -87,8 +87,6 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			return nil
 		}
 
-		var defaultSCName string
-
 		storageClassesSnapshots := input.Snapshots["storage_classes"]
 
 		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
@@ -96,17 +94,13 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		for _, storageClassSnapshot := range storageClassesSnapshots {
 			sc := storageClassSnapshot.(*storage.StorageClass)
 
-			if sc.Annotations["storageclass.kubernetes.io/is-default-class"] == "true" {
-				defaultSCName = sc.Name
-			}
-
 			storageClasses = append(storageClasses, storageClass{
 				Name:           sc.Name,
 				StorageProfile: sc.Parameters["storageProfile"],
 			})
 		}
 
-		setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+		setStorageClassesValues(input, storageClasses)
 
 		return nil
 	}
@@ -134,17 +128,11 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 }
 
 func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1alpha1.VCDStorageProfile) {
-	var defaultSCName string
-
 	volumeTypesMap := make(map[string]string, len(volumeTypes))
 
 	for _, volumeType := range volumeTypes {
 		if !volumeType.IsEnabled {
 			continue
-		}
-
-		if volumeType.IsDefaultStorageProfile {
-			defaultSCName = getStorageClassName(volumeType.Name)
 		}
 
 		volumeTypesMap[getStorageClassName(volumeType.Name)] = volumeType.Name
@@ -175,23 +163,11 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1al
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+	setStorageClassesValues(input, storageClasses)
 }
 
-func setStorageClassesValues(values *go_hook.PatchableValues, storageClasses []storageClass, defaultSCName string) {
-	values.Set("cloudProviderVcd.internal.storageClasses", storageClasses)
-
-	def, ok := values.GetOk("cloudProviderVcd.storageClass.default")
-	if ok {
-		values.Set("cloudProviderVcd.internal.defaultStorageClass", def.String())
-		return
-	}
-
-	if defaultSCName != "" {
-		values.Set("cloudProviderVcd.internal.defaultStorageClass", defaultSCName)
-		return
-	}
-	values.Remove("cloudProviderVcd.internal.defaultStorageClass")
+func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
+	input.Values.Set("cloudProviderVcd.internal.storageClasses", storageClasses)
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names

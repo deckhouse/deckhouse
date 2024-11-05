@@ -11,6 +11,14 @@ properties:
         * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
+  defaultClusterStorageClass:
+    type: string
+    default: null
+    description: |
+      The name of the StorageClass that will be annotated as default in the cluster.
+        * If the value is omitted, the current default StorageClass will be kept, if it exists in the cluster.
+          Otherwise, the first StorageClass created by the cloud-provider module will be used (if any cloud-provider module is used).
+        * Use this parameter to change the default StorageClass in the cluster, since manually adding default-annotations to StorageClasses is prohibited.
   highAvailability:
     type: boolean
     description: |
