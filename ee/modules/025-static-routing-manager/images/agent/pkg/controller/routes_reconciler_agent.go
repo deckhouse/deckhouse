@@ -347,7 +347,7 @@ func getRouteEntryFromRouteAndTable(route v1alpha1.Route, tbl int) (RouteEntry, 
 			)
 		}
 		if len(gwRts) > 1 {
-			fmt.Errorf("more then one egress Link find for Gateway %v. Used only first: %v",
+			fmt.Errorf("more then one egress Link found for Gateway %v. Used only first: %v",
 				route.Gateway,
 				gwRts[0].String(),
 			)
@@ -581,7 +581,7 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 	for nrtName, ns := range *nm {
 		// Wipe the finalizer if necessary
 		if ns.needToWipeFinalizer && ns.k8sResources.DeletionTimestamp != nil {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Wipe finalizer on NRT: %v", nrtName))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] wipe finalizer on NRT: %v", nrtName))
 
 			tmpNRTFinalizers := make([]string, 0)
 			for _, fnlzr := range ns.k8sResources.Finalizers {
@@ -608,7 +608,7 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 		}
 
 		// Update(patch) status every time
-		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Update status of NRT: %v", nrtName))
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] update status of NRT: %v", nrtName))
 
 		patch, err := json.Marshal(
 			map[string]interface{}{
@@ -689,7 +689,7 @@ func delRouteFromNode(re RouteEntry) error {
 
 func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryMap, status utils.ReconciliationStatus, log logr.Logger) utils.ReconciliationStatus {
 	for hash, re := range delREM {
-		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Route %v should be deleted", re))
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] route %v should be deleted", re))
 		if _, ok := (gdREM)[hash]; ok {
 			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] but it is present in other NRT"))
 			continue
@@ -715,10 +715,10 @@ func deleteOrphanRoutes(gdREM, actREM RouteEntryMap, log logr.Logger) {
 		if _, ok := (gdREM)[hash]; ok {
 			continue
 		}
-		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Route %v should be deleted.", re))
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] route %v should be deleted.", re))
 		err := delRouteFromNode(re)
 		if err != nil {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Unable to delete route %v,err: %v", re, err))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] unable to delete route %v,err: %v", re, err))
 		}
 	}
 }
