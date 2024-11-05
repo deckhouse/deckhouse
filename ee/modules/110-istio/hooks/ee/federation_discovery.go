@@ -105,7 +105,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		return nil
 	}
 	if !input.Values.Get("istio.internal.remoteAuthnKeypair.priv").Exists() {
-		input.LogEntry.Warnf("authn keypair for signing requests to remote metadata endpoints isn't generated yet, retry in 1min")
+		input.Logger.Warnf("authn keypair for signing requests to remote metadata endpoints isn't generated yet, retry in 1min")
 		return nil
 	}
 
@@ -129,23 +129,23 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(), federationInfo.PublicMetadataEndpoint, "")
 		if err != nil {
-			input.LogEntry.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
 		if statusCode != 200 {
-			input.LogEntry.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s (HTTP Code %d)", federationInfo.PublicMetadataEndpoint, federationInfo.Name, statusCode)
+			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s (HTTP Code %d)", federationInfo.PublicMetadataEndpoint, federationInfo.Name, statusCode)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
 		err = json.Unmarshal(bodyBytes, &publicMetadata)
 		if err != nil {
-			input.LogEntry.Warnf("cannot unmarshal public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warnf("cannot unmarshal public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
 		if publicMetadata.ClusterUUID == "" || publicMetadata.AuthnKeyPub == "" || publicMetadata.RootCA == "" {
-			input.LogEntry.Warnf("bad public metadata format in endpoint %s for IstioFederation %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name)
+			input.Logger.Warnf("bad public metadata format in endpoint %s for IstioFederation %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
@@ -165,29 +165,29 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		}
 		bearerToken, err := jwt.GenerateJWT(privKey, claims, time.Minute)
 		if err != nil {
-			input.LogEntry.Warnf("can't generate auth token for endpoint %s of IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warnf("can't generate auth token for endpoint %s of IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(), federationInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
-			input.LogEntry.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		if statusCode != 200 {
-			input.LogEntry.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s (HTTP Code %d)", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, statusCode)
+			input.Logger.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s (HTTP Code %d)", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, statusCode)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		err = json.Unmarshal(bodyBytes, &privateMetadata)
 		if err != nil {
-			input.LogEntry.Warnf("cannot unmarshal private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warnf("cannot unmarshal private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		if privateMetadata.IngressGateways == nil || privateMetadata.PublicServices == nil {
-			input.LogEntry.Warnf("bad private metadata format in endpoint %s for IstioFederation %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name)
+			input.Logger.Warnf("bad private metadata format in endpoint %s for IstioFederation %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}

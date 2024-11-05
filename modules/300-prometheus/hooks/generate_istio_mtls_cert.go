@@ -188,7 +188,7 @@ func generateMTLSCertHook(input *go_hook.HookInput) error {
 		return err
 	}
 	if !ok {
-		mTLSCert, err = certificate.GenerateSelfSignedCert(input.LogEntry,
+		mTLSCert, err = certificate.GenerateSelfSignedCert(input.Logger,
 			"prometheus-scraper-istio-mtls",
 			istioCA,
 			certificate.WithKeyAlgo("ecdsa"),

@@ -185,7 +185,7 @@ func prepareSolverRegistryServiceAccount(namespace string) *corev1.ServiceAccoun
 func handleChallenge(input *go_hook.HookInput) error {
 	d8RegistrySnap := input.Snapshots[d8RegistrySnapshot]
 	if len(d8RegistrySnap) == 0 {
-		input.LogEntry.Warnln("Registry secret not found. Skip")
+		input.Logger.Warn("Registry secret not found. Skip")
 		return nil
 	}
 

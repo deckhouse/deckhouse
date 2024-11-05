@@ -84,7 +84,7 @@ func handlePackagesProxyEndpoints(input *go_hook.HookInput) error {
 		return fmt.Errorf("no packages proxy endpoints found")
 	}
 
-	input.LogEntry.Infof("found packages proxy endpoints: %v", endpointsList)
+	input.Logger.Infof("found packages proxy endpoints: %v", endpointsList)
 	input.Values.Set("nodeManager.internal.packagesProxy.addresses", endpointsList)
 
 	return nil

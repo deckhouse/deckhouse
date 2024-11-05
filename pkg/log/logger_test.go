@@ -99,8 +99,6 @@ func Test_LoggerFormat(t *testing.T) {
 		logger.Logf(context.Background(), log.LevelFatal, "stub msg: %s", argValue)
 	}
 
-	_ = logfFn
-
 	type meta struct {
 		name    string
 		enabled bool

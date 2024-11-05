@@ -87,7 +87,7 @@ func generateSelfSignedCA(input *go_hook.HookInput) error {
 		}
 	} else {
 		var err error
-		sefSignedCA, err = certificate.GenerateCA(input.LogEntry, "kubernetes-api-selfsigned-ca")
+		sefSignedCA, err = certificate.GenerateCA(input.Logger, "kubernetes-api-selfsigned-ca")
 		if err != nil {
 			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
 		}

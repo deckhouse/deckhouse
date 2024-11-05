@@ -27,11 +27,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
-	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,6 +52,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -66,7 +65,7 @@ const defaultCheckInterval = 15 * time.Second
 type deckhouseReleaseReconciler struct {
 	client        client.Client
 	dc            dependency.Container
-	logger        logger.Logger
+	logger        *log.Logger
 	moduleManager moduleManager
 
 	updateSettings *helpers.DeckhouseSettingsContainer
@@ -79,9 +78,9 @@ type deckhouseReleaseReconciler struct {
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage,
-	preflightCountDown *sync.WaitGroup,
+	preflightCountDown *sync.WaitGroup, logger *log.Logger,
 ) error {
-	lg := log.WithField("component", "DeckhouseRelease")
+	lg := logger.With("component", "DeckhouseRelease")
 
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
@@ -137,12 +136,12 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return result, nil
 	}
 
-	r.metricStorage.GroupedVault.ExpireGroupMetrics(metricReleasesGroup)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricReleasesGroup)
 
 	release := new(v1alpha1.DeckhouseRelease)
 	err = r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
-		r.logger.Debug("get release: %s", err.Error())
+		r.logger.Debugf("get release: %s", err.Error())
 		// The DeckhouseRelease resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
@@ -153,7 +152,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	if !release.DeletionTimestamp.IsZero() {
-		r.logger.Debug("release deletion timestamp: %s", release.DeletionTimestamp.String())
+		r.logger.Debugf("release deletion timestamp: %s", release.DeletionTimestamp.String())
 		return result, nil
 	}
 
@@ -204,7 +203,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
 	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
-		r.logger.Debug("release phase: %s", dr.Status.Phase)
+		r.logger.Debugf("release phase: %s", dr.Status.Phase)
 		return result, nil
 
 	case v1alpha1.PhaseDeployed:
@@ -332,7 +331,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	if podReady {
-		r.metricStorage.GroupedVault.ExpireGroupMetrics(metricUpdatingGroup)
+		r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
 
 		if releaseData.IsUpdating {
 			_ = deckhouseUpdater.ChangeUpdatingFlag(false)
@@ -341,7 +340,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		labels := map[string]string{
 			"releaseChannel": r.updateSettings.Get().ReleaseChannel,
 		}
-		r.metricStorage.GroupedVault.GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, labels)
+		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, labels)
 	}
 	{
 		var releases v1alpha1.DeckhouseReleaseList
@@ -413,7 +412,7 @@ func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Resu
 	var result ctrl.Result
 	var notReadyErr *updater.NotReadyForDeployError
 	if errors.As(err, &notReadyErr) {
-		r.logger.Infoln(err.Error())
+		r.logger.Info(err.Error())
 		// TODO: requeue all releases if deckhouse update settings is changed
 		// requeueAfter := notReadyErr.RetryDelay()
 		// if requeueAfter == 0 {
@@ -517,7 +516,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 			CA:           drs.CA,
 			UserAgent:    r.clusterUUID,
 		}
-		opts = utils.GenerateRegistryOptions(rconf)
+		opts = utils.GenerateRegistryOptions(rconf, r.logger)
 	}
 
 	regClient, err := r.dc.GetRegistryClient(repo, opts...)

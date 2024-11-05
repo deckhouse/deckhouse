@@ -21,9 +21,16 @@ linters-settings:
       - prefix(github.com/deckhouse/)
   goimports:
     local-prefixes: github.com/deckhouse/
+  # TODO: replace deprecated methods
+  # ignore deprecated 
+  # https://staticcheck.dev/docs/checks/#SA1019
+  staticcheck:
+     checks: ["all","-SA1019"]
   errcheck:
     # Is Depricateed, use exclude-functions: https://github.com/kisielk/errcheck#excluding-functions
-    ignore: fmt:.*,[rR]ead|[wW]rite|[cC]lose,io:Copy
+    exclude-functions:
+      - fmt:.*[rR]ead|[wW]rite|[cC]lose
+      - io:Copy
   sloglint:
       # Enforce not mixing key-value pairs and attributes.
       no-mixed-args: true

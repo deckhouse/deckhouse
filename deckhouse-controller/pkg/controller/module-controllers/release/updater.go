@@ -26,7 +26,6 @@ import (
 	"time"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	cp "github.com/otiai10/copy"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,9 +38,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func newModuleUpdater(dc dependency.Container, logger logger.Logger, settings *updater.Settings,
+func newModuleUpdater(dc dependency.Container, logger *log.Logger, settings *updater.Settings,
 	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
 ) *updater.Updater[*v1alpha1.ModuleRelease] {
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, settings,
@@ -49,12 +49,12 @@ func newModuleUpdater(dc dependency.Container, logger logger.Logger, settings *u
 		newWebhookDataSource(logger), enabledModules)
 }
 
-func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
+func newWebhookDataSource(logger *log.Logger) *webhookDataSource {
 	return &webhookDataSource{logger: logger}
 }
 
 type webhookDataSource struct {
-	logger logger.Logger
+	logger *log.Logger
 }
 
 func (s *webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.ModuleRelease, applyTime time.Time) {
@@ -74,7 +74,7 @@ func (s *webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.
 	output.ModuleName = release.GetModuleName()
 }
 
-func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client, downloadedModulesDir string, symlinksDir string,
+func newKubeAPI(ctx context.Context, logger *log.Logger, client client.Client, downloadedModulesDir string, symlinksDir string,
 	moduleManager moduleManager, dc dependency.Container, clusterUUID string,
 ) *kubeAPI {
 	return &kubeAPI{
@@ -92,7 +92,7 @@ func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client,
 type kubeAPI struct {
 	// TODO: move context from struct field to arguments
 	ctx                  context.Context
-	logger               logger.Logger
+	logger               *log.Logger
 	client               client.Client
 	downloadedModulesDir string
 	symlinksDir          string
@@ -152,7 +152,7 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 		}
 	}()
 
-	options := utils.GenerateRegistryOptionsFromModuleSource(&ms, k.clusterUUID)
+	options := utils.GenerateRegistryOptionsFromModuleSource(&ms, k.clusterUUID, k.logger)
 	md := downloader.NewModuleDownloader(k.dc, tmpDir, &ms, options)
 	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
@@ -176,7 +176,7 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	if module := k.moduleManager.GetModule(moduleName); module != nil {
 		values = module.GetConfigValues(false)
 	}
-	err = validateModule(def, values)
+	err = validateModule(def, values, k.logger)
 	if err != nil {
 		release.Status.Phase = v1alpha1.PhaseSuspended
 		_ = k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase)

@@ -167,21 +167,25 @@ func (l *Logger) WithGroup(name string) *Logger {
 	}
 }
 
+// Deprecated: use Log instead
 func (l *Logger) Logf(ctx context.Context, level Level, format string, args ...any) {
 	ctx = logContext.SetCustomKeyContext(ctx)
 	l.Log(ctx, level.Level(), fmt.Sprintf(format, args...))
 }
 
+// Deprecated: use Debug instead
 func (l *Logger) Debugf(format string, args ...any) {
 	ctx := logContext.SetCustomKeyContext(context.Background())
 	l.Log(ctx, LevelDebug.Level(), fmt.Sprintf(format, args...))
 }
 
+// Deprecated: use Info instead
 func (l *Logger) Infof(format string, args ...any) {
 	ctx := logContext.SetCustomKeyContext(context.Background())
 	l.Log(ctx, LevelInfo.Level(), fmt.Sprintf(format, args...))
 }
 
+// Deprecated: use Warn instead
 func (l *Logger) Warnf(format string, args ...any) {
 	ctx := logContext.SetCustomKeyContext(context.Background())
 	l.Log(ctx, LevelWarn.Level(), fmt.Sprintf(format, args...))
@@ -194,6 +198,7 @@ func (l *Logger) Error(msg string, args ...any) {
 	l.Log(ctx, LevelError.Level(), msg, args...)
 }
 
+// Deprecated: use Error instead
 func (l *Logger) Errorf(format string, args ...any) {
 	ctx := logContext.SetCustomKeyContext(context.Background())
 	ctx = logContext.SetStackTraceContext(ctx, getStack())
@@ -210,6 +215,7 @@ func (l *Logger) Fatal(msg string, args ...any) {
 	os.Exit(1)
 }
 
+// Deprecated: use Fatal instead
 func (l *Logger) Fatalf(format string, args ...any) {
 	ctx := logContext.SetCustomKeyContext(context.Background())
 	ctx = logContext.SetStackTraceContext(ctx, getStack())

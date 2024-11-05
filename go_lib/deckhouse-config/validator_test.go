@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -263,9 +264,9 @@ spec:
 					GlobalHooksDir: "testdata/validator/global",
 				},
 			}
-			mm := module_manager.NewModuleManager(context.Background(), mmc)
+			mm := module_manager.NewModuleManager(context.Background(), mmc, log.NewNop())
 
-			err := mm.Init()
+			err := mm.Init(log.NewNop())
 			g.Expect(err).ShouldNot(HaveOccurred(), "should init module manager")
 
 			v := NewConfigValidator(mm)

@@ -25,11 +25,10 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
-	"github.com/flant/addon-operator/pkg/utils/logger"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/versionmatcher"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -45,15 +44,16 @@ var (
 var _ extenders.Extender = &Extender{}
 
 type Extender struct {
-	logger         logger.Logger
+	logger         *log.Logger
 	versionMatcher *versionmatcher.Matcher
 	err            error
 }
 
+// TODO: refactor
 func Instance() *Extender {
 	once.Do(func() {
 		instance = &Extender{
-			logger:         log.WithField("extender", Name),
+			logger:         log.Default().With("extender", Name),
 			versionMatcher: versionmatcher.New(false),
 		}
 		if val := os.Getenv("TEST_EXTENDER_DECKHOUSE_VERSION"); val != "" {

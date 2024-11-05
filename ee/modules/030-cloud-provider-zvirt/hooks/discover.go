@@ -79,10 +79,10 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 	if len(input.Snapshots["cloud_provider_discovery_data"]) == 0 {
-		input.LogEntry.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
+		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
 		if len(input.Snapshots["storage_classes"]) == 0 {
-			input.LogEntry.Warn("failed to find storage classes for zvirt provisioner")
+			input.Logger.Warn("failed to find storage classes for zvirt provisioner")
 
 			return nil
 		}
@@ -104,7 +104,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 				AllowVolumeExpansion: allowVolumeExpansion,
 			})
 		}
-		input.LogEntry.Infof("Found zvirt storage classes using StorageClass snapshots: %v", storageClasses)
+		input.Logger.Infof("Found zvirt storage classes using StorageClass snapshots: %v", storageClasses)
 
 		setStorageClassesValues(input, storageClasses)
 
@@ -183,7 +183,7 @@ func handleDiscoveryDataVolumeTypes(
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	input.LogEntry.Infof("Found zvirt storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
+	input.Logger.Infof("Found zvirt storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
 
 	setStorageClassesValues(input, storageClasses)
 }

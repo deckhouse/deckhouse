@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type deckhouseReleaseService struct {
@@ -40,13 +41,16 @@ type deckhouseReleaseService struct {
 
 	registry        string
 	registryOptions []cr.Option
+
+	logger *log.Logger
 }
 
-func newDeckhouseReleaseService(registryAddress string, registryConfig *utils.RegistryConfig) *deckhouseReleaseService {
+func newDeckhouseReleaseService(registryAddress string, registryConfig *utils.RegistryConfig, logger *log.Logger) *deckhouseReleaseService {
 	return &deckhouseReleaseService{
 		dc:              dependency.NewDependencyContainer(),
 		registry:        registryAddress,
-		registryOptions: utils.GenerateRegistryOptions(registryConfig),
+		registryOptions: utils.GenerateRegistryOptions(registryConfig, logger),
+		logger:          logger,
 	}
 }
 

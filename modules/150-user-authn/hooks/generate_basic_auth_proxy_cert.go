@@ -159,7 +159,7 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 	}
 
 	// create CSR
-	gcsr, pkey, err := certificate.GenerateCSR(input.LogEntry, "front-proxy-client", certificate.WithCSRKeyRequest(&csr.KeyRequest{A: "rsa", S: 2048}))
+	gcsr, pkey, err := certificate.GenerateCSR(input.Logger, "front-proxy-client", certificate.WithCSRKeyRequest(&csr.KeyRequest{A: "rsa", S: 2048}))
 	if err != nil {
 		return err
 	}
