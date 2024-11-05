@@ -26,6 +26,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -202,4 +203,10 @@ func onCheckResult(checkRes *check.CheckResult) error {
 	})
 
 	return nil
+}
+
+func applyPreflightSkips(operationOptions *pb.OperationOptions) {
+	if operationOptions != nil {
+		app.ApplyPreflightSkips(operationOptions.SkipPreflightChecks)
+	}
 }
