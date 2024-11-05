@@ -298,14 +298,11 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 		if err := validateRegistryDockerCfg(properties.DockerCfg, address); err != nil {
 			return err
 		}
-		clusterDomain, err := m.GetClusterDomain()
-		if err != nil {
-			return err
-		}
+
 		m.Registry = Registry{
 			Mode: m.RegistryConfig.Mode,
 			Data: RegistryData{
-				Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
+				Address: "embedded-registry.d8-system.svc:5001",
 				Path:    embeddedRegistryPath,
 				// These parameters are filled in the method `PrepareAfterGlobalCacheInit`:
 				// Scheme:       "",
@@ -329,14 +326,11 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 		if properties == nil {
 			return fmt.Errorf("unable to get the properties of the detached registry mode")
 		}
-		clusterDomain, err := m.GetClusterDomain()
-		if err != nil {
-			return err
-		}
+
 		m.Registry = Registry{
 			Mode: m.RegistryConfig.Mode,
 			Data: RegistryData{
-				Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
+				Address: "embedded-registry.d8-system.svc:5001",
 				Path:    embeddedRegistryPath,
 				// These parameters are filled in the method `PrepareAfterGlobalCacheInit`:
 				// Scheme:       "",
