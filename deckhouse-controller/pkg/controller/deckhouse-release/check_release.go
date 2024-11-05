@@ -30,7 +30,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/spaolacci/murmur3"
@@ -416,7 +415,10 @@ func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(img v1.Image) (*ReleaseMetadata, error) {
 	meta := new(ReleaseMetadata)
 
-	rc := mutate.Extract(img)
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return nil, err
+	}
 	defer rc.Close()
 
 	rr := &releaseReader{
@@ -424,7 +426,7 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(img v1.Image) (*Release
 		changelogReader: bytes.NewBuffer(nil),
 	}
 
-	err := rr.untarMetadata(rc)
+	err = rr.untarMetadata(rc)
 	if err != nil {
 		return nil, err
 	}

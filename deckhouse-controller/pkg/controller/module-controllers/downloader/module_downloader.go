@@ -32,7 +32,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/shell-operator/pkg/utils/measure"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
 	"gopkg.in/yaml.v3"
 
@@ -170,7 +169,7 @@ func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion st
 		return nil, fmt.Errorf("fetch image: %w", err)
 	}
 
-	return module.ExtractDocs(img), nil
+	return module.ExtractDocs(img)
 }
 
 func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, error) {
@@ -211,7 +210,10 @@ func (md *ModuleDownloader) fetchAndCopyModuleByVersion(moduleName, moduleVersio
 }
 
 func (md *ModuleDownloader) copyModuleToFS(rootPath string, img v1.Image) (*DownloadStatistic, error) {
-	rc := mutate.Extract(img)
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return nil, err
+	}
 	defer rc.Close()
 
 	ds, err := md.copyLayersToFS(rootPath, rc)
@@ -360,12 +362,15 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 		Weight: defaultModuleWeight,
 	}
 
-	rc := mutate.Extract(img)
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return nil, err
+	}
 	defer rc.Close()
 
 	buf := bytes.NewBuffer(nil)
 
-	err := untarModuleDefinition(rc, buf)
+	err = untarModuleDefinition(rc, buf)
 	if err != nil {
 		return def, err
 	}
@@ -385,7 +390,10 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (ModuleReleaseMetadata, error) {
 	var meta ModuleReleaseMetadata
 
-	rc := mutate.Extract(img)
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return meta, err
+	}
 	defer rc.Close()
 
 	rr := &releaseReader{
@@ -393,7 +401,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (ModuleRele
 		changelogReader: bytes.NewBuffer(nil),
 	}
 
-	err := rr.untarMetadata(rc)
+	err = rr.untarMetadata(rc)
 	if err != nil {
 		return meta, err
 	}
