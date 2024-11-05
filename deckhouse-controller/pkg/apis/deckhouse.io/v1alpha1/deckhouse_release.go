@@ -121,7 +121,7 @@ func (in *DeckhouseRelease) GetManuallyApproved() bool {
 		return true
 	}
 
-	v, ok := in.Annotations["release.deckhouse.io/approved"]
+	v, ok := in.Annotations[DeckhouseReleaseApprovalAnnotation]
 	if ok {
 		return v == "true"
 	}

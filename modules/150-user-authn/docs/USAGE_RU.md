@@ -328,6 +328,8 @@ echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 
 Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
 
+Обратите внимание, что в приведенном примере указан [`ttl`](cr.html#user-v1-spec-ttl).
+
 {% raw %}
 
 ```yaml

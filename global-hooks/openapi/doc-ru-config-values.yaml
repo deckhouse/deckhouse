@@ -1,11 +1,20 @@
 type: object
 properties:
   storageClass:
-    description: |
-      Имя storage class, который будет использоваться для всех компонентов Deckhouse (Prometheus, Grafana, OpenVPN и т. д.).
-        * Если значение не указано, используется автоматически определяемый `global.discovery.defaultStorageClass`. Если `global.discovery.defaultStorageClass` не определен, используется `emptyDir`.
+    description: |-
+      Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
+
+        * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
         * Этот параметр имеет смысл использовать только в исключительных ситуациях.
         * Этот параметр применяется в процессе включения модуля.
+  defaultClusterStorageClass:
+    type: string
+    default: null
+    description: |
+      Имя StorageClass, который будет назначен по умолчанию в кластере.
+        * Если значение отсутствует, то будет сохранен текущий StorageClass по умолчанию, при его наличии в кластере.
+          Иначе будет использован первый StorageClass из создаваемых модулем cloud-provider (если какой-либо модуль cloud-provider-а используется).
+        * Воспользуйтесь этим параметром, чтобы изменить StorageClass по умолчанию в кластере, поскольку вручную добавлять default-аннотации в StorageClass-ы запрещено.
   highAvailability:
     description: |
       Параметр глобального включения *режима отказоустойчивости* для модулей, которые его поддерживают.

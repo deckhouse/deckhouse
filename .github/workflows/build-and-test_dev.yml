@@ -464,10 +464,10 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: Set up Go 1.22
+      - name: Set up Go 1.23
         uses: actions/setup-go@v3
         with:
-          go-version: '1.22'
+          go-version: '1.23'
 
       - name: Run go generate
         run: |
@@ -966,7 +966,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.22.8-bullseye@sha256:0b709573e7e867429a436ed40d88f9a3014fc568533073438d61e9d33c918848"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.1-bullseye@sha256:a24507d1a36fce86431198a979435dadb187e8d0ce0b5c181f46d6788d84a40f"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -1052,7 +1052,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.22.8-bullseye@sha256:0b709573e7e867429a436ed40d88f9a3014fc568533073438d61e9d33c918848"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.1-bullseye@sha256:a24507d1a36fce86431198a979435dadb187e8d0ce0b5c181f46d6788d84a40f"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

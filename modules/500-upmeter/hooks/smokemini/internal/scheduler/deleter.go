@@ -76,7 +76,7 @@ type loggingDeleter struct {
 
 func (d *loggingDeleter) Delete(name string) {
 	d.delegate.Delete(name)
-	d.logger.Warnf(d.message(name))
+	d.logger.Warn(d.message(name))
 }
 
 // objDeleter is the generic implementation of a Deleter interface

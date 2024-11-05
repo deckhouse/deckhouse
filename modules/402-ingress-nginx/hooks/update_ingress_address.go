@@ -61,7 +61,7 @@ func filterIngressServiceAddress(obj *unstructured.Unstructured) (go_hook.Filter
 	if err := sdk.FromUnstructured(obj, &svc); err != nil {
 		return nil, err
 	}
-	if svc.Status.LoadBalancer.Ingress != nil && len(svc.Status.LoadBalancer.Ingress) != 0 {
+	if len(svc.Status.LoadBalancer.Ingress) != 0 {
 		return loadBalancerService{
 			name:     svc.Labels["name"],
 			ip:       svc.Status.LoadBalancer.Ingress[0].IP,

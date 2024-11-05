@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -550,11 +551,7 @@ func (rsv *registrySchemaForValues) SetBase(registryBase string) {
 }
 
 func (rsv *registrySchemaForValues) SetDockercfg(dockercfg string) {
-	if len(dockercfg) == 0 {
-		return
-	}
-
-	rsv.Properties.Dockercfg.Default = dockercfg
+	rsv.Properties.Dockercfg.Default = DockerCFGForModules(rsv.Properties.Base.Default, dockercfg)
 }
 
 func (rsv *registrySchemaForValues) SetScheme(scheme string) {
@@ -563,6 +560,27 @@ func (rsv *registrySchemaForValues) SetScheme(scheme string) {
 
 func (rsv *registrySchemaForValues) SetCA(ca string) {
 	rsv.Properties.CA.Default = ca
+}
+
+// DockerCFGForModules
+// according to the deckhouse docs, for anonymous registry access we must have the value:
+// {"auths": { "<PROXY_REGISTRY>": {}}}
+// but it could be empty for a ModuleSource.
+// modules are not ready to catch empty string, so we have to fill it with the default value
+func DockerCFGForModules(repo, dockercfg string) string {
+	if len(dockercfg) != 0 {
+		return dockercfg
+	}
+
+	index := strings.Index(repo, "/")
+	var registry string
+	if index != -1 {
+		registry = repo[:index]
+	} else {
+		registry = repo
+	}
+
+	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"auths": {"%s": {}}}`, registry)))
 }
 
 type injectedValues struct {
