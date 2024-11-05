@@ -134,11 +134,6 @@ spec:
           properties:
             spec:
               properties:
-                domain:
-                  description: |
-                    Внешний адрес вашего приложения, с которого пользовательский запрос будет перенаправлен для авторизации в Dex.
-
-                    **Не должен** содержать HTTP-схему.
                 sendAuthorizationHeader:
                   description: |
                     Флаг, который отвечает за отправку конечному приложению заголовка `Authorization: Bearer`.
