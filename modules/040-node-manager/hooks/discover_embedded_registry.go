@@ -153,18 +153,6 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 		input.Values.Remove("nodeManager.internal.systemRegistry.addresses")
 	}
 
-	// Get embedded registry CA from snapshot
-	caCertSnap := input.Snapshots["registry_pki_secret"]
-	// If CA is not present, remove it from values
-	if len(caCertSnap) == 0 {
-		input.LogEntry.Warn("Secret registry-pki not found or empty")
-		input.Values.Remove("nodeManager.internal.systemRegistry.registryCA")
-	} else {
-		// Set embedded registry CA value
-		caCert := caCertSnap[0].(string)
-		input.LogEntry.Infof("found embedded registry CA")
-		input.Values.Set("nodeManager.internal.systemRegistry.registryCA", caCert)
-	}
 	// Get embedded registry credentials from snapshot
 	credsSnap := input.Snapshots["registry_user_ro_secret"]
 
@@ -173,6 +161,7 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 		input.LogEntry.Warn("Secret registry-user-ro not found or empty")
 		input.Values.Remove("nodeManager.internal.systemRegistry.auth")
 		input.Values.Remove("nodeManager.internal.systemRegistry.registryAddress")
+		input.Values.Remove("nodeManager.internal.systemRegistry.registryCA")
 		return nil
 	}
 
@@ -189,6 +178,7 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 		input.LogEntry.Warn("Failed to parse registry-user-ro secret")
 		input.Values.Remove("nodeManager.internal.systemRegistry.auth")
 		input.Values.Remove("nodeManager.internal.systemRegistry.registryAddress")
+		input.Values.Remove("nodeManager.internal.systemRegistry.registryCA")
 		return nil
 	}
 
@@ -203,6 +193,19 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 		// Set embedded registry embeddedRegistry only if credentials are present
 		input.LogEntry.Infof("setting embedded registry embeddedRegistry to %s", embeddedRegistry)
 		input.Values.Set("nodeManager.internal.systemRegistry.registryAddress", embeddedRegistry+":"+embeddedRegistryPort)
+	}
+
+	// Get embedded registry CA from snapshot
+	caCertSnap := input.Snapshots["registry_pki_secret"]
+	// If CA is not present, remove it from values
+	if len(caCertSnap) == 0 {
+		input.LogEntry.Warn("Secret registry-pki not found or empty")
+		input.Values.Remove("nodeManager.internal.systemRegistry.registryCA")
+	} else {
+		// Set embedded registry CA value
+		caCert := caCertSnap[0].(string)
+		input.LogEntry.Infof("found embedded registry CA")
+		input.Values.Set("nodeManager.internal.systemRegistry.registryCA", caCert)
 	}
 
 	return nil
