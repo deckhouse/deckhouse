@@ -210,7 +210,6 @@ oom_score = 0
         [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
           ca_file = "/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
         {{- end }}
-        {{- end }}
       {{- /* Embedded registry auth and tls configuration */}}
       [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}"]
         {{- if .systemRegistry.auth }}
@@ -221,6 +220,7 @@ oom_score = 0
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".tls]
           ca_file = "/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
         {{- end }}
+    {{- end }}
   {{- end }}
 
   {{- if eq .runType "Normal" }}
