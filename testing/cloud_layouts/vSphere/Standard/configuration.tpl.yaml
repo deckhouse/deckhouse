@@ -25,7 +25,7 @@ layout: Standard
 vmFolderPath: 'flant-e2e-tests/${PREFIX}'
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
-region: test-region
+region: spb5-region
 zones:
 - spb5
 internalNetworkNames:
