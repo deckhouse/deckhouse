@@ -173,7 +173,7 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	return m, nil
 }
 
-// Some of the information from the metaconfig is used to create a global cache.
+// PrepareAfterGlobalCacheInit Some of the information from the metaconfig is used to create a global cache.
 // This function is necessary to initialize the data after creating the global cache
 func (m *MetaConfig) PrepareAfterGlobalCacheInit() error {
 	type DockerCfg struct {
@@ -307,7 +307,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 			Data: RegistryData{
 				Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
 				Path:    embeddedRegistryPath,
-				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
+				// These parameters are filled in the method `PrepareAfterGlobalCacheInit`:
 				// Scheme:       "",
 				// DockerCfg:    "",
 				// CA:           "",
@@ -338,7 +338,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 			Data: RegistryData{
 				Address: fmt.Sprintf("embedded-registry.d8-system.svc.%s:5001", clusterDomain),
 				Path:    embeddedRegistryPath,
-				// These parameters are filled in in the method `PrepareAfterGlobalCacheInit`:
+				// These parameters are filled in the method `PrepareAfterGlobalCacheInit`:
 				// Scheme:       "",
 				// DockerCfg:    "",
 				// CA:           "",
