@@ -23,11 +23,10 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	"github.com/stretchr/testify/suite"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/testclient"
 )
 
@@ -63,16 +62,6 @@ func (suite *Suite) SetupNoLock(initObjects []client.Object, opts ...SuiteOption
 	}
 
 	suite.logger = log.NewNop()
-	// suite.logger.Formatter = new(log.JSONFormatter)
-	// suite.logger.ExitFunc = suite.loggerExit
-	// suite.logger.Out = suite.logOutput
-
-	//outFile, ok := suite.logger.Out.(*os.File)
-	//if flags.Verbose && ok && suite.sameFile(outFile, defaultLogOutput) {
-	//	suite.logger.Level = log.TraceLevel
-	//	suite.logger.ReportCaller = true
-	//}
-
 	var err error
 	suite.client, err = testclient.New(log.NewNop(), initObjects)
 	return err

@@ -21,13 +21,11 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/kube-openapi/pkg/validation/spec"
 )
 
 func addValidator(
 	crd apiextensionsv1.CustomResourceDefinition,
 	validators map[schema.GroupVersionKind]validation.SchemaValidator,
-	schemaMap map[string]*spec.Schema,
 ) error {
 	var apiServerCRD apiextensions.CustomResourceDefinition
 
@@ -52,18 +50,8 @@ func addValidator(
 			Version: ver.Name,
 			Kind:    crd.Spec.Names.Kind,
 		}
-		openAPITypes := new(spec.Schema)
-		err = validation.ConvertJSONSchemaProps(s.OpenAPIV3Schema, openAPITypes)
-		if err != nil {
-			return fmt.Errorf("convert JSON schema props: %w", err)
-		}
-		schemaMap[gvk.String()] = openAPITypes
 
-		validators[schema.GroupVersionKind{
-			Group:   apiServerCRD.Spec.Group,
-			Version: ver.Name,
-			Kind:    apiServerCRD.Spec.Names.Kind,
-		}] = validator
+		validators[gvk] = validator
 	}
 	return nil
 }

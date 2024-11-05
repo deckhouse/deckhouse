@@ -19,16 +19,15 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/kube-openapi/pkg/validation/spec"
 	"k8s.io/kube-openapi/pkg/validation/validate"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func NewValidator(logger *log.Logger, validators map[schema.GroupVersionKind]validation.SchemaValidator, openAPISchema map[string]*spec.Schema) *Validator {
+func NewValidator(logger *log.Logger, validators map[schema.GroupVersionKind]validation.SchemaValidator) *Validator {
 	return &Validator{
 		logger:     logger,
 		validators: validators,

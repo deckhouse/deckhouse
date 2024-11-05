@@ -23,7 +23,6 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
-	"k8s.io/kube-openapi/pkg/validation/spec"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -47,13 +46,12 @@ func New(logger *log.Logger, initObjects []client.Object) (*Client, error) {
 		return nil, fmt.Errorf("list crds: %w", err)
 	}
 
-	openAPISchema := make(map[string]*spec.Schema)
 	crdsObjects := make([]client.Object, 0, len(CRDs))
 	validators := make(map[schema.GroupVersionKind]validation.SchemaValidator, len(CRDs))
 	for _, crd := range CRDs {
 		crdsObjects = append(crdsObjects, &crd)
 
-		err = addValidator(crd, validators, openAPISchema)
+		err = addValidator(crd, validators)
 		if err != nil {
 			return nil, fmt.Errorf("add validator: %w", err)
 		}
@@ -69,7 +67,7 @@ func New(logger *log.Logger, initObjects []client.Object) (*Client, error) {
 		).
 		Build()
 
-	validator := NewValidator(logger, validators, openAPISchema)
+	validator := NewValidator(logger, validators)
 	return &Client{logger: logger, Client: cl, validator: validator}, nil
 }
 
