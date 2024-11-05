@@ -74,19 +74,25 @@ spec:
                   properties:
                     mode:
                       type: string
-                      default: 'Auto'
+                      default: 'AutoPatch'
                       description: |
-                        Modules minor version update mode (release change).
+                        Modules version update mode (release change).
+                        - 'AutoPatch' — patch version updates are applied automatically (according to the update windows)
+                        Minor version module updates require manual confirmation.
+                        Set `modules.deckhouse.io/approved="true"` annotation on the corresponding ModuleRelease resource, to confirm the update.
+
                         - `Auto` — all updates are applied automatically.
 
                           Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
                         - `Manual` — to change a minor version of modules (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required. Set `modules.deckhouse.io/approved="true"` annotation on the corresponding ModuleRelease resource, to confirm the update.
+
 
                         - `Ignore` — updates are ignored.
                       enum:
                         - 'Auto'
                         - 'Manual'
                         - 'Ignore'
+                        - 'AutoPatch'
                     windows:
                       type: array
                       description: |
