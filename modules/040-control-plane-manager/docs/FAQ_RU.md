@@ -538,7 +538,7 @@ spec:
 Начиная с релиза Deckhouse Kubernetes Platform v1.65 стала доступна утилита `d8 backup etcd`, которая предназначена для быстрого создания снимков состояния etcd.
 
 ```bash
-d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
+d8 backup etcd --kubeconfig $KUBECONFIG ./etcd-backup.snapshot
 ```
 
 #### Используя bash (Deckhouse Kubernetes Platform v1.64 и старше)
@@ -575,52 +575,61 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 #### Восстановление кластера single-master
 
-Для корректного восстановления кластера single-master выполните следующие шаги:
+Для корректного восстановления кластера single-master выполните следующие шаги на master-узле:
 
-1. Загрузите утилиту [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно чтобы её версия была такая же, как и версия etcd в кластере).
+1. - Найдите утилиту `etcdctl` на мастер-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
+     ```shell
+     cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+     -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
+     etcdctl version
+     ```
+   
+     Должен отобразиться корректный вывод `etcdctl version` без ошибок.
 
-   ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
-   ```
+   - Альтернативно, вы можете загрузить исполняемый файл [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно чтобы её версия была такая же, как и версия etcd в кластере):
 
-   Посмотреть версию etcd в кластере можно выполнив следующую команду:
+     ```shell
+     wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
+     tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
+     ```
+  
+     Посмотреть версию etcd в кластере можно выполнив следующую команду (может не сработать, если etcd и Kubernetes API недоступны):
+  
+     ```shell
+     kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+     ```
 
-   ```shell
-   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
-   ```
-
-1. Остановите etcd.
+2. Остановите etcd.
 
    ```shell
    mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
    ```
 
-1. Сохраните текущие данные etcd.
+3. Сохраните текущие данные etcd.
 
    ```shell
    cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
    ```
 
-1. Очистите директорию etcd.
+4. Очистите директорию etcd.
 
    ```shell
    rm -rf /var/lib/etcd/member/
    ```
+   
+5. Перенесите и переименуйте резервную копию в `~/etcd-backup.snapshot`.
 
-1. Перенесите и переименуйте резервную копию в `~/etcd-backup.snapshot`.
-
-1. Восстановите базу данных etcd.
+6. Восстановите базу данных etcd.
 
    ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
+   etcdctl snapshot restore ~/etcd-backup.snapshot --data-dir=/var/lib/etcd
    ```
 
-1. Запустите etcd.
+7. Запустите etcd. Запуск может занять некоторое время.
 
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
    ```
 
 #### Восстановление кластерa multi-master

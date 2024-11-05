@@ -545,7 +545,7 @@ CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. 
 Starting with Deckhouse Kubernetes Platform v1.65, a new `d8 backup etcd` tool is available for taking snapshots of etcd state.
 
 ```bash
-d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
+d8 backup etcd --kubeconfig $KUBECONFIG ./etcd-backup.snapshot
 ```
 
 #### Using bash (Deckhouse Kubernetes Platform v1.64 and older)
@@ -584,50 +584,59 @@ The following steps will be described to restore to the previous state of the cl
 
 Follow these steps to restore a single-master cluster:
 
-1. Download the [etcdctl](https://github.com/etcd-io/etcd/releases) utility to the server (preferably its version is the same as the etcd version in the cluster).
+1. - Find `etcdctl` utility on the master-node and copy the executable to `/usr/local/bin/`:
+     ```shell
+     cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+     -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
+     etcdctl version
+     ```
 
-   ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
-   ```
+     The result must be a correct output of `etcdctl version` command without errors.
 
-   Use the following command to view the etcd version in the cluster:
+   - Alternatively, you can download [etcdctl](https://github.com/etcd-io/etcd/releases) executable to the node (preferably its version is the same as the etcd version in the cluster):
 
-   ```shell
-   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
-   ```
+     ```shell
+     wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
+     tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
+     ```
 
-1. Stop the etcd.
+     You can check current `etcd` version using following command (might not work, if etcd and Kubernetes API are already unavailable):
+
+     ```shell
+     kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+     ```
+
+2. Stop the etcd.
 
    ```shell
    mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
    ```
 
-1. Save the current etcd data.
+3. Save the current etcd data.
 
    ```shell
    cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
    ```
 
-1. Clean the etcd directory.
+4. Clean the etcd directory.
 
    ```shell
    rm -rf /var/lib/etcd/member/
    ```
 
-1. Transfer and rename the backup to `~/etcd-backup.snapshot`.
+5. Transfer and rename the backup to `~/etcd-backup.snapshot`.
 
-1. Restore the etcd database.
+6. Restore the etcd database.
 
    ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ --data-dir=/var/lib/etcd
+   etcdctl snapshot restore ~/etcd-backup.snapshot --data-dir=/var/lib/etcd
    ```
 
-1. Run etcd.
+7. Run etcd.
 
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+   crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
    ```
 
 #### Restorige a multi-master cluster
