@@ -31,7 +31,7 @@ lang: ru
    Выполните следующую команду, чтобы указать имя модуля в файле `Chart.yaml`, либо отредактируйте его вручную:
 
    ```shell
-   sed -Ei 's/^name:(.*)/name: hello-world-module/g' Chart.yaml
+   sed -i '' -e 's/^name:(.*)/name: hello-world-module/g' Chart.yaml
    ```
 
 1. Склонируйте исходный код чарта [hello-world](https://github.com/giantswarm/hello-world-app) во временную директорию.
@@ -52,7 +52,7 @@ lang: ru
    > Это архитектурная особенность [addon-operator](https://github.com/flant/addon-operator), ей необходимо следовать для обращения к values модуля.
 
    ```shell
-   sed -i -e 's/.Values/.Values.helloWorldModule/g' $(find templates/ -type f)
+   sed -i '' -e 's/.Values/.Values.helloWorld/g' $(find templates/ -type f)
    ```
 
 1. Добавьте OpenAPI-схему настроек модуля.
@@ -76,7 +76,7 @@ lang: ru
 1. Замените образ в манифесте Deployment на хелпер библиотеки Deckhouse Kubernetes Platform. Это позволит использовать актуальный content-based-тэг образа.
 
    ```shell
-   sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorldModule") }}/g' templates/deployment.yaml
+   sed -i '' -E 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorld") }}/g' templates/deployment.yaml
    ```
 
 1. Удалите хуки модуля, CRD и временные файлы.

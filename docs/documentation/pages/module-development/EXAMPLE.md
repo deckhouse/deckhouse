@@ -30,7 +30,7 @@ This section provides an example of creating a `hello-world-module` module based
    Run the following command to add the module name to the `Chart.yaml` file or edit it manually:
 
    ```shell
-   sed -Ei 's/^name:(.*)/name: hello-world-module/g' Chart.yaml
+   sed -i '' -e 's/^name:(.*)/name: hello-world-module/g' Chart.yaml
    ```
 
 1. Clone the [hello-world](https://github.com/giantswarm/hello-world-app) chart source code into a temporary directory.
@@ -51,7 +51,7 @@ This section provides an example of creating a `hello-world-module` module based
    > This is due to the architectural feature of [addon-operator](https://github.com/flant/addon-operator). You have to stick to it to be able to access module values.
 
    ```shell
-   sed -i -e 's/.Values/.Values.helloWorldModule/g' $(find templates/ -type f)
+   sed -i '' -e 's/.Values/.Values.helloWorld/g' $(find templates/ -type f)
    ```
 
 1. Add the OpenAPI schema of the module settings.
@@ -75,7 +75,7 @@ This section provides an example of creating a `hello-world-module` module based
 1. Replace the image in the Deployment manifest with the Deckhouse Kubernetes Platform library helper. This will allow you to use the current content-based image tag.
 
    ```shell
-   sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorldModule") }}/g' templates/deployment.yaml
+   sed -i '' -E 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorld") }}/g' templates/deployment.yaml
    ```
 
 1. Delete module hooks, CRDs, and temporary files.
