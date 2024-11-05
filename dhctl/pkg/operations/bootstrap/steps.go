@@ -67,6 +67,7 @@ const (
 	MasterHostsCacheKey               = "cluster-hosts"
 	BastionHostCacheKey               = "bastion-hosts"
 	DHCTLEndBootstrapBashiblePipeline = app.NodeDeckhouseDirectoryPath + "/first-control-plane-bashible-ran"
+	SystemRegistrylockFile            = "/var/lib/bashible/wait_for_docker_img_push"
 )
 
 var (
@@ -324,24 +325,24 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 
 	ctx, ctxCancel := context.WithCancel(ctx)
 
-	log.DebugLn("PushDockerImagesToSystemRegistry: Starting")
+	log.InfoLn("PushDockerImagesToSystemRegistry: Starting")
 
 	defer func() {
-		log.DebugLn("PushDockerImagesToSystemRegistry: Stopping")
+		log.InfoLn("PushDockerImagesToSystemRegistry: Stopping")
 		ctxCancel()
 
-		log.DebugLn("PushDockerImagesToSystemRegistry: Waiting goroutines")
+		log.InfoLn("PushDockerImagesToSystemRegistry: Waiting goroutines")
 		wg.Wait()
 
-		log.DebugLn("PushDockerImagesToSystemRegistry: Stopped")
+		log.InfoLn("PushDockerImagesToSystemRegistry: Stopped")
 	}()
-
-	defer ctxCancel()
 
 	distributionHost := "127.0.0.1:5001"
 
 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 		sshClient := wrapper.Client()
+
+		log.InfoLn("PushDockerImagesToSystemRegistry: Creating auth tunnel")
 
 		// Create auth tunnel
 		authTun, err := setupSSHTunnelToSystemRegistryAuth(sshClient)
@@ -366,6 +367,8 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 		if sshClient.Settings.BastionHost == "" {
 			distributionHost = fmt.Sprintf("%s:5001", sshClient.Settings.Host())
 		} else {
+			log.InfoLn("PushDockerImagesToSystemRegistry: Creating distribution tunnel")
+
 			// Create distribution tunnel, if BastionHost != ""
 			distributionTun, err := setupSSHTunnelToSystemRegistryDistribution(sshClient)
 			if err != nil {
@@ -416,65 +419,69 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 	return mirror.Push(&pushCtx)
 }
 
+func removeSystemRegistryLockFile(ctx context.Context, nodeInterface node.Interface) error {
+	isExist, err := isSystemRegistryLockFileExists(ctx, nodeInterface)
+	if err != nil {
+		return fmt.Errorf("isLockFileExists error: %v", err)
+	}
+
+	if !isExist {
+		return nil
+	}
+
+	cmd := nodeInterface.Command("rm", "-f", SystemRegistrylockFile)
+	cmd.Sudo()
+	cmd.WithContext(ctx)
+
+	return cmd.Run()
+}
+
+func isSystemRegistryLockFileExists(ctx context.Context, nodeInterface node.Interface) (bool, error) {
+	checkLockFileStdout := ""
+	checkLockFileStdoutHandler := func(l string) { checkLockFileStdout += l }
+
+	cmd := nodeInterface.Command("test", "-e", SystemRegistrylockFile, "&&", "echo", "true", "||", "echo", "false")
+	cmd.Sudo()
+	cmd.WithStdoutHandler(checkLockFileStdoutHandler)
+	cmd.WithContext(ctx)
+
+	err := cmd.Run()
+
+	if err != nil {
+		return false, err
+	}
+
+	if strings.TrimSpace(checkLockFileStdout) == "true" {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
-	log.DebugLn("RegistryImagesPusher: Starting")
-	defer log.DebugLn("RegistryImagesPusher: Stopped")
-
-	lockFileName := "/var/lib/bashible/wait_for_docker_img_push"
-
-	isLockFileExist := func() (bool, error) {
-		checkLockFileStdout := ""
-		checkLockFileStdoutHandler := func(l string) { checkLockFileStdout += l }
-
-		cmd := nodeInterface.Command("test", "-e", lockFileName, "&&", "echo", "true", "||", "echo", "false")
-		cmd.Sudo()
-		cmd.WithStdoutHandler(checkLockFileStdoutHandler)
-		cmd.WithContext(ctx)
-
-		err := cmd.Run()
-
-		if err != nil {
-			return false, err
-		}
-
-		if strings.TrimSpace(checkLockFileStdout) == "true" {
-			return true, nil
-		}
-
-		return false, nil
-	}
-
-	removeLockFile := func() error {
-		cmd := nodeInterface.Command("rm", "-f", lockFileName)
-		cmd.Sudo()
-		cmd.WithContext(ctx)
-
-		return cmd.Run()
-	}
-
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-time.After(5 * time.Second):
-			isExist, err := isLockFileExist()
+			isExist, err := isSystemRegistryLockFileExists(ctx, nodeInterface)
 			if err != nil {
 				log.WarnF("RegistryImagesPusher: isLockFileExists error: %v\n", err)
 				continue
 			}
 
 			if isExist {
-				log.DebugLn("RegistryImagesPusher: Start pushing images")
+				log.InfoLn("RegistryImagesPusher: Start pushing images")
 				err := pushDockerImagesToSystemRegistry(ctx, nodeInterface, registryData)
-				log.DebugLn("RegistryImagesPusher: Done pushing images")
+				log.InfoLn("RegistryImagesPusher: Done pushing images")
 
 				if err != nil {
 					log.WarnF("RegistryImagesPusher: Pushing images error: %v\n", err)
 					return err
 				}
 
-				log.DebugLn("RegistryImagesPusher: Removing lock")
-				return removeLockFile()
+				log.InfoLn("RegistryImagesPusher: Removing lock")
+				return removeSystemRegistryLockFile(ctx, nodeInterface)
 			}
 		}
 	}
@@ -627,9 +634,6 @@ func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {
 }
 
 func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, nodeIP string, dataDevices terraform.DataDevices) error {
-	log.DebugLn("RunBashiblePipeline: Start")
-	defer log.DebugLn("RunBashiblePipeline: Done")
-
 	var clusterDomain string
 	err := json.Unmarshal(cfg.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
@@ -722,6 +726,16 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		return err
 	}
 
+	var tombWg sync.WaitGroup
+	tombCtx, tombCtxCancel := context.WithCancel(context.Background())
+
+	tomb.RegisterOnShutdown("Stopping background processes", func() {
+		tombCtxCancel()
+
+		log.InfoLn("Waiting for background processes")
+		tombWg.Wait()
+	})
+
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
 		BreakIf(func(err error) bool {
 			return false ||
@@ -730,13 +744,17 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 
 		}).
 		Run(func() error {
-			log.DebugLn("=== Execute bundle: Loop cycle start ===")
-			defer log.DebugLn("=== Execute bundle: Loop cycle end ===")
-
 			// we do not need to restart tunnel because we have HealthMonitor
 
-			ctx, ctxCancel := context.WithCancel(context.Background())
-			defer ctxCancel()
+			ctx, ctxCancel := context.WithCancel(tombCtx)
+
+			var wg sync.WaitGroup
+			defer func() {
+				log.InfoLn("Waiting for background operations")
+				ctxCancel()
+				wg.Wait()
+				log.InfoLn("Waiting for background operations done")
+			}()
 
 			if cfg.Registry.Mode == "Detached" {
 				// Run Docker pusher
@@ -748,7 +766,20 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 					)
 				}
 
+				if cleanLockFileErr := removeSystemRegistryLockFile(ctx, nodeInterface); cleanLockFileErr != nil {
+					return fmt.Errorf("cannot clean images push lock file: %v", cleanLockFileErr)
+				}
+
+				wg.Add(1)
 				go func(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) {
+					defer wg.Done()
+
+					select {
+					case <-tombCtx.Done():
+						return
+					default:
+					}
+
 					if err := waitAndPushDockerImages(ctx, nodeInterface, registryData); err != nil {
 						log.ErrorF("RegistryImagesPusher: got error: %v\n", err)
 						panic(err)
