@@ -47,7 +47,7 @@ func createFirstDeschedulerCR(input *go_hook.HookInput, dc dependency.Container)
 
 	cm, err := kubeCl.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "descheduler-config-migration", metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		input.LogEntry.Infof("nothing to migrate: %s", err)
+		input.Logger.Infof("nothing to migrate: %s", err)
 		return nil
 	}
 	if err != nil {
@@ -55,7 +55,7 @@ func createFirstDeschedulerCR(input *go_hook.HookInput, dc dependency.Container)
 	}
 
 	if _, ok := cm.GetAnnotations()[migratedKey]; ok {
-		input.LogEntry.Info("already migrated")
+		input.Logger.Info("already migrated")
 		return nil
 	}
 

@@ -79,10 +79,10 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 	if len(input.Snapshots["cloud_provider_discovery_data"]) == 0 {
-		input.LogEntry.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
+		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
 		if len(input.Snapshots["storage_classes"]) == 0 {
-			input.LogEntry.Warn("failed to find storage classes for 'named-disk.csi.cloud-director.vmware.com' provisioner")
+			input.Logger.Warn("failed to find storage classes for 'named-disk.csi.cloud-director.vmware.com' provisioner")
 
 			return nil
 		}

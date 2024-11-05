@@ -17,6 +17,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -61,7 +62,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		for _, r := range repos {
 			if err := cleanGarbage(ctx, r); err != nil {
 				// The queue shouldn't be stopped event if there is an API error
-				input.LogEntry.Warn(err)
+				input.Logger.Warn("clean garbage", slog.String("error", err.Error()))
 			}
 		}
 

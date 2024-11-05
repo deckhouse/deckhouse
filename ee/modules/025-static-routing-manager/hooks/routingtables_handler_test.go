@@ -298,7 +298,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 		})
 	})
 
@@ -524,7 +524,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 			Expect(f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt666").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt666").Field("status").Exists()).To(BeTrue())
 			rtstatusraw := f.KubernetesGlobalResource(v1alpha1.RTKind, "testrt666").Field("status").String()

@@ -88,13 +88,13 @@ func getDefaultPolicy(input *go_hook.HookInput) string {
 
 	// no version field found or invalid semver - something went wrong
 	if len(deckhouseVersion) == 0 || !semver.IsValid(deckhouseVersion) {
-		input.LogEntry.Warnf("deckhouseVersion isn't found or invalid: %s", deckhouseVersion)
+		input.Logger.Warnf("deckhouseVersion isn't found or invalid: %s", deckhouseVersion)
 		return "Privileged"
 	}
 
 	// if deckhouse bootstrap release >= v1.55
 	if semver.Compare(semver.MajorMinor(deckhouseVersion), milestone) >= 0 {
-		input.LogEntry.Infof("PSS default policy for %v is set to baseline", deckhouseVersion)
+		input.Logger.Infof("PSS default policy for %v is set to baseline", deckhouseVersion)
 		return "Baseline"
 	}
 

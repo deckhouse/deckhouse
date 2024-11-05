@@ -148,7 +148,7 @@ func handleLoadBalancers(input *go_hook.HookInput) error {
 		}
 
 		if service.L2LBNameAnnotationIsMissed {
-			input.LogEntry.Warnf("Annotation %s is missed for service %s in namespace %s", keyAnnotationL2BalancerName, service.Name, service.Namespace)
+			input.Logger.Warnf("Annotation %s is missed for service %s in namespace %s", keyAnnotationL2BalancerName, service.Name, service.Namespace)
 			continue
 		}
 

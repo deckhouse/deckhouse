@@ -107,7 +107,8 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			ipAdvertisement = layer2.NewIPAdvertisement(net.ParseIP(ip), false, sets.New[string](interfaces...))
 		}
 		r.VirtualIPAnnounces.SetBalancer(ip, ipAdvertisement)
-		logger.Info("added virtual IP", "ip", ip, "interfaces", interfaces)
+
+		logger.Info("added virtual IP", "ip", ip)
 	}
 
 	for _, ip := range virtualIPsToDel {

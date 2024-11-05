@@ -96,7 +96,7 @@ func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container)
 	snap := input.Snapshots["master_nodes"]
 
 	if len(snap) == 0 {
-		input.LogEntry.Debug("No master Nodes found in snapshot, skipping iteration")
+		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")
 		return nil
 	}
 

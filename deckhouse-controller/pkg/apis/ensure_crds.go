@@ -17,11 +17,11 @@ package apis
 import (
 	"context"
 
-	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (

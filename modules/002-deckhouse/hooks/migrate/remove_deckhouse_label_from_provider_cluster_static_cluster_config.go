@@ -98,12 +98,12 @@ func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
 		snap := input.Snapshots[snapSecretName]
 
 		if len(snap) == 0 {
-			input.LogEntry.Debugf("Skip removing label 'heritage: deckhouse' for secret %s - secret not found", snapSecretName)
+			input.Logger.Debugf("Skip removing label 'heritage: deckhouse' for secret %s - secret not found", snapSecretName)
 			return
 		}
 
 		if !snap[0].(bool) {
-			input.LogEntry.Debugf("Skip removing label 'heritage: deckhouse' for secret %s - label not found", snapSecretName)
+			input.Logger.Debugf("Skip removing label 'heritage: deckhouse' for secret %s - label not found", snapSecretName)
 			return
 		}
 
@@ -115,7 +115,7 @@ func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
 			},
 		}
 
-		input.LogEntry.Warnf("Remove label 'heritage: deckhouse' from %s", snapSecretName)
+		input.Logger.Warnf("Remove label 'heritage: deckhouse' from %s", snapSecretName)
 		input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", snapSecretName)
 	}
 

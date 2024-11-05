@@ -33,13 +33,11 @@ import (
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	openapierrors "github.com/go-openapi/errors"
 	"github.com/gofrs/uuid/v5"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -65,6 +63,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // moduleReleaseReconciler is the controller implementation for ModuleRelease resources
@@ -73,7 +72,7 @@ type moduleReleaseReconciler struct {
 
 	dc            dependency.Container
 	metricStorage *metric_storage.MetricStorage
-	logger        logger.Logger
+	logger        *log.Logger
 
 	moduleManager        moduleManager
 	downloadedModulesDir string
@@ -109,8 +108,9 @@ func NewModuleReleaseController(
 	mm moduleManager,
 	metricStorage *metric_storage.MetricStorage,
 	preflightCountDown *sync.WaitGroup,
+	logger *log.Logger,
 ) error {
-	lg := log.WithField("component", "ModuleReleaseController")
+	lg := logger.With("component", "ModuleReleaseController")
 
 	c := &moduleReleaseReconciler{
 		client:               mgr.GetClient(),
@@ -548,7 +548,7 @@ func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result,
 	var notReadyErr *updater.NotReadyForDeployError
 
 	if errors.As(err, &notReadyErr) {
-		r.logger.Infoln(err.Error())
+		r.logger.Info(err.Error())
 		// TODO: requeue all releases if deckhouse update settings is changed
 		// requeueAfter := notReadyErr.RetryDelay()
 		// if requeueAfter == 0 {
@@ -999,7 +999,7 @@ func (r *moduleReleaseReconciler) createModuleSymlink(moduleName, moduleVersion 
 	if err != nil || !info.IsDir() {
 		r.logger.Infof("Downloading module %q from registry", moduleName)
 		// download the module to fs
-		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, r.clusterUUID)
+		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, r.clusterUUID, r.logger)
 		md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, moduleSource, options)
 		_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
 		if err != nil {
@@ -1044,7 +1044,7 @@ func (r *moduleReleaseReconciler) parseNotificationConfig(ctx context.Context) (
 	return settings.NotificationConfig, nil
 }
 
-func validateModule(def models.DeckhouseModuleDefinition, values addonutils.Values) error {
+func validateModule(def models.DeckhouseModuleDefinition, values addonutils.Values, logger *log.Logger) error {
 	if def.Weight < 900 || def.Weight > 999 {
 		return fmt.Errorf("external module weight must be between 900 and 999")
 	}
@@ -1056,7 +1056,7 @@ func validateModule(def models.DeckhouseModuleDefinition, values addonutils.Valu
 	if err != nil {
 		return fmt.Errorf("read open API files: %w", err)
 	}
-	dm, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, nil, cb, vb)
+	dm, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, nil, cb, vb, logger.Named("basic-module"))
 	if err != nil {
 		return fmt.Errorf("new deckhouse module: %w", err)
 	}

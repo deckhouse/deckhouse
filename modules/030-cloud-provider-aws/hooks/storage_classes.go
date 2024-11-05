@@ -172,7 +172,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		if !isModified(storageClassesFiltered, sc) {
 			continue
 		}
-		input.LogEntry.Infof("Deleting storageclass/%s because its parameters has been changed", sc.Name)
+		input.Logger.Infof("Deleting storageclass/%s because its parameters has been changed", sc.Name)
 		input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", sc.Name)
 	}
 

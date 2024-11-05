@@ -114,11 +114,11 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 
 	for _, item := range nodeUserSnap {
 		nuForClear := item.(nodeUsersForClear)
-		input.LogEntry.Debugf("clearErrors--> NodeUsers: %v Nodes: %v", nuForClear, nodes)
+		input.Logger.Debugf("clearErrors--> NodeUsers: %v Nodes: %v", nuForClear, nodes)
 		if incorrectNodes := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); len(
 			incorrectNodes,
 		) > 0 {
-			input.LogEntry.Debugf("clearErrors--> incorrectNodes: %v", incorrectNodes)
+			input.Logger.Debugf("clearErrors--> incorrectNodes: %v", incorrectNodes)
 			err := clearNodeUserIncorrectErrors(nuForClear.Name, incorrectNodes, input)
 			if err != nil {
 				return err
@@ -157,7 +157,7 @@ func clearNodeUserIncorrectErrors(
 		patch["status"]["errors"][node] = nil
 	}
 
-	input.LogEntry.Debugf("clearErrors--> patch: %v", patch)
+	input.Logger.Debugf("clearErrors--> patch: %v", patch)
 	input.PatchCollector.MergePatch(
 		patch,
 		"deckhouse.io/v1",

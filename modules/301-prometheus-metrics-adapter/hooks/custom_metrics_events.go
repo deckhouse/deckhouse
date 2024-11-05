@@ -94,7 +94,7 @@ func addQueriesToStateFromSnapshots(state *internal.MetricsQueriesState, input *
 		metric := m.(internal.CustomMetric)
 
 		if _, ok := internal.AllMetricsTypes[metricType]; !ok {
-			input.LogEntry.Warnf("Incorrect custom metric type %s. Skip", metric.Type)
+			input.Logger.Warnf("Incorrect custom metric type %s. Skip", metric.Type)
 			continue
 		}
 
