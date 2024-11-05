@@ -30,6 +30,7 @@ zones:
 - spb5
 externalNetworkNames:
 - DPortGroup-lab-vms
+internalNetworkCIDR: 192.168.240.0/24
 baseResourcePool: cloud-layout-tests
 masterNodeGroup:
   replicas: ${MASTERS_COUNT}
@@ -70,7 +71,7 @@ kind: ModuleConfig
 metadata:
   name: keepalived
 spec:
-  enabled: true
+  enabled: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
