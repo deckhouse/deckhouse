@@ -4,7 +4,7 @@ entries:
     - title:
         en: Overview
         ru: Введение
-      url: /virtualization-platform/documentation/
+      url: /virtualization-platform/readme.html
     - title:
         en: Guides
         ru: Руководства
@@ -197,11 +197,10 @@ entries:
                       en: Virtual Machine Publishing
                       ru: Публикация ВМ
                     url: /virtualization-platform/documentation/user/network/vm-publishing.html
-            folders:
-              - title:
+        - title:
                   en: Architecture
                   ru: Архитектура
-                folders:
+          folders:
                   - title:
                       en: Functional specifications
                       ru: Функциональные характеристики
@@ -222,20 +221,18 @@ entries:
                       en: Table
                       ru: Таблица
                     url: /virtualization-platform/documentation/architecture/table.html
-            folders:
-              - title:
+        - title:
                   en: Modules
                   ru: Модули
-                folders:
+          folders:
                   - title:
                       en: List
                       ru: Список
                     url: /virtualization-platform/documentation/modules/list.html
-            folders:
-              - title:
+        - title:
                   en: Reference
                   ru: Референс
-                folders:
+          folders:
                   - title:
                       en: Configuration module
                       ru: Конфигурации модуля
@@ -256,20 +253,18 @@ entries:
                           en: D8
                           ru: D8
                         url: /virtualization-platform/documentation/reference/console-utilities/d8.html
-            folders:
-              - title:
+        - title:
                   en: DVP editions
                   ru: Список версий DVP
-                folders:
+          folders:
                   - title:
                       en: Configuration module
                       ru: Конфигурации модуля
                     url: /virtualization-platform/documentation/dvp-editions/changelog.html
-            folders:
-              - title:
+        - title:
                   en: FAQ
                   ru: FAQ
-                url: /virtualization-platform/documentation/faq.html
+          url: /virtualization-platform/documentation/faq.html
 
 
     # - title:
