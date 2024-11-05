@@ -77,8 +77,8 @@ type ReleaseControllerTestSuite struct {
 	testMRName       string
 }
 
-func (suite *ReleaseControllerTestSuite) SetupSuite() {
-	suite.Suite.SetupSuite()
+func (suite *ReleaseControllerTestSuite) SetupSubTest() {
+	suite.Suite.SetupSubTest()
 
 	suite.T().Setenv(d8env.DownloadedModulesDir, suite.TmpDir())
 	_ = os.MkdirAll(filepath.Join(suite.TmpDir(), "modules"), 0o777)
