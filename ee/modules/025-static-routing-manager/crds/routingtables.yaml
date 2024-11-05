@@ -85,7 +85,7 @@ spec:
                       type: string
                       format: ipv4
                       description: |
-                        Next Hop is the gateway through which a subnet is reachable.
+                        The gateway through which the subnet is reachable.
                     dev:
                       type: string
                       maxLength: 15
