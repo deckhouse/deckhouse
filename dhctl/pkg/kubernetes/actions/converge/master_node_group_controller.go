@@ -80,6 +80,7 @@ func (c *MasterNodeGroupController) populateNodeToHost() error {
 		if c.commanderMode {
 			return true
 		}
+		// надо проверять что это авто конверж для 1 master's кластера через 1 -> 3 -> 1
 		return input.NewConfirmation().WithMessage(msg).Ask()
 	})
 	if err != nil {
