@@ -159,9 +159,7 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 	// If credentials are not present, remove them from values and remove embedded registry address
 	if len(credsSnap) == 0 {
 		input.LogEntry.Warn("Secret registry-user-ro not found or empty")
-		input.Values.Remove("nodeManager.internal.systemRegistry.auth")
-		input.Values.Remove("nodeManager.internal.systemRegistry.registryAddress")
-		input.Values.Remove("nodeManager.internal.systemRegistry.registryCA")
+		clearRegistryValues(input)
 		return nil
 	}
 
@@ -176,9 +174,7 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 
 	if !exists {
 		input.LogEntry.Warn("Failed to parse registry-user-ro secret")
-		input.Values.Remove("nodeManager.internal.systemRegistry.auth")
-		input.Values.Remove("nodeManager.internal.systemRegistry.registryAddress")
-		input.Values.Remove("nodeManager.internal.systemRegistry.registryCA")
+		clearRegistryValues(input)
 		return nil
 	}
 
@@ -209,4 +205,10 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 	}
 
 	return nil
+}
+
+func clearRegistryValues(input *go_hook.HookInput) {
+	input.Values.Remove("nodeManager.internal.systemRegistry.auth")
+	input.Values.Remove("nodeManager.internal.systemRegistry.registryAddress")
+	input.Values.Remove("nodeManager.internal.systemRegistry.registryCA")
 }
