@@ -194,7 +194,7 @@ func CreateNodePKISecret(ctx context.Context, kubeClient *kubernetes.Clientset, 
 		"127.0.0.1",
 		"localhost",
 		node.Address,
-		fmt.Sprintf("embedded-registry.%s.svc.%s", RegistryNamespace, InternalClusterName),
+		fmt.Sprintf("%s.%s.svc", RegistrySvcName, RegistryNamespace),
 	}
 
 	// generate registry node distribution certificates

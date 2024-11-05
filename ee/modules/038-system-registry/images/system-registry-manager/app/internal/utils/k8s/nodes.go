@@ -27,7 +27,7 @@ const (
 	ModuleConfigApiVersion = "deckhouse.io/v1alpha1"
 	ModuleConfigKind       = "ModuleConfig"
 	labelNodeRoleKey       = "node-role.kubernetes.io/master"
-	InternalClusterName    = "cluster.local" // #TODO get from cluster config
+	RegistrySvcName        = labelModuleValue
 )
 
 // GetMasterNodeByName returns the master node with the given name
