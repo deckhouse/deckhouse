@@ -584,28 +584,28 @@ The following steps will be described to restore to the previous state of the cl
 
 Follow these steps to restore a single-master cluster:
 
-1. - Find `etcdctl` utility on the master-node and copy the executable to `/usr/local/bin/`:
+1.  - Find `etcdctl` utility on the master-node and copy the executable to `/usr/local/bin/`:
 
-     ```shell
-     cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
-     -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
-     etcdctl version
-     ```
+      ```shell
+      cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+      -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
+      etcdctl version
+      ```
 
-     The result must be a correct output of `etcdctl version` command without errors.
+      The result must be a correct output of `etcdctl version` command without errors.
 
-   - Alternatively, you can download [etcdctl](https://github.com/etcd-io/etcd/releases) executable to the node (preferably its version is the same as the etcd version in the cluster):
+    - Alternatively, you can download [etcdctl](https://github.com/etcd-io/etcd/releases) executable to the node (preferably its version is the same as the etcd version in the cluster):
 
-     ```shell
-     wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
-     tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
-     ```
+      ```shell
+      wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
+      tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
+      ```
 
-     You can check current `etcd` version using following command (might not work, if etcd and Kubernetes API are already unavailable):
+      You can check current `etcd` version using following command (might not work, if etcd and Kubernetes API are already unavailable):
 
-     ```shell
-     kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
-     ```
+      ```shell
+      kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+      ```
 
 2. Stop the etcd.
 
