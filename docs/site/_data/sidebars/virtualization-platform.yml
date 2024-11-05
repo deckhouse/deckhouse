@@ -74,8 +74,8 @@ entries:
                         ru: Описание
                       url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/about.html
                     - title:
-                        en: Description
-                        ru: Описание
+                        en: Placement management
+                        ru: Управление размещением
                       url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/placement_management.html
                 - title:
                     en: Traffic control
@@ -148,7 +148,7 @@ entries:
             - title:
                 en: Platform update
                 ru: Обновление платформы
-              url: /virtualization-platform/documentation/admin/update.html
+              url: /virtualization-platform/documentation/admin/update/update.html
             - title:
                 en: Removing the platform
                 ru: Удаление платформы
