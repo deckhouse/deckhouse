@@ -27,6 +27,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -37,11 +38,12 @@ type StaticMachineTemplateWebhook struct {
 	decoder *admission.Decoder
 }
 
-// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachinetemplates,verbs=create;update;delete,versions=v1alpha1,name=validation.staticmachinetemplate.infrastructure.cluster.x-k8s.io
 func (r *StaticMachineTemplate) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
-		Complete()
+	mw := &StaticMachineTemplateWebhook{}
+	dec := admission.NewDecoder(mgr.GetScheme())
+	mw.InjectDecoder(dec)
+	mgr.GetWebhookServer().Register("/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachinetemplate", &webhook.Admission{Handler: mw})
+	return nil
 }
 
 func (w *StaticMachineTemplateWebhook) InjectDecoder(d *admission.Decoder) error {
