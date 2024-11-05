@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"runtime/debug"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -54,13 +55,6 @@ func New(podName, cacheDir string, schemaStore *config.SchemaStore) *Service {
 		cacheDir:    cacheDir,
 		schemaStore: schemaStore,
 	}
-}
-
-func (s *Service) shutdown(done <-chan struct{}) {
-	go func() {
-		<-done
-		tomb.Shutdown(0)
-	}()
 }
 
 func operationCtx(server grpc.ServerStream) context.Context {
@@ -202,4 +196,14 @@ func onCheckResult(checkRes *check.CheckResult) error {
 	})
 
 	return nil
+}
+
+func panicMessage(ctx context.Context, p any) string {
+	stack := string(debug.Stack())
+
+	logger.L(ctx).Error("recovered from panic",
+		slog.Any("panic", p),
+		slog.String("stack", stack),
+	)
+	return fmt.Sprintf("panic: %v, %s", p, stack)
 }
