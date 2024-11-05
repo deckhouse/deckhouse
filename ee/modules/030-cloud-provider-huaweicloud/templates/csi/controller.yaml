@@ -1,5 +1,5 @@
 {{- define "csi_controller_args" }}
-- "--node-name=$(NODE_ID)"
+- "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/cloud/cloud-config"
 - "--endpoint=unix:///csi/csi.sock"
 {{- end }}
@@ -26,7 +26,7 @@
 {{- end }}
 
 {{- define "csi_node_args" }}
-- "--node-name=$(NODE_ID)"
+- "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/cloud/cloud-config"
 - "--endpoint=unix:///csi/csi.sock"
 {{- end }}
