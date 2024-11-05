@@ -20,7 +20,6 @@ rules:
   verbs: ["get", "watch", "list", "delete", "update", "create"]
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
-  resourceNames: ["embedded-registry-manager-leader"]
   verbs: ["get", "watch", "list", "delete", "update", "create"]
 - apiGroups: [""]
   resources: ["events"]
