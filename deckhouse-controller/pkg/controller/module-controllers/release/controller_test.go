@@ -18,9 +18,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,8 +38,11 @@ import (
 	"golang.org/x/text/language"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -58,9 +65,16 @@ var (
 
 	embeddedMUP = &v1alpha1.ModuleUpdatePolicySpec{
 		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-			Mode: updater.ModeAuto.String(),
+			Mode:    updater.ModeAuto.String(),
+			Windows: make(update.Windows, 0),
 		},
 		ReleaseChannel: "Stable",
+		ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
+			LabelSelector: &metav1.LabelSelector{
+				// defined only for the purpose of schema validation
+				MatchLabels: map[string]string{"*": "true"},
+			},
+		},
 	}
 )
 
@@ -197,9 +211,10 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		mup := &v1alpha1.ModuleUpdatePolicySpec{
 			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 				Mode:    "Auto",
-				Windows: update.Windows{{From: "00:00", To: "24:00", Days: []string{"tue"}}},
+				Windows: update.Windows{{From: update.MinTime, To: update.MaxTime, Days: []string{"Thu"}}},
 			},
-			ReleaseChannel: "Stable",
+			ReleaseChannel:        "Stable",
+			ModuleReleaseSelector: embeddedMUP.ModuleReleaseSelector,
 		}
 
 		testData := suite.fetchTestFileData("loop-canary.yaml")
@@ -219,9 +234,10 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mup := &v1alpha1.ModuleUpdatePolicySpec{
 				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 					Mode:    "AutoPatch",
-					Windows: update.Windows{{From: "10:00", To: "11:00"}},
+					Windows: update.Windows{{From: "10:00", To: "11:00", Days: update.Everyday()}},
 				},
-				ReleaseChannel: "Stable",
+				ReleaseChannel:        "Stable",
+				ModuleReleaseSelector: embeddedMUP.ModuleReleaseSelector,
 			}
 
 			testData := suite.fetchTestFileData("auto-patch-patch-update.yaml")
@@ -236,9 +252,10 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mup := &v1alpha1.ModuleUpdatePolicySpec{
 				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 					Mode:    "AutoPatch",
-					Windows: update.Windows{{From: "10:00", To: "11:00"}},
+					Windows: update.Windows{{From: "10:00", To: "11:00", Days: update.Everyday()}},
 				},
-				ReleaseChannel: "Stable",
+				ReleaseChannel:        "Stable",
+				ModuleReleaseSelector: embeddedMUP.ModuleReleaseSelector,
 			}
 
 			testData := suite.fetchTestFileData("auto-patch-minor-update.yaml")
@@ -253,9 +270,10 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			mup := &v1alpha1.ModuleUpdatePolicySpec{
 				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
 					Mode:    "AutoPatch",
-					Windows: update.Windows{{From: "10:00", To: "11:00"}},
+					Windows: update.Windows{{From: "10:00", To: "11:00", Days: update.Everyday()}},
 				},
-				ReleaseChannel: "Stable",
+				ReleaseChannel:        "Stable",
+				ModuleReleaseSelector: embeddedMUP.ModuleReleaseSelector,
 			}
 
 			testData := suite.fetchTestFileData("auto-mode.yaml")
@@ -417,20 +435,51 @@ type: Opaque
 		moduleManager:        stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
 
-		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha1.ModuleUpdatePolicySpec{
-			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
-				Mode: "Auto",
-			},
-			ReleaseChannel: "Stable",
-		}),
+		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 	}
 
 	for _, option := range options {
 		option(rec)
 	}
 
+	c := suite.Client()
+	mup := &v1alpha1.ModuleUpdatePolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
+			APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+		},
+		Spec: ptr.Deref(rec.deckhouseEmbeddedPolicy.Get(), v1alpha1.ModuleUpdatePolicySpec{}),
+	}
+	result := c.Validator().Validate(mup)
+	if result != nil {
+		for warn := range skipNotSpecErrors(result.Warnings) {
+			suite.Logger().Warn(warn.Error())
+		}
+
+		result.Errors = slices.Collect(skipNotSpecErrors(result.Errors))
+		if len(result.Errors) > 0 {
+			suite.Check(fmt.Errorf("custom resource validation: %w", errors.Join(result.Errors...)))
+		}
+	}
+
 	suite.ctr = rec
-	suite.kubeClient = suite.Client()
+	suite.kubeClient = c
+}
+
+func skipNotSpecErrors(errs []error) iter.Seq[error] {
+	return func(yield func(error) bool) {
+		for _, err := range errs {
+			var vErr *validationerrors.Validation
+			ok := errors.As(err, &vErr)
+			if !ok || !strings.HasPrefix(vErr.Name, "spec.") {
+				continue
+			}
+
+			if !yield(err) {
+				break
+			}
+		}
+	}
 }
 
 func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.Object {

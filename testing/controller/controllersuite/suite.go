@@ -18,10 +18,16 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
+
+	"github.com/deckhouse/deckhouse/testing/flags"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 
 	"github.com/stretchr/testify/suite"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,9 +67,23 @@ func (suite *Suite) SetupNoLock(initObjects []client.Object, opts ...SuiteOption
 		opt(suite)
 	}
 
-	suite.logger = log.NewNop()
+	loggerOpts := log.Options{
+		Level:  slog.LevelWarn,
+		Output: suite.logOutput,
+		TimeFunc: func(t time.Time) time.Time {
+			return dependency.TestDC.GetClock().Now()
+		},
+	}
+
+	if flags.Verbose || flags.Run != nil {
+		loggerOpts.Level = slog.LevelDebug
+	}
+
+	logger := log.NewLogger(loggerOpts)
+	suite.logger = logger.Named("suite")
+
 	var err error
-	suite.client, err = testclient.New(log.NewNop(), initObjects)
+	suite.client, err = testclient.New(logger.Named("test k8s client"), initObjects)
 	return err
 }
 
@@ -82,7 +102,7 @@ func (suite *Suite) Logger() *log.Logger {
 	return suite.logger
 }
 
-func (suite *Suite) Client() client.Client {
+func (suite *Suite) Client() *testclient.Client {
 	suite.Lock()
 	defer suite.Unlock()
 

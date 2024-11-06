@@ -67,7 +67,7 @@ func New(logger *log.Logger, initObjects []client.Object) (*Client, error) {
 		).
 		Build()
 
-	validator := NewValidator(logger, validators)
+	validator := NewValidator(logger.Named("custom resource schema validator"), validators)
 	return &Client{logger: logger, Client: cl, validator: validator}, nil
 }
 
