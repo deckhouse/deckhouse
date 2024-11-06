@@ -63,7 +63,7 @@ if [ ! -f "$registry_pki_path/auth.key" ]; then
 fi
 if [ ! -f "$registry_pki_path/auth.csr" ]; then
     openssl req -new -key "$registry_pki_path/auth.key" \
-    -subj "/ST=./L=./O=./OU=./CN=embedded-registry-auth" \
+    -subj "/CN=embedded-registry-auth" \
     -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
     -out "$registry_pki_path/auth.csr"
 fi
@@ -79,7 +79,7 @@ if [ ! -f "$registry_pki_path/distribution.key" ]; then
 fi
 if [ ! -f "$registry_pki_path/distribution.csr" ]; then
     openssl req -new -key "$registry_pki_path/distribution.key" \
-    -subj "/ST=./L=./O=./OU=./CN=embedded-registry-distribution" \
+    -subj "/CN=embedded-registry-distribution" \
     -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
     -out "$registry_pki_path/distribution.csr"
 fi
@@ -95,7 +95,7 @@ if [ ! -f "$registry_pki_path/token.key" ]; then
 fi
 if [ ! -f "$registry_pki_path/token.csr" ]; then
     openssl req -new -key "$registry_pki_path/token.key" \
-    -subj "/ST=./L=./O=./OU=./CN=embedded-registry-auth-token" \
+    -subj "/CN=embedded-registry-auth-token" \
     -out "$registry_pki_path/token.csr"
 fi
 if [ ! -f "$registry_pki_path/token.crt" ]; then
