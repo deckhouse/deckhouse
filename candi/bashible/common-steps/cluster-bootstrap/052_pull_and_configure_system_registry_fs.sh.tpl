@@ -158,9 +158,6 @@ http:
   tls:
     certificate: /system_registry_pki/distribution.crt
     key: /system_registry_pki/distribution.key
-#    clientcas:
-#      - /system_registry_pki/ca.crt
-
 {{- if eq .registry.registryMode "Proxy" -}}
 {{- $scheme := .registry.upstreamRegistry.scheme | trimSuffix "/" | trimPrefix "/" -}}
 {{- $address := .registry.upstreamRegistry.address | trimSuffix "/" | trimPrefix "/" }}
@@ -172,10 +169,9 @@ proxy:
   localpathalias: "{{ .registry.path }}"
   ttl: 72h
 {{- end }}
-
 auth:
   token:
-    realm: https://${discovered_node_ip}:5051/auth
+    realm: "https://${discovered_node_ip}:5051/auth"
     service: Docker registry
     issuer: Registry server
     rootcertbundle: /system_registry_pki/token.crt
