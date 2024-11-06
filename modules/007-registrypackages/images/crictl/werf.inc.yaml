@@ -1,9 +1,7 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $image_version := $version | replace "." "-" }}
-  {{- $patch := toString $value.patch }}
   {{- $crictlPatch := toString $value.crictlPatch }}
-  {{- $v := semver $version }}
   {{- $full_version := printf "%s.%s" $version $crictlPatch }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
