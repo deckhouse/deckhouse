@@ -146,11 +146,13 @@ oom_score = 0
       {{- else }}
       {{- /* Embedded registry in Direct mode or disabled */}}
       {{- if eq .registry.registryMode "Direct" }}
+        # DEBUG CASE 1
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
           endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
       {{- end }}
       {{- /* Embedded registry in non Direct mode and cluster uses external registry */}}
       {{- if and (ne .registry.registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address) }}
+        # DEBUG CASE 2
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
           endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
          {{- if .systemRegistry.registryAddress }}
@@ -162,6 +164,7 @@ oom_score = 0
       {{- /* Registry tls and auth configuration */}}
       {{- /* Embedded registry in non Direct mode and cluster uses internal embedded registry */}}
       {{- if and (ne .registry.registryMode "Direct") (eq .systemRegistry.registryAddress .registry.address) }}
+        # DEBUG CASE 3
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .systemRegistry.registryAddress }}"]
           endpoint = ["https://127.0.0.1:5001", "https://{{ .systemRegistry.registryAddress }}"]
       {{- end }}
