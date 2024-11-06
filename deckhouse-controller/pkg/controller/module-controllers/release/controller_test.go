@@ -19,11 +19,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"iter"
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -456,7 +454,7 @@ type: Opaque
 			suite.Logger().Warn(warn.Error())
 		}
 
-		result.Errors = slices.Collect(skipNotSpecErrors(result.Errors))
+		result.Errors = skipNotSpecErrors(result.Errors)
 		if len(result.Errors) > 0 {
 			suite.Check(fmt.Errorf("custom resource validation: %w", errors.Join(result.Errors...)))
 		}
@@ -466,20 +464,19 @@ type: Opaque
 	suite.kubeClient = c
 }
 
-func skipNotSpecErrors(errs []error) iter.Seq[error] {
-	return func(yield func(error) bool) {
-		for _, err := range errs {
-			var vErr *validationerrors.Validation
-			ok := errors.As(err, &vErr)
-			if !ok || !strings.HasPrefix(vErr.Name, "spec.") {
-				continue
-			}
-
-			if !yield(err) {
-				break
-			}
+func skipNotSpecErrors(errs []error) []error {
+	result := make([]error, 0, len(errs))
+	for _, err := range errs {
+		var vErr *validationerrors.Validation
+		ok := errors.As(err, &vErr)
+		if !ok || !strings.HasPrefix(vErr.Name, "spec.") {
+			continue
 		}
+
+		result = append(result, err)
 	}
+
+	return result
 }
 
 func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.Object {
