@@ -63,13 +63,16 @@ if crictl version >/dev/null 2>/dev/null; then
   # Registry vars
   REGISTRY_ACTUAL_ADDRESS="{{ $.registry.address }}"
   REGISTRY_PROXY_ADDRESSES="{{ $registryProxyAddresses }}"
+  EMBEDDED_REGISTRY_ACTUAL_ADDRESS="{{ $.systemRegistry.registryAddress | default "" }}"
 
   # Images refs
   IMAGE_PATH_FOR_KUBERNETES_API_PROXY={{ printf "%s@%s" $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
   IMAGE_PATH_FOR_PAUSE={{ printf "%s@%s" $.registry.path (index $.images.common "pause") }}
 
-  # Bootstrap for registry mode != "Direct"
-  if [ "$FIRST_BASHIBLE_RUN" == "yes" ] && [ -n "$REGISTRY_PROXY_ADDRESSES" ] && [ -n "$REGISTRY_MODE" ] && [ "$REGISTRY_MODE" != "Direct" ]; then
+  # Bootstrap for registry mode != "Direct" and embedded registry address != current registry address
+  if [ "$FIRST_BASHIBLE_RUN" == "yes" ] && [ -n "$REGISTRY_PROXY_ADDRESSES" ] && \
+    [ -n "$REGISTRY_MODE" ] && [ "$REGISTRY_MODE" != "Direct" ] && \
+    [ "$EMBEDDED_REGISTRY_ACTUAL_ADDRESS" != "$REGISTRY_ACTUAL_ADDRESS" ]; then
     pull_using_proxies "$IMAGE_PATH_FOR_KUBERNETES_API_PROXY" "$REGISTRY_ACTUAL_ADDRESS" "$REGISTRY_PROXY_ADDRESSES"
     pull_using_proxies "$IMAGE_PATH_FOR_PAUSE" "$REGISTRY_ACTUAL_ADDRESS" "$REGISTRY_PROXY_ADDRESSES"
   else
