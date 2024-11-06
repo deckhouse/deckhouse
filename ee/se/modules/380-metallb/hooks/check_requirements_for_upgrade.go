@@ -203,7 +203,6 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 	}
 
 	// Search orphaned Services
-	// TODO add test
 	serviceNameSnaps := input.Snapshots["services"]
 	for _, serviceNameSnap := range serviceNameSnaps {
 		if serviceNameSnap != nil {
