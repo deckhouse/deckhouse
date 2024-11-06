@@ -6,11 +6,11 @@ lang: ru
 
 ## Описание
 
-Проекты (ресурс `Project`) в платформе обеспечивают изолированные окружения для создания ресурсов пользователя.
+Проекты (ресурс [Project](../../../reference/cr.html#Project)) в платформе обеспечивают изолированные окружения для создания ресурсов пользователя.
 
 Настройки проекта позволяют задать квоты для ресурсов, ограничить сетевое взаимодействие как внутри платформы так и с внешним миром.
 
-Для создания проектов используются шаблоны (ресрурс `ProjectTemplate`).
+Для создания проектов используются шаблоны (ресурс [ProjectTemplate](../../../reference/cr.html#ProjectTemplate)).
 
 > **Внимание!** При изменении шаблона проекта, все созданные проекты будут обновлены в соответствии с новым шаблоном.
 
@@ -32,15 +32,15 @@ lang: ru
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 
 ```shell
-kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
+d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
 ```
 
 ## Создание проекта
 
-1. Для создания проекта создайте ресурс [Project](cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename).
-2. В параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) ресурса `Project` укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса `ProjectTemplate`.
+1. Для создания проекта создайте ресурс [Project](../../../reference/cr.html#Project) с указанием имени шаблона проекта в поле `.spec.projectTemplateName`.
+2. В параметре `.spec.parameters` ресурса [Project](../../../reference/cr.html#Project) укажите значения параметров для секции `.spec.parametersSchema.openAPIV3Schema` ресурса [ProjectTemplate](../../../reference/cr.html#ProjectTemplate).
 
-   Пример создания проекта с помощью ресурса [Project](cr.html#project) из `default` [ProjectTemplate](cr.html#projecttemplate) представлен ниже:
+   Пример создания проекта с помощью ресурса [Project](../../../reference/cr.html#Project) из `default` [ProjectTemplate](../../../reference/cr.html#ProjectTemplate) представлен ниже:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
