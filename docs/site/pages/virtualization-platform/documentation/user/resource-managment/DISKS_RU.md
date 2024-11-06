@@ -12,11 +12,11 @@ lang: ru
 
 `Immediate` - Диск создается сразу после создания ресурса (предполагается, что диск будет доступен для подключения к виртуальной машине на любом узле кластера).
 
-![](images/vd-immediate.ru.png)
+![](/images/virtualization-platform/vd-immediate.ru.png)
 
 `WaitForFirstConsumer` - Диск создается только после того как будет подключен к виртуальной машине и будет создан на том узле, на котором будет запущена виртуальная машина.
 
-![](images/vd-wffc.ru.png)
+![](/images/virtualization-platform/vd-wffc.ru.png)
 
 Режим доступа AccessMode:
 

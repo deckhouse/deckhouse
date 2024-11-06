@@ -125,7 +125,7 @@ A virtual machine's startup policy defines its state. It can be enabled, disable
 
 The virtual machine runs inside the Pod, which allows you to manage virtual machines as normal Kubernetes resources and use all the features of the platform, including load balancers, network policies, automation tools, etc.
 
-![](images/vm.png)
+![](/images/virtualization-platform/vm.png)
 
 ### Virtual Machine Operations
 

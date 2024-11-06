@@ -364,7 +364,7 @@ spec:
     disktype: ssd
 ```
 
-![](images/placement-node-affinity.ru.png)
+![](/images/virtualization-platform/placement-node-affinity.ru.png)
 
 В этом примере виртуальная машина будет размещена только на узлах, которые имеют метку `disktype` со значением `ssd`.
 
@@ -389,7 +389,7 @@ spec:
                   - ssd
 ```
 
-![](images/placement-node-affinity.ru.png)
+![](/images/virtualization-platform/placement-node-affinity.ru.png)
 
 В этом примере виртуальная машина будет размещена только на узлах, которые имеют метку `disktype` со значением `ssd`.
 
@@ -410,7 +410,7 @@ spec:
             topologyKey: "kubernetes.io/hostname"
 ```
 
-![](images/placement-vm-affinity.ru.png)
+![](/images/virtualization-platform/placement-vm-affinity.ru.png)
 
 В этом примере виртуальная машина будет размещена, если будет такая возможность (тк используется preffered) только на узлах на которых присутствует виртуальная машина с меткой server и значением database.
 
@@ -433,7 +433,7 @@ spec:
           topologyKey: "kubernetes.io/hostname"
 ```
 
-![](images/placement-vm-antiaffinity.ru.png)
+![](/images/virtualization-platform/placement-vm-antiaffinity.ru.png)
 
 В данном примере создаваемая виртуальная машина не будет размещена на одном узле с виртуальной машиной с меткой server: database.
 
