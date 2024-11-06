@@ -15,6 +15,7 @@
 REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/registry-ca.crt"
 REGISTRY_MODE="{{ $.registry.registryMode | default ""  }}"
 REGISTRY_AUTH="$(base64 -d <<< "{{ $.registry.auth | default "" }}")"
+REGISTRY_CA_EXISTS={{ if and $.registry.ca (ne $.registry.ca "") }}true{{ else }}false{{ end }}
 
 mkdir -p /etc/kubernetes/manifests
 
@@ -22,7 +23,12 @@ pull_and_re_tag_image() {
     local PROXY_IMG_ADDRESS=$1
     local ACTUAL_IMAGE_ADDRESS=$2
 
-    /opt/deckhouse/bin/ctr --namespace=k8s.io images pull -u "$REGISTRY_AUTH" --tlscacert "$REGISTRY_CACERT_PATH" "$PROXY_IMG_ADDRESS" || return 1
+    if [ "$REGISTRY_CA_EXISTS" = true ]; then
+        /opt/deckhouse/bin/ctr --namespace=k8s.io images pull -u "$REGISTRY_AUTH" --tlscacert "$REGISTRY_CACERT_PATH" "$PROXY_IMG_ADDRESS" || return 1
+    else
+        /opt/deckhouse/bin/ctr --namespace=k8s.io images pull -u "$REGISTRY_AUTH" "$PROXY_IMG_ADDRESS" || return 1
+    fi
+
     /opt/deckhouse/bin/ctr --namespace=k8s.io image tag "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS" || return 1
     /opt/deckhouse/bin/ctr --namespace=k8s.io image rm "$PROXY_IMG_ADDRESS" || return 1
 }
