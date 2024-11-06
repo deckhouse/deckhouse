@@ -89,7 +89,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 		log.ErrorF("Error while accessing Cloud API: %v", err)
 		return ErrCloudApiUnreachable
 	}
-	log.InfoF("GET %s: %d/%s", cloudAPIConfig.URL.String(), resp.StatusCode, resp.Status)
+	log.InfoF("GET %s: %s\n", cloudAPIConfig.URL.String(), resp.Status)
 	if resp.StatusCode >= 500 {
 		return ErrCloudApiUnreachable
 	}
