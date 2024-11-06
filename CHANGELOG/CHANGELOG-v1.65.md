@@ -25,6 +25,7 @@
  - **[deckhouse]** Get rid of the rbacgen tool. [#9622](https://github.com/deckhouse/deckhouse/pull/9622)
  - **[deckhouse]** Extend Deckhouse update settings. [#9314](https://github.com/deckhouse/deckhouse/pull/9314)
     Changed logic of automatic updates modes (read parameter [settings.update.mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1.65/modules/002-deckhouse/configuration.html#parameters-update-mode) description of module deckhouse ).
+ - **[deckhouse-controller]** Added support for Auto Patch mode for Modules Release (configurable in the module update policy object) [#10466](https://github.com/deckhouse/deckhouse/pull/10466)
  - **[deckhouse-controller]** Added `backup.deckhouse.io/cluster-config` label to Deckhouse CRD. [#10111](https://github.com/deckhouse/deckhouse/pull/10111)
  - **[deckhouse-controller]** Add disable confirmation settings for critical modules. [#10098](https://github.com/deckhouse/deckhouse/pull/10098)
  - **[deckhouse-controller]** Ability to watch info about deckhouse release and module releases in the registry from cli. [#10046](https://github.com/deckhouse/deckhouse/pull/10046)
@@ -86,6 +87,8 @@
  - **[go_lib]** Clean up module documentation when deleting module [#9985](https://github.com/deckhouse/deckhouse/pull/9985)
  - **[go_lib]** add probe to the cloud-data reconciler [#9915](https://github.com/deckhouse/deckhouse/pull/9915)
  - **[go_lib]** cloud-data-discoverer continues its operation despite temporary issues within the cluster. [#9570](https://github.com/deckhouse/deckhouse/pull/9570)
+ - **[ingress-nginx]** Add check for existing label. [#10449](https://github.com/deckhouse/deckhouse/pull/10449)
+ - **[istio]** SA token path in api-proxy container fixed. [#10454](https://github.com/deckhouse/deckhouse/pull/10454)
  - **[kube-dns]** Seamless change of clusterDomain. [#9739](https://github.com/deckhouse/deckhouse/pull/9739)
  - **[kube-dns]** Graceful rollout of the `kube-dns` deployment without disrupting connections. [#9565](https://github.com/deckhouse/deckhouse/pull/9565)
  - **[log-shipper]** Move cleanup transform to be the last transform for a source. Fixes multiline parsing issue. [#10264](https://github.com/deckhouse/deckhouse/pull/10264)
