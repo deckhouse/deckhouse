@@ -100,6 +100,8 @@ spec:
               fieldPath: status.hostIP
         - name: REGISTRY_ADDRESS
           value: {{ $.Values.global.modulesImages.registry.address }}
+        - name: REGISTRY_PATH
+          value: {{ $.Values.global.modulesImages.registry.path }}
         - name: IMAGE_DOCKER_AUTH
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}"
         - name: IMAGE_DOCKER_DISTRIBUTION
