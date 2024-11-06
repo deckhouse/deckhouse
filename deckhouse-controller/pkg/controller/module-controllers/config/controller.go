@@ -162,7 +162,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			})
 			if err != nil {
 				r.log.Errorf("failed to enable the '%s' module: %v", module.Name, err)
-				return ctrl.Result{Requeue: true}, err
+				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -212,7 +212,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	})
 	if err != nil {
 		r.log.Errorf("failed to set finalizer the '%s' module: %v", module.Name, err)
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	updatePolicy := module.Properties.UpdatePolicy
