@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [[ "$(getenforce)" != "Enforcing" ]]; then
+# check that selinux exist in bundle
+if [[ ! "$(getenforce)" ]]; then
   exit 0
 fi
 
