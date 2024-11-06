@@ -16,10 +16,9 @@ package registryscaner
 
 import (
 	"context"
-	"time"
-
 	"registry-modules-watcher/internal/backends"
 	"registry-modules-watcher/internal/backends/pkg/registry-scaner/cache"
+	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"k8s.io/klog"
@@ -47,7 +46,7 @@ var releaseChannelsTags = map[string]string{
 	"stable":       "",
 }
 
-// New ...
+// New
 func New(registryClients ...Client) *registryscaner {
 	registryscaner := registryscaner{
 		registryClients: make(map[string]Client),
@@ -69,7 +68,7 @@ func (s *registryscaner) SubscribeOnUpdate(updateHandler func([]backends.Version
 	s.updateHandler = updateHandler
 }
 
-// Subscribe ...
+// Subscribe
 func (s *registryscaner) Subscribe(ctx context.Context, scanInterval time.Duration) {
 	s.processRegistries(ctx)
 	s.cache.ResetRange()

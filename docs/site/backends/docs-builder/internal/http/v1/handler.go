@@ -15,7 +15,6 @@
 package v1
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -44,7 +43,6 @@ func NewHandler(docsService *docs.Service) *DocsBuilderHandler {
 	r.HandleFunc("POST /loadDocArchive/{moduleName}/{version}", h.handleUpload)
 	r.HandleFunc("POST /build", h.handleBuild)
 
-	r.HandleFunc("GET /api/v1/docs", h.handleList)
 	r.HandleFunc("POST /api/v1/doc/{moduleName}/{version}", h.handleUpload)
 	r.HandleFunc("DELETE /api/v1/doc/{moduleName}", h.handleDelete)
 	r.HandleFunc("POST /api/v1/build", h.handleBuild)
@@ -66,32 +64,6 @@ func (h *DocsBuilderHandler) handleReadyZ(w http.ResponseWriter, _ *http.Request
 func (h *DocsBuilderHandler) handleHealthZ(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.WriteString(w, "ok")
-}
-
-func (h *DocsBuilderHandler) handleList(w http.ResponseWriter, r *http.Request) {
-	modules, err := h.docsService.List()
-	if err != nil {
-		klog.Error(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	data, err := json.Marshal(struct {
-		Modules []docs.Version `json:"modules"`
-	}{
-		Modules: modules,
-	})
-
-	if err != nil {
-		klog.Error(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_, _ = io.WriteString(w, string(data))
-
-	return
 }
 
 func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +88,7 @@ func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (h *DocsBuilderHandler) handleBuild(w http.ResponseWriter, _ *http.Request) {
+func (h *DocsBuilderHandler) handleBuild(w http.ResponseWriter, r *http.Request) {
 	err := h.docsService.Build()
 	if err != nil {
 		klog.Error(err)
