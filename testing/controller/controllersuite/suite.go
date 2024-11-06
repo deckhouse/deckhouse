@@ -68,7 +68,7 @@ func (suite *Suite) SetupNoLock(initObjects []client.Object, opts ...SuiteOption
 	loggerOpts := log.Options{
 		Level:  slog.LevelWarn,
 		Output: suite.logOutput,
-		TimeFunc: func(t time.Time) time.Time {
+		TimeFunc: func(_ time.Time) time.Time {
 			return dependency.TestDC.GetClock().Now()
 		},
 	}
