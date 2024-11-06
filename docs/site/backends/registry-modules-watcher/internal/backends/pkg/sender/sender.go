@@ -56,16 +56,16 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 
 		go func(backend string) {
 			for _, version := range versions {
-				if version.Exists {
+				if version.ToDelete {
+					err := s.delete(ctx, backend, version.Module, version.ReleaseChannels)
+					if err != nil {
+						klog.Errorf("send delete error: %v", err)
+					}
+				} else {
 					url := "http://" + backend + "/loadDocArchive/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
 					err := s.loadDocArchive(ctx, url, version.TarFile)
 					if err != nil {
 						klog.Errorf("send docs error: %v", err)
-					}
-				} else {
-					err := s.delete(ctx, backend, version.Module, version.ReleaseChannels)
-					if err != nil {
-						klog.Errorf("send delete error: %v", err)
 					}
 				}
 			}

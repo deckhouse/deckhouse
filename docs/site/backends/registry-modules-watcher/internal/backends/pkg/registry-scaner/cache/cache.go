@@ -75,7 +75,7 @@ func (c *Cache) GetRange() (versions []backends.Version) {
 
 	for _, version := range c.stateSnap {
 		if !contain(state, version) {
-			version.Exists = false
+			version.ToDelete = true
 			versions = append(versions, version)
 		}
 	}
@@ -102,7 +102,6 @@ func (c *Cache) GetState() (versions []backends.Version) {
 					Version:         string(version),
 					TarFile:         data.TarFile,
 					ReleaseChannels: releaseChannels,
-					Exists:          true,
 				})
 			}
 		}
