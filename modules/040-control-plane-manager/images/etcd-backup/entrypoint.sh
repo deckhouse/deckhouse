@@ -29,8 +29,6 @@ tar -czvf "${archive}" "${etcd}"
 if [ $(df /var/lib/etcd/ | tail -1 | awk '{printf "%.0f\n", $4 - ($2 * 0.25)}') -ge $(du -k "${archive}" | awk '{print $1}') ]; then
     chmod 0600 "${archive}"
     mv "${archive}" "/var/lib/etcd/${archive}"
-    # remove after 1.66 Old version.
-    rm -f /var/lib/etcd/etcd-backup.snapshot
 else
     echo "Free space in /var/lib/etcd/ is too small for backup should be more than 25%"
     exit 1
