@@ -14,7 +14,7 @@ properties:
 
   additionalVulnerabilityReportFields:
     description: |
-      Список дополнительных полей из базы уязвимостей, добавляемых к отчетам уязвимостей (VulnerabilityReport).
+      Список дополнительных полей из базы уязвимостей, добавляемых к отчетам об уязвимостях (VulnerabilityReport).
 
   severities:
     description: |
