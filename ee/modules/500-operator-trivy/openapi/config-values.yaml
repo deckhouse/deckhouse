@@ -22,7 +22,6 @@ properties:
       type: string
     x-examples:
     -
-      additionalVulnerabilityReportFields:
       - Class
       - Target
   severities:
@@ -40,7 +39,6 @@ properties:
         - CRITICAL
     x-examples:
     -
-      severities:
       - UNKNOWN
       - CRITICAl
   linkCVEtoBDU:
