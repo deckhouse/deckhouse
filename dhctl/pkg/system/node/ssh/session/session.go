@@ -16,9 +16,10 @@ package session
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 	"sync"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
 type Input struct {
@@ -28,7 +29,7 @@ type Input struct {
 	BastionPort    string
 	BastionUser    string
 	ExtraArgs      string
-	AvailableHosts []Host
+	AvailableHosts []string
 	BecomePass     string
 }
 
@@ -74,26 +75,9 @@ type Session struct {
 
 	lock           sync.RWMutex
 	host           string
-	availableHosts []Host
-	remainingHosts []Host
+	availableHosts []string
+	remainingHosts []string
 }
-
-type Host struct {
-	host string
-	name string
-}
-
-type SortByName []Host
-
-func (h SortByName) Len() int { return len(h) }
-func (h SortByName) Less(i, j int) bool {
-	if h[i].name == h[j].name {
-		return h[i].host < h[j].host
-	} else {
-		return h[i].name < h[j].name
-	}
-}
-func (h SortByName) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
 
 func NewSession(input Input) *Session {
 	s := &Session{
@@ -122,71 +106,79 @@ func (s *Session) ChoiceNewHost() {
 	defer s.lock.Unlock()
 	s.lock.Lock()
 
-	s.selectNewHost()
+	s.selectNewHost("")
 }
 
-func (s *Session) AddAvailableHosts(hosts ...Host) {
+func (s *Session) AddAvailableHosts(hosts ...string) {
 	defer s.lock.Unlock()
 	s.lock.Lock()
 
-	availableHostsMap := make(map[string]string, len(s.availableHosts))
+	availableHostsMap := make(map[string]struct{}, len(s.availableHosts))
+
 	for _, host := range s.availableHosts {
-		availableHostsMap[host.host] = host.name
+		availableHostsMap[host] = struct{}{}
 	}
+
 	for _, host := range hosts {
-		availableHostsMap[host.host] = host.name
+		availableHostsMap[host] = struct{}{}
 	}
-	availableHosts := make([]Host, 0, len(availableHostsMap))
-	for key, value := range availableHostsMap {
-		availableHosts = append(availableHosts, Host{host: key, name: value})
+
+	availableHosts := make([]string, 0, len(availableHostsMap))
+
+	for host := range availableHostsMap {
+		availableHosts = append(availableHosts, host)
 	}
-	sort.Sort(SortByName(availableHosts))
+
 	s.availableHosts = availableHosts
 
 	s.resetUsedHosts()
-	s.selectNewHost()
+	s.selectNewHost("")
 }
 
-func (s *Session) RemoveAvailableHosts(hosts ...Host) {
+func (s *Session) RemoveAvailableHosts(hosts ...string) {
 	defer s.lock.Unlock()
 	s.lock.Lock()
 
-	availableHostsMap := make(map[string]string, len(s.availableHosts))
+	availableHostsMap := make(map[string]struct{}, len(s.availableHosts))
+
 	for _, host := range s.availableHosts {
-		availableHostsMap[host.host] = host.name
+		availableHostsMap[host] = struct{}{}
 	}
+
 	for _, host := range hosts {
-		delete(availableHostsMap, host.host)
+		delete(availableHostsMap, host)
 	}
-	availableHosts := make([]Host, 0, len(availableHostsMap))
-	for key, value := range availableHostsMap {
-		availableHosts = append(availableHosts, Host{host: key, name: value})
+
+	availableHosts := make([]string, 0, len(availableHostsMap))
+
+	for host := range availableHostsMap {
+		availableHosts = append(availableHosts, host)
 	}
-	sort.Sort(SortByName(availableHosts))
+
 	s.availableHosts = availableHosts
 
 	s.resetUsedHosts()
-	s.selectNewHost()
+	s.selectNewHost("")
 }
 
 // SetAvailableHosts
 // Set Available hosts. Current host can choice
-func (s *Session) SetAvailableHosts(hosts []Host) {
+func (s *Session) SetAvailableHosts(hosts []string) {
 	defer s.lock.Unlock()
 	s.lock.Lock()
 
-	s.availableHosts = make([]Host, len(hosts))
+	s.availableHosts = make([]string, len(hosts))
 	copy(s.availableHosts, hosts)
 
 	s.resetUsedHosts()
-	s.selectNewHost()
+	s.selectNewHost("")
 }
 
-func (s *Session) AvailableHosts() []Host {
+func (s *Session) AvailableHosts() []string {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	return append(make([]Host, 0), s.availableHosts...)
+	return append(make([]string, 0), s.availableHosts...)
 }
 
 func (s *Session) CountHosts() int {
@@ -259,7 +251,7 @@ func (s *Session) Copy() *Session {
 		ses.AgentSettings = s.AgentSettings.Clone()
 	}
 
-	ses.availableHosts = make([]Host, len(s.availableHosts))
+	ses.availableHosts = make([]string, len(s.availableHosts))
 	copy(ses.availableHosts, s.availableHosts)
 
 	ses.resetUsedHosts()
@@ -269,37 +261,32 @@ func (s *Session) Copy() *Session {
 
 // resetUsedHosts if all available host is used this function reset
 func (s *Session) resetUsedHosts() {
-	s.remainingHosts = make([]Host, len(s.availableHosts))
+	s.remainingHosts = make([]string, len(s.availableHosts))
 	copy(s.remainingHosts, s.availableHosts)
 }
 
 // selectNewHost selects new host from available and updates remaining hosts
-func (s *Session) selectNewHost() {
+func (s *Session) selectNewHost(newHostForSet string) {
 	if len(s.availableHosts) == 0 {
 		s.host = ""
 		return
 	}
+
+	hostIndx := 0
+	if newHostForSet != "" {
+		indx := stringsutil.Index(s.availableHosts, newHostForSet)
+		if indx >= 0 {
+			s.resetUsedHosts()
+			hostIndx = indx
+		}
+	}
+
 	if len(s.remainingHosts) == 0 {
 		s.resetUsedHosts()
 	}
 
-	hosts := make([]Host, len(s.availableHosts))
-	copy(hosts, s.availableHosts)
+	host := s.remainingHosts[hostIndx]
+	s.remainingHosts = append(s.remainingHosts[:hostIndx], s.remainingHosts[hostIndx+1:]...)
 
-	hostIndx := 0
-	if s.host != "" {
-		for i, host := range hosts {
-			if host.host == s.host {
-				if i != len(hosts)-1 {
-					hostIndx = i + 1
-				}
-				break
-			}
-		}
-	}
-
-	host := hosts[hostIndx]
-	s.remainingHosts = append(hosts[:hostIndx], hosts[hostIndx+1:]...)
-
-	s.host = host.host
+	s.host = host
 }

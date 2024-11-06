@@ -50,7 +50,6 @@ func CheckSSHHosts(userPassedHosts []string, nodesNames []string, runConfirm fun
 		warnMsg = tooManyWarn
 	}
 
-	// Выводить информацию о новых master
 	if warnMsg != "" {
 		msg := fmt.Sprintf(`Warning! %s
 If you lose connection to node, converge may not be finished.

@@ -67,12 +67,8 @@ func (c *MasterNodeGroupController) populateNodeToHost() error {
 	if sshCl != nil {
 		userPassedHosts = append(make([]string, 0), sshCl.Settings.AvailableHosts()...)
 	}
-	// проблема с определением ip в том что имена отвязаны от ip. надо связывать это всё в один список. причём лучше хранить оба ip
 	nodesNames := make([]string, 0, len(c.state.State))
 	for nodeName := range c.state.State {
-
-		// по идеи ip должны быть в стейте их можно выдернуть и сверить со списком.
-		// надо разобраться как стейт распаковывать либо получать список ip ещё и из кластера
 		nodesNames = append(nodesNames, nodeName)
 	}
 
@@ -80,7 +76,6 @@ func (c *MasterNodeGroupController) populateNodeToHost() error {
 		if c.commanderMode {
 			return true
 		}
-		// надо проверять что это авто конверж для 1 master's кластера через 1 -> 3 -> 1
 		return input.NewConfirmation().WithMessage(msg).Ask()
 	})
 	if err != nil {
@@ -351,7 +346,6 @@ func (c *MasterNodeGroupController) updateNode(nodeName string) error {
 				log.InfoLn("Aborted")
 				return nil
 			}
-			// место в котором делается мульти мастер
 			c.convergeState.Phase = PhaseScaleToMultiMaster
 
 			err := c.convergeStateStore.SetState(c.convergeState)
