@@ -29,7 +29,7 @@ fi
 {{- end }}
 
 {{- if .systemRegistry.registryCA }}
-bb-sync-file EMBEDDED_REGISTRY_CACERT_PATH - << "EOF"
+bb-sync-file $EMBEDDED_REGISTRY_CACERT_PATH - << "EOF"
 {{ .systemRegistry.registryCA }}
 EOF
 {{- else }}
