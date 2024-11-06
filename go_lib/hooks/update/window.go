@@ -23,6 +23,17 @@ import (
 )
 
 const (
+	MinTime = "00:00"
+	MaxTime = "23:59"
+
+	Mon = "Mon"
+	Tue = "Tue"
+	Wed = "Wed"
+	Thu = "Thu"
+	Fri = "Fri"
+	Sat = "Sat"
+	Sun = "Sun"
+
 	hh_mm = "15:04" // nolint: revive
 )
 
@@ -231,4 +242,8 @@ func (ws Windows) DeepCopy() Windows {
 	out := new(Windows)
 	ws.DeepCopyInto(out)
 	return *out
+}
+
+func Everyday() []string {
+	return []string{Mon, Tue, Wed, Thu, Fri, Sat, Sun}
 }
