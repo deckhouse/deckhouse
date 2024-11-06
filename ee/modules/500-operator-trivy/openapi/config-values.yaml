@@ -17,7 +17,6 @@ properties:
     type: array
     description: |
       A list of additional fields from the vulnerability database to add to the VulnerabilityReport.
-
     items:
       type: string
     x-examples:
