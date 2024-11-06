@@ -224,8 +224,8 @@ oom_score = 0
   {{- if eq .runType "Normal" }}
     {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
       {{- if $ca }}
-        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $registryAddr | lower }}".tls]
-          ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ $registryAddr | lower }}".tls]
+        ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
       {{- end }}
     {{- end }}
   {{- end }}
