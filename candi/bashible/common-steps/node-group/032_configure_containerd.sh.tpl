@@ -217,7 +217,6 @@ oom_score = 0
           auth = "{{ .systemRegistry.auth }}"
         {{- end }}
         {{- if .systemRegistry.registryCA }}
-        # "{{ .systemRegistry.registryCA }}"
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".tls]
           ca_file = "/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
         {{- end }}
