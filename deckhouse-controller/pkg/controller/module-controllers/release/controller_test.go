@@ -450,7 +450,7 @@ type: Opaque
 	}
 	result := c.Validator().Validate(mup)
 	if result != nil {
-		for warn := range skipNotSpecErrors(result.Warnings) {
+		for _, warn := range skipNotSpecErrors(result.Warnings) {
 			suite.Logger().Warn(warn.Error())
 		}
 
