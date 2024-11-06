@@ -102,6 +102,7 @@ const (
 )
 
 func NewModuleReleaseController(
+	// TODO: logger log.Logger,
 	mgr manager.Manager,
 	dc dependency.Container,
 	embeddedPolicyContainer *helpers.ModuleUpdatePolicySpecContainer,
@@ -110,7 +111,7 @@ func NewModuleReleaseController(
 	preflightCountDown *sync.WaitGroup,
 	logger *log.Logger,
 ) error {
-	lg := logger.With("component", "ModuleReleaseController")
+	lg := log.Default().Named("ModuleReleaseController")
 
 	c := &moduleReleaseReconciler{
 		client:               mgr.GetClient(),
@@ -537,7 +538,7 @@ func (r *moduleReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result,
 	var notReadyErr *updater.NotReadyForDeployError
 
 	if errors.As(err, &notReadyErr) {
-		r.logger.Info(err.Error())
+		r.logger.Debug("ignoring NotReadyForDeployError", "err", err)
 		// TODO: requeue all releases if deckhouse update settings is changed
 		// requeueAfter := notReadyErr.RetryDelay()
 		// if requeueAfter == 0 {

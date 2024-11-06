@@ -25,6 +25,8 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	"github.com/Masterminds/sprig/v3"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/stretchr/testify/require"
@@ -95,7 +97,7 @@ func setupControllerSettings(
 	rec := &deckhouseReleaseReconciler{
 		client:         cl,
 		dc:             dc,
-		logger:         log.NewNop(),
+		logger:         log.Default(),
 		moduleManager:  stubModulesManager{},
 		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
 		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true, log.NewNop()),

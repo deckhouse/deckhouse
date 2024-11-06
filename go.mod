@@ -60,6 +60,8 @@ require (
 require (
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241106075526-de70f3ad9093
+	github.com/docker/distribution v2.8.3+incompatible
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.7.0+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
@@ -70,6 +72,7 @@ require (
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/slok/kubewebhook/v2 v2.5.0
 	golang.org/x/mod v0.20.0
+	golang.org/x/text v0.19.0
 	k8s.io/cli-runtime v0.29.0
 	k8s.io/code-generator v0.29.0
 	k8s.io/klog/v2 v2.130.1

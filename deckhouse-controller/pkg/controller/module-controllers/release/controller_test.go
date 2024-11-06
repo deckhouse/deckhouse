@@ -428,7 +428,7 @@ type: Opaque
 		client:               suite.Suite.Client(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
-		logger:               log.NewNop(),
+		logger:               suite.Logger(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		moduleManager:        stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
