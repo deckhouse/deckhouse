@@ -25,8 +25,6 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	"github.com/Masterminds/sprig/v3"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/stretchr/testify/require"
