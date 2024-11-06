@@ -18,7 +18,6 @@ import (
 	"reflect"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
-
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
