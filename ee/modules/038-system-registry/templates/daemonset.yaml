@@ -98,14 +98,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: HOSTNAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
         - name: REGISTRY_ADDRESS
           value: {{ $.Values.global.modulesImages.registry.address }}
         - name: IMAGE_DOCKER_AUTH
@@ -114,8 +106,6 @@ spec:
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
         - name: IMAGE_SEAWEEDFS
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
-        - name: CLUSTER_DOMAIN
-          value: "{{ $.Values.global.discovery.clusterDomain}}"
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz
