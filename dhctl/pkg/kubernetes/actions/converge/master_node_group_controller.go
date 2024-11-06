@@ -67,6 +67,7 @@ func (c *MasterNodeGroupController) populateNodeToHost() error {
 	if sshCl != nil {
 		userPassedHosts = append(make([]string, 0), sshCl.Settings.AvailableHosts()...)
 	}
+
 	nodesNames := make([]string, 0, len(c.state.State))
 	for nodeName := range c.state.State {
 		nodesNames = append(nodesNames, nodeName)
@@ -346,6 +347,7 @@ func (c *MasterNodeGroupController) updateNode(nodeName string) error {
 				log.InfoLn("Aborted")
 				return nil
 			}
+
 			c.convergeState.Phase = PhaseScaleToMultiMaster
 
 			err := c.convergeStateStore.SetState(c.convergeState)
