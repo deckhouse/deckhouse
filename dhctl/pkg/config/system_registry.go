@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/yaml"
 	"time"
 
-	"github.com/cloudflare/cfssl/csr"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/certificate"
 	"golang.org/x/crypto/bcrypt"
@@ -106,16 +105,7 @@ func getRegistryAccessData() (*RegistryAccessData, error) {
 
 func newRegistryAuthority() (certificate.Authority, error) {
 	return certificate.GenerateCA(
-		"system-registry-selfsigned-ca",
-		certificate.WithNames(
-			csr.Name{
-				C:  "RU",
-				ST: "MO",
-				L:  "Moscow",
-				O:  "Flant",
-				OU: "Deckhouse Registry",
-			},
-		),
+		"embedded-registry-ca",
 	)
 }
 
