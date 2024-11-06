@@ -42,6 +42,8 @@ bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system create secret ge
   --from-file=etcd-ca.key=$etcd_pki_path/ca.key \
   --from-file=etcd-ca.crt=$etcd_pki_path/ca.crt \
 {{- end }}
+  --from-file=token.key=$registry_pki_path/token.key \
+  --from-file=token.crt=$registry_pki_path/token.crt \
   --from-file=registry-ca.key=$registry_pki_path/ca.key \
   --from-file=registry-ca.crt=$registry_pki_path/ca.crt
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n d8-system label secret registry-pki \
