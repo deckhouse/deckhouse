@@ -25,15 +25,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/testing/flags"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-
 	"github.com/stretchr/testify/suite"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/testclient"
+	"github.com/deckhouse/deckhouse/testing/flags"
 )
 
 var defaultLogOutput = os.Stderr

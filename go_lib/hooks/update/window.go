@@ -25,13 +25,14 @@ import (
 const (
 	MinTime = "00:00"
 	MaxTime = "23:59"
-	Mon     = "Mon"
-	Tue     = "Tue"
-	Wed     = "Wed"
-	Thu     = "Thu"
-	Fri     = "Fri"
-	Sat     = "Sat"
-	Sun     = "Sun"
+
+	Mon = "Mon"
+	Tue = "Tue"
+	Wed = "Wed"
+	Thu = "Thu"
+	Fri = "Fri"
+	Sat = "Sat"
+	Sun = "Sun"
 
 	hh_mm = "15:04" // nolint: revive
 )
