@@ -134,13 +134,17 @@ entries:
                 ru: Разграничение доступа
               folders:
                 - title:
+                    en: User management
+                    ru: Управление пользователями
+                  url: /virtualization-platform/documentation/admin/access-control/user_management.html
+                - title:
+                    en: Role model
+                    ru: Ролевая модель
+                  url: /virtualization-platform/documentation/admin/access-control/role_model.html
+                - title:
                     en: Projects
                     ru: Проекты
                   url: /virtualization-platform/documentation/admin/access-control/projects.html
-                - title:
-                    en: Access settings
-                    ru: Настройки доступа
-                  url: /virtualization-platform/documentation/admin/access-control/access_settings.html
         - title:
             en: Platform update
             ru: Обновление платформы
