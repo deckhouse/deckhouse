@@ -92,7 +92,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.destroy(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.destroySafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
 					sendCh <- &pb.DestroyResponse{Message: &pb.DestroyResponse_Result{Result: result}}
 				}()
 
@@ -121,6 +121,21 @@ connectionProcessor:
 			}
 		}
 	}
+}
+
+func (s *Service) destroySafe(
+	ctx context.Context,
+	request *pb.DestroyStart,
+	switchPhase phases.DefaultOnPhaseFunc,
+	logWriter io.Writer,
+) (result *pb.DestroyResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.DestroyResult{Err: panicMessage(ctx, r)}
+		}
+	}()
+
+	return s.destroy(ctx, request, switchPhase, logWriter)
 }
 
 func (s *Service) destroy(
