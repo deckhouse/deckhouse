@@ -1,4 +1,4 @@
 ---
-title: "Deckhouse Virtualization Platform"
-permalink: en/virtualization-platform/documentation/admin/virtualization/cluster-images.html
+title: "Cluster images"
+permalink: en/virtualization-platform/documentation/admin/virtualization-management/virtualization/cluster_images.html
 ---
