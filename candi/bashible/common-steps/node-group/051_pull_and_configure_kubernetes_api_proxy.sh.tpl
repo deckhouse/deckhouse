@@ -43,7 +43,7 @@ pull_using_proxies() {
     IFS=',' read -ra PROXY_ADDR <<< "$REGISTRY_PROXY_ADDRESSES"
     for REGISTRY_PROXY_ADDRESS in "${PROXY_ADDR[@]}"; do
         local PROXY_IMG_ADDRESS="${REGISTRY_PROXY_ADDRESS}${IMAGE_PATH}"
-        
+
         if pull_and_re_tag_image "$PROXY_IMG_ADDRESS" "$ACTUAL_IMAGE_ADDRESS"; then
             echo "The image '$ACTUAL_IMAGE_ADDRESS' was correctly pulling from '$PROXY_IMG_ADDRESS'"
             return 0
