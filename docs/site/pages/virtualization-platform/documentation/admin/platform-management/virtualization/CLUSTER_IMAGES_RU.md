@@ -1,6 +1,6 @@
 ---
 title: "Кластерные образы"
-permalink: ru/virtualization-platform/documentation/admin/virtualization-management/virtualization/cluster_images.html
+permalink: ru/virtualization-platform/documentation/admin/virtualization-management/virtualization/cluster-images.html
 lang: ru
 ---
 

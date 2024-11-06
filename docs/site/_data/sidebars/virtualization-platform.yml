@@ -56,7 +56,7 @@ entries:
                 - title:
                     en: Adding a node
                     ru: Добавление узла
-                  url: /virtualization-platform/documentation/admin/platform-management/node-management/addingnode.html
+                  url: /virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html
                 - title:
                     en: Configuration
                     ru: Настройка
@@ -72,7 +72,7 @@ entries:
                 - title:
                     en: Placement management
                     ru: Управление размещением
-                  url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/placement_management.html
+                  url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/placement-management.html
             - title:
                 en: Traffic control
                 ru: Управление трафиком
@@ -96,11 +96,11 @@ entries:
                 - title:
                     en: Supported Storage
                     ru: Поддерживаемые хранилища
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/supported_storage.html
+                  url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
                 - title:
                     en: sds-local-volume
                     ru: sds-local-volume
-                  url: /virtualization-platform/platform-management/documentation/admin/storage/sds_local_volume.html
+                  url: /virtualization-platform/platform-management/documentation/admin/storage/sds-local-volume.html
                 - title:
                     en: sds-replicated-volume
                     ru: sds-replicated-volume
@@ -108,15 +108,15 @@ entries:
                 - title:
                     en: csi-nfs
                     ru: csi-nfs
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/csi_nfs.html
+                  url: /virtualization-platform/documentation/admin/platform-management/storage/csi-nfs.html
                 - title:
                     en: csi-ceph
                     ru: csi-ceph
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/csi_seph.html
+                  url: /virtualization-platform/documentation/admin/platform-management/storage/csi-seph.html
                 - title:
                     en: csi-yadro
                     ru: csi-yadro
-                  url: /virtualization-platform/platform-management/storage/csi_yadro.html
+                  url: /virtualization-platform/platform-management/storage/csi-yadro.html
             - title:
                 en: Virtualization
                 ru: Виртуализация
