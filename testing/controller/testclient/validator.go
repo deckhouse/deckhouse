@@ -15,9 +15,7 @@
 package testclient
 
 import (
-	"maps"
 	"reflect"
-	"slices"
 
 	"github.com/flant/addon-operator/pkg/utils/logger"
 
@@ -80,9 +78,19 @@ func (v *Validator) GetValidatorFor(kind schema.ObjectKind) validation.SchemaVal
 	gvk := kind.GroupVersionKind()
 	gvkValidator := v.validators[gvk]
 	if gvkValidator == nil {
-		v.logger.Debugf("validator for %s not found. Available validators: %s", gvk, slices.Collect(maps.Keys(v.validators)))
+		v.logger.Debugf("validator for %s not found. Available validators: %s", gvk, keys(v.validators))
 		return nil
 	}
 
 	return gvkValidator
+}
+
+func keys(validators map[schema.GroupVersionKind]validation.SchemaValidator) []string {
+	result := make([]string, 0, len(validators))
+
+	for k := range validators {
+		result = append(result, k.GroupVersion().String())
+	}
+
+	return result
 }
