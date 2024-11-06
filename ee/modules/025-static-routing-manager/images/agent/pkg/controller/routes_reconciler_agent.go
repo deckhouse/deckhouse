@@ -259,10 +259,10 @@ func (re *RouteEntry) getRoute() v1alpha1.Route {
 
 func (re *RouteEntry) getNetlinkRoute() (*netlink.Route, error) {
 	// Prepare route for netlink
-	preparedNlRoute := new(netlink.Route)
+	preparedNetlinkRoute := new(netlink.Route)
 
 	if re.table > 0 {
-		preparedNlRoute.Table = re.table
+		preparedNetlinkRoute.Table = re.table
 	}
 	if re.destination != "" {
 		ip, dstnetIPNet, err := net.ParseCIDR(re.destination)
@@ -278,40 +278,40 @@ func (re *RouteEntry) getNetlinkRoute() (*netlink.Route, error) {
 				dstnetIPNet.String(),
 			)
 		}
-		preparedNlRoute.Dst = dstnetIPNet
+		preparedNetlinkRoute.Dst = dstnetIPNet
 	}
 	if re.gateway != "" {
-		preparedNlRoute.Gw = net.ParseIP(re.gateway)
+		preparedNetlinkRoute.Gw = net.ParseIP(re.gateway)
 	}
 	if re.dev != "" && re.devId != 0 {
-		preparedNlRoute.LinkIndex = re.devId
+		preparedNetlinkRoute.LinkIndex = re.devId
 	}
 
-	return preparedNlRoute, nil
+	return preparedNetlinkRoute, nil
 }
 
-func getRouteEntryFromNetlinkRoute(nlRoute netlink.Route) (RouteEntry, error) {
+func getRouteEntryFromNetlinkRoute(netlinkRoute netlink.Route) (RouteEntry, error) {
 	preparedRE := RouteEntry{}
 
-	if nlRoute.Dst != nil {
-		preparedRE.destination = nlRoute.Dst.String()
+	if netlinkRoute.Dst != nil {
+		preparedRE.destination = netlinkRoute.Dst.String()
 	}
-	if nlRoute.Gw != nil {
-		preparedRE.gateway = nlRoute.Gw.String()
+	if netlinkRoute.Gw != nil {
+		preparedRE.gateway = netlinkRoute.Gw.String()
 	}
-	if nlRoute.LinkIndex > 0 {
-		preparedRE.devId = nlRoute.LinkIndex
-		link, err := netlink.LinkByIndex(nlRoute.LinkIndex)
+	if netlinkRoute.LinkIndex > 0 {
+		preparedRE.devId = netlinkRoute.LinkIndex
+		link, err := netlink.LinkByIndex(netlinkRoute.LinkIndex)
 		if err != nil {
 			return RouteEntry{}, fmt.Errorf("can not find Link by Index %v, err: %w",
-				nlRoute.LinkIndex,
+				netlinkRoute.LinkIndex,
 				err,
 			)
 		}
 		preparedRE.dev = link.Attrs().Name
 	}
-	if nlRoute.Table > 0 {
-		preparedRE.table = nlRoute.Table
+	if netlinkRoute.Table > 0 {
+		preparedRE.table = netlinkRoute.Table
 	}
 
 	return preparedRE, nil
@@ -629,13 +629,13 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 // netlink service functions
 
 func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
-	nlRoutes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: v1alpha1.D8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
+	netlinkRoutes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: v1alpha1.D8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
 	if err != nil {
 		return nil, fmt.Errorf("failed get routes from node, err: %w", err)
 	}
 	ar := make(RouteEntryMap)
 
-	for _, route := range nlRoutes {
+	for _, route := range netlinkRoutes {
 		re, err := getRouteEntryFromNetlinkRoute(route)
 		if err != nil {
 			return nil, fmt.Errorf("the route (%v) could not be processed, err: %w", route.String(), err)
