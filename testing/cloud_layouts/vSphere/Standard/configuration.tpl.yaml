@@ -44,7 +44,7 @@ masterNodeGroup:
     runtimeOptions:
       nestedHardwareVirtualization: false
 provider:
-  server: vcenter01.mvp.lab
+  server: vcenter01.${VSPHERE_BASE_DOMAIN}
   username: e2e-autotests@vsphere.local
   password: '${VSPHERE_PASSWORD}'
   insecure: true
