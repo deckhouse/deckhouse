@@ -174,8 +174,8 @@ func (m *Manager) prepareProject(ctx context.Context, project *v1alpha2.Project)
 		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
 			return err
 		}
-		if project.Labels == nil {
-			project.Labels = map[string]string{}
+		if len(project.Labels) == 0 {
+			project.Labels = make(map[string]string, 1)
 		}
 		project.Labels[consts.ProjectTemplateLabel] = project.Spec.ProjectTemplateName
 		if project.Annotations != nil {

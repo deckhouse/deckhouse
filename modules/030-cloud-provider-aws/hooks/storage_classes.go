@@ -156,12 +156,6 @@ func storageClasses(input *go_hook.HookInput) error {
 		input.Values.Set("cloudProviderAws.internal.storageClasses", []StorageClass{})
 	}
 
-	if input.Values.Exists("cloudProviderAws.storageClass.default") {
-		input.Values.Set("cloudProviderAws.internal.defaultStorageClass", input.Values.Get("cloudProviderAws.storageClass.default").String())
-	} else {
-		input.Values.Remove("cloudProviderAws.internal.defaultStorageClass")
-	}
-
 	var existedStorageClasses []StorageClass
 	for _, v := range input.Snapshots["module_storageclasses"] {
 		sc := v.(*storagev1.StorageClass)
@@ -178,7 +172,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		if !isModified(storageClassesFiltered, sc) {
 			continue
 		}
-		input.LogEntry.Infof("Deleting storageclass/%s because its parameters has been changed", sc.Name)
+		input.Logger.Infof("Deleting storageclass/%s because its parameters has been changed", sc.Name)
 		input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", sc.Name)
 	}
 

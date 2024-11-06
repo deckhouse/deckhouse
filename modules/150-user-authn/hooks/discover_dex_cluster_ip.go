@@ -61,7 +61,7 @@ func discoverDexClusterIP(input *go_hook.HookInput) error {
 
 	services := input.Snapshots["service"]
 	if len(services) == 0 {
-		input.LogEntry.Debugf("no dex services found in cluster")
+		input.Logger.Debugf("no dex services found in cluster")
 		return nil
 	}
 

@@ -47,13 +47,13 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
@@ -157,10 +157,12 @@ type HookExecutionConfig struct {
 	PatchCollector   *object_patch.PatchCollector
 
 	Session      *gexec.Session
-	LogrusOutput *gbytes.Buffer
+	LoggerOutput *gbytes.Buffer
 
 	fakeClusterVersion k8s.FakeClusterVersion
 	fakeCluster        *fake.Cluster
+
+	logger *log.Logger
 }
 
 func (hec *HookExecutionConfig) KubeClient() *klient.Client {
@@ -213,6 +215,8 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 	hookEnvs := []string{"ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests"}
 
 	hec := new(HookExecutionConfig)
+	hec.logger = log.NewLogger(log.Options{})
+
 	fakeClusterVersion := k8s.DefaultFakeClusterVersion
 	if len(k8sVersion) > 0 {
 		fakeClusterVersion = k8sVersion[0]
@@ -255,17 +259,18 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 		}
 	}
 
-	// Catch logrus messages for LoadOpenAPISchemas.
+	// Catch log messages for LoadOpenAPISchemas.
 	buf := &bytes.Buffer{}
-	logrus.SetOutput(buf)
+
+	hec.logger.SetOutput(buf)
 	// TODO Is there a solution for ginkgo to have a shared validator for all tests in module?
 	hec.ValuesValidator, err = values_validation.NewValuesValidator(moduleName, modulePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, buf.String())
 		panic(fmt.Errorf("load module OpenAPI schemas for hook: %v", err))
 	}
-	// Set logrus output to GinkgoWriter to print only messages for failed specs.
-	logrus.SetOutput(GinkgoWriter)
+	// Set log output to GinkgoWriter to print only messages for failed specs.
+	hec.logger.SetOutput(GinkgoWriter)
 
 	// Search golang hook by name.
 	goHookPath := hec.HookPath + ".go"
@@ -367,7 +372,7 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) hookcontext.Ge
 	var contexts hookcontext.GeneratedBindingContexts
 	var err error
 	if !hec.IsKubeStateInited {
-		hec.BindingContextController = hookcontext.NewBindingContextController(hec.hookConfig, hec.fakeClusterVersion)
+		hec.BindingContextController = hookcontext.NewBindingContextController(hec.hookConfig, hec.logger, hec.fakeClusterVersion)
 		if err != nil {
 			panic(err)
 		}
@@ -599,7 +604,7 @@ func (hec *HookExecutionConfig) RunHook() {
 		operations, err := object_patch.ParseOperations(kubernetesPatchBytes)
 		Expect(err).ShouldNot(HaveOccurred())
 
-		patcher := object_patch.NewObjectPatcher(hec.getFakeClient())
+		patcher := object_patch.NewObjectPatcher(hec.getFakeClient(), hec.logger)
 		err = patcher.ExecuteOperations(operations)
 		Expect(err).ToNot(HaveOccurred())
 	}
@@ -679,9 +684,8 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	hec.MetricsCollector = metricsCollector
 
 	// Catch all log messages into assertable buffer.
-	hec.LogrusOutput = gbytes.NewBuffer()
-	logger := logrus.New()
-	logger.SetOutput(hec.LogrusOutput)
+	hec.LoggerOutput = gbytes.NewBuffer()
+	hec.logger.SetOutput(hec.LoggerOutput)
 
 	// TODO: assert on binding actions
 	var bindingActions []go_hook.BindingAction
@@ -695,7 +699,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		Values:           patchableValues,
 		ConfigValues:     patchableConfigValues,
 		MetricsCollector: metricsCollector,
-		LogEntry:         logger.WithField("output", "gohook"),
+		Logger:           hec.logger.With("output", "gohook"),
 		PatchCollector:   patchCollector,
 		BindingActions:   &bindingActions,
 	}
@@ -729,7 +733,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	}
 
 	if operations := patchCollector.Operations(); len(operations) > 0 {
-		patcher := object_patch.NewObjectPatcher(hec.getFakeClient())
+		patcher := object_patch.NewObjectPatcher(hec.getFakeClient(), hec.logger)
 		err := patcher.ExecuteOperations(operations)
 		Expect(err).ShouldNot(HaveOccurred())
 	}

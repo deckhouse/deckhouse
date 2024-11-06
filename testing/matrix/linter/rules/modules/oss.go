@@ -39,6 +39,7 @@ func ossModuleRule(name, moduleRoot string) linterrors.LintRuleErrorsList {
 				"MODULE001",
 				moduleLabel(name),
 				nil,
+				"%s",
 				ossFileErrorMessage(err),
 			)
 

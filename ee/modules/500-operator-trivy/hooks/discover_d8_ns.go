@@ -44,7 +44,7 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 func handleNamespaces(input *go_hook.HookInput) error {
 	snap := input.Snapshots["namespaces"]
 	if len(snap) == 0 {
-		input.LogEntry.Warnln("trivy namespaces not found")
+		input.Logger.Warn("trivy namespaces not found")
 		return nil
 	}
 

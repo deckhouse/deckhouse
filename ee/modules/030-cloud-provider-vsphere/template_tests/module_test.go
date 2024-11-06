@@ -420,7 +420,7 @@ labels:
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
-			f.ValuesSetFromYaml("cloudProviderVsphere.internal.defaultStorageClass", `mydsname2`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `mydsname2`)
 			f.HelmRender()
 		})
 

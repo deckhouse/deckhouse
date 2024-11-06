@@ -21,12 +21,14 @@ import (
 	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // InitBasic creates basic ModuleManager without additional components.
 // It is sufficient to list modules and validate values. It is suitable
 // for separated webhooks and tests.
-func InitBasic(globalHooksDir string, modulesDir string) (*module_manager.ModuleManager, error) {
+func InitBasic(globalHooksDir string, modulesDir string, logger *log.Logger) (*module_manager.ModuleManager, error) {
 	tempDir := os.Getenv("ADDON_OPERATOR_TMP_DIR")
 	if tempDir == "" {
 		tempDir = "."
@@ -40,9 +42,9 @@ func InitBasic(globalHooksDir string, modulesDir string) (*module_manager.Module
 	cfg := module_manager.ModuleManagerConfig{
 		DirectoryConfig: dirs,
 	}
-	mm := module_manager.NewModuleManager(context.Background(), &cfg)
+	mm := module_manager.NewModuleManager(context.Background(), &cfg, logger.Named("module-manager"))
 
-	err := mm.Init()
+	err := mm.Init(logger)
 	if err != nil {
 		return nil, err
 	}

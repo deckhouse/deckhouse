@@ -25,9 +25,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/gofrs/uuid/v5"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,6 +46,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -63,7 +62,7 @@ type moduleSourceReconciler struct {
 
 	dc dependency.Container
 
-	logger logger.Logger
+	logger *log.Logger
 
 	rwlock                sync.RWMutex
 	moduleSourcesChecksum sourceChecksum
@@ -72,9 +71,9 @@ type moduleSourceReconciler struct {
 }
 
 func NewModuleSourceController(mgr manager.Manager, dc dependency.Container, embeddedPolicyContainer *helpers.ModuleUpdatePolicySpecContainer,
-	preflightCountDown *sync.WaitGroup,
+	preflightCountDown *sync.WaitGroup, logger *log.Logger,
 ) error {
-	lg := log.WithField("component", "ModuleSourceController")
+	lg := logger.With("component", "ModuleSourceController")
 
 	r := &moduleSourceReconciler{
 		client:               mgr.GetClient(),
@@ -167,7 +166,7 @@ func (r *moduleSourceReconciler) createOrUpdateReconcile(ctx context.Context, ms
 	ms.Status.Msg = ""
 	ms.Status.ModuleErrors = make([]v1alpha1.ModuleError, 0)
 
-	opts := controllerUtils.GenerateRegistryOptionsFromModuleSource(ms, r.clusterUUID)
+	opts := controllerUtils.GenerateRegistryOptionsFromModuleSource(ms, r.clusterUUID, r.logger)
 
 	regCli, err := r.dc.GetRegistryClient(ms.Spec.Registry.Repo, opts...)
 	if err != nil {

@@ -78,7 +78,7 @@ func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookIn
 	return func(input *go_hook.HookInput) error {
 		snapshots, ok := input.Snapshots["custom_certificates"]
 		if !ok {
-			input.LogEntry.Info("No custom certificates received, skipping setting values")
+			input.Logger.Info("No custom certificates received, skipping setting values")
 			return nil
 		}
 

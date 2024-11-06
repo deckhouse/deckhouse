@@ -292,7 +292,7 @@ shell:
   beforeInstall:
 {{/*  TODO: Move it to the dev image */}}
   - rm -rf /usr/local/go
-  - curl -sSfL https://go.dev/dl/go1.22.2.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
+  - curl -sSfL https://go.dev/dl/go1.23.1.linux-amd64.tar.gz -o - | tar -C /usr/local -zxvf -
   {{- include "base components" . | nindent 2 }}
 
 ---
@@ -324,11 +324,14 @@ shell:
 
 ---
 artifact: golangci-lint-artifact
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 shell:
+  beforeInstall:
+  - apk add --no-cache git
   install:
+  # Use v1.60.1 for go1.23 - https://github.com/golangci/golangci-lint/issues/4837
   - export GOPROXY={{ .GOPROXY }}
-  - git clone --depth 1 {{ .SOURCE_REPO }}/golangci/golangci-lint --branch v1.58.0
+  - git clone --depth 1 {{ .SOURCE_REPO }}/golangci/golangci-lint --branch v1.60.1
   - cd golangci-lint/
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
 
@@ -440,6 +443,7 @@ git:
   - modules
   - global-hooks
   - go_lib
+  - pkg
   - shell_lib.sh
   - shell_lib
   - jq_lib
@@ -514,13 +518,16 @@ git:
     - dhctl
     - deckhouse-controller
     - global-hooks/**/*.go
-    - go_lib/**/*.go
     - modules/**/*.go
     - ee/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
     - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
     - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
+    - go_lib/**/*.go
     - go_lib/**/go.mod
     - go_lib/**/go.sum
+    - pkg/**/*.go
+    - pkg/**/go.mod
+    - pkg/**/go.sum
     - go.mod
     - go.sum
     - tools
@@ -546,6 +553,9 @@ git:
       - go_lib/**/*.go
       - go_lib/**/go.mod
       - go_lib/**/go.sum
+      - pkg/**/*.go
+      - pkg/**/go.mod
+      - pkg/**/go.sum
       - modules/**/*.go
       - editions.yaml
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
@@ -589,6 +599,14 @@ git:
     - Makefile
 - add: /go_lib/registry-packages-proxy
   to: /go_lib/registry-packages-proxy
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - "**/*.go"
+- add: /pkg/log
+  to: /pkg/log
   stageDependencies:
     install:
       - go.mod
@@ -888,6 +906,7 @@ args:
   BASE_GOLANG_22_ALPINE_DEV: {{ .Images.BASE_GOLANG_22_ALPINE_DEV }}
   BASE_GOLANG_22_BULLSEYE: {{ .Images.BASE_GOLANG_22_BULLSEYE }}
   BASE_GOLANG_23_ALPINE: {{ .Images.BASE_GOLANG_23_ALPINE }}
+  BASE_GOLANG_23_ALPINE_DEV: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
   BASE_GOLANG_23_BULLSEYE: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
   BASE_NGINX_ALPINE:  {{ .Images.BASE_NGINX_ALPINE }}
   BASE_NGINX_ALPINE_DEV:  {{ .Images.BASE_NGINX_ALPINE_DEV }}

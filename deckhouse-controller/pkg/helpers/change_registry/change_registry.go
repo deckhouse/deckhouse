@@ -33,7 +33,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/hashicorp/go-multierror"
-	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,6 +40,7 @@ import (
 
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // TODO (alex123012): Use new methods in transport package for getting bearer token:
@@ -53,9 +53,9 @@ const (
 	caKey      = "ca"
 )
 
-func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag, scheme string, dryRun bool) error {
+func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag, scheme string, dryRun bool, logger *log.Logger) error {
 	ctx := context.Background()
-	logEntry := log.WithField("operator.component", "ChangeRegistry")
+	logEntry := logger.With("operator.component", "ChangeRegistry")
 
 	authConfig := newAuthConfig(username, password)
 
@@ -81,7 +81,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	logEntry.Println("Retrieving deckhouse deployment...")
+	logEntry.Info("Retrieving deckhouse deployment...")
 	deckhouseDeploy, err := deckhouseDeployment(ctx, kubeCl)
 	if err != nil {
 		return err
@@ -109,26 +109,26 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 	}
 
 	if dryRun {
-		logEntry.Println("Dry-run enabled")
+		logEntry.Info("Dry-run enabled")
 		secretYaml, _ := yaml.Marshal(deckhouseSecret)
 		deploymentYaml, _ := yaml.Marshal(deckhouseDeploy)
-		logEntry.Println("------------------------------")
-		logEntry.Printf("New Secret will be applied:\n%s\n", secretYaml)
-		logEntry.Println("------------------------------")
-		logEntry.Printf("New Deployment will be applied:\n%s\n", deploymentYaml)
+		logEntry.Info("------------------------------")
+		logEntry.Infof("New Secret will be applied:\n%s\n", secretYaml)
+		logEntry.Info("------------------------------")
+		logEntry.Infof("New Deployment will be applied:\n%s\n", deploymentYaml)
 	} else {
-		logEntry.Println("Updating deckhouse image pull secret...")
+		logEntry.Info("Updating deckhouse image pull secret...")
 		if err := updateImagePullSecret(ctx, kubeCl, deckhouseSecret); err != nil {
 			return err
 		}
 
-		logEntry.Println("Updating deckhouse deployment...")
+		logEntry.Info("Updating deckhouse deployment...")
 		if err := updateDeployment(ctx, kubeCl, deckhouseDeploy); err != nil {
 			return err
 		}
 	}
 
-	logEntry.Println("Done")
+	logEntry.Info("Done")
 	return nil
 }
 

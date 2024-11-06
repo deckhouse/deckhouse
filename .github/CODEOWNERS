@@ -70,3 +70,4 @@ docs/                           @z9r5 @nabokihms
 helm_lib/                       @name212 @sprait
 crds/                           @nabokihms @konstantin-axenov @z9r5
 openapi/                        @nabokihms @konstantin-axenov @z9r5
+pkg/                            @yalosev @ldmonster

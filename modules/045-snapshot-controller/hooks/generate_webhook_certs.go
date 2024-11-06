@@ -92,12 +92,12 @@ func generateSelfSignedCertificates(input *go_hook.HookInput) error {
 
 	if cert.CA == "" || cert.Cert == "" || cert.Key == "" {
 		var err error
-		caCert, err = certificate.GenerateCA(input.LogEntry, "snapshot-validation-webhook-ca")
+		caCert, err = certificate.GenerateCA(input.Logger, "snapshot-validation-webhook-ca")
 		if err != nil {
 			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
 		}
 
-		cert, err = certificate.GenerateSelfSignedCert(input.LogEntry,
+		cert, err = certificate.GenerateSelfSignedCert(input.Logger,
 			"snapshot-validation-webhook",
 			caCert,
 			certificate.WithSigningDefaultExpiry(87600*time.Hour),

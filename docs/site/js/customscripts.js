@@ -6,17 +6,6 @@ $( document ).ready(function() {
             else $(".search__results").removeClass("active");
           });
 
-    // Fix second level topnav menu for GS and guides sections.
-    let subUrls = ['/gs/', '/guides/'];
-    subUrls.forEach(function(element) {
-      if (window.location.pathname.toLowerCase().includes(element)) {
-        $('.header.header__product-menu ul.nav li').each(function () {
-          if ($(this).find('a').attr('href').toLowerCase().includes(element)) $(this).addClass('active');
-          else $(this).removeClass('active');
-        });
-      }
-    });
-
 });
 
 document.addEventListener("DOMContentLoaded", function() {

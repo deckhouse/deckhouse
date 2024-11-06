@@ -29,6 +29,7 @@ type ConversionsStore struct {
 	converters map[string]*Converter
 }
 
+// TODO: refactor singletone
 func Store() *ConversionsStore {
 	once.Do(func() {
 		instance = &ConversionsStore{}
