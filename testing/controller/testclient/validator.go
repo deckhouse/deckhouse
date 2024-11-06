@@ -44,7 +44,7 @@ type Validator struct {
 func (v *Validator) Validate(obj any, options ...validation.ValidationOption) *validate.Result {
 	runtimeObject, ok := obj.(runtime.Object)
 	if !ok {
-		v.logger.Debug("unsupported type", "obj: ", reflect.TypeOf(obj))
+		v.logger.Debug("unsupported type", "obj", obj, "type", reflect.TypeOf(obj).String())
 		return nil
 	}
 
@@ -59,7 +59,7 @@ func (v *Validator) Validate(obj any, options ...validation.ValidationOption) *v
 func (v *Validator) ValidateUpdate(newObj, oldObj any, options ...validation.ValidationOption) *validate.Result {
 	runtimeObject, ok := newObj.(runtime.Object)
 	if !ok {
-		v.logger.Debug("unsupported type", "obj: ", reflect.TypeOf(newObj))
+		v.logger.Debug("unsupported type", "obj", newObj, "type", reflect.TypeOf(newObj).String())
 		return nil
 	}
 
