@@ -18,19 +18,18 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	cca "github.com/deckhouse/deckhouse/dhctl/pkg/preflight/check-cloud-api"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 )
@@ -38,30 +37,6 @@ import (
 var (
 	ErrCloudApiUnreachable = errors.New("could not reach Cloud API from master node")
 )
-
-type OpenStackProvider struct {
-	AuthURL    string `json:"authURL,omitempty" yaml:"authURL,omitempty"`
-	CACert     string `json:"caCert,omitempty" yaml:"caCert,omitempty"`
-	DomainName string `json:"domainName,omitempty" yaml:"domainName,omitempty"`
-	TenantName string `json:"tenantName,omitempty" yaml:"tenantName,omitempty"`
-	TenantID   string `json:"tenantID,omitempty" yaml:"tenantID,omitempty"`
-	Username   string `json:"username,omitempty" yaml:"username,omitempty"`
-	Password   string `json:"password,omitempty" yaml:"password,omitempty"`
-	Region     string `json:"region,omitempty" yaml:"region,omitempty"`
-}
-
-type VSphereProvider struct {
-	Server   string `json:"server"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Insecure bool   `json:"insecure"`
-}
-
-type CloudApiConfig struct {
-	URL      *url.URL
-	Insecure bool
-	CACert   string
-}
 
 func (pc *Checker) CheckCloudAPIAccessibility() error {
 
@@ -121,7 +96,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	return nil
 }
 
-func buildSSHTunnelHTTPClient(cloudAPIConfig *CloudApiConfig) (*http.Client, error) {
+func buildSSHTunnelHTTPClient(cloudAPIConfig *cca.CloudApiConfig) (*http.Client, error) {
 
 	tlsConfig := &tls.Config{
 		ServerName: cloudAPIConfig.URL.Hostname(),
@@ -159,7 +134,7 @@ func buildSSHTunnelHTTPClient(cloudAPIConfig *CloudApiConfig) (*http.Client, err
 	return client, nil
 }
 
-func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *CloudApiConfig, proxyUrl *url.URL) (*http.Response, error) {
+func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.CloudApiConfig, proxyUrl *url.URL) (*http.Response, error) {
 
 	cloudAPIUrlString := cloudAPIConfig.URL.String()
 
@@ -198,54 +173,23 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *Clou
 	return resp, nil
 }
 
-func getCloudApiConfigFromMetaConfig(metaConfig *config.MetaConfig) (*CloudApiConfig, error) {
+func getCloudApiConfigFromMetaConfig(metaConfig *config.MetaConfig) (*cca.CloudApiConfig, error) {
 	providerClusterConfig, exists := metaConfig.ProviderClusterConfig["provider"]
 	if !exists {
 		return nil, fmt.Errorf("provider configuration not found in ProviderClusterConfig")
 	}
 
-	var cloudAPIURLStr string
-	var insecure bool
-	var cacert string
+	var cloudApiConfig cca.CloudApiConfig
+	var err error
 
 	switch providerName := metaConfig.ProviderName; providerName {
 	case "openstack":
-		var openStackConfig OpenStackProvider
-		if err := json.Unmarshal(providerClusterConfig, &openStackConfig); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal provider config for OpenStack: %v", err)
-		}
-		cloudAPIURLStr = openStackConfig.AuthURL
-		cacert = openStackConfig.CACert
-
+		cloudApiConfig, err = cca.HandleOpenStackProvider(providerClusterConfig)
 	case "vsphere":
-		var vsphereConfig VSphereProvider
-		if err := json.Unmarshal(providerClusterConfig, &vsphereConfig); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal provider config for vSphere: %v", err)
-		}
-		cloudAPIURLStr = vsphereConfig.Server
-		insecure = vsphereConfig.Insecure
-
+		cloudApiConfig, err = cca.HandleVSphereProvider(providerClusterConfig)
 	default:
 		log.DebugF("[Skip] Checking if Cloud API is accessible from first master host. Unsupported provider: %v", providerName)
 		return nil, nil
 	}
-
-	if cloudAPIURLStr == "" {
-		return nil, fmt.Errorf("cloud API URL is empty for provider: %s", metaConfig.ProviderName)
-	}
-	if !strings.Contains(cloudAPIURLStr, "://") {
-		cloudAPIURLStr = "https://" + cloudAPIURLStr
-	}
-
-	cloudAPIURL, err := url.Parse(cloudAPIURLStr)
-
-	if err != nil {
-		return nil, fmt.Errorf("invalid cloud API URL '%s': %v", cloudAPIURLStr, err)
-	}
-
-	return &CloudApiConfig{
-		URL:      cloudAPIURL,
-		Insecure: insecure,
-		CACert:   cacert,
-	}, nil
+	return &cloudApiConfig, err
 }
