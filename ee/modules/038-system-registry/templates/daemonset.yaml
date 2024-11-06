@@ -106,6 +106,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: REGISTRY_ADDRESS
+          value: {{ $.Values.global.modulesImages.registry.address }}
         - name: IMAGE_DOCKER_AUTH
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}"
         - name: IMAGE_DOCKER_DISTRIBUTION
