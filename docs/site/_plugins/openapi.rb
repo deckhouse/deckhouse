@@ -873,8 +873,11 @@ module Jekyll
     end
 
     def format_module_configuration(input, moduleName = "")
+        return if input.nil? || input.empty? || input["properties"].nil?|| input["properties"].empty?
+
         @moduleName = moduleName
         @resourceType = "moduleConfig"
+        puts "Generating moduleConfig for #{@moduleName}"
         format_configuration(input, true)
     end
   end

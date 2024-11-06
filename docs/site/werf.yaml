@@ -79,12 +79,14 @@ shell:
         bundle --version
   setup:
   - |
-        # "Generating CR schemas..."
+        # "Generating CR schemas for DVP..."
         cd /srv/jekyll-data/site/
-        export MODULES_RAW_DIR=/rawdata/crds
+        export MODULES_RAW_DIR=/rawdata
         export CRD_PATH=virtualization-platform/crds
-        bash ./modules_generate_cr.sh
-        # "Build static files"
+        export OPENAPI_PATH=virtualization-platform/openapi
+        bash ./prepare_resources.sh
+
+        # "Building static files"
         cd /srv/jekyll-data/site/
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
@@ -142,7 +144,46 @@ git:
   - "**/*-cilium-hubble/crds/*.yaml"
   - "**/*-upmeter/crds/*.yaml"
   stageDependencies:
-    install: ['Gemfile','Gemfile.lock']
+    setup: '**/*'
+# add moduleConfigs schemas
+- add: /{{ .ModulePath }}
+  to: /rawdata/openapi
+{{/*  to: /srv/jekyll-data/site/_data/schemas/virtualization-platform/crds*/}}
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "**/*-cni-cilium/openapi/*"
+  - "**/*-control-plane-manager/openapi/*"
+  - "**/*-node-manager/openapi/*"
+  - "**/*-snapshot-controller/openapi/*"
+  - "**/*-cert-manager/openapi/*"
+  - "**/*-user-authz/openapi/*"
+  - "**/*-user-authn/openapi/*"
+  #- "**/*-multitenancy-manager/openapi/*"
+  - "**/*-operator-prometheus/openapi/*"
+  - "**/*-prometheus/openapi/*"
+  - "**/*-prometheus-metrics-adapter/openapi/*"
+  - "**/*-vertical-pod-autoscaler/openapi/*"
+  - "**/*-extended-monitoring/openapi/*"
+  - "**/*-monitoring-custom/openapi/*"
+  - "**/*-monitoring-deckhouse/openapi/*"
+  - "**/*-monitoring-kubernetes/openapi/*"
+  - "**/*-monitoring-kubernetes-control-plane/openapi/*"
+  - "**/*-monitoring-ping/openapi/*"
+  - "**/*-node-local-dns/openapi/*"
+  #- "**/*-metallb/openapi/*"
+  #- "**/*-l2-load-balancer/openapi/*"
+  - "**/*-descheduler/openapi/*"
+  - "**/*-ingress-nginx/openapi/*"
+  - "**/*-log-shipper/openapi/*"
+  - "**/*-loki/openapi/*"
+  - "**/*-chrony/openapi/*"
+  - "**/*-cilium-hubble/openapi/*"
+  - "**/*-upmeter/openapi/*"
+  excludePaths:
+  - "**/global-hooks/"
+  - "**/testdata/"
+  stageDependencies:
     setup: '**/*'
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 import:

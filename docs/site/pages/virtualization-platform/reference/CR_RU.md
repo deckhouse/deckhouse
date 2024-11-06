@@ -4,12 +4,11 @@ permalink: ru/virtualization-platform/reference/cr.html
 lang: ru
 ---
 
-{%- for module in site.data.schemas.virtualization-platform.crds %}
-  {%- assign moduleCRDs = module[1]["crds"]  %}
-  {%- for crd in moduleCRDs %}
+{%- assign CRDs = site.data.schemas.virtualization-platform.crds | sort  %}
+
+  {%- for crd in CRDs %}
 <div markdown="0">
-    {{ crd[1] | format_crd: module[0] }}
+    {{ crd[1] | format_crd: "" }}
 </div>
   {%- endfor %}
 
-{%- endfor %}
