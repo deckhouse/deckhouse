@@ -42,29 +42,39 @@ type HookForUpdatePipeline struct {
 	oldMasterIPForSSH string
 }
 
-func NewHookForUpdatePipeline(kubeCl *client.KubernetesClient, nodeToHostForChecks map[string]string, clusterUUID string) *HookForUpdatePipeline {
-	cl := kubeCl.NodeInterfaceAsSSHClient()
-	if cl == nil {
-		panic("Node interface is not ssh")
-	}
-
+func NewHookForUpdatePipeline(
+	kubeCl *client.KubernetesClient,
+	nodeToHostForChecks map[string]string,
+	clusterUUID string,
+	commanderMode bool,
+) *HookForUpdatePipeline {
 	checkers := []hook.NodeChecker{
 		hook.NewKubeNodeReadinessChecker(kubeCl),
-		NewKubeProxyChecker().
-			WithExternalIPs(nodeToHostForChecks).
-			WithClusterUUID(clusterUUID).
-			WithSSHCredentials(session.Input{
-				User:        cl.Settings.User,
-				Port:        cl.Settings.Port,
-				BastionHost: cl.Settings.BastionHost,
-				BastionPort: cl.Settings.BastionPort,
-				BastionUser: cl.Settings.BastionUser,
-				ExtraArgs:   cl.Settings.ExtraArgs,
-				BecomePass:  cl.Settings.BecomePass,
-			}, cl.PrivateKeys...),
-		NewManagerReadinessChecker(kubeCl),
 	}
 
+	if !commanderMode {
+		cl := kubeCl.NodeInterfaceAsSSHClient()
+		if cl == nil {
+			panic("Node interface is not ssh")
+		}
+
+		checkers = append(
+			checkers,
+			NewKubeProxyChecker().
+				WithExternalIPs(nodeToHostForChecks).
+				WithClusterUUID(clusterUUID).
+				WithSSHCredentials(session.Input{
+					User:        cl.Settings.User,
+					Port:        cl.Settings.Port,
+					BastionHost: cl.Settings.BastionHost,
+					BastionPort: cl.Settings.BastionPort,
+					BastionUser: cl.Settings.BastionUser,
+					ExtraArgs:   cl.Settings.ExtraArgs,
+					BecomePass:  cl.Settings.BecomePass,
+				}, cl.PrivateKeys...))
+	}
+
+	checkers = append(checkers, NewManagerReadinessChecker(kubeCl))
 	checker := NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
 
 	return &HookForUpdatePipeline{
