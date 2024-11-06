@@ -42,7 +42,7 @@ kubectl get storageclass
 # nfs-4-1-wffc                  nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 
-С полным описанием параметров конфигурации дисков можно ознакомиться по [ссылке](../../../reference/cr.html#VirtualDisk).
+С полным описанием параметров конфигурации дисков можно ознакомиться по [ссылке](../../../reference/cr.html#virtualdisk).
 
 ### Создание пустого диска
 
@@ -65,7 +65,7 @@ spec:
 EOF
 ```
 
-После создания ресурс [VirtualDisk](../../../reference/cr.html#VirtualDisk) может находиться в следующих состояниях (фазах):
+После создания ресурс [VirtualDisk](../../../reference/cr.html#virtualdisk) может находиться в следующих состояниях (фазах):
 
 - `Pending` - ожидание готовности всех зависимых ресурсов, требующихся для создания диска.
 - `Provisioning` - идет процесс создания диска.
@@ -87,11 +87,11 @@ d8 k get vd blank-disk
 
 ### Создание диска из образа
 
-Диск также можно создавать и заполнять данными из ранее созданных образов [ClusterVirtualImage](../../../reference/cr.html#ClusterVirtualImage) и [VirtualImage](../../../reference/cr.html#VirtualImage).
+Диск также можно создавать и заполнять данными из ранее созданных образов [ClusterVirtualImage](../../../reference/cr.html#clustervirtualimage) и [VirtualImage](../../../reference/cr.html#virtualimage).
 
 При создании диска можно указать его желаемый размер, который должен быть равен или больше размера распакованного образа. Если размер не указан, то будет создан диск с размером, соответствующим исходному образу диска.
 
-На примере ранее созданного проектного образа [VirtualImage](../../../reference/cr.html#VirtualImage), рассмотрим команду позволяющую определить размер распакованного образа:
+На примере ранее созданного проектного образа [VirtualImage](../../../reference/cr.html#virtualimage), рассмотрим команду позволяющую определить размер распакованного образа:
 
 ```bash
 d8 k get cvi ubuntu-22.04 -o wide

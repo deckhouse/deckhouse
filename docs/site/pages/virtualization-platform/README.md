@@ -34,7 +34,7 @@ You can view the resource documentation locally from the console using the stand
 
 ## How to enable the module
 
-To enable the module, you need a Deckhouse Kubernetes Platform cluster deployed according to [requirements](#Requirements). To deploy Deckhouse Kubernetes Platform, follow [instructions](https://deckhouse.io/gs/#other-options).
+To enable the module, you need a Deckhouse Kubernetes Platform cluster deployed according to [requirements](#requirements). To deploy Deckhouse Kubernetes Platform, follow [instructions](https://deckhouse.io/gs/#other-options).
 
 1. Enable the [CNI Cilium](/documentation/v1/modules/021-cni-cilium/) module to provide network connectivity for cluster resources.
 2. To store virtual machine data, you must enable one of the following modules according to their installation instructions:

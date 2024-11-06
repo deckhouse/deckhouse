@@ -6,11 +6,11 @@ lang: ru
 
 ## Описание
 
-Проекты (ресурс [Project](../../../reference/cr.html#Project)) в платформе обеспечивают изолированные окружения для создания ресурсов пользователя.
+Проекты (ресурс [Project](../../../reference/cr.html#project)) в платформе обеспечивают изолированные окружения для создания ресурсов пользователя.
 
 Настройки проекта позволяют задать квоты для ресурсов, ограничить сетевое взаимодействие как внутри платформы так и с внешним миром.
 
-Для создания проектов используются шаблоны (ресурс [ProjectTemplate](../../../reference/cr.html#ProjectTemplate)).
+Для создания проектов используются шаблоны (ресурс [ProjectTemplate](../../../reference/cr.html#projecttemplate)).
 
 > **Внимание!** При изменении шаблона проекта, все созданные проекты будут обновлены в соответствии с новым шаблоном.
 
@@ -37,10 +37,10 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 ## Создание проекта
 
-1. Для создания проекта создайте ресурс [Project](../../../reference/cr.html#Project) с указанием имени шаблона проекта в поле `.spec.projectTemplateName`.
-2. В параметре `.spec.parameters` ресурса [Project](../../../reference/cr.html#Project) укажите значения параметров для секции `.spec.parametersSchema.openAPIV3Schema` ресурса [ProjectTemplate](../../../reference/cr.html#ProjectTemplate).
+1. Для создания проекта создайте ресурс [Project](../../../reference/cr.html#project) с указанием имени шаблона проекта в поле `.spec.projectTemplateName`.
+2. В параметре `.spec.parameters` ресурса [Project](../../../reference/cr.html#project) укажите значения параметров для секции `.spec.parametersSchema.openAPIV3Schema` ресурса [ProjectTemplate](../../../reference/cr.html#projecttemplate).
 
-   Пример создания проекта с помощью ресурса [Project](../../../reference/cr.html#Project) из `default` [ProjectTemplate](../../../reference/cr.html#ProjectTemplate) представлен ниже:
+   Пример создания проекта с помощью ресурса [Project](../../../reference/cr.html#project) из `default` [ProjectTemplate](../../../reference/cr.html#projecttemplate) представлен ниже:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2

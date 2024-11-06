@@ -10,7 +10,7 @@ lang: ru
 
 Процесс создания образа включает следующие шаги:
 
-- Пользователь создаёт ресурс [ClusterVirtualImage](../../../../reference/cr.html#ClusterVirtualImage).
+- Пользователь создаёт ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage).
 - После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
 - После завершения загрузки ресурс становится доступным для создания дисков.
 
@@ -31,13 +31,13 @@ lang: ru
 
 Образы могут быть созданы из других образов и дисков виртуальных машин.
 
-С полным описанием параметров конфигурации ресурса ClusterVirtualImage можно ознакомиться по [ClusterVirtualImage](../../../../reference/cr.html#ClusterVirtualImage).
+С полным описанием параметров конфигурации ресурса ClusterVirtualImage можно ознакомиться по [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage).
 
 ### Создание образа с HTTP-сервера
 
 Рассмотрим вариант создания кластерного образа.
 
-Выполните следующую команду для создания [ClusterVirtualImage](../../../../reference/cr.html#ClusterVirtualImage):
+Выполните следующую команду для создания [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage):
 
 ```yaml
 d8 k apply -f - <<EOF

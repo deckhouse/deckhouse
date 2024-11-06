@@ -1,14 +1,14 @@
 ---
 title: "Образы"
-permalink: ru/virtualization-platform/documentation/user/resource-managment/images.html
+permalink: ru/virtualization-platform/documentation/user/resource-management/images.html
 lang: ru
 ---
 
-Ресурс [VirtualImage](../../../reference/cr.html#VirtualImage предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин. Данный ресурс доступен только в неймспейсе или проекте в котором он был создан.
+Ресурс [VirtualImage](../../../reference/cr.html#virtualimage) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин. Данный ресурс доступен только в неймспейсе или проекте в котором он был создан.
 
 Процесс создания образа включает следующие шаги:
 
-- Пользователь создаёт ресурс [VirtualImage](../../../reference/cr.html#VirtualImage.
+- Пользователь создаёт ресурс [VirtualImage](../../../reference/cr.html#virtualimage).
 - После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
 - После завершения загрузки, ресурс становится доступным для создания дисков.
 
@@ -36,7 +36,7 @@ lang: ru
 
 ### Создание образа с HTTP-сервера
 
-Рассмотрим вариант создания образа с вариантом хранения в DVCR. Выполните следующую команду для создания [VirtualImage](../../../reference/cr.html#VirtualImage:
+Рассмотрим вариант создания образа с вариантом хранения в DVCR. Выполните следующую команду для создания [VirtualImage](../../../reference/cr.html#virtualimage):
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -55,7 +55,7 @@ spec:
 EOF
 ```
 
-Проверить результат создания [VirtualImage](../../../reference/cr.html#VirtualImage:
+Проверить результат создания [VirtualImage](../../../reference/cr.html#virtualimage):
 
 ```bash
 d8 k get virtualimage ubuntu-22.04
@@ -66,7 +66,7 @@ d8 k get vi ubuntu-22.04
 # ubuntu-22.04   Ready   false   100%       23h
 ```
 
-После создания ресурс [VirtualImage](../../../reference/cr.html#VirtualImage может находиться в следующих состояниях (фазах):
+После создания ресурс [VirtualImage](../../../reference/cr.html#virtualimage) может находиться в следующих состояниях (фазах):
 
 - `Pending` - ожидание готовности всех зависимых ресурсов, требующихся для создания образа.
 - `WaitForUserUpload` - ожидание загрузки образа пользователем (фаза присутствует только для `type=Upload`).
@@ -92,7 +92,7 @@ d8 k get vi ubuntu-22.04 -w
 # ubuntu-22.04   Ready          false   100%       18s
 ```
 
-В описание ресурса [VirtualImage](../../../reference/cr.html#VirtualImage можно получить дополнительную информацию о скачанном образе:
+В описание ресурса [VirtualImage](../../../reference/cr.html#virtualimage) можно получить дополнительную информацию о скачанном образе:
 
 ```bash
 d8 k describe vi ubuntu-22.04
@@ -117,7 +117,7 @@ spec:
 EOF
 ```
 
-Проверить результат создания [VirtualImage](../../../reference/cr.html#VirtualImage:
+Проверить результат создания [VirtualImage](../../../reference/cr.html#virtualimage):
 
 ```bash
 d8 k get vi ubuntu-22.04-pvc
@@ -176,7 +176,7 @@ EOF
 
 ### Загрузка образа из командной строки
 
-Чтобы загрузить образ из командной строки, предварительно создайте следующий ресурс, как представлено ниже на примере [VirtualImage](../../../reference/cr.html#VirtualImage:
+Чтобы загрузить образ из командной строки, предварительно создайте следующий ресурс, как представлено ниже на примере [VirtualImage](../../../reference/cr.html#virtualimage):
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -228,7 +228,7 @@ d8 k get vi some-image
 
 ### Создание образа из диска
 
-Существует возможность создать образ из [диска](./DISKS_RU.md). Для этого необходимо выполнить одно из следующих условий:
+Существует возможность создать образ из [диска](disk.html). Для этого необходимо выполнить одно из следующих условий:
 
 - Диск не подключен ни к одной из виртуальных машин.
 - Виртуальная машина, к которой подключен диск, находится в выключенном состоянии.
