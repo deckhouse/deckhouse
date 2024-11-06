@@ -42,6 +42,7 @@ const (
 	NodeUnininitalizedTaintKey        = "node.deckhouse.io/uninitialized"
 	masterNodeRoleKey                 = "node-role.kubernetes.io/master"
 	clusterAPIAnnotationKey           = "cluster.x-k8s.io/machine"
+	HeartbeatAnnotationKey            = "kubevirt.internal.virtualization.deckhouse.io/heartbeat"
 )
 
 type NodeSettings struct {
@@ -93,6 +94,12 @@ func actualNodeSettingsFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 		Annotations:      nodeObj.Annotations,
 		Taints:           nodeObj.Spec.Taints,
 		IsClusterAPINode: isClusterAPINode,
+	}
+
+	// Ignore annotation "kubevirt.internal.virtualization.deckhouse.io/heartbeat" on hook execute.
+	_, isHeartbeat := nodeObj.Annotations[HeartbeatAnnotationKey]
+	if isHeartbeat {
+		delete(nodeObj.Annotations, HeartbeatAnnotationKey)
 	}
 
 	return settings, nil
