@@ -124,11 +124,11 @@ entries:
                 - title:
                     en: Virtual Machine Classes
                     ru: Классы виртуальных машин
-                  url: /virtualization-platform/documentation/admin/virtualization-management/virtualization/virtual_machine_classes.html
+                  url: /virtualization-platform/documentation/admin/virtualization-management/virtualization/virtual-machine-classes.html
                 - title:
                     en: Cluster Images
                     ru: Кластерные образы
-                  url: /virtualization-platform/documentation/admin/virtualization-management/virtualization/cluster_images.html
+                  url: /virtualization-platform/documentation/admin/virtualization-management/virtualization/cluster-images.html
             - title:
                 en: Access control
                 ru: Разграничение доступа
@@ -136,11 +136,11 @@ entries:
                 - title:
                     en: User management
                     ru: Управление пользователями
-                  url: /virtualization-platform/documentation/admin/access-control/user_management.html
+                  url: /virtualization-platform/documentation/admin/access-control/user-management.html
                 - title:
                     en: Role model
                     ru: Ролевая модель
-                  url: /virtualization-platform/documentation/admin/access-control/role_model.html
+                  url: /virtualization-platform/documentation/admin/access-control/role-model.html
                 - title:
                     en: Projects
                     ru: Проекты

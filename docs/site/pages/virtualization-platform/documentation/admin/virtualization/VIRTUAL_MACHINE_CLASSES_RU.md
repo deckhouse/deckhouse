@@ -1,5 +1,5 @@
 ---
 title: "Deckhouse Virtualization Platform"
-permalink: ru/virtualization-platform/documentation/admin/virtualization-management/virtualization/virtual_machine_classes.html
+permalink: ru/virtualization-platform/documentation/admin/virtualization/virtual-machine-classes.html
 lang: ru
 ---
