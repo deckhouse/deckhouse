@@ -138,6 +138,7 @@ oom_score = 0
       conf_template = ""
     [plugins."io.containerd.grpc.v1.cri".registry]
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+    {{- /* Registry mirrors configuration */}}
     {{- /* First node bootstrap and Embedded registry in non Direct mode */}}
     {{- if and (eq .runType "ClusterBootstrap") (ne .registry.registryMode "Direct") }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
@@ -158,6 +159,7 @@ oom_score = 0
           endpoint = ["https://127.0.0.1:5001", "https://{{ .systemRegistry.registryAddress }}"]
          {{- end }}
       {{- end }}
+      {{- /* Registry tls and auth configuration */}}
       {{- /* Embedded registry in non Direct mode and cluster uses internal embedded registry */}}
       {{- if and (ne .registry.registryMode "Direct") (eq .systemRegistry.registryAddress .registry.address) }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .systemRegistry.registryAddress }}"]
