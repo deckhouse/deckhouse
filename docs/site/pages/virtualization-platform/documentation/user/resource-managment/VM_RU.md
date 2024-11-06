@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Виртуальные машины"
 permalink: ru/virtualization-platform/documentation/user/resource-managment/virtual-machines.html
 lang: ru
 ---

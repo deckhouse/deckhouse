@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Снимки"
 permalink: ru/virtualization-platform/documentation/user/resource-managment/snapshots.html
 lang: ru
 ---
