@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	AppName = "dhctl"
+	AppName = "dhctlф"
 	// NodeDeckhouseDirectoryPath deckhouse operating directory path.
 	NodeDeckhouseDirectoryPath = "/opt/deckhouse"
 
