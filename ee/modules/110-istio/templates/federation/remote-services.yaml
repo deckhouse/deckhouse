@@ -17,8 +17,6 @@ spec:
   - name: {{ $port.name }}
     number: {{ $port.port }}
       {{- end }}
-  addresses:
-  - {{ $publicService.virtualIP }}
   resolution: STATIC
   endpoints:
       {{- range $ingressGateway := $federation.ingressGateways }}

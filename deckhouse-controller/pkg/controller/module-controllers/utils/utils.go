@@ -15,14 +15,14 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -30,7 +30,7 @@ const (
 )
 
 // GenerateRegistryOptionsFromModuleSource fetches settings from ModuleSource and generate registry options from them
-func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource, clusterUUID string) []cr.Option {
+func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource, clusterUUID string, logger *log.Logger) []cr.Option {
 	rconf := &RegistryConfig{
 		DockerConfig: ms.Spec.Registry.DockerCFG,
 		Scheme:       ms.Spec.Registry.Scheme,
@@ -38,7 +38,7 @@ func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource, clusterU
 		UserAgent:    clusterUUID,
 	}
 
-	return GenerateRegistryOptions(rconf)
+	return GenerateRegistryOptions(rconf, logger)
 }
 
 type RegistryConfig struct {
@@ -48,12 +48,10 @@ type RegistryConfig struct {
 	UserAgent    string
 }
 
-func GenerateRegistryOptions(ri *RegistryConfig) []cr.Option {
+func GenerateRegistryOptions(ri *RegistryConfig, logger *log.Logger) []cr.Option {
 	if ri.UserAgent == "" {
-		if log.IsLevelEnabled(log.DebugLevel) {
-			loggerCopy := *log.StandardLogger()
-			loggerCopy.ReportCaller = true
-			loggerCopy.Debugln("got empty user agent")
+		if logger.Enabled(context.Background(), log.LevelDebug.Level()) {
+			logger.Debug("got empty user agent")
 		}
 
 		ri.UserAgent = "deckhouse-controller"

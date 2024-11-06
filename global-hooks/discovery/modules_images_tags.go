@@ -17,6 +17,7 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -89,7 +90,7 @@ func readModulesImagesDigests(input *go_hook.HookInput, modulesDir string) map[s
 
 	dirItems, err := os.ReadDir(modulesDir)
 	if err != nil {
-		input.LogEntry.Warning(err)
+		input.Logger.Warn("read dir", slog.String("error", err.Error()))
 		return nil
 	}
 
@@ -97,13 +98,13 @@ func readModulesImagesDigests(input *go_hook.HookInput, modulesDir string) map[s
 		evalPath := filepath.Join(modulesDir, dirItem.Name())
 		evalPath, err = filepath.EvalSymlinks(evalPath)
 		if err != nil {
-			input.LogEntry.Warning(err)
+			input.Logger.Warn("eval symlinks", slog.String("error", err.Error()))
 			continue
 		}
 
 		fi, err := os.Stat(evalPath)
 		if err != nil {
-			input.LogEntry.Warning(err)
+			input.Logger.Warn("stat", slog.String("error", err.Error()))
 			continue
 		}
 		if !fi.Mode().IsDir() {
@@ -112,7 +113,7 @@ func readModulesImagesDigests(input *go_hook.HookInput, modulesDir string) map[s
 
 		moduleDigestsObj, err := parseImagesDigestsFile(filepath.Join(evalPath, "images_digests.json"))
 		if err != nil {
-			input.LogEntry.Warning(err)
+			input.Logger.Warn("parse image digest", slog.String("error", err.Error()))
 			continue
 		}
 

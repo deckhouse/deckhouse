@@ -232,7 +232,7 @@ func IssueCertificate(input *go_hook.HookInput, dc dependency.Container, request
 	// Delete existing CSR from the cluster.
 	_ = k8.CertificatesV1().CertificateSigningRequests().Delete(context.TODO(), request.CommonName, metav1.DeleteOptions{})
 
-	csrPEM, key, err := certificate.GenerateCSR(input.LogEntry, request.CommonName,
+	csrPEM, key, err := certificate.GenerateCSR(input.Logger, request.CommonName,
 		certificate.WithGroups(request.Groups...),
 		certificate.WithSANs(request.SANs...))
 	if err != nil {

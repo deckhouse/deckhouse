@@ -151,12 +151,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	secrets, ok := input.Snapshots["secrets"]
 	if !ok {
-		input.LogEntry.Info("No Secrets received, skipping execution")
+		input.Logger.Info("No Secrets received, skipping execution")
 		return nil
 	}
 	namespaces, ok := input.Snapshots["namespaces"]
 	if !ok {
-		input.LogEntry.Info("No Namespaces received, skipping execution")
+		input.Logger.Info("No Namespaces received, skipping execution")
 		return nil
 	}
 

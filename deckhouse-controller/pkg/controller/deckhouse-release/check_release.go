@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
@@ -48,6 +47,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -99,7 +99,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 			UserAgent:    r.clusterUUID,
 		}
 
-		opts = utils.GenerateRegistryOptions(rconf)
+		opts = utils.GenerateRegistryOptions(rconf, r.logger)
 
 		imagesRegistry = drs.ImageRegistry
 	}
@@ -145,7 +145,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		pointerReleases = append(pointerReleases, &r)
 	}
 	sort.Sort(sort.Reverse(updater.ByVersion[*v1alpha1.DeckhouseRelease](pointerReleases)))
-	r.metricStorage.GroupedVault.ExpireGroupMetrics(metricUpdatingFailedGroup)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
 
 	for _, release := range pointerReleases {
 		switch {
@@ -220,7 +220,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 						"version": release.GetVersion().Original(),
 					}
 
-					r.metricStorage.GroupedVault.GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
+					r.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, "d8_updating_is_failed", 1, labels)
 					return err
 				}
 
@@ -313,7 +313,7 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 	return client.IgnoreAlreadyExists(r.client.Create(ctx, release))
 }
 
-func NewDeckhouseReleaseChecker(opts []cr.Option, logger logger.Logger, dc dependency.Container, moduleManager moduleManager, imagesRegistry, releaseChannel string) (*DeckhouseReleaseChecker, error) {
+func NewDeckhouseReleaseChecker(opts []cr.Option, logger *log.Logger, dc dependency.Container, moduleManager moduleManager, imagesRegistry, releaseChannel string) (*DeckhouseReleaseChecker, error) {
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
 	regCli, err := dc.GetRegistryClient(path.Join(imagesRegistry, "release-channel"), opts...)
 	if err != nil {
@@ -332,7 +332,7 @@ func NewDeckhouseReleaseChecker(opts []cr.Option, logger logger.Logger, dc depen
 
 type DeckhouseReleaseChecker struct {
 	registryClient cr.Client
-	logger         logger.Logger
+	logger         *log.Logger
 	moduleManager  moduleManager
 
 	releaseChannel  string

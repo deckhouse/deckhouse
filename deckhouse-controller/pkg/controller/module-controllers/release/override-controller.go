@@ -25,10 +25,8 @@ import (
 	"time"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/gofrs/uuid/v5"
 	cp "github.com/otiai10/copy"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +45,7 @@ import (
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // modulePullOverrideReconciler is the controller implementation for ModulePullOverride resources
@@ -55,7 +54,7 @@ type modulePullOverrideReconciler struct {
 	dc                 dependency.Container
 	preflightCountDown *sync.WaitGroup
 
-	logger logger.Logger
+	logger *log.Logger
 
 	moduleManager        moduleManager
 	downloadedModulesDir string
@@ -69,8 +68,9 @@ func NewModulePullOverrideController(
 	dc dependency.Container,
 	moduleManager moduleManager,
 	preflightCountDown *sync.WaitGroup,
+	logger *log.Logger,
 ) error {
-	lg := log.WithField("component", "ModulePullOverrideController")
+	lg := logger.With("component", "ModulePullOverrideController")
 
 	rc := &modulePullOverrideReconciler{
 		client: mgr.GetClient(),
@@ -222,7 +222,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		}
 	}()
 
-	options := utils.GenerateRegistryOptionsFromModuleSource(ms, c.clusterUUID)
+	options := utils.GenerateRegistryOptionsFromModuleSource(ms, c.clusterUUID, c.logger)
 	md := downloader.NewModuleDownloader(c.dc, tmpDir, ms, options)
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
@@ -253,7 +253,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	if module := c.moduleManager.GetModule(moduleDef.Name); module != nil {
 		values = module.GetConfigValues(false)
 	}
-	err = validateModule(*moduleDef, values)
+	err = validateModule(*moduleDef, values, c.logger)
 	if err != nil {
 		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
 		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
@@ -374,7 +374,7 @@ func (c *modulePullOverrideReconciler) restoreAbsentModulesFromOverrides(ctx con
 
 		// mpo's status.weight field isn't set - get it from the module's definition
 		if moduleWeight == 0 {
-			md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, utils.GenerateRegistryOptionsFromModuleSource(ms, c.clusterUUID))
+			md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, utils.GenerateRegistryOptionsFromModuleSource(ms, c.clusterUUID, c.logger))
 			def, err := md.DownloadModuleDefinitionByVersion(moduleName, moduleImageTag)
 			if err != nil {
 				return fmt.Errorf("couldn't get the %s module definition from repository: %w", moduleName, err)
@@ -458,7 +458,7 @@ func (c *modulePullOverrideReconciler) createModuleSymlink(moduleName, moduleIma
 	if err != nil || !info.IsDir() {
 		// download the module to fs
 		c.logger.Infof("Downloading module %q from registry", moduleName)
-		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, c.clusterUUID)
+		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, c.clusterUUID, c.logger)
 		md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, moduleSource, options)
 		_, _, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
 		if err != nil {

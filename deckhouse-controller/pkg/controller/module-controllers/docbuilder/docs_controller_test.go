@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/jonboulle/clockwork"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -44,6 +43,7 @@ import (
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var golden bool
@@ -281,7 +281,7 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 	rec := &moduleDocumentationReconciler{
 		client:               cl,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		logger:               log.New(),
+		logger:               log.NewNop(),
 		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
 		dc:                   dc,
 	}

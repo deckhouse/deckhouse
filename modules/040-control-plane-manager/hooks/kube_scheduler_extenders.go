@@ -70,7 +70,7 @@ func handleExtenders(input *go_hook.HookInput) error {
 		for _, config := range snapshot.([]KubeSchedulerWebhook) {
 			err := verifyCAChain(config.ClientConfig.CABundle)
 			if err != nil {
-				input.LogEntry.Warnf("failed to verify CA chain: %v, use default kubernetes CA", err)
+				input.Logger.Warnf("failed to verify CA chain: %v, use default kubernetes CA", err)
 				config.ClientConfig.CABundle = kubernetesCABase64
 			}
 

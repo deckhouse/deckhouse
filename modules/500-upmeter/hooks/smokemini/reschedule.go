@@ -19,6 +19,7 @@ package smokemini
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -120,7 +121,7 @@ func reschedule(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	logger := input.LogEntry
+	logger := input.Logger
 	const statePath = "upmeter.internal.smokeMini.sts"
 
 	// Parse the state from values
@@ -156,7 +157,7 @@ func reschedule(input *go_hook.HookInput) error {
 	x, newSts, err := sched.Schedule(state, nodes)
 	if err != nil {
 		if errors.Is(err, scheduler.ErrSkip) {
-			logger.Info(err)
+			logger.Info("scheduler skip", slog.String("error", err.Error()))
 			return nil
 		}
 		return err

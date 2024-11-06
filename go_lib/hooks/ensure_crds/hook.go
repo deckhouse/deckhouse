@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -59,7 +60,7 @@ func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc depend
 		result := EnsureCRDs(crdsGlob, dc)
 
 		if result.ErrorOrNil() != nil {
-			input.LogEntry.WithError(result).Error("ensure_crds failed")
+			input.Logger.Error("ensure_crds failed", slog.String("error", result.Error()))
 		}
 
 		return result.ErrorOrNil()
