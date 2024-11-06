@@ -89,6 +89,20 @@ if [ ! -f "$registry_pki_path/distribution.crt" ]; then
     -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
+# Auth token certs
+if [ ! -f "$registry_pki_path/token.key" ]; then
+    openssl genrsa -out "$registry_pki_path/token.key" 2048
+fi
+if [ ! -f "$registry_pki_path/token.csr" ]; then
+    openssl req -new -key "$registry_pki_path/token.key" \
+    -subj "/ST=./L=./O=./OU=./CN=embedded-registry-auth-token" \
+    -out "$registry_pki_path/token.csr"
+fi
+if [ ! -f "$registry_pki_path/token.crt" ]; then
+    openssl x509 -req -in "$registry_pki_path/token.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
+    -out "$registry_pki_path/token.crt" -days 365 -sha256
+fi
+
 # Seaweedfs certs
 if [ ! -f "$registry_pki_path/seaweedfs.key" ]; then
     openssl genrsa -out "$registry_pki_path/seaweedfs.key" 2048
@@ -113,8 +127,8 @@ server:
 token:
   issuer: "Registry server"
   expiration: 900
-  certificate: "/system_registry_pki/auth.crt"
-  key: "/system_registry_pki/auth.key"
+  certificate: "/system_registry_pki/token.crt"
+  key: "/system_registry_pki/token.key"
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
@@ -219,7 +233,7 @@ auth:
     realm: https://${discovered_node_ip}:5051/auth
     service: Docker registry
     issuer: Registry server
-    rootcertbundle: /system_registry_pki/auth.crt
+    rootcertbundle: /system_registry_pki/token.crt
     autoredirect: false
 EOF
 
