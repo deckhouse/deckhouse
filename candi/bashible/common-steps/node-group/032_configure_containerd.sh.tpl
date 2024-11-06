@@ -183,6 +183,7 @@ oom_score = 0
   {{- else }}
     {{- /* Embedded registry in Direct mode or disable OR Embedded registry in non Direct mode and cluster uses external registry */}}
     {{- if or (eq .registryMode "Direct") (and (ne .registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address)) }}
+      # DEBUG CASE 3
       {{- if .registry.auth }}
       [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
         auth = "{{ .registry.auth }}"
@@ -197,6 +198,7 @@ oom_score = 0
     {{- end }}
     {{- /* Embedded registry configuration if non Direct mode */}}
     {{- if ne .registryMode "Direct" }}
+    # DEBUG CASE 4
       {{- /* Kubernetes-api-proxy on 127.0.0.1:5001 acts as registry embedded registry mirror */}}
       {{- if (and (ne .systemRegistry.registryAddress .registry.address) .registry.auth) }}
       [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".auth]
