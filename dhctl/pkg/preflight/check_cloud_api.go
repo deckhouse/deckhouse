@@ -185,7 +185,6 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *Clou
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
 
-	// Debug
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
@@ -195,7 +194,6 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *Clou
 	body := string(bodyBytes)
 	statusCode := resp.StatusCode
 	log.DebugF("status, response: %d %s", statusCode, body)
-	// Debug
 
 	return resp, nil
 }
