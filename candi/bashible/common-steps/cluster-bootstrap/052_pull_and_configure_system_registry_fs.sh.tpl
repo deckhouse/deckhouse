@@ -69,7 +69,7 @@ if [ ! -f "$registry_pki_path/auth.csr" ]; then
 fi
 if [ ! -f "$registry_pki_path/auth.crt" ]; then
     openssl x509 -req -in "$registry_pki_path/auth.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
-    -out "$registry_pki_path/auth.crt" -days 365 -sha256 \
+    -out "$registry_pki_path/auth.crt" -days 3650 -sha256 \
     -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
@@ -85,7 +85,7 @@ if [ ! -f "$registry_pki_path/distribution.csr" ]; then
 fi
 if [ ! -f "$registry_pki_path/distribution.crt" ]; then
     openssl x509 -req -in "$registry_pki_path/distribution.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
-    -out "$registry_pki_path/distribution.crt" -days 365 -sha256 \
+    -out "$registry_pki_path/distribution.crt" -days 3650 -sha256 \
     -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
@@ -100,7 +100,7 @@ if [ ! -f "$registry_pki_path/token.csr" ]; then
 fi
 if [ ! -f "$registry_pki_path/token.crt" ]; then
     openssl x509 -req -in "$registry_pki_path/token.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
-    -out "$registry_pki_path/token.crt" -days 365 -sha256
+    -out "$registry_pki_path/token.crt" -days 3650 -sha256
 fi
 
 bb-sync-file /etc/kubernetes/system-registry/auth_config/config.yaml - << EOF
