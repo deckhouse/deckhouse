@@ -1,0 +1,38 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  name: parca-1.26.2
+  resourceVersion: "999"
+spec:
+  moduleName: parca
+  version: 1.26.2
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2021-12-08T08:34:01Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    modules.deckhouse.io/update-policy: ""
+  name: parca-1.27.0
+  resourceVersion: "1001"
+spec:
+  moduleName: parca
+  version: 1.27.0
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: null

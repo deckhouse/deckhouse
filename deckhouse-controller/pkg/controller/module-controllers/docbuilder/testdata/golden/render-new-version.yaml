@@ -4,7 +4,7 @@ kind: ModuleDocumentation
 metadata:
   creationTimestamp: null
   finalizers:
-    - modules.deckhouse.io/documentation-exists
+  - modules.deckhouse.io/documentation-exists
   name: testmodule
   resourceVersion: "1001"
 spec:

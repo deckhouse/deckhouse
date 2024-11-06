@@ -523,17 +523,6 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		return result, nil
 	}
 
-	if releaseUpdater.PredictedReleaseIsPatch() {
-		// patch release does not respect update windows or ManualMode
-		err = releaseUpdater.ApplyPredictedRelease()
-		if err != nil {
-			return r.wrapApplyReleaseError(err)
-		}
-
-		modulesChangedReason = "a new module release found"
-		return result, nil
-	}
-
 	err = releaseUpdater.ApplyPredictedRelease()
 	if err != nil {
 		return r.wrapApplyReleaseError(err)
