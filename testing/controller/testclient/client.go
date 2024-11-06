@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/flant/addon-operator/pkg/utils/logger"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
@@ -29,13 +32,12 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/crds"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/project"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // TODO: implement StatusClient and SubResourceClientConstructor
 var _ client.Client = (*Client)(nil)
 
-func New(logger *log.Logger, initObjects []client.Object) (*Client, error) {
+func New(logger *log.Entry, initObjects []client.Object) (*Client, error) {
 	sc, err := project.Scheme()
 	if err != nil {
 		return nil, fmt.Errorf("build scheme: %w", err)
@@ -67,12 +69,12 @@ func New(logger *log.Logger, initObjects []client.Object) (*Client, error) {
 		).
 		Build()
 
-	validator := NewValidator(logger.Named("custom resource schema validator"), validators)
+	validator := NewValidator(logger.WithField(logging.ComponentFieldKey, "custom resource schema validator"), validators)
 	return &Client{logger: logger, Client: cl, validator: validator}, nil
 }
 
 type Client struct {
-	logger *log.Logger
+	logger logger.Logger
 	client.Client
 	validator *Validator
 }

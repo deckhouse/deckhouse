@@ -59,7 +59,6 @@ require (
 require (
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241106075526-de70f3ad9093
 	github.com/docker/distribution v2.8.3+incompatible
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.7.0+incompatible

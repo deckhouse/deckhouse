@@ -19,15 +19,15 @@ import (
 	"reflect"
 	"slices"
 
+	"github.com/flant/addon-operator/pkg/utils/logger"
+
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/kube-openapi/pkg/validation/validate"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func NewValidator(logger *log.Logger, validators map[schema.GroupVersionKind]validation.SchemaValidator) *Validator {
+func NewValidator(logger logger.Logger, validators map[schema.GroupVersionKind]validation.SchemaValidator) *Validator {
 	return &Validator{
 		logger:     logger,
 		validators: validators,
@@ -37,7 +37,7 @@ func NewValidator(logger *log.Logger, validators map[schema.GroupVersionKind]val
 var _ validation.SchemaValidator = (*Validator)(nil)
 
 type Validator struct {
-	logger     *log.Logger
+	logger     logger.Logger
 	validators map[schema.GroupVersionKind]validation.SchemaValidator
 }
 

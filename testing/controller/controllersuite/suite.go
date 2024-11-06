@@ -18,18 +18,17 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
+	"github.com/flant/addon-operator/pkg/utils/logger"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/testclient"
 	"github.com/deckhouse/deckhouse/testing/flags"
 )
@@ -42,7 +41,7 @@ type Suite struct {
 
 	ctx        context.Context
 	stopNotify context.CancelFunc
-	logger     *log.Logger
+	logger     logger.Logger
 	client     *testclient.Client
 	logOutput  io.Writer
 	tmpDir     string
@@ -65,23 +64,18 @@ func (suite *Suite) SetupNoLock(initObjects []client.Object, opts ...SuiteOption
 		opt(suite)
 	}
 
-	loggerOpts := log.Options{
-		Level:  slog.LevelWarn,
-		Output: suite.logOutput,
-		TimeFunc: func(_ time.Time) time.Time {
-			return dependency.TestDC.GetClock().Now()
-		},
-	}
+	lg := log.New()
+	lg.Level = log.WarnLevel
+	lg.Out = suite.logOutput
 
 	if flags.Verbose || flags.Run != nil {
-		loggerOpts.Level = slog.LevelDebug
+		lg.Level = log.TraceLevel
 	}
 
-	logger := log.NewLogger(loggerOpts)
-	suite.logger = logger.Named("suite")
+	suite.logger = lg.WithField(logging.ComponentFieldKey, "suite")
 
 	var err error
-	suite.client, err = testclient.New(logger.Named("test k8s client"), initObjects)
+	suite.client, err = testclient.New(lg.WithField(logging.ComponentFieldKey, "test k8s client"), initObjects)
 	return err
 }
 
@@ -89,7 +83,7 @@ func (suite *Suite) Check(err error) {
 	suite.Require().NoError(err)
 }
 
-func (suite *Suite) Logger() *log.Logger {
+func (suite *Suite) Logger() logger.Logger {
 	suite.Lock()
 	defer suite.Unlock()
 
