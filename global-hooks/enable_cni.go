@@ -20,7 +20,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
@@ -54,20 +53,6 @@ var (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "cni_name",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-cni-configuration"},
-			},
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-system"},
-				},
-			},
-			FilterFunc: applyCniConfigFilter,
-		},
-		{
 			Name:       "deckhouse_mc",
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "ModuleConfig",
@@ -94,33 +79,12 @@ func applyMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	return obj.GetName(), nil
 }
 
-func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var cm v1core.Secret
-	err := sdk.FromUnstructured(obj, &cm)
-	if err != nil {
-		return "", err
-	}
-
-	cni, ok := cm.Data["cni"]
-	if ok {
-		return string(cni), nil
-	}
-
-	return nil, nil
-}
-
 func enableCni(input *go_hook.HookInput) error {
 	requirements.RemoveValue(cniConfigurationSettledKey)
 
-	cniNameSnap := input.Snapshots["cni_name"]
 	deckhouseMCSnap := input.Snapshots["deckhouse_mc"]
 
 	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
-
-	if len(cniNameSnap) == 0 {
-		input.Logger.Warn("CNI name not found")
-		return nil
-	}
 
 	if len(explicitlyEnabledCNIs) > 1 {
 		requirements.SaveValue(cniConfigurationSettledKey, "false")
@@ -131,13 +95,7 @@ func enableCni(input *go_hook.HookInput) error {
 	}
 
 	// nor any CNI enabled directly via MC, found default CNI from secret
-	cniToEnable := cniNameSnap[0].(string)
-	if _, ok := cniNameToModule[cniToEnable]; !ok {
-		input.Logger.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
-		return nil
-	}
 
-	input.Logger.Infof("enabled CNI by secret: %s", cniToEnable)
-	input.Values.Set(cniNameToModule[cniToEnable], true)
+	input.Logger.Warnf("no cni is explicitly enabled")
 	return nil
 }
