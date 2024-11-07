@@ -49,9 +49,13 @@ data:
   {{- $image := (include "helm_lib_module_image" (list . "trivy")) | splitn ":" 2 }}
   trivy.repository: {{ $image._0 }}
   trivy.tag: {{ $image._1 }}
+  {{- if .Values.operatorTrivy.additionalVulnerabilityReportFields }}
+  trivy.additionalVulnerabilityReportFields: {{ .Values.operatorTrivy.additionalVulnerabilityReportFields | join "," | quote }}
+  {{- else }}
   trivy.additionalVulnerabilityReportFields: ""
+  {{- end }}
   {{- if .Values.operatorTrivy.severities }}
-  trivy.severity: {{ .Values.operatorTrivy.severities | join "," }}
+  trivy.severity: {{ .Values.operatorTrivy.severities | join "," | quote }}
   {{- else }}
   trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   {{- end }}
