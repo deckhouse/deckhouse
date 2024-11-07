@@ -37,12 +37,12 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 			resources := []string{
 				manageModuleRole("d8:manage:capability:module:test:edit", "others", "test-ns"),
 				manageModuleRole("d8:manage:capability:module:test2:edit", "others", "test2-ns"),
-				manageScopeRole("d8:manage:others:admin", "scope", "others"),
-				manageScopeBinding("test", "d8:manage:others:admin"),
+				manageRole("d8:manage:others:admin", "scope", "others"),
+				manageBinding("test", "d8:manage:others:admin"),
 
 				manageModuleRole("d8:manage:capability:module:test3:edit", "test", "test2-ns"),
-				manageScopeRole("d8:manage:test:admin", "scope", "test"),
-				manageScopeBinding("test2", "d8:manage:test:admin"),
+				manageRole("d8:manage:test:admin", "scope", "test"),
+				manageBinding("test2", "d8:manage:test:admin"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -65,9 +65,9 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 			resources := []string{
 				manageModuleRole("d8:manage:capability:module:test:edit", "others", "test-ns"),
 				manageModuleRole("d8:manage:capability:module:test2:edit", "others", "test2-ns"),
-				manageScopeRole("d8:manage:others:admin", "scope", "others"),
-				manageScopeRole("d8:manage:all:admin", "all", "all"),
-				manageScopeBinding("test", "d8:manage:all:admin"),
+				manageRole("d8:manage:others:admin", "scope", "others"),
+				manageRole("d8:manage:all:admin", "all", "all"),
+				manageBinding("test", "d8:manage:all:admin"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -108,7 +108,7 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 	})
 })
 
-func manageScopeRole(name, level, scope string) string {
+func manageRole(name, level, scope string) string {
 	role := rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -158,7 +158,7 @@ func manageModuleRole(name, scope, namespace string) string {
 	return string(marshaled)
 }
 
-func manageScopeBinding(name, role string) string {
+func manageBinding(name, role string) string {
 	binding := rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
