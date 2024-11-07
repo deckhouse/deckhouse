@@ -450,8 +450,8 @@ updates:
 - package-ecosystem: "gomod"
   directory: "/modules/160-multitenancy-manager/images/multitenancy-manager"
   labels:
-    - "type/dependencies"
-    - "status/ok-to-test"
+  - "type/dependencies"
+  - "status/ok-to-test"
   schedule:
     interval: "daily"
   open-pull-requests-limit: 0
