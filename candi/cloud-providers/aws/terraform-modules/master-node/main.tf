@@ -17,6 +17,12 @@ locals {
   az_count = length(data.aws_availability_zones.available.names)
 }
 
+data "aws_region" "current" {}
+
+locals {
+  network_border_group = data.aws_availability_zone.master_az.group_name != data.aws_region.current.name ? data.aws_availability_zone.master_az.group_name : null
+}
+
 data "aws_availability_zone" "master_az" {
   name = aws_instance.master.availability_zone
 }
@@ -108,7 +114,7 @@ resource "aws_instance" "master" {
 
 resource "aws_eip" "eip" {
   count = var.associate_public_ip_address ? 1 : 0
-  network_border_group = data.aws_availability_zone.master_az.group_name
+  network_border_group = local.network_border_group
   vpc = true
   tags = merge(var.tags, {
     Name = "${var.prefix}-master-${var.node_index}"
