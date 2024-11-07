@@ -34,7 +34,7 @@ resource "huaweicloud_vpc_subnet" "subnet" {
   vpc_id            = huaweicloud_vpc.vpc.id
   availability_zone = local.zone
   dhcp_enable       = true
-  dns_list          = var.providerClusterConfiguration.standard.internalNetworkDNSServers
+  dns_list          = lookup(var.providerClusterConfiguration.standard, "internalNetworkDNSServers", [])
 }
 
 resource "huaweicloud_compute_servergroup" "server_group" {
