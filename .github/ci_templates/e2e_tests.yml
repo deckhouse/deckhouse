@@ -257,6 +257,7 @@ run: |
     -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
 {!{- end }!}
     -e USER_RUNNER_ID=${user_runner_id} \
+    -e HOME=/tmp \
     -v $(pwd)/testing:/deckhouse/testing \
     -v $(pwd)/release.yaml:/deckhouse/release.yaml \
     -v ${TMP_DIR_PATH}:/tmp \
