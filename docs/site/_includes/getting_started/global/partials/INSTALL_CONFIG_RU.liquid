@@ -29,7 +29,7 @@
 
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
-Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью указания `nodeSelector` в `ModuleConfig deckhouse` в параметре `spec.setting.nodeSelector` конфигурации установки. 
+Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью параметра `spec.setting.nodeSelector` в ModuleConfig `deckhouse` в конфигурации установки.
 
 > Пример указания `nodeSelector` для модуля `deckhouse` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
 > ```yaml
@@ -45,7 +45,7 @@
 >       node-role.kubernetes.io/master: master
 > ```
 
-Также, вы можете перечислить необходимые taint'ы узлов кластера в `ModuleConfig global` в массиве `spec.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие `toleration` своим компонентам.
+Также, вы можете перечислить необходимые taint'ы узлов кластера в ModuleConfig `global` в массиве `spec.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие toleration своим компонентам.
 
 > Пример указания `customTolerationKeys` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
 > ```yaml
