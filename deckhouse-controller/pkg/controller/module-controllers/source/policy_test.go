@@ -18,7 +18,6 @@ import (
 	"os"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -31,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func TestGetReleasePolicy(t *testing.T) {
@@ -49,7 +49,7 @@ func TestGetReleasePolicy(t *testing.T) {
 		downloadedModulesDir:    d8env.GetDownloadedModulesDir(),
 		dc:                      dependency.NewDependencyContainer(),
 		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedDeckhousePolicy),
-		logger:                  log.New(),
+		logger:                  log.NewNop(),
 
 		moduleSourcesChecksum: make(sourceChecksum),
 	}

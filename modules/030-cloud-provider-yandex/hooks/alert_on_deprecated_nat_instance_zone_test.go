@@ -184,7 +184,7 @@ cloudProviderYandex:
 		It("Should expire metric and successfully executed without any log output", func() {
 			Expect(standardLayout).To(ExecuteSuccessfully())
 
-			Expect(string(standardLayout.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(standardLayout.LoggerOutput.Contents())).To(HaveLen(0))
 			m := standardLayout.MetricsCollector.CollectedMetrics()
 
 			Expect(m).To(HaveLen(1))
@@ -206,7 +206,7 @@ cloudProviderYandex:
 		It("Should expire metric and successfully executed without any log output", func() {
 			Expect(normalZone).To(ExecuteSuccessfully())
 
-			Expect(string(normalZone.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(normalZone.LoggerOutput.Contents())).To(HaveLen(0))
 			m := normalZone.MetricsCollector.CollectedMetrics()
 
 			Expect(m).To(HaveLen(1))
@@ -228,7 +228,7 @@ cloudProviderYandex:
 		It("Should expire metric first and then successfully executed setting metric to 1", func() {
 			Expect(deprecatedZone).To(ExecuteSuccessfully())
 
-			Expect(string(deprecatedZone.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(deprecatedZone.LoggerOutput.Contents())).To(HaveLen(0))
 			m := deprecatedZone.MetricsCollector.CollectedMetrics()
 
 			Expect(m).To(HaveLen(2))

@@ -759,7 +759,7 @@ metadata:
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.LogrusOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."))
+			Expect(f.LoggerOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.27"))
@@ -844,7 +844,7 @@ metadata:
 				`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.LogrusOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
+			Expect(f.LoggerOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.27"))
@@ -914,7 +914,7 @@ metadata:
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.LogrusOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.`))
+			Expect(f.LoggerOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.27"))
@@ -984,7 +984,7 @@ metadata:
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.LogrusOutput).Should(gbytes.Say(`unknown cloudInstances\.zones: \[xxx\]`))
+			Expect(f.LoggerOutput).Should(gbytes.Say(`unknown cloudInstances\.zones: \[xxx\]`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.27"))
@@ -1069,7 +1069,7 @@ metadata:
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.LogrusOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!`))
+			Expect(f.LoggerOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.27"))
@@ -1330,7 +1330,7 @@ spec: {}
 			// nodeGroup should not be rendered at all
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").Array()).To(HaveLen(0))
 			// but we have an error in logs
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Calculate capacity failed for: D8TestInstanceClass"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Calculate capacity failed for: D8TestInstanceClass"))
 		})
 	})
 

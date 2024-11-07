@@ -95,7 +95,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		for _, storageClass := range existedStorageClasses {
 			if storageClass.Name == crd.Name {
 				if storageClass.ReclaimPolicy != crd.ReclaimPolicy {
-					input.LogEntry.Infof("Deleting storageclass/%s because its parameters has been changed", storageClass.Name)
+					input.Logger.Infof("Deleting storageclass/%s because its parameters has been changed", storageClass.Name)
 					input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClass.Name)
 				}
 				break

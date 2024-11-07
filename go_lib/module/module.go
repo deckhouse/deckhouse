@@ -108,7 +108,7 @@ func GetHTTPSSecretName(prefix string, moduleName string, input *go_hook.HookInp
 	case "OnlyInURI":
 		return ""
 	default:
-		input.LogEntry.Warnf("ERROR: https.mode must be in [CertManager, CustomCertificate, OnlyInURI], returning %s", prefix)
+		input.Logger.Warnf("ERROR: https.mode must be in [CertManager, CustomCertificate, OnlyInURI], returning %s", prefix)
 		return prefix
 	}
 }

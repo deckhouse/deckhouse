@@ -150,7 +150,7 @@ func calculateReplicasAndPatchMachineDeployment(
 
 		ng, ok := nodeGroups[md.NodeGroup]
 		if !ok {
-			input.LogEntry.Warnf("can't find NodeGroup %s to get min and max instances per zone", md.NodeGroup)
+			input.Logger.Warnf("can't find NodeGroup %s to get min and max instances per zone", md.NodeGroup)
 			continue
 		}
 

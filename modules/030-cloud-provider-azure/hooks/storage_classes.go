@@ -127,12 +127,6 @@ func storageClasses(input *go_hook.HookInput) error {
 		input.Values.Set("cloudProviderAzure.internal.storageClasses", storageClasses)
 	}
 
-	if input.Values.Exists("cloudProviderAzure.storageClass.default") {
-		input.Values.Set("cloudProviderAzure.internal.defaultStorageClass", input.Values.Get("cloudProviderAzure.storageClass.default").String())
-	} else {
-		input.Values.Remove("cloudProviderAzure.internal.defaultStorageClass")
-	}
-
 	return nil
 }
 

@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -40,7 +40,7 @@ const (
 	NotifiedAnnotation   = "release.deckhouse.io/notified"
 )
 
-func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependency.Container,
+func NewDeckhouseUpdater(logger *log.Logger, client client.Client, dc dependency.Container,
 	updateSettings *updater.Settings, releaseData updater.DeckhouseReleaseData, metricStorage *metric_storage.MetricStorage,
 	podIsReady, clusterBootstrapping bool, imagesRegistry string, enabledModules []string,
 ) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
@@ -49,12 +49,12 @@ func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependen
 		newMetricUpdater(metricStorage), newWebhookDataSource(logger), enabledModules), nil
 }
 
-func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
+func newWebhookDataSource(logger *log.Logger) *webhookDataSource {
 	return &webhookDataSource{logger: logger}
 }
 
 type webhookDataSource struct {
-	logger logger.Logger
+	logger *log.Logger
 }
 
 func (s *webhookDataSource) Fill(output *updater.WebhookData, _ *v1alpha1.DeckhouseRelease, applyTime time.Time) {
