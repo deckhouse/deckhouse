@@ -6,7 +6,7 @@ lang: ru
 
 ## Образы
 
-Ресурс [ClusterVirtualImage](../../../../reference/cr.html#ClusterVirtualImage) служит для загрузки образов виртуальных машин во внутрикластерное хранилище, после чего с его помощью можно создавать диски виртуальных машин. Он доступен во всех пространствах имен/проектах кластера.
+Ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage) служит для загрузки образов виртуальных машин во внутрикластерное хранилище, после чего с его помощью можно создавать диски виртуальных машин. Он доступен во всех пространствах имен/проектах кластера.
 
 Процесс создания образа включает следующие шаги:
 
@@ -54,7 +54,7 @@ spec:
 EOF
 ```
 
-Проверьте результат создания [ClusterVirtualImage](../../../../reference/cr.html#ClusterVirtualImage):
+Проверьте результат создания [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage):
 
 ```bash
 d8 k get clustervirtualimage ubuntu-22.04
@@ -65,7 +65,7 @@ d8 k get cvi ubuntu-22.04
 # ubuntu-22.04   Ready   false   100%       23h
 ```
 
-После создания ресурс [ClusterVirtualImage](../../../../reference/cr.html#ClusterVirtualImage) может находиться в следующих состояниях (фазах):
+После создания ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage) может находиться в следующих состояниях (фазах):
 
 - `Pending` - ожидание готовности всех зависимых ресурсов, требующихся для создания образа.
 - `WaitForUserUpload` - ожидание загрузки образа пользователем (фаза присутствует только для `type=Upload`).
@@ -91,7 +91,7 @@ d8 k get cvi ubuntu-22.04 -w
 # ubuntu-22.04   Ready          false   100%       18s
 ```
 
-В описание ресурса [ClusterVirtualImage](../../../../reference/cr.html#ClusterVirtualImage) можно получить дополнительную информацию о скачанном образе:
+В описание ресурса [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage) можно получить дополнительную информацию о скачанном образе:
 
 ```bash
 d8 k describe cvi ubuntu-22.04
@@ -146,7 +146,7 @@ EOF
 
 ### Загрузка образа из командной строки
 
-Чтобы загрузить образ из командной строки, предварительно создайте следующий ресурс, как представлено ниже на примере [ClusterVirtualImage](../../../../reference/cr.html#ClusterVirtualImage):
+Чтобы загрузить образ из командной строки, предварительно создайте следующий ресурс, как представлено ниже на примере [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage):
 
 ```yaml
 d8 k apply -f - <<EOF

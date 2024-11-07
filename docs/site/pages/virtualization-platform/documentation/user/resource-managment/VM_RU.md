@@ -6,7 +6,7 @@ lang: ru
 
 Для создания виртуальной машины используется ресурс [VirtualMachine](../../../reference/cr.html#virtualmachine), его параметры позволяют сконфигурировать:
 
-- [класс виртуальной машины](../../admin/platform-management/virtualization/VIRTUAL_MACHINE_CLASSES_RU.md)
+- [класс виртуальной машины](../../admin/platform-management/virtualization/virtual_machine_classes.html)
 - ресурсы, требуемые для работы виртуальной машины (процессор, память, диски и образы);
 - правила размещения виртуальной машины на узлах кластера;
 - настройки загрузчика и оптимальные параметры для гостевой ОС;
@@ -457,7 +457,7 @@ spec:
 
 Динамические блочные устройства можно подключать и отключать от виртуальной машины, находящейся в запущенном состоянии, без необходимости её перезагрузки.
 
-Для подключения динамических блочных устройств используется ресурс [VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment) (`vmbda`). На данный момент для подключения в качестве динамического блочного устройства поддерживается только [VirtualDisk](../../../reference/cr.html#virtualdisk.
+Для подключения динамических блочных устройств используется ресурс [VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment) (`vmbda`). На данный момент для подключения в качестве динамического блочного устройства поддерживается только [VirtualDisk](../../../reference/cr.html#virtualdisk).
 
 Создайте следующий ресурс, который подключит пустой диск blank-disk к виртуальной машине linux-vm:
 
@@ -475,7 +475,7 @@ spec:
 EOF
 ```
 
-После создания [VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment может находиться в следующих состояниях (фазах):
+После создания [VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment) может находиться в следующих состояниях (фазах):
 
 - `Pending` - ожидание готовности всех зависимых ресурсов.
 - `InProgress` - идет процесс подключения устройства.
@@ -532,7 +532,7 @@ kubectl get vm
 
 Мы видим что на данный момент она запущена на узле `virtlab-pt-1`.
 
-Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperations](../../../reference/cr.html#VirtualMachineOperations (`vmop`) с типом migrate.
+Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperations](../../../reference/cr.html#virtualmachineoperations) (`vmop`) с типом migrate.
 
 ```yaml
 d8 k apply -f - <<EOF
