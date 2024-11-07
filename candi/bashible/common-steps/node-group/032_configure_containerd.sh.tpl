@@ -211,20 +211,20 @@ oom_score = 0
       {{- end }}
       {{- /* Embedded registry configuration if non Direct mode for both cases external and internal registry*/}}
       {{- if ne .registryMode "Direct" }}
-      # DEBUG CASE 10
+        # DEBUG CASE 10
         {{- if .systemRegistry.auth }}
-      # DEBUG CASE 11
-      [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".auth]
-        auth = "{{ .systemRegistry.auth }}"
-      [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".auth]
-        auth = "{{ .systemRegistry.auth }}"
+        # DEBUG CASE 11
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".auth]
+          auth = "{{ .systemRegistry.auth }}"
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".auth]
+          auth = "{{ .systemRegistry.auth }}"
         {{- end }}
         {{- if .systemRegistry.registryCA }}
-      # DEBUG CASE 12
-      [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
-        ca_file = "/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
-      [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".tls]
-        ca_file = "/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
+        # DEBUG CASE 12
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .systemRegistry.registryAddress }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
         {{- end }}
       {{- end }}
     {{- end }}
