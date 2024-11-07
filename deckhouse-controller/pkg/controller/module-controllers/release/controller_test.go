@@ -134,9 +134,16 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	require.NoError(suite.T(), err)
 	ctx := suite.Context()
 
-	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-		return []v1.Layer{&utils.FakeLayer{}}, nil
-	}}, nil)
+	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+		ManifestStub: func() (*v1.Manifest, error) {
+			return &v1.Manifest{
+				Layers: []v1.Descriptor{},
+			}, nil
+		},
+		LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{&utils.FakeLayer{}}, nil
+		},
+	}, nil)
 
 	suite.Run("simple", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("simple.yaml"))

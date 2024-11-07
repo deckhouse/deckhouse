@@ -25,7 +25,6 @@ import (
 
 	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"gopkg.in/yaml.v2"
 
@@ -121,7 +120,10 @@ func (svc *moduleReleaseService) GetModuleRelease(ctx context.Context, moduleNam
 func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modRelease.ModuleReleaseMetadata, error) {
 	var meta = new(modRelease.ModuleReleaseMetadata)
 
-	rc := mutate.Extract(img)
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return nil, err
+	}
 	defer rc.Close()
 
 	rr := &releaseReader{
@@ -129,7 +131,7 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 		changelogReader: bytes.NewBuffer(nil),
 	}
 
-	err := rr.untarMetadata(rc)
+	err = rr.untarMetadata(rc)
 	if err != nil {
 		return nil, err
 	}
