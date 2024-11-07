@@ -1200,6 +1200,8 @@ shell:
     EOD
     touch /terraform.log
     chmod 755 /terraform.log
+    mkdir /.terraform.d
+    chmod 777 /.terraform.d
 ---
 artifact: e2e-eks-terraform-plugins
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
