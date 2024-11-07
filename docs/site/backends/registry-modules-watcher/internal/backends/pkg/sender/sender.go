@@ -61,12 +61,13 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 					if err != nil {
 						klog.Errorf("send delete error: %v", err)
 					}
-				} else {
-					url := "http://" + backend + "/loadDocArchive/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
-					err := s.loadDocArchive(ctx, url, version.TarFile)
-					if err != nil {
-						klog.Errorf("send docs error: %v", err)
-					}
+
+					continue
+				}
+				url := "http://" + backend + "/loadDocArchive/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
+				err := s.loadDocArchive(ctx, url, version.TarFile)
+				if err != nil {
+					klog.Errorf("send docs error: %v", err)
 				}
 			}
 
