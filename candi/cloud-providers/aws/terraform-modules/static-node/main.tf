@@ -17,6 +17,10 @@ locals {
   az_count = length(data.aws_availability_zones.available.names)
 }
 
+data "aws_availability_zone" "node_az" {
+  name = aws_instance.node.availability_zone
+}
+
 data "aws_subnet" "kube" {
   count = local.az_count
   tags = {
@@ -80,6 +84,7 @@ resource "aws_instance" "node" {
 
 resource "aws_eip" "eip" {
   count = var.associate_public_ip_address ? 1 : 0
+  network_border_group = data.aws_availability_zone.node_az.group_name
   vpc = true
   tags = merge(var.tags, {
     Name = "${var.prefix}-${var.node_group.name}-${var.node_index}"
