@@ -65,39 +65,39 @@ When using this method, you need to place a service that will process the hook a
 
 As an example, let's consider using the `Yandex Cloud DNS` service.
 
-To process the webhook, first place the `Yandex Cloud DNS ACME webhook` service in the cluster according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex)  
+1. To process the webhook, first place the `Yandex Cloud DNS ACME webhook` service in the cluster according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex)  
 
-Then, create the `ClusterIssuer` resource:
+1. Then, create the `ClusterIssuer` resource:
 
-```yaml
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: yc-clusterissuer
-  namespace: default
-spec:
-  acme:
-    # You must replace this email address with your own.
-    # Let's Encrypt will use this to contact you about expiring
-    # certificates, and issues related to your account.
-    email: your@email.com
-    server: https://acme-staging-v02.api.letsencrypt.org/directory
-    privateKeySecretRef:
-      # Secret resource that will be used to store the account's private key.
-      name: secret-ref
-    solvers:
-      - dns01:
-          webhook:
-            config:
-              # The ID of the folder where dns-zone located in
-              folder: <your folder ID>
-              # This is the secret used to access the service account
-              serviceAccountSecretRef:
-                name: cert-manager-secret
-                key: iamkey.json
-            groupName: acme.cloud.yandex.com
-            solverName: yandex-cloud-dns
-```
+   ```yaml
+   apiVersion: cert-manager.io/v1
+   kind: ClusterIssuer
+   metadata:
+     name: yc-clusterissuer
+     namespace: default
+   spec:
+     acme:
+       # You must replace this email address with your own.
+       # Let's Encrypt will use this to contact you about expiring
+       # certificates, and issues related to your account.
+       email: your@email.com
+       server: https://acme-staging-v02.api.letsencrypt.org/directory
+       privateKeySecretRef:
+         # Secret resource that will be used to store the account's private key.
+         name: secret-ref
+       solvers:
+         - dns01:
+             webhook:
+               config:
+                 # The ID of the folder where dns-zone located in
+                 folder: <your folder ID>
+                 # This is the secret used to access the service account
+                 serviceAccountSecretRef:
+                   name: cert-manager-secret
+                   key: iamkey.json
+               groupName: acme.cloud.yandex.com
+               solverName: yandex-cloud-dns
+   ```
 
 ## How to add an additional `Issuer` and `ClusterIssuer` using HashiCorp Vault to issue certificates?
 

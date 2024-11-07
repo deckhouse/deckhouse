@@ -67,35 +67,35 @@ title: "Модуль cert-manager: FAQ"
 
 1. Затем создайте ресурс `ClusterIssuer`:
 
-```yaml
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: yc-clusterissuer
-  namespace: default
-spec:
-  acme:
-    # Вы должны заменить этот адрес электронной почты на свой собственный.
-    # Let's Encrypt будет использовать его, чтобы связаться с вами по поводу истекающих
-    # сертификатов и вопросов, связанных с вашей учетной записью.
-    email: your@email.com
-    server: https://acme-staging-v02.api.letsencrypt.org/directory
-    privateKeySecretRef:
-      # Ресурс секретов, который будет использоваться для хранения закрытого ключа аккаунта.
-      name: secret-ref
-    solvers:
-      - dns01:
-          webhook:
-            config:
-              # Идентификатор папки, в которой расположена DNS-зона
-              folder: <your folder ID>
-              # Это секрет, используемый для доступа к учетной записи сервиса
-              serviceAccountSecretRef:
-                name: cert-manager-secret
-                key: iamkey.json
-            groupName: acme.cloud.yandex.com
-            solverName: yandex-cloud-dns
-```
+   ```yaml
+   apiVersion: cert-manager.io/v1
+   kind: ClusterIssuer
+   metadata:
+     name: yc-clusterissuer
+     namespace: default
+   spec:
+     acme:
+       # Вы должны заменить этот адрес электронной почты на свой собственный.
+       # Let's Encrypt будет использовать его, чтобы связаться с вами по поводу истекающих
+       # сертификатов и вопросов, связанных с вашей учетной записью.
+       email: your@email.com
+       server: https://acme-staging-v02.api.letsencrypt.org/directory
+       privateKeySecretRef:
+         # Ресурс секретов, который будет использоваться для хранения закрытого ключа аккаунта.
+         name: secret-ref
+       solvers:
+         - dns01:
+             webhook:
+               config:
+                 # Идентификатор папки, в которой расположена DNS-зона
+                 folder: <your folder ID>
+                 # Это секрет, используемый для доступа к учетной записи сервиса
+                 serviceAccountSecretRef:
+                   name: cert-manager-secret
+                   key: iamkey.json
+               groupName: acme.cloud.yandex.com
+               solverName: yandex-cloud-dns
+   ```
 
 ### Как добавить дополнительный `Issuer` и `ClusterIssuer`, использующий HashiСorp Vault для выпуска сертификатов?
 
