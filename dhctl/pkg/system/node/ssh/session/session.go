@@ -292,7 +292,6 @@ func (s *Session) selectNewHost() {
 
 	hosts := make([]Host, len(s.availableHosts))
 	copy(hosts, s.availableHosts)
-
 	hostIndx := 0
 	if s.host != "" {
 		for i, host := range hosts {
