@@ -169,7 +169,7 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 
 	hosts := make([]session.Host, 0, len(cfg.SSHHosts))
 	for i, host := range cfg.SSHHosts {
-		hosts = append(hosts, session.Host{Host: host.Host, Name: string(i)})
+		hosts = append(hosts, session.Host{Host: host.Host, Name: strconv.Itoa(i)})
 	}
 
 	bastionPort := ""

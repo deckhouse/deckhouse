@@ -54,6 +54,10 @@ func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, runConfi
 
 	// Выводить информацию о новых master
 	if warnMsg != "" {
+		forConfirmation := make([]string, userPassedHostsLen)
+		for i, host := range userPassedHosts {
+			forConfirmation[i] = fmt.Sprintf("%s -> %s", host.Name, host.Host)
+		}
 		msg := fmt.Sprintf(`Warning! %s
 If you lose connection to node, converge may not be finished.
 Also, SSH connectivity to another nodes will not check before converge node.
@@ -61,8 +65,9 @@ Also, SSH connectivity to another nodes will not check before converge node.
 And be attentive when you create new control-plane nodes and change another control-plane instances both.
 dhctl can not add new master IP's for connection.
 
+%s
 Do you want to continue?
-`, warnMsg)
+`, warnMsg, strings.Join(forConfirmation, "\n"))
 
 		if !runConfirm(msg) {
 			return nil, fmt.Errorf("Hosts warning was not confirmed.")

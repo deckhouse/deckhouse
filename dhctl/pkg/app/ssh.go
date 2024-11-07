@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
@@ -99,7 +100,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if len(sSHHostsRaw) > 0 {
 			for i, host := range sSHHostsRaw {
-				SSHHosts = append(SSHHosts, session.Host{Host: host, Name: string(i)})
+				SSHHosts = append(SSHHosts, session.Host{Host: host, Name: strconv.Itoa(i)})
 			}
 		}
 		return nil
