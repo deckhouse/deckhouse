@@ -15,7 +15,7 @@ Provides a gatekeeper based on configurable policies for modifying Kubernetes re
 Allows you to modify the `Metadata` section of a resource.
 At the moment, Gatekeeper only allows **adding** `labels` and `annotations` objects. Modification of existing objects is not provided.
 
-An Example of adding the label `owner` with the value `admin` in all namespaces:
+An example of adding the label `owner` with the value `admin` in all namespaces:
 
 ```yaml
 apiVersion: mutations.gatekeeper.sh/v1
