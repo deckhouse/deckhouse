@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 )
 
 const (
@@ -30,7 +32,7 @@ const (
 	checkHostsMsg = "Please check, is correct mapping node name to host?"
 )
 
-func CheckSSHHosts(userPassedHosts []string, nodesNames []string, runConfirm func(string) bool) (map[string]string, error) {
+func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, runConfirm func(string) bool) (map[string]string, error) {
 	userPassedHostsLen := len(userPassedHosts)
 	replicas := len(nodesNames)
 
@@ -76,9 +78,8 @@ Do you want to continue?
 	forConfirmation := make([]string, userPassedHostsLen)
 
 	for i, host := range userPassedHosts {
-		nodeName := nodesSorted[i]
-		forConfirmation[i] = fmt.Sprintf("%s -> %s", nodeName, host)
-		nodeToHost[nodeName] = host
+		forConfirmation[i] = fmt.Sprintf("%s -> %s", host.Name, host.Host)
+		nodeToHost[host.Name] = host.Host
 	}
 
 	msg := fmt.Sprintf("%s\n%s\n", checkHostsMsg, strings.Join(forConfirmation, "\n"))

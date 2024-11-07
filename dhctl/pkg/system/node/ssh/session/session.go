@@ -79,18 +79,18 @@ type Session struct {
 }
 
 type Host struct {
-	host string
-	name string
+	Host string
+	Name string
 }
 
 type SortByName []Host
 
 func (h SortByName) Len() int { return len(h) }
 func (h SortByName) Less(i, j int) bool {
-	if h[i].name == h[j].name {
-		return h[i].host < h[j].host
+	if h[i].Name == h[j].Name {
+		return h[i].Host < h[j].Host
 	} else {
-		return h[i].name < h[j].name
+		return h[i].Name < h[j].Name
 	}
 }
 func (h SortByName) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
@@ -131,14 +131,14 @@ func (s *Session) AddAvailableHosts(hosts ...Host) {
 
 	availableHostsMap := make(map[string]string, len(s.availableHosts))
 	for _, host := range s.availableHosts {
-		availableHostsMap[host.host] = host.name
+		availableHostsMap[host.Host] = host.Name
 	}
 	for _, host := range hosts {
-		availableHostsMap[host.host] = host.name
+		availableHostsMap[host.Host] = host.Name
 	}
 	availableHosts := make([]Host, 0, len(availableHostsMap))
 	for key, value := range availableHostsMap {
-		availableHosts = append(availableHosts, Host{host: key, name: value})
+		availableHosts = append(availableHosts, Host{Host: key, Name: value})
 	}
 	sort.Sort(SortByName(availableHosts))
 	s.availableHosts = availableHosts
@@ -153,14 +153,14 @@ func (s *Session) RemoveAvailableHosts(hosts ...Host) {
 
 	availableHostsMap := make(map[string]string, len(s.availableHosts))
 	for _, host := range s.availableHosts {
-		availableHostsMap[host.host] = host.name
+		availableHostsMap[host.Host] = host.Name
 	}
 	for _, host := range hosts {
-		delete(availableHostsMap, host.host)
+		delete(availableHostsMap, host.Host)
 	}
 	availableHosts := make([]Host, 0, len(availableHostsMap))
 	for key, value := range availableHostsMap {
-		availableHosts = append(availableHosts, Host{host: key, name: value})
+		availableHosts = append(availableHosts, Host{Host: key, Name: value})
 	}
 	sort.Sort(SortByName(availableHosts))
 	s.availableHosts = availableHosts
@@ -289,7 +289,7 @@ func (s *Session) selectNewHost() {
 	hostIndx := 0
 	if s.host != "" {
 		for i, host := range hosts {
-			if host.host == s.host {
+			if host.Host == s.host {
 				if i != len(hosts)-1 {
 					hostIndx = i + 1
 				}
@@ -301,5 +301,5 @@ func (s *Session) selectNewHost() {
 	host := hosts[hostIndx]
 	s.remainingHosts = append(hosts[:hostIndx], hosts[hostIndx+1:]...)
 
-	s.host = host.host
+	s.host = host.Host
 }

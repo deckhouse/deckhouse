@@ -62,10 +62,10 @@ func (c *MasterNodeGroupController) populateNodeToHost() error {
 		return nil
 	}
 
-	var userPassedHosts []string
+	var userPassedHosts []session.Host
 	sshCl := c.client.NodeInterfaceAsSSHClient()
 	if sshCl != nil {
-		userPassedHosts = append(make([]string, 0), sshCl.Settings.AvailableHosts()...)
+		userPassedHosts = append(make([]session.Host, 0), sshCl.Settings.AvailableHosts()...)
 	}
 	// проблема с определением ip в том что имена отвязаны от ip. надо связывать это всё в один список. причём лучше хранить оба ip
 	nodesNames := make([]string, 0, len(c.state.State))
@@ -203,7 +203,7 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 			return fmt.Errorf("failed to get master IP address: %w", err)
 		}
 
-		settings.AddAvailableHosts(ipAddress)
+		settings.AddAvailableHosts(session.Host{Host: ipAddress, Name: nodeName})
 	}
 
 	if c.lockRunner != nil {
@@ -256,7 +256,7 @@ func (c *MasterNodeGroupController) addNodes() error {
 
 	var (
 		nodesToWait        []string
-		masterIPForSSHList []string
+		masterIPForSSHList []session.Host
 		nodeInternalIPList []string
 	)
 
@@ -269,7 +269,7 @@ func (c *MasterNodeGroupController) addNodes() error {
 				return err
 			}
 
-			masterIPForSSHList = append(masterIPForSSHList, output.MasterIPForSSH)
+			masterIPForSSHList = append(masterIPForSSHList, session.Host{Host: output.MasterIPForSSH, Name: candidateName})
 			nodeInternalIPList = append(nodeInternalIPList, output.NodeInternalIP)
 
 			count++

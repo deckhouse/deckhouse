@@ -21,7 +21,7 @@ import (
 )
 
 func TestCreatingNewSShSession(t *testing.T) {
-	host := Host{host: "a", name: "master-0"}
+	host := Host{Host: "a", Name: "master-0"}
 
 	ses := NewSession(Input{
 		AvailableHosts: []Host{host},
@@ -32,7 +32,7 @@ func TestCreatingNewSShSession(t *testing.T) {
 	})
 
 	t.Run("Create settings with not empty AvailableHosts sets hosts field", func(t *testing.T) {
-		require.Equal(t, ses.host, host.host)
+		require.Equal(t, ses.host, host.Host)
 	})
 
 	t.Run("Create settings with not empty AvailableHosts choices host from remainingHosts (not contains host in remainingHosts)", func(t *testing.T) {
@@ -41,8 +41,8 @@ func TestCreatingNewSShSession(t *testing.T) {
 }
 
 func TestSession_SetNewAvailableHosts(t *testing.T) {
-	oldHost := Host{host: "a", name: "master-0"}
-	newHost := Host{host: "b", name: "master-1"}
+	oldHost := Host{Host: "a", Name: "master-0"}
+	newHost := Host{Host: "b", Name: "master-1"}
 
 	oldHostsList := []Host{oldHost}
 	newHostsList := []Host{newHost}
@@ -54,7 +54,7 @@ func TestSession_SetNewAvailableHosts(t *testing.T) {
 		{
 			name: "Set new available hosts sets new host",
 			assert: func(t *testing.T, s *Session) {
-				require.Equal(t, s.host, newHost.host)
+				require.Equal(t, s.host, newHost.Host)
 			},
 		},
 
@@ -89,19 +89,19 @@ func TestSession_SetNewAvailableHosts(t *testing.T) {
 
 func TestSession_ChoiceNewHost(t *testing.T) {
 	t.Run("ChoiceNewHost should always return one host when setting contains one host", func(t *testing.T) {
-		host := Host{host: "a", name: "master-0"}
+		host := Host{Host: "a", Name: "master-0"}
 		ses := NewSession(Input{
 			AvailableHosts: []Host{host},
 		})
 
 		for i := 0; i < 3; i++ {
 			ses.ChoiceNewHost()
-			require.Equal(t, ses.host, host.host)
+			require.Equal(t, ses.host, host.Host)
 		}
 	})
 
 	t.Run("With multiple hosts ChoiceNewHost does not repeat hosts for calling count - 1 times", func(t *testing.T) {
-		availableHosts := []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}}
+		availableHosts := []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}}
 		ses := NewSession(Input{
 			AvailableHosts: availableHosts,
 		})
@@ -119,7 +119,7 @@ func TestSession_ChoiceNewHost(t *testing.T) {
 	})
 
 	t.Run("With multiple hosts ChoiceNewHost should resets remainingHosts", func(t *testing.T) {
-		availableHosts := []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}}
+		availableHosts := []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}}
 		ses := NewSession(Input{
 			AvailableHosts: availableHosts,
 		})
@@ -130,7 +130,7 @@ func TestSession_ChoiceNewHost(t *testing.T) {
 
 		var remainedHosts []Host
 		for i, host := range availableHosts {
-			if host.host == ses.host {
+			if host.Host == ses.host {
 				remainedHosts = append(availableHosts[:i], availableHosts[i+1:]...)
 				break
 			}
@@ -154,41 +154,41 @@ func TestSession_AddAvailableHosts(t *testing.T) {
 		expected []Host
 	}{
 		{
-			newHosts: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
-			expected: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
+			newHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
 		},
 		{
-			newHosts: []Host{{host: "b", name: ""}, {host: "a", name: ""}, {host: "c", name: ""}},
-			expected: []Host{{host: "a", name: ""}, {host: "b", name: ""}, {host: "c", name: ""}},
+			newHosts: []Host{{Host: "b", Name: ""}, {Host: "a", Name: ""}, {Host: "c", Name: ""}},
+			expected: []Host{{Host: "a", Name: ""}, {Host: "b", Name: ""}, {Host: "c", Name: ""}},
 		},
 		{
-			hosts:    []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
-			newHosts: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
-			expected: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
+			hosts:    []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			newHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
 		},
 		{
-			hosts:    []Host{{host: "c", name: ""}, {host: "b", name: ""}, {host: "a", name: ""}},
-			newHosts: []Host{{host: "b", name: ""}, {host: "a", name: ""}, {host: "c", name: ""}},
-			expected: []Host{{host: "a", name: ""}, {host: "b", name: ""}, {host: "c", name: ""}},
+			hosts:    []Host{{Host: "c", Name: ""}, {Host: "b", Name: ""}, {Host: "a", Name: ""}},
+			newHosts: []Host{{Host: "b", Name: ""}, {Host: "a", Name: ""}, {Host: "c", Name: ""}},
+			expected: []Host{{Host: "a", Name: ""}, {Host: "b", Name: ""}, {Host: "c", Name: ""}},
 		},
 		{
-			hosts:    []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
-			newHosts: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}, {host: "d", name: "master-3"}},
-			expected: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}, {host: "d", name: "master-3"}},
+			hosts:    []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			newHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}, {Host: "d", Name: "master-3"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}, {Host: "d", Name: "master-3"}},
 		},
 		{
-			hosts:    []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
-			newHosts: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}},
-			expected: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
+			hosts:    []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			newHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
 		},
 		{
-			hosts:    []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
-			newHosts: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "d", name: "master-3"}},
-			expected: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}, {host: "d", name: "master-3"}},
+			hosts:    []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			newHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "d", Name: "master-3"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}, {Host: "d", Name: "master-3"}},
 		},
 		{
-			hosts:    []Host{{host: "a", name: "master-0"}},
-			expected: []Host{{host: "a", name: "master-0"}},
+			hosts:    []Host{{Host: "a", Name: "master-0"}},
+			expected: []Host{{Host: "a", Name: "master-0"}},
 		},
 	}
 
@@ -212,23 +212,23 @@ func TestSession_RemoveAvailableHosts(t *testing.T) {
 		expected    []Host
 	}{
 		{
-			hosts:    []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
-			expected: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
+			hosts:    []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
 		},
 		{
-			hosts:       []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
-			removeHosts: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
+			hosts:       []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			removeHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
 			expected:    []Host{},
 		},
 		{
-			hosts:       []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
-			removeHosts: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}},
-			expected:    []Host{{host: "c", name: "master-2"}},
+			hosts:       []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			removeHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}},
+			expected:    []Host{{Host: "c", Name: "master-2"}},
 		},
 		{
-			hosts:       []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "c", name: "master-2"}},
-			removeHosts: []Host{{host: "a", name: "master-0"}, {host: "b", name: "master-1"}, {host: "d", name: "master-3"}},
-			expected:    []Host{{host: "c", name: "master-2"}},
+			hosts:       []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			removeHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "d", Name: "master-3"}},
+			expected:    []Host{{Host: "c", Name: "master-2"}},
 		},
 	}
 
