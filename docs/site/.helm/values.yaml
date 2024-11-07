@@ -16,7 +16,6 @@ moduleWatcher:
     _default:
       - dev-registry.deckhouse.io/sys/deckhouse-oss/modules
       - registry.flant.com/team/foxtrot/docs-example
-      - registry.flant.com/team/foxtrot/trololo
     web-production:
       - registry.deckhouse.io/deckhouse/fe/modules
   scanInterval:

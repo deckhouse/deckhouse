@@ -69,6 +69,7 @@ func (c *Cache) GetRange() (versions []backends.Version) {
 	state := c.GetState()
 	for _, version := range state {
 		if !contain(c.stateSnap, version) {
+			version.ToDelete = false
 			versions = append(versions, version)
 		}
 	}
