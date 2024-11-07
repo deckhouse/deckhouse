@@ -24,11 +24,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/be/modules/600-flant-integration
-  to: /deckhouse/modules/600-flant-integration
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
   stageDependencies:
