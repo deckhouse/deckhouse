@@ -20,7 +20,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -89,7 +88,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 		log.ErrorF("Error while accessing Cloud API: %v", err)
 		return ErrCloudApiUnreachable
 	}
-	log.InfoF("GET %s: %s\n", cloudAPIConfig.URL.String(), resp.Status)
+	log.DebugF("GET %s: %s\n", cloudAPIConfig.URL.String(), resp.Status)
 	if resp.StatusCode >= 500 {
 		return ErrCloudApiUnreachable
 	}
@@ -160,17 +159,6 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.
 	if err != nil {
 		return nil, fmt.Errorf("HTTP request failed: %w", err)
 	}
-
-	defer resp.Body.Close()
-
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.ErrorF("Error reading response body: %v", err)
-	}
-	body := string(bodyBytes)
-	statusCode := resp.StatusCode
-	log.DebugF("status, response: %d %s", statusCode, body)
-
 	return resp, nil
 }
 
