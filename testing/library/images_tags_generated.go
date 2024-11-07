@@ -56,6 +56,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudDataDiscoverer":       "imageHash-cloudProviderGcp-cloudDataDiscoverer",
 		"pdCsiPlugin":               "imageHash-cloudProviderGcp-pdCsiPlugin",
 	},
+	"cloudProviderHuaweicloud": map[string]interface{}{
+		"cloudControllerManager": "imageHash-cloudProviderHuaweicloud-cloudControllerManager",
+		"huaweicloudCsiDriver":   "imageHash-cloudProviderHuaweicloud-huaweicloudCsiDriver",
+	},
 	"cloudProviderOpenstack": map[string]interface{}{
 		"cinderCsiPlugin126":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin126",
 		"cinderCsiPlugin127":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin127",
