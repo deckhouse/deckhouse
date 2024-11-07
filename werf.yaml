@@ -741,6 +741,8 @@ shell:
     {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
     EOD
 
+    chmod a+rwx /deckhouse
+
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
     echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
 
