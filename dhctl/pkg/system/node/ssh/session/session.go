@@ -130,16 +130,21 @@ func (s *Session) AddAvailableHosts(hosts ...Host) {
 	s.lock.Lock()
 
 	availableHostsMap := make(map[string]string, len(s.availableHosts))
+
 	for _, host := range s.availableHosts {
 		availableHostsMap[host.Host] = host.Name
 	}
+
 	for _, host := range hosts {
 		availableHostsMap[host.Host] = host.Name
 	}
+
 	availableHosts := make([]Host, 0, len(availableHostsMap))
+
 	for key, value := range availableHostsMap {
 		availableHosts = append(availableHosts, Host{Host: key, Name: value})
 	}
+
 	sort.Sort(SortByName(availableHosts))
 	s.availableHosts = availableHosts
 
@@ -152,16 +157,21 @@ func (s *Session) RemoveAvailableHosts(hosts ...Host) {
 	s.lock.Lock()
 
 	availableHostsMap := make(map[string]string, len(s.availableHosts))
+
 	for _, host := range s.availableHosts {
 		availableHostsMap[host.Host] = host.Name
 	}
+
 	for _, host := range hosts {
 		delete(availableHostsMap, host.Host)
 	}
+
 	availableHosts := make([]Host, 0, len(availableHostsMap))
+
 	for key, value := range availableHostsMap {
 		availableHosts = append(availableHosts, Host{Host: key, Name: value})
 	}
+
 	sort.Sort(SortByName(availableHosts))
 	s.availableHosts = availableHosts
 
