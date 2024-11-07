@@ -140,9 +140,14 @@ oom_score = 0
       [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
     {{- /* Registry mirrors configuration */}}
     {{- /* First node bootstrap and Embedded registry in non Direct mode */}}
-    {{- if and (eq .runType "ClusterBootstrap") (ne .registry.registryMode "Direct") }}
+    {{- if eq .runType "ClusterBootstrap" }}
+      {{- if eq .registry.registryMode "Direct" }}
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
+          endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
+      {{- else }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
           endpoint = ["{{ .registry.scheme }}://127.0.0.1:5001", "{{ .registry.scheme }}://{{ .registry.address }}"]
+      {{- end }}
     {{- else }}
       {{- /* Embedded registry in Direct mode or disabled */}}
       {{- if eq .registryMode "Direct" }}
@@ -195,7 +200,7 @@ oom_score = 0
     {{- else }}
       {{- /* Embedded registry in Direct mode or disabled OR Embedded registry in non Direct mode and cluster uses external registry */}}
       {{- if or (eq .registryMode "Direct") (and (ne .registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address)) }}
-      # DEBUG CASE 7
+        # DEBUG CASE 7
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
           auth = "{{ .registry.auth | default "" }}"
         {{- if .registry.ca }}
