@@ -21,6 +21,45 @@ Here are some common problems and ways to solve them. Should you run into diffic
     ```shell
     kubectl patch -n d8-system deployment deckhouse --type json -p '[{"op": "remove", "path": "/spec/template/spec/nodeSelector"}]'
     ```
+- Error of the following kind:
+  ```
+  Waiting for Deckhouse to become Ready
+  │ │ Deckhouse pod found: deckhouse-7cc8b6f4bd-9l99t (Running)
+  │ │ Running pod found! Checking logs...
+  │ │ Request failed. Probably pod was restarted during installation.
+  │ │ No Deckhouse pod found.
+  ```
+  And also an error with the status appears in the `deckhouse` module:
+  ```
+  Status:   ModuleError: unable to build kubernetes objects from release manifest: [resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "heritage-label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first]
+  ```
+  
+  May be, the `kube-apiserver.yaml` static manifest does not specify `runtime-config'.
+
+  Add the `spec.containers.command` parameter to `/etc/kubernetes/manifests/kube-api server.yaml` value- --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true`.
+
+  **Caution.** `kube-apiserver` may not respond to requests for a while.
+
+{% endofftopic %}
+
+{% offtopic title="Error in case of Deckhouse installation after interruption" %}
+If the Deckhouse installation was interrupted for unknown reasons, the following error may be displayed during the re-installation:
+```
+  ┌ ⛵ ~ Bootstrap: Install Deckhouse
+  └ ⛵ ~ Bootstrap: Install Deckhouse (43.50 seconds) FAILED
+
+  Timeout while "Check prevent break another bootstrapped": last error: Cluster UUID's not equal in the cluster                              ↵
+  (7489d07a-5fbb-4269-ba0d-e0340ce4f118) and in the cache ().
+  Probably you are trying bootstrap cluster on node with previous created cluster.
+  Please check hostname.
+```
+
+To reinstall Deckhouse on the cluster, you need to delete the following ConfigMaps in the namespace `kube-system`:
+```
+  d8-cluster-is-bootstraped
+  d8-cluster-uuid
+```
+and then start the installation again.
 {% endofftopic %}
 
 {% offtopic title="There is no Ingress controller in the cluster..." %}
