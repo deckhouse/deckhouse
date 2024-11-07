@@ -101,8 +101,7 @@ resource "aws_instance" "master" {
       user_data_replace_on_change,
       ebs_optimized,
       #TODO: remove ignore after we enable automatic converge for master nodes
-      volume_tags,
-      network_border_group
+      volume_tags
     ]
   }
 }
@@ -114,6 +113,9 @@ resource "aws_eip" "eip" {
   tags = merge(var.tags, {
     Name = "${var.prefix}-master-${var.node_index}"
   })
+  lifecycle {
+    ignore_changes = [network_border_group]
+  }
 }
 
 resource "aws_eip_association" "eip" {
