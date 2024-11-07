@@ -48,11 +48,10 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-<p>Make the created StorageClass as the default one in the cluster:</p>
+<p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
-  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
@@ -83,11 +82,10 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-  <p>Make the created StorageClass as the default one in the cluster:</p>
+  <p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
-  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
