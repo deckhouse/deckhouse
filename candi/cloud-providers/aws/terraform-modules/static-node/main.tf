@@ -77,7 +77,8 @@ resource "aws_instance" "node" {
       user_data_replace_on_change,
       ebs_optimized,
       #TODO: remove ignore after we enable automatic converge for master nodes
-      volume_tags
+      volume_tags,
+      network_border_group
     ]
   }
 }
