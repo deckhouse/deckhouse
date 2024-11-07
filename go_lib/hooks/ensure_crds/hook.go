@@ -27,7 +27,6 @@ import (
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	klient "github.com/flant/kube-client/client"
 	"github.com/hashicorp/go-multierror"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -200,11 +199,6 @@ func (cp *CRDsInstaller) getCRDFromCluster(ctx context.Context, crdName string) 
 // NewCRDsInstaller creates new installer for CRDs
 // crdsGlob example: "/deckhouse/modules/002-deckhouse/crds/*.yaml"
 func NewCRDsInstaller(client k8s.Client, crdsGlob string) (*CRDsInstaller, error) {
-	kClient, ok := client.(*klient.Client)
-	if !ok {
-		return nil, fmt.Errorf("TODO: add installer support for %T", client)
-	}
-
 	crds, err := filepath.Glob(crdsGlob)
 	if err != nil {
 		return nil, fmt.Errorf("glob %q: %w", crdsGlob, err)
@@ -213,7 +207,7 @@ func NewCRDsInstaller(client k8s.Client, crdsGlob string) (*CRDsInstaller, error
 	return &CRDsInstaller{
 		k8sClient: client,
 		installer: addonoperator.NewCRDsInstaller(
-			kClient,
+			client,
 			crds,
 			addonoperator.WithExtraLabels(defaultLabels),
 			addonoperator.WithFileFilter(func(crdFilePath string) bool {
