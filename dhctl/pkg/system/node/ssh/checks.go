@@ -78,8 +78,9 @@ Do you want to continue?
 	forConfirmation := make([]string, userPassedHostsLen)
 
 	for i, host := range userPassedHosts {
-		forConfirmation[i] = fmt.Sprintf("%s -> %s", host.Name, host.Host)
-		nodeToHost[host.Name] = host.Host
+		nodeName := nodesSorted[i]
+		forConfirmation[i] = fmt.Sprintf("%s (%s) -> %s", nodeName, host.Name, host.Host)
+		nodeToHost[nodeName] = host.Host
 	}
 
 	msg := fmt.Sprintf("%s\n%s\n", checkHostsMsg, strings.Join(forConfirmation, "\n"))
