@@ -159,6 +159,10 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 	var found *filteredManageRole
 	for _, snap := range manageRoles {
 		if role := snap.(*filteredManageRole); role.Name == roleName {
+			// TODO: skip deleted roles, can be removed after 1.67
+			if deletedRole(role) {
+				continue
+			}
 			found = role
 			var ok bool
 			if useRole, ok = found.Labels["rbac.deckhouse.io/use-role"]; !ok {
