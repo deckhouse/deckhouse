@@ -289,9 +289,6 @@ func (s *Session) selectNewHost() {
 		s.host = ""
 		return
 	}
-	if len(s.remainingHosts) == 0 {
-		s.resetUsedHosts()
-	}
 
 	hosts := make([]Host, len(s.availableHosts))
 	copy(hosts, s.availableHosts)
