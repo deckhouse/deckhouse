@@ -40,7 +40,7 @@ kind: User
 metadata:
   name: joe
 spec:
-  email: joe@example.com
+  email: joe@example.com # используется в RoleBinding, ClusterRoleBinding для назначения прав пользователю
   password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
   ttl: 24h # (опционально) задает срок жизни учетной записи
 ```
@@ -55,13 +55,13 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: Group
 metadata:
-  name: admins
+  name: vms-admins
 spec:
   # список пользователей
   members:
   - kind: User
     name: joe
-  name: admins # уникальное имя группы
+  name: vms-admins # используется в RoleBinding, ClusterRoleBinding для назначения прав группе пользователей
 ```
 
 ## Создание конфигурационного файла для удаленного доступа

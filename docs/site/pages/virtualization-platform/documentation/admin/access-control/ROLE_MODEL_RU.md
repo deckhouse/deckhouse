@@ -33,7 +33,25 @@ metadata:
   namespace: vms
 subjects:
 - kind: User
-  name: joe
+  name: joe@example.com # для users.deckhouse.io параметр .spec.email
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:use:role:admin
+  apiGroup: rbac.authorization.k8s.io
+```
+
+Пример назначения прав администратора проекта `vms` группе пользователей `vms-admins`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: project-admin-joe
+  namespace: vms
+subjects:
+- kind: Group
+  name: vms-admins # для groups.deckhouse.io параметр .spec.name
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -62,7 +80,7 @@ metadata:
   name: cluster-admin-joe
 subjects:
 - kind: User
-  name: joe # пользователь
+  name: joe@example.com # для users.deckhouse.io параметр .spec.email
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -81,7 +99,7 @@ metadata:
   name: network-admin-joe
 subjects:
 - kind: User
-  name: joe # пользователь
+  name: joe@example.com # для users.deckhouse.io параметр .spec.email
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
