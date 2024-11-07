@@ -17,15 +17,16 @@ set -Eeuo pipefail
 
 function pause-the-test() {
   while true; do
-    ec=0
-    ( kubectl get configmap pause-the-test -o json | jq -re '.metadata.name == "pause-the-test"' >/dev/null ) || ec=$?
+    pause_check=$( { kubectl get configmap pause-the-test; } 2>&1 ) || true
 
-    case $ec in
-        0) >&2 echo 'Waiting until "kubectl delete cm pause-the-test" before destroying cluster';;
-        1) break;;
-        4) >&2 echo 'Unable to connect to Kubernetes API, waiting';;
-        *) >&2 echo 'Unknown exit code on pause check'; break;;
-    esac
+    if [[ $pause_check = *NotFound* ]]; then
+      break
+    elif [[ $pause_check = *pause-the-test* ]]; then
+      echo 'Waiting until "kubectl delete cm pause-the-test" before destroying cluster'
+    else
+      >&2 echo "$pause_check"
+      echo 'Unable to connect to Kubernetes API, waiting'
+    fi
 
     sleep 30
   done
