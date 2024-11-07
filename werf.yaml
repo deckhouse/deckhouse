@@ -370,10 +370,10 @@ git:
   to: /pkg/log
   stageDependencies:
     install:
-    - go.mod
-    - go.sum
+      - go.mod
+      - go.sum
     setup:
-    - "**/*.go"
+      - "**/*.go"
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
