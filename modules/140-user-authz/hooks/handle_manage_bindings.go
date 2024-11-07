@@ -137,7 +137,7 @@ func syncBindings(input *go_hook.HookInput) error {
 	// delete excess use bindings
 	for _, snap := range input.Snapshots["useBindings"] {
 		existing := snap.(*filteredUseBinding)
-		if _, ok := expected[existing.RoleName]; !ok {
+		if _, ok := expected[existing.Name]; !ok {
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
 	}
