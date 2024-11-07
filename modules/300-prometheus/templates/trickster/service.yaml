@@ -11,6 +11,6 @@ spec:
   ports:
   - port: 443
     name: https
-    targetPort: https
+    targetPort: 8443
   selector:
-    app: trickster
+    app: aggregating-proxy

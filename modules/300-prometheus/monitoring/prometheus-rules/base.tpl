@@ -27,14 +27,14 @@
           There is no `prometheus-longterm` target in Prometheus.
 {{- end }}
 
-    - alert: D8TricksterTargetAbsent
-      expr: (max(up{job="prometheus", service="prometheus"}) == 1) * absent(up{job="trickster", namespace="d8-monitoring"} == 1)
+    - alert: D8AggregatingProxyTargetAbsent
+      expr: (max(up{job="prometheus", service="prometheus"}) == 1) * absent(up{job="aggregating-proxy", namespace="d8-monitoring"} == 1)
       for: 2m
       labels:
         severity_level: "5"
         tier: cluster
         d8_module: prometheus
-        d8_component: trickster
+        d8_component: aggregating-proxy
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
@@ -44,23 +44,23 @@
           The following modules use this component:
           * `prometheus-metrics-adapter` — the unavailability of the component means that HPA (auto scaling) is not running and you cannot view resource consumption using `kubectl`;
           * `vertical-pod-autoscaler` — this module is quite capable of surviving a short-term unavailability, as VPA looks at the consumption history for 8 days;
-          * `grafana` — by default, all dashboards use Trickster for caching requests to Prometheus. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and, hence, to unavailability.
+          * `grafana` — by default, all dashboards use aggregating-proxy for caching requests to Prometheus. You can retrieve data directly from Prometheus (bypassing the aggregating-proxy). However, this may lead to high memory usage by Prometheus and, hence, to unavailability.
 
           The recommended course of action:
-          1. Analyze the Deployment stats: `kubectl -n d8-monitoring describe deployment trickster`;
-          2. Analyze the Pod stats: `kubectl -n d8-monitoring describe pod -l app=trickster`;
-          3. Usually, Trickster is unavailable due to Prometheus-related issues because the Trickster's readinessProbe checks the Prometheus availability. Thus, make sure that Prometheus is running: `kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main`.
+          1. Analyze the Deployment stats: `kubectl -n d8-monitoring describe deployment aggregating-proxy`;
+          2. Analyze the Pod stats: `kubectl -n d8-monitoring describe pod -l app=aggregating-proxy`;
+          3. Usually, aggregating-proxy is unavailable due to Prometheus-related issues because the aggregating-proxy's readinessProbe checks the Prometheus availability. Thus, make sure that Prometheus is running: `kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main`.
         summary: >
-          There is no Trickster target in Prometheus.
+          There is no aggregating-proxy target in Prometheus.
 
-    - alert: D8TricksterTargetAbsent
-      expr: absent(up{job="trickster", namespace="d8-monitoring"} == 1)
+    - alert: D8AggregatingProxyTargetAbsent
+      expr: absent(up{job="aggregating-proxy", namespace="d8-monitoring"} == 1)
       for: 5m
       labels:
         severity_level: "5"
         tier: cluster
         d8_module: prometheus
-        d8_component: trickster
+        d8_component: aggregating-proxy
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
@@ -70,11 +70,11 @@
           The following modules use this component:
           * `prometheus-metrics-adapter` — the unavailability of the component means that HPA (auto scaling) is not running and you cannot view resource consumption using `kubectl`;
           * `vertical-pod-autoscaler` — this module is quite capable of surviving a short-term unavailability, as VPA looks at the consumption history for 8 days;
-          * `grafana` — by default, all dashboards use Trickster for caching requests to Prometheus. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and, hence, to its unavailability.
+          * `grafana` — by default, all dashboards use aggregating-proxy for caching requests to Prometheus. You can retrieve data directly from Prometheus (bypassing the aggregating-proxy). However, this may lead to high memory usage by Prometheus and, hence, to its unavailability.
 
           The recommended course of action:
-          1. Analyze the Deployment information: `kubectl -n d8-monitoring describe deployment trickster`;
-          2. Analyze the Pod information: `kubectl -n d8-monitoring describe pod -l app=trickster`;
-          3. Usually, Trickster is unavailable due to Prometheus-related issues because the Trickster's readinessProbe checks the Prometheus availability. Thus, make sure that Prometheus is running: `kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main`.
+          1. Analyze the Deployment information: `kubectl -n d8-monitoring describe deployment aggregating-proxy`;
+          2. Analyze the Pod information: `kubectl -n d8-monitoring describe pod -l app=aggregating-proxy`;
+          3. Usually, aggregating-proxy is unavailable due to Prometheus-related issues because the aggregating-proxy's readinessProbe checks the Prometheus availability. Thus, make sure that Prometheus is running: `kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main`.
         summary: >
-          There is no Trickster target in Prometheus.
+          There is no aggregating-proxy target in Prometheus.
