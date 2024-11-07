@@ -12,9 +12,9 @@ require (
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.5.1
-	github.com/flant/kube-client v1.2.1
-	github.com/flant/shell-operator v1.5.0
+	github.com/flant/addon-operator v1.5.2
+	github.com/flant/kube-client v1.2.2
+	github.com/flant/shell-operator v1.5.1
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-openapi/spec v0.19.8
@@ -70,6 +70,7 @@ require (
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/slok/kubewebhook/v2 v2.5.0
 	golang.org/x/mod v0.20.0
+	golang.org/x/text v0.19.0
 	k8s.io/cli-runtime v0.29.0
 	k8s.io/code-generator v0.29.0
 	k8s.io/klog/v2 v2.130.1
@@ -228,7 +229,6 @@ require (
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/term v0.25.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
