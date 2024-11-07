@@ -19,9 +19,9 @@ If you need support for other types of certificates, you can add them yourself.
 The standard delivery set includes `ClusterIssuer` that issues certificates from the trusted public certificate authority Let's Encrypt or issues self-signed certificates.
 
 To issue certificates for a domain name via Let's Encrypt, the service requires that you verify domain ownership.
-Cert-manager supports several methods for verifying domain ownership when using `ACME` (Automated Certificate Management Environment):
-* `HTTP-01` - when using this method cert-manager will create a temporary Pod in the cluster that will listen on a specific URL to verify domain ownership. For it to work, you must be able to direct external traffic to this Pod, usually via `Ingress`.
-* `DNS-01` - when using this method cert-manager makes a TXT record in DNS to verify domain ownership. cert-manager has built-in support for popular DNS providers: AWS Route53, Google Cloud DNS, Cloudflare, and others.
+The `cert-manager` supports several methods for verifying domain ownership when using `ACME` (Automated Certificate Management Environment):
+* `HTTP-01` - when using this method `cert-manager` will create a temporary Pod in the cluster that will listen on a specific URL to verify domain ownership. For it to work, you must be able to direct external traffic to this Pod, usually via `Ingress`.
+* `DNS-01` - when using this method `cert-manager` makes a TXT record in DNS to verify domain ownership. The `cert-manager` has built-in support for popular DNS providers: AWS Route53, Google Cloud DNS, Cloudflare, and others.
 
 {% alert level="danger" %}
 The `HTTP-01` method does not support issuing wildcard certificates.
@@ -42,7 +42,7 @@ Added automatically unless their creation is disabled in the [module settings](.
    * `letsencrypt-staging`
 
 In this way, an additional `ClusterIssuer` may be required in the following cases:
-1. Certificates need to be issued in a CA other than Let's Encrypt (including a private one). Supported CAs are available [in the cert-manager documentation](https://cert-manager.io/docs/configuration/)
+1. Certificates need to be issued in a CA other than Let's Encrypt (including a private one). Supported CAs are available [in the `cert-manager` documentation](https://cert-manager.io/docs/configuration/)
 2. Certificates need to be issued via Let's Encrypt using the `DNS-01` method via a third-party provider.
 
 ### How to add an additional `ClusterIssuer` using Let's Encrypt and `DNS-01` verification method?
@@ -50,12 +50,12 @@ In this way, an additional `ClusterIssuer` may be required in the following case
 To verify domain ownership via Let's Encrypt using the `DNS-01` method, you need to configure the ability to create TXT records in a public DNS.
 
 `cert-manager` has support for mechanisms for creating TXT records in some popular DNS: `AzureDNS`, `Cloudflare`, `Google Cloud DNS`, etc.  
-The full list is available [in the cert-manager documentation](https://cert-manager.io/docs/configuration/acme/dns01/).
+The full list is available [in the `cert-manager` documentation](https://cert-manager.io/docs/configuration/acme/dns01/).
 
 The module automatically creates `ClusterIssuer` of supported cloud providers when filling in the module settings related to the cloud used.  
 If necessary, you can create such `ClusterIssuer` yourself.
 
-An example of using AWS Route53 is available in the section [How to protect cert-manager credentials](#how-to-protect-cert-manager-credentials).  
+An example of using AWS Route53 is available in the section [How to protect `cert-manager` credentials](#how-to-protect-cert-manager-credentials).  
 The list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
 
 Using third-party DNS providers is implemented via the `webhook` method.  
@@ -190,7 +190,7 @@ Follow the steps below to use a custom or interim CA:
 
   You can use any name you like for the secret.
 
-- Create a ClusterIssuer using the secret you created earlier:
+- Create a `ClusterIssuer` using the secret you created earlier:
 
   ```yaml
   apiVersion: cert-manager.io/v1
@@ -202,11 +202,11 @@ Follow the steps below to use a custom or interim CA:
       secretName: internal-ca-key-pair    # Name of the secret you created earlier.
   ```
 
-  You can use any name as your ClusterIssuer name.
+  You can use any name as your `ClusterIssuer` name.
 
-You can now use the created ClusterIssuer to issue certificates for all Deckhouse components or a particular component.
+You can now use the created `ClusterIssuer` to issue certificates for all Deckhouse components or a particular component.
 
-For example, to issue certificates for all Deckhouse components, specify the ClusterIssuer name in the [clusterIssuerName](../../deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername) global parameter (`kubectl edit mc global`):
+For example, to issue certificates for all Deckhouse components, specify the `ClusterIssuer` name in the [ClusterIssuerName](../../deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername) global parameter (`kubectl edit mc global`):
 
   ```yaml
   spec:
@@ -220,11 +220,11 @@ For example, to issue certificates for all Deckhouse components, specify the Clu
     version: 1
   ```
 
-## How to secure cert-manager credentials?
+## How to secure `cert-manager` credentials?
 
 If you don't want to store credentials in the Deckhouse configuration (security reasons, for example), feel free to create
 your own ClusterIssuer / Issuer.
-For example, you can create your own ClusterIssuer for a [route53](https://aws.amazon.com/route53/) service in this way:
+For example, you can create your own `ClusterIssuer` for a [route53](https://aws.amazon.com/route53/) service in this way:
 - Create a Secret with credentials:
 
   ```shell
@@ -240,7 +240,7 @@ For example, you can create your own ClusterIssuer for a [route53](https://aws.a
   EOF
   ```
 
-- Create a simple ClusterIssuer with reference to that secret:
+- Create a simple `ClusterIssuer` with reference to that secret:
 
   ```shell
   kubectl apply -f - <<EOF
@@ -265,7 +265,7 @@ For example, you can create your own ClusterIssuer for a [route53](https://aws.a
   EOF
   ```
 
-- Order certificates as usual, using created ClusterIssuer:
+- Order certificates as usual, using created `ClusterIssuer`:
 
   ```shell
   kubectl apply -f - <<EOF
