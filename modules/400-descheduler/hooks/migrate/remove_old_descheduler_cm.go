@@ -42,12 +42,12 @@ func removeOldDeschedulerSecret(input *go_hook.HookInput, dc dependency.Containe
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			input.LogEntry.Info("Descheduler legacy CM d8-system/descheduler-config-migration is not found, skipping migration")
+			input.Logger.Info("Descheduler legacy CM d8-system/descheduler-config-migration is not found, skipping migration")
 			return nil
 		}
 		return err
 	}
 
-	input.LogEntry.Info("Descheduler legacy CM d8-system/descheduler-config-migration is deleted")
+	input.Logger.Info("Descheduler legacy CM d8-system/descheduler-config-migration is deleted")
 	return nil
 }
