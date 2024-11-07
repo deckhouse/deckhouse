@@ -43,7 +43,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,14 +51,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
@@ -110,13 +108,11 @@ func NewModuleReleaseController(
 	preflightCountDown *sync.WaitGroup,
 	logger *log.Logger,
 ) error {
-	lg := logger.With("component", "ModuleReleaseController")
-
 	c := &moduleReleaseReconciler{
 		client:               mgr.GetClient(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dc,
-		logger:               lg,
+		logger:               logger,
 
 		metricStorage:           metricStorage,
 		moduleManager:           mm,
@@ -660,11 +656,11 @@ func (r *moduleReleaseReconciler) PreflightCheck(ctx context.Context) (err error
 	r.clusterUUID = r.getClusterUUID(ctx)
 
 	// Check if controller's dependencies have been initialized
-	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
-		func(context.Context) (bool, error) {
-			// TODO: add modulemanager initialization check r.moduleManager.AreModulesInited() (required for reloading modules without restarting deckhouse)
-			return deckhouseconfig.IsServiceInited(), nil
-		})
+	//_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
+	//	func(context.Context) (bool, error) {
+	//		// TODO: add modulemanager initialization check r.moduleManager.AreModulesInited() (required for reloading modules without restarting deckhouse)
+	//		return deckhouseconfig.IsServiceInited(), nil
+	//	})
 
 	go r.restartLoop(ctx)
 	err = r.restoreAbsentModulesFromReleases(ctx)

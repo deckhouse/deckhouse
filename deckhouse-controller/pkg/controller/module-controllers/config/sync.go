@@ -28,14 +28,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
-// syncModules syncs module at start
+// syncModules syncs modules at start
 func (r *reconciler) syncModules(ctx context.Context) error {
 	// wait until module manager init
-	r.log.Debugf("wait until module manager is inited")
+	r.log.Debug("wait until module manager is inited")
 	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
 		return r.moduleManager.AreModulesInited(), nil
 	}); err != nil {
@@ -72,7 +71,7 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 			}
 
 			// clear module
-			err := utils.Update[*v1alpha1.Module](ctx, r.client, module, false, func(module *v1alpha1.Module) bool {
+			err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				availableSources := module.Properties.AvailableSources
 				module.Properties = v1alpha1.ModuleProperties{
 					AvailableSources: availableSources,
@@ -84,10 +83,9 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 				return err
 			}
 
-			err = utils.Update[*v1alpha1.Module](ctx, r.client, module, true, func(module *v1alpha1.Module) bool {
+			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				module.Status.Phase = v1alpha1.ModulePhaseNotInstalled
-				module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-				module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "Disabled", "disabled")
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 				return true
 			})
 			if err != nil {
@@ -98,15 +96,14 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 		}
 
 		// init modules status
-		err := utils.Update[*v1alpha1.Module](ctx, r.client, module, true, func(module *v1alpha1.Module) bool {
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "Init", "Init")
-
-			module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager, r.moduleManager.IsModuleEnabled(moduleName))
-			module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleManager, "Init", "Init")
-
-			module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleConfig, "Init", "Init")
+		err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonInit, v1alpha1.ModuleMessageInit)
+			if r.moduleManager.IsModuleEnabled(module.Name) {
+				module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleManager)
+			} else {
+				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonInit, v1alpha1.ModuleMessageInit)
+			}
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonInit, v1alpha1.ModuleMessageInit)
 			return true
 		})
 		if err != nil {
@@ -114,14 +111,14 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 			return err
 		}
 	}
-	r.log.Debugf("registered modules are inited, init module configs")
+	r.log.Debug("registered modules are inited, init module configs")
 
 	if err := r.syncModuleConfigs(ctx); err != nil {
 		r.log.Errorf("failed to sync module configs: %v", err)
 		return err
 	}
 
-	r.log.Debugf("module configs are inited, run event loop")
+	r.log.Debug("module configs are inited, run event loop")
 
 	r.init.Done()
 	return r.runModuleEventLoop(ctx)
@@ -160,7 +157,7 @@ func (r *reconciler) refreshModuleConfigStatus(ctx context.Context, configName s
 				return err
 			}
 
-			d8config.Service().StatusReporter().RefreshConfig(moduleConfig)
+			r.refreshConfigStatus(moduleConfig)
 			if err := r.client.Status().Update(ctx, moduleConfig); err != nil {
 				return err
 			}
@@ -185,22 +182,22 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 		if event.ModuleName == "" {
 			continue
 		}
-		if err := r.refreshModuleStatus(ctx, event.ModuleName); err != nil {
+		if err := r.refreshModule(ctx, event.ModuleName); err != nil {
 			r.log.Errorf("failed to handle the event: failed to refresh the '%s' module: %v", event.ModuleName, err)
 		}
 	}
 	return nil
 }
 
-// refreshModuleStatus refreshes module status by addon-operator
-func (r *reconciler) refreshModuleStatus(ctx context.Context, moduleName string) error {
+// refreshModule refreshes module status by addon-operator
+func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			module := new(v1alpha1.Module)
 			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 				return err
 			}
-			d8config.Service().StatusReporter().RefreshModule(module)
+			r.refreshModuleStatus(module)
 			return r.client.Status().Update(ctx, module)
 		})
 	})

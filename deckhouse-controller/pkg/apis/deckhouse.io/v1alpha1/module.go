@@ -38,11 +38,33 @@ const (
 	ModulePhaseNotInstalled = "NotInstalled"
 	ModulePhaseDownloading  = "Downloading"
 	ModulePhaseEnqueued     = "Enqueued"
-	ModulePhaseWaitSync     = "WaitSynchronization"
+	ModulePhaseWaitSync     = "WaitSync"
 	ModulePhasePending      = "Pending"
 	ModulePhaseConflict     = "Conflict"
 	ModulePhaseReady        = "Ready"
 	ModulePhaseError        = "Error"
+
+	ModuleReasonNotInstalled = "NotInstalled"
+	ModuleReasonDisabled     = "Disabled"
+	ModuleReasonInit         = "Init"
+	ModuleReasonConflict     = "Conflict"
+	ModuleReasonChangeSource = "ChangeSource"
+	ModuleReasonHookError    = "HookError"
+	ModuleReasonModuleError  = "ModuleError"
+	ModuleReasonEnqueued     = "Enqueued"
+	ModuleReasonWaitSync     = "WaitSync"
+	ModuleReasonPending      = "Pending"
+	ModuleReasonError        = "Error"
+
+	ModuleMessageNotInstalled  = "not installed"
+	ModuleMessageDisabled      = "disabled"
+	ModuleMessageInit          = "init"
+	ModuleMessageConflict      = "several available sources"
+	ModuleMessageChangeSource  = "changing source"
+	ModuleMessageEnqueued      = "enqueued"
+	ModuleMessageWaitSync      = "run sync tasks"
+	ModuleMessageOnStartupHook = "completed OnStartup hooks"
+	ModuleMessageHooksDisabled = "hooks disabled"
 )
 
 var (
@@ -144,47 +166,52 @@ func (m *Module) ConditionStatus(condName string) bool {
 	return false
 }
 
-func (m *Module) SetConditionStatus(condName string, enabled bool) {
+func (m *Module) SetConditionTrue(condName string) {
 	for idx, cond := range m.Status.Conditions {
 		if cond.Type == condName {
 			m.Status.Conditions[idx].LastProbeTime = metav1.Now()
-			if enabled && cond.Status != corev1.ConditionTrue {
+			if cond.Status == corev1.ConditionFalse {
 				m.Status.Conditions[idx].LastTransitionTime = metav1.Now()
 				m.Status.Conditions[idx].Status = corev1.ConditionTrue
 			}
-			if !enabled && cond.Status != corev1.ConditionFalse {
-				m.Status.Conditions[idx].LastTransitionTime = metav1.Now()
-				m.Status.Conditions[idx].Status = corev1.ConditionFalse
-			}
+			m.Status.Conditions[idx].Reason = ""
+			m.Status.Conditions[idx].Message = ""
 			return
 		}
 	}
 
-	status := corev1.ConditionFalse
-	if enabled {
-		status = corev1.ConditionTrue
-	}
 	m.Status.Conditions = append(m.Status.Conditions, ModuleCondition{
 		Type:               condName,
-		Status:             status,
+		Status:             corev1.ConditionTrue,
 		LastProbeTime:      metav1.Now(),
 		LastTransitionTime: metav1.Now(),
 	})
 }
 
-func (m *Module) SetConditionReason(condName string, reason, message string) {
+func (m *Module) SetConditionFalse(condName string, reason, message string) {
 	for idx, cond := range m.Status.Conditions {
 		if cond.Type == condName {
 			m.Status.Conditions[idx].LastProbeTime = metav1.Now()
-			if cond.Message != message {
-				m.Status.Conditions[idx].Message = message
+			if cond.Status == corev1.ConditionTrue {
+				m.Status.Conditions[idx].LastTransitionTime = metav1.Now()
+				m.Status.Conditions[idx].Status = corev1.ConditionFalse
 			}
 			if cond.Reason != reason {
 				m.Status.Conditions[idx].Reason = reason
 			}
+			if cond.Message != message {
+				m.Status.Conditions[idx].Message = cond.Message
+			}
 			return
 		}
 	}
+
+	m.Status.Conditions = append(m.Status.Conditions, ModuleCondition{
+		Type:               condName,
+		Status:             corev1.ConditionFalse,
+		LastProbeTime:      metav1.Now(),
+		LastTransitionTime: metav1.Now(),
+	})
 }
 
 func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {

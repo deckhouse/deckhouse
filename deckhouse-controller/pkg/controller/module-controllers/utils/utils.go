@@ -17,16 +17,17 @@ package utils
 import (
 	"context"
 	"errors"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"strings"
+	"time"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
-	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -134,17 +135,28 @@ func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySec
 	}, err
 }
 
-func Update[Object client.Object](ctx context.Context, cli client.Client, object Object, status bool, updater func(obj Object) bool) error {
+func Update[Object client.Object](ctx context.Context, cli client.Client, object Object, updater func(obj Object) bool) error {
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := cli.Get(ctx, client.ObjectKey{Name: object.GetName()}, object); err != nil {
 				return err
 			}
 			if updater(object) {
-				if status {
-					return cli.Status().Update(ctx, object)
-				}
 				return cli.Update(ctx, object)
+			}
+			return nil
+		})
+	})
+}
+
+func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, object Object, updater func(obj Object) bool) error {
+	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := cli.Get(ctx, client.ObjectKey{Name: object.GetName()}, object); err != nil {
+				return err
+			}
+			if updater(object) {
+				return cli.Status().Update(ctx, object)
 			}
 			return nil
 		})

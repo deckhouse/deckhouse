@@ -19,12 +19,13 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/kube-client/client"
+	kubeclient "github.com/flant/kube-client/client"
 	"gopkg.in/alecthomas/kingpin.v2"
-	k8errors "k8s.io/apimachinery/pkg/api/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -38,9 +39,8 @@ func DefineModuleConfigDebugCommands(kpApp *kingpin.Application, logger *log.Log
 	moduleEnableCmd := moduleCmd.Command("enable", "Enable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.").
 		Action(func(_ *kingpin.ParseContext) error {
 			logger.SetLevel(log.LevelError)
-			cli := client.New(client.WithLogger(logger))
-			err := cli.Init()
-			if err != nil {
+			cli := kubeclient.New(kubeclient.WithLogger(logger))
+			if err := cli.Init(); err != nil {
 				return err
 			}
 
@@ -51,9 +51,8 @@ func DefineModuleConfigDebugCommands(kpApp *kingpin.Application, logger *log.Log
 	moduleDisableCmd := moduleCmd.Command("disable", "Disable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.").
 		Action(func(_ *kingpin.ParseContext) error {
 			logger.SetLevel(log.LevelError)
-			cli := client.New(client.WithLogger(logger))
-			err := cli.Init()
-			if err != nil {
+			cli := kubeclient.New(kubeclient.WithLogger(logger))
+			if err := cli.Init(); err != nil {
 				return err
 			}
 
@@ -62,7 +61,7 @@ func DefineModuleConfigDebugCommands(kpApp *kingpin.Application, logger *log.Log
 	moduleDisableCmd.Arg("module_name", "").Required().StringVar(&moduleName)
 }
 
-func moduleSwitch(kubeClient *client.Client, moduleName string, enabled bool, actionDesc string, logger *log.Logger) error {
+func moduleSwitch(kubeClient *kubeclient.Client, moduleName string, enabled bool, actionDesc string, logger *log.Logger) error {
 	// Init logging for console output.
 
 	// TODO: check formatters?
@@ -70,7 +69,7 @@ func moduleSwitch(kubeClient *client.Client, moduleName string, enabled bool, ac
 	logger.SetLevel(log.LevelError)
 
 	if err := setModuleConfigEnabled(kubeClient, moduleName, enabled); err != nil {
-		return fmt.Errorf("%s module failed: %v", actionDesc, err)
+		return fmt.Errorf("%s module failed: %w", actionDesc, err)
 	}
 	fmt.Printf("Module %s %sd\n", moduleName, actionDesc)
 	return nil
@@ -84,16 +83,16 @@ func setModuleConfigEnabled(kubeClient k8s.Client, name string, enabled bool) er
 	}
 
 	unstructuredObj, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Get(context.TODO(), name, metav1.GetOptions{})
-	if err != nil && !k8errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get the '%s' module config: %v", name, err)
+	if client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("failed to get the '%s' module config: %w", name, err)
 	}
 
 	if unstructuredObj != nil {
 		if err = unstructured.SetNestedField(unstructuredObj.Object, enabled, "spec", "enabled"); err != nil {
-			return fmt.Errorf("failed to change spec.enabled to %v in the '%s' module config/: %v", enabled, name, err)
+			return fmt.Errorf("failed to change spec.enabled to %v in the '%s' module config: %w", enabled, name, err)
 		}
 		if _, err = kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Update(context.TODO(), unstructuredObj, metav1.UpdateOptions{}); err != nil {
-			return fmt.Errorf("failed to update the '%s' module config: %v", name, err)
+			return fmt.Errorf("failed to update the '%s' module config: %w", name, err)
 		}
 		return nil
 	}
@@ -114,11 +113,11 @@ func setModuleConfigEnabled(kubeClient k8s.Client, name string, enabled bool) er
 
 	obj, err := sdk.ToUnstructured(newCfg)
 	if err != nil {
-		return fmt.Errorf("failed to convert the '%s' module config: %v", name, err)
+		return fmt.Errorf("failed to convert the '%s' module config: %w", name, err)
 	}
 
 	if _, err = kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Create(context.TODO(), obj, metav1.CreateOptions{}); err != nil {
-		return fmt.Errorf("failed to create the '%s' module config: %v", name, err)
+		return fmt.Errorf("failed to create the '%s' module config: %w", name, err)
 	}
 	return nil
 }

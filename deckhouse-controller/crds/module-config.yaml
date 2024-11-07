@@ -85,10 +85,12 @@ spec:
           description: The update policy of the module.
           jsonPath: .spec.updatePolicy
           type: string
+          priority: 1
         - name: Source
           description: The source of the module.
           type: string
           jsonPath: .spec.source
+          priority: 1
         - name: Version
           type: string
           description: "Version of settings schema in use"

@@ -1,5 +1,5 @@
 /*
-Copyright 2022 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package deckhouse_config
+package config
 
 import (
 	"fmt"
@@ -30,28 +30,19 @@ import (
 	staticextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 )
 
-type StatusReporter struct {
-	moduleManager ModuleManager
-}
-
-func NewStatusReporter(mm ModuleManager) *StatusReporter {
-	return &StatusReporter{moduleManager: mm}
-}
-
-func (s *StatusReporter) RefreshModule(module *v1alpha1.Module) {
-	basicModule := s.moduleManager.GetModule(module.Name)
+func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
+	basicModule := r.moduleManager.GetModule(module.Name)
 	// TODO(ipaqas): how to handle it ?
 	if basicModule == nil {
 		return
 	}
 
-	if s.moduleManager.IsModuleEnabled(module.Name) {
-		module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager, true)
-		module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleManager, "Enabled", "enabled")
+	if r.moduleManager.IsModuleEnabled(module.Name) {
+		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleManager)
 
 		if module.Status.HooksState != basicModule.GetHookErrorsSummary() {
 			module.Status.HooksState = basicModule.GetHookErrorsSummary()
@@ -59,15 +50,13 @@ func (s *StatusReporter) RefreshModule(module *v1alpha1.Module) {
 
 		if hookErr := basicModule.GetLastHookError(); hookErr != nil {
 			module.Status.Phase = v1alpha1.ModulePhaseError
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "HookError", hookErr.Error())
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonHookError, hookErr.Error())
 			return
 		}
 
 		if moduleError := basicModule.GetModuleError(); moduleError != nil {
 			module.Status.Phase = v1alpha1.ModulePhaseError
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "ModuleError", moduleError.Error())
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonModuleError, moduleError.Error())
 			return
 		}
 
@@ -81,42 +70,33 @@ func (s *StatusReporter) RefreshModule(module *v1alpha1.Module) {
 		// which is directly controlled by addon-operator.
 		case modules.CanRunHelm:
 			module.Status.Phase = v1alpha1.ModulePhaseReady
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, true)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "", "")
+			module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
 
 		case modules.Startup:
 			module.Status.Phase = v1alpha1.ModulePhaseEnqueued
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, v1alpha1.ModulePhaseEnqueued, "enqueued")
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonEnqueued, v1alpha1.ModuleMessageEnqueued)
 
 		case modules.OnStartupDone:
 			module.Status.Phase = v1alpha1.ModulePhaseEnqueued
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, v1alpha1.ModulePhaseEnqueued, "completed OnStartUp hooks")
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonEnqueued, v1alpha1.ModuleMessageOnStartupHook)
 
 		case modules.WaitForSynchronization:
 			module.Status.Phase = v1alpha1.ModulePhaseWaitSync
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, v1alpha1.ModulePhaseWaitSync, "run sync tasks")
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonWaitSync, v1alpha1.ModuleMessageWaitSync)
 
 		case modules.HooksDisabled:
 			module.Status.Phase = v1alpha1.ModulePhasePending
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, v1alpha1.ModulePhasePending, "hooks are disabled")
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonPending, v1alpha1.ModuleMessageHooksDisabled)
 		}
 
 		return
 	}
 
-	updatedBy, updatedByErr := s.moduleManager.GetUpdatedByExtender(module.Name)
+	updatedBy, updatedByErr := r.moduleManager.GetUpdatedByExtender(module.Name)
 	if updatedByErr != nil {
 		module.Status.Phase = v1alpha1.ModulePhaseError
-		module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager, false)
-		module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModulePhaseError, updatedByErr.Error())
-
-		module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-		module.SetConditionReason(v1alpha1.ModuleConditionIsReady, v1alpha1.ModulePhaseError, updatedByErr.Error())
-
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonError, updatedByErr.Error())
+		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonError, updatedByErr.Error())
 		return
 	}
 
@@ -168,18 +148,11 @@ func (s *StatusReporter) RefreshModule(module *v1alpha1.Module) {
 	if module.Status.Phase != v1alpha1.ModulePhaseNotInstalled {
 		module.Status.Phase = v1alpha1.ModulePhasePending
 	}
-	module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager, false)
-	module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleManager, reason, message)
+	module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, reason, message)
 }
 
-func (s *StatusReporter) RefreshConfig(config *v1alpha1.ModuleConfig) {
-	if !Service().possibleNames.Has(config.Name) {
-		config.Status.Version = ""
-		config.Status.Message = "Ignored: unknown module name"
-		return
-	}
-
-	validationResult := Service().ConfigValidator().Validate(config)
+func (r *reconciler) refreshConfigStatus(config *v1alpha1.ModuleConfig) {
+	validationResult := r.configValidator.Validate(config)
 	if validationResult.HasError() {
 		config.Status.Version = ""
 		config.Status.Message = fmt.Sprintf("Error: %s", validationResult.Error)

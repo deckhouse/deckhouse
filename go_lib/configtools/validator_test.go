@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package deckhouse_config
+package configtools
 
 import (
 	"context"
@@ -166,7 +166,7 @@ spec:
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			v := NewConfigValidator(nil)
+			v := NewValidator(nil)
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
 			res := v.validateCR(cfg)
@@ -269,7 +269,7 @@ spec:
 			err := mm.Init(log.NewNop())
 			g.Expect(err).ShouldNot(HaveOccurred(), "should init module manager")
 
-			v := NewConfigValidator(mm)
+			v := NewValidator(mm)
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
 

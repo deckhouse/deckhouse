@@ -42,6 +42,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	moduleconfig "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/config"
@@ -50,8 +51,7 @@ import (
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -200,38 +200,37 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, embeddedPolicy, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
-	// init deckhouse-config service with ModuleManager instance.
-	d8config.InitService(operator.ModuleManager)
-
-	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger.Named("deckhouse-release"))
+	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger.Named("deckhouse-release-controller"))
 	if err != nil {
 		return nil, err
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, configHandler, operator.ModuleManager, operator.MetricStorage, loader, bundle, logger.Named("module-config"))
+	err = moduleconfig.RegisterController(runtimeManager, configHandler, operator.ModuleManager, operator.MetricStorage, loader, bundle, logger.Named("module-config-controller"))
 	if err != nil {
 		return nil, err
 	}
 
-	err = modulesource.RegisterController(runtimeManager, dc, embeddedPolicy, logger.Named("module-source"))
+	err = modulesource.RegisterController(runtimeManager, dc, embeddedPolicy, logger.Named("module-source-controller"))
 	if err != nil {
 		return nil, err
 	}
 
-	err = modulerelease.NewModuleReleaseController(runtimeManager, dc, embeddedPolicy, operator.ModuleManager, operator.MetricStorage, preflightCountDown, logger.Named("module-release"))
+	err = modulerelease.NewModuleReleaseController(runtimeManager, dc, embeddedPolicy, operator.ModuleManager, operator.MetricStorage, preflightCountDown, logger.Named("module-release-controller"))
 	if err != nil {
 		return nil, err
 	}
 
-	err = modulerelease.NewModulePullOverrideController(runtimeManager, dc, operator.ModuleManager, preflightCountDown, logger.Named("pull-override"))
+	err = modulerelease.NewModulePullOverrideController(runtimeManager, dc, operator.ModuleManager, preflightCountDown, logger.Named("module-pull-override-controller"))
 	if err != nil {
 		return nil, err
 	}
 
-	err = docbuilder.NewModuleDocumentationController(runtimeManager, dc, logger.Named("module-documentation"))
+	err = docbuilder.NewModuleDocumentationController(runtimeManager, dc, logger.Named("module-documentation-controller"))
 	if err != nil {
 		return nil, err
 	}
+
+	validation.RegisterAdmissionHandlers(operator, loader, operator.MetricStorage)
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
@@ -303,9 +302,4 @@ func (c *DeckhouseController) runDeckhouseConfigObserver() {
 		}
 		c.embeddedPolicy.Set(settings)
 	}
-}
-
-// GetModuleByName implements moduleStorage interface for validation webhook
-func (c *DeckhouseController) GetModuleByName(name string) (*moduleloader.Module, error) {
-	return c.moduleLoader.GetModuleByName(name)
 }

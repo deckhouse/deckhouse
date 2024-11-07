@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package deckhouse_config
+package configtools
 
 import (
 	"fmt"
@@ -26,18 +26,12 @@ import (
 	"github.com/flant/addon-operator/pkg/values/validation"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
-// ConfigValidator is a validator for values in ModuleConfig.
-type ConfigValidator struct {
+// Validator is a validator for values in ModuleConfig.
+type Validator struct {
 	valuesValidator ValuesValidator
-}
-
-func NewConfigValidator(valuesValidator ValuesValidator) *ConfigValidator {
-	return &ConfigValidator{
-		valuesValidator: valuesValidator,
-	}
 }
 
 // ValuesValidator is a part of ValuesValidator from addon-operator with needed
@@ -45,6 +39,12 @@ func NewConfigValidator(valuesValidator ValuesValidator) *ConfigValidator {
 type ValuesValidator interface {
 	GetGlobal() *modules.GlobalModule
 	GetModule(name string) *modules.BasicModule
+}
+
+func NewValidator(valuesValidator ValuesValidator) *Validator {
+	return &Validator{
+		valuesValidator: valuesValidator,
+	}
 }
 
 type ValidationResult struct {
@@ -62,12 +62,12 @@ func (v ValidationResult) HasError() bool {
 }
 
 // validateCR checks if ModuleConfig resource is well-formed.
-func (c *ConfigValidator) validateCR(cfg *v1alpha1.ModuleConfig) ValidationResult {
+func (v *Validator) validateCR(config *v1alpha1.ModuleConfig) ValidationResult {
 	result := ValidationResult{}
 
-	if cfg.Spec.Version == 0 {
+	if config.Spec.Version == 0 {
 		// Resource is not valid when spec.settings are specified without version.
-		if len(cfg.Spec.Settings) > 0 {
+		if len(config.Spec.Settings) > 0 {
 			result.Error = "spec.version is required when spec.settings are specified"
 		}
 		// Resource is valid without spec.version and spec.settings.
@@ -75,23 +75,23 @@ func (c *ConfigValidator) validateCR(cfg *v1alpha1.ModuleConfig) ValidationResul
 	}
 
 	// Can run conversions and validations if spec.version and spec.settings are specified.
-	if len(cfg.Spec.Settings) == 0 {
+	if len(config.Spec.Settings) == 0 {
 		// Warn about spec.version without spec.settings.
 		result.Warning = "spec.version has no effect without spec.settings, defaults from the latest version of settings schema will be applied"
 	}
 
-	converter := conversion.Store().Get(cfg.GetName())
+	converter := conversion.Store().Get(config.GetName())
 	latestVersion := converter.LatestVersion()
 
 	// Check if version is unknown.
-	if !converter.IsKnownVersion(cfg.Spec.Version) {
+	if !converter.IsKnownVersion(config.Spec.Version) {
 		prevVersionsMsg := concatIntList(converter.ListVersionsWithoutLatest())
 		if prevVersionsMsg != "" {
 			prevVersionsMsg = fmt.Sprintf(", or one of previous versions: %s", prevVersionsMsg)
 		}
 
-		msg := fmt.Sprintf("spec.version=%d is unsupported. Use latest version %d%s", cfg.Spec.Version, latestVersion, prevVersionsMsg)
-		if hasVersionedSettings(cfg) {
+		msg := fmt.Sprintf("spec.version=%d is unsupported. Use latest version %d%s", config.Spec.Version, latestVersion, prevVersionsMsg)
+		if hasVersionedSettings(config) {
 			// Error if spec.settings are specified. Can't start conversions for such configuration.
 			result.Error = msg
 		} else {
@@ -101,16 +101,16 @@ func (c *ConfigValidator) validateCR(cfg *v1alpha1.ModuleConfig) ValidationResul
 		return result
 	}
 
-	newVersion, newSettings, err := converter.ConvertToLatest(cfg.Spec.Version, cfg.Spec.Settings)
+	newVersion, newSettings, err := converter.ConvertToLatest(config.Spec.Version, config.Spec.Settings)
 	if err != nil {
-		result.Error = fmt.Sprintf("spec.settings conversion from version %d to %d: %v", cfg.Spec.Version, newVersion, err)
+		result.Error = fmt.Sprintf("spec.settings conversion from version %d to %d: %v", config.Spec.Version, newVersion, err)
 		return result
 	}
 	result.Settings = newSettings
 	result.Version = newVersion
 
-	if cfg.Spec.Version != latestVersion {
-		result.Warning = fmt.Sprintf("spec.version=%d is obsolete. Please migrate spec.settings to the latest version %d", cfg.Spec.Version, latestVersion)
+	if config.Spec.Version != latestVersion {
+		result.Warning = fmt.Sprintf("spec.version=%d is obsolete. Please migrate spec.settings to the latest version %d", config.Spec.Version, latestVersion)
 	}
 
 	return result
@@ -121,29 +121,27 @@ func (c *ConfigValidator) validateCR(cfg *v1alpha1.ModuleConfig) ValidationResul
 // - runs conversions for spec.settings if it`s needed
 // - use OpenAPI schema defined in related config-values.yaml file to validate converted spec.settings.
 // TODO(future) return cfg, error. Put cfg.Spec into result cfg.
-func (c *ConfigValidator) Validate(cfg *v1alpha1.ModuleConfig) ValidationResult {
-	result := c.validateCR(cfg)
+func (v *Validator) Validate(config *v1alpha1.ModuleConfig) ValidationResult {
+	result := v.validateCR(config)
 	if result.HasError() {
 		return result
 	}
 
-	if cfg.Spec.Enabled != nil && !(*cfg.Spec.Enabled) {
+	if config.Spec.Enabled != nil && !(*config.Spec.Enabled) {
 		return result
 	}
 
-	module := c.valuesValidator.GetModule(cfg.Name)
-	if module == nil {
+	if module := v.valuesValidator.GetModule(config.Name); module == nil {
 		result.Warning = "module not installed"
 		return result
 	}
 
-	err := c.validateSettings(cfg.GetName(), result.Settings)
-	if err != nil {
+	if err := v.validateSettings(config.GetName(), result.Settings); err != nil {
 		convMsg := ""
-		if cfg.Spec.Version != result.Version {
+		if config.Spec.Version != result.Version {
 			convMsg = fmt.Sprintf(" converted to %d", result.Version)
 		}
-		result.Error = fmt.Sprintf("spec.settings are not valid (version %d%s): %v", cfg.Spec.Version, convMsg, cleanupMultilineError(err))
+		result.Error = fmt.Sprintf("spec.settings are not valid (version %d%s): %v", config.Spec.Version, convMsg, cleanupMultilineError(err))
 	}
 
 	return result
@@ -153,23 +151,23 @@ func (c *ConfigValidator) Validate(cfg *v1alpha1.ModuleConfig) ValidationResult 
 // cfgName arg is a kebab-cased name of the ModuleConfig resource.
 // cfgSettings is a content of spec.settings and can be nil if settings field wasn't set.
 // (Note: cfgSettings map is a map with 'plain values', i.e. without camelCased module name as a root key).
-func (c *ConfigValidator) validateSettings(cfgName string, cfgSettings map[string]interface{}) error {
+func (v *Validator) validateSettings(configName string, configSettings map[string]interface{}) error {
 	// Ignore empty validator.
-	if c.valuesValidator == nil {
+	if v.valuesValidator == nil {
 		return nil
 	}
 
 	// init cfg settings if it equals nil
-	if cfgSettings == nil {
-		cfgSettings = make(map[string]interface{})
+	if configSettings == nil {
+		configSettings = make(map[string]interface{})
 	}
 
-	valuesKey := valuesKeyFromObjectName(cfgName)
+	valuesKey := valuesKeyFromObjectName(configName)
 	var schemaStorage *validation.SchemaStorage
-	if cfgName == "global" {
-		schemaStorage = c.valuesValidator.GetGlobal().GetSchemaStorage()
+	if configName == "global" {
+		schemaStorage = v.valuesValidator.GetGlobal().GetSchemaStorage()
 	} else {
-		module := c.valuesValidator.GetModule(cfgName)
+		module := v.valuesValidator.GetModule(configName)
 		schemaStorage = module.GetSchemaStorage()
 	}
 
@@ -183,7 +181,7 @@ func (c *ConfigValidator) validateSettings(cfgName string, cfgSettings map[strin
 	// Merge defaults with passed settings as addon-operator will do.
 	values := utils.MergeValues(
 		utils.Values{valuesKey: defaultSettings},
-		utils.Values{valuesKey: cfgSettings},
+		utils.Values{valuesKey: configSettings},
 	)
 
 	return schemaStorage.ValidateConfigValues(valuesKey, values)

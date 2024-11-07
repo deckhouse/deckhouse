@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,8 +27,6 @@ import (
 const (
 	ModuleUpdatePolicyResource = "moduleupdatepolicies"
 	ModuleUpdatePolicyKind     = "ModuleUpdatePolicy"
-
-	ModuleUpdatePolicyModeIgnore = "Ignore"
 )
 
 var (

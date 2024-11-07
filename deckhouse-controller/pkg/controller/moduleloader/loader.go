@@ -16,6 +16,7 @@ package moduleloader
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"maps"
@@ -38,9 +39,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -59,6 +59,8 @@ var (
 
 	// validModuleNameRe defines a valid module name. It may have a number prefix: it is an order of the module.
 	validModuleNameRe = regexp.MustCompile(`^(([0-9]+)-)?(.+)$`)
+
+	ErrModuleIsNotFound = errors.New("module is not found")
 )
 
 var _ loader.ModuleLoader = &Loader{}
@@ -181,7 +183,7 @@ func validateModuleName(name string) error {
 func (l *Loader) GetModuleByName(name string) (*Module, error) {
 	module, ok := l.modules[name]
 	if !ok {
-		return nil, fmt.Errorf("module '%s' not found", name)
+		return nil, ErrModuleIsNotFound
 	}
 
 	return module, nil
@@ -201,7 +203,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			l.log.Debugf("process the '%s' module definition from the '%s' dir", def.Name, dir)
 			module, err := l.processModuleDefinition(def)
 			if err != nil {
-				return fmt.Errorf("failed to process the '%s' module definition: %v", def.Name, err)
+				return fmt.Errorf("failed to process the '%s' module definition: %w", def.Name, err)
 			}
 
 			if _, ok := l.modules[def.Name]; ok {
@@ -211,12 +213,8 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 
 			l.log.Debugf("ensure the '%s' module", def.Name)
 			if err = l.ensureModule(ctx, def, !strings.HasPrefix(def.Path, d8env.GetDownloadedModulesDir())); err != nil {
-				return fmt.Errorf("failed to ensure the '%s' embedded module: %v", def.Name, err)
+				return fmt.Errorf("failed to ensure the '%s' embedded module: %w", def.Name, err)
 			}
-
-			// add module name as a possible name for validation module config webhook
-			l.log.Debugf("register the '%s' module name as a possible name", def.Name)
-			d8config.Service().AddPossibleName(def.Name)
 
 			l.modules[def.Name] = module
 		}
@@ -224,6 +222,9 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 
 	// clear deleted embedded modules
 	modulesList := new(v1alpha1.ModuleList)
+	if err := l.client.List(ctx, modulesList); err != nil {
+		return fmt.Errorf("failed to list all modules: %w", err)
+	}
 	for _, module := range modulesList.Items {
 		if module.IsEmbedded() && l.modules[module.Name] == nil {
 			if err := l.client.Delete(ctx, &module); err != nil {
@@ -362,7 +363,7 @@ func readDir(dir string) ([]os.DirEntry, error) {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("path '%s' does not exist", dir)
 		}
-		return nil, fmt.Errorf("failed to list modules directory '%s': %s", dir, err)
+		return nil, fmt.Errorf("failed to list modules directory '%s': %w", dir, err)
 	}
 	return dirEntries, nil
 }
@@ -385,7 +386,7 @@ func (l *Loader) resolveDirEntry(dirPath string, entry os.DirEntry) (string, str
 			}
 		}
 
-		return "", "", fmt.Errorf("failed to resolve '%s' as a possible symlink: %v", absPath, err)
+		return "", "", fmt.Errorf("failed to resolve '%s' as a possible symlink: %w", absPath, err)
 	}
 
 	if targetPath != "" {
@@ -466,7 +467,7 @@ func (l *Loader) moduleDefinitionByFile(absPath string) (*Definition, error) {
 // moduleDefinitionByDirName returns Definition instance filled with name, order and its absolute path.
 func (l *Loader) moduleDefinitionByDirName(dirName string, absPath string) (*Definition, error) {
 	matchRes := validModuleNameRe.FindStringSubmatch(dirName)
-	if matchRes == nil {
+	if len(matchRes) <= moduleNameIdx {
 		return nil, fmt.Errorf("'%s' is invalid name for module: should match regex '%s'", dirName, validModuleNameRe.String())
 	}
 

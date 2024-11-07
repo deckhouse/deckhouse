@@ -37,7 +37,6 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -157,12 +156,10 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
-	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, operator, logger)
+	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, operator, logger.Named("deckhouse-controller"))
 	if err != nil {
 		return fmt.Errorf("deckhouse controller creating: %w", err)
 	}
-
-	validation.RegisterAdmissionHandlers(operator, deckhouseController, operator.MetricStorage)
 
 	// load module from FS, start pluggable controllers and run deckhouse config event loop
 	if err = deckhouseController.Start(ctx); err != nil {

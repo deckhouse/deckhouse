@@ -173,8 +173,8 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 		Path:   tmpModuleVersionPath,
 	}
 	values := make(addonutils.Values)
-	if mod := k.moduleManager.GetModule(moduleName); mod != nil {
-		values = mod.GetConfigValues(false)
+	if module := k.moduleManager.GetModule(moduleName); module != nil {
+		values = module.GetConfigValues(false)
 	}
 	err = validateModule(def, values, k.logger)
 	if err != nil {

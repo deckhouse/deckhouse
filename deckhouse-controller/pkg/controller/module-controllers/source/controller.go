@@ -16,6 +16,7 @@ package source
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -44,8 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -70,9 +70,11 @@ const (
 	cacheSyncTimeout        = 3 * time.Minute
 )
 
+var ErrSettingsNotChanged = errors.New("settings not changed")
+
 func RegisterController(runtimeManager manager.Manager, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) error {
 	r := &reconciler{
-		init:                 &sync.WaitGroup{},
+		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
 		log:                  logger,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
@@ -205,15 +207,14 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 
 	// sync registry settings
-	shouldRequeue, err := r.syncRegistrySettings(ctx, source)
-	if err != nil {
+	if err = r.syncRegistrySettings(ctx, source); err != nil && !errors.Is(err, ErrSettingsNotChanged) {
 		r.log.Errorf("failed to sync registry settings for the '%s' module source: %v", source.Name, err)
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
-	if shouldRequeue {
+	if err == nil {
 		// new registry settings checksum should be applied to module source
 		if err = r.client.Update(ctx, source); err != nil {
 			r.log.Errorf("failed to update the '%s' module source status: %v", source.Name, err)
@@ -235,8 +236,6 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	sort.Strings(pulledModules)
-
 	// remove the source from available sources in deleted modules
 	nameSet := make(map[string]bool)
 	for _, pulledModuleName := range pulledModules {
@@ -257,12 +256,13 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 	r.log.Debugf("the '%s' module source reconciled", source.Name)
 
-	// everything is ok, check source on the other iteration
+	// everything is ok, check source on the other iterations
 	return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 }
 
 func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.ModuleSource, opts []cr.Option, pulledModules []string) error {
 	md := downloader.NewModuleDownloader(r.dependencyContainer, r.downloadedModulesDir, source, opts)
+	sort.Strings(pulledModules)
 
 	var availableModules []v1alpha1.AvailableModule
 	var pullErrorsExist bool
@@ -285,7 +285,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// get update policy
 		policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, moduleName)
 		if err != nil {
-			return fmt.Errorf("failed to get update policy for the '%s' module: %v", moduleName, err)
+			return fmt.Errorf("failed to get update policy for the '%s' module: %w", moduleName, err)
 		}
 
 		// TODO(ipaqsa): can be removed
@@ -294,11 +294,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// create or update module
 		module, err := r.ensureModule(ctx, source.Name, moduleName)
 		if err != nil {
-			return fmt.Errorf("failed to ensure module for the '%s' module source: %v", moduleName, err)
+			return fmt.Errorf("failed to ensure module for the '%s' module source: %w", moduleName, err)
 		}
-
-		// add module name as a possible name for validation module config webhook
-		d8config.Service().AddPossibleName(moduleName)
 
 		if module == nil {
 			availableModules = append(availableModules, availableModule)
@@ -308,7 +305,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		exist, err := utils.ModulePullOverrideExists(ctx, r.client, source.Name, moduleName)
 		if err != nil {
-			return fmt.Errorf("failed to get pull override for the '%s' module: %v", moduleName, err)
+			return fmt.Errorf("failed to get pull override for the '%s' module: %w", moduleName, err)
 		}
 
 		if exist {
@@ -321,9 +318,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		var cachedChecksum = availableModule.Checksum
 
 		// check if release exists
-		exist, err = r.releaseExists(ctx, moduleName, cachedChecksum)
+		exist, err = r.releaseExists(ctx, source.Name, moduleName, cachedChecksum)
 		if err != nil {
-			return fmt.Errorf("failed to check if the module '%s' has a release: %v", moduleName, err)
+			return fmt.Errorf("failed to check if the module '%s' has a release: %w", moduleName, err)
 		}
 		if !exist {
 			// if release does not exist, clear checksum to trigger meta downloading
@@ -343,26 +340,24 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exist) {
 			r.log.Debugf("ensure module release for the '%s' module for the '%s' module source", moduleName, source.Name)
 			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
-				return fmt.Errorf("failed to ensure module release for the '%s'", moduleName)
+				return fmt.Errorf("failed to ensure module release for the '%s': %w", moduleName, err)
 			}
 			availableModule.Checksum = meta.Checksum
 		} else {
 			r.log.Debugf("the '%s' module in the '%s' module source not changed", moduleName, source.Name)
-			err = utils.Update[*v1alpha1.Module](ctx, r.client, module, true, func(module *v1alpha1.Module) bool {
+			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				module.Status.Phase = v1alpha1.ModulePhaseReady
-
-				module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, true)
-				module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "", "")
+				module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
 				return true
 			})
 			if err != nil {
-				return fmt.Errorf("failed to update the '%s' module: %v", moduleName, err)
+				return fmt.Errorf("failed to update the '%s' module: %w", moduleName, err)
 			}
 		}
 		availableModules = append(availableModules, availableModule)
 
 		// update release channel
-		err = utils.Update[*v1alpha1.Module](ctx, r.client, module, false, func(module *v1alpha1.Module) bool {
+		err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 			if module.Properties.ReleaseChannel != policy.Spec.ReleaseChannel {
 				module.Properties.ReleaseChannel = policy.Spec.ReleaseChannel
 				return true
@@ -370,11 +365,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			return false
 		})
 		if err != nil {
-			return fmt.Errorf("failed to update release channel or version for the '%s' module: %v", moduleName, err)
+			return fmt.Errorf("failed to update release channel or version for the '%s' module: %w", moduleName, err)
 		}
 	}
 	// update status
-	err := utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, true, func(obj *v1alpha1.ModuleSource) bool {
+	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(obj *v1alpha1.ModuleSource) bool {
 		source.Status.Message = ""
 		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
@@ -385,11 +380,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		return true
 	})
 	if err != nil {
-		return fmt.Errorf("failed to update the '%s' module source status: %v", source.Name, err)
+		return fmt.Errorf("failed to update the '%s' module source status: %w", source.Name, err)
 	}
 
 	// set finalizer
-	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, false, func(obj *v1alpha1.ModuleSource) bool {
+	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, func(obj *v1alpha1.ModuleSource) bool {
 		if len(source.Status.AvailableModules) > 0 && !controllerutil.ContainsFinalizer(source, moduleSourceModuleExistsFinalizer) {
 			controllerutil.AddFinalizer(source, moduleSourceModuleExistsFinalizer)
 			return true
@@ -397,7 +392,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		return false
 	})
 	if err != nil {
-		return fmt.Errorf("failed to set finalizer to the '%s' module source: %v", source.Name, err)
+		return fmt.Errorf("failed to set finalizer to the '%s' module source: %w", source.Name, err)
 	}
 
 	return nil
@@ -414,7 +409,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 			// prevent deletion if there are deployed releases
 			if len(releases.Items) > 0 {
-				err := utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, true, func(obj *v1alpha1.ModuleSource) bool {
+				err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(obj *v1alpha1.ModuleSource) bool {
 					source.Status.Message = "The ModuleSource contains at least 1 Deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue"
 					return true
 				})

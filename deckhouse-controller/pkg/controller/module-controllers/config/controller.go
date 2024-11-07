@@ -21,8 +21,11 @@ import (
 	"time"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
+	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
+
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -56,14 +60,15 @@ func RegisterController(
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		init:          &sync.WaitGroup{},
-		client:        runtimeManager.GetClient(),
-		log:           logger,
-		handler:       handler,
-		moduleManager: mm,
-		metricStorage: ms,
-		moduleLoader:  loader,
-		bundle:        bundle,
+		init:            new(sync.WaitGroup),
+		client:          runtimeManager.GetClient(),
+		log:             logger,
+		handler:         handler,
+		moduleManager:   mm,
+		metricStorage:   ms,
+		moduleLoader:    loader,
+		bundle:          bundle,
+		configValidator: configtools.NewValidator(mm),
 	}
 
 	r.init.Add(1)
@@ -85,20 +90,24 @@ func RegisterController(
 }
 
 type reconciler struct {
-	init          *sync.WaitGroup
-	client        client.Client
-	log           *log.Logger
-	handler       *confighandler.Handler
-	moduleManager moduleManager
-	metricStorage *metricstorage.MetricStorage
-	moduleLoader  *moduleloader.Loader
-	bundle        string
+	init            *sync.WaitGroup
+	client          client.Client
+	log             *log.Logger
+	handler         *confighandler.Handler
+	moduleManager   moduleManager
+	metricStorage   *metricstorage.MetricStorage
+	moduleLoader    *moduleloader.Loader
+	configValidator *configtools.Validator
+	bundle          string
 }
 
 type moduleManager interface {
 	AreModulesInited() bool
 	IsModuleEnabled(moduleName string) bool
 	GetModuleNames() []string
+	GetModule(name string) *modules.BasicModule
+	GetGlobal() *modules.GlobalModule
+	GetUpdatedByExtender(name string) (string, error)
 	GetModuleEventsChannel() chan events.ModuleEvent
 }
 
@@ -155,9 +164,8 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	if moduleConfig.IsEnabled() {
 		// enable module
 		if !enabled {
-			err := utils.Update[*v1alpha1.Module](ctx, r.client, module, true, func(module *v1alpha1.Module) bool {
-				module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig, true)
-				module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleConfig, "Enabled", "enabled")
+			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+				module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)
 				return true
 			})
 			if err != nil {
@@ -171,12 +179,9 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	if !moduleConfig.IsEnabled() {
 		// disable module
 		if enabled {
-			err := utils.Update[*v1alpha1.Module](ctx, r.client, module, true, func(module *v1alpha1.Module) bool {
-				module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig, false)
-				module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleConfig, "Disabled", "disabled")
-
-				module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-				module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "Disabled", "disabled")
+			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 				return true
 			})
 			if err != nil {
@@ -202,7 +207,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		return ctrl.Result{}, nil
 	}
 
-	err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, false, func(obj *v1alpha1.ModuleConfig) bool {
+	err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(obj *v1alpha1.ModuleConfig) bool {
 		// to handle delete event
 		if !controllerutil.ContainsFinalizer(moduleConfig, moduleConfigFinalizer) {
 			controllerutil.AddFinalizer(moduleConfig, moduleConfigFinalizer)
@@ -242,14 +247,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		}
 
 		// set conflict
-		err = utils.Update[*v1alpha1.Module](ctx, r.client, module, true, func(module *v1alpha1.Module) bool {
+		err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 			module.Status.Phase = v1alpha1.ModulePhaseConflict
-
-			module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleManager, "Conflict", "several available sources")
-
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "Conflict", "several available sources")
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
 			return true
 		})
 		if err != nil {
@@ -259,7 +260,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	// update only the update policy if nothing else has changed
-	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, false, func(obj *v1alpha1.Module) bool {
+	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(obj *v1alpha1.Module) bool {
 		if module.Properties.UpdatePolicy != updatePolicy {
 			module.Properties.UpdatePolicy = updatePolicy
 			return true
@@ -301,12 +302,9 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 	// disable module
 	if enabled {
-		err := utils.Update[*v1alpha1.Module](ctx, r.client, module, true, func(module *v1alpha1.Module) bool {
-			module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleConfig, "Disabled", "disabled")
-
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "Disabled", "disabled")
+		err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 			return true
 		})
 		if err != nil {
@@ -315,7 +313,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		}
 	}
 
-	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, false, func(obj *v1alpha1.Module) bool {
+	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(obj *v1alpha1.Module) bool {
 		module.Properties.UpdatePolicy = ""
 		module.Properties.Source = ""
 		return true
@@ -325,7 +323,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	err = utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, false, func(obj *v1alpha1.ModuleConfig) bool {
+	err = utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(obj *v1alpha1.ModuleConfig) bool {
 		if controllerutil.ContainsFinalizer(moduleConfig, moduleConfigFinalizer) {
 			controllerutil.RemoveFinalizer(moduleConfig, moduleConfigFinalizer)
 			return true
@@ -342,18 +340,16 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Module, source, updatePolicy string) (ctrl.Result, error) {
 	r.log.Debugf("set new '%s' source to the '%s' module", source, module.Name)
-	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, true, func(module *v1alpha1.Module) bool {
+	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		module.Status.Phase = v1alpha1.ModulePhaseDownloading
-
-		module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-		module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "ChangeSource", "changing source")
+		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonChangeSource, v1alpha1.ModuleMessageChangeSource)
 		return true
 	})
 	if err != nil {
 		r.log.Errorf("failed to change the module source to the '%s' module: %v", module.Name, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
-	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, false, func(module *v1alpha1.Module) bool {
+	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		module.Properties.Source = source
 		module.Properties.UpdatePolicy = updatePolicy
 		return true

@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	"github.com/deckhouse/deckhouse/go_lib/configtools"
 )
 
 type AnnotationsOnly struct {
@@ -45,7 +45,7 @@ type ObjectMeta struct {
 const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhouse.io/allow-disable=true` if you're sure that you want to disable the module."
 
 // moduleConfigValidationHandler validations for ModuleConfig creation
-func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *metric_storage.MetricStorage) http.Handler {
+func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *metric_storage.MetricStorage, configValidator *configtools.Validator) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
 		var (
 			cfg = new(v1alpha1.ModuleConfig)
@@ -143,16 +143,16 @@ func moduleConfigValidationHandler(moduleStorage ModuleStorage, metricStorage *m
 		}
 
 		// Allow changing configuration for unknown modules.
-		if !d8config.Service().PossibleNames().Has(cfg.Name) {
-			metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
-
-			return allowResult(fmt.Sprintf("module name '%s' is unknown for deckhouse", cfg.Name))
-		}
+		//if !d8config.Service().PossibleNames().Has(cfg.Name) {
+		//	metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
+		//
+		//	return allowResult(fmt.Sprintf("module name '%s' is unknown for deckhouse", cfg.Name))
+		//}
 
 		// Check if spec.version value is valid and the version is the latest.
 		// Validate spec.settings using the OpenAPI schema.
-		res := d8config.Service().ConfigValidator().Validate(cfg)
-		if res.HasError() {
+		var res configtools.ValidationResult
+		if res = configValidator.Validate(cfg); res.HasError() {
 			return rejectResult(res.Error)
 		}
 

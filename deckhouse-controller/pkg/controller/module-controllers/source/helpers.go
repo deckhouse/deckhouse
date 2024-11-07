@@ -56,9 +56,12 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 				}
 			}
 
-			lastThisSource := len(module.Properties.AvailableSources) == 1 && module.Properties.AvailableSources[0] == sourceName
-			if len(module.Properties.AvailableSources) == 0 || lastThisSource {
-				return r.client.Delete(ctx, module)
+			isSourceLast := len(module.Properties.AvailableSources) == 1 && module.Properties.AvailableSources[0] == sourceName
+			if len(module.Properties.AvailableSources) == 0 || isSourceLast {
+				// don`t delete enabled module
+				if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager) && module.Properties.Source == sourceName {
+					return r.client.Delete(ctx, module)
+				}
 			}
 			return r.client.Update(ctx, module)
 		})
@@ -68,49 +71,50 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 // syncRegistrySettings checks if modules source registry settings were updated
 // (comparing moduleSourceAnnotationRegistryChecksum annotation and the current registry spec)
 // and update relevant module releases' openapi values files if it is the case
-func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.ModuleSource) (bool, error) {
+func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.ModuleSource) error {
 	marshaled, err := json.Marshal(source.Spec.Registry)
 	if err != nil {
-		return false, fmt.Errorf("failed to marshal the '%s' module source registry spec: %w", source.Name, err)
+		return fmt.Errorf("failed to marshal the '%s' module source registry spec: %w", source.Name, err)
 	}
 
 	currentChecksum := fmt.Sprintf("%x", md5.Sum(marshaled))
 
-	// if there is no annotations - only set the current checksum value
-	if source.ObjectMeta.Annotations == nil {
-		source.ObjectMeta.Annotations = make(map[string]string)
-		source.ObjectMeta.Annotations[moduleSourceAnnotationRegistryChecksum] = currentChecksum
-		return true, nil
+	// if no annotations - only set the current checksum value
+	if len(source.ObjectMeta.Annotations) == 0 {
+		source.ObjectMeta.Annotations = map[string]string{
+			moduleSourceAnnotationRegistryChecksum: currentChecksum,
+		}
+		return nil
 	}
 
 	// if the annotation matches current checksum - there is nothing to do here
 	if source.ObjectMeta.Annotations[moduleSourceAnnotationRegistryChecksum] == currentChecksum {
-		return false, nil
+		return ErrSettingsNotChanged
 	}
 
 	// get related releases
 	moduleReleases := new(v1alpha1.ModuleReleaseList)
 	if err = r.client.List(ctx, moduleReleases, client.MatchingLabels{"source": source.Name}); err != nil {
-		return false, fmt.Errorf("failed to list module releases to update registry settings: %w", err)
+		return fmt.Errorf("failed to list module releases to update registry settings: %w", err)
 	}
 
 	for _, moduleRelease := range moduleReleases.Items {
 		if moduleRelease.Status.Phase == v1alpha1.PhaseDeployed {
 			for _, ref := range moduleRelease.GetOwnerReferences() {
 				if ref.UID == source.UID && ref.Name == source.Name && ref.Kind == v1alpha1.ModuleSourceGVK.Kind {
-					// update the values.yaml file in external-modules/<module_name>/v<module_version/openapi path
+					// update the values.yaml file in downloaded-modules/<module_name>/v<module_version/openapi path
 					modulePath := filepath.Join(r.downloadedModulesDir, moduleRelease.Spec.ModuleName, fmt.Sprintf("v%s", moduleRelease.Spec.Version))
 					if err = downloader.InjectRegistryToModuleValues(modulePath, source); err != nil {
-						return false, fmt.Errorf("failed to update the '%s' module release registry settings: %w", moduleRelease.Name, err)
+						return fmt.Errorf("failed to update the '%s' module release registry settings: %w", moduleRelease.Name, err)
 					}
 
-					if moduleRelease.ObjectMeta.Annotations == nil {
+					if len(moduleRelease.ObjectMeta.Annotations) == 0 {
 						moduleRelease.ObjectMeta.Annotations = make(map[string]string)
 					}
 
 					moduleRelease.ObjectMeta.Annotations[release.RegistrySpecChangedAnnotation] = r.dependencyContainer.GetClock().Now().UTC().Format(time.RFC3339)
 					if err = r.client.Update(ctx, &moduleRelease); err != nil {
-						return false, fmt.Errorf("failed to set RegistrySpecChangedAnnotation to the '%s' module release: %w", moduleRelease.Name, err)
+						return fmt.Errorf("failed to set RegistrySpecChangedAnnotation to the '%s' module release: %w", moduleRelease.Name, err)
 					}
 					break
 				}
@@ -120,19 +124,23 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 
 	source.ObjectMeta.Annotations[moduleSourceAnnotationRegistryChecksum] = currentChecksum
 
-	return true, nil
+	return nil
 }
 
-func (r *reconciler) releaseExists(ctx context.Context, moduleName, checksum string) (bool, error) {
+func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, checksum string) (bool, error) {
+	// image digest has 64 symbols, while label can have maximum 63 symbols, so make md5 sum here
+	checksum = fmt.Sprintf("%x", md5.Sum([]byte(checksum)))
+
 	moduleReleases := new(v1alpha1.ModuleReleaseList)
 	if err := r.client.List(ctx, moduleReleases, client.MatchingLabels{"module": moduleName, "release-checksum": checksum}); err != nil {
 		return false, fmt.Errorf("failed to list module releases: %v", err)
 	}
 	if len(moduleReleases.Items) == 0 {
-		r.log.Warnf("no module release with '%s' checksum", checksum)
+		r.log.Warnf("no module release with '%s' checksum for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
 		return false, nil
 	}
-	r.log.Debugf("the module release with '%s' checksum exist", checksum)
+
+	r.log.Debugf("the module release with '%s' checksum exist for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
 	return true, nil
 }
 
@@ -191,6 +199,7 @@ func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UI
 		prevModuleRelease.Spec = moduleRelease.Spec
 		return r.client.Update(ctx, prevModuleRelease)
 	}
+
 	return nil
 }
 
@@ -219,18 +228,13 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName st
 		}
 	}
 
-	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, true, func(module *v1alpha1.Module) bool {
+	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		// init just created downloaded modules
 		if len(module.Status.Conditions) == 0 {
 			module.Status.Phase = v1alpha1.ModulePhaseNotInstalled
-			module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleConfig, "Disabled", "disabled")
-
-			module.SetConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionEnabledByModuleManager, "NotInstalled", "not installed")
-
-			module.SetConditionStatus(v1alpha1.ModuleConditionIsReady, false)
-			module.SetConditionReason(v1alpha1.ModuleConditionIsReady, "NotInstalled", "not installed")
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 			return true
 		}
 		return false
@@ -239,7 +243,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName st
 		return nil, err
 	}
 
-	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, false, func(module *v1alpha1.Module) bool {
+	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		if !slices.Contains(module.Properties.AvailableSources, sourceName) {
 			module.Properties.AvailableSources = append(module.Properties.AvailableSources, sourceName)
 			return true
@@ -264,7 +268,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName st
 }
 
 func (r *reconciler) updateModuleSourceStatusMessage(ctx context.Context, source *v1alpha1.ModuleSource, message string) error {
-	err := utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, true, func(obj *v1alpha1.ModuleSource) bool {
+	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(obj *v1alpha1.ModuleSource) bool {
 		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		source.Status.Message = message
 		return true
@@ -272,5 +276,6 @@ func (r *reconciler) updateModuleSourceStatusMessage(ctx context.Context, source
 	if err != nil {
 		return fmt.Errorf("failed to update the '%s' module source status: %w", source.Name, err)
 	}
+
 	return nil
 }
