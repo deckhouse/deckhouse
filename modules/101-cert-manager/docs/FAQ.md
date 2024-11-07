@@ -99,7 +99,7 @@ spec:
             solverName: yandex-cloud-dns
 ```
 
-## How to add an additional `Issuer` and `ClusterIssuer` using HashiСorp Vault to issue certificates?
+## How to add an additional `Issuer` and `ClusterIssuer` using HashiCorp Vault to issue certificates?
 
 You can use [this manual](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) for configuring certificate issuance using Vault.
 
