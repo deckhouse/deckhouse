@@ -63,7 +63,7 @@ title: "Модуль cert-manager: FAQ"
 
 В качестве примера рассмотрим использование сервиса `Yandex Cloud DNS`.
 
-1. Для обработки вебхука предварительно разместите в кластере сервис `Yandex Cloud DNS ACME webhook` согласно [официальной документации](https://github.com/yandex-cloud/cert-manager-webhook-yandex)
+1. Для обработки вебхука предварительно разместите в кластере сервис `Yandex Cloud DNS ACME webhook` согласно [официальной документации](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
 
 1. Затем создайте ресурс `ClusterIssuer`:
 
