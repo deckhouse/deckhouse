@@ -79,7 +79,11 @@ Do you want to continue?
 
 	for i, host := range userPassedHosts {
 		nodeName := nodesSorted[i]
-		forConfirmation[i] = fmt.Sprintf("%s (%s) -> %s", nodeName, host.Name, host.Host)
+		if nodeName == host.Name {
+			forConfirmation[i] = fmt.Sprintf("%s -> %s", nodeName, host.Host)
+		} else {
+			forConfirmation[i] = fmt.Sprintf("%s (%s) -> %s", nodeName, host.Name, host.Host)
+		}
 		nodeToHost[nodeName] = host.Host
 	}
 
