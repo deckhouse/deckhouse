@@ -99,7 +99,7 @@ spec:
             solverName: yandex-cloud-dns
 ```
 
-## How to add an additional `Issuer` and `ClusterIssuer` using Hashicorp Vault to issue certificates?
+## How to add an additional `Issuer` and `ClusterIssuer` using HashiСorp Vault to issue certificates?
 
 You can use [this manual](https://learn.hashicorp.com/tutorials/vault/kubernetes-cert-manager?in=vault/kubernetes) for configuring certificate issuance using Vault.
 
@@ -287,7 +287,7 @@ For example, you can create your own ClusterIssuer for a [route53](https://aws.a
 ## Does the legacy tls-acme annotation work?
 
 Yes, it works! The dedicated component (`cert-manager-ingress-shim`) automatically creates `Certificate` resources based on these annotations (in the same namespaces as those of Ingress resources with annotations).
-
+HashiCorp
 > **Caution!** The Certificate for a particular annotation is linked to the existing Ingress resource. The additional records are put into the existing Ingress resource instead of creating a separate one. Thus, the process will fail if authentication or whitelist is set for the primary Ingress. In this case, you shouldn't use the annotation; use the Certificate instead.
 >
 > **Caution!** If you switched to the Certificate instead of annotation, then you need to delete the annotation-based Certificate. Otherwise, the same Secret will be updated for both Certificates (this may lead to exceeding the Let's Encrypt limits).
