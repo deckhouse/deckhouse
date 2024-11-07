@@ -84,7 +84,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 	// skip migration if d8-cni-configuration secret doesn't exist.
 	d8cniSecret, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-cni-configuration", metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		input.LogEntry.Info("d8-cni-configuration secret does not exist, skipping migration")
+		input.Logger.Info("d8-cni-configuration secret does not exist, skipping migration")
 		return nil
 	}
 	if err != nil {
@@ -121,7 +121,7 @@ func d8cniSecretMigrate(input *go_hook.HookInput, dc dependency.Container) error
 				break
 			}
 
-			input.LogEntry.Infof("Module config for %s found, skipping migration", mc.GetName())
+			input.Logger.Infof("Module config for %s found, skipping migration", mc.GetName())
 			return removeD8CniSecret(input, kubeCl, d8cniSecret)
 		}
 	}
@@ -227,7 +227,7 @@ func removeD8CniSecret(input *go_hook.HookInput, kubeCl k8s.Client, secret *v1.S
 	if err != nil {
 		return err
 	}
-	input.LogEntry.Info(string(secretData))
+	input.Logger.Info(string(secretData))
 	return kubeCl.CoreV1().Secrets(secret.Namespace).Delete(context.TODO(), secret.Name, metav1.DeleteOptions{})
 }
 
