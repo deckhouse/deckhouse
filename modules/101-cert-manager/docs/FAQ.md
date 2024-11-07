@@ -4,7 +4,7 @@ title: "The cert-manager module: FAQ"
 
 ## What types of certificates are supported?
 
-Currently the module installs the following ClusterIssuers:
+The module installs the following ClusterIssuers:
 * `letsencrypt`
 * `letsencrypt-staging`
 * `selfsigned`
@@ -16,9 +16,9 @@ If you need support for other types of certificates, you can add them yourself.
 
 ### When is an additional `ClusterIssuer` required?
 
-The standard delivery set includes `ClusterIssuer` that issues certificates from the trusted public certificate authority LetsEncrypt or issues self-signed certificates.
+The standard delivery set includes `ClusterIssuer` that issues certificates from the trusted public certificate authority Let's Encrypt or issues self-signed certificates.
 
-To issue certificates for a domain name via LetsEncrypt, the service requires that you verify domain ownership.
+To issue certificates for a domain name via Let's Encrypt, the service requires that you verify domain ownership.
 Cert-manager supports several methods for verifying domain ownership when using `ACME` (Automated Certificate Management Environment):
 * `HTTP-01` - when using this method cert-manager will create a temporary Pod in the cluster that will listen on a specific URL to verify domain ownership. For it to work, you must be able to direct external traffic to this Pod, usually via `Ingress`.
 * `DNS-01` - when using this method cert-manager makes a TXT record in DNS to verify domain ownership. cert-manager has built-in support for popular DNS providers: AWS Route53, Google Cloud DNS, Cloudflare, and others.
@@ -27,7 +27,7 @@ Cert-manager supports several methods for verifying domain ownership when using 
 The `HTTP-01` method does not support issuing wildcard certificates.
 {% endalert %}
 
-The `ClusterIssuers` in standard delivery set that issue certificates via LetsEncrypt are divided into two types:
+The `ClusterIssuers` in standard delivery set that issue certificates via Let's Encrypt are divided into two types:
 
 1. `ClusterIssuer` specific to the cloud provider being used.
 Added automatically when filling in the [module settings](./configuration.html) associated with the cloud provider.  
@@ -42,12 +42,12 @@ Added automatically unless their creation is disabled in the [module settings](.
    * `letsencrypt-staging`
 
 In this way, an additional `ClusterIssuer` may be required in the following cases:
-1. Certificates need to be issued in a CA other than LetsEncrypt (including a private one). Supported CAs are available [in the cert-manager documentation](https://cert-manager.io/docs/configuration/)
-2. Certificates need to be issued via LetsEncrypt using the `DNS-01` method via a third-party provider.
+1. Certificates need to be issued in a CA other than Let's Encrypt (including a private one). Supported CAs are available [in the cert-manager documentation](https://cert-manager.io/docs/configuration/)
+2. Certificates need to be issued via Let's Encrypt using the `DNS-01` method via a third-party provider.
 
-### How to add an additional `ClusterIssuer` using LetsEncrypt and `DNS-01` verification method?
+### How to add an additional `ClusterIssuer` using Let's Encrypt and `DNS-01` verification method?
 
-To verify domain ownership via LetsEncrypt using the `DNS-01` method, you need to configure the ability to create TXT records in a public DNS.
+To verify domain ownership via Let's Encrypt using the `DNS-01` method, you need to configure the ability to create TXT records in a public DNS.
 
 `cert-manager` has support for mechanisms for creating TXT records in some popular DNS: `AzureDNS`, `Cloudflare`, `Google Cloud DNS`, etc.  
 The full list is available [in the cert-manager documentation](https://cert-manager.io/docs/configuration/acme/dns01/).
@@ -56,7 +56,7 @@ The module automatically creates `ClusterIssuer` of supported cloud providers wh
 If necessary, you can create such `ClusterIssuer` yourself.
 
 An example of using AWS Route53 is available in the section [How to protect cert-manager credentials](#how-to-protect-cert-manager-credentials).  
-The current list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
+The list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
 
 Using third-party DNS providers is implemented via the `webhook` method.  
 
@@ -65,9 +65,9 @@ When using this method, you need to place a service that will process the hook a
 
 As an example, let's consider using the `Yandex Cloud DNS` service.
 
-To process the webhook, we will first place the `Yandex Cloud DNS ACME webhook` service in the cluster according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex)  
+To process the webhook, first place the `Yandex Cloud DNS ACME webhook` service in the cluster according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex)  
 
-And after that we will create the `ClusterIssuer` resource:
+Then, create the `ClusterIssuer` resource:
 
 ```yaml
 apiVersion: cert-manager.io/v1
@@ -297,7 +297,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/tls-acme: "true"           # here is the annotation!
+    kubernetes.io/tls-acme: "true"           # The annotation.
   name: example-com
   namespace: default
 spec:
@@ -313,7 +313,7 @@ spec:
               number: 80
         path: /
         pathType: ImplementationSpecific
-  - host: www.example.com                    # the additional domain
+  - host: www.example.com                    # The additional domain
     http:
       paths:
       - backend:
@@ -323,7 +323,7 @@ spec:
               number: 80
         path: /
         pathType: ImplementationSpecific
-  - host: admin.example.com                  # another additional domain
+  - host: admin.example.com                  # Another additional domain
     http:
       paths:
       - backend:
@@ -336,9 +336,9 @@ spec:
   tls:
   - hosts:
     - example.com
-    - www.example.com                        # the additional domain
-    - admin.example.com                      # another additional domain
-    secretName: example-com-tls              # the name of the certificate & secret
+    - www.example.com                        # The additional domain
+    - admin.example.com                      # Another additional domain
+    secretName: example-com-tls              # The name of the certificate and secret
 ```
 
 ## How do I check the certificate status?
@@ -395,4 +395,4 @@ Suppose `cert-manager` gets the following error when trying to provide a certifi
 CAA record does not match issuer
 ```
 
-In this case, you have to check the `CAA (Certificate Authority Authorization)` DNS record of the domain for which the certificate is intended. For Let's Encrypt certificates, the domain must have the `issue "letsencrypt.org"` CAA record. You can read more about CAA [here](https://www.xolphin.com/support/Terminology/CAA_DNS_Records) and [here](https://letsencrypt.org/docs/caa/).
+In this case, you have to check the `CAA (Certificate Authority Authorization)` DNS record of the domain for which the certificate is intended. For Let's Encrypt certificates, the domain must have the `issue "letsencrypt.org"` CAA record. You can read more about CAA [in the Let's Encrypt documentation](https://letsencrypt.org/docs/caa/).
