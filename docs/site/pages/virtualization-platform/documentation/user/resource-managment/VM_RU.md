@@ -14,7 +14,6 @@ lang: ru
 - сценарии начальной конфигурации (cloud-init);
 - перечень блочных устройств.
 
-
 ## Создание виртуальной машины
 
 Ниже представлен пример простой конфигурации виртуальной машины, запускающей ОС Ubuntu 22.04. В примере используется сценарий первичной инициализации виртуальной машины (cloud-init), который устанавливает гостевого агента `qemu-guest-agent` и сервис `nginx`, а также создает пользователя `cloud` с паролем `cloud`:
@@ -172,12 +171,12 @@ d8 v restart  linux-vm
 
 Перечень возможных операций приведен в таблице ниже:
 
-| d8             | vmop type | Действие                      |
-| -------------- | --------- | ----------------------------- |
-| `d8 v stop`    | `stop`    | Остановить ВМ                 |
-| `d8 v start`   | `start`   | Запустить ВМ                  |
-| `d8 v restart` | `restart` | Перезапустить ВМ              |
-| `d8 v migrate` | `migrate` | Мигрировать ВМ на другой узел |
+| d8             | vmop type | Действие                                    |
+| -------------- | --------- | ------------------------------------------- |
+| `d8 v stop`    | `Stop`    | Остановить ВМ                               |
+| `d8 v start`   | `Start`   | Запустить ВМ                                |
+| `d8 v restart` | `Restart` | Перезапустить ВМ                            |
+| `d8 v evict`   | `Evict`   | Мигрировать ВМ на другой, произвольный узел |
 
 ## Изменение конфигурации виртуальной машины
 
@@ -532,19 +531,19 @@ kubectl get vm
 
 Мы видим что на данный момент она запущена на узле `virtlab-pt-1`.
 
-Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperations](../../../reference/cr.html#virtualmachineoperations) (`vmop`) с типом migrate.
+Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperations](../../../reference/cr.html#virtualmachineoperations) (`vmop`) с типом Evict.
 
 ```yaml
 d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineOperation
 metadata:
-  name: migrate-linux-vm-$(date +%s)
+  name: evict-linux-vm-$(date +%s)
 spec:
   # имя виртуальной машины
   virtualMachineName: linux-vm
   # операция для миграции
-  type: Migrate
+  type: Evict
 EOF
 ```
 
@@ -562,7 +561,7 @@ kubectl get vm -w
 Также для выполнения миграции можно использовать команду:
 
 ```bash
-d8 v migrate <vm-name>
+d8 v evict <vm-name>
 ```
 
 ## IP-адреса виртуальных машин
