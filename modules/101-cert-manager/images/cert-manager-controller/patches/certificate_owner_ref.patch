@@ -1,146 +1,150 @@
 diff --git a/deploy/crds/crd-certificates.yaml b/deploy/crds/crd-certificates.yaml
-index ec7d01b48..62a3abbce 100644
+index e6e9938f2..235fa7132 100644
 --- a/deploy/crds/crd-certificates.yaml
 +++ b/deploy/crds/crd-certificates.yaml
-@@ -80,6 +80,9 @@ spec:
+@@ -78,6 +78,9 @@ spec:
                          enum:
                            - DER
                            - CombinedPEM
 +                certificateOwnerRef:
 +                  description: CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored. When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted. If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
-+                  type: boolean
++                  type: boolean                          
                  commonName:
-                   description: 'CommonName is a common name to be used on the Certificate. The CommonName should have a length of 64 characters or fewer to avoid generating invalid CSRs. This value is ignored by TLS clients when any subject alt name is set. This is x509 behaviour: https://tools.ietf.org/html/rfc6125#section-6.4.4'
+                   description: "Requested common name X509 certificate subject attribute. More info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.6 NOTE: TLS clients will ignore this value when any subject alternative name is set (see https://tools.ietf.org/html/rfc6125#section-6.4.4). \n Should have a length of 64 characters or fewer to avoid generating invalid CSRs. Cannot be set if the `literalSubject` field is set."
                    type: string
 diff --git a/internal/apis/certmanager/types_certificate.go b/internal/apis/certmanager/types_certificate.go
-index 6163a19a9..a610384b6 100644
+index dbffdbc06..4de55faee 100644
 --- a/internal/apis/certmanager/types_certificate.go
 +++ b/internal/apis/certmanager/types_certificate.go
-@@ -178,6 +178,11 @@ type CertificateSpec struct {
- 	// `--feature-gates=AdditionalCertificateOutputFormats=true` option on both
+@@ -244,7 +244,12 @@ type CertificateSpec struct {
+ 	// `--feature-gates=AdditionalCertificateOutputFormats=true` option set on both
  	// the controller and webhook components.
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat
+-
 +
 +	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
 +	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
 +	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +	CertificateOwnerRef *bool
- }
- 
- // CertificatePrivateKey contains configuration options for private keys
++
+ 	// x.509 certificate NameConstraint extension which MUST NOT be used in a non-CA certificate.
+ 	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
+ 	//
 diff --git a/internal/apis/certmanager/v1/zz_generated.conversion.go b/internal/apis/certmanager/v1/zz_generated.conversion.go
-index 41e6cd26b..e8ec0dcd1 100644
+index a2c5ca7a4..f521862d7 100644
 --- a/internal/apis/certmanager/v1/zz_generated.conversion.go
 +++ b/internal/apis/certmanager/v1/zz_generated.conversion.go
-@@ -845,6 +845,7 @@ func autoConvert_v1_CertificateSpec_To_certmanager_CertificateSpec(in *v1.Certif
+@@ -878,6 +878,7 @@ func autoConvert_v1_CertificateSpec_To_certmanager_CertificateSpec(in *v1.Certif
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	out.NameConstraints = (*certmanager.NameConstraints)(unsafe.Pointer(in.NameConstraints))
  	return nil
  }
- 
-@@ -878,6 +879,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1_CertificateSpec(in *certmanag
+@@ -918,6 +919,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1_CertificateSpec(in *certmanag
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]v1.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
+ 	out.NameConstraints = (*v1.NameConstraints)(unsafe.Pointer(in.NameConstraints))
  	return nil
  }
- 
 diff --git a/internal/apis/certmanager/v1alpha2/types_certificate.go b/internal/apis/certmanager/v1alpha2/types_certificate.go
-index 5872612d7..69706178b 100644
+index 332058ae3..c39fb8675 100644
 --- a/internal/apis/certmanager/v1alpha2/types_certificate.go
 +++ b/internal/apis/certmanager/v1alpha2/types_certificate.go
-@@ -223,6 +223,11 @@ type CertificateSpec struct {
- 	// the controller and webhook components.
+@@ -231,6 +231,11 @@ type CertificateSpec struct {
  	// +optional
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
-+
+ 
 +	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
 +	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
 +	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +	CertificateOwnerRef *bool
- }
- 
- // CertificatePrivateKey contains configuration options for private keys
++
+ 	// x.509 certificate NameConstraint extension which MUST NOT be used in a non-CA certificate.
+ 	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
+ 	//
 diff --git a/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go b/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
-index 427b8c168..615809611 100644
+index 7ce7c0c3b..b5a165fae 100644
 --- a/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
 +++ b/internal/apis/certmanager/v1alpha2/zz_generated.conversion.go
-@@ -845,6 +845,7 @@ func autoConvert_v1alpha2_CertificateSpec_To_certmanager_CertificateSpec(in *Cer
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+@@ -879,6 +879,7 @@ func autoConvert_v1alpha2_CertificateSpec_To_certmanager_CertificateSpec(in *Cer
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
+ 	out.NameConstraints = (*certmanager.NameConstraints)(unsafe.Pointer(in.NameConstraints))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
  
-@@ -894,6 +895,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1alpha2_CertificateSpec(in *cer
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+@@ -930,6 +931,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1alpha2_CertificateSpec(in *cer
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
+ 	out.NameConstraints = (*NameConstraints)(unsafe.Pointer(in.NameConstraints))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
  
 diff --git a/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go b/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go
-index fba61454a..029902566 100644
+index a83a25bf3..ec636b608 100644
 --- a/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go
 +++ b/internal/apis/certmanager/v1alpha2/zz_generated.deepcopy.go
-@@ -472,6 +472,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
- 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
- 		copy(*out, *in)
+@@ -487,6 +487,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+ 		*out = new(NameConstraints)
+ 		(*in).DeepCopyInto(*out)
  	}
 +	if in.CertificateOwnerRef != nil {
 +		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
 +		*out = new(bool)
 +		**out = **in
-+	}
++	}		
  	return
  }
  
 diff --git a/internal/apis/certmanager/v1alpha3/types_certificate.go b/internal/apis/certmanager/v1alpha3/types_certificate.go
-index 7748fdad0..bce015b4f 100644
+index 8303549df..68cc35600 100644
 --- a/internal/apis/certmanager/v1alpha3/types_certificate.go
 +++ b/internal/apis/certmanager/v1alpha3/types_certificate.go
-@@ -221,6 +221,11 @@ type CertificateSpec struct {
+@@ -228,7 +228,12 @@ type CertificateSpec struct {
  	// the controller and webhook components.
  	// +optional
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
+-
 +
 +	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
 +	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
 +	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +	CertificateOwnerRef *bool
- }
- 
- // CertificatePrivateKey contains configuration options for private keys
++
+ 	// x.509 certificate NameConstraint extension which MUST NOT be used in a non-CA certificate.
+ 	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
+ 	//
 diff --git a/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go b/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
-index 958d721f4..d93893dc5 100644
+index 031c935c1..5d7e55b47 100644
 --- a/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
 +++ b/internal/apis/certmanager/v1alpha3/zz_generated.conversion.go
-@@ -844,6 +844,7 @@ func autoConvert_v1alpha3_CertificateSpec_To_certmanager_CertificateSpec(in *Cer
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+@@ -878,6 +878,7 @@ func autoConvert_v1alpha3_CertificateSpec_To_certmanager_CertificateSpec(in *Cer
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
+ 	out.NameConstraints = (*certmanager.NameConstraints)(unsafe.Pointer(in.NameConstraints))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
  
-@@ -893,6 +894,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1alpha3_CertificateSpec(in *cer
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+@@ -929,6 +930,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1alpha3_CertificateSpec(in *cer
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
+ 	out.NameConstraints = (*NameConstraints)(unsafe.Pointer(in.NameConstraints))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
  
 diff --git a/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go b/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go
-index 6f3bcaebc..8fdd3edd4 100644
+index 7a521518d..a419a0057 100644
 --- a/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go
 +++ b/internal/apis/certmanager/v1alpha3/zz_generated.deepcopy.go
-@@ -467,6 +467,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+@@ -477,6 +477,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
  		*out = make([]CertificateAdditionalOutputFormat, len(*in))
  		copy(*out, *in)
  	}
@@ -148,51 +152,53 @@ index 6f3bcaebc..8fdd3edd4 100644
 +		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
 +		*out = new(bool)
 +		**out = **in
-+	}
- 	return
- }
- 
++	}	
+ 	if in.NameConstraints != nil {
+ 		in, out := &in.NameConstraints, &out.NameConstraints
+ 		*out = new(NameConstraints)
 diff --git a/internal/apis/certmanager/v1beta1/types_certificate.go b/internal/apis/certmanager/v1beta1/types_certificate.go
-index 2f2a5b18f..057baf771 100644
+index 6446e80cf..0a89a20eb 100644
 --- a/internal/apis/certmanager/v1beta1/types_certificate.go
 +++ b/internal/apis/certmanager/v1beta1/types_certificate.go
-@@ -198,6 +198,11 @@ type CertificateSpec struct {
+@@ -205,7 +205,12 @@ type CertificateSpec struct {
  	// the controller and webhook components.
  	// +optional
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
+-
 +
 +	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
 +	// When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted.
 +	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +	CertificateOwnerRef *bool
- }
- 
- // CertificatePrivateKey contains configuration options for private keys
++
+ 	// x.509 certificate NameConstraint extension which MUST NOT be used in a non-CA certificate.
+ 	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
+ 	//
 diff --git a/internal/apis/certmanager/v1beta1/zz_generated.conversion.go b/internal/apis/certmanager/v1beta1/zz_generated.conversion.go
-index 72b72178e..6aa9b3537 100644
+index d672626fe..6dc9dd9e8 100644
 --- a/internal/apis/certmanager/v1beta1/zz_generated.conversion.go
 +++ b/internal/apis/certmanager/v1beta1/zz_generated.conversion.go
-@@ -843,6 +843,7 @@ func autoConvert_v1beta1_CertificateSpec_To_certmanager_CertificateSpec(in *Cert
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+@@ -877,6 +877,7 @@ func autoConvert_v1beta1_CertificateSpec_To_certmanager_CertificateSpec(in *Cert
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
+ 	out.NameConstraints = (*certmanager.NameConstraints)(unsafe.Pointer(in.NameConstraints))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
  
-@@ -881,6 +882,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1beta1_CertificateSpec(in *cert
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
+@@ -912,6 +913,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1beta1_CertificateSpec(in *cert
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
+ 	out.NameConstraints = (*NameConstraints)(unsafe.Pointer(in.NameConstraints))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	return nil
  }
  
 diff --git a/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go b/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go
-index 7644138e1..fee02661c 100644
+index b6a791021..e45d3e536 100644
 --- a/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go
 +++ b/internal/apis/certmanager/v1beta1/zz_generated.deepcopy.go
-@@ -467,6 +467,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+@@ -477,6 +477,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
  		*out = make([]CertificateAdditionalOutputFormat, len(*in))
  		copy(*out, *in)
  	}
@@ -200,32 +206,31 @@ index 7644138e1..fee02661c 100644
 +		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
 +		*out = new(bool)
 +		**out = **in
-+	}
- 	return
- }
- 
++	}	
+ 	if in.NameConstraints != nil {
+ 		in, out := &in.NameConstraints, &out.NameConstraints
+ 		*out = new(NameConstraints)
 diff --git a/internal/apis/certmanager/zz_generated.deepcopy.go b/internal/apis/certmanager/zz_generated.deepcopy.go
-index 67361a89e..dac61e476 100644
+index f4427e740..924a3d10b 100644
 --- a/internal/apis/certmanager/zz_generated.deepcopy.go
 +++ b/internal/apis/certmanager/zz_generated.deepcopy.go
-@@ -467,6 +467,12 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
- 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
- 		copy(*out, *in)
+@@ -482,6 +482,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+ 		*out = new(NameConstraints)
+ 		(*in).DeepCopyInto(*out)
  	}
-+
 +	if in.CertificateOwnerRef != nil {
 +		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
 +		*out = new(bool)
 +		**out = **in
-+	}
++	}	
  	return
  }
  
 diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
-index 767a18ffc..7e6a648ff 100644
+index 743cd3e35..7646c0d16 100644
 --- a/pkg/apis/certmanager/v1/types_certificate.go
 +++ b/pkg/apis/certmanager/v1/types_certificate.go
-@@ -202,6 +202,12 @@ type CertificateSpec struct {
+@@ -270,6 +270,12 @@ type CertificateSpec struct {
  	// the controller and webhook components.
  	// +optional
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
@@ -235,22 +240,22 @@ index 767a18ffc..7e6a648ff 100644
 +	// If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +	// +optional
 +	CertificateOwnerRef *bool `json:"certificateOwnerRef,omitempty"`
- }
  
- // CertificatePrivateKey contains configuration options for private keys
+ 	// x.509 certificate NameConstraint extension which MUST NOT be used in a non-CA certificate.
+ 	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
 diff --git a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
-index 8ba5ea3aa..fdbb35c07 100644
+index e5cdbccb5..043f51fb4 100644
 --- a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
 +++ b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
-@@ -467,6 +467,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
- 		*out = make([]CertificateAdditionalOutputFormat, len(*in))
- 		copy(*out, *in)
+@@ -482,6 +482,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+ 		*out = new(NameConstraints)
+ 		(*in).DeepCopyInto(*out)
  	}
 +	if in.CertificateOwnerRef != nil {
 +		in, out := &in.CertificateOwnerRef, &out.CertificateOwnerRef
 +		*out = new(bool)
 +		**out = **in
-+	}
++	}	
  	return
  }
  

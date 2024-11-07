@@ -1,4 +1,4 @@
-{{- $version := "1.12.3" }}
+{{- $version := "1.14.4" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
