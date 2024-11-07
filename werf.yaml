@@ -276,13 +276,16 @@ git:
     - dhctl
     - deckhouse-controller
     - global-hooks/**/*.go
-    - go_lib/**/*.go
     - modules/**/*.go
     - ee/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
     - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
     - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
+    - go_lib/**/*.go
     - go_lib/**/go.mod
     - go_lib/**/go.sum
+    - pkg/**/*.go
+    - pkg/**/go.mod
+    - pkg/**/go.sum
     - go.mod
     - go.sum
     - tools
@@ -308,6 +311,9 @@ git:
       - go_lib/**/*.go
       - go_lib/**/go.mod
       - go_lib/**/go.sum
+      - pkg/**/*.go
+      - pkg/**/go.mod
+      - pkg/**/go.sum
       - modules/**/*.go
       - editions.yaml
 {{ .Files.Get (printf "tools/build_includes/modules-with-dependencies-%s.yaml" .Env) }}
@@ -357,6 +363,14 @@ git:
       - go.sum
     setup:
       - "**/*.go"
+- add: /pkg/log
+  to: /pkg/log
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    setup:
+    - "**/*.go"
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg

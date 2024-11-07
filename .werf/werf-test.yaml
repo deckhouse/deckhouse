@@ -15,6 +15,7 @@ git:
   - modules
   - global-hooks
   - go_lib
+  - pkg
   - shell_lib.sh
   - shell_lib
   - jq_lib
