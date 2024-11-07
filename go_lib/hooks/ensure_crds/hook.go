@@ -19,7 +19,6 @@ package ensure_crds
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"path/filepath"
 	"reflect"
 	"strings"
