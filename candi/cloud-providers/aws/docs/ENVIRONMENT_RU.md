@@ -3,9 +3,13 @@ title: "Cloud provider — AWS: подготовка окружения"
 description: "Настройка AWS для работы облачного провайдера Deckhouse."
 ---
 
+{% include notice_envinronment.liquid %}
+
 Для работы `cloud-provider` и `machine-controller-manager` требуется доступ в API AWS из-под IAM-пользователя, который обладает достаточным набором прав.
 
-> Убедитесь в наличии доступа к нужному региону и наличии необходимых квот.
+{% alert level="warning" %}
+Убедитесь в наличии доступа к нужному региону и наличии необходимых квот.
+{% endalert %}
 
 ## JSON-спецификация Policy
 
@@ -201,7 +205,7 @@ EOF
 Затем создайте новую Policy с именем `D8CloudProviderAWS` и примечанием `ARN`, используя JSON-спецификацию из файла `policy.json`:
 
 ```shell
-aws iam create-policy --policy-name D8Policy --policy-document file://policy.json
+aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
 
 В ответ отобразится следующий текст:
@@ -209,9 +213,9 @@ aws iam create-policy --policy-name D8Policy --policy-document file://policy.jso
 ```yaml
 {
     "Policy": {
-        "PolicyName": "D8Policy",
+        "PolicyName": "D8CloudProviderAWS",
         "PolicyId": "AAA",
-        "Arn": "arn:aws:iam::123:policy/D8Policy",
+        "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
         "Path": "/",
         "DefaultVersionId": "v1",
         "AttachmentCount": 0,
@@ -266,7 +270,7 @@ aws iam create-access-key --user-name deckhouse
 Объедините `User` и `Policy`:
 
 ```shell
-aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8Policy
+aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
 
 ## Настройка IAM через Terraform
@@ -283,7 +287,7 @@ resource "aws_iam_access_key" "user" {
 }
 
 resource "aws_iam_policy" "policy" {
-  name        = "D8Policy"
+  name        = "D8CloudProviderAWS"
   path        = "/"
   description = "Deckhouse policy"
 

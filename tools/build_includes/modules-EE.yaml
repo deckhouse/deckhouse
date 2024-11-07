@@ -24,23 +24,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/be/modules/600-flant-integration
-  to: /deckhouse/modules/600-flant-integration
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/se/modules/380-metallb
   to: /deckhouse/modules/380-metallb
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/se/modules/502-delivery
-  to: /deckhouse/modules/502-delivery
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/010-metallb-crd
-  to: /deckhouse/modules/010-metallb-crd
   stageDependencies:
     setup:
         - '**/*.go'
@@ -99,13 +84,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/021-cni-cilium/templates/monitoring.yaml
-  to: /deckhouse/modules/021-cni-cilium/templates/monitoring.yaml
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules
-  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules
+- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   stageDependencies:
     setup:
         - '**/*.go'

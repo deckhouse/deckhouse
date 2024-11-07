@@ -2,6 +2,8 @@
 title: "The basic-auth module: configuration"
 ---
 
+{% include module-alerts.liquid %}
+
 {% include module-bundle.liquid %}
 
 The module does not have any mandatory settings.

@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -334,7 +334,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(0))
@@ -349,7 +349,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 
 		f.RunHook()
 		Expect(f).To(ExecuteSuccessfully())
-		Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+		Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 		m := f.MetricsCollector.CollectedMetrics()
 
 		// the first action should always be "expire"
@@ -369,7 +369,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 			Name:   istioPodMetadataMetricName,
 			Group:  metadataExporterMetricsGroup,
 			Action: "set",
-			Value:  pointer.Float64(1.0),
+			Value:  ptr.To(1.0),
 			Labels: map[string]string{
 				"namespace":            nsName,
 				"dataplane_pod":        podName,
@@ -737,7 +737,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 
 			f.RunHook()
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 			m := f.MetricsCollector.CollectedMetrics()
 
 			assertTelemetryStat := func(startIndex int) {
@@ -1091,8 +1091,8 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Patch Deployment"))
+				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch Deployment"))
 
 				d := f.KubernetesResource("Deployment", nsName, deployName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1140,8 +1140,8 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Patch Deployment"))
+				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch Deployment"))
 
 				d := f.KubernetesResource("Deployment", nsName, deployName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1163,7 +1163,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+				Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 				d := f.KubernetesResource("Deployment", nsName, deployName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1185,7 +1185,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+				Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 				d := f.KubernetesResource("Deployment", nsName, deployName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1247,8 +1247,8 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Patch DaemonSet"))
+				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch DaemonSet"))
 
 				d := f.KubernetesResource("DaemonSet", nsName, dsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1294,8 +1294,8 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Patch DaemonSet"))
+				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch DaemonSet"))
 
 				d := f.KubernetesResource("DaemonSet", nsName, dsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1316,7 +1316,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+				Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 				d := f.KubernetesResource("DaemonSet", nsName, dsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1337,7 +1337,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+				Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 				d := f.KubernetesResource("DaemonSet", nsName, dsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1401,8 +1401,8 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Patch StatefulSet"))
+				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch StatefulSet"))
 
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1448,8 +1448,8 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Patch StatefulSet"))
+				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch StatefulSet"))
 
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1470,7 +1470,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+				Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1491,7 +1491,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+				Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1571,7 +1571,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 			It("Hook must execute successfully", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+				Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 				d1 := f.KubernetesResource("Deployment", nsName, "istioDeploymentNotPatchedAndReady")
 				Expect(d1.Exists()).Should(BeTrue())

@@ -11,7 +11,7 @@ title: "The openvpn module: configuration"
 Use kubectl to see password:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
 ```
 
 Delete the Secret to re-generate password:

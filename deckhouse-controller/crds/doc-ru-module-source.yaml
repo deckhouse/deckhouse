@@ -20,10 +20,11 @@ spec:
                       type: string
                       description: Адрес репозитория образов контейнеров.
                     dockerCfg:
-                      description: Строка с токеном доступа к container registry в Base64.
+                      description: Строка с токеном доступа к container registry в Base64. В случае использования анонимного доступа к container registry не заполняйте это поле.
                     ca:
                       description: |
                         Корневой сертификат (В формате PEM), которым можно проверить сертификат registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).
+                        > Создание ресурса ModuleSource с указанием корневого сертификата, приведет к перезапуску containerd на всех узлах кластера.
             status:
               properties:
                 syncTime:

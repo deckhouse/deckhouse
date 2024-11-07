@@ -3,7 +3,7 @@ cpu: 10m
 memory: 30Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -55,9 +55,7 @@ spec:
         - args:
             - --port=7472
             - --webhook-mode=disabled
-            {{ if .Values.l2LoadBalancer.loadBalancerClass }}
-            - --lb-class={{ .Values.l2LoadBalancer.loadBalancerClass }}
-            {{- end }}
+            - --lb-class=l2-load-balancer-class.network.deckhouse.io
           env:
           - name: METALLB_ML_SECRET_NAME
             value: memberlist
@@ -70,7 +68,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "controller_resources" . | nindent 14 }}
 {{- end }}
         - name: kube-rbac-proxy
@@ -105,7 +103,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "controller_resources" . | nindent 14 }}
 {{- end }}
       serviceAccountName: controller

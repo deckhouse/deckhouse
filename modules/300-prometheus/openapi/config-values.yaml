@@ -8,27 +8,31 @@ properties:
   storageClass:
     type: string
     x-examples: ["ceph-ssd", "false"]
-    description: |
-      The name of the StorageClass to use.
+    description: |-
+      The name of the StorageClass to use for Longterm Prometheus.
 
-      If omitted, the StorageClass of the existing Prometheus PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+      If omitted, the StorageClass of the existing Prometheus PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
 
-      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
-
-      `storageClass: false` — forces the `emptyDir` usage. You will need to delete the old PVC and restart the Pod manually.
-
-      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Prometheus volume re-provisioning and data loss.
+      The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
+      
+      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+      
+      If `false` is specified, `emptyDir` will be forced to be used.
   longtermStorageClass:
     type: string
     x-examples: ["ceph-ssd"]
-    description: |
+    description: |-
       The name of the StorageClass to use for Longterm Prometheus.
 
-      If omitted, the StorageClass of the existing Longterm Prometheus PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data;
+      If omitted, the StorageClass of the existing Longterm Prometheus PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
 
-      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
+      The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
 
-      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in Longterm Prometheus volume reprovisioning and data loss.
+      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+
+      **Warning.** When migrating Prometheus with local storage to other nodes, the pod will hang in the Pending state. In this case, it will be necessary to save the Prometheus database, delete the old PVC and restart the pod manually.  Local storage refers to a StorageClass that is associated not with network storage, but with a local volume on a node (for example, StorageClass created by the local-path-provider module).
+
+      If `false` is specified, emptyDir will be forced to be used.
   longtermRetentionDays:
     type: integer
     default: 1095
@@ -46,7 +50,7 @@ properties:
         description: |
           Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module is enabled.
+          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -65,7 +69,7 @@ properties:
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) one.
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:
@@ -276,7 +280,7 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   longtermNodeSelector:
     type: object
     additionalProperties:
@@ -287,7 +291,15 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  longtermPodAntiAffinity:
+    type: string
+    default: "Preferred"
+    description: |
+      Defines the podAntiAffinity configuration for the Prometheus longterm instance relative to the Prometheus main instance.
+      - `Preferred` — allows scheduling Prometheus longterm instance alongside the Prometheus main instance if it is not possible to place them on different nodes.
+      - `Required` — does not allow scheduling Prometheus longterm instance on the same node as the Prometheus main instance.
+    enum: [Preferred, Required]
   tolerations:
     type: array
     items:
@@ -313,7 +325,7 @@ properties:
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   longtermTolerations:
     type: array
     items:
@@ -339,7 +351,7 @@ properties:
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   mainMaxDiskSizeGigabytes:
     type: integer
     description: |

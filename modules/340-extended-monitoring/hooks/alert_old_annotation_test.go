@@ -20,7 +20,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -117,7 +117,7 @@ var _ = Describe("Extended Monitoring hooks :: alert_old_annotation ::", func() 
 				Name:   "d8_deprecated_legacy_annotation",
 				Group:  "d8_deprecated_legacy_annotation",
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind":      "Node",
 					"namespace": "",
@@ -128,7 +128,7 @@ var _ = Describe("Extended Monitoring hooks :: alert_old_annotation ::", func() 
 				Name:   "d8_deprecated_legacy_annotation",
 				Group:  "d8_deprecated_legacy_annotation",
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind":      "Deployment",
 					"namespace": "default",
@@ -139,7 +139,7 @@ var _ = Describe("Extended Monitoring hooks :: alert_old_annotation ::", func() 
 				Name:   "d8_deprecated_legacy_annotation",
 				Group:  "d8_deprecated_legacy_annotation",
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind":      "StatefulSet",
 					"namespace": "default",
@@ -150,7 +150,7 @@ var _ = Describe("Extended Monitoring hooks :: alert_old_annotation ::", func() 
 				Name:   "d8_deprecated_legacy_annotation",
 				Group:  "d8_deprecated_legacy_annotation",
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind":      "DaemonSet",
 					"namespace": "default",
@@ -161,7 +161,7 @@ var _ = Describe("Extended Monitoring hooks :: alert_old_annotation ::", func() 
 				Name:   "d8_deprecated_legacy_annotation",
 				Group:  "d8_deprecated_legacy_annotation",
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind":      "CronJob",
 					"namespace": "default",
@@ -172,7 +172,7 @@ var _ = Describe("Extended Monitoring hooks :: alert_old_annotation ::", func() 
 				Name:   "d8_deprecated_legacy_annotation",
 				Group:  "d8_deprecated_legacy_annotation",
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind":      "Ingress",
 					"namespace": "default",

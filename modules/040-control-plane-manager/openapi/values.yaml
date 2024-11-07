@@ -9,6 +9,7 @@ properties:
     - effectiveKubernetesVersion
     - pkiChecksum
     - rolloutEpoch
+    - kubeSchedulerExtenders
     properties:
       audit:
         type: object
@@ -30,6 +31,12 @@ properties:
         items:
           type: string
           pattern: '^[0-9a-zA-Z\.-:\/]+$'
+      mastersNode:
+        type: array
+        items:
+          type: string
+          pattern: '^[0-9a-zA-Z\.-]+$'
+          maxLength: 63
       pkiChecksum:
         type: string
         pattern: '^[0-9a-zA-Z]+$'
@@ -54,3 +61,19 @@ properties:
             type: [integer, string]
           nodeStatusUpdateFrequency:
             type: [integer, string]
+      kubeSchedulerExtenders:
+        type: array
+        items:
+          type: object
+          properties:
+            urlPrefix:
+              type: string
+            weight:
+              type: integer
+            timeout:
+              type: integer
+            ignorable:
+              type: boolean
+            caData:
+              type: string
+        default: []

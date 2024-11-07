@@ -149,7 +149,17 @@ Ingress $ingress_inlet check: $([ "$ingress" == "ok" ] && echo "success" || echo
 EOF
   fi
 
-  if [[ "$availability:$ingress" == "ok:ok" ]]; then
+  if kubectl -n d8-istio get po | grep istiod | grep -q Running; then
+    istio="ok"
+  else
+    istio=""
+  fi
+
+  cat <<EOF
+Istio operator check: $([ "$istio" == "ok" ] && echo "success" || echo "failed")
+EOF
+
+  if [[ "$availability:$ingress:$istio" == "ok:ok:ok" ]]; then
     exit 0
   fi
 done

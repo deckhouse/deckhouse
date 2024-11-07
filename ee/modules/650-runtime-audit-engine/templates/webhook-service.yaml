@@ -9,7 +9,7 @@ spec:
   ports:
     - name: webhook
       port: 443
-      targetPort: 9680
+      targetPort: webhook
       protocol: TCP
   selector:
     app: {{ $.Chart.Name }}

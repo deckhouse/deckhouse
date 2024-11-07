@@ -25,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/errors"
@@ -198,7 +199,8 @@ func containerImageDigestCheck(object storage.StoreObject, containers []v1.Conta
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Cannot parse repository from image: "+c.Image,
+				"Cannot parse repository from image: %s",
+				c.Image,
 			)
 		}
 
@@ -206,7 +208,9 @@ func containerImageDigestCheck(object storage.StoreObject, containers []v1.Conta
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"All images must be deployed from the same default registry: "+defaultRegistry+" current:"+repo.RepositoryStr(),
+				"All images must be deployed from the same default registry: %s current: %s",
+				defaultRegistry,
+				repo.RepositoryStr(),
 			)
 		}
 	}
@@ -300,6 +304,7 @@ func (l *ObjectLinter) ApplyObjectRules(object storage.StoreObject) {
 
 	l.ErrorsList.Add(objectRevisionHistoryLimit(object))
 	l.ErrorsList.Add(objectHostNetworkPorts(object))
+	l.ErrorsList.Add(objectServiceTargetPort(object))
 
 	l.ErrorsList.Add(modules.PromtoolRuleCheck(l.Module, object))
 
@@ -504,7 +509,8 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("GetPodSecurityContext failed: %v", err),
+			"GetPodSecurityContext failed: %v",
+			err,
 		)
 	}
 
@@ -566,15 +572,54 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 	return errors.EmptyRuleError
 }
 
-func skipHostNetworkPorts(o *storage.StoreObject, c *v1.Container, p *v1.ContainerPort, hostNetworkUsed bool) bool {
-	// The 123 port is standard one, which is configured on external clients.
-	if o.Unstructured.GetKind() == "DaemonSet" && strings.HasPrefix(o.Unstructured.GetName(), "chrony") &&
-		o.Unstructured.GetNamespace() == "d8-chrony" && c.Name == "chrony" {
-		if (hostNetworkUsed && p.ContainerPort == 123) || p.HostPort == 123 {
-			return true
-		}
+func skipServiceTargetPort(o *storage.StoreObject, port int32) bool {
+	// istiod is being deployed by istio-operator and ports are hardcoded.
+	if o.Unstructured.GetName() == "istiod" && o.Unstructured.GetNamespace() == "d8-istio" &&
+		(port == 15010 || port == 15012 || port == 15014 || port == 15017) {
+		return true
+	}
+	return false
+}
+
+func objectServiceTargetPort(object storage.StoreObject) errors.LintRuleError {
+	switch object.Unstructured.GetKind() {
+	case "Service":
+	default:
+		return errors.EmptyRuleError
 	}
 
+	converter := runtime.DefaultUnstructuredConverter
+	service := new(v1.Service)
+	err := converter.FromUnstructured(object.Unstructured.UnstructuredContent(), service)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, port := range service.Spec.Ports {
+		if port.TargetPort.Type == intstr.Int {
+			if port.TargetPort.IntVal == 0 {
+				return errors.NewLintRuleError(
+					"MANIFEST004",
+					object.Identity(),
+					nil,
+					"Service port must use an explicit named (non-numeric) target port",
+				)
+			}
+			if skipServiceTargetPort(&object, port.TargetPort.IntVal) {
+				continue
+			}
+			return errors.NewLintRuleError(
+				"MANIFEST004",
+				object.Identity(),
+				port.TargetPort.IntVal,
+				"Service port must use a named (non-numeric) target port",
+			)
+		}
+	}
+	return errors.EmptyRuleError
+}
+
+func skipHostNetworkPorts(o *storage.StoreObject, c *v1.Container, p *v1.ContainerPort, hostNetworkUsed bool) bool {
 	// The 5416 port is standard one which is already configured on client's side.
 	if o.Unstructured.GetKind() == "StatefulSet" && o.Unstructured.GetName() == "openvpn" &&
 		o.Unstructured.GetNamespace() == "d8-openvpn" && c.Name == "openvpn-tcp" {
@@ -607,7 +652,8 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("IsHostNetwork failed: %v", err),
+			"IsHostNetwork failed: %v",
+			err,
 		)
 	}
 
@@ -617,7 +663,8 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("GetContainers failed: %v", err),
+			"GetContainers failed: %v",
+			err,
 		)
 	}
 	initContainers, err := object.GetInitContainers()
@@ -626,7 +673,8 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("GetInitContainers failed: %v", err),
+			"GetInitContainers failed: %v",
+			err,
 		)
 	}
 	containers = append(containers, initContainers...)

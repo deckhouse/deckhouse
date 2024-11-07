@@ -6,6 +6,7 @@ metadata:
     heritage: deckhouse
     app.kubernetes.io/name: deckhouse
     app.kubernetes.io/part-of: deckhouse
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -64,11 +65,12 @@ spec:
                       x-doc-examples: ['registry.example.io/deckhouse/modules']
                     dockerCfg:
                       type: string
-                      description: Container registry access token in Base64.
+                      description: Container registry access token in Base64. If using anonymous access to the container registry, do not fill in this field.
                     ca:
                       type: string
                       description: |
                         Root CA certificate (PEM format) to validate the registry’s HTTPS certificate (if self-signed certificates are used).
+                        > Creating a ModuleSource resource with the CA certificate spec will cause the container to restart on all nodes.
             status:
               type: object
               properties:

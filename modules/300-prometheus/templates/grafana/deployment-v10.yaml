@@ -8,7 +8,7 @@ cpu: 10m
 memory: 60Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -81,7 +81,7 @@ spec:
         env:
         {{- if .Values.global.modules.publicDomainTemplate }}
         - name: GF_SERVER_ROOT_URL
-          value: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana-v10") }}
+          value: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}
         {{- end }}
         - name: GF_AUTH_BASIC_ENABLED
           value: "false"
@@ -134,6 +134,8 @@ spec:
           value: "true"
         - name: GF_UNIFIED_ALERTING_ENABLED
           value: "false"
+        - name: GF_UNIFIED_ALERTING_DISABLED_ORGS
+          value: "1"
         {{- if hasKey .Values.prometheus "grafana" }}
           {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
         - name: GF_INSTALL_PLUGINS
@@ -170,7 +172,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "grafana_resources" . | nindent 12 }}
 {{- end }}
         readinessProbe:
@@ -188,7 +190,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "dashboard_provisioner_resources" . | nindent 12 }}
 {{- end }}
 
@@ -257,7 +259,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
         volumeMounts:

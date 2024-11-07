@@ -86,7 +86,7 @@ func generateCA(input *go_hook.HookInput) error {
 				return fmt.Errorf("cannot convert certificate to certificate authority")
 			}
 		} else {
-			selfSignedCA, err := certificate.GenerateCA(input.LogEntry, "d8-istio", certificate.WithGroups("d8-istio"), certificate.WithKeyRequest(&csr.KeyRequest{
+			selfSignedCA, err := certificate.GenerateCA(input.Logger, "d8-istio", certificate.WithGroups("d8-istio"), certificate.WithKeyRequest(&csr.KeyRequest{
 				A: "rsa",
 				S: 2048,
 			}))

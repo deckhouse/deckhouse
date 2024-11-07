@@ -1,0 +1,26 @@
+apiVersion: deckhouse.io/v1
+kind: ZvirtClusterConfiguration
+layout: Standard
+clusterID: b46372e7-0d52-40c7-9bbf-fda31e187088
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    numCPUs: 4
+    memory: 8192
+    rootDiskSizeGb: 50
+    template: debian-bookworm
+    vnicProfileID: 49bb4594-0cd4-4eb7-8288-8594eafd5a86
+    storageDomainID: c4bf82a5-b803-40c3-9f6c-b9398378f424
+nodeGroups:
+  - name: worker
+    replicas: 1
+    instanceClass:
+      numCPUs: 4
+      memory: 8192
+      template: debian-bookworm
+      vnicProfileID: 49bb4594-0cd4-4eb7-8288-8594eafd5a86
+provider:
+  server: "<SERVER>"
+  username: "<USERNAME>"
+  password: "<PASSWORD>"
+  insecure: true

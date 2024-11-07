@@ -31,7 +31,7 @@ var _ = Describe("Module :: prometheus :: helm template :: render prometheus cr"
 	Context("Default", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", `
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
+enabledModules: ["vertical-pod-autoscaler", "prometheus"]
 modules:
   https:
     mode: CustomCertificate

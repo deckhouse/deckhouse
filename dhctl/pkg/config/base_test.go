@@ -42,7 +42,8 @@ kind: InitConfiguration
 deckhouse:
    imagesRepo: test
    devBranch: test
-   configOverrides: {}
+   # {"auths": { "test": {}}}
+   registryDockerCfg: eyJhdXRocyI6IHsgInRlc3QiOiB7fX19
 `
 	staticConfig := `
 ---

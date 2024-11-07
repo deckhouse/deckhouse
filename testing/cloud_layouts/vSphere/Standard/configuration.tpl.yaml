@@ -35,7 +35,7 @@ internalNetworkNames:
 internalNetworkCIDR: 172.16.25.0/24
 baseResourcePool: kubernetes-stage/cloud-layout-tests
 masterNodeGroup:
-  replicas: 1
+  replicas: ${MASTERS_COUNT}
   instanceClass:
     numCPUs: 4
     memory: 8192
@@ -44,7 +44,7 @@ masterNodeGroup:
     additionalNetworks:
     - DEVOPS_36
     datastore: 3par_4_Lun105
-    rootDiskSize: 20
+    rootDiskSize: 50
     runtimeOptions:
       nestedHardwareVirtualization: false
 provider:
@@ -52,6 +52,16 @@ provider:
   username: dvadm@vsphere.local
   password: '${VSPHERE_PASSWORD}'
   insecure: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    highAvailability: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -98,3 +108,12 @@ spec:
     modules:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
   version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 2
+  enabled: true
+  settings:

@@ -82,6 +82,10 @@ func ApplyCopierSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
 	delete(s.Labels, "certmanager.k8s.io/certificate-name")
 
+	// Secrets with that labels lead to ArgoCD control over them.
+	delete(s.Labels, "argocd.argoproj.io/instance")
+	delete(s.Labels, "argocd.argoproj.io/secret-type")
+
 	return s, nil
 }
 
@@ -147,12 +151,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 	secrets, ok := input.Snapshots["secrets"]
 	if !ok {
-		input.LogEntry.Info("No Secrets received, skipping execution")
+		input.Logger.Info("No Secrets received, skipping execution")
 		return nil
 	}
 	namespaces, ok := input.Snapshots["namespaces"]
 	if !ok {
-		input.LogEntry.Info("No Namespaces received, skipping execution")
+		input.Logger.Info("No Namespaces received, skipping execution")
 		return nil
 	}
 

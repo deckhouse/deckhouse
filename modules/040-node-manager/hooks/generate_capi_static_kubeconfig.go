@@ -158,6 +158,13 @@ func createCAPIServiceAccount(k8sClient k8s.Client, saName string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
 			Namespace: clusterAPINamespace,
+			Annotations: map[string]string{
+				"meta.helm.sh/release-name":      "node-manager",
+				"meta.helm.sh/release-namespace": "d8-system",
+			},
+			Labels: map[string]string{
+				"app.kubernetes.io/managed-by": "Helm",
+			},
 		},
 	}
 

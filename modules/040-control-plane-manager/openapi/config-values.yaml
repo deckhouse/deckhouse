@@ -1,4 +1,19 @@
 type: object
+x-doc-example:
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: control-plane-manager
+  spec:
+    version: 1
+    enabled: true
+    settings:
+      apiserver:
+        bindToWildcard: true
+        certSANs:
+          - bakery.infra
+          - devs.infra
+        loadBalancer: { }
 properties:
   apiserver:
     type: object
@@ -27,6 +42,23 @@ properties:
             type: array
             description: |
               A list of API audiences to add when provisioning ServiceAccount tokens.
+
+              The defautl audiences is automatically generated based on the template `https://kubernetes.default.svc.${clusterDomain}`, for example, `https://kubernetes.default.svc.cluster.local`.
+              The service account token authenticator will validate that tokens used against the API are bound to at least one of these audiences.
+
+              This option is beneficial when migrating from one API issuer to another.
+            items:
+              type: string
+          additionalAPIIssuers:
+            type: array
+            description: |
+              A list of additional issuers to include when provisioning ServiceAccount tokens.
+
+              Issuers (`iss`) are used to verify the source of the tokens, ensuring they originate from trusted entities.
+
+              The first issuer is automatically generated based on the template `https://kubernetes.default.svc.${clusterDomain}`, for example, `https://kubernetes.default.svc.cluster.local`. When multiple issuers are specified, the first issuer is used to generate tokens, and all provided issuers are accepted for token verification.
+
+              This option is beneficial when migrating from one API issuer to another.
             items:
               type: string
       admissionPlugins:
@@ -78,10 +110,10 @@ properties:
           * `kubernetes.default`;
           * `kubernetes.default.svc`;
           * `kubernetes.default.svc.cluster.local`;
-          * `192.168.0.1`;
+          * Kubernetes API server address;
           * `127.0.0.1`;
-          * *current_hostname*;
-          * *hostIP*.
+          * host name;
+          * host IP.
         x-examples:
           - ["my-site.com", "192.168.67.76"]
         items:
@@ -93,7 +125,7 @@ properties:
         description: |
           Optional authentication parameters for Kubernetes API clients.
 
-          By default, they are taken from [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module ConfigMap.
+          By default, they are taken from [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module ConfigMap.
         properties:
           oidcIssuerURL:
             type: string
@@ -137,7 +169,7 @@ properties:
         description: |
           Optional authorization parameters for Kubernetes API clients.
 
-          By default, they are taken from [user-authz](https://deckhouse.io/documentation/v1/modules/140-user-authz/) module ConfigMap.
+          By default, they are taken from [user-authz](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/140-user-authz/) module ConfigMap.
         properties:
           webhookURL:
             type: string

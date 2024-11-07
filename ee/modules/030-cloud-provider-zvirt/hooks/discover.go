@@ -79,15 +79,13 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 	if len(input.Snapshots["cloud_provider_discovery_data"]) == 0 {
-		input.LogEntry.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
+		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
 		if len(input.Snapshots["storage_classes"]) == 0 {
-			input.LogEntry.Warn("failed to find storage classes for zvirt provisioner")
+			input.Logger.Warn("failed to find storage classes for zvirt provisioner")
 
 			return nil
 		}
-
-		var defaultSCName string
 
 		storageClassesSnapshots := input.Snapshots["storage_classes"]
 
@@ -96,17 +94,19 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		for _, storageClassSnapshot := range storageClassesSnapshots {
 			sc := storageClassSnapshot.(*storage.StorageClass)
 
-			if sc.Annotations["storageclass.kubernetes.io/is-default-class"] == "true" {
-				defaultSCName = sc.Name
+			allowVolumeExpansion := true
+			if sc.AllowVolumeExpansion != nil {
+				allowVolumeExpansion = *sc.AllowVolumeExpansion
 			}
-
 			storageClasses = append(storageClasses, storageClass{
-				Name:          sc.Name,
-				StorageDomain: sc.Parameters["storageDomain"],
+				Name:                 sc.Name,
+				StorageDomain:        sc.Parameters["storageDomain"],
+				AllowVolumeExpansion: allowVolumeExpansion,
 			})
 		}
+		input.Logger.Infof("Found zvirt storage classes using StorageClass snapshots: %v", storageClasses)
 
-		setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+		setStorageClassesValues(input, storageClasses)
 
 		return nil
 	}
@@ -135,44 +135,46 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
-	volumeTypes []cloudDataV1.ZvirtStorageDomain,
+	storageDomains []cloudDataV1.ZvirtStorageDomain,
 ) {
-	var defaultSCName string
+	storageClassStorageDomain := make(map[string]string, len(storageDomains))
 
-	volumeTypesMap := make(map[string]storageClass, len(volumeTypes))
-
-	for _, volumeType := range volumeTypes {
-		if !volumeType.IsEnabled {
+	for _, domain := range storageDomains {
+		if !domain.IsEnabled {
 			continue
 		}
 
-		if volumeType.IsDefault {
-			defaultSCName = getStorageClassName(volumeType.Name)
-		}
-
-		volumeTypesMap[getStorageClassName(volumeType.Name)] = storageClass{
-			Name:          getStorageClassName(volumeType.Name),
-			StorageDomain: volumeType.Name,
-		}
+		storageClassStorageDomain[getStorageClassName(domain.Name)] = domain.Name
 	}
 
-	excludes, ok := input.Values.GetOk("cloudProviderZvirt.storageClass.exclude")
+	classExcludes, ok := input.Values.GetOk("cloudProviderZvirt.storageClass.exclude")
 	if ok {
-		for _, esc := range excludes.Array() {
+		for _, esc := range classExcludes.Array() {
 			rg := regexp.MustCompile("^(" + esc.String() + ")$")
-			for name := range volumeTypesMap {
-				if rg.MatchString(name) {
-					delete(volumeTypesMap, name)
+			for class := range storageClassStorageDomain {
+				if rg.MatchString(class) {
+					delete(storageClassStorageDomain, class)
 				}
 			}
 		}
 	}
 
-	storageClasses := make([]storageClass, 0, len(volumeTypes))
-	for name, sp := range volumeTypesMap {
+	storageClassSnapshots := make(map[string]*storage.StorageClass)
+	for _, snapshot := range input.Snapshots["storage_classes"] {
+		s := snapshot.(*storage.StorageClass)
+		storageClassSnapshots[s.Name] = s
+	}
+
+	storageClasses := make([]storageClass, 0, len(storageDomains))
+	for name, domain := range storageClassStorageDomain {
+		allowVolumeExpansion := true
+		if s, ok := storageClassSnapshots[name]; ok && s.AllowVolumeExpansion != nil {
+			allowVolumeExpansion = *s.AllowVolumeExpansion
+		}
 		sc := storageClass{
-			StorageDomain: sp.StorageDomain,
-			Name:          name,
+			Name:                 name,
+			StorageDomain:        domain,
+			AllowVolumeExpansion: allowVolumeExpansion,
 		}
 		storageClasses = append(storageClasses, sc)
 	}
@@ -181,7 +183,9 @@ func handleDiscoveryDataVolumeTypes(
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+	input.Logger.Infof("Found zvirt storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
+
+	setStorageClassesValues(input, storageClasses)
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
@@ -205,27 +209,12 @@ func getStorageClassName(value string) string {
 	return strings.Trim(value, "-.")
 }
 
-func setStorageClassesValues(
-	values *go_hook.PatchableValues,
-	storageClasses []storageClass,
-	defaultSCName string,
-) {
-	values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
-
-	def, ok := values.GetOk("cloudProviderZvirt.storageClass.default")
-	if ok {
-		values.Set("cloudProviderZvirt.internal.defaultStorageClass", def.String())
-		return
-	}
-
-	if defaultSCName != "" {
-		values.Set("cloudProviderZvirt.internal.defaultStorageClass", defaultSCName)
-		return
-	}
-	values.Remove("cloudProviderZvirt.internal.defaultStorageClass")
+func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
+	input.Values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
 }
 
 type storageClass struct {
-	Name          string `json:"name"`
-	StorageDomain string `json:"storageDomain"`
+	Name                 string `json:"name"`
+	StorageDomain        string `json:"storageDomain"`
+	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
 }

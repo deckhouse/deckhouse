@@ -28,14 +28,21 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/pkg/errors"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 )
 
 type DefaultClient struct{}
 
-func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, digest string) (int64, io.ReadCloser, error) {
+func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, io.ReadCloser, error) {
+
+	repo := config.Repository
+	if path != "" {
+		repo = fmt.Sprintf("%s/%s", repo, path)
+	}
 
 	nameOpts := newNameOptions(config.Scheme)
-	repository, err := name.NewRepository(config.Repository, nameOpts...)
+	repository, err := name.NewRepository(repo, nameOpts...)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -50,8 +57,11 @@ func (c *DefaultClient) GetPackage(ctx context.Context, config *ClientConfig, di
 		remoteOpts...)
 	if err != nil {
 		e := &transport.Error{}
-		if errors.As(err, &e) && e.StatusCode == http.StatusNotFound {
-			return 0, nil, ErrPackageNotFound
+		if errors.As(err, &e) {
+			log.Error(e.Error())
+			if e.StatusCode == http.StatusNotFound {
+				return 0, nil, ErrPackageNotFound
+			}
 		}
 		return 0, nil, err
 	}

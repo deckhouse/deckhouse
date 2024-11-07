@@ -21,10 +21,12 @@ ifeq ($(OS_NAME), Linux)
 	JQ_PLATFORM = linux64
 	YQ_PLATFORM = linux
 	TRDL_PLATFORM = linux
+	GH_PLATFORM = linux
 else ifeq ($(OS_NAME), Darwin)
 	JQ_PLATFORM = osx-amd64
 	YQ_PLATFORM = darwin
 	TRDL_PLATFORM = darwin
+	GH_PLATFORM = macOS
 endif
 JQ_VERSION = 1.6
 
@@ -33,18 +35,14 @@ ifeq ($(PLATFORM_NAME), x86_64)
 	YQ_ARCH = amd64
 	CRANE_ARCH = x86_64
 	TRDL_ARCH = amd64
+	CRANE_ARCH = x86_64
+	GH_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
 	YQ_ARCH = arm64
 	CRANE_ARCH = arm64
 	TRDL_ARCH = arm64
-endif
-
-
-# Set arch for crane
-ifeq ($(PLATFORM_NAME), x86_64)
-	CRANE_ARCH = x86_64
-else ifeq ($(PLATFORM_NAME), arm64)
 	CRANE_ARCH = arm64
+	GH_ARCH = arm64
 endif
 
 # Set testing path for tests-modules
@@ -105,11 +103,12 @@ GOLANGCI_VERSION = 1.54.2
 TRIVY_VERSION= 0.38.3
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
+GH_VERSION = 2.52.0
 TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf bin/gh ## Install dev dependencies.
 
 ##@ Tests
 
@@ -145,11 +144,6 @@ tests-openapi: ## Run tests against modules openapi values schemas.
 
 tests-controller: ## Run deckhouse-controller unit tests.
 	go test ./deckhouse-controller/... -v
-
-.PHONY: tests-doc-links
-tests-doc-links: ## Build documentation and run checker of html links.
-	bash tools/doc_check_links.sh
-
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
@@ -227,20 +221,28 @@ cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
 .PHONY: docs
 docs: ## Run containers with the documentation.
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-dev
 docs-dev: ## Run containers with the documentation in the dev mode (allow uncommited files).
+	export WERF_REPO=:local
+	export SECONDARY_REPO=""
+	export DOC_API_URL=dev
+	export DOC_API_KEY=dev
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
 	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
+
+.PHONY: tests-doc-links
+docs-linkscheck: ## Build documentation and run checker of html links.
+	bash tools/doc_check_links.sh
 
 .PHONY: docs-spellcheck
 docs-spellcheck: ## Check the spelling in the documentation.
@@ -292,6 +294,11 @@ bin/werf: bin bin/trdl ## Install werf for images-digests generator.
 	trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable
 	ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf
 
+bin/gh: bin ## Install gh cli.
+	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
+	unzip -d bin -oj bin/gh.zip gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh
+	rm bin/gh.zip
+
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
 	cd candi/tools; bash update_kubernetes_patchversions.sh
@@ -336,10 +343,13 @@ set-build-envs:
 		endif
  	endif
   ifeq ($(CI_COMMIT_REF_SLUG),)
- 		export CI_COMMIT_REF_SLUG=$(shell echo $(CI_COMMIT_BRANCH) | cut -c -63 | sed -E 's/[^a-z0-9-]+/-/g' | sed -E 's/^-*([a-z0-9-]+[a-z0-9])-*$$/\1/g')
+ 		export CI_COMMIT_REF_SLUG=$(shell bin/gh pr view $$CI_COMMIT_BRANCH --json number -q .number 2>/dev/null)
  	endif
   ifeq ($(DECKHOUSE_REGISTRY_HOST),)
  		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
+  endif
+  ifeq ($(OBSERVABILITY_SOURCE_REPO),)
+  	export OBSERVABILITY_SOURCE_REPO=https://example.com
   endif
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
@@ -347,43 +357,44 @@ set-build-envs:
 
 build: set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
-	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
+	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --save-build-report=true --build-report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
   ifeq ($(FOCUS),)
-    ifneq ($(CI_COMMIT_BRANCH),)
-				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-				@# But in the local build we cannot know pr number. So, to move local build process close to the github ci build,
-				@# we need to set CI_COMMIT_REF_SLUG env manually. If CI_COMMIT_REF_SLUG is not set, it will be set to branch name.
+    ifneq ($(CI_COMMIT_REF_SLUG),)
+				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches.
 				SRC=$(shell jq -r '.Images."dev".DockerImageName' images_tags_werf.json) && \
-				DST=$(DEV_REGISTRY_PATH):$(CI_COMMIT_REF_SLUG) && \
+				DST=$(DEV_REGISTRY_PATH):pr$(CI_COMMIT_REF_SLUG) && \
 				echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '$(CI_COMMIT_BRANCH)' and edition '$(WERF_ENV)' using tag '$(CI_COMMIT_REF_SLUG)' ..." && \
-				echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'dev' image to dev-registry using tag 'pr$(CI_COMMIT_REF_SLUG)'" && \
 				docker pull $$SRC && \
 				docker image tag $$SRC $$DST && \
 				docker image push $$DST && \
 				docker image rmi $$DST || true
 
 				SRC=$(shell jq -r '.Images."dev/install".DockerImageName' images_tags_werf.json) && \
-  			DST=$(DEV_REGISTRY_PATH)/install:$(CI_COMMIT_REF_SLUG) && \
-  			echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+  			DST=$(DEV_REGISTRY_PATH)/install:pr$(CI_COMMIT_REF_SLUG) && \
+  			echo "⚓️ 💫 [$(date -u)] Publish 'dev/install' image to dev-registry using tag 'pr$(CI_COMMIT_REF_SLUG)'" && \
 				docker pull $$SRC && \
 				docker image tag $$SRC $$DST && \
 				docker image push $$DST && \
 				docker image rmi $$DST || true
 
 				SRC=$(shell jq -r '.Images."dev/install-standalone".DockerImageName' images_tags_werf.json) && \
-				DST=$(DEV_REGISTRY_PATH)/install-standalone:$(CI_COMMIT_REF_SLUG) && \
-				echo "⚓️ 💫 [$(date -u)] Publish 'dev/install-standalone' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				DST=$(DEV_REGISTRY_PATH)/install-standalone:pr$(CI_COMMIT_REF_SLUG) && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'dev/install-standalone' image to dev-registry using tag 'pr$(CI_COMMIT_REF_SLUG)'" && \
 				docker pull $$SRC && \
 				docker image tag $$SRC $$DST && \
 				docker image push $$DST && \
 				docker image rmi $$DST || true
 
 				SRC="$(shell jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)" && \
-				DST="$(DEV_REGISTRY_PATH)/e2e-terraform:$(CI_COMMIT_REF_SLUG)" && \
-				echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag '$(CI_COMMIT_REF_SLUG)'" && \
+				DST="$(DEV_REGISTRY_PATH)/e2e-terraform:pr$(CI_COMMIT_REF_SLUG)" && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag 'pr$(CI_COMMIT_REF_SLUG)'" && \
 				docker pull $$SRC && \
 				docker image tag $$SRC $$DST && \
 				docker image push $$DST && \
 				docker image rmi $$DST || true
     endif
   endif
+
+build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
+	werf config render

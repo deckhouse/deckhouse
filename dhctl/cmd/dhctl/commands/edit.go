@@ -15,24 +15,16 @@
 package commands
 
 import (
-	"context"
 	"fmt"
-	"time"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
-
-const allowUnsafeAnnotation = "deckhouse.io/allow-unsafe"
 
 func connectionFlags(parent *kingpin.CmdClause) {
 	app.DefineKubeFlags(parent)
@@ -51,75 +43,15 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		kubeCl, err := operations.ConnectToKubernetesAPI(sshClient)
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}
 
-		config, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), secret, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		configData := config.Data[dataKey]
-
-		var modifiedData []byte
-		tomb.WithoutInterruptions(func() { modifiedData, err = operations.Edit(configData) })
-		if err != nil {
-			return err
-		}
-
-		// This flag is validating by webhooks to allow editing unsafe resource's fields.
-		if app.SanityCheck {
-			addUnsafeAnnotation(config)
-		}
-
-		return log.Process(
-			"common",
-			fmt.Sprintf("Save %s back to the Kubernetes cluster", name), func() error {
-				if string(configData) == string(modifiedData) {
-					log.InfoLn("Configurations are equal. Nothing to update.")
-					return nil
-				}
-
-				config.Data[dataKey] = modifiedData
-
-				return retry.
-					NewLoop(fmt.Sprintf("Update %s secret", name), 5, 5*time.Second).
-					Run(func() error {
-						_, err = kubeCl.CoreV1().
-							Secrets("kube-system").
-							Update(context.TODO(), config, metav1.UpdateOptions{})
-						if err != nil {
-							return err
-						}
-
-						if app.SanityCheck {
-							log.InfoLn("Remove allow-unsafe annotation")
-							removeUnsafeAnnotation(config)
-
-							_, err = kubeCl.CoreV1().
-								Secrets("kube-system").
-								Update(context.TODO(), config, metav1.UpdateOptions{})
-						}
-
-						return err
-					})
-			})
+		return operations.SecretEdit(kubeCl, name, "kube-system", secret, dataKey)
 	})
 
 	return cmd
-}
-
-func addUnsafeAnnotation(doc *v1.Secret) {
-	if doc.Annotations == nil {
-		doc.Annotations = make(map[string]string)
-	}
-	doc.Annotations[allowUnsafeAnnotation] = "true"
-}
-
-func removeUnsafeAnnotation(doc *v1.Secret) {
-	delete(doc.Annotations, allowUnsafeAnnotation)
 }
 
 func DefineEditCommands(parent *kingpin.CmdClause, wConnFlags bool) {

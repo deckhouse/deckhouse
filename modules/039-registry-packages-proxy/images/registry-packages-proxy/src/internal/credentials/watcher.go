@@ -16,6 +16,7 @@ package credentials
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"sync"
@@ -89,9 +90,9 @@ func (w *Watcher) Watch(ctx context.Context) {
 
 func (w *Watcher) watchSecret(ctx context.Context) {
 	watchFunc := func(_ metav1.ListOptions) (watch.Interface, error) {
-		timeout := int64((30 * time.Second).Seconds())
+		timeout := int64(30)
 
-		// Get the module sources and their registry credentials
+		// Get the deckhouse-registry secret
 		return w.k8sClient.CoreV1().Secrets("d8-system").Watch(ctx, metav1.ListOptions{
 			TimeoutSeconds: &timeout,
 			FieldSelector:  fields.OneTermEqualSelector("metadata.name", "deckhouse-registry").String(),
@@ -140,11 +141,13 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 		}
 
 		w.Lock()
+		w.logger.Info("added registry config for main repo")
 		w.registryClientConfigs[registry.DefaultRepository] = registryConfig
 		w.Unlock()
 
 	case watch.Deleted:
 		w.Lock()
+		w.logger.Info("deleted registry config for main repo")
 		delete(w.registryClientConfigs, registry.DefaultRepository)
 		w.Unlock()
 	}
@@ -157,7 +160,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 		timeout := int64((30 * time.Second).Seconds())
 
 		// Get the module sources and their registry credentials
-		return w.k8sDynamicClient.Resource(moduleSourceGVR).Watch(ctx, metav1.ListOptions{TimeoutSeconds: &timeout})
+		return w.k8sDynamicClient.Resource(ModuleSourceGVR).Watch(ctx, metav1.ListOptions{TimeoutSeconds: &timeout})
 	}
 
 	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
@@ -191,16 +194,22 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(moduleSourceEvent.Object.(*unstructured.Unstructured).Object, &moduleSource)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal module source event: %v", err)
 	}
+
+	w.logger.Infof("%s event from module source %s received", moduleSourceEvent.Type, moduleSource.Name)
 
 	switch moduleSourceEvent.Type {
 	case watch.Added, watch.Modified:
 		var auth string
 
 		if len(moduleSource.Spec.Registry.DockerCFG) > 0 {
-			var err error
-			auth, err = dockerConfigToAuth(moduleSource.Spec.Registry.DockerCFG, strings.Split(moduleSource.Spec.Registry.Repo, "/")[0])
+			dc, err := base64.StdEncoding.DecodeString(moduleSource.Spec.Registry.DockerCFG)
+			if err != nil {
+				return err
+			}
+
+			auth, err = dockerConfigToAuth(dc, strings.Split(moduleSource.Spec.Registry.Repo, "/")[0])
 			if err != nil {
 				return err
 			}
@@ -214,10 +223,12 @@ func (w *Watcher) processModuleSourceEvent(moduleSourceEvent watch.Event) error 
 		}
 
 		w.Lock()
+		w.logger.Infof("added registry config for repo %s", moduleSource.Spec.Registry.Repo)
 		w.registryClientConfigs[moduleSource.Spec.Registry.Repo] = clientConfig
 		w.Unlock()
 	case watch.Deleted:
 		w.Lock()
+		w.logger.Infof("deleted registry config for repo %s", moduleSource.Spec.Registry.Repo)
 		delete(w.registryClientConfigs, moduleSource.Spec.Registry.Repo)
 		w.Unlock()
 	}

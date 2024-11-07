@@ -112,3 +112,11 @@ func DefineDeckhouseInstallFlags(cmd *kingpin.CmdClause) {
 		Default("false").
 		BoolVar(&MasterNodeSelector)
 }
+
+func DefineConfigsForResourcesPhaseFlags(cmd *kingpin.CmdClause) {
+	// we need another flag for dhctl bootstrap-phase create-resources for backward compatibility
+	// because in another cases --config flag is required, and we do not want to add another flag in DefineConfigFlags
+	cmd.Flag("config", `Path to a file with bootstrap configuration and declared Kubernetes resources in YAML format.`).
+		Envar(configEnvName("CONFIG")).
+		StringsVar(&ConfigPaths)
+}

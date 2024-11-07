@@ -1,7 +1,7 @@
 # [<en>] Section containing the parameters of NGINX Ingress controller.
-# [<en>] https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/cr.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html
 # [<ru>] Секция, описывающая параметры NGINX Ingress controller.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/402-ingress-nginx/cr.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -21,6 +21,8 @@ spec:
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   nodeSelector:
-    node-role.kubernetes.io/master: ""
+    node-role.kubernetes.io/control-plane: ""
   tolerations:
-  - operator: Exists
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+    operator: Exists

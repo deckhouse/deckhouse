@@ -17,5 +17,6 @@ spec:
     ntpServers:
       - pool.ntp.org
       - ntp.ubuntu.com
+      - time.google.com
   version: 1
 ```

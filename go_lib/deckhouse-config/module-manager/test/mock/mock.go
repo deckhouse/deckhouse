@@ -23,16 +23,17 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
-	EnabledByBundle  = pointer.Bool(true)
-	EnabledByScript  = pointer.Bool(true)
-	DisabledByBundle = pointer.Bool(false)
-	DisabledByScript = pointer.Bool(false)
+	EnabledByBundle  = ptr.To(true)
+	EnabledByScript  = ptr.To(true)
+	DisabledByBundle = ptr.To(false)
+	DisabledByScript = ptr.To(false)
 )
 
 // NewModuleManager returns mocked ModuleManager to test hooks
@@ -65,6 +66,10 @@ func (m *ModuleManagerMock) IsModuleEnabled(name string) bool {
 	return m.enabledModules.Has(name)
 }
 
+func (m *ModuleManagerMock) GetUpdatedByExtender(_ string) (string, error) {
+	return "mockExtender", nil
+}
+
 func (m *ModuleManagerMock) GetModule(name string) *modules.BasicModule {
 	mod, has := m.modules[name]
 	if has {
@@ -86,13 +91,13 @@ type ModuleMock struct {
 	enabled *bool
 }
 
-func NewModule(name, path string, enabledByScript *bool) (*ModuleMock, error) {
+func NewModule(name, path string, enabledByScript *bool, logger *log.Logger) (*ModuleMock, error) {
 	cb, vb, err := utils.ReadOpenAPIFiles(filepath.Join(path, "openapi"))
 	if err != nil {
 		return nil, fmt.Errorf("read open API files: %w", err)
 	}
 
-	bm, err := modules.NewBasicModule(name, "mockpath", 100, nil, cb, vb)
+	bm, err := modules.NewBasicModule(name, "mockpath", 100, nil, cb, vb, logger)
 	if err != nil {
 		return nil, fmt.Errorf("new basic module: %w", err)
 	}

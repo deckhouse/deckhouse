@@ -24,7 +24,6 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "iteration": 1705861629728,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -41,7 +40,9 @@
           },
           "custom": {
             "align": "auto",
-            "displayMode": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
             "filterable": false,
             "inspect": false,
             "minWidth": 70
@@ -608,7 +609,9 @@
       "links": [],
       "maxPerRow": 6,
       "options": {
+        "cellHeight": "sm",
         "footer": {
+          "countRows": false,
           "fields": "",
           "reducer": [
             "sum"
@@ -618,10 +621,14 @@
         "showHeader": true,
         "sortBy": []
       },
-      "pluginVersion": "8.5.13",
+      "pluginVersion": "10.2.2",
       "repeatDirection": "h",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "max by (job, namespace, controller, controller_name) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]))",
           "format": "table",
           "hide": false,
@@ -632,6 +639,10 @@
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Off\"}[$__range]))) * 0\nor\nsum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Initial\"}[$__range]))) * 0 + 1\nor\nsum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Auto\"}[$__range]))) * 0 + 2\nor\nsum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]) * on (controller_type, controller_name) group_left() sum by (controller_type, controller_name) (avg_over_time(vpa_target_recommendation{namespace=\"$namespace\", update_mode=\"Recreate\"}[$__range]))) * 0 + 3\nor\nsum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) * 0 + 5",
           "format": "table",
           "hide": false,
@@ -641,6 +652,10 @@
           "refId": "B"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]) * on (pod) group_left() sum by (pod) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__range])))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -649,6 +664,10 @@
           "refId": "C"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller)\n  (\n    avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])\n    * on (pod) group_left()\n    sum by (pod) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\"}[$__range]))\n  )\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -657,6 +676,10 @@
           "refId": "D"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller)\n  (\n    avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])\n    * on (controller_type, controller_name) group_left()\n    sum by(controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"cpu\"}[$__range]))\n  ) \nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -665,6 +688,10 @@
           "refId": "E"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller)\n  (\n    avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\"}[$__range]))\n          -\n          sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n        ) > 0\n      )\n  )\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -673,6 +700,10 @@
           "refId": "F"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller)\n  (\n    avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          (\n            sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", namespace=\"$namespace\"}[$__range]))\n            -\n            sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"cpu\",unit=\"core\",node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n          ) or sum by(namespace, pod, container) (rate(container_cpu_usage_seconds_total{node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n        ) > 0\n      )\n  )\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -681,6 +712,10 @@
           "refId": "G"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]) * on (pod) group_left() ((sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{node=~\"$node\", namespace=\"$namespace\"}[$__range])) / sum by (pod) (rate(container_cpu_cfs_periods_total{node=~\"$node\", namespace=\"$namespace\"}[$__range]))) * sum by (pod) (rate(kube_pod_container_resource_limits{resource=\"cpu\",unit=\"core\",node=~\"$node\", namespace=\"$namespace\"}[$__range]))))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -689,6 +724,10 @@
           "refId": "H"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]) * on (pod) group_left() sum by (pod) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__range])))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -697,6 +736,10 @@
           "refId": "I"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller)\n  (\n    avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])\n    * on (pod) group_left()\n    sum by (namespace, pod)\n      (\n        avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__range])\n      )\n    )\n  or\n  count (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -705,6 +748,10 @@
           "refId": "J"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller)\n  (\n    avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])\n    * on (controller_type, controller_name) group_left()\n    sum by(controller_type, controller_name) (avg_over_time(vpa_target_recommendation{container!=\"POD\",namespace=\"$namespace\", resource=\"memory\"}[$__range]))\n  ) \n  or  \ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -713,6 +760,10 @@
           "refId": "K"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller)\n  (\n    avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", namespace=\"$namespace\"}[$__range]))\n          -\n          sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n        ) > 0\n      )\n  )\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -721,6 +772,10 @@
           "refId": "L"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller)\n  (\n    avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])\n    * on (namespace, pod) group_left()\n    sum by (namespace, pod)\n      (\n        (\n          (\n            sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", namespace=\"$namespace\"}[$__range]))\n            -\n            sum by(namespace, pod, container) (avg_over_time(kube_pod_container_resource_requests{resource=\"memory\",unit=\"byte\",node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n          ) or sum by(namespace, pod, container) (avg_over_time(container_memory_working_set_bytes:without_kmem{node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__range]))\n        ) > 0\n      )\n  )\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -729,7 +784,12 @@
           "refId": "M"
         },
         {
-          "expr": "sum by(controller) (  # Data rate of the controller is a sum of data rates from its Pods.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  sum by(pod)  # Use sum if there are multiple interaces in the Pod.\n  (\n    rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__range])\n    *   # Select only Pods with 'hostNetwork: false', because receive_bytes values are meaningful only for Pods with hostNetwork: false.\n    on(pod)\n    kube_pod_info{host_network=\"false\", namespace=\"$namespace\"}\n  )\n)\nor # Return -1 value for Pods with 'hostNetwork: true' to rewrite by value mapping.\n# Use max to get one '-1' per controller\n(max by(controller) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}\n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  (kube_pod_info{host_network=\"true\", namespace=\"$namespace\"})\n) * -1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(controller) (  # Data rate of the controller is a sum of data rates from its Pods.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  sum by(pod)  # Use sum if there are multiple interaces in the Pod.\n  (\n    max(rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__range])) by(pod)\n    *   # Select only Pods with 'hostNetwork: false', because receive_bytes values are meaningful only for Pods with hostNetwork: false.\n    on(pod)\n    kube_pod_info{host_network=\"false\", namespace=\"$namespace\"}\n  )\n)\nor # Return -1 value for Pods with 'hostNetwork: true' to rewrite by value mapping.\n# Use max to get one '-1' per controller\n(max by(controller) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}\n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  (kube_pod_info{host_network=\"true\", namespace=\"$namespace\"})\n) * -1)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -737,7 +797,12 @@
           "refId": "N"
         },
         {
-          "expr": "sum by(controller) (  # Data rate of the controller is a sum of data rates from its Pods.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  sum by(pod)  # Use sum if there are multiple interaces in the Pod.\n  (\n    rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__range])\n    *   # Select only Pods with 'hostNetwork: false', because receive_bytes values are meaningful only for Pods with hostNetwork: false.\n    on(pod)\n    kube_pod_info{host_network=\"false\", namespace=\"$namespace\"}\n  )\n)\nor # Return -1 value for Pods with 'hostNetwork: true' to rewrite by value mapping.\n# Use max to get one '-1' per controller\n(max by(controller) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}\n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  (kube_pod_info{host_network=\"true\", namespace=\"$namespace\"})\n) * -1)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
+          "editorMode": "code",
+          "expr": "sum by(controller) (  # Data rate of the controller is a sum of data rates from its Pods.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  sum by(pod)  # Use sum if there are multiple interaces in the Pod.\n  (\n    max(rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__range])) by(pod)\n    *   # Select only Pods with 'hostNetwork: false', because receive_bytes values are meaningful only for Pods with hostNetwork: false.\n    on(pod)\n    kube_pod_info{host_network=\"false\", namespace=\"$namespace\"}\n  )\n)\nor # Return -1 value for Pods with 'hostNetwork: true' to rewrite by value mapping.\n# Use max to get one '-1' per controller\n(max by(controller) (\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}\n  * on(pod)\n  group_left() # Do not drop controller label from kube_controller_pod.\n  (kube_pod_info{host_network=\"true\", namespace=\"$namespace\"})\n) * -1)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -745,6 +810,10 @@
           "refId": "O"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]) * on (pod) group_left() sum by (pod) (rate(container_fs_reads_total{node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__range])))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -753,6 +822,10 @@
           "refId": "P"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]) * on (pod) group_left() sum by (pod) (rate(container_fs_writes_total{node=~\"$node\", container!=\"POD\", namespace=\"$namespace\"}[$__range])))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -761,6 +834,10 @@
           "refId": "Q"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "max by (controller) (max by (namespace, controller_type, controller_name, controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) * on (namespace, controller_type, controller_name) group_left() max by (namespace, controller_type, controller_name) (avg_over_time(kube_controller_replicas{node=~\"$node\", namespace=\"$namespace\"}[$__range])))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "hide": false,
@@ -770,6 +847,10 @@
           "refId": "R"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "max by (job, namespace, controller_type, controller_name, controller) ((max by (job, namespace, controller_type, controller_name, controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]))) *  on (job, namespace, controller_type, controller_name) group_right(controller)\n(avg_over_time(kube_controller_replicas[$__range]) - avg_over_time(kube_controller_replicas_ready[$__range])))\nor\nmax by (job, namespace, controller_type, controller_name, controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) * 0",
           "format": "table",
           "hide": false,
@@ -779,6 +860,10 @@
           "refId": "S"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller) \n  (\n    avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])\n    * on (pod) group_left()\n    sum by (pod) (increase(kube_pod_container_status_restarts_total{node=~\"$node\", namespace=\"$namespace\"}[$__range]))\n  )\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "hide": false,
@@ -788,6 +873,10 @@
           "refId": "T"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${ds_prometheus}"
+          },
           "expr": "sum by (controller) (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range]) * on (pod) group_left() sum by (pod) (avg_over_time(container_memory:kmem{node=~\"$node\", namespace=\"$namespace\", container!=\"POD\"}[$__range])))\nor\ncount (avg_over_time(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}[$__range])) by (controller) * 0",
           "format": "table",
           "instant": true,
@@ -856,10 +945,16 @@
           },
           "custom": {
             "fillOpacity": 70,
-            "lineWidth": 0
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
           },
           "decimals": 0,
-          "displayName": "availability",
           "mappings": [],
           "max": 100,
           "min": 0,
@@ -904,7 +999,8 @@
         "alignValue": "left",
         "legend": {
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "mergeValues": false,
         "rowHeight": 0.9,
@@ -967,6 +1063,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -978,6 +1077,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineStyle": {
               "fill": "solid"
@@ -1064,8 +1164,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -1107,6 +1208,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1118,6 +1222,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1197,8 +1302,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -1256,6 +1362,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1267,6 +1376,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1349,6 +1459,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -1392,6 +1503,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1403,6 +1517,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1515,6 +1630,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -1569,6 +1685,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1580,6 +1699,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1662,6 +1782,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -1705,6 +1826,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1716,6 +1840,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1798,6 +1923,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -1842,6 +1968,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "cores",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -1853,6 +1982,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1935,7 +2065,8 @@
             "max"
           ],
           "displayMode": "table",
-          "placement": "right"
+          "placement": "right",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1990,6 +2121,9 @@
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "cores",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
@@ -2001,6 +2135,7 @@
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "smooth",
                 "lineWidth": 2,
                 "pointSize": 5,
@@ -2109,7 +2244,8 @@
             "legend": {
               "calcs": [],
               "displayMode": "list",
-              "placement": "bottom"
+              "placement": "bottom",
+              "showLegend": true
             },
             "tooltip": {
               "mode": "multi",
@@ -2182,6 +2318,9 @@
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "cores",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
@@ -2193,6 +2332,7 @@
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "smooth",
                 "lineWidth": 1,
                 "pointSize": 5,
@@ -2301,7 +2441,8 @@
             "legend": {
               "calcs": [],
               "displayMode": "list",
-              "placement": "bottom"
+              "placement": "bottom",
+              "showLegend": true
             },
             "tooltip": {
               "mode": "multi",
@@ -2377,6 +2518,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -2388,6 +2532,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2461,8 +2606,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -2503,6 +2649,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -2514,6 +2663,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2637,8 +2787,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -2700,6 +2851,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -2711,6 +2865,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2784,8 +2939,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -2827,6 +2983,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -2838,6 +2997,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -2915,8 +3075,9 @@
       "options": {
         "legend": {
           "calcs": [],
-          "displayMode": "hidden",
-          "placement": "bottom"
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
         },
         "tooltip": {
           "mode": "multi",
@@ -2971,6 +3132,9 @@
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
@@ -2982,6 +3146,7 @@
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "smooth",
                 "lineWidth": 1,
                 "pointSize": 5,
@@ -3229,8 +3394,9 @@
           "options": {
             "legend": {
               "calcs": [],
-              "displayMode": "hidden",
-              "placement": "bottom"
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
             },
             "tooltip": {
               "mode": "multi",
@@ -3336,6 +3502,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -3347,6 +3516,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3428,6 +3598,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -3443,10 +3614,12 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "# Data rate for the controller is a sum of data rates of its Pods.\nsum by (controller) (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod)\n  group_left() # Preserve controller label from the 'kube_controller_pod' metric.\n  (\n    # Select Pods with hostNetwork: false.\n    kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}\n    * on(pod)\n    # Sum data rate for all interfaces in the Pod. \n    sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]))\n  )\n)",
+          "editorMode": "code",
+          "expr": "# Data rate for the controller is a sum of data rates of its Pods.\nsum by (controller) (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"}\n  * on (pod)\n  group_left() # Preserve controller label from the 'kube_controller_pod' metric.\n  (\n    # Select Pods with hostNetwork: false.\n    max(kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}) by(pod)\n    * on(pod)\n    # Sum data rate for all interfaces in the Pod. \n    sum by (pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]))\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ controller }}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -3471,6 +3644,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -3482,6 +3658,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3563,6 +3740,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -3578,10 +3756,12 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "# Data rate for the controller is a sum of data rates of its Pods.\nsum by (controller) (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod)\n  group_left() # Preserve controller label from the 'kube_controller_pod' metric.\n  (\n    # Select Pods with hostNetwork: false.\n    kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}\n    * on(pod)\n    # Sum data rate for all interfaces in the Pod. \n    sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]))\n  )\n)",
+          "editorMode": "code",
+          "expr": "# Data rate for the controller is a sum of data rates of its Pods.\nsum by (controller) (\n  # Select Pods by controller_type and controller.\n  kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller_type=~\"$controller_type\", controller=~\"$controller\"} \n  * on (pod)\n  group_left() # Preserve controller label from the 'kube_controller_pod' metric.\n  (\n    # Select Pods with hostNetwork: false.\n    max(kube_pod_info{host_network=\"false\",namespace=\"$namespace\"}) by(pod)\n    * on(pod)\n    # Sum data rate for all interfaces in the Pod. \n    sum by (pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=\"$namespace\"}[$__rate_interval]))\n  )\n)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ controller }}",
+          "range": true,
           "refId": "A"
         }
       ],
@@ -3622,6 +3802,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -3633,6 +3816,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3710,6 +3894,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -3752,6 +3937,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -3763,6 +3951,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3844,6 +4033,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -3904,6 +4094,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -3915,6 +4108,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -3992,6 +4186,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -4046,6 +4241,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -4057,6 +4255,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -4134,6 +4333,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -4176,6 +4376,9 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -4187,6 +4390,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -4233,6 +4437,7 @@
           ],
           "displayMode": "table",
           "placement": "right",
+          "showLegend": true,
           "sortBy": "Mean",
           "sortDesc": true
         },
@@ -4279,7 +4484,9 @@
               },
               "custom": {
                 "align": "auto",
-                "displayMode": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
                 "inspect": false
               },
               "decimals": 2,
@@ -4289,7 +4496,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -4547,12 +4755,14 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 136
+            "y": 100
           },
           "id": 600,
           "links": [],
           "options": {
+            "cellHeight": "sm",
             "footer": {
+              "countRows": false,
               "fields": "",
               "reducer": [
                 "sum"
@@ -4561,7 +4771,7 @@
             },
             "showHeader": true
           },
-          "pluginVersion": "8.5.13",
+          "pluginVersion": "10.2.2",
           "targets": [
             {
               "expr": "max by (persistentvolumeclaim, storageclass) (\n  max by (namespace, persistentvolumeclaim) (\n    max by (namespace, persistentvolumeclaim, pod) (\n      max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__range])\n    ) \n    * on (namespace, pod) group_left(controller)\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"}\n  )\n* on (namespace, persistentvolumeclaim) group_right() kube_persistentvolumeclaim_info{namespace=\"$namespace\"})",
@@ -4683,6 +4893,9 @@
                 "mode": "palette-classic"
               },
               "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
@@ -4694,6 +4907,7 @@
                   "tooltip": false,
                   "viz": false
                 },
+                "insertNulls": false,
                 "lineInterpolation": "smooth",
                 "lineWidth": 1,
                 "pointSize": 5,
@@ -4717,7 +4931,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   }
                 ]
               },
@@ -4729,7 +4944,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 143
+            "y": 107
           },
           "id": 603,
           "links": [],
@@ -4739,7 +4954,8 @@
                 "mean"
               ],
               "displayMode": "table",
-              "placement": "right"
+              "placement": "right",
+              "showLegend": true
             },
             "tooltip": {
               "mode": "multi",
@@ -4755,10 +4971,12 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "\n\nmax by (persistentvolumeclaim) (\n  max by (namespace, persistentvolumeclaim) (\n    max by (namespace, persistentvolumeclaim, pod) (\n      max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__range])\n    ) \n    * on (namespace, pod) group_left(controller)\n    kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"}\n  )\n)\n* on (persistentvolumeclaim) group_right()\nmax by (persistentvolumeclaim) (\n  max_over_time(kube_persistentvolume_capacity_bytes[$__rate_interval]) \n  * on (persistentvolume) group_right() \n  (\n    label_replace(\n      max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__rate_interval]),\n      \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n  )\n)",
+              "editorMode": "code",
+              "expr": "sum(max by (persistentvolumeclaim) (\n  max by (namespace, persistentvolumeclaim) (\n    max by (namespace, persistentvolumeclaim, pod) (\n      max_over_time(kube_pod_spec_volumes_persistentvolumeclaims_info{namespace=\"$namespace\"}[$__range])\n    ) \n    * on (namespace, pod) group_left(controller)\n    max(kube_controller_pod{node=~\"$node\", namespace=\"$namespace\", controller=~\"$controller\"}) by(namespace, pod)\n  )\n)\n* on (persistentvolumeclaim) group_right()\nmax by (persistentvolumeclaim) (\n  max_over_time(kube_persistentvolume_capacity_bytes[$__rate_interval]) \n  * on (persistentvolume) group_right() \n  (\n    label_replace(\n      max_over_time(kube_persistentvolumeclaim_info{namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__rate_interval]),\n      \"persistentvolume\", \"$1\", \"volumename\", \"(.*)\")\n  )\n))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Provisioned",
+              "range": true,
               "refId": "A"
             },
             {
@@ -4766,10 +4984,12 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__rate_interval])\n)",
+              "editorMode": "code",
+              "expr": "sum(max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__rate_interval])\n))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Capacity",
+              "range": true,
               "refId": "B"
             },
             {
@@ -4777,10 +4997,12 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__rate_interval]) - max_over_time(kubelet_volume_stats_available_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__rate_interval])\n)",
+              "editorMode": "code",
+              "expr": "sum(max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__rate_interval]) - max_over_time(kubelet_volume_stats_available_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__rate_interval])\n))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Used",
+              "range": true,
               "refId": "C"
             }
           ],
@@ -4793,8 +5015,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 36,
-  "style": "dark",
+  "schemaVersion": 38,
   "tags": [
     "main"
   ],

@@ -23,15 +23,18 @@ type NodeInfo struct {
 }
 
 type ServiceInfo struct {
-	AnnotationIsMissed bool
-	Name               string
-	Namespace          string
-	L2LoadBalancerName string
-	LoadBalancerClass  string
-	ClusterIP          string
-	ExternalIPsCount   int
-	Ports              []v1.ServicePort
-	Selector           map[string]string
+	L2LBNameAnnotationIsMissed bool
+	PublishNotReadyAddresses   bool
+	Name                       string
+	Namespace                  string
+	L2LoadBalancerName         string
+	LoadBalancerClass          string
+	ClusterIP                  string
+	ExternalIPsCount           int
+	Ports                      []v1.ServicePort
+	ExternalTrafficPolicy      v1.ServiceExternalTrafficPolicy
+	InternalTrafficPolicy      v1.ServiceInternalTrafficPolicy
+	Selector                   map[string]string
 }
 
 type L2LBServiceStatusInfo struct {
@@ -41,15 +44,19 @@ type L2LBServiceStatusInfo struct {
 }
 
 type L2LBServiceConfig struct {
-	Name              string            `json:"name"`
-	Namespace         string            `json:"namespace"`
-	ServiceName       string            `json:"serviceName"`
-	ServiceNamespace  string            `json:"serviceNamespace"`
-	PreferredNode     string            `json:"preferredNode,omitempty"`
-	LoadBalancerClass string            `json:"loadBalancerClass"`
-	ClusterIP         string            `json:"clusterIP"`
-	Ports             []v1.ServicePort  `json:"ports"`
-	Selector          map[string]string `json:"selector"`
+	PublishNotReadyAddresses bool                            `json:"publishNotReadyAddresses"`
+	Name                     string                          `json:"name"`
+	Namespace                string                          `json:"namespace"`
+	ServiceName              string                          `json:"serviceName"`
+	ServiceNamespace         string                          `json:"serviceNamespace"`
+	PreferredNode            string                          `json:"preferredNode,omitempty"`
+	LoadBalancerClass        string                          `json:"loadBalancerClass"`
+	ClusterIP                string                          `json:"clusterIP"`
+	Ports                    []v1.ServicePort                `json:"ports"`
+	ExternalTrafficPolicy    v1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy"`
+	InternalTrafficPolicy    v1.ServiceInternalTrafficPolicy `json:"internalTrafficPolicy"`
+	Selector                 map[string]string               `json:"selector"`
+	LoadBalancerName         string                          `json:"loadBalancerName"`
 }
 
 type L2LoadBalancerInfo struct {

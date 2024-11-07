@@ -3,7 +3,6 @@ defaults:
 positive:
   values:
     - internal:
-        defaultStorageClass: test
         storageClasses: []
         instances:
           ami: test

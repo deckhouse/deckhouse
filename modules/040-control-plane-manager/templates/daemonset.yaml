@@ -32,6 +32,7 @@ memory: 10Mi
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
 {{- $_ := set $tpl_context "apiserver" dict }}
+{{- $_ := set $tpl_context "scheduler" dict }}
 {{- $_ := set $tpl_context "resourcesRequestsMilliCpuControlPlane" .Values.global.internal.modules.resourcesRequests.milliCpuControlPlane }}
 {{- $_ := set $tpl_context "resourcesRequestsMemoryControlPlane" .Values.global.internal.modules.resourcesRequests.memoryControlPlane }}
 
@@ -97,6 +98,9 @@ memory: 10Mi
 {{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
   {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
 {{- end }}
+{{- if hasKey .Values.controlPlaneManager.internal "kubeSchedulerExtenders" }}
+{{ $_ := set $tpl_context.scheduler "extenders" .Values.controlPlaneManager.internal.kubeSchedulerExtenders }}
+{{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "arguments" }}
 {{- $_ := set $tpl_context "arguments" .Values.controlPlaneManager.internal.arguments }}
 {{- end }}
@@ -151,7 +155,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 data:
   {{- include "control_plane_config" (list . $tpl_context) | nindent 2 }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -260,7 +264,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "control_plane_manager_resources" . | nindent 12 }}
 {{- end }}
 {{- range $name, $imageDigest := $images }}
@@ -268,7 +272,7 @@ spec:
         image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
         command:
         - /pause
-  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         resources:
           requests:
             {{- include "image_holder_resources" $ | nindent 12 }}

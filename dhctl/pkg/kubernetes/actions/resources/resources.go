@@ -59,13 +59,13 @@ func (g *apiResourceListGetter) Get(gvk *schema.GroupVersionKind) (*metav1.APIRe
 
 	var resourcesList *metav1.APIResourceList
 	var err error
-	err = retry.NewSilentLoop("Get resources list", 50, 5*time.Second).Run(func() error {
+	err = retry.NewSilentLoop("Get resources list", 3, 1*time.Second).Run(func() error {
 		// ServerResourcesForGroupVersion does not return error if API returned NotFound (404) or Forbidden (403)
 		// https://github.com/kubernetes/client-go/blob/51a4fd4aee686931f6a53148b3f4c9094f80d512/discovery/discovery_client.go#L204
 		// and if CRD was not deployed method will return empty APIResources list
 		resourcesList, err = g.kubeCl.Discovery().ServerResourcesForGroupVersion(gvk.GroupVersion().String())
 		if err != nil {
-			return fmt.Errorf("can't get preferred resources: %w", err)
+			return fmt.Errorf("can't get preferred resources '%s': %w", key, err)
 		}
 		return nil
 	})
@@ -98,17 +98,35 @@ func (c *Creator) createAll() error {
 
 		for i, resource := range c.resources {
 			if _, ok := addedResourcesIndexes[i]; !ok {
+				log.DebugF("Remain resource %s\n", resource.String())
 				remainResources = append(remainResources, resource)
 			}
 		}
 
 		c.resources = remainResources
+		log.DebugF("Remain resources: %d\n", len(c.resources))
 	}()
 
+	log.DebugLn("start ensureRequiredNamespacesExist")
+
+	// resourcesToSkipInCurrentIteration connect with c.resources via resource slice index
+	resourcesToSkipInCurrentIteration, err := c.ensureRequiredNamespacesExist()
+	if err != nil {
+		return err
+	}
+
+	log.DebugLn("start single resource creation loop")
+
 	for indx, resource := range c.resources {
+		if _, shouldSkip := resourcesToSkipInCurrentIteration[indx]; shouldSkip {
+			log.DebugF("Resource %s with index % should skip to create in current iteration because namespace is not existed\n", resource.String())
+			continue
+		}
+
 		resourcesList, err := apiResourceGetter.Get(&resource.GVK)
 		if err != nil {
-			return err
+			log.DebugF("apiResourceGetter returns error: %w\n", err)
+			continue
 		}
 
 		for _, discoveredResource := range resourcesList.APIResources {
@@ -125,6 +143,67 @@ func (c *Creator) createAll() error {
 	}
 
 	return nil
+}
+
+func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
+	// true means known existing namespace
+	// false means known namespace that is not yet created (used to skip checking for that namespace for multiple times)
+	knownNamespaces := make(map[string]bool)
+	// we need to skip all resources without existing namespace
+	// because namespace can possibly be created in current iteration
+	// or after state is set to "cluster is bootstrapped" (some namespaces will be created by the deckhouse after that)
+	resourcesToSkipInCurrentIteration := make(map[int]struct{})
+
+	err := retry.NewSilentLoop("Ensure that required namespaces exist", 10, 10*time.Second).Run(func() error {
+		for i, res := range c.resources {
+			nsName := res.Object.GetNamespace()
+
+			if nsName == "" {
+				// we can receive empty name space when user want to deploy in 'default' ns
+				// we keep it in our minds and skip verify therese resources because we think that
+				// default namespace always exist
+				log.DebugF("Namespace is empty for resource %s. Skip ns checking\n", res.String())
+				continue
+			}
+
+			namespaceExists, nsWasSeenBefore := knownNamespaces[nsName]
+			if nsWasSeenBefore {
+				if !namespaceExists {
+					// we have two cases; first - we check namespace and namespace is existed and not
+					// if ns is existed then we will skip only
+					// if ns is not exists we should skip resource on current iteration and try to create on next iteration
+					resourcesToSkipInCurrentIteration[i] = struct{}{}
+					log.DebugF("Namespace not found but processed for resource %s. Adding skip to create resource in current iteration\n", res.String())
+				}
+				log.DebugF("Namespace was processed for resource %s. Skip ns checking\n", res.String())
+				continue
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if _, err := c.kubeCl.CoreV1().Namespaces().Get(ctx, nsName, metav1.GetOptions{}); err != nil {
+				cancel()
+
+				if !apierrors.IsNotFound(err) {
+					return fmt.Errorf("can't get namespace %q: %w", nsName, err)
+				}
+
+				resourcesToSkipInCurrentIteration[i] = struct{}{}
+				knownNamespaces[nsName] = false
+				log.DebugF("Namespace was not found for resource %s\n", res.String())
+				continue
+			}
+			cancel()
+			knownNamespaces[nsName] = true
+			log.DebugF("Namespace found for resource %s\n", res.String())
+		}
+		return nil
+	})
+
+	if err != nil {
+		return make(map[int]struct{}), err
+	}
+
+	return resourcesToSkipInCurrentIteration, nil
 }
 
 func (c *Creator) TryToCreate() error {
@@ -154,33 +233,44 @@ func (c *Creator) isNamespaced(gvk schema.GroupVersionKind, name string) (bool, 
 	return isNamespaced(c.kubeCl, gvk, name)
 }
 
-func (c *Creator) createSingleResource(resource *template.Resource) error {
+func resourceToGVR(kubeCl *client.KubernetesClient, resource *template.Resource) (*schema.GroupVersionResource, *unstructured.Unstructured, error) {
 	doc := resource.Object
 	gvk := resource.GVK
 
+	gvr, err := kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
+	if err != nil {
+		return nil, nil, fmt.Errorf("can't get resource by kind and apiVersion: %w", err)
+	}
+
+	namespaced, err := isNamespaced(kubeCl, gvk, gvr.Resource)
+	if err != nil {
+		return nil, nil, fmt.Errorf("can't determine whether a resource is namespaced or not: %v", err)
+	}
+
+	docCopy := doc.DeepCopy()
+	namespace := docCopy.GetNamespace()
+	if namespace == metav1.NamespaceNone && namespaced {
+		namespace = metav1.NamespaceDefault
+	}
+
+	docCopy.SetNamespace(namespace)
+
+	return &gvr, docCopy, nil
+}
+
+func (c *Creator) createSingleResource(resource *template.Resource) error {
 	// Wait up to 10 minutes
-	return retry.NewLoop(fmt.Sprintf("Create %s resources", gvk.String()), 60, 10*time.Second).Run(func() error {
-		gvr, err := c.kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
+	return retry.NewLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).Run(func() error {
+		gvr, docCopy, err := resourceToGVR(c.kubeCl, resource)
 		if err != nil {
-			return fmt.Errorf("can't get resource by kind and apiVersion: %w", err)
+			return err
 		}
-
-		namespaced, err := c.isNamespaced(gvk, gvr.Resource)
-		if err != nil {
-			return fmt.Errorf("can't determine whether a resource is namespaced or not: %v", err)
-		}
-
-		docCopy := doc.DeepCopy()
 		namespace := docCopy.GetNamespace()
-		if namespace == metav1.NamespaceNone && namespaced {
-			namespace = metav1.NamespaceDefault
-		}
-
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
 			Manifest: func() interface{} { return nil },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := c.kubeCl.Dynamic().Resource(gvr).
+				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
 					Create(context.TODO(), docCopy, metav1.CreateOptions{})
 				return err
@@ -191,7 +281,7 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 					return err
 				}
 				// using patch here because of https://github.com/kubernetes/kubernetes/issues/70674
-				_, err = c.kubeCl.Dynamic().Resource(gvr).
+				_, err = c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
 					Patch(context.TODO(), docCopy.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 				return err
@@ -211,7 +301,6 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Res
 	resourceCreator := NewCreator(kubeCl, resources)
 
 	waiter := NewWaiter(checkers)
-
 	for {
 		err := resourceCreator.TryToCreate()
 		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {

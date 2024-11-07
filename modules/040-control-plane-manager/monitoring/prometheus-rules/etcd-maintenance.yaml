@@ -1,9 +1,9 @@
 - name: d8.etcd-maintenance.quota-backend-bytes
   rules:
     - alert: D8KubeEtcdDatabaseSizeCloseToTheLimit
-      expr: max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) >= scalar(max(d8_etcd_quota_backend_total) * 0.9)
+      expr: max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) >= scalar(max(d8_etcd_quota_backend_total) * 0.95)
       labels:
-        severity_level: "6"
+        severity_level: "3"
         tier: cluster
       for: "10m"
       annotations:
@@ -65,4 +65,37 @@
             64GB         8589934592 (8GB)
             72GB         8589934592 (8GB)
             ....
+    - alert: D8EtcdExcessiveDatabaseGrowth
+      expr: predict_linear(etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}[6h], 24*3600) >= scalar(max(d8_etcd_quota_backend_total) * 0.95)
+      for: "30m"
+      labels:
+        severity_level: "4"
+        tier: cluster
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: etcd cluster database growing very fast.
+        description: |
+          Predicting that the etcd database will run out of disk space in the next 1 day on instance `{{ $labels.instance }}` based on 6h growth rate.
 
+          Please check and take action as it might be disruptive.
+    - alert: D8EtcdDatabaseHighFragmentationRatio
+      expr: max by (node) (last_over_time(etcd_mvcc_db_total_size_in_use_in_bytes[5m]) / last_over_time(etcd_mvcc_db_total_size_in_bytes[5m])) < 0.5 and max by (node) (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"}) > scalar(max(d8_etcd_quota_backend_total) * 0.75)
+      for: "10m"
+      labels:
+        severity_level: "7"
+        tier: cluster
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        summary: etcd database size in use is less than 50% of the actual allocated storage, indicating potential fragmentation, and the total storage size exceeds 75% of the configured quota.
+        description: |
+          The etcd database size in use on instance `{{ $labels.instance }}` is less than 50% of the actual allocated disk space, indicating potential fragmentation
+
+          Possible solutions:
+          - You can do defragmentation. Use the following command:
+            `kubectl -n kube-system exec -ti etcd-{{ $labels.node }} -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s`

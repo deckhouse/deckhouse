@@ -1,0 +1,7 @@
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: wait-lb-non-default
+spec:
+  inlet: "LoadBalancer"
+  waitLoadBalancerOnTerminating: 333

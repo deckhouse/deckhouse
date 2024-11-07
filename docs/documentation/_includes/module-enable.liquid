@@ -17,7 +17,7 @@
 - с помощью команды `deckhouse-controller` (требуется kubectl, настроенный на работу с кластером):
 
   ```shell
-  kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module enable {{ include.moduleKebabName }}
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable {{ include.moduleKebabName }}
   ```
 
 Пример **выключения** модуля:
@@ -36,7 +36,7 @@
 - с помощью команды `deckhouse-controller` (требуется kubectl, настроенный на работу с кластером):
 
   ```shell
-  kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module disable {{ include.moduleKebabName }}
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable {{ include.moduleKebabName }}
   ```
 
 {% endofftopic %}
@@ -59,7 +59,7 @@ Example of enabling the module:
 - by using the `deckhouse-controller` command (you need a kubectl, configured to work with the cluster):
 
   ```shell
-  kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module enable {{ include.moduleKebabName }}
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable {{ include.moduleKebabName }}
   ```
 
 Example of disabling the module:
@@ -77,7 +77,7 @@ Example of disabling the module:
 - by using the `deckhouse-controller` command (you need a kubectl, configured to work with the cluster):
 
   ```shell
-  kubectl -ti -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller module disable {{ include.moduleKebabName }}
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable {{ include.moduleKebabName }}
   ```
 {% endofftopic %}
 {% endif %}

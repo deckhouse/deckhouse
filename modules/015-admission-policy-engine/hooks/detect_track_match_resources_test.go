@@ -37,7 +37,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect_track_ma
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedConstraintResources").Array()).NotTo(BeEmpty())
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedMutateResources").Array()).NotTo(BeEmpty())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedConstraintResources").String()).To(MatchJSON(`[{"apiGroups":[""],"resources":["pods"]}, {"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}]`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedConstraintResources").String()).To(MatchJSON(`[{"apiGroups":[""],"resources":["pods"]}, {"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}, {"apiGroups": [""],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}]`))
 			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedMutateResources").String()).To(MatchJSON(`[{"apiGroups":["apps"],"resources":["deployments"]}]`))
 		})
 	})
@@ -71,6 +71,13 @@ data:
       - networking.k8s.io
       resources:
       - ingresses
+    - apiGroups:
+      - ""
+      resources:
+      - pods/exec
+      - pods/attach
+      operations:
+      - CONNECT
   mutate-resources.yaml: |
     - apiGroups:
       - apps

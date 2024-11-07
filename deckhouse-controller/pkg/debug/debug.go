@@ -106,7 +106,17 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "machines.json",
 			Cmd:  "kubectl",
-			Args: []string{"get", "machines", "-A", "-o", "json"},
+			Args: []string{"get", "machines.machine.sapcloud.io", "-A", "-o", "json"},
+		},
+		{
+			File: "instances.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "instances.deckhouse.io", "-o", "json"},
+		},
+		{
+			File: "staticinstances.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "staticinstances.deckhouse.io", "-o", "json"},
 		},
 		{
 			File: "deckhouse-version.json",
@@ -167,6 +177,26 @@ func createTarball() *bytes.Buffer {
 			File: "alerts.json",
 			Cmd:  "bash",
 			Args: []string{"-c", `kubectl get clusteralerts.deckhouse.io -o json | jq '.items[]'`},
+		},
+		{
+			File: "pods.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get pod -A -owide | grep -Pv '\s+([1-9]+[\d]*)\/\1\s+' | grep -v 'Completed\|Evicted' | grep -E "^(d8-|kube-system)"`},
+		},
+		{
+			File: "cluster-authorization-rules.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "clusterauthorizationrules", "-o", "json"},
+		},
+		{
+			File: "authorization-rules.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "authorizationrules", "-o", "json"},
+		},
+		{
+			File: "module-configs.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "moduleconfig", "-o", "json"},
 		},
 	}
 

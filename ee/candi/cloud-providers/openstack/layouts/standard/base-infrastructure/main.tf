@@ -144,3 +144,9 @@ resource "openstack_compute_floatingip_associate_v2" "bastion" {
     ]
   }
 }
+
+resource "openstack_compute_servergroup_v2" "server_group" {
+  count    = local.server_group_policy == "AntiAffinity" ? 1 : 0
+  name     = local.prefix
+  policies = ["anti-affinity"]
+}

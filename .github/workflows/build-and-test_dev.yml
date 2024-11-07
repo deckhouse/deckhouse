@@ -35,9 +35,13 @@ env:
   # </template: werf_envs>
 
   # <template: git_source_envs>
-  # source repo contains should creds for repo for ex https://user:password@my-repo.com/group
+  # source repo should contain creds for repo for ex https://user:password@my-repo.com/group
   SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
+  # cloud providers source repo should contain creds for repo for ex https://user:password@my-repo.com/group
+  CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
   GOPROXY: "${{secrets.GOPROXY}}"
+  # observability source repo should contain creds for repo for ex https://user:password@my-repo.com/group
+  OBSERVABILITY_SOURCE_REPO: "${{secrets.OBSERVABILITY_SOURCE_REPO}}"
   # </template: git_source_envs>
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
@@ -460,10 +464,10 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - name: Set up Go 1.22
+      - name: Set up Go 1.23
         uses: actions/setup-go@v3
         with:
-          go-version: '1.22'
+          go-version: '1.23'
 
       - name: Run go generate
         run: |
@@ -701,7 +705,8 @@ jobs:
             werf build \
               ${SECONDARY_REPO} \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
@@ -711,7 +716,8 @@ jobs:
             # - semver tags to Github Container Registry for testing release process.
             werf build \
               --parallel=true --parallel-tasks-limit=5 \
-              --report-path images_tags_werf.json
+              --save-build-report=true \
+              --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
             echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
@@ -817,6 +823,7 @@ jobs:
         env:
           WERF_DIR: "docs/documentation"
           WERF_LOG_VERBOSE: "on"
+          WERF_ENV: "EE"
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 
     # </template: web_build_template>
@@ -876,6 +883,7 @@ jobs:
         env:
           WERF_DIR: "docs/site"
           WERF_LOG_VERBOSE: "on"
+          WERF_ENV: "EE"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
           WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
@@ -958,7 +966,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.22.3-bullseye@sha256:d51f0325ad7c506fa807bb2fcb67f9c037188ae7fcf1b25e6ac97fca3058265f"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.1-bullseye@sha256:a24507d1a36fce86431198a979435dadb187e8d0ce0b5c181f46d6788d84a40f"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -1044,7 +1052,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.22.3-bullseye@sha256:d51f0325ad7c506fa807bb2fcb67f9c037188ae7fcf1b25e6ac97fca3058265f"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images/golang:1.23.1-bullseye@sha256:a24507d1a36fce86431198a979435dadb187e8d0ce0b5c181f46d6788d84a40f"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -1400,6 +1408,7 @@ jobs:
         env:
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
+          WERF_ENV: "EE"
 
           WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
         run: |
@@ -1436,12 +1445,12 @@ jobs:
           # Extract documentation content to the tmp directory.
           export WERF_DIR=$BASEDIR/documentation
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo "werf stage image web:"
+          echo "werf stage image docs/web:"
           werf stage image web | tr 'a-z' 'A-Z'
-          echo "Run 'docker pull' from werf stage image web"
-          docker pull $(werf stage image web)
-          echo "Run 'docker cp' from werf stage image web"
-          docker cp $(docker create --rm $(werf stage image web)):/app ${_TMPDIR}/documentation
+          echo "Run 'docker pull' from werf stage image docs/web"
+          docker pull $(werf stage image docs/web)
+          echo "Run 'docker cp' from werf stage image docs/web"
+          docker cp $(docker create --rm $(werf stage image docs/web)):/app ${_TMPDIR}/documentation
 
           # Create EN site structure.
           echo "Create site structure in '${_TMPDIR}/site_en/'"
@@ -1471,9 +1480,9 @@ jobs:
           # Checking EN site
           docker run --rm -v "${_TMPDIR}/site_en:/src:ro" klakegg/html-proofer:3.19.2 \
             --allow-hash-href --check-html --empty-alt-ignore \
-            --url-ignore "/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-            --url-swap "https\:\/\/deckhouse.io\/:/,\/documentation\/v1\/:/documentation/,\/documentation\/latest\/:/documentation/" \
-            --file_ignore "404.html" \
+            --url-ignore "/alerts.html/,/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+            --url-swap "https\:\/\/deckhouse.io\/:/,\/products\/kubernetes-platform\/documentation\/v1\/:/documentation/,\/products\/kubernetes-platform\/documentation\/latest\/:/documentation/,\/documentation\/v1\/:/documentation/" \
+            --file_ignore "404.html,./documentation/alerts.html" \
             --http-status-ignore "0,429" ${1}
           # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
           exit 0
@@ -1485,9 +1494,9 @@ jobs:
           # Checking RU site
           docker run --rm -v "${_TMPDIR}/site_ru:/src:ro" klakegg/html-proofer:3.19.2 \
             --allow-hash-href --check-html --empty-alt-ignore \
-            --url-ignore "/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
-            --url-swap "https\:\/\/deckhouse.io\/:/,\/documentation\/v1\/:/documentation/,\/documentation\/latest\/:/documentation/" \
-            --file_ignore "404.html" \
+            --url-ignore "/alerts.html/,/^\/(?!(gs\/|documentation\/|guides\/))/,/localhost/,/https\:\/\/t.me/,/docs-prv\.pcisecuritystandards\.org/,/gitlab.com\/profile/,/dash.cloudflare.com\/profile/,/example.com/,/vmware.com/,/.slack.com/,/habr.com/,/flant.ru/,/bcrypt-generator.com/,/candi\/bashible\/bashbooster/,/..\/..\/compare\//,/compare\/ru\//,/compare\/en\//,/\.yml$/,/\.yaml$/,/\.tmpl$/,/\.tpl$/" \
+            --url-swap "https\:\/\/deckhouse.io\/:/,\/products\/kubernetes-platform\/documentation\/v1\/:/documentation/,\/products\/kubernetes-platform\/documentation\/latest\/:/documentation/,\/documentation\/v1\/:/documentation/" \
+            --file_ignore "404.html,./documentation/alerts.html" \
             --http-status-ignore "0,429" ${1}
           # Emulate 'allow_failure: true' from Gitlab. Github has only two state: success and failure.
           exit 0

@@ -8,11 +8,13 @@ bashible:
     '12.5':
   astra: &astra
     '1.7':
+    '1.8':
   altlinux:
     'p10':
     '10.0':
     '10.1':
     '10.2':
+    '11':
 k8s:
   '1.26':
     bashible:

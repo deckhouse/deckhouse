@@ -43,6 +43,7 @@ type ContextBuilder struct {
 	// debug function injection
 	emitStepsOutput func(string, string, map[string]string)
 
+	moduleSourcesCA        map[string]string
 	nodeUserConfigurations map[string][]*UserConfiguration
 }
 
@@ -51,6 +52,7 @@ func NewContextBuilder(ctx context.Context, stepsStorage *StepsStorage) *Context
 		ctx:                    ctx,
 		stepsStorage:           stepsStorage,
 		nodeUserConfigurations: make(map[string][]*UserConfiguration),
+		moduleSourcesCA:        make(map[string]string),
 	}
 
 	return cb
@@ -150,6 +152,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			BootstrapTokens:    cb.clusterInputData.BootstrapTokens,
 			ApiserverEndpoints: cb.clusterInputData.APIServerEndpoints,
 			KubernetesCA:       cb.clusterInputData.KubernetesCA,
+			ModuleSourcesCA:    cb.moduleSourcesCA,
 		},
 		Registry:      cb.registryData,
 		Images:        cb.imagesDigests,
@@ -525,6 +528,7 @@ type normal struct {
 	BootstrapTokens    map[string]string `json:"bootstrapTokens" yaml:"bootstrapTokens"`
 	ApiserverEndpoints []string          `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA       string            `json:"kubernetesCA" yaml:"kubernetesCA"`
+	ModuleSourcesCA    map[string]string `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
 }
 
 type registry struct {

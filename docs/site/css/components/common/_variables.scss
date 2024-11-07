@@ -21,6 +21,8 @@ $color-danger: #ff4141;
 $color-inverse: #FFFFFF;
 $color-smooth: #F3F3F3;
 $color-muted: #939fb1;
+$color-text-secondary: #5E6697;
+$background-blue: #EFF3F9;
 
 // Colors from theme.json
 $white: #fff;
@@ -51,8 +53,7 @@ $font-size-lead: 54px;
 $font-size-h1: 36px;
 $font-size-h2: 28px;
 $font-size-h3: 22px;
-//$font-size-base: 14px;
-$font-size-base: 16px;
+$font-size-base: 14px;
 $font-size-small: 12px;
 $font-size-tiny: 10px;
 
@@ -65,3 +66,6 @@ $font-weight-light: 300;
 $spacing-s: 10px;
 $spacing-m: 20px;
 $spacing-l: 30px;
+$text-spacing-s: 12px;
+$text-spacing-m: 16px;
+$text-spacing-l: 24px;

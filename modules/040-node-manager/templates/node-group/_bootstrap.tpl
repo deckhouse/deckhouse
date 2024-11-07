@@ -53,17 +53,6 @@ sys.stdout.write(data["bootstrap"])
 EOF
 }
 
-function check_python() {
-  for pybin in python3 python2 python; do
-    if command -v "$pybin" >/dev/null 2>&1; then
-      python_binary="$pybin"
-      return 0
-    fi
-  done
-  echo "Python not found, exiting..."
-  return 1
-}
-
 function get_phase2() {
   bootstrap_ng_name="common.{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
@@ -80,15 +69,20 @@ function get_phase2() {
   done
 }
 
-#prepare_base_d8_binaries
-  {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-base-pkgs.sh.tpl" }}
-    {{- tpl ( $fetch_base_pkgs ) $tpl_context | nindent 0 }}
+  {{- if $bb_package_install := $context.Files.Get "candi/bashible/bb_package_install.sh.tpl" -}}
+    {{- tpl ( $bb_package_install ) $tpl_context | nindent 0 }}
   {{- end }}
 
 #run network scripts
-  {{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/02-network-scripts.sh.tpl" }}
+  {{- if $bootstrap_networks := $context.Files.Get "candi/bashible/bootstrap/01-network-scripts.sh.tpl" }}
     {{- tpl ( $bootstrap_networks ) $tpl_context | nindent 0 }}
   {{- end }}
+
+#prepare_base_d8_binaries
+  {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/02-base-pkgs.sh.tpl" }}
+    {{- tpl ( $fetch_base_pkgs ) $tpl_context | nindent 0 }}
+  {{- end }}
+
 
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 run_log_output

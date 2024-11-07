@@ -8,7 +8,7 @@ metadata:
   name: {{ $storageClass.name | quote }}
 provisioner: csi.ovirt.org
 reclaimPolicy: Delete
-allowVolumeExpansion: false
+allowVolumeExpansion: {{ $storageClass.allowVolumeExpansion }}
 volumeBindingMode: WaitForFirstConsumer
 parameters:
   storageDomainName: {{ $storageClass.storageDomain | quote }}

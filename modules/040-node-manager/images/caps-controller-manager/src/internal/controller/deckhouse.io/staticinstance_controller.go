@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -94,9 +95,28 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
+	status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
+		if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
+			conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
+		}
+		if instanceScope.Instance.Status.CurrentStatus == nil || instanceScope.Instance.Status.CurrentStatus.Phase == "" {
+			instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
+		}
+		err2 := instanceScope.Patch(ctx)
+		if err2 != nil {
+			return ctrl.Result{}, errors.Wrap(err2, "failed to set StaticInstance to Error phase")
+		}
 		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
+	} else {
+		if status == nil || status.Status != corev1.ConditionTrue {
+			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
+		}
+		err = instanceScope.Patch(ctx)
+		if err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance to Error phase")
+		}
 	}
 
 	machineScope, err := r.getStaticMachine(ctx, staticInstance)
@@ -140,9 +160,12 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		return r.adoptBootstrappedStaticInstance(ctx, instanceScope)
 	}
 
-	if instanceScope.Instance.Status.CurrentStatus == nil || instanceScope.Instance.Status.CurrentStatus.Phase == "" {
-		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
+	if (instanceScope.Instance.Status.CurrentStatus == nil ||
+		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
+		instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError) &&
+		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == corev1.ConditionTrue {
 
+		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 
 		err := instanceScope.Patch(ctx)

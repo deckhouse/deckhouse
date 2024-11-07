@@ -4,15 +4,15 @@ kind: Service
 metadata:
   name: memcached
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "memcached")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "memcached" "migration.deckhouse.io/fix-services-broken-by-helm" "done")) | nindent 2 }}
 spec:
   clusterIP: None
   ports:
     - name: memcached
       port: 11211
-      targetPort: 11211
+      targetPort: memcached
     - name: http-metrics
       port: 9150
-      targetPort: 9150
+      targetPort: http-metrics
   selector:
     app: memcached

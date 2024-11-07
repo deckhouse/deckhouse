@@ -1,0 +1,23 @@
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: test-lbwpp
+spec:
+  config:
+    load-balance: ewma
+  ingressClass: nginx
+  controllerVersion: "1.9"
+  inlet: LoadBalancerWithProxyProtocol
+  resourcesRequests:
+    mode: Static
+  loadBalancerWithProxyProtocol:
+    annotations:
+      my: annotation
+      second: true
+    sourceRanges:
+      - 1.1.1.1
+      - 2.2.2.2
+  maxReplicas: 6
+  minReplicas: 2
+  additionalHeaders:
+    X-Foo: bar

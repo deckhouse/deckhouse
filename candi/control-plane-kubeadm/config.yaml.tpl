@@ -6,6 +6,9 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
 {{- end }}
+{{- if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
+    {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
+{{- end }}
 {{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
@@ -45,7 +48,15 @@ apiServer:
 {{- end }}
   extraArgs:
 {{- if .apiserver.serviceAccount }}
-    api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}{{ with .apiserver.serviceAccount.additionalAPIAudiences }},{{ . | join "," }}{{ end }}
+    {{- $defaultAud := printf "https://kubernetes.default.svc.%s" .clusterConfiguration.clusterDomain }}
+    {{- $uniqueAdditionalAuds := .apiserver.serviceAccount.additionalAPIAudiences | uniq }}
+    {{- $filteredAuds := list }}
+    {{- range $uniqueAdditionalAuds }}
+      {{- if ne . $defaultAud }}
+        {{- $filteredAuds = append $filteredAuds . }}
+      {{- end }}
+    {{- end }}
+    api-audiences: {{ $defaultAud }}{{- if gt (len $filteredAuds) 0 }},{{ $filteredAuds | join "," }}{{ end }}
     {{- if .apiserver.serviceAccount.issuer }}
     service-account-issuer: {{ .apiserver.serviceAccount.issuer }}
     service-account-jwks-uri: {{ .apiserver.serviceAccount.issuer }}/openid/v1/jwks
@@ -70,7 +81,7 @@ apiServer:
     anonymous-auth: "false"
     feature-gates: {{ $featureGates | quote }}
 {{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
-    runtime-config: "admissionregistration.k8s.io/v1beta1=true"
+    runtime-config: "admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true"
 {{- else if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
 {{- end }}
@@ -137,7 +148,7 @@ apiServer:
   {{- end }}
     profiling: "false"
     request-timeout: "300s"
-    tls-cipher-suites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+    tls-cipher-suites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256"
   {{- if hasKey .apiserver "certSANs" }}
   certSANs:
     {{- range $san := .apiserver.certSANs }}

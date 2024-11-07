@@ -72,7 +72,8 @@ nodeGroups:
     # required during vm bootstrap process. It's needed if there
     # is no dhcp in network that is used as default gateway.
     configDrive: false
-    # Required, network will be used as default gateway.
+    # Required, the gateway of the network will be used as the default gateway.
+    # Matches the cloud.prefix in the ClusterConfiguration resource.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
@@ -156,7 +157,8 @@ nodeGroups:
     # if there is no dhcp in network that is used as default
     # gateway.
     configDrive: false
-    # Required, network will be used as default gateway.
+    # Required, the gateway of the network will be used as the default gateway.
+    # Matches the cloud.prefix in the ClusterConfiguration resource.
     mainNetwork: kube
     additionalNetworks:                          # Optional.
     - office
@@ -234,6 +236,7 @@ nodeGroups:
     # gateway.
     configDrive: false
     # Required, network will be used as default gateway.
+    # Matches the name of the pre-created network.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office
@@ -314,6 +317,7 @@ nodeGroups:
     # gateway.
     configDrive: false
     # Required, network will be used as default gateway.
+    # Matches the name of the pre-created network.
     mainNetwork: kube
     additionalNetworks:                         # Optional.
     - office

@@ -215,8 +215,9 @@ func (kt *KindTracker) createCM() error {
 }
 
 type matchResource struct {
-	APIGroups []string `json:"apiGroups"`
-	Resources []string `json:"resources"`
+	APIGroups  []string `json:"apiGroups"`
+	Resources  []string `json:"resources"`
+	Operations []string `json:"operations,omitempty"`
 }
 
 type resourceMatcher struct {
@@ -256,6 +257,7 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 	for _, mk := range kinds {
 		uniqGroups := make(map[string]struct{})
 		uniqResources := make(map[string]struct{})
+		uniqOperations := make(map[string]struct{})
 
 		for _, apiGroup := range mk.APIGroups {
 			for _, kind := range mk.Kinds {
@@ -279,6 +281,20 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 						globalDuplications[uniqKey] = struct{}{}
 					}
 				} else {
+					// specific resource mapping, for pods/exec command
+					if kind == "PodExecOptions" {
+						uniqKey := fmt.Sprintf("%s/%s", "", "pods/exec")
+						if _, ok := globalDuplications[uniqKey]; ok {
+							continue
+						}
+						uniqGroups[""] = struct{}{}
+						uniqResources["pods/exec"] = struct{}{}
+						uniqResources["pods/attach"] = struct{}{}
+						uniqOperations["CONNECT"] = struct{}{}
+						globalDuplications[uniqKey] = struct{}{}
+						continue
+					}
+
 					restMapping, err := rm.mapper.RESTMapping(schema.GroupKind{
 						Group: apiGroup,
 						Kind:  kind,
@@ -307,6 +323,7 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 
 		groups := make([]string, 0, len(mk.APIGroups))
 		resources := make([]string, 0, len(mk.Kinds))
+		operations := make([]string, 0)
 
 		for k := range uniqGroups {
 			groups = append(groups, k)
@@ -316,12 +333,18 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 			resources = append(resources, k)
 		}
 
+		for k := range uniqOperations {
+			operations = append(operations, k)
+		}
+
 		sort.Strings(groups)
 		sort.Strings(resources)
+		sort.Strings(operations)
 
 		res = append(res, matchResource{
-			APIGroups: groups,
-			Resources: resources,
+			APIGroups:  groups,
+			Resources:  resources,
+			Operations: operations,
 		})
 	}
 

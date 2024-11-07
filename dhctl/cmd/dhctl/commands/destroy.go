@@ -24,9 +24,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 const (
@@ -52,6 +53,9 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		if !app.SanityCheck {
 			log.WarnLn(destroyApprovalsMessage)
+			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
+				return fmt.Errorf("Cleanup cluster resources disallow")
+			}
 		}
 
 		sshClient, err := ssh.NewClientFromFlags().Start()
@@ -67,7 +71,7 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
-			SSHClient:        sshClient,
+			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			StateCache:       cache.Global(),
 			SkipResources:    app.SkipResources,
 			TerraformContext: terraform.NewTerraformContext(),

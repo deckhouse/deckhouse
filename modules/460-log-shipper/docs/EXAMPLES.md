@@ -326,6 +326,41 @@ spec:
     syslog.message_id: "{{ request_id }}"
 ```
 
+## Logs in CEF Format
+
+There is a way to format logs in CEF format using `codec: CEF`, with overriding `cef.name` and `cef.severity` based on values from the `message` field (application log) in JSON format.
+
+In the example below, `app` and `log_level` are keys containing values for overriding:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: siem-kafka
+spec:
+  extraLabels:
+    cef.name: '{{ app }}'
+    cef.severity: '{{ log_level }}'
+  type: Kafka
+  kafka:
+    bootstrapServers:
+      - my-cluster-kafka-brokers.kafka:9092
+    encoding:
+      codec: CEF
+    tls:
+      verifyCertificate: false
+      verifyHostname: true
+    topic: logs
+```
+
+You can also manually set your own values:
+
+```yaml
+extraLabels:
+  cef.name: 'TestName'
+  cef.severity: '1'
+```
+
 ## Collect Kubernetes Events
 
 Kubernetes Events can be collected by log-shipper if `events-exporter` is enabled in the [extended-monitoring](../340-extended-monitoring/) module configuration.
@@ -367,6 +402,7 @@ spec:
 ## Log filters
 
 Users can filter logs by applying two filters:
+
 * `labelFilter` — applies to the top-level metadata, e.g., container, namespace, or Pod name.
 * `logFilter` — applies to fields of a message if it is in JSON format.
 
@@ -498,5 +534,69 @@ spec:
       labels:
         log-shipper.deckhouse.io/exclude: "true"
 ```
+
+## Enable Buffering
+
+The log buffering configuration is essential for improving the reliability and performance of the log collection system. Buffering can be useful in the following cases:
+
+1. Temporary connectivity disruptions. If there are temporary disruptions or instability in the connection to the log storage system (such as Elasticsearch), a buffer allows logs to be temporarily stored and sent when the connection is restored.
+
+1. Smoothing out load peaks. During sudden spikes in log volume, a buffer helps smooth out peak loads on the log storage system, preventing it from becoming overloaded and potentially losing data.
+
+1. Performance optimization. Buffering helps optimize the performance of the log collection system by accumulating logs and sending them in batches, which reduces the number of network requests and improves overall throughput.
+
+### Example of enabling in-memory buffering
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  buffer:
+    memory:
+      maxEvents: 4096
+    type: Memory
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+### Example of enabling disk buffering
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+### Example of defining behavior when the buffer is full
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+More detailed description of the parameters is available in the [ClusterLogDestination](cr.html#clusterlogdestination) resource.
 
 {% endraw %}

@@ -19,8 +19,8 @@ package scheduler
 import (
 	"fmt"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -31,7 +31,7 @@ type Deleter interface {
 	Delete(string)
 }
 
-func newPersistentVolumeClaimDeleter(patcher *object_patch.PatchCollector, logger *logrus.Entry) Deleter {
+func newPersistentVolumeClaimDeleter(patcher *object_patch.PatchCollector, logger go_hook.ILogger) Deleter {
 	deleter := &objDeleter{
 		patcher:    patcher,
 		apiVersion: "v1",
@@ -45,7 +45,7 @@ func newPersistentVolumeClaimDeleter(patcher *object_patch.PatchCollector, logge
 	return newLoggingDeleter(deleter, logger, message)
 }
 
-func newStatefulSetDeleter(patcher *object_patch.PatchCollector, logger *logrus.Entry) Deleter {
+func newStatefulSetDeleter(patcher *object_patch.PatchCollector, logger go_hook.ILogger) Deleter {
 	deleter := &objDeleter{
 		patcher:    patcher,
 		apiVersion: "apps/v1",
@@ -59,7 +59,7 @@ func newStatefulSetDeleter(patcher *object_patch.PatchCollector, logger *logrus.
 	return newLoggingDeleter(deleter, logger, message)
 }
 
-func newLoggingDeleter(delegate Deleter, logger *logrus.Entry, message func(string) string) Deleter {
+func newLoggingDeleter(delegate Deleter, logger go_hook.ILogger, message func(string) string) Deleter {
 	return &loggingDeleter{
 		delegate: delegate,
 		logger:   logger,
@@ -70,13 +70,13 @@ func newLoggingDeleter(delegate Deleter, logger *logrus.Entry, message func(stri
 // loggingDeleter wraps a Deleter and logs about the deletion
 type loggingDeleter struct {
 	delegate Deleter
-	logger   *logrus.Entry
+	logger   go_hook.ILogger
 	message  func(string) string
 }
 
 func (d *loggingDeleter) Delete(name string) {
 	d.delegate.Delete(name)
-	d.logger.Warnf(d.message(name))
+	d.logger.Warn(d.message(name))
 }
 
 // objDeleter is the generic implementation of a Deleter interface

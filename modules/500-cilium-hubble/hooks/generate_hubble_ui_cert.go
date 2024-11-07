@@ -24,7 +24,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
@@ -45,8 +45,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-cni-cilium"},
 				},
 			},
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   filterAdmissionSecret,
 		},
 	},
@@ -67,7 +67,7 @@ func generateHubbleUICert(input *go_hook.HookInput) error {
 	ca := genCAAuthority(input)
 
 	const cn = "*.hubble-ui.cilium.io"
-	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+	tls, err := certificate.GenerateSelfSignedCert(input.Logger,
 		cn,
 		ca,
 		certificate.WithKeyRequest(&csr.KeyRequest{

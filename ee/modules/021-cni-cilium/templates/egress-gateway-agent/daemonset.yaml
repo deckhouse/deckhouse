@@ -9,7 +9,7 @@ memory: 50Mi
   {{- end -}}
 {{- end -}}
 {{- if $foundVirtualIP }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -42,6 +42,8 @@ spec:
       maxUnavailable: 1
   template:
     metadata:
+      annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
       labels:
         app: egress-gateway-agent
     spec:

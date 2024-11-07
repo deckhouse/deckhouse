@@ -17,6 +17,8 @@ package downloader
 import (
 	"archive/tar"
 	"bytes"
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,19 +49,19 @@ const (
 )
 
 type ModuleDownloader struct {
-	dc                 dependency.Container
-	externalModulesDir string
+	dc                   dependency.Container
+	downloadedModulesDir string
 
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
 }
 
-func NewModuleDownloader(dc dependency.Container, externalModulesDir string, ms *v1alpha1.ModuleSource, registryOptions []cr.Option) *ModuleDownloader {
+func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, registryOptions []cr.Option) *ModuleDownloader {
 	return &ModuleDownloader{
-		dc:                 dc,
-		externalModulesDir: externalModulesDir,
-		ms:                 ms,
-		registryOptions:    registryOptions,
+		dc:                   dc,
+		downloadedModulesDir: downloadedModulesDir,
+		ms:                   ms,
+		registryOptions:      registryOptions,
 	}
 }
 
@@ -76,7 +78,7 @@ type ModuleDownloadResult struct {
 // if checksum is equal to a module image digest - do nothing
 // otherwise return new digest
 func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *models.DeckhouseModuleDefinition, error) {
-	moduleStorePath := path.Join(md.externalModulesDir, moduleName, DefaultDevVersion)
+	moduleStorePath := path.Join(md.downloadedModulesDir, moduleName, DefaultDevVersion)
 
 	img, err := md.fetchImage(moduleName, imageTag)
 	if err != nil {
@@ -108,7 +110,7 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 		moduleVersion = "v" + moduleVersion
 	}
 
-	moduleVersionPath := path.Join(md.externalModulesDir, moduleName, moduleVersion)
+	moduleVersionPath := path.Join(md.downloadedModulesDir, moduleName, moduleVersion)
 
 	return md.fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath)
 }
@@ -177,7 +179,7 @@ func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, e
 		return nil, fmt.Errorf("fetch module error: %v", err)
 	}
 
-	return regCli.Image(imageTag)
+	return regCli.Image(context.TODO(), imageTag)
 }
 
 func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) (*DownloadStatistic, error) {
@@ -299,7 +301,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
 	}
 
-	img, err := regCli.Image(strcase.ToKebab(releaseChannel))
+	img, err := regCli.Image(context.TODO(), strcase.ToKebab(releaseChannel))
 	if err != nil {
 		return "", "", nil, fmt.Errorf("fetch image error: %v", err)
 	}
@@ -316,6 +318,10 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 	moduleMetadata, err := md.fetchModuleReleaseMetadata(img)
 	if err != nil {
 		return "", digest.String(), nil, fmt.Errorf("fetch release metadata error: %v", err)
+	}
+
+	if moduleMetadata.Version == nil {
+		return "", digest.String(), nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
 	}
 
 	return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
@@ -376,8 +382,8 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 	return def, nil
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (moduleReleaseMetadata, error) {
-	var meta moduleReleaseMetadata
+func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (ModuleReleaseMetadata, error) {
+	var meta ModuleReleaseMetadata
 
 	rc := mutate.Extract(img)
 	defer rc.Close()
@@ -455,20 +461,22 @@ func isRel(candidate, target string) bool {
 	return err == nil && !strings.HasPrefix(filepath.Clean(relpath), "..")
 }
 
-type moduleReleaseMetadata struct {
+type ModuleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
 
 	Changelog map[string]any
 }
-
-// Inject registry to module values
 
 func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alpha1.ModuleSource) error {
 	valuesFile := path.Join(moduleVersionPath, "openapi", "values.yaml")
 
 	valuesData, err := os.ReadFile(valuesFile)
 	if err != nil {
-		return err
+		if !os.IsNotExist(err) {
+			return err
+		}
+		_ = os.MkdirAll(filepath.Dir(valuesFile), 0o775)
+		valuesData = bytes.TrimSpace([]byte("type: object"))
 	}
 
 	valuesData, err = mutateOpenapiSchema(valuesData, moduleSource)
@@ -543,11 +551,7 @@ func (rsv *registrySchemaForValues) SetBase(registryBase string) {
 }
 
 func (rsv *registrySchemaForValues) SetDockercfg(dockercfg string) {
-	if len(dockercfg) == 0 {
-		return
-	}
-
-	rsv.Properties.Dockercfg.Default = dockercfg
+	rsv.Properties.Dockercfg.Default = DockerCFGForModules(rsv.Properties.Base.Default, dockercfg)
 }
 
 func (rsv *registrySchemaForValues) SetScheme(scheme string) {
@@ -556,6 +560,27 @@ func (rsv *registrySchemaForValues) SetScheme(scheme string) {
 
 func (rsv *registrySchemaForValues) SetCA(ca string) {
 	rsv.Properties.CA.Default = ca
+}
+
+// DockerCFGForModules
+// according to the deckhouse docs, for anonymous registry access we must have the value:
+// {"auths": { "<PROXY_REGISTRY>": {}}}
+// but it could be empty for a ModuleSource.
+// modules are not ready to catch empty string, so we have to fill it with the default value
+func DockerCFGForModules(repo, dockercfg string) string {
+	if len(dockercfg) != 0 {
+		return dockercfg
+	}
+
+	index := strings.Index(repo, "/")
+	var registry string
+	if index != -1 {
+		registry = repo[:index]
+	} else {
+		registry = repo
+	}
+
+	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"auths": {"%s": {}}}`, registry)))
 }
 
 type injectedValues struct {

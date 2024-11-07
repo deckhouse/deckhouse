@@ -45,17 +45,22 @@ groups:
     description:
       en: "*bashible apiserver* for delivering node configurations"
       ru: "*apiserver bashible* для доставки конфигурации на узлы"
-  - ports: "9680"
+  - ports: "4227"
     protocol: TCP
     description:
-      en: runtime-audit-engine webhook
-      ru: webhook компонента runtime-audit-engine
+      en: "runtime-audit-engine webhook handler"
+      ru: "Webhook-обработчик компонента runtime-audit-engine"
 
 - group: NodesToMasters
   description:
     en: Nodes to masters traffic
     ru: Трафик между любыми узлами и мастер-узлами
   destinations:
+  - ports: "4234"
+    protocol: UDP
+    description:
+      en: NTP for time synchronization between nodes
+      ru: NTP для синхронизации времени между узлами
   - ports: "6443"
     protocol: TCP
     description:
@@ -87,11 +92,6 @@ groups:
     description:
       en: ICMP for node-to-node connectivity monitoring
       ru: ICMP для мониторинга связности между узлами
-  - ports: "123"
-    protocol: UDP
-    description:
-      en: NTP for time synchronization between nodes
-      ru: NTP для синхронизации времени между узлами
   - ports: "7000-7999"
     protocol: TCP
     description:

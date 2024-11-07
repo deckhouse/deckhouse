@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
@@ -43,8 +43,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchNames: []string{"ingress-admission-certificate"},
 			},
 			NamespaceSelector:            internal.NsSelector(),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   filterAdmissionSecret,
 		},
 	},
@@ -78,7 +78,7 @@ func generateValidateWebhookCert(input *go_hook.HookInput) error {
 	}
 
 	const cn = "ingress-nginx-validation.webhook.ca"
-	ca, err := certificate.GenerateCA(input.LogEntry, cn,
+	ca, err := certificate.GenerateCA(input.Logger, cn,
 		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",
 			S: 2048,
@@ -90,7 +90,7 @@ func generateValidateWebhookCert(input *go_hook.HookInput) error {
 		return errors.Wrap(err, "generate CA failed")
 	}
 
-	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+	tls, err := certificate.GenerateSelfSignedCert(input.Logger,
 		cn,
 		ca,
 		certificate.WithKeyRequest(&csr.KeyRequest{

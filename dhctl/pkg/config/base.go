@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -45,18 +45,8 @@ var (
 	DefaultKubernetesVersion = "1.27"
 )
 
-func revealWildcardPaths(paths []string) []string {
-	for _, path := range paths {
-		if strings.Contains(path, "*") {
-			revealPaths, _ := filepath.Glob(path)
-			paths = append(paths, revealPaths...)
-		}
-	}
-	return paths
-}
-
 func LoadConfigFromFile(paths []string, opts ...ValidateOption) (*MetaConfig, error) {
-	metaConfig, err := ParseConfig(revealWildcardPaths(paths), opts...)
+	metaConfig, err := ParseConfig(fs.RevealWildcardPaths(paths), opts...)
 	if err != nil {
 		return nil, err
 	}

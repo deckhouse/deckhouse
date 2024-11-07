@@ -69,7 +69,7 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 func handleNamespaceConfiguration(input *go_hook.HookInput) error {
 	snap := input.Snapshots["namespaces"]
 	if len(snap) == 0 {
-		input.LogEntry.Debugln("Namespaces not found. Skip")
+		input.Logger.Debug("Namespaces not found. Skip")
 		return nil
 	}
 
@@ -145,7 +145,7 @@ func (configItem *namespaceConfigurationItem) Load(result gjson.Result) error {
 func (configItem *namespaceConfigurationItem) Apply(input *go_hook.HookInput) error {
 	for _, s := range input.Snapshots["namespaces"] {
 		ns := s.(Namespace)
-		input.LogEntry.Debugln("Processing namespace:", ns.Name)
+		input.Logger.Debug("Processing namespace:", ns.Name)
 
 		mergePatch := makePatch(input, &ns, configItem)
 		if mergePatch != nil {
@@ -161,22 +161,22 @@ func makePatch(input *go_hook.HookInput, ns *Namespace, configItem *namespaceCon
 	var mergePatch interface{}
 	var matched = false
 
-	input.LogEntry.Debugf("Matching exclude patterns for namespace: %s\n", ns.Name)
+	input.Logger.Debugf("Matching exclude patterns for namespace: %s\n", ns.Name)
 	for _, r := range configItem.ExcludePatterns {
 		if r.MatchString(ns.Name) {
-			input.LogEntry.Debugf("Skip configuring excluded namespace: %s\n", ns.Name)
+			input.Logger.Debugf("Skip configuring excluded namespace: %s\n", ns.Name)
 			return mergePatch
 		}
 	}
 
-	input.LogEntry.Debugf("Matching include patterns for namespace: %s\n", ns.Name)
+	input.Logger.Debugf("Matching include patterns for namespace: %s\n", ns.Name)
 	for _, r := range configItem.IncludePatterns {
 		if r.MatchString(ns.Name) {
 			matched = true
 		}
 	}
 	if !matched {
-		input.LogEntry.Debugf("Skip configuring not matched namespace: %s\n", ns.Name)
+		input.Logger.Debugf("Skip configuring not matched namespace: %s\n", ns.Name)
 		return mergePatch
 	}
 
@@ -187,16 +187,16 @@ ALOOP:
 			if ck == nk {
 				found = true
 				if cv != nil && cv.(string) == nv {
-					input.LogEntry.Debugf("Annotation %s=%s already set for namespace: %s\n", ck, cv, ns.Name)
+					input.Logger.Debugf("Annotation %s=%s already set for namespace: %s\n", ck, cv, ns.Name)
 					continue ALOOP
 				}
 			}
 		}
 		if cv == nil && !found {
-			input.LogEntry.Debugf("Annotation %s already unset for namespace: %s\n", ck, ns.Name)
+			input.Logger.Debugf("Annotation %s already unset for namespace: %s\n", ck, ns.Name)
 			continue ALOOP
 		}
-		input.LogEntry.Debugf("Setting annotation %s=%s for namespace: %s\n", ck, cv, ns.Name)
+		input.Logger.Debugf("Setting annotation %s=%s for namespace: %s\n", ck, cv, ns.Name)
 		newAnnotations[ck] = cv
 	}
 
@@ -207,16 +207,16 @@ LLOOP:
 			if ck == nk {
 				found = true
 				if cv != nil && cv.(string) == nv {
-					input.LogEntry.Debugf("Label %s=%s already set for namespace: %s\n", ck, cv, ns.Name)
+					input.Logger.Debugf("Label %s=%s already set for namespace: %s\n", ck, cv, ns.Name)
 					continue LLOOP
 				}
 			}
 		}
 		if cv == nil && !found {
-			input.LogEntry.Debugf("Label %s already unset for namespace: %s\n", ck, ns.Name)
+			input.Logger.Debugf("Label %s already unset for namespace: %s\n", ck, ns.Name)
 			continue LLOOP
 		}
-		input.LogEntry.Debugf("Setting label %s=%s for namespace: %s\n", ck, cv, ns.Name)
+		input.Logger.Debugf("Setting label %s=%s for namespace: %s\n", ck, cv, ns.Name)
 		newLabels[ck] = cv
 	}
 

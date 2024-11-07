@@ -53,6 +53,21 @@ type MasterNodeGroupSpec struct {
 	Replicas int `json:"replicas"`
 }
 
+type YandexMasterNodeGroupSpec struct {
+	Replicas      int `json:"replicas"`
+	InstanceClass struct {
+		ExternalIPAddresses []string `json:"externalIPAddresses"`
+	} `json:"instanceClass"`
+}
+
+type YandexNodeGroupSpec struct {
+	Name          string `json:"name"`
+	Replicas      int    `json:"replicas"`
+	InstanceClass struct {
+		ExternalIPAddresses []string `json:"externalIPAddresses"`
+	} `json:"instanceClass"`
+}
+
 type TerraNodeGroupSpec struct {
 	Replicas     int                    `json:"replicas"`
 	Name         string                 `json:"name"`
@@ -68,5 +83,5 @@ type DeckhouseClusterConfig struct {
 	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
 	RegistryCA        string                 `json:"registryCA,omitempty"`
 	RegistryScheme    string                 `json:"registryScheme,omitempty"`
-	ConfigOverrides   map[string]interface{} `json:"configOverrides"`
+	ConfigOverrides   map[string]interface{} `json:"configOverrides"` // Deprecated
 }

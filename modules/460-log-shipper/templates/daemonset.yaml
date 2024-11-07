@@ -1,10 +1,10 @@
 {{- define "vector_reloader_resources" }}
 cpu: 10m
-memory: 25Mi
+memory: 15Mi
 {{- end }}
 
 {{- if .Values.logShipper.internal.activated }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -20,7 +20,7 @@ spec:
         {{- include "vector_reloader_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 20m
-        memory: 25Mi
+        memory: 15Mi
       {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     {{- end }}
   {{- end }}
@@ -107,7 +107,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "vector_reloader_resources" . | nindent 14 }}
  {{- end }}
           env:
@@ -184,7 +184,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
   {{- end }}
       terminationGracePeriodSeconds: 120

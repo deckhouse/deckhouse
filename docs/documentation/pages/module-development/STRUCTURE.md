@@ -1,6 +1,7 @@
 ---
 title: "Module structure"
 permalink: en/module-development/structure/
+lang: en
 ---
 
 {% raw %}
@@ -90,7 +91,7 @@ This directory contains [_CustomResourceDefinitions_](https://kubernetes.io/docs
 {% endraw %}
 
 {% alert level="warning" %}
-For CRDs from the module's `/crds` directory to be applied in the cluster, the [ensure_crds.py](https://github.com/deckhouse/modules-template/blob/main/hooks/ensure_crds.py) hook must be added from the _module template_. See [`hooks`](#hooks) for more information.
+For CRDs from the module's `/crds` directory to be applied in the cluster, the [hello.py](https://github.com/deckhouse/modules-template/blob/main/hooks/hello.py) hook must be added from the _module template_. See [`hooks`](#hooks) for more information.
 {% endalert %}
 
 {% raw -%}
@@ -215,7 +216,7 @@ You need a file with the appropriate suffix for each language, e.g. `image1.jpg`
 The `/hooks` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
 {% endraw %}
 
-[Get to know](./#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Python library](https://github.com/deckhouse/lib-python) by the Deckhouse team to speed up the development of hooks.
+[Get to know](../#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Python library](https://github.com/deckhouse/lib-python) by the Deckhouse team to speed up the development of hooks.
 
 {% raw %}
 Hook requirements:
@@ -235,7 +236,7 @@ import os
 import yaml
 from deckhouse import hook
 
-# We expect structure with possible subdirectories like this
+# We expect structure with possible subdirectories like this:
 #
 #   my-module/
 #       crds/
@@ -251,34 +252,37 @@ configVersion: v1
 onStartup: 5
 """
 
+
 def main(ctx: hook.Context):
-    for crd in iter_manifests(find_crds_root(**file**)):
+    for crd in iter_manifests(find_crds_root(__file__)):
         ctx.kubernetes.create_or_update(crd)
 
+
 def iter_manifests(root_path: str):
-  if not os.path.exists(root_path):
-      return
+    if not os.path.exists(root_path):
+        return
 
-  for dirpath, dirnames, filenames in os.walk(top=root_path):
-      for filename in filenames:
-          if not filename.endswith(".yaml"):
-              # Wee only seek manifests
-              continue
-          if filename.startswith("doc-"):
-              # Skip dedicated doc yamls, common for Deckhouse internal modules
-              continue
+    for dirpath, dirnames, filenames in os.walk(top=root_path):
+        for filename in filenames:
+            if not filename.endswith(".yaml"):
+                # Seek only manifests.
+                continue
+            if filename.startswith("doc-"):
+                # Skip YAML files for module documentation.
+                continue
 
-      crd_path = os.path.join(dirpath, filename)
-      with open(crd_path, "r", encoding="utf-8") as f:
-          for manifest in yaml.safe_load_all(f):
-              if manifest is None:
-                  continue
-              yield manifest
+        crd_path = os.path.join(dirpath, filename)
+        with open(crd_path, "r", encoding="utf-8") as f:
+            for manifest in yaml.safe_load_all(f):
+                if manifest is None:
+                    continue
+                yield manifest
 
-  for dirname in dirnames:
-      subroot = os.path.join(dirpath, dirname)
-      for manifest in iter_manifests(subroot):
-          yield manifest
+    for dirname in dirnames:
+        subroot = os.path.join(dirpath, dirname)
+        for manifest in iter_manifests(subroot):
+            yield manifest
+
 
 def find_crds_root(hookpath):
     hooks_root = os.path.dirname(hookpath)
@@ -286,8 +290,10 @@ def find_crds_root(hookpath):
     crds_root = os.path.join(module_root, "crds")
     return crds_root
 
-if **name** == "**main**":
-    hook.run(main, config=config)</code>
+
+if __name__ == "__main__":
+    hook.run(main, config=config)
+
 ```
 
 ## images
@@ -391,7 +397,7 @@ properties:
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
-      [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).</code>
+      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).</code>
 ```
 
 An example of the `/openapi/doc-ru-config-values.yaml` file for the Russian translation of the schema:
@@ -445,7 +451,7 @@ This file stores the following module settings:
 
 - `tags: string` — the additional module tags, which are converted to module labels: `module.deckhouse.io/$tag=""`.
 - `weight: integer` — the module weight. The default weight is 900, you can set your own weight between 900 and 999.
-- `stage: string` — [module lifecycle stage](versioning/#module-lifecycle). Can be `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
+- `stage: string` — [module lifecycle stage](../versioning/#module-lifecycle). Can be `Sandbox`, `Incubating`, `Graduated`, or `Deprecated`.
 - `description: string` — the module description.
 
 An example:
@@ -460,4 +466,36 @@ description: "my awesome module"
 Applying this file will create a module (`deckhouse.io/v1alpha/Module`) with the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`, weight `960`, and the description `my awesome module`.
 
 This way you can control the module sequence as well as specify additional meta-information for the modules.
+
+Here is how you can set the Deckhouse Kubernetes Platform version dependency:
+
+```yaml
+name: test
+weight: 901
+requirements:
+    deckhouse: ">= 1.61"
+```
+
+Here is how you can set the Kubernetes version dependency
+
+```yaml
+name: test
+weight: 901
+requirements:
+    kubernetes: ">= 1.27"
+```
+
+Here is how you can set the cluster installation status dependency (bootstrapped):
+
+```yaml
+name: ingress-nginx
+weight: 402
+description: |
+    Ingress controller for nginx
+    https://kubernetes.github.io/ingress-nginx
+
+requirements:
+    bootstrapped: true
+```
+
 {% endraw %}

@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"reflect"
 	"sync"
 	"syscall"
 	"time"
@@ -110,6 +111,10 @@ type Executor struct {
 	StdoutSplitter bufio.SplitFunc
 	StdoutHandler  func(l string)
 
+	pipesMutex     sync.Mutex
+	stdoutPipeFile *os.File
+	stderrPipeFile *os.File
+
 	StderrBuffer   *bytes.Buffer
 	StderrSplitter bufio.SplitFunc
 	StderrHandler  func(l string)
@@ -150,9 +155,8 @@ func (e *Executor) OpenStdinPipe() *Executor {
 	return e
 }
 
-func (e *Executor) WithStdoutHandler(stdoutHandler func(l string)) *Executor {
+func (e *Executor) WithStdoutHandler(stdoutHandler func(l string)) {
 	e.StdoutHandler = stdoutHandler
-	return e
 }
 
 func (e *Executor) WithStdoutSplitter(fn bufio.SplitFunc) *Executor {
@@ -160,9 +164,8 @@ func (e *Executor) WithStdoutSplitter(fn bufio.SplitFunc) *Executor {
 	return e
 }
 
-func (e *Executor) WithStderrHandler(stderrHandler func(l string)) *Executor {
+func (e *Executor) WithStderrHandler(stderrHandler func(l string)) {
 	e.StderrHandler = stderrHandler
-	return e
 }
 
 func (e *Executor) WithStderrSplitter(fn bufio.SplitFunc) *Executor {
@@ -245,7 +248,12 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 		if err != nil {
 			return fmt.Errorf("unable to create os pipe for stdout: %s", err)
 		}
+
 		e.cmd.Stdout = stdoutWritePipe
+
+		e.pipesMutex.Lock()
+		e.stdoutPipeFile = stdoutWritePipe
+		e.pipesMutex.Unlock()
 
 		// create pipe for StdoutHandler
 		if e.StdoutHandler != nil {
@@ -267,6 +275,10 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 			return fmt.Errorf("unable to create os pipe for stderr: %s", err)
 		}
 		e.cmd.Stderr = stderrWritePipe
+
+		e.pipesMutex.Lock()
+		e.stderrPipeFile = stderrWritePipe
+		e.pipesMutex.Unlock()
 
 		// create pipe for StderrHandler
 		if e.StderrHandler != nil {
@@ -310,6 +322,9 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 			return
 		}
 
+		log.DebugLn("Start reading from stderr pipe")
+		defer log.DebugLn("Stop reading from stderr pipe")
+
 		buf := make([]byte, 16)
 		for {
 			n, err := stderrReadPipe.Read(buf)
@@ -343,16 +358,31 @@ func (e *Executor) SetupStreamHandlers() (err error) {
 }
 
 func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWritePipe io.Writer) {
-	if stdoutReadPipe == nil {
+	defer log.DebugLn("stop readFromStreams")
+
+	if stdoutReadPipe == nil || reflect.ValueOf(stdoutReadPipe).IsNil() {
 		return
 	}
+
+	log.DebugLn("Start read from streams for command: ", e.cmd.String())
+
 	buf := make([]byte, 16)
 	matchersDone := false
 	if len(e.Matchers) == 0 {
 		matchersDone = true
 	}
+
+	errorsCount := 0
 	for {
 		n, err := stdoutReadPipe.Read(buf)
+		if err != nil && err != io.EOF {
+			log.DebugF("Error reading from stdout: %s\n", err)
+			errorsCount++
+			if errorsCount > 1000 {
+				panic(fmt.Errorf("readFromStreams: too many errors, last error %v", err))
+			}
+			continue
+		}
 
 		m := 0
 		if !matchersDone {
@@ -395,6 +425,7 @@ func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWriteP
 		}
 
 		if err == io.EOF {
+			log.DebugLn("readFromStreams: EOF")
 			break
 		}
 	}
@@ -496,6 +527,30 @@ func (e *Executor) ProcessWait() {
 	}()
 }
 
+func (e *Executor) closePipes() {
+	log.DebugLn("Starting close piped")
+	defer log.DebugLn("Stop close piped")
+
+	e.pipesMutex.Lock()
+	defer e.pipesMutex.Unlock()
+
+	if e.stdoutPipeFile != nil {
+		err := e.stdoutPipeFile.Close()
+		if err != nil {
+			log.DebugF("Cannot close stdout pipe: %v\n", err)
+		}
+		e.stdoutPipeFile = nil
+	}
+
+	if e.stderrPipeFile != nil {
+		err := e.stderrPipeFile.Close()
+		if err != nil {
+			log.DebugF("Cannot close stderr pipe: %v\n", err)
+		}
+		e.stderrPipeFile = nil
+	}
+}
+
 func (e *Executor) Stop() {
 	if e.stop {
 		log.DebugF("Stop '%s': already stopped\n", e.cmd.String())
@@ -516,8 +571,8 @@ func (e *Executor) Stop() {
 		close(e.stopCh)
 	}
 	<-e.waitCh
-
 	log.DebugF("Stopped '%s': %d\n", e.cmd.String(), e.cmd.ProcessState.ExitCode())
+	e.closePipes()
 }
 
 // Run executes a command and blocks until it is finished or stopped.
@@ -530,6 +585,9 @@ func (e *Executor) Run() error {
 	}
 
 	<-e.waitCh
+
+	e.closePipes()
+
 	return e.WaitError()
 }
 

@@ -11,6 +11,8 @@ spec:
   destinationRefs:
     - test-socket1-dest
     - test-socket2-dest
+    - test-socket3-dest
+    - test-socket4-dest
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
@@ -40,3 +42,30 @@ spec:
     mode: UDP
     encoding:
       codec: Syslog
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-socket3-dest
+spec:
+  extraLabels:
+    cef.name: d8
+    cef.severity: "1"
+  socket:
+    address: 0.0.0.0:7252
+    encoding:
+      codec: Text
+    mode: TCP
+  type: Socket
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-socket4-dest
+spec:
+  socket:
+    address: 0.0.0.0:7252
+    encoding:
+      codec: CEF
+    mode: UDP
+  type: Socket

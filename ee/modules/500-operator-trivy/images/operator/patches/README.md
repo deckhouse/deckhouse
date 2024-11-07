@@ -10,14 +10,6 @@ This [issue](https://github.com/aquasecurity/trivy-operator/issues/695) covers b
 Skip some defseq checks for proper reports result for deckhouse installation.
 
 
-### 003-aws-ecr.patch
-
-In ClientServer mode scan pods can't retrive images from Amazon Elastic Container Registry, because `AWS_REGION` environment variable is absent.
-This patch is fixing this behaviour.
-
-[PR](https://github.com/aquasecurity/trivy-operator/pull/1613)
-
-
 ### 004-scan-job-registry-ca.patch
 
 This patch adds the ability to specify CA for scan jobs via environment variables.
@@ -34,3 +26,16 @@ The first check begins instantly when the operator starts.
 ### 006-new-metrics.patch
 
 This patch adds primaryLink metric for reports.
+
+### 007-fix-custom-volumes.patch
+
+[PR](https://github.com/aquasecurity/trivy-operator/pull/2241)
+[Issue](https://github.com/aquasecurity/trivy-operator/issues/2240)
+
+### 008-bump-dependencies.patch
+
+This patch updates vulnerable dependencies.
+
+### 009-fix-policies-cache.patch
+
+The operator of v0.22.0 cannot re-download policies if the image of the policies has been changed, it tries to download the old one.

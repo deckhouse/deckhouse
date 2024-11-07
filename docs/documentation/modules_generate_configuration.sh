@@ -11,7 +11,7 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
   cp -f $schema_path _data/schemas/${module_name}/
   if [ -f $module_path/openapi/doc-ru-config-values.yaml ]; then
      echo -e "\ni18n:\n  ru:" >>_data/schemas/${module_name}/config-values.yaml
-     cat $module_path/openapi/doc-ru-config-values.yaml | sed 's/^/    /' >>_data/schemas/${module_name}/config-values.yaml
+     cat $module_path/openapi/doc-ru-config-values.yaml | sed '1{/^---$/d}; s/^/    /' >>_data/schemas/${module_name}/config-values.yaml
   fi
   if [ ! -f ${module_path}/docs/CONFIGURATION.md ]; then
       continue

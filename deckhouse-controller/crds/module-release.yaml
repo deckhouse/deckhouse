@@ -68,6 +68,7 @@ spec:
                     - Deployed
                     - Superseded
                     - Suspended
+                    - Skipped
                   description: Current status of the release.
                 message:
                   type: string

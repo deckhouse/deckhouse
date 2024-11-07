@@ -81,7 +81,7 @@ status:
 		})
 
 		It("Hook should execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
+			Expect(f).NotTo(ExecuteSuccessfully())
 		})
 	})
 

@@ -15,30 +15,115 @@
 package utils
 
 import (
+	"context"
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	SyncedPollPeriod = 100 * time.Millisecond
 )
 
-// GenerateRegistryOptions fetches settings from ModuleSource and generate registry options from them
-func GenerateRegistryOptions(ms *v1alpha1.ModuleSource) []cr.Option {
+// GenerateRegistryOptionsFromModuleSource fetches settings from ModuleSource and generate registry options from them
+func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource, clusterUUID string, logger *log.Logger) []cr.Option {
+	rconf := &RegistryConfig{
+		DockerConfig: ms.Spec.Registry.DockerCFG,
+		Scheme:       ms.Spec.Registry.Scheme,
+		CA:           ms.Spec.Registry.CA,
+		UserAgent:    clusterUUID,
+	}
+
+	return GenerateRegistryOptions(rconf, logger)
+}
+
+type RegistryConfig struct {
+	DockerConfig string
+	CA           string
+	Scheme       string
+	UserAgent    string
+}
+
+func GenerateRegistryOptions(ri *RegistryConfig, logger *log.Logger) []cr.Option {
+	if ri.UserAgent == "" {
+		if logger.Enabled(context.Background(), log.LevelDebug.Level()) {
+			logger.Debug("got empty user agent")
+		}
+
+		ri.UserAgent = "deckhouse-controller"
+	}
+
 	opts := []cr.Option{
-		cr.WithAuth(ms.Spec.Registry.DockerCFG),
-		cr.WithUserAgent("deckhouse-controller/ModuleControllers"),
-	}
-
-	if ms.Spec.Registry.CA != "" {
-		opts = append(opts, cr.WithCA(ms.Spec.Registry.CA))
-	}
-
-	if ms.Spec.Registry.Scheme == "HTTP" {
-		opts = append(opts, cr.WithInsecureSchema(true))
+		cr.WithAuth(ri.DockerConfig),
+		cr.WithUserAgent(ri.UserAgent),
+		cr.WithCA(ri.CA),
+		cr.WithInsecureSchema(strings.ToLower(ri.Scheme) == "http"),
 	}
 
 	return opts
+}
+
+type DeckhouseRegistrySecret struct {
+	DockerConfig          string
+	Address               string
+	ClusterIsBootstrapped string
+	ImageRegistry         string
+	Path                  string
+	Scheme                string
+	CA                    string
+}
+
+var ErrCAFieldIsNotFound = errors.New("secret has no ca field")
+
+func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySecret, error) {
+	var err error
+
+	dockerConfig, ok := data[".dockerconfigjson"]
+	if !ok {
+		err = errors.Join(err, errors.New("secret has no .dockerconfigjson field"))
+	}
+
+	address, ok := data["address"]
+	if !ok {
+		err = errors.Join(err, errors.New("secret has no address field"))
+	}
+
+	clusterIsBootstrapped, ok := data["clusterIsBootstrapped"]
+	if !ok {
+		err = errors.Join(err, errors.New("secret has no clusterIsBootstrapped field"))
+	}
+
+	imagesRegistry, ok := data["imagesRegistry"]
+	if !ok {
+		err = errors.Join(err, errors.New("secret has no imagesRegistry field"))
+	}
+
+	path, ok := data["path"]
+	if !ok {
+		err = errors.Join(err, errors.New("secret has no path field"))
+	}
+
+	scheme, ok := data["scheme"]
+	if !ok {
+		err = errors.Join(err, errors.New("secret has no scheme field"))
+	}
+
+	ca, ok := data["ca"]
+	if !ok {
+		err = errors.Join(err, ErrCAFieldIsNotFound)
+	}
+
+	return &DeckhouseRegistrySecret{
+		DockerConfig:          string(dockerConfig),
+		Address:               string(address),
+		ClusterIsBootstrapped: string(clusterIsBootstrapped),
+		ImageRegistry:         string(imagesRegistry),
+		Path:                  string(path),
+		Scheme:                string(scheme),
+		CA:                    string(ca),
+	}, err
 }

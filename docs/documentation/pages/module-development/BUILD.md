@@ -20,7 +20,7 @@ We suggest using the pre-compiled [GitHub Actions](https://github.com/deckhouse/
 
 - Build module artifacts when changes are made to the PR and when changes are merged into the main branch.
 - Build module artifacts from tags using the production container registry.
-- Publish module to GitHub Packages container registry to the selected [stability channel](../versioning/#stability-channels) from a tag.
+- Publish module to GitHub Packages container registry to the selected [release channel](../versioning/#release-channels) from a tag.
 
 Module artifacts will be uploaded to `ghcr.io/<OWNER>/modules/`, which will serve as [module source](../../cr.html#modulesource).
 

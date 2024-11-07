@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -37,12 +35,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
@@ -56,14 +55,17 @@ func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.ConvergeRequest)
 	sendCh := make(chan *pb.ConvergeResponse)
-	phaseSwitcher := &convergePhaseSwitcher{
-		sendCh: sendCh,
-		f:      f,
-		next:   make(chan error),
+	phaseSwitcher := &fsmPhaseSwitcher[*pb.ConvergeResponse, any]{
+		f: f, dataFunc: s.convergeSwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
+	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
+		func(lines []string) *pb.ConvergeResponse {
+			return &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+	)
 
-	s.startConvergerReceiver(server, receiveCh, doneCh, internalErrCh)
-	s.startConvergerSender(server, sendCh, internalErrCh)
+	startReceiver[*pb.ConvergeRequest, *pb.ConvergeResponse](server, receiveCh, doneCh, internalErrCh)
+	startSender[*pb.ConvergeRequest, *pb.ConvergeResponse](server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -89,9 +91,10 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				s.startConverge(
-					ctx, message.Start, phaseSwitcher, &convergeLogWriter{l: logger.L(ctx), sendCh: sendCh}, sendCh,
-				)
+				go func() {
+					result := s.convergeSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					sendCh <- &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}}
+				}()
 
 			case *pb.ConvergeRequest_Continue:
 				err := f.Event("toNextPhase")
@@ -120,71 +123,31 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) startConvergerReceiver(
-	server pb.DHCTL_ConvergeServer,
-	receiveCh chan *pb.ConvergeRequest,
-	doneCh chan struct{},
-	internalErrCh chan error,
-) {
-	go func() {
-		for {
-			request, err := server.Recv()
-			if errors.Is(err, io.EOF) {
-				close(doneCh)
-				return
-			}
-			if err != nil {
-				internalErrCh <- fmt.Errorf("receiving message: %w", err)
-				return
-			}
-			receiveCh <- request
-		}
-	}()
-}
-
-func (s *Service) startConvergerSender(
-	server pb.DHCTL_ConvergeServer,
-	sendCh chan *pb.ConvergeResponse,
-	internalErrCh chan error,
-) {
-	go func() {
-		for response := range sendCh {
-			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
-			err := loop.Run(func() error {
-				return server.Send(response)
-			})
-			if err != nil {
-				internalErrCh <- fmt.Errorf("sending message: %w", err)
-				return
-			}
-		}
-	}()
-}
-
-func (s *Service) startConverge(
+func (s *Service) convergeSafe(
 	ctx context.Context,
 	request *pb.ConvergeStart,
-	phaseSwitcher *convergePhaseSwitcher,
-	logWriter *convergeLogWriter,
-	sendCh chan *pb.ConvergeResponse,
-) {
-	go func() {
-		result := s.converge(ctx, request, phaseSwitcher, logWriter)
-		sendCh <- &pb.ConvergeResponse{
-			Message: &pb.ConvergeResponse_Result{
-				Result: result,
-			},
+	switchPhase phases.DefaultOnPhaseFunc,
+	logWriter io.Writer,
+) (result *pb.ConvergeResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.ConvergeResult{Err: panicMessage(ctx, r)}
 		}
 	}()
+
+	return s.converge(ctx, request, switchPhase, logWriter)
 }
 
 func (s *Service) converge(
 	ctx context.Context,
 	request *pb.ConvergeStart,
-	phaseSwitcher *convergePhaseSwitcher,
+	switchPhase phases.DefaultOnPhaseFunc,
 	logWriter io.Writer,
 ) *pb.ConvergeResult {
 	var err error
+
+	cleanuper := callback.NewCallback()
+	defer cleanuper.Call()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -195,6 +158,7 @@ func (s *Service) converge(
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
+	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
@@ -240,30 +204,6 @@ func (s *Service) converge(
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
-	err = log.Process("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
-			config.NewSchemaStore(),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
-		sshClient, err = prepareSSHClient(connectionConfig)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return &pb.ConvergeResult{Err: err.Error()}
-	}
-	defer sshClient.Stop()
-
 	terraformContext := terraform.NewTerraformContext()
 
 	var commanderUUID uuid.UUID
@@ -274,8 +214,7 @@ func (s *Service) converge(
 		}
 	}
 
-	checker := check.NewChecker(&check.Params{
-		SSHClient:     sshClient,
+	checkParams := &check.Params{
 		StateCache:    cache.Global(),
 		CommanderMode: request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
@@ -284,11 +223,10 @@ func (s *Service) converge(
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
 		TerraformContext: terraform.NewTerraformContext(),
-	})
+	}
 
-	converger := converge.NewConverger(&converge.Params{
-		SSHClient:              sshClient,
-		OnPhaseFunc:            phaseSwitcher.switchPhase,
+	convergeParams := &converge.Params{
+		OnPhaseFunc:            switchPhase,
 		AutoApprove:            true,
 		AutoDismissDestructive: false,
 		CommanderMode:          true,
@@ -298,10 +236,34 @@ func (s *Service) converge(
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
 		TerraformContext:           terraformContext,
-		Checker:                    checker,
 		ApproveDestructiveChangeID: request.ApproveDestructionChangeId,
 		OnCheckResult:              onCheckResult,
+	}
+
+	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(helper.ClusterConnectionsOptions{
+		CommanderMode: request.Options.CommanderMode,
+		ApiServerUrl:  request.Options.ApiServerUrl,
+		ApiServerOptions: helper.ApiServerOptions{
+			Token:                    request.Options.ApiServerToken,
+			InsecureSkipTLSVerify:    request.Options.ApiServerInsecureSkipTlsVerify,
+			CertificateAuthorityData: util.StringToBytes(request.Options.ApiServerCertificateAuthorityData),
+		},
+		SchemaStore:         s.schemaStore,
+		SSHConnectionConfig: request.ConnectionConfig,
 	})
+	cleanuper.Add(cleanup)
+	if err != nil {
+		return &pb.ConvergeResult{Err: err.Error()}
+	}
+
+	checkParams.KubeClient = kubeClient
+	checkParams.SSHClient = sshClient
+	convergeParams.KubeClient = kubeClient
+	convergeParams.SSHClient = sshClient
+
+	checker := check.NewChecker(checkParams)
+	convergeParams.Checker = checker
+	converger := converge.NewConverger(convergeParams)
 
 	result, convergeErr := converger.Converge(ctx)
 	state := converger.GetLastState()
@@ -309,7 +271,7 @@ func (s *Service) converge(
 	resultString, marshalResultErr := json.Marshal(result)
 	err = errors.Join(convergeErr, marshalStateErr, marshalResultErr)
 
-	return &pb.ConvergeResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
+	return &pb.ConvergeResult{State: string(stateData), Result: string(resultString), Err: util.ErrToString(err)}
 }
 
 func (s *Service) convergeServerTransitions() []fsm.Transition {
@@ -332,64 +294,14 @@ func (s *Service) convergeServerTransitions() []fsm.Transition {
 	}
 }
 
-type convergeLogWriter struct {
-	l      *slog.Logger
-	sendCh chan *pb.ConvergeResponse
-
-	m    sync.Mutex
-	prev []byte
-}
-
-func (w *convergeLogWriter) Write(p []byte) (n int, err error) {
-	w.m.Lock()
-	defer w.m.Unlock()
-
-	var r []string
-
-	for _, b := range p {
-		switch b {
-		case '\n', '\r':
-			s := string(w.prev)
-			if s != "" {
-				r = append(r, s)
-			}
-			w.prev = []byte{}
-		default:
-			w.prev = append(w.prev, b)
-		}
-	}
-
-	if len(r) > 0 {
-		for _, line := range r {
-			w.l.Info(line, logTypeDHCTL)
-		}
-		w.sendCh <- &pb.ConvergeResponse{
-			Message: &pb.ConvergeResponse_Logs{Logs: &pb.Logs{Logs: r}},
-		}
-	}
-
-	return len(p), nil
-}
-
-type convergePhaseSwitcher struct {
-	sendCh chan *pb.ConvergeResponse
-	f      *fsm.FiniteStateMachine
-	next   chan error
-}
-
-func (b *convergePhaseSwitcher) switchPhase(
+func (s *Service) convergeSwitchPhaseData(
 	completedPhase phases.OperationPhase,
 	completedPhaseState phases.DhctlState,
-	_ interface{},
+	_ any,
 	nextPhase phases.OperationPhase,
 	nextPhaseCritical bool,
-) error {
-	err := b.f.Event("wait")
-	if err != nil {
-		return fmt.Errorf("changing state to waiting: %w", err)
-	}
-
-	b.sendCh <- &pb.ConvergeResponse{
+) (*pb.ConvergeResponse, error) {
+	return &pb.ConvergeResponse{
 		Message: &pb.ConvergeResponse_PhaseEnd{
 			PhaseEnd: &pb.ConvergePhaseEnd{
 				CompletedPhase:      string(completedPhase),
@@ -398,11 +310,5 @@ func (b *convergePhaseSwitcher) switchPhase(
 				NextPhaseCritical:   nextPhaseCritical,
 			},
 		},
-	}
-
-	switchErr, ok := <-b.next
-	if !ok {
-		return fmt.Errorf("server stopped, cancel task")
-	}
-	return switchErr
+	}, nil
 }

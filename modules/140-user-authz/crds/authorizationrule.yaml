@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Namespaced
@@ -22,6 +23,8 @@ spec:
           type: object
           description: |
             Manages RBAC and authorization settings within a particular namespace.
+
+            > The `AuthorizationRule` resource is used in the [obsolete role-based model](./#the-obsolete-role-based-model), which will be removed in future versions of Deckhouse. We recommend using the [new role-based model](./#the-new-role-based-model).
           required:
           - spec
           properties:
@@ -58,9 +61,9 @@ spec:
 
                     [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#subject-v1-rbac-authorization-k8s-io)
 
-                    Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module:
+                    Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module:
                     - Use the user's `email` as the username to grant privileges to the specific user;
-                    - When specifying a group, make sure that the necessary groups are allowed to be received from the provider, i.e., they are defined in the corresponding custom resource [DexProvider](https://deckhouse.io/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
+                    - When specifying a group, make sure that the necessary groups are allowed to be received from the provider, i.e., they are defined in the corresponding custom resource [DexProvider](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
                   items:
                     type: object
                     required:

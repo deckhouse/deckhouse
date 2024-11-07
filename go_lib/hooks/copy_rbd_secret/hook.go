@@ -26,7 +26,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -39,16 +39,16 @@ func RegisterHook(namespace string) bool {
 				Name:                         "rbd_storageclass",
 				ApiVersion:                   "storage.k8s.io/v1",
 				Kind:                         "StorageClass",
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				ExecuteHookOnEvents:          pointer.Bool(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				ExecuteHookOnEvents:          ptr.To(false),
 				FilterFunc:                   filterStorageClass,
 			},
 			{
 				Name:                         "rbd_secret",
 				ApiVersion:                   "v1",
 				Kind:                         "Secret",
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				ExecuteHookOnEvents:          pointer.Bool(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				ExecuteHookOnEvents:          ptr.To(false),
 				FilterFunc:                   filterSecrets,
 				FieldSelector: &types.FieldSelector{
 					MatchExpressions: []types.FieldSelectorRequirement{
@@ -138,7 +138,7 @@ func copyRBDSecretHandlerWithArgs(input *go_hook.HookInput, namespace string) er
 
 		existingSecret, ok := secretsToCopy[userSecret]
 		if !ok {
-			input.LogEntry.WithField("secretName", userSecret).Warn("secret not found")
+			input.Logger.With("secretName", userSecret).Warn("secret not found")
 			continue
 		}
 

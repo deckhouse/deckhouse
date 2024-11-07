@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleValidationKinds(input *go_hook.HookInput, _ dependency.Container) error {
 	snap := input.Snapshots["constraint-exporter-cm"]
 	if len(snap) == 0 {
-		input.LogEntry.Info("no exporter cm found")
+		input.Logger.Info("no exporter cm found")
 		return nil
 	}
 
@@ -89,8 +89,9 @@ func filterExporterCM(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 type matchResource struct {
-	APIGroups []string `json:"apiGroups"`
-	Resources []string `json:"resources"`
+	APIGroups  []string `json:"apiGroups"`
+	Resources  []string `json:"resources"`
+	Operations []string `json:"operations,omitempty"`
 }
 
 type matchData struct {

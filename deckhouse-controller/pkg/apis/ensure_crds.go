@@ -21,6 +21,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
+	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+var (
+	deprecatedCRDs = []string{
+		"externalmodulesources.deckhouse.io",
+		"externalmodulereleases.deckhouse.io",
+	}
 )
 
 type kubeClient interface {
@@ -34,6 +42,13 @@ func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
 	inst, err := ensure_crds.NewCRDsInstaller(client, crdsGlob)
 	if err != nil {
 		return err
+	}
+
+	deletedCRDs, err := inst.DeleteCRDs(ctx, deprecatedCRDs)
+	if err != nil {
+		log.Warnf("Couldn't delete deprecated CRDs: %s", err)
+	} else {
+		log.Infof("The following deprecated CRDs were deleted: %v", deletedCRDs)
 	}
 
 	merr := inst.Run(ctx)

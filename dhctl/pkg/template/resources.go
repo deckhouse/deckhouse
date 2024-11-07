@@ -79,6 +79,10 @@ type Resource struct {
 	Object unstructured.Unstructured
 }
 
+func (r *Resource) String() string {
+	return fmt.Sprintf("%s - %s/%s", r.GVK.String(), r.Object.GetNamespace(), r.Object.GetName())
+}
+
 type Resources []*Resource
 
 func (r Resources) Len() int {
@@ -166,6 +170,15 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 	sort.Stable(resources)
 
 	return resources, nil
+}
+
+func (r Resources) String() string {
+	s := make([]string, 0)
+	for _, rr := range r {
+		s = append(s, fmt.Sprintf("%v", rr.Object.Object))
+	}
+
+	return strings.Join(s, ";")
 }
 
 func loadResources(path string, data map[string]interface{}) (Resources, error) {

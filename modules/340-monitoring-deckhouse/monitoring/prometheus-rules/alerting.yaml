@@ -103,3 +103,40 @@
         If you are ready to deploy this release, run: `kubectl annotate DeckhouseRelease {{ $labels.name }} release.deckhouse.io/disruption-approved=true`.
       summary: |
         Deckhouse release disruption approval required.
+  - alert: ModuleReleaseIsWaitingManualApproval
+    expr: max by (name) (d8_module_release_waiting_manual) >= 1
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      description: |
+        Module release is waiting for manual approval.
+
+        Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
+      summary: |
+        Module release is waiting for manual approval.
+  - alert: D8HasModuleConfigAllowedToDisable
+    expr: max by (module) (d8_moduleconfig_allowed_to_disable) >= 1
+    for: 3m
+    labels:
+      severity_level: "4"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        ModuleConfig is waiting for disable.
+
+        It is recommended to keep clean your module configurations from approve annotations.
+
+        If you ignore this alert and do not clear the annotation, it may cause the module to be accidentally removed from the cluster.
+        
+        Removing a module from a cluster can lead to a number of irreparable consequences.
+
+        Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disable-` to stop this alert.
+      summary: |
+        ModuleConfig annotation for allow to disable is setted.

@@ -26,7 +26,7 @@
     "transform/destination/test-es-dest/00_elastic_dedot": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/tests-whispers_whispers-logs/03_multiline"
+        "transform/source/tests-whispers_whispers-logs/03_clean_up"
       ],
       "source": "if exists(.pod_labels) {\n    .pod_labels = map_keys(object!(.pod_labels), recursive: true) -\u003e |key| { replace(key, \".\", \"_\") }\n}",
       "type": "remap"
@@ -55,35 +55,35 @@
       "source": "if exists(.pod_owner) {\n    .pod_owner = string!(.pod_owner)\n\n    if starts_with(.pod_owner, \"ReplicaSet/\") {\n        hash = \"-\"\n        if exists(.pod_labels.\"pod-template-hash\") {\n            hash = hash + string!(.pod_labels.\"pod-template-hash\")\n        }\n\n        if hash != \"-\" \u0026\u0026 ends_with(.pod_owner, hash) {\n            .pod_owner = replace(.pod_owner, \"ReplicaSet/\", \"Deployment/\")\n            .pod_owner = replace(.pod_owner, hash, \"\")\n        }\n    }\n\n    if starts_with(.pod_owner, \"Job/\") {\n        if match(.pod_owner, r'-[0-9]{8,11}$') {\n            .pod_owner = replace(.pod_owner, \"Job/\", \"CronJob/\")\n            .pod_owner = replace(.pod_owner, r'-[0-9]{8,11}$', \"\")\n        }\n    }\n}",
       "type": "remap"
     },
-    "transform/source/tests-whispers_whispers-logs/01_clean_up": {
+    "transform/source/tests-whispers_whispers-logs/01_local_timezone": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/tests-whispers_whispers-logs/00_owner_ref"
       ],
-      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
-      "type": "remap"
-    },
-    "transform/source/tests-whispers_whispers-logs/02_local_timezone": {
-      "drop_on_abort": false,
-      "inputs": [
-        "transform/source/tests-whispers_whispers-logs/01_clean_up"
-      ],
       "source": "if exists(.\"timestamp\") {\n    ts = parse_timestamp!(.\"timestamp\", format: \"%+\")\n    .\"timestamp\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}\n\nif exists(.\"timestamp_end\") {\n    ts = parse_timestamp!(.\"timestamp_end\", format: \"%+\")\n    .\"timestamp_end\" = format_timestamp!(ts, format: \"%+\", timezone: \"local\")\n}",
       "type": "remap"
     },
-    "transform/source/tests-whispers_whispers-logs/03_multiline": {
+    "transform/source/tests-whispers_whispers-logs/02_multiline": {
       "group_by": [
         "file",
         "stream"
       ],
       "inputs": [
-        "transform/source/tests-whispers_whispers-logs/02_local_timezone"
+        "transform/source/tests-whispers_whispers-logs/01_local_timezone"
       ],
       "merge_strategies": {
         "message": "concat"
       },
       "starts_when": "matched, err = match(.message, r'^\\{');\nif err != null {\n    false;\n} else {\n    matched;\n}",
       "type": "reduce"
+    },
+    "transform/source/tests-whispers_whispers-logs/03_clean_up": {
+      "drop_on_abort": false,
+      "inputs": [
+        "transform/source/tests-whispers_whispers-logs/02_multiline"
+      ],
+      "source": "if exists(.pod_labels.\"controller-revision-hash\") {\n    del(.pod_labels.\"controller-revision-hash\")\n}\nif exists(.pod_labels.\"pod-template-hash\") {\n    del(.pod_labels.\"pod-template-hash\")\n}\nif exists(.kubernetes) {\n    del(.kubernetes)\n}\nif exists(.file) {\n    del(.file)\n}\nif exists(.node_labels.\"node.deckhouse.io/group\") {\n\t.node_group = (.node_labels.\"node.deckhouse.io/group\")\n}\ndel(.node_labels)",
+      "type": "remap"
     }
   },
   "sinks": {
@@ -95,6 +95,7 @@
       "healthcheck": {
         "enabled": false
       },
+      "api_version": "v8",
       "endpoint": "http://192.168.1.1:9200",
       "encoding": {
         "timestamp_format": "rfc3339"

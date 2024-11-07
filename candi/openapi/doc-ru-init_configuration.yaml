@@ -45,24 +45,3 @@ apiVersions:
               Используйте параметр [logLevel](../modules/002-deckhouse/configuration.html#parameters-loglevel) ModuleConfig 'deckhouse' вместо этого параметра.
 
               Уровень логирования Deckhouse.
-          configOverrides:
-            description: |
-              Вместо этого параметра, используйте ресурсы ModuleConfig для настройки модулей.
-
-              Начальная [конфигурация Deckhouse](/documentation/v1/#конфигурация-deckhouse).
-
-              Укажите здесь параметры конфигурации Deckhouse, с которыми он должен запуститься после установки.
-
-              Структура, указанная в параметре, будет использована для создания [глобальной конфигурации Deckhouse](../deckhouse-configure-global.html) (moduleConfig `global`) и [настроек модулей](../#настройка-модуля) (moduleConfig `<module-name>`).
-
-              Формат структуры:
-              ```yaml
-              configOverrides:
-                global:
-                  ... секция глобальных параметров
-                <moduleName>Enabled: true|false
-                <moduleName>:
-                  ... секция параметров модуля
-              ```
-
-              **Внимание!** В `configOverrides` для включения/отключения модуля и указания его настроек используется название модуля в **camelCase** (например, `userAuthn`). После установки Deckhouse для управления модулем используется ресурс moduleConfig с названием модуля в **snake-case** (например, `user-authn`).

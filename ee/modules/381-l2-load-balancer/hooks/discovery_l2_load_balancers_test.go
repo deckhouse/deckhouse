@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("l2-load-balancer :: hooks :: discovery_l2_lb ::", func() {
-	f := HookExecutionConfigInit(`{"l2LoadBalancer":{"internal": {"l2lbservices": [{}]}}}`, "")
+	f := HookExecutionConfigInit(`{"l2LoadBalancer":{"loadBalancerClass": "my-lb-class", "internal": {"l2lbservices": [{}]}}}`, "")
 	f.RegisterCRD("network.deckhouse.io", "v1alpha1", "L2LoadBalancer", false)
 
 	Context("Empty Cluster", func() {
@@ -45,6 +45,8 @@ spec:
   - port: 7473
     protocol: TCP
     targetPort: 7473
+  externalTrafficPolicy: Local
+  internalTrafficPolicy: Cluster
   selector:
     app: nginx
   type: LoadBalancer
@@ -106,6 +108,7 @@ spec:
 			Expect(f.ValuesGet("l2LoadBalancer.internal.l2lbservices").String()).To(MatchJSON(`
 [
           {
+			"publishNotReadyAddresses": false,
             "name": "nginx-ingress-0",
             "namespace": "nginx",
 			"serviceName": "nginx",
@@ -120,11 +123,15 @@ spec:
                 "targetPort": 7473
               }
             ],
+			"externalTrafficPolicy": "Local",
+            "internalTrafficPolicy": "Cluster",
             "selector": {
               "app": "nginx"
-            }
+            },
+			"loadBalancerName": "ingress"
           },
           {
+			"publishNotReadyAddresses": false,
             "name": "nginx-ingress-1",
             "namespace": "nginx",
 			"serviceName": "nginx",
@@ -139,11 +146,15 @@ spec:
                 "targetPort": 7473
               }
             ],
+			"externalTrafficPolicy": "Local",
+            "internalTrafficPolicy": "Cluster",
             "selector": {
               "app": "nginx"
-            }
+            },
+			"loadBalancerName": "ingress"
           },
           {
+			"publishNotReadyAddresses": false,
             "name": "nginx-ingress-2",
             "namespace": "nginx",
 			"serviceName": "nginx",
@@ -158,9 +169,12 @@ spec:
                 "targetPort": 7473
               }
             ],
+			"externalTrafficPolicy": "Local",
+            "internalTrafficPolicy": "Cluster",
             "selector": {
               "app": "nginx"
-            }
+            },
+			"loadBalancerName": "ingress"
           }
 ]
 `))

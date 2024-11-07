@@ -15,7 +15,6 @@
 package terraform
 
 import (
-	"crypto/md5"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -67,6 +66,7 @@ type ChangeActionSettings struct {
 	AutoDismissDestructive bool
 	AutoApprove            bool
 	SkipChangesOnDeny      bool
+	LogToBuffer            bool
 }
 
 type Runner struct {
@@ -229,6 +229,11 @@ func (r *Runner) withTerraformExecutor(t Executor) *Runner {
 	return r
 }
 
+func (r *Runner) WithCatchOutput(flag bool) *Runner {
+	r.changeSettings.LogToBuffer = flag
+	return r
+}
+
 func (r *Runner) switchTerraformIsRunning() {
 	atomic.AddInt32(&r.terraformRunningCounter, 1)
 }
@@ -324,7 +329,7 @@ func (r *Runner) getHook() InfraActionHook {
 func (r *Runner) runBeforeActionAndWaitReady() error {
 	hook := r.getHook()
 
-	runPostAction, err := hook.BeforeAction()
+	runPostAction, err := hook.BeforeAction(r)
 	if err != nil {
 		return err
 	}
@@ -334,7 +339,7 @@ func (r *Runner) runBeforeActionAndWaitReady() error {
 		resErr = multierror.Append(resErr, err)
 
 		if runPostAction {
-			err := hook.AfterAction()
+			err := hook.AfterAction(r)
 			if err != nil {
 				resErr = multierror.Append(resErr, err)
 			}
@@ -418,7 +423,7 @@ func (r *Runner) Apply() error {
 
 		// yes, do not check err from exec terraform
 		// always run post action if need
-		err = r.getHook().AfterAction()
+		err = r.getHook().AfterAction(r)
 		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()
@@ -514,13 +519,27 @@ func (r *Runner) Destroy() error {
 		return nil
 	}
 
+	planDestroyArgs := []string{
+		"plan",
+		"-destroy",
+		"-no-color",
+		fmt.Sprintf("-var-file=%s", r.variablesPath),
+		fmt.Sprintf("-state=%s", r.statePath),
+	}
+	planDestroyArgs = append(planDestroyArgs, r.workingDir)
+
+	_, err := r.execTerraform(planDestroyArgs...)
+	if err != nil {
+		return fmt.Errorf("Cannot prepare terrafrom destroy plan: %w", err)
+	}
+
 	if !r.changeSettings.AutoApprove {
 		if !r.confirm().WithMessage("Do you want to DELETE objects from the cloud?").Ask() {
 			return fmt.Errorf("terraform destroy aborted")
 		}
 	}
 
-	err := r.runBeforeActionAndWaitReady()
+	err = r.runBeforeActionAndWaitReady()
 	if err != nil {
 		return err
 	}
@@ -548,7 +567,7 @@ func (r *Runner) Destroy() error {
 
 		// yes, do not check err from exec terraform
 		// always run post action if need
-		err = r.getHook().AfterAction()
+		err = r.getHook().AfterAction(r)
 		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()
@@ -602,6 +621,14 @@ func (r *Runner) GetTerraformExecutor() Executor {
 	return r.terraformExecutor
 }
 
+func (r *Runner) IsLogToBuffer() bool {
+	return r.changeSettings.LogToBuffer
+}
+
+func (r *Runner) GetLog() []string {
+	return r.terraformExecutor.GetStdout()
+}
+
 // Stop interrupts the current runner command and sets
 // a flag to prevent executions of next runner commands.
 func (r *Runner) Stop() {
@@ -628,7 +655,7 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	r.switchTerraformIsRunning()
 	defer r.switchTerraformIsRunning()
 
-	exitCode, err := r.terraformExecutor.Exec(args...)
+	exitCode, err := r.terraformExecutor.Exec(r.changeSettings.LogToBuffer, args...)
 	log.InfoF("Terraform runner %q process exited.\n", r.step)
 
 	return exitCode, err
@@ -644,6 +671,7 @@ type PlanDestructiveChanges struct {
 type ValueChange struct {
 	CurrentValue interface{} `json:"current_value,omitempty"`
 	NextValue    interface{} `json:"next_value,omitempty"`
+	Type         string      `json:"type,omitempty"`
 }
 
 func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveChanges, error) {
@@ -662,8 +690,6 @@ func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveCha
 		return nil, fmt.Errorf("can't get terraform plan for %q\n%v", planFile, err)
 	}
 
-	os.WriteFile(fmt.Sprintf("/%x.json", md5.Sum([]byte(planFile))), result, os.ModePerm)
-
 	var changes struct {
 		ResourcesChanges []struct {
 			Change struct {
@@ -671,6 +697,7 @@ func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveCha
 				Before  map[string]interface{} `json:"before,omitempty"`
 				After   map[string]interface{} `json:"after,omitempty"`
 			} `json:"change"`
+			Type string `json:"type"`
 		} `json:"resource_changes"`
 	}
 
@@ -694,10 +721,12 @@ func (r *Runner) getPlanDestructiveChanges(planFile string) (*PlanDestructiveCha
 				getOrCreateDestructiveChanges().ResourcesRecreated = append(getOrCreateDestructiveChanges().ResourcesRecreated, ValueChange{
 					CurrentValue: resource.Change.Before,
 					NextValue:    resource.Change.After,
+					Type:         resource.Type,
 				})
 			} else {
 				getOrCreateDestructiveChanges().ResourcesDeleted = append(getOrCreateDestructiveChanges().ResourcesDeleted, ValueChange{
 					CurrentValue: resource.Change.Before,
+					Type:         resource.Type,
 				})
 			}
 		}

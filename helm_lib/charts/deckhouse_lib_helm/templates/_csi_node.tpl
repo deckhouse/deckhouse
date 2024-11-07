@@ -24,12 +24,13 @@ memory: 25Mi
   {{- $additionalNodeLivenessProbesCmd := $config.additionalNodeLivenessProbesCmd }}
   {{- $initContainerCommand := $config.initContainerCommand }}
   {{- $initContainerImage := $config.initContainerImage }}
+  {{- $initContainerVolumeMounts := $config.initContainerVolumeMounts }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
   {{- if $driverRegistrarImage }}
-    {{- if or (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") ($context.Values.global.enabledModules | has "csi-nfs") ($context.Values.global.enabledModules | has "csi-ceph") }}
+    {{- if or (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") ($context.Values.global.enabledModules | has "csi-nfs") ($context.Values.global.enabledModules | has "csi-ceph") ($context.Values.global.enabledModules | has "csi-yadro") }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -89,7 +90,7 @@ spec:
                 - CloudEphemeral
                 - CloudPermanent
                 - CloudStatic
-                {{- if or (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") (eq $fullname "csi-nfs") }}
+                {{- if or (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") (eq $fullname "csi-nfs") (eq $fullname "csi-yadro") }}
                 - Static
                 {{- end }}
       imagePullSecrets:
@@ -170,6 +171,10 @@ spec:
         image: {{ $initContainerImage }}
         imagePullPolicy: IfNotPresent
         name: csi-node-init-container
+        {{- if $initContainerVolumeMounts }}
+        volumeMounts:
+        {{- $initContainerVolumeMounts | toYaml | nindent 8 }}
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

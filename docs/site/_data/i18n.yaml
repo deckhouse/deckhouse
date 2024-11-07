@@ -149,12 +149,15 @@ common:
   status:
     en: status
     ru: статус
+  products:
+    en: Products
+    ru: Продукты
   or:
     en: or
     ru: или
   notice-latest:
-    en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/documentation/v1/">go to the latest stable Deckhouse version</a>.
-    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
+    en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/products/kubernetes-platform/documentation/v1/">go to the latest stable Deckhouse version</a>.
+    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/products/kubernetes-platform/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
   os_supported_phrase:
     en: The following Linux distributions are currently supported for nodes
     ru: В настоящий момент в качестве ОС для узлов поддерживаются следующие дистрибутивы Linux
@@ -176,6 +179,9 @@ common:
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
+  gs_description:
+    en: Getting Started. <TITLE>. <STEP>
+    ru: Быстрый старт. <TITLE>. <STEP>
 
 comparison:
   except_parameters:

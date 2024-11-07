@@ -1,66 +1,82 @@
-{{- $fromCacheVersion := "16" }}
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
 # #####################################################################
 # Final image of cilium-agent (used in helm-templates)
-# Based on https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/Dockerfile
-# and https://github.com/cilium/cilium/blob/v1.14.5/images/runtime/install-runtime-deps.sh
-# and https://github.com/cilium/cilium/blob/v1.14.5/images/cilium/Dockerfile (release stage)
+# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.14.14/images/runtime/install-runtime-deps.sh
+# and https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (release stage)
 ---
 # #####################################################################
 # List of binary files used by agent
 # from base install script
-{{ $binaries := "/etc/localtime /usr/bin/jq /usr/bin/curl" }}
-# clang and dependencies
-{{ $binaries := cat $binaries "/usr/local/bin/clang /usr/local/bin/llc" }}
-{{ $binaries := cat $binaries "/usr/lib/x86_64-linux-gnu/libstdc++.so.6" }}
-# bpftool and dependencies
-{{ $binaries := cat $binaries "/usr/local/bin/bpftool" }}
-# cni-loopback and dependencies
-{{ $binaries := cat $binaries "/cni/loopback" }}
-# gops and dependencies
-{{ $binaries := cat $binaries "/bin/gops" }}
+## ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
+{{ $binariesFromALT := "/etc/localtime" }}
 # shell-scripts dependencies
-{{ $binaries := cat $binaries "/bin/bash /bin/sh /bin/echo /bin/printf /bin/sed /bin/awk /bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
-{{ $binaries := cat $binaries "/bin/cat /bin/head /bin/cut /bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
+{{ $binariesFromALT := cat $binariesFromALT "/bin/bash /bin/sh /bin/echo /usr/bin/printf /bin/sed /bin/awk /usr/bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
+{{ $binariesFromALT := cat $binariesFromALT "/bin/cat /bin/head /bin/cut /usr/bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
 # kmod and dependencies
-{{ $binaries := cat $binaries "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
+{{ $binariesFromALT := cat $binariesFromALT "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
 # iproute2 and dependencies
-{{ $binaries := cat $binaries "/bin/ip /bin/ss /sbin/ip /sbin/bridge /sbin/dcb /sbin/devlink /sbin/rtacct /sbin/rtmon /sbin/tc /sbin/tipc /sbin/vdpa /usr/bin/lnstat" }}
-{{ $binaries := cat $binaries "/usr/bin/nstat /usr/bin/rdma /usr/bin/routef /usr/bin/routel /usr/bin/ctstat /usr/bin/rtstat /usr/sbin/arpd /usr/sbin/genl" }}
-# iptables and dependencies
-{{ $binaries := cat $binaries "/usr/sbin/xtables* /usr/sbin/arptables* /usr/sbin/ebtables* /usr/sbin/ip6tables* /usr/sbin/iptables* /usr/sbin/ipset* /usr/bin/iptables-xml" }}
-{{ $binaries := cat $binaries "/usr/sbin/nfnl_osf" }}
-{{ $binaries := cat $binaries "/usr/lib/x86_64-linux-gnu/xtables/*" }}
+{{ $binariesFromALT := cat $binariesFromALT "/sbin/ip /usr/sbin/ss /usr/sbin/bridge /sbin/dcb /sbin/devlink /usr/sbin/rtacct /sbin/rtmon /sbin/tc /usr/sbin/tipc /sbin/vdpa /usr/bin/lnstat" }}
+{{ $binariesFromALT := cat $binariesFromALT "/usr/bin/nstat /sbin/rdma /usr/sbin/routef /usr/sbin/routel /usr/sbin/ctstat /usr/sbin/rtstat /usr/sbin/genl" }}
+# {{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/arpd" }}
+# ipset and dependencies
+{{ $binariesFromALT := cat $binariesFromALT "/sbin/ipset" }}
+# clang dependencies
+{{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
 # bash-completion
-{{ $binaries := cat $binaries "/etc/profile.d/bash_completion.sh /usr/share/bash-completion/bash_completion" }}
+{{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }}
+{{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }}
 # groups
-{{ $binaries := cat $binaries "/usr/bin/groups" }}
-# for debug
-{{ $binaries := cat $binaries "/usr/bin/sleep /usr/bin/strace /bin/ls" }}
-# hubble and dependencies
-{{ $binaries := cat $binaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
-# cilium-envoy and dependencies
-{{ $binaries := cat $binaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
-# cilium and dependencies
-{{ $binaries := cat $binaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
-{{ $binaries := cat $binaries "/LICENSE.all /etc/bash_completion.d/cilium" }}
-{{ $binaries := cat $binaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
+{{ $binariesFromALT := cat $binariesFromALT "/usr/bin/groups" }}
 # for prepull
-{{ $binaries := cat $binaries "/pause /usr/bin/true" }}
----
+{{ $binariesFromALT := cat $binariesFromALT "/bin/true" }}
+# for cilium-cli sysdump
+{{ $binariesFromALT := cat $binariesFromALT "/bin/tar /usr/bin/timeout /usr/bin/stat /bin/tail" }}
+# for debug
+{{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace /usr/bin/env" }}
+#####################################################################
+{{ $selfBuiltBinaries := "" }}
+# from llvm-artifact
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
+# from bpftool-artifact
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
+# from cilium-envoy-artifact
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
+# from cni-plugins-artifact
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
+# from gops-artifact
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/gops" }}
+# from hubble-artifact
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
+# from cilium-artifact
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
+# from common/pause
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/pause" }}
+# from /jq
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/jq" }}
+# for check and cleaning unnecessary iptables
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/check-n-cleaning-iptables.sh" }}
+# iptables and dependencies
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/iptables-wrapper" }}
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
 artifact: {{ $.ModuleName }}/agent-binaries-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
-fromCacheVersion: {{ $fromCacheVersion }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /
   includePaths:
   - binary_replace.sh
+  - check-n-cleaning-iptables.sh
   stageDependencies:
     install:
-    - binary_replace.sh
+    - "**/*.sh"
 import:
 - artifact: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
@@ -81,16 +97,17 @@ import:
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
-- artifact: {{ $.ModuleName }}/iptables-artifact
-  add: /iptables
-  to: /iptables
-  before: install
-- artifact: {{ $.ModuleName }}/cilium-artifact
-  add: /go/src/github.com/cilium/cilium/images/runtime/orig/
-  to: /go/src/github.com/cilium/cilium/images/runtime
-  before: install
+- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin
   includePaths:
-  - iptables-wrapper-installer.sh
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: install
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /usr/sbin/iptables-wrapper
+  before: install
 - artifact: {{ $.ModuleName }}/cilium-artifact
   add: /tmp/install
   to: /
@@ -110,6 +127,7 @@ import:
   before: install
   includePaths:
   - bin/cilium-envoy
+  - bin/cilium-envoy-starter
   - lib/libcilium.so
 - artifact: {{ $.ModuleName }}/hubble-artifact
   add: /hubble
@@ -123,54 +141,76 @@ import:
   add: /pause
   to: /pause
   before: install
+- artifact: jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: install
 - image: common/distroless
   add: /etc/group
   to: /from_common_distroless/group
   before: setup
 shell:
   install:
-  # from runtime
-  - dpkg -i /iptables/*.deb
-  - rm -rf /iptables
-  - chmod +x /go/src/github.com/cilium/cilium/images/runtime/*.sh
-  - cd /go/src/github.com/cilium/cilium/images/runtime
-  - ./iptables-wrapper-installer.sh --no-sanity-check
+  - chown root:root /usr/sbin/iptables-wrapper
+  - chmod 755 /usr/sbin/iptables-wrapper
+  #
+  - chmod +x /check-n-cleaning-iptables.sh
   beforeSetup:
   # common relocate
   - chmod +x /binary_replace.sh
   - mkdir -p /relocate
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-  # additional relocate from runtime
+  # copy base binaries and deps from ALT
+  - ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
+  - /binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
+  # copy self built binaries and deps
+  - /binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
+  # additional relocate for iptables
   - |
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-      rm -f "/relocate/usr/sbin/${cmd}"
-      ln -f -s /usr/sbin/iptables-wrapper "/relocate/usr/sbin/${cmd}"
+      rm -f "/relocate/sbin/${cmd}"
+      ln -f -s /usr/sbin/iptables-wrapper "/relocate/sbin/${cmd}"
     done
     # broken symlinks are not imported from the artifact
     touch /usr/sbin/iptables-wrapper
+  - |
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+        done
+      done
+    done
+  - |
+    for basecmd in ebtables arptables; do
+      for cmd in ${basecmd}-nft ${basecmd}-nft-save ${basecmd}-nft-restore; do
+        ln -sf /sbin/xtables-nft-multi "/relocate/sbin/${cmd}"
+      done
+    done
   # additional relocate from cilium
   - mkdir -p /relocate/var/lib/cilium
   - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
-  - echo ". /etc/profile.d/bash_completion.sh" >> /etc/bash.bashrc
-  - cp -a /etc/bash.bashrc /relocate/etc
+  - echo ". /etc/bashrc.d/bash_completion.sh" >> /root/.bashrc
+  - mkdir -p /relocate/root && cp -a /root/.bashrc /relocate/root
   setup:
   # prepare final fs
+  - mkdir -p /relocate/usr/sbin
+  - if [ -d "/relocate/sbin" ]; then cp -a /relocate/sbin/* /relocate/usr/sbin/ && rm -rf /relocate/sbin; fi
+  - ln -f -s usr/sbin "/relocate/sbin"
   - mkdir -p /relocate/usr/bin
-  - cp -a /relocate/bin/* /relocate/usr/bin/ && rm -rf /relocate/bin
+  - if [ -d "/relocate/bin" ]; then cp -a /relocate/bin/* /relocate/usr/bin/ && rm -rf /relocate/bin; fi
   - ln -f -s usr/bin "/relocate/bin"
   - mkdir -p /relocate/usr/lib
-  - cp -a /relocate/lib/* /relocate/usr/lib/ && rm -rf /relocate/lib
+  - if [ -d "/relocate/lib" ]; then cp -a /relocate/lib/* /relocate/usr/lib/ && rm -rf /relocate/lib; fi
   - ln -f -s usr/lib "/relocate/lib"
   - mkdir -p /relocate/usr/lib32
-  - cp -a /relocate/lib32/* /relocate/usr/lib32/ && rm -rf /relocate/lib32
+  - if [ -d "/relocate/lib32" ]; then cp -a /relocate/lib32/* /relocate/usr/lib32/ && rm -rf /relocate/lib32; fi
   - ln -f -s usr/lib32 "/relocate/lib32"
   - mkdir -p /relocate/usr/lib64
-  - cp -a /relocate/lib64/* /relocate/usr/lib64/ && rm -rf /relocate/lib64
+  - if [ -d "/relocate/lib64" ]; then cp -a /relocate/lib64/* /relocate/usr/lib64/ && rm -rf /relocate/lib64; fi
   - ln -f -s usr/lib64 "/relocate/lib64"
   - mkdir -p /relocate/usr/libx32
-  - cp -a /relocate/libx32/* /relocate/usr/libx32/ && rm -rf /relocate/libx32
+  - if [ -d "/relocate/libx32" ]; then cp -a /relocate/libx32/* /relocate/usr/libx32/ && rm -rf /relocate/libx32; fi
   - ln -f -s usr/libx32 "/relocate/libx32"
-  #
   - mkdir -p /relocate/var /relocate/run /relocate/run/lock
   - ln -f -s /run "/relocate/var/run"
   - ln -f -s /run/lock "/relocate/var/lock"
@@ -185,7 +225,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: {{ $fromCacheVersion }}
 import:
 - artifact: {{ $.ModuleName }}/agent-binaries-artifact
   add: /relocate

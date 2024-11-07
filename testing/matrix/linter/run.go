@@ -20,14 +20,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	stdlog "log"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 
-	"github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/chartutil"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/rules/modules"
 	"github.com/deckhouse/deckhouse/testing/matrix/linter/utils"
 )
@@ -50,8 +50,8 @@ func Run(tmpDir string, m utils.Module) (err error) {
 	}()
 
 	// Silence default loggers
-	log.SetOutput(io.Discard)          // helm
-	logrus.SetLevel(logrus.PanicLevel) // shell-operator
+	stdlog.SetOutput(io.Discard)        // helm
+	log.SetDefaultLevel(log.LevelFatal) // shell-operator
 
 	var values []chartutil.Values
 	if err != nil {

@@ -39,6 +39,7 @@ func ossModuleRule(name, moduleRoot string) linterrors.LintRuleErrorsList {
 				"MODULE001",
 				moduleLabel(name),
 				nil,
+				"%s",
 				ossFileErrorMessage(err),
 			)
 
@@ -150,7 +151,6 @@ func parseProjectList(b []byte) ([]ossProject, error) {
 var skipOssChecks = map[string]struct{}{
 	// module name
 	"001-priority-class":                      {},
-	"005-external-module-manager":             {},
 	"039-registry-packages-proxy":             {},
 	"011-flow-schema":                         {},
 	"013-helm":                                {}, // helm in 002-deckhouse
@@ -180,6 +180,7 @@ var skipOssChecks = map[string]struct{}{
 	"500-okmeter":                             {},
 	"500-upmeter":                             {},
 	"600-secret-copier":                       {},
+	"800-deckhouse-tools":                     {},
 	"810-documentation":                       {},
 }
 

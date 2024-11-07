@@ -26,6 +26,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 
@@ -90,10 +91,12 @@ func csrFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		return ret, nil
 	}
 
-	err = nodeServingCert(csr, x509cr)
-	if err != nil {
-		ret.ErrMsg = err.Error()
-		return ret, nil
+	if csr.Spec.SignerName == "kubernetes.io/kubelet-serving" {
+		err = nodeServingCert(csr, x509cr)
+		if err != nil {
+			ret.ErrMsg = err.Error()
+			return ret, nil
+		}
 	}
 
 	ret.Valid = true
@@ -127,7 +130,7 @@ func csrHandler(input *go_hook.HookInput, dc dependency.Container) error {
 
 		csrInfo := s.(*CsrInfo)
 		if !csrInfo.Valid {
-			input.LogEntry.Warning(csrInfo.Name, csrInfo.ErrMsg)
+			input.Logger.Warn("csr info not valid", slog.String(csrInfo.Name, csrInfo.ErrMsg))
 			continue
 		}
 

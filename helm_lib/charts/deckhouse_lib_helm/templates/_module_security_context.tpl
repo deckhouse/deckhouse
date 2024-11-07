@@ -52,6 +52,22 @@ securityContext:
   fsGroup: 64535
 {{- end }}
 
+{{- /* Usage: {{ include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . }} */ -}}
+{{- /* returns SecurityContext parameters for Container with user and group "deckhouse" plus minimal required settings to comply with the Restricted mode of the Pod Security Standards */ -}}
+{{- define "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" -}}
+{{- /* Template context with .Values, .Chart, etc */ -}}
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+  drop:
+  - all
+  runAsGroup: 64535
+  runAsNonRoot: true
+  runAsUser: 64535
+  seccompProfile:
+    type: RuntimeDefault
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_root" . }} */ -}}
 {{- /* returns PodSecurityContext parameters for Pod with user and group 0 */ -}}
 {{- define "helm_lib_module_pod_security_context_run_as_user_root" -}}

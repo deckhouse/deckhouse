@@ -26,11 +26,15 @@ properties:
             isReady:
               type: boolean
               x-examples: [false]
+      kialiSigningKey:
+        type: string
+        x-examples:
+        - "FD9Q24PwNZkg4pV9cxTOV1Se5R0RD1sT"
       istioToK8sCompatibilityMap:
         type: object
         default:
           "1.16": ["1.22", "1.23", "1.24", "1.25"]
-          "1.19": ["1.25", "1.26", "1.27", "1.28"]
+          "1.19": ["1.25", "1.26", "1.27", "1.28", "1.29", "1.30"]
         additionalProperties:
           type: array
           items:
@@ -216,13 +220,13 @@ properties:
                   description: |
                     The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
                 tolerations:
                   type: array
                   description: |
                     The same as `spec.tolerations` for the Kubernetes pod.
 
-                    Use [automatic](https://deckhouse.io/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
+                    Use [automatic](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling) if not specified. Set `false` to turn off automatic.
                   items:
                     type: object
                     properties:

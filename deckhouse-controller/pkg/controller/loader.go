@@ -28,11 +28,13 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
@@ -45,14 +47,14 @@ var (
 )
 
 // LoadModule reads single directory and returns BasicModule
-// modulePath is in the following format: /deckhouse-controller/external-modules/<module_name>/<module_version>
+// modulePath is in the following format: /deckhouse-controller/downloaded/<module_name>/<module_version>
 func (dml *DeckhouseController) LoadModule(moduleSource, modulePath string) (*modules.BasicModule, error) {
 	_, err := readDir(modulePath)
 	if err != nil {
 		return nil, err
 	}
 
-	// run parseModuleDir("<module_name>", "/deckhouse-controller/external-modules/<module_name>/<module_version>")
+	// run parseModuleDir("<module_name>", "/deckhouse-controller/downloaded/<module_name>/<module_version>")
 	def, err := dml.parseModuleDir(filepath.Base(filepath.Dir(modulePath)), modulePath)
 	if err != nil {
 		return nil, err
@@ -102,6 +104,11 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		return nil, err
 	}
 
+	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb, dml.logger)
+	if err != nil {
+		return nil, fmt.Errorf("new deckhouse module: %w", err)
+	}
+
 	// Load conversions
 	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
 		log.Debugf("conversions for %q module found", valuesModuleName)
@@ -117,9 +124,9 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		log.Debugf("conversions for %q module not found", valuesModuleName)
 	}
 
-	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb)
-	if err != nil {
-		return nil, fmt.Errorf("new deckhouse module: %w", err)
+	// Load constrains
+	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
+		return nil, err
 	}
 
 	if _, ok := dml.deckhouseModules[def.Name]; ok {
@@ -146,7 +153,7 @@ func (dml *DeckhouseController) searchAndLoadDeckhouseModules() error {
 				return fmt.Errorf("process module %s: %w", def.Name, err)
 			}
 
-			if !strings.HasPrefix(def.Path, os.Getenv("EXTERNAL_MODULES_DIR")) {
+			if !strings.HasPrefix(def.Path, d8env.GetDownloadedModulesDir()) {
 				dml.sourceModules[def.Name] = "Embedded"
 			}
 

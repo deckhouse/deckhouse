@@ -25,7 +25,14 @@ rules:
   resources:
   - nodes
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -48,7 +55,10 @@ rules:
   resources:
   - persistentvolumes
   verbs:
-  - '*'
+  - get
+  - list
+  - update
+  - watch
 - apiGroups:
   - ""
   resources:

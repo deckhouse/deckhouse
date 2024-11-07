@@ -112,7 +112,7 @@ func restoreOrGeneratePassword(input *go_hook.HookInput) error {
 		// Try to restore generated password from the Secret, or generate a new one.
 		pass, err := restoreGeneratedPasswordFromSnapshot(input.Snapshots[authSecretBinding], secretName)
 		if err != nil {
-			input.LogEntry.Infof("No password for '%s' in config values, generate new one: %s", appName, err)
+			input.Logger.Infof("No password for '%s' in config values, generate new one: %s", appName, err)
 			pass = GeneratePassword()
 		}
 

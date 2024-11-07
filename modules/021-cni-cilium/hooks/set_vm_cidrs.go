@@ -23,7 +23,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchNames: []string{"virtualization"},
 			},
 			FilterFunc:          applyVMCIDRsFilter,
-			ExecuteHookOnEvents: pointer.Bool(false),
+			ExecuteHookOnEvents: ptr.To(false),
 		},
 	},
 }, applyVMCIDRs)
@@ -50,7 +50,7 @@ func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert virtualization moduleconfig: %v", err)
 	}
-	return mc.Spec.Settings["vmCIDRs"], nil
+	return mc.Spec.Settings["virtualMachineCIDRs"], nil
 }
 
 func applyVMCIDRs(input *go_hook.HookInput) error {

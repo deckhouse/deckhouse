@@ -24,13 +24,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
-	log "github.com/sirupsen/logrus"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/gofrs/uuid/v5"
+	cp "github.com/otiai10/copy"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -41,7 +43,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // modulePullOverrideReconciler is the controller implementation for ModulePullOverride resources
@@ -50,11 +54,12 @@ type modulePullOverrideReconciler struct {
 	dc                 dependency.Container
 	preflightCountDown *sync.WaitGroup
 
-	logger logger.Logger
+	logger *log.Logger
 
-	moduleManager      moduleManager
-	externalModulesDir string
-	symlinksDir        string
+	moduleManager        moduleManager
+	downloadedModulesDir string
+	symlinksDir          string
+	clusterUUID          string
 }
 
 // NewModulePullOverrideController returns a new sample controller
@@ -63,17 +68,18 @@ func NewModulePullOverrideController(
 	dc dependency.Container,
 	moduleManager moduleManager,
 	preflightCountDown *sync.WaitGroup,
+	logger *log.Logger,
 ) error {
-	lg := log.WithField("component", "ModulePullOverrideController")
+	lg := logger.With("component", "ModulePullOverrideController")
 
 	rc := &modulePullOverrideReconciler{
 		client: mgr.GetClient(),
 		dc:     dc,
 		logger: lg,
 
-		moduleManager:      moduleManager,
-		externalModulesDir: os.Getenv("EXTERNAL_MODULES_DIR"),
-		symlinksDir:        filepath.Join(os.Getenv("EXTERNAL_MODULES_DIR"), "modules"),
+		moduleManager:        moduleManager,
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 
 		preflightCountDown: preflightCountDown,
 	}
@@ -87,8 +93,8 @@ func NewModulePullOverrideController(
 
 	ctr, err := controller.New("module-pull-override", mgr, controller.Options{
 		MaxConcurrentReconciles: 1,
-		CacheSyncTimeout:        30 * time.Minute,
-		NeedLeaderElection:      pointer.Bool(false),
+		CacheSyncTimeout:        3 * time.Minute,
+		NeedLeaderElection:      ptr.To(false),
 		Reconciler:              rc,
 	})
 	if err != nil {
@@ -107,6 +113,8 @@ func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) (err 
 			c.preflightCountDown.Done()
 		}
 	}()
+	c.clusterUUID = c.getClusterUUID(ctx)
+
 	// Check if controller's dependencies have been initialized
 	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
 		func(context.Context) (bool, error) {
@@ -122,14 +130,33 @@ func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) (err 
 	return nil
 }
 
+func (c *modulePullOverrideReconciler) getClusterUUID(ctx context.Context) string {
+	var secret corev1.Secret
+	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-discovery"}
+	err := c.client.Get(ctx, key, &secret)
+	if err != nil {
+		c.logger.Warnf("Read clusterUUID from secret %s failed: %v. Generating random uuid", key, err)
+		return uuid.Must(uuid.NewV4()).String()
+	}
+
+	if clusterUUID, ok := secret.Data["clusterUUID"]; ok {
+		return string(clusterUUID)
+	}
+
+	return uuid.Must(uuid.NewV4()).String()
+}
+
 func (c *modulePullOverrideReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+	var result ctrl.Result
+
 	mpo := new(v1alpha1.ModulePullOverride)
+
 	err := c.client.Get(ctx, types.NamespacedName{Name: request.Name}, mpo)
 	if err != nil {
 		// The ModulePullOverride resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
+			return result, nil
 		}
 
 		return ctrl.Result{Requeue: true}, err
@@ -139,13 +166,14 @@ func (c *modulePullOverrideReconciler) Reconcile(ctx context.Context, request ct
 }
 
 func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Context, mo *v1alpha1.ModulePullOverride) (ctrl.Result, error) {
+	var result ctrl.Result
 	var metaUpdateRequired bool
 
 	// check if RegistrySpecChangedAnnotation annotation is set and process it
 	if _, set := mo.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
 		// if module is enabled - push runModule task in the main queue
 		c.logger.Infof("Applying new registry settings to the %s module", mo.Name)
-		err := c.moduleManager.RunModuleWithNewOpenAPISchema(mo.Name, mo.ObjectMeta.Labels["source"], filepath.Join(c.externalModulesDir, mo.Name, downloader.DefaultDevVersion))
+		err := c.moduleManager.RunModuleWithNewOpenAPISchema(mo.Name, mo.ObjectMeta.Labels["source"], filepath.Join(c.downloadedModulesDir, mo.Name, downloader.DefaultDevVersion))
 		if err != nil {
 			return ctrl.Result{Requeue: true}, err
 		}
@@ -184,7 +212,18 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+	tmpDir, err := os.MkdirTemp("", "module*")
+	if err != nil {
+		return result, fmt.Errorf("cannot create tmp directory: %w", err)
+	}
+	defer func() {
+		if err = os.RemoveAll(tmpDir); err != nil {
+			c.logger.Errorf("cannot remove old module dir %q: %s", tmpDir, err.Error())
+		}
+	}()
+
+	options := utils.GenerateRegistryOptionsFromModuleSource(ms, c.clusterUUID, c.logger)
+	md := downloader.NewModuleDownloader(c.dc, tmpDir, ms, options)
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mo.Name, mo.Spec.ImageTag, mo.Status.ImageDigest)
 	if err != nil {
 		mo.Status.Message = err.Error()
@@ -210,14 +249,25 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, fmt.Errorf("got an empty module definition for %s module pull override", mo.Name)
 	}
 
-	err = validateModule(*moduleDef)
+	var values = make(addonutils.Values)
+	if module := c.moduleManager.GetModule(moduleDef.Name); module != nil {
+		values = module.GetConfigValues(false)
+	}
+	err = validateModule(*moduleDef, values, c.logger)
 	if err != nil {
 		mo.Status.Message = fmt.Sprintf("validation failed: %s", err)
 		if e := c.updateModulePullOverrideStatus(ctx, mo); e != nil {
-			return ctrl.Result{Requeue: true}, e
+			return ctrl.Result{Requeue: true}, fmt.Errorf("update override status: %w", e)
 		}
+		return result, fmt.Errorf("validation failed: %w", err)
+	}
 
-		return ctrl.Result{RequeueAfter: mo.Spec.ScanInterval.Duration}, nil
+	moduleStorePath := path.Join(c.downloadedModulesDir, moduleDef.Name, downloader.DefaultDevVersion)
+	if err = os.RemoveAll(moduleStorePath); err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot remove old module dir %q: %w", c.downloadedModulesDir, err)
+	}
+	if err = cp.Copy(tmpDir, c.downloadedModulesDir); err != nil {
+		return ctrl.Result{}, fmt.Errorf("copy module dir: %w", err)
 	}
 
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleDef.Weight, mo.Name))
@@ -266,7 +316,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 		Kind:       v1alpha1.ModulePullOverrideGVK.Kind,
 		Name:       mo.GetName(),
 		UID:        mo.GetUID(),
-		Controller: pointer.Bool(true),
+		Controller: ptr.To(true),
 	}
 	err = createOrUpdateModuleDocumentationCR(ctx, c.client, mo.GetModuleName(), moduleVersion, checksum, modulePath, mo.GetModuleSource(), ownerRef)
 	if err != nil {
@@ -282,7 +332,7 @@ func (c *modulePullOverrideReconciler) enableModule(moduleName, symlinkPath stri
 		currentModuleSymlink = "900-" + moduleName // fallback
 	}
 
-	return enableModule(c.externalModulesDir, currentModuleSymlink, symlinkPath, path.Join("../", moduleName, downloader.DefaultDevVersion))
+	return enableModule(c.downloadedModulesDir, currentModuleSymlink, symlinkPath, path.Join("../", moduleName, downloader.DefaultDevVersion))
 }
 
 func (c *modulePullOverrideReconciler) updateModulePullOverrideStatus(ctx context.Context, mo *v1alpha1.ModulePullOverride) error {
@@ -324,7 +374,7 @@ func (c *modulePullOverrideReconciler) restoreAbsentModulesFromOverrides(ctx con
 
 		// mpo's status.weight field isn't set - get it from the module's definition
 		if moduleWeight == 0 {
-			md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, ms, utils.GenerateRegistryOptions(ms))
+			md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, ms, utils.GenerateRegistryOptionsFromModuleSource(ms, c.clusterUUID, c.logger))
 			def, err := md.DownloadModuleDefinitionByVersion(moduleName, moduleImageTag)
 			if err != nil {
 				return fmt.Errorf("couldn't get the %s module definition from repository: %w", moduleName, err)
@@ -341,7 +391,7 @@ func (c *modulePullOverrideReconciler) restoreAbsentModulesFromOverrides(ctx con
 		// we must overwrite the module from the repository
 		if annotationNodeName, set := item.GetAnnotations()[deckhouseNodeNameAnnotation]; !set || annotationNodeName != currentNodeName {
 			c.logger.Infof("Reinitializing module %s pull override due to stale/absent %s annotation", moduleName, deckhouseNodeNameAnnotation)
-			moduleDir := path.Join(c.externalModulesDir, moduleName, downloader.DefaultDevVersion)
+			moduleDir := path.Join(c.downloadedModulesDir, moduleName, downloader.DefaultDevVersion)
 			if err := os.RemoveAll(moduleDir); err != nil {
 				return fmt.Errorf("Couldn't delete the stale directory %s of the %s module: %s", moduleDir, moduleName, err)
 			}
@@ -388,7 +438,7 @@ func (c *modulePullOverrideReconciler) restoreAbsentModulesFromOverrides(ctx con
 		}
 
 		// sync registry spec
-		if err := syncModuleRegistrySpec(c.externalModulesDir, moduleName, downloader.DefaultDevVersion, ms); err != nil {
+		if err := syncModuleRegistrySpec(c.downloadedModulesDir, moduleName, downloader.DefaultDevVersion, ms); err != nil {
 			return fmt.Errorf("couldn't sync the %s module's registry settings with the %s module source: %w", moduleName, ms.Name, err)
 		}
 		c.logger.Infof("Resynced the %s module's registry settings with the %s module source", moduleName, ms.Name)
@@ -404,11 +454,12 @@ func (c *modulePullOverrideReconciler) createModuleSymlink(moduleName, moduleIma
 	}
 
 	// check if module's directory exists on fs
-	info, err := os.Stat(path.Join(c.externalModulesDir, moduleName, downloader.DefaultDevVersion))
+	info, err := os.Stat(path.Join(c.downloadedModulesDir, moduleName, downloader.DefaultDevVersion))
 	if err != nil || !info.IsDir() {
 		// download the module to fs
 		c.logger.Infof("Downloading module %q from registry", moduleName)
-		md := downloader.NewModuleDownloader(c.dc, c.externalModulesDir, moduleSource, utils.GenerateRegistryOptions(moduleSource))
+		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, c.clusterUUID, c.logger)
+		md := downloader.NewModuleDownloader(c.dc, c.downloadedModulesDir, moduleSource, options)
 		_, _, err := md.DownloadDevImageTag(moduleName, moduleImageTag, "")
 		if err != nil {
 			return fmt.Errorf("couldn't get module %q pull override definition: %s", moduleName, err)
@@ -418,7 +469,7 @@ func (c *modulePullOverrideReconciler) createModuleSymlink(moduleName, moduleIma
 	// restore symlink
 	moduleRelativePath := filepath.Join("../", moduleName, downloader.DefaultDevVersion)
 	symlinkPath := filepath.Join(c.symlinksDir, fmt.Sprintf("%d-%s", moduleWeight, moduleName))
-	err = restoreModuleSymlink(c.externalModulesDir, symlinkPath, moduleRelativePath)
+	err = restoreModuleSymlink(c.downloadedModulesDir, symlinkPath, moduleRelativePath)
 	if err != nil {
 		return fmt.Errorf("creating symlink for module %v failed: %w", moduleName, err)
 	}

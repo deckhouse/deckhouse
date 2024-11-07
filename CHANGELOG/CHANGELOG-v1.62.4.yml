@@ -1,0 +1,9 @@
+candi:
+  fixes:
+    - summary: Restore the installation of the `nfs-common` package from the system package repositories.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9182
+control-plane-manager:
+  fixes:
+    - summary: Fixed the description in the scaling section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9165
+

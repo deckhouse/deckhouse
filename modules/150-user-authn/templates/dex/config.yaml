@@ -9,6 +9,8 @@
     https: 0.0.0.0:5556
     tlsKey: /etc/dex/certs/tls.key
     tlsCert: /etc/dex/certs/tls.crt
+    clientRemoteIP:
+      header: X-Real-IP
   telemetry:
     http: 127.0.0.1:5558
   frontend:
@@ -156,6 +158,9 @@
           email: {{ $provider.oidc.claimMapping.email }}
           groups: {{ $provider.oidc.claimMapping.groups }}
           preferred_username: {{ $provider.oidc.claimMapping.preferred_username }}
+        {{- end }}
+        {{- if $provider.oidc.claimMappingOverride }}
+        overrideClaimMapping: true
         {{- end }}
         scopes:
         {{- if $provider.oidc.scopes }}

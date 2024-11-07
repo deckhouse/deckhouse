@@ -89,18 +89,19 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
 		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
 
-		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg); err != nil {
+		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
+		m.Registry.Address = parts[0]
+		if len(parts) == 2 {
+			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
+		}
+
+		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg, m.Registry.Address); err != nil {
 			return nil, err
 		}
 		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
 		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
 		m.Registry.CA = m.DeckhouseConfig.RegistryCA
 
-		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-		m.Registry.Address = parts[0]
-		if len(parts) == 2 {
-			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
-		}
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -125,6 +126,39 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
+	if cloud.Provider == "Yandex" {
+		if err := ValidateClusterConfigurationPrefix(cloud.Prefix, cloud.Provider); err != nil {
+			return nil, err
+		}
+
+		var masterNodeGroup YandexMasterNodeGroupSpec
+		if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
+		}
+
+		if masterNodeGroup.Replicas > 0 &&
+			len(masterNodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
+			masterNodeGroup.Replicas > len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
+			return nil, fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
+		}
+
+		nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
+		if ok {
+			var yandexNodeGroups []YandexNodeGroupSpec
+			if err := json.Unmarshal(nodeGroups, &yandexNodeGroups); err != nil {
+				return nil, fmt.Errorf("unable to unmarshal node groups from provider cluster configuration: %v", err)
+			}
+
+			for _, nodeGroup := range yandexNodeGroups {
+				if nodeGroup.Replicas > 0 &&
+					len(nodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
+					nodeGroup.Replicas > len(nodeGroup.InstanceClass.ExternalIPAddresses) {
+					return nil, fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
+				}
+			}
+		}
+	}
+
 	m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
 	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
 	if ok {
@@ -146,10 +180,9 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 	return m, nil
 }
 
-func validateRegistryDockerCfg(cfg string) error {
-	// cause CE version might have empty registryDockerCfg field
+func validateRegistryDockerCfg(cfg string, repo string) error {
 	if cfg == "" {
-		return nil
+		return fmt.Errorf("can't be empty")
 	}
 
 	regcrd, err := base64.StdEncoding.DecodeString(cfg)
@@ -183,7 +216,12 @@ func validateRegistryDockerCfg(cfg string) error {
 		}
 	}
 
-	return nil
+	for k := range creds.Auths {
+		if k == repo {
+			return nil
+		}
+	}
+	return fmt.Errorf("incorrect registryDockerCfg. It must contain auths host {\"auths\": { \"%s\": {}}}", repo)
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -203,6 +241,10 @@ func (m *MetaConfig) FindTerraNodeGroup(nodeGroupName string) []byte {
 		}
 	}
 	return nil
+}
+
+func (m *MetaConfig) IsStatic() bool {
+	return m.ClusterType == "Static"
 }
 
 func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface{} {

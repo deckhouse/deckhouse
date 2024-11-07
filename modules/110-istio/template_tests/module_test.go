@@ -45,7 +45,7 @@ clusterConfiguration:
   cloud:
     provider: OpenStack
 highAvailability: true
-enabledModules: ["operator-prometheus-crd","cert-manager","vertical-pod-autoscaler-crd","cni-cilium"]
+enabledModules: ["operator-prometheus","cert-manager","vertical-pod-autoscaler","cni-cilium"]
 modules:
   publicDomainTemplate: "%s.example.com"
   placement:
@@ -78,6 +78,7 @@ const istioValues = `
           revision: "v1x16x2"
           fullVersion: "1.16.2"
           imageSuffix: "V1x16x2"
+      kialiSigningKey: "kiali"
       operatorVersionsToInstall:  []
       versionsToInstall: []
       federations: []
@@ -326,7 +327,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
     port: 123
   publicServices:
   - hostname: xxx.yyy
-    virtualIP: 2.2.2.2
     ports:
     - name: aaa
       port: 456
@@ -357,9 +357,6 @@ neighbour-0:
             - address: 1.1.1.1
               ports:
                 aaa: 123
-            `))
-			Expect(se.Field("spec.addresses").String()).To(MatchYAML(`
-            - 2.2.2.2
             `))
 
 			Expect(f.KubernetesResource("Deployment", "d8-istio", "metadata-exporter").Exists()).To(BeTrue())
@@ -572,7 +569,7 @@ static:
     cpu: 11m
     memory: 22Mi
   limits:
-    cpu: 33
+    cpu: "33"
     memory: 44Gi
 `)
 			f.HelmRender()
@@ -588,7 +585,7 @@ requests:
   memory: 22Mi
   ephemeral-storage: 50Mi
 limits:
-  cpu: 33
+  cpu: "33"
   memory: 44Gi
 `))
 			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x19x7")

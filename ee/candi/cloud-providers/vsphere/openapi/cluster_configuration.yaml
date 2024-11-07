@@ -12,7 +12,7 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
     x-doc-search: |
       ProviderClusterConfiguration
@@ -44,7 +44,7 @@ apiVersions:
             additionalNetworks:
               - K8S_3
             datastore: lun10
-            rootDiskSize: 20
+            rootDiskSize: 50
             runtimeOptions:
               nestedHardwareVirtualization: false
         nodeGroups:
@@ -99,7 +99,7 @@ apiVersions:
             additionalProperties: false
             required: [numCPUs, memory, template, mainNetwork, datastore]
             description: |
-              Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+              Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/cr.html#vsphereinstanceclass).
             properties: &instanceClassProperties
               numCPUs:
                 type: integer
@@ -141,7 +141,7 @@ apiVersions:
                   Root disk size in GiB to use in vSphere VirtualMachines.
 
                   The disk will be automatically enlarged if its size in the template is less than specified.
-                example: 20
+                example: 50
               resourcePool:
                 type: string
                 description: |
@@ -298,7 +298,7 @@ apiVersions:
               additionalProperties: false
               required: [numCPUs, memory, template, mainNetwork, datastore]
               description: |
-                Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/cr.html#vsphereinstanceclass).
               properties:
                 <<: *instanceClassProperties
       sshPublicKey:
@@ -395,7 +395,7 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vsphere/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/layouts.html) about possible provider layouts.
         x-unsafe: true
       provider:
         type: object

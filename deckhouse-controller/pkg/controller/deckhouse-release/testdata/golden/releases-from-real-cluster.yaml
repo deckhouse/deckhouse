@@ -1,0 +1,85 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.30.16
+  resourceVersion: "999"
+spec:
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.16
+status:
+  approved: true
+  message: ""
+  phase: Superseded
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.30.17
+  resourceVersion: "1000"
+spec:
+  applyAfter: "2022-03-22T16:39:01Z"
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.17
+status:
+  approved: false
+  message: Skipped by cleanup hook
+  phase: Skipped
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.30.18
+  resourceVersion: "999"
+spec:
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.18
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.30.19
+  resourceVersion: "999"
+spec:
+  applyAfter: "2022-03-24T12:20:02Z"
+  requirements:
+    k8s: 1.19.0
+  version: v1.30.19
+status:
+  approved: true
+  message: ""
+  phase: Pending
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.30.9
+  resourceVersion: "999"
+spec:
+  version: v1.30.9
+status:
+  approved: true
+  message: ""
+  phase: Superseded
+  transitionTime: null

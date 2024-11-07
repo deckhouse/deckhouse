@@ -110,7 +110,7 @@ It is highly not recommended to disable automatic updates! It will block updates
 To apply an update immediately, set the `release.deckhouse.io/apply-now : "true"` annotation on the [DeckhouseRelease](cr.html#deckhouserelease) resource.
 
 {% alert level="info" %}
-**Caution!** In this case, the update windows, settings [canary-release](modules/002-deckhouse/cr.html#deckhouserelease-v1alpha1-spec-applyafter) and [manual cluster update mode](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after the annotation is installed.
+**Caution!** In this case, the update windows, settings [canary-release](cr.html#deckhouserelease-v1alpha1-spec-applyafter) and [manual cluster update mode](modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after the annotation is installed.
 {% endalert %}
 
 An example of a command to set the annotation to skip the update windows for version `v1.56.2`:
@@ -155,10 +155,10 @@ An example:
 ```console
 $ kubectl get deckhouserelease
 NAME       PHASE        TRANSITIONTIME   MESSAGE
-v1.46.8    Superseded   13d              
-v1.46.9    Superseded   11d              
-v1.47.0    Superseded   4h12m            
-v1.47.1    Deployed     4h12m            
+v1.46.8    Superseded   13d
+v1.46.9    Superseded   11d
+v1.47.0    Superseded   4h12m
+v1.47.1    Deployed     4h12m
 ```
 
 The `Deployed` status of the corresponding version indicates that the switch to the corresponding version was performed (but this does not mean that it ended successfully).
@@ -238,13 +238,51 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
 ![The scheme of using the releaseChannel parameter during Deckhouse installation and operation](images/common/deckhouse-update-process.png)
 {% endofftopic %}
 
+### How to check the job queue in Deckhouse?
+
+To view the status of all Deckhouse job queues, run the following command:
+
+```shell
+kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+```
+
+Example of output (queues are empty):
+
+```console
+$ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+Summary:
+- 'main' queue: empty.
+- 88 other queues (0 active, 88 empty): 0 tasks.
+- no tasks to handle.
+```
+
+To view the status of the `main` Deckhouse task queue, run the following command:
+
+```shell
+kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+```
+
+Example of output (38 tasks in the `main` queue):
+
+```console
+$ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+Queue 'main': length 38, status: 'run first task'
+```
+
+Example of output (the `main` queue is empty):
+
+```console
+$ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+Queue 'main': length 0, status: 'waiting for task 0s'
+```
+
 ### What do I do if Deckhouse fails to retrieve updates from the release channel?
 
 * Make sure that the desired release channel is [configured](#how-do-i-set-the-desired-release-channel).
 * Make sure that the DNS name of the Deckhouse container registry is resolved correctly.
 
   Retrieve and compare the IP addresses of the Deckhouse container registry (`registry.deckhouse.io`) on one of the nodes and in the Deckhouse pod. They should match.
-  
+
   Here is how you can retrieve the IP address of the Deckhouse container registry on a node:
 
   ```shell
@@ -255,15 +293,15 @@ Patch releases (e.g., an update from version `1.30.1` to version `1.30.2`) ignor
   ```
 
   Here is how you can retrieve the IP address of the Deckhouse container registry in a pod:
-  
+
   ```shell
-  $ kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- getent ahosts registry.deckhouse.io
+  $ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
   46.4.145.194    STREAM registry.deckhouse.io
   46.4.145.194    DGRAM  registry.deckhouse.io
   ```
-  
+
   If the retrieved IP addresses do not match, inspect the DNS settings on the host. Specifically, check the list of domains in the `search` parameter of the `/etc/resolv.conf` file (it affects name resolution in the Deckhouse pod). If the `search` parameter of the `/etc/resolv.conf` file includes a domain where wildcard record resolution is configured, it may result in incorrect resolution of the IP address of the Deckhouse container registry (see example).
-  
+
 {% offtopic title="Example of DNS settings that may cause errors in resolving the IP address of the Deckhouse container registry..." %}
 
 In the example below, DNS settings produce different results when resolving names on the host and in the Kubernetes pod:
@@ -331,6 +369,19 @@ Use the following `registryDockerCfg` if authentication is required to access De
 
 `registryDockerCfg` must be Base64-encoded.
 
+You can use the following script to generate `registryDockerCfg`:
+
+```shell
+declare MYUSER='<PROXY_USERNAME>'
+declare MYPASSWORD='<PROXY_PASSWORD>'
+declare MYREGISTRY='<PROXY_REGISTRY>'
+
+MYAUTH=$(echo -n "$MYUSER:$MYPASSWORD" | base64 -w0)
+MYRESULTSTRING=$(echo -n "{\"auths\":{\"$MYREGISTRY\":{\"username\":\"$MYUSER\",\"password\":\"$MYPASSWORD\",\"auth\":\"$MYAUTH\"}}}" | base64 -w0)
+
+echo "$MYRESULTSTRING"
+```
+
 The `InitConfiguration` resource provides two more parameters for non-standard third-party registry configurations:
 
 * `registryCA` - root CA certificate to validate the third-party registry's HTTPS certificate (if self-signed certificates are used);
@@ -341,7 +392,7 @@ The `InitConfiguration` resource provides two more parameters for non-standard t
 ### Tips for configuring Nexus
 
 {% alert level="warning" %}
-When interacting with a `docker` repository located in Nexus (e. g. executing `docker pull`, `docker push` commands), you must specify the address in the `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>` format.  
+When interacting with a `docker` repository located in Nexus (e. g. executing `docker pull`, `docker push` commands), you must specify the address in the `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>` format.
 
 Using the `URL` value from the Nexus repository options is **not acceptable**
 {% endalert %}
@@ -458,6 +509,14 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
       - To authenticate in a third-party registry, you need to use the `--source-login` and `--source-password` parameters;
    - `--images-bundle-chunk-size=N` — to specify the maximum file size (in GB) to split the image archive into. As a result of the operation, instead of a single file archive, a set of `.chunk` files will be created (e.g., `d8.tar.NNNN.chunk`). To upload images from such a set of files, specify the file name without the `.NNNN.chunk` suffix in the `d8 mirror push` command (e.g., `d8.tar` for files like `d8.tar.NNNN.chunk`).
 
+   Additional configuration options for the `d8 mirror` family of commands are available as environment variables:
+    - `HTTP_PROXY`/`HTTPS_PROXY` — URL of the proxy server for HTTP(S) requests to hosts that are not listed in the variable `$NO_PROXY`;
+    - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Supported value formats include IP addresses (`1.2.3.4`), CIDR notations (`1.2.3.4/8`), domains, and the asterisk character (`*`).  The IP addresses and domain names can also include a literal port number (`1.2.3.4:80`). The domain name matches that name and all the subdomains. The domain name with a leading `.` matches subdomains only. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but does not match `y.com`. A single asterisk `*` indicates that no proxying should be done;
+    - `SSL_CERT_FILE` — path to the SSL certificate. If the variable is set, system certificates are not used;
+    - `SSL_CERT_DIR` — list of directories to search for SSL certificate files, separated by a colon. If set, system certificates are not used. [See more...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
+    - `TMPDIR (*nix)`/`TMP (Windows)` — path to a temporary directory to use for image pulling and pushing. All processing is done in this directory, so make sure there is enough free disk space to accommodate the entire bundle you are downloading;
+    - `MIRROR_BYPASS_ACCESS_CHECKS` — set to `1` to skip validation of registry credentials;
+
    Example of a command to download all versions of Deckhouse EE starting from version 1.59 (provide the license key):
 
    ```shell
@@ -509,7 +568,8 @@ Follow these steps for manual loading images of modules, connected from the modu
 1. Create an authentication string for `registry.deckhouse.io` using the following command (provide the license key):
 
    ```shell
-   LICENSE_KEY="LICENSE_KEY" base64 -w0 <<EOF
+   LICENSE_KEY='<LICENSE_KEY>'
+   base64 -w0 <<EOF
      {
        "auths": {
          "registry.deckhouse.io": {
@@ -551,14 +611,16 @@ Follow these steps for manual loading images of modules, connected from the modu
      d8 mirror modules pull -d ./d8-modules -m $HOME/module_source.yml
      ```
 
-     To download only a specific set of modules of specific versions, use the `--filter` flag followed by the list of required modules and their versions separated by the `;` character.
+     To download only a specific set of modules of specific versions, use the `--filter` flag followed by the list of required modules and their minimal required versions separated by the `;` character.
 
      For example:
 
      ```shell
      d8 mirror modules pull -d /tmp/d8-modules -m $HOME/module_source.yml \
-       --filter='deckhouse-admin:v1.0.0;deckhouse-admin:v1.3.3; sds-drbd:v0.0.1'
+       --filter='deckhouse-admin@1.3.3; sds-drbd@0.0.1'
      ```
+
+     The command above will only pull the `deckhouse-admin` and `sds-drbd` modules. For `deckhouse-admin`, all available versions starting from `1.3.3` will be pulled; for `sds-drbd` — those starting from `0.0.1`.
 
 1. Upload the directory with the pulled images of the Deckhouse modules to a host with access to the air-gapped registry and install [Deckhouse CLI](deckhouse-cli/) tool.
 
@@ -568,11 +630,11 @@ Follow these steps for manual loading images of modules, connected from the modu
 
    ```shell
    d8 mirror modules push \
-     -d /tmp/d8-modules --registry='corp.company.com:5000/deckhouse-modules' \
+     -d /tmp/d8-modules --registry='corp.company.com:5000/sys/deckhouse/modules' \
      --registry-login='<USER>' --registry-password='<PASSWORD>'
    ```
 
-   > Before pushind images, make sure that the path for loading into the registry exists (`/deckhouse-modules` in the example above), and the account being used has write permissions.
+   > Before pushing images, make sure that the path for loading into the registry exists (`/sys/deckhouse/modules` in the example above), and the account being used has write permissions.
 
 1. After uploading the images to the air-gapped registry, edit the `ModuleSource` YAML manifest prepared in step 3:
 
@@ -590,7 +652,7 @@ Follow these steps for manual loading images of modules, connected from the modu
      registry:
        # Specify the authentication string for your registry.
        dockerCfg: <BASE64_REGISTRY_CREDENTIALS>
-       repo: 'corp.company.com:5000'
+       repo: 'corp.company.com:5000/sys/deckhouse/modules'
        scheme: HTTPS
      # Select the appropriate release channel: Alpha, Beta, EarlyAccess, Stable, or RockSolid
      releaseChannel: "Stable"
@@ -616,7 +678,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
   * Example:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse
+    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
     ```
 
   * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `/tmp/ca.crt` in the Deckhouse Pod and add the `--ca-file /tmp/ca.crt` option to the script or put the content of CA into a variable as follows:
@@ -631,37 +693,37 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
     -----END CERTIFICATE-----
     EOF
     )
-    $ kubectl exec  -n d8-system deploy/deckhouse -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    $ kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
     ```
 
   * To view the list of available keys of the `deckhouse-controller helper change-registry` command, run the following command:
 
     ```shell
-    kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --help
+    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --help
     ```
 
     Example output:
 
     ```shell
     usage: deckhouse-controller helper change-registry [<flags>] <new-registry>
-    
+
     Change registry for deckhouse images.
-    
+
     Flags:
-    --help               Show context-sensitive help (also try --help-long and --help-man).
-    --user=USER          User with pull access to registry.
-    --password=PASSWORD  Password/token for registry user.
-    --ca-file=CA-FILE    Path to registry CA.
-    --insecure           Use HTTP while connecting to new registry.
-    --dry-run            Don't change deckhouse resources, only print them.
-    --new-deckhouse-tag=NEW-DECKHOUSE-TAG
-    New tag that will be used for deckhouse deployment image (by default
-    current tag from deckhouse deployment will be used).
-    
+      --help               Show context-sensitive help (also try --help-long and --help-man).
+      --user=USER          User with pull access to registry.
+      --password=PASSWORD  Password/token for registry user.
+      --ca-file=CA-FILE    Path to registry CA.
+      --scheme=SCHEME      Used scheme while connecting to registry, http or https.
+      --dry-run            Don't change deckhouse resources, only print them.
+      --new-deckhouse-tag=NEW-DECKHOUSE-TAG
+                          New tag that will be used for deckhouse deployment image (by default
+                          current tag from deckhouse deployment will be used).
+
     Args:
-    <new-registry>  Registry that will be used for deckhouse images (example:
-    registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
-    http - provide '--insecure' flag
+      <new-registry>  Registry that will be used for deckhouse images (example:
+                      registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need
+                      http - provide '--scheme' flag with http value
     ```
 
 * Wait for the Deckhouse Pod to become `Ready`. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state.
@@ -670,8 +732,8 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 * Check if there are Pods with original registry in cluster (if there are — restart them):
 
   ```shell
-  kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io"))))
-    | .metadata.namespace + "\t" + .metadata.name' -r
+  kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+    | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
   ```
 
 ### How to bootstrap a cluster and run Deckhouse without the usage of release channels?
@@ -757,19 +819,19 @@ The general cluster parameters are stored in the [ClusterConfiguration](installi
 To change the general cluster parameters, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
 ```
 
 After saving the changes, Deckhouse will bring the cluster configuration to the state according to the changed configuration. Depending on the size of the cluster, this may take some time.
 
 ### How do I change the configuration of a cloud provider in a cluster?
 
-Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
+Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` — name/code of the cloud provider. E.g., for an OpenStack provider, the structure will be called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}modules/030-cloud-provider-openstack/cluster_configuration.html).
 
 Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 ### How do I change the configuration of a static cluster?
@@ -779,7 +841,7 @@ Settings of a static cluster are stored in the [StaticClusterConfiguration](inst
 To change the settings of a static cluster, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
 ```
 
 ### How to switch Deckhouse EE to CE?
@@ -792,77 +854,275 @@ The instruction implies using the public address of the container registry: `reg
 Deckhouse CE does not support cloud clusters on OpenStack and VMware vSphere.
 {% endalert %}
 
-To switch Deckhouse Enterprise Edition to Community Edition, follow these steps:
+Perform the following steps to switch a Deckhouse Enterprise Edition cluster to Community Edition (all commands must be run on the master node of the active cluster):
 
-1. Make sure that the modules used in the cluster [are supported in Deckhouse CE](revision-comparison.html). Disable modules that are not supported in Deckhouse CE.
-
-1. Run the following command:
+1. Run a temporary Deckhouse CE pod to retrieve up-to-date digests and module lists:
 
    ```shell
-   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry registry.deckhouse.io/deckhouse/ce
+   kubectl run ce-image --image=registry.deckhouse.io/deckhouse/ce/install:v1.63.7 --command sleep -- infinity
    ```
 
-1. Wait for the Deckhouse Pod to become `Ready`:
+   > Run an image of the latest installed Deckhouse version in the cluster. To find out which version is currently installed, use the following command:
+   >
+   > ```shell
+   > kubectl get deckhousereleases
+   > ```
+
+1. Wait for the pod to become `Running` and then run the following commands:
+
+   * Retrieve the value of `CE_SANDBOX_IMAGE`:
+
+     ```shell
+     CE_SANDBOX_IMAGE=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | grep  pause | grep -oE 'sha256:\w*')
+     ```
+
+     Check the result of the command to make sure it was successful:
+
+     ```console
+     $ echo $CE_SANDBOX_IMAGE
+     sha256:2a909cb9df4d0207f1fe5bd9660a0529991ba18ce6ce7b389dc008c05d9022d1
+     ```
+
+   * Retrieve the value of `CE_K8S_API_PROXY`:
+
+     ```shell
+     CE_K8S_API_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+     ```
+
+     Check the result of the command to make sure it was successful:
+
+     ```console
+     $ echo $CE_K8S_API_PROXY
+     sha256:a5442437976a11dfa4860c2fbb025199d9d1b074222bb80173ed36b9006341dd
+     ```
+
+   * Retrieve the value of `CE_REGISTRY_PACKAGE_PROXY`:
+
+     ```shell
+     CE_REGISTRY_PACKAGE_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | grep registryPackagesProxy | grep -oE 'sha256:\w*')
+     ```
+
+     Run the command:
+
+     ```shell
+     crictl pull registry.deckhouse.io/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
+     ```
+
+     An example:
+
+     ```console
+     $ crictl pull registry.deckhouse.io/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
+     Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
+     ```
+
+   * Retrieve the value of `CE_MODULES`:
+
+     ```shell
+     CE_MODULES=$(kubectl exec ce-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*"  | awk {'print $9'} | cut -c5-)
+     ```
+
+     Check the result of the command to make sure it was successful:
+
+     ```console
+     $echo $CE_MODULES
+     common priority-class deckhouse external-module-manager registrypackages ...
+     ```
+
+   * Retrieve the value of `USED_MODULES`:
+
+     ```shell
+     USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+     ```
+
+     Check the result of the command to make sure it was successful:
+
+     ```console
+     $ echo $USED_MODULES
+     admission-policy-engine cert-manager chrony cloud-data-crd ...
+     ```
+
+   * Retrieve the value of `MODULES_WILL_DISABLE`:
+
+     ```shell
+     MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CE_MODULES | tr ' ' '\n'))
+     ```
+
+     Check the result of the command to make sure it was successful:
+
+     ```console
+     $ echo $MODULES_WILL_DISABLE
+     metallb-crd node-local-dns registry-packages-proxy
+     ```
+
+     > Note that if `registry-packages-proxy` is listed in `$MODULES_WILL_DISABLE`, you will need to enable it back, otherwise the cluster will not be able to migrate to Deckhouse CE images. See paragraph 8 on how to enable it.
+
+1. Ensure that the modules used in the cluster are supported in Deckhouse CE.
+
+   For this, print a list of modules that are not supported in Deckhouse CE and will be disabled:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   > Inspect the list and make sure that the listed modules are not in use in the cluster and that it is safe to disable them.
+
+   Disable the modules that are not supported in Deckhouse CE:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE |
+     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec  deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+   ```
+
+   An example of the output you might get as a result of running the previous command:
+
+   ```console
+   Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
+   Module metallb-crd disabled
+
+   Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
+   Module node-local-dns disabled
+
+   Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
+   Module registry-packages-proxy disabled
+   ```
+
+1. Create a `NodeGroupConfiguration` resource:
+
+   ```shell
+   kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-ce-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 30
+     content: |
+       _on_containerd_config_changed() {
+         bb-flag-set containerd-need-restart
+       }
+       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+
+       mkdir -p /etc/containerd/conf.d
+       bb-sync-file /etc/containerd/conf.d/ce-registry.toml - containerd-config-file-changed << "EOF_TOML"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           sandbox_image = "registry.deckhouse.io/deckhouse/ce@$CE_SANDBOX_IMAGE"
+           [plugins."io.containerd.grpc.v1.cri".registry.configs]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
+               auth = ""
+       EOF_TOML
+
+       sed -i 's|image: .*|image: registry.deckhouse.io/deckhouse/ce@$CE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+       sed -i 's|crictl pull .*|crictl pull registry.deckhouse.io/deckhouse/ce@$CE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+
+   EOF
+   ```
+
+   Wait for the `/etc/containerd/conf.d/ce-registry.toml` file to propagate to the nodes and for bashible synchronization to complete.
+
+   The synchronization status can be tracked by the `UPTODATE` value (the displayed number of nodes in this status must match the total number of nodes (`NODES`) in the group):
+
+   ```shell
+   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   ```
+
+   For example:
+
+   ```console
+   $ kubectl  get ng  -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   NAME     NODES   READY   UPTODATE
+   master   1       1       1
+   worker   2       2       2
+   ```
+
+   Also, the `Configuration is in sync, nothing to do` message must show up in the bashible systemd service log, e.g.:
+
+   ```console
+   $ journalctl -u bashible -n 5
+   Aug 21 11:04:28 master-ee-to-ce-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ee-to-ce-0 bashible.sh[53407]: Annotate node master-ee-to-ce-0 with annotation node.deckhouse.io/  configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-ce-0 bashible.sh[53407]: Succesful annotate node master-ee-to-ce-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-ce-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Update the secret to access the Deckhouse registry by running the following command:
+
+   ```bash
+   kubectl -n d8-system create secret generic deckhouse-registry \
+     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.io\": {}}}" \
+     --from-literal="address"=registry.deckhouse.io \
+     --from-literal="path"=/deckhouse/ce \
+     --from-literal="scheme"=https \
+     --type=kubernetes.io/dockerconfigjson \
+     --dry-run='client' \
+     -o yaml | kubectl replace -f -
+   ```
+
+1. Apply the Deckhouse CE image:
+
+   ```shell
+   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.io/deckhouse/ce:v1.63.7
+   ```
+
+1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
+
+   Use the following command to check the Deckhouse pod's status:
 
    ```shell
    kubectl -n d8-system get po -l app=deckhouse
    ```
 
-1. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state:
+   Use the following command to check the Deckhouse queue:
 
    ```shell
-   kubectl -n d8-system delete po -l app=deckhouse
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
    ```
 
-1. Wait for Deckhouse to restart and to complete all tasks in the queue:
+1. Check if there are any pods with the Deckhouse EE registry address left in the cluster:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+      | select(.image | contains("deckhouse.io/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-   Example of output when there are still jobs in the queue (`length 38`):
+   > If the module was disabled in the process, enable it again:
+   >
+   > ```shell
+   > kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable registry-packages-proxy
+   > ```
 
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 38, status: 'run first task'
-   ```
-
-   Example of output when the queue is empty (`length 0`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 0, status: 'waiting for task 0s'
-   ```
-
-1. On the master node, check the application of the new settings.
-
-   The message `Configuration is in sync, nothing to do` should appear in the `bashible` systemd service log on the master node.
-
-   An example::
-
-   ```console
-   # journalctl -u bashible -n 5
-   Jan 12 12:38:20 demo-master-0 bashible.sh[868379]: Configuration is in sync, nothing to do.
-   Jan 12 12:38:20 demo-master-0 systemd[1]: bashible.service: Deactivated successfully.
-   Jan 12 12:39:18 demo-master-0 systemd[1]: Started Bashible service.
-   Jan 12 12:39:19 demo-master-0 bashible.sh[869714]: Configuration is in sync, nothing to do.
-   Jan 12 12:39:19 demo-master-0 systemd[1]: bashible.service: Deactivated successfully.
-   ```
-
-1. Check if there are any Pods left in the cluster with the Deckhouse EE registry address:
+1. Purge temporary files, `NodeGroupConfiguration` resource, and variables:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ee"))))
-     | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
+   kubectl delete ngc containerd-ce-config.sh
+   kubectl delete pod ce-image
+   kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: del-temp-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 90
+     content: |
+       if [ -f /etc/containerd/conf.d/ce-registry.toml ]; then
+         rm -f /etc/containerd/conf.d/ce-registry.toml
+       fi
+   EOF
    ```
 
-   Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
+   Once bashible synchronization is complete (you can track the synchronization status on nodes via the `UPTODATE` value of the NodeGroup), delete the NodeGroupConfiguration resource you created earlier:
 
    ```shell
-   grep -ri 'deckhouse.io/deckhouse/ee' /etc/kubernetes | grep -v backup
+   kubectl  delete ngc del-temp-config.sh
    ```
-
-   The output of the command should be empty.
 
 ### How to switch Deckhouse CE to EE?
 
@@ -874,81 +1134,282 @@ The instruction implies using the public address of the container registry: `reg
 
 To switch Deckhouse Community Edition to Enterprise Edition, follow these steps:
 
-1. Run the following command:
+1. Create the variables containing the license token:
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
-   kubectl exec -ti -n d8-system deploy/deckhouse -c deckhouse -- deckhouse-controller helper change-registry --user license-token --password $LICENSE_TOKEN registry.deckhouse.io/deckhouse/ee
+   AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
    ```
 
-1. Wait for the Deckhouse Pod to become `Ready`:
+1. Create a NodeGroupConfiguration resource for authorization in `registry.deckhouse.io` during the migration:
+
+   ```shell
+   kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-ee-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 30
+     content: |
+       _on_containerd_config_changed() {
+         bb-flag-set containerd-need-restart
+       }
+       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+
+       mkdir -p /etc/containerd/conf.d
+       bb-sync-file /etc/containerd/conf.d/ee-registry.toml - containerd-config-file-changed << "EOF_TOML"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           [plugins."io.containerd.grpc.v1.cri".registry.configs]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.deckhouse.io".auth]
+               auth = "$AUTH_STRING"
+       EOF_TOML
+
+   EOF
+   ```
+
+   Wait for the `/etc/containerd/conf.d/ee-registry.toml` file to propagate to the nodes and for bashible synchronization to complete.
+
+   You can track the synchronization status via the `UPTODATE` value (the displayed number of nodes having this status must match the total number of nodes (`NODES`) in the group):
+
+   ```console
+   $ kubectl  get ng  -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   NAME     NODES   READY   UPTODATE
+   master   1       1       1
+   worker   2       2       2
+   ```
+
+   Also, the `Configuration is in sync, nothing to do` message must show up in the bashible systemd service log, e.g.:
+
+   ```console
+   $ journalctl -u bashible -n 5
+   Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: , nothing to do.
+   Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master ce-to-ee-0 bashible.sh[53407]: Succesful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/   configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ce-to-ee-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+   Run a temporary Deckhouse EE pod to retrieve up-to-date digests and module lists:
+
+   ```shell
+   kubectl run ee-image --image=registry.deckhouse.io/deckhouse/ee/install:v1.63.8 --command sleep -- infinity
+   ```
+
+   > Run an image of the latest installed Deckhouse version in the cluster. To find out which version is currently installed, use the following command:
+   >
+   >  ```shell
+   >  kubectl get deckhousereleases
+   >  ```
+
+1. Wait for the pod to become `Running` and then run the following commands:
+
+   * Retrieve the value of `EE_SANDBOX_IMAGE`:
+
+     ```shell
+     EE_SANDBOX_IMAGE=$(kubectl exec ee-image -- cat deckhouse/candi/images_digests.json | grep  pause | grep -oE 'sha256:\w*')
+     ```
+
+     Check the result of the command to make sure it was successful:
+
+     ```console
+     $ echo $EE_SANDBOX_IMAGE
+     sha256:2a909cb9df4d0207f1fe5bd9660a0529991ba18ce6ce7b389dc008c05d9022d1
+     ```
+
+   * Retrieve the value of `EE_K8S_API_PROXY`:
+
+     ```shell
+     EE_K8S_API_PROXY=$(kubectl exec ee-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+     ```
+
+     Check the result of the command to make sure it was successful:
+
+     ```console
+     $ echo $EE_K8S_API_PROXY
+     sha256:80a2cf757adad6a29514f82e1c03881de205780dbd87c6e24da0941f48355d6c
+     ```
+
+   * Retrieve the value of `EE_REGISTRY_PACKAGE_PROXY`:
+
+     ```shell
+     EE_REGISTRY_PACKAGE_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | grep registryPackagesProxy | grep -oE 'sha256:\w*')
+     ```
+
+     Run the command:
+
+     ```shell
+     crictl pull registry.deckhouse.io/deckhouse/ee@$EE_REGISTRY_PACKAGE_PROXY
+     ```
+
+     An example:
+
+     ```console
+     $ crictl pull registry.deckhouse.io/deckhouse/ee@$EE_REGISTRY_PACKAGE_PROXY
+     Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
+     ```
+
+   * Retrieve the value of `EE_MODULES`:
+
+     ```shell
+     EE_MODULES=$(kubectl exec ee-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*"  | awk {'print $9'} | cut -c5-)
+     ```
+
+     An example:
+
+     ```console
+     $ echo $EE_MODULES
+     common priority-class deckhouse external-module-manager ...
+     ```
+
+   * Retrieve the value of `USED_MODULES`:
+
+     ```shell
+     USED_MODULES=$(kubectl get modules | grep -v 'snapshot-controller-crd' | grep Enabled |awk {'print $1'})
+     ```
+
+     An example:
+
+     ```console
+     $ echo $USED_MODULES
+     admission-policy-engine cert-manager chrony cloud-data-crd ...
+     ```
+
+1. Create a NodeGroupConfiguration resource:
+
+   ```shell
+   $ kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: ee-set-sha-images.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 30
+     content: |
+       _on_containerd_config_changed() {
+         bb-flag-set containerd-need-restart
+       }
+       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+
+       bb-sync-file /etc/containerd/conf.d/ee-sandbox.toml - containerd-config-file-changed << "EOF_TOML"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           sandbox_image = "registry.deckhouse.io/deckhouse/ee@$EE_SANDBOX_IMAGE"
+       EOF_TOML
+
+       sed -i 's|image: .*|image: registry.deckhouse.io/deckhouse/ee@$EE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+       sed -i 's|crictl pull .*|crictl pull registry.deckhouse.io/deckhouse/ee@$EE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+
+   EOF
+   ```
+
+   Wait for the `/etc/containerd/conf.d/ee-sandbox.toml` file to propagate to the nodes and for bashible synchronization to complete.
+
+   You can track the synchronization status via the `UPTODATE` value (the displayed number of nodes having this status must match the total number of nodes (`NODES`) in the group):
+
+   ```console
+   $ kubectl  get ng  -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   NAME     NODES   READY   UPTODATE
+   master   1       1       1
+   worker   2       2       2
+   ```
+
+   Also, the `Configuration is in sync, nothing to do` message must show up in the bashible systemd service log, e.g.:
+
+   ```console
+   $ journalctl -u bashible -n 5
+   Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ce-to-ee-0 bashible.sh[53407]: Annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ce-to-ee-0 bashible.sh[53407]: Succesful annotate node master-ce-to-ee-0 with annotation node.deckhouse.io/ configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ce-to-ee-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Update the secret to access the Deckhouse registry by running the following command:
+
+   ```shell
+   kubectl -n d8-system create secret generic deckhouse-registry \
+     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.io\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\":    \"$AUTH_STRING\" }}}" \
+     --from-literal="address"=registry.deckhouse.io \
+     --from-literal="path"=/deckhouse/ee \
+     --from-literal="scheme"=https \
+     --type=kubernetes.io/dockerconfigjson \
+     --dry-run='client' \
+     -o yaml | kubectl replace -f -
+   ```
+
+1. Apply the Deckhouse EE image:
+
+   ```shell
+   kubectl -n d8-system set image deployment/deckhouse deckhouse=registry.deckhouse.ru/deckhouse/ee:v1.63.8
+   ```
+
+1. Wait for the Deckhouse pod to become `Ready` and for [all the queued jobs to complete](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error is generated in the process, wait for the pod to be restarted automatically.
+
+   Use the following command to check the Deckhouse pod's status:
 
    ```shell
    kubectl -n d8-system get po -l app=deckhouse
    ```
 
-1. Restart Deckhouse Pod if it will be in `ImagePullBackoff` state:
+   Use the following command to check the Deckhouse queue:
 
    ```shell
-   kubectl -n d8-system delete po -l app=deckhouse
+   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
    ```
 
-1. Wait for Deckhouse to restart and to complete all tasks in the queue:
+1. Check if there are any pods with the Deckhouse CE registry address left in the cluster:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+      | select(.image | contains("deckhouse.ru/deckhouse/ce"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
-   Example of output when there are still jobs in the queue (`length 38`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 38, status: 'run first task'
-   ```
-
-   Example of output when the queue is empty (`length 0`):
-
-   ```console
-   # kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main | grep status:
-   Queue 'main': length 0, status: 'waiting for task 0s'
-   ```
-
-1. On the master node, check the application of the new settings.
-
-   The message `Configuration is in sync, nothing to do` should appear in the `bashible` systemd service log on the master node.
-
-   An example:
-
-   ```console
-   # journalctl -u bashible -n 5
-   Jan 12 12:38:20 demo-master-0 bashible.sh[868379]: Configuration is in sync, nothing to do.
-   Jan 12 12:38:20 demo-master-0 systemd[1]: bashible.service: Deactivated successfully.
-   Jan 12 12:39:18 demo-master-0 systemd[1]: Started Bashible service.
-   Jan 12 12:39:19 demo-master-0 bashible.sh[869714]: Configuration is in sync, nothing to do.
-   Jan 12 12:39:19 demo-master-0 systemd[1]: bashible.service: Deactivated successfully.
-   ```
-
-1. Check if there are any Pods left in the cluster with the Deckhouse CE registry address:
+1. Purge temporary files, `NodeGroupConfiguration` resource, and variables:
 
    ```shell
-   kubectl get pods -A -o json | jq '.items[] | select(.spec.containers[] | select((.image | contains("deckhouse.io/deckhouse/ce"))))
-     | .metadata.namespace + "\t" + .metadata.name' -r | sort | uniq
+   kubectl delete ngc containerd-ee-config.sh ee-set-sha-images.sh
+   kubectl delete pod ee-image
+   kubectl apply -f - <<EOF
+       apiVersion: deckhouse.io/v1alpha1
+       kind: NodeGroupConfiguration
+       metadata:
+         name: del-temp-config.sh
+       spec:
+         nodeGroups:
+         - '*'
+         bundles:
+         - '*'
+         weight: 90
+         content: |
+           if [ -f /etc/containerd/conf.d/ee-registry.toml ]; then
+             rm -f /etc/containerd/conf.d/ee-registry.toml
+           fi
+           if [ -f /etc/containerd/conf.d/ee-sandbox.toml ]; then
+             rm -f /etc/containerd/conf.d/ee-sandbox.toml
+           fi
+   EOF
    ```
 
-   Sometimes, some static Pods may remain running (for example, `kubernetes-api-proxy-*`). This is due to the fact that kubelet does not restart the Pod despite changing the corresponding manifest, because the image used is the same for the Deckhouse CE and EE. To make sure that the corresponding manifests have also been changed, run the following command on any master node:
+   Once bashible synchronization is complete (you can track the synchronization status on nodes via the `UPTODATE` value of the NodeGroup), delete the NodeGroupConfiguration resource you created earlier:
 
    ```shell
-   grep -ri 'deckhouse.io/deckhouse/ce' /etc/kubernetes | grep -v backup
+   kubectl  delete ngc del-temp-config.sh
    ```
-
-   The output of the command should be empty.
 
 ### How do I get access to Deckhouse controller in multimaster cluster?
 
 In clusters with multiple master nodes Deckhouse runs in high availability mode (in several instances). To access the active Deckhouse controller, you can use the following command (as an example of the command `deckhouse-controller queue list`):
 
 ```shell
-kubectl -n d8-system exec -it $(kubectl -n d8-system get leases.coordination.k8s.io deckhouse-leader-election -o jsonpath='{.spec.holderIdentity}' | awk -F'.' '{ print $1 }') -c deckhouse -- deckhouse-controller queue list
+kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
 ```
 
 ## How do I upgrade the Kubernetes version in a cluster?
@@ -957,7 +1418,7 @@ To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](in
 1. Run the command:
 
    ```shell
-   kubectl -n d8-system exec -ti deploy/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
    ```
 
 1. Change the `kubernetesVersion` field.

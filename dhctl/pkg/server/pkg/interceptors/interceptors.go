@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	rc "github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/requests_counter"
 )
 
 const resourceExhaustedTimeout = time.Second
@@ -36,7 +37,7 @@ func PanicRecoveryHandler() func(ctx context.Context, p any) error {
 		logger.L(ctx).Error(
 			"recovered from panic",
 			slog.Any("panic", p),
-			slog.Any("stack", string(debug.Stack())),
+			slog.String("stack", string(debug.Stack())),
 		)
 		return status.Errorf(codes.Internal, "%s", p)
 	}
@@ -44,14 +45,14 @@ func PanicRecoveryHandler() func(ctx context.Context, p any) error {
 
 func UnaryLogger(log *slog.Logger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
-		return handler(logger.ToContext(ctx, log), req)
+		return handler(logger.ToContext(ctx, log, logger.AttrFromGRPCCtx(ctx)...), req)
 	}
 }
 
 func StreamLogger(log *slog.Logger) grpc.StreamServerInterceptor {
 	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		wss := newStreamContextWrapper(ss)
-		wss.SetContext(logger.ToContext(ss.Context(), log))
+		wss.SetContext(logger.ToContext(ss.Context(), log, logger.AttrFromGRPCCtx(ss.Context())...))
 		return handler(srv, wss)
 	}
 }
@@ -60,6 +61,20 @@ func Logger() logging.Logger {
 	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
 		logger.L(ctx).Log(ctx, slog.Level(lvl), msg, fields...)
 	})
+}
+
+func UnaryRequestsCounter(counter *rc.RequestsCounter) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		counter.Add(info.FullMethod)
+		return handler(ctx, req)
+	}
+}
+
+func StreamRequestsCounter(counter *rc.RequestsCounter) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		counter.Add(info.FullMethod)
+		return handler(srv, ss)
+	}
 }
 
 func UnaryParallelTasksLimiter(sem chan struct{}, prefix string) grpc.UnaryServerInterceptor {

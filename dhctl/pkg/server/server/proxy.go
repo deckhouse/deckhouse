@@ -15,13 +15,17 @@
 package server
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,13 +45,25 @@ import (
 type StreamDirector struct {
 	methodsPrefix string
 	log           *slog.Logger
+
+	wg       *sync.WaitGroup
+	stdOutMx *sync.Mutex
+	stdErrMx *sync.Mutex
 }
 
 func NewStreamDirector(log *slog.Logger, methodsPrefix string) *StreamDirector {
 	return &StreamDirector{
 		methodsPrefix: methodsPrefix,
 		log:           log,
+
+		wg:       &sync.WaitGroup{},
+		stdOutMx: &sync.Mutex{},
+		stdErrMx: &sync.Mutex{},
 	}
+}
+
+func (d *StreamDirector) Wait() {
+	d.wg.Wait()
 }
 
 func (d *StreamDirector) Director() proxy.StreamDirector {
@@ -65,6 +81,8 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 			return outCtx, nil, err
 		}
 
+		log := logger.L(ctx).With(slog.String("addr", address))
+
 		cmd := exec.Command(
 			os.Args[0],
 			"_server",
@@ -72,21 +90,43 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 			fmt.Sprintf("--server-address=%s", address),
 		)
 
-		// todo: handle logs from parallel server instances
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		// Add parent envs to child envs
+		cmd.Env = append(cmd.Env, os.Environ()...)
+
+		// Launch new process group so that signals (ex: SIGINT) are not sent also to the child process.
+		// https://stackoverflow.com/a/66261096
+		// Child process will start own child process e.g. terraform. We want them to finish normally.
+		// Parent process should wait for all children.
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Setpgid: true,
+		}
+
+		stdOutReader, err := cmd.StdoutPipe()
+		if err != nil {
+			return outCtx, nil, fmt.Errorf("getting dhctl instance stdout pipe: %w", err)
+		}
+
+		stdErrReader, err := cmd.StderrPipe()
+		if err != nil {
+			return outCtx, nil, fmt.Errorf("getting dhctl instance stderr pipe: %w", err)
+		}
+
+		d.wg.Add(2)
+		go writeLogs(log, stdOutReader, os.Stdout, d.stdOutMx, d.wg)
+		go writeLogs(log, stdErrReader, os.Stderr, d.stdErrMx, d.wg)
 
 		err = cmd.Start()
 		if err != nil {
 			return outCtx, nil, fmt.Errorf("starting dhctl server: %w", err)
 		}
 
-		logger.L(ctx).Info("started new dhctl instance", slog.String("addr", address))
+		log.Info("started new dhctl instance")
 
+		d.wg.Add(1)
 		go func() {
+			defer d.wg.Done()
 			exitErr := cmd.Wait()
-			logger.L(ctx).
-				Info("stopped dhctl instance", slog.String("addr", address), logger.Err(exitErr))
+			log.Info("stopped dhctl instance", logger.Err(exitErr))
 		}()
 
 		conn, err := grpc.NewClient(
@@ -129,4 +169,18 @@ func socketPath() (string, error) {
 
 	address := filepath.Join(app.TmpDirName, sockUUID.String()+".sock")
 	return address, nil
+}
+
+func writeLogs(log *slog.Logger, reader io.ReadCloser, writer io.Writer, mx *sync.Mutex, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		mx.Lock()
+		_, err := fmt.Fprintf(writer, scanner.Text()+"\n")
+		mx.Unlock()
+		if err != nil {
+			log.Error("failed to write dhctl instance logs", logger.Err(err))
+		}
+	}
 }

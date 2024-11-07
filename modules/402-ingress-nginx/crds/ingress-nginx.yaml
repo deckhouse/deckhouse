@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: ingress-nginx
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -35,7 +36,7 @@ spec:
 
                     Using this option, you can create several controllers to use with a single ingress
 
-                    **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
+                    > **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
                   x-doc-examples: ['nginx']
                   default: 'nginx'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -52,14 +53,14 @@ spec:
 
                       Settings are required in [spec.HostPortWithProxyProtocol](#ingressnginxcontroller-v1-spec-hostportwithproxyprotocol).
 
-                      **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter can help you with defining trusted sources.
+                      > **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The [acceptRequestsFrom](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter can help you with defining trusted sources.
                     * `HostWithFailover` — installs two ingress controllers, the primary and the backup one. The primary controller runs in a hostNetwork. If the pods of the primary controller are not available, the traffic is routed to the backup one;
 
-                      **Caution!** There can be only one controller with this inlet type on a host.
+                      > **Caution!** There can be only one controller with this inlet type on a host.
 
-                      **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
+                      > **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
 
-                      **Caution!** To change inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
+                      > **Caution!** To change inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
                   enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
@@ -112,7 +113,7 @@ spec:
                   description: |
                     The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
@@ -120,7 +121,7 @@ spec:
                   description: |
                     [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:
@@ -151,7 +152,10 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        The cloud provider may not support this option or ignore it.                       .
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
+                        > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
                         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
@@ -161,16 +165,20 @@ spec:
                       description: |
                         Annotations to assign to the service for flexible configuration of the load balancer.
 
-                        **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                     behindL7Proxy:
                       type: boolean
                       description: |
                         Accepts all the incoming `X-Forwarded-*` headers and passes them to upstreams.
 
-                        **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this option.
+                        > **Caution!** Make sure that requests to the Ingress controller are sent from trusted sources when using this option.
                     realIPHeader:
                       type: string
                       description: |
@@ -190,7 +198,10 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        The cloud provider may not support this option or ignore it.                       .
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
+                        > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
                         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
@@ -199,11 +210,15 @@ spec:
                       description: |
                         Annotations that will be passed to service with type load balancer to configure it.
 
-                        **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                 hostPort:
                   type: object
                   description: |
@@ -238,7 +253,7 @@ spec:
                       description: |
                         Accepts all the incoming X-Forwarded-* headers and passes them to upstreams.
 
-                        **Caution!** Make sure that requests to the ingress are sent from trusted sources when using this option. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
+                        > **Caution!** Make sure that requests to the ingress are sent from trusted sources when using this option. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
                     realIPHeader:
                       type: string
                       description: |
@@ -292,7 +307,7 @@ spec:
                 hsts:
                   type: boolean
                   description: |
-                    Determines whether hsts is enabled ([read more...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)).
+                    Determines whether hsts is enabled. [Read more...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)).
                   default: false
                 hstsOptions:
                   type: object
@@ -363,9 +378,9 @@ spec:
 
                     You can specify [any supported parameter](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/) in it in the `key: value (string)` format.
 
-                    **Caution!** An erroneous option may lead to the failure of the ingress controller;
+                    > **Caution!** An erroneous option may lead to the failure of the ingress controller;
 
-                    **Caution!** The usage of this parameter is not recommended; the backward compatibility or operability of the ingress controller that uses this option is not guaranteed
+                    > **Caution!** The usage of this parameter is not recommended; the backward compatibility or operability of the ingress controller that uses this option is not guaranteed
                 additionalHeaders:
                   type: object
                   description: |
@@ -479,7 +494,7 @@ spec:
                   description: |
                     Determines whether underscores are allowed in headers. Learn [more...](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
 
-                    [This tutorial](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers) sheds light on why you should not enable it without careful consideration.
+                    [This tutorial](https://docs.nginx.com/#missing-disappearing-http-headers) sheds light on why you should not enable it without careful consideration.
                   default: false
                 minReplicas:
                   type: integer
@@ -496,12 +511,12 @@ spec:
                 defaultSSLCertificate:
                   description: |
                     This certificate is used:
-                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx [server directive](http://nginx.org/en/docs/http/ngx_http_core_module.html#server)). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
+                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx [server directive](http://nginx.org/en/docs/http/ngx_http_core_module.html#server). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
                     - for Ingress resources that do not have a `secretName` specified in the `tls` section.
 
                     By default, a self-signed certificate is used.
 
-                    **Caution!** This parameter does not affect certificates used in the Ingress resources of the Deckhouse modules. You can specify the certificate to be used in the Ingress resources of the Deckhouse modules with the [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate) global parameter.
+                    > **Caution!** This parameter does not affect certificates used in the Ingress resources of the Deckhouse modules. You can specify the certificate to be used in the Ingress resources of the Deckhouse modules with the [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate) global parameter.
                   type: object
                   properties:
                     secretRef:
@@ -594,7 +609,7 @@ spec:
 
                     Using this option, you can create several controllers to use with a single ingress
 
-                    **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
+                    > **Caution!** If you set it to "nginx", then Ingress resources lacking the `kubernetes.io/ingress.class` annotation or `spec.ingressClassName` field will also be handled.
                   x-doc-examples: ['nginx']
                   default: 'nginx'
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -604,23 +619,48 @@ spec:
                     The way traffic goes to cluster from the outer network.
                     * `LoadBalancer` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned.
                     * `LoadBalancerWithProxyProtocol` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. Ingress controller uses proxy-protocol to get a real IP of the client.
+                    * `LoadBalancerWithSSLPasstrough` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. It enables SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly, without terminating it at the Ingress controller.
+
+                      SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
+
+                      If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured SSL Passthrough proxy port (default: 442), which proxies the request to the default backend.
+
+                      > **Caution!** SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and handing it over to a local TCP proxy. This bypasses NGINX completely and introduces a non-negligible performance penalty.
+                      >
+                      > **Caution!** Unlike HTTP backends, traffic to SSL Passthrough backends is sent to the ClusterIP of the backing Service instead of individual Endpoints.
+                      >
+                      > **Caution!** Because SSL Passthrough works on layer 4 of the OSI model (TCP) and not on the layer 7 (HTTP), using SSL Passthrough invalidates all the other annotations set on an Ingress object.
                     * `HostPort` — Ingress controller is deployed and available through nodes' ports via `hostPort`.
                     * `HostPortWithProxyProtocol` — Ingress controller is deployed and available through nodes' ports via `hostPort, it uses proxy-protocol to get a real IP of the client.
 
-                      **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
+                      > **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
+                    * `HostPortWithSSLPassthrough` - Ingress controller is deployed and available through nodes' ports via `hostPort.  It enables SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly, without terminating it at the Ingress controller.
+
+                      Settings are required in [spec.HostPortWithSSLPassthrough](#ingressnginxcontroller-v1-spec-hostportwithsslpassthrough).
+
+                      SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
+
+                      If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured passthrough proxy port (default: 442),
+                      which proxies the request to the default backend.
+
+                      > **Caution!** SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and handing it over to a local TCP proxy. This bypasses NGINX completely and introduces a non-negligible performance penalty.
+                      >
+                      > **Caution!** Unlike HTTP backends, traffic to SSL Passthrough backends is sent to the ClusterIP of the backing Service instead of individual Endpoints.
+                      >
+                      > **Caution!** Because SSL Passthrough works on layer 4 of the OSI model (TCP) and not on the layer 7 (HTTP), using SSL Passthrough invalidates all the other annotations set on an Ingress object.
                     * `HostWithFailover` — installs two ingress controllers, the primary and the backup one. The primary controller runs in a hostNetwork. If the pods of the primary controller are not available, the traffic is routed to the backup one;
 
-                      **Caution!** There can be only one controller with this inlet type on a host.
+                      > **Caution!** There can be only one controller with this inlet type on a host.
 
-                      **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
-                  enum: ["LoadBalancer","LoadBalancerWithProxyProtocol","HostPort","HostPortWithProxyProtocol", "HostWithFailover"]
+                      > **Caution!** The following ports must be available on the node: 80, 81, 443, 444, 4207, 4208.
+                  enum: ["LoadBalancer","LoadBalancerWithSSLPassthrough","LoadBalancerWithProxyProtocol","HostPort","HostPortWithSSLPassthrough","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
                   description: |
                     One of the supported NGINX Ingress controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ['1.6','1.9','1.10']
+                  enum: ['1.9','1.10']
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -638,8 +678,8 @@ spec:
                     The number of seconds before the /healthz location will start to return a 500 code when the pod enters the Terminating state.
                     This parameter has default values:
                       - 0s - for HostWithFailover
-                      - 60s - for HostPort and HostPortWithProxyProtocol
-                      - 120s - for LoadBalancer and LoadBalancerWithProxyProtocol
+                      - 60s - for HostPort, HostPortWithProxyProtocol and HostPortWithSSLPassthrough
+                      - 120s - for LoadBalancer, LoadBalancerWithProxyProtocol and LoadBalancerWithSSLPassthrough
                 chaosMonkey:
                   type: boolean
                   default: false
@@ -655,8 +695,6 @@ spec:
                   default: false
                   description: |
                     Enables the annotation validation feature.
-
-                    Requires a controller of 1.9 version.
                 nodeSelector:
                   type: object
                   additionalProperties:
@@ -665,7 +703,7 @@ spec:
                   description: |
                     The same as in the pods' `spec.nodeSelector` parameter in Kubernetes.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                 tolerations:
@@ -673,7 +711,7 @@ spec:
                   description: |
                     [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the pods' `spec.tolerations` parameter in Kubernetes;
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
                     **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:
@@ -704,7 +742,10 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        The cloud provider may not support this option or ignore it.                       .
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
+                        > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
                         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
@@ -714,16 +755,20 @@ spec:
                       description: |
                         Annotations to assign to the service for flexible configuration of the load balancer.
 
-                        **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
                         Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                     behindL7Proxy:
                       type: boolean
                       description: |
                         Accepts all the incoming `X-Forwarded-*` headers and passes them to upstreams.
 
-                        **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this option.
+                        > **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this option.
                     realIPHeader:
                       type: string
                       description: |
@@ -743,7 +788,10 @@ spec:
                       description: |
                         IP ranges (CIDR) that are allowed to access the load balancer.
 
-                        The cloud provider may not support this option or ignore it.                       .
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _YandexCloud_.
+                        > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
                       items:
                         type: string
                         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
@@ -752,11 +800,47 @@ spec:
                       description: |
                         Annotations that will be passed to service with type load balancer to configure it.
 
-                        **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
-                        Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
+                        > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        > Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
                       additionalProperties:
                         type: string
                       x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
+                loadBalancerWithSSLPassthrough:
+                  type: object
+                  x-doc-required: false
+                  description: |
+                    A section of parameters of the `LoadBalancerWithSSLPassthrough` inlet.
+                  properties:
+                    sourceRanges:
+                      type: array
+                      description: |
+                        IP ranges (CIDR) that are allowed to access the load balancer.
+
+                        > **Caution!** The cloud provider may not support this option or ignore it.
+                        > Providers supporting the option: _AWS_, _GCP_, _Azure_.
+                        > Providers ignoring the option: _Yandex Cloud_.
+                        > For other cloud providers, the behavior may depend on the specifics of the cloud implementation. Testing is recommended before use of the option in production.
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                    annotations:
+                      type: object
+                      description: |
+                        Annotations that will be passed to service with type load balancer to configure it.
+
+                        > **Caution!** The module does not take into account the specifics of setting annotations in different clouds.
+                        > Note that you will need to recreate `IngressNginxController` (or create a new controller and then delete the old one) if annotations to provision a load balancer are only used when creating the service.
+                      additionalProperties:
+                        type: string
+                      x-kubernetes-preserve-unknown-fields: true
+                    loadBalancerClass:
+                      type: string
+                      description: |
+                        The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
                 hostPort:
                   type: object
                   description: |
@@ -791,7 +875,7 @@ spec:
                       description: |
                         Accepts all the incoming X-Forwarded-* headers and passes them to upstreams.
 
-                        **Caution!** Make sure that requests to the ingress are sent from trusted sources when using this option. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
+                        > **Caution!** Make sure that requests to the ingress are sent from trusted sources when using this option. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
                     realIPHeader:
                       type: string
                       description: |
@@ -829,6 +913,35 @@ spec:
                       x-kubernetes-validations:
                         - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
+                hostPortWithSSLPassthrough:
+                  type: object
+                  description: |
+                    A section of parameters of the `HostPortWithSSLPassthrough` inlet.
+                  anyOf:
+                    - {required: ['httpPort']}
+                    - {required: ['httpsPort']}
+                  properties:
+                    httpPort:
+                      type: integer
+                      description: |
+                        Port for insecure HTTP connections.
+
+                        If the parameter is not set, the connection over HTTP cannot be established.
+
+                        This parameter is mandatory if `httpsPort` is not set.
+                      x-doc-examples: ['80']
+                    httpsPort:
+                      type: integer
+                      description: |
+                        Port for secure HTTPS connections.
+
+                        If the parameter is not set, the connection over HTTPS cannot be established.
+
+                        This parameter is mandatory if `httpPort` is not set.
+                      x-doc-examples: ['443']
+                      x-kubernetes-validations:
+                        - message: .spec.hostPortWithSSLPassthrough.httpsPort can't be 6443, it's reserved for kube-apiserver
+                          rule: 'self != 6443'
                 acceptRequestsFrom:
                   type: array
                   description: |
@@ -845,7 +958,7 @@ spec:
                 hsts:
                   type: boolean
                   description: |
-                    Determines whether hsts is enabled ([read more...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)).
+                    Determines whether hsts is enabled. [Read more...](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security).
                   default: false
                 hstsOptions:
                   type: object
@@ -923,9 +1036,9 @@ spec:
 
                     You can specify [any supported parameter](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/) in it in the `key: value (string)` format.
 
-                    **Caution!** An erroneous option may lead to the failure of the ingress controller;
+                    > **Caution!** An erroneous option may lead to the failure of the ingress controller;
 
-                    **Caution!** The usage of this parameter is not recommended; the backward compatibility or operability of the ingress controller that uses this option is not guaranteed
+                    > **Caution!** The usage of this parameter is not recommended; the backward compatibility or operability of the ingress controller that uses this option is not guaranteed
                 additionalHeaders:
                   type: object
                   description: |
@@ -1039,29 +1152,29 @@ spec:
                   description: |
                     Determines whether underscores are allowed in headers. Learn [more...](http://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers).
 
-                    [This tutorial](https://www.nginx.com/resources/wiki/start/topics/tutorials/config_pitfalls/#missing-disappearing-http-headers) sheds light on why you should not enable it without careful consideration.
+                    [This tutorial](https://docs.nginx.com/#missing-disappearing-http-headers) sheds light on why you should not enable it without careful consideration.
                   default: false
                 minReplicas:
                   type: integer
                   description: |
-                    LoadBalancer and LoadBalancerWithProxyProtocol controller's Horizontal Pod Autoscaler minimum replicas count.
+                    LoadBalancer, LoadBalancerWithProxyProtocol and LoadBalancerWithSSLPassthrough controller's Horizontal Pod Autoscaler minimum replicas count.
                   default: 1
                   minimum: 1
                 maxReplicas:
                   type: integer
                   description: |
-                    LoadBalancer and LoadBalancerWithProxyProtocol controller's Horizontal Pod Autoscaler maximum replicas count.
+                    LoadBalancer, LoadBalancerWithProxyProtocol and LoadBalancerWithSSLPassthrough controller's Horizontal Pod Autoscaler maximum replicas count.
                   default: 1
                   minimum: 1
                 defaultSSLCertificate:
                   description: |
                     This certificate is used:
-                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx [server directive](http://nginx.org/en/docs/http/ngx_http_core_module.html#server)). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
+                    - for `catch-all` server requests (here, "catch-all server" refers to the nginx [server directive](http://nginx.org/en/docs/http/ngx_http_core_module.html#server). Requests for which there is no corresponding Ingress resource end up on the `catch-all` server.
                     - for Ingress resources that do not have a `secretName` specified in the `tls` section.
 
                     By default, a self-signed certificate is used.
 
-                    **Caution!** This parameter does not affect certificates used in the Ingress resources of the Deckhouse modules. You can specify the certificate to be used in the Ingress resources of the Deckhouse modules with the [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate) global parameter.
+                    > **Caution!** This parameter does not affect certificates used in the Ingress resources of the Deckhouse modules. You can specify the certificate to be used in the Ingress resources of the Deckhouse modules with the [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate) global parameter.
                   type: object
                   properties:
                     secretRef:
@@ -1091,6 +1204,10 @@ spec:
                     loadBalancerWithProxyProtocol: {}
                 - properties:
                     inlet:
+                      enum: ['LoadBalancerWithSSLPassthrough']
+                    loadBalancerWithSSLPassthrough: {}
+                - properties:
+                    inlet:
                       enum: ['HostPort']
                     hostPort: {}
                   required: ['hostPort']
@@ -1101,11 +1218,14 @@ spec:
                   required: ['hostPortWithProxyProtocol']
                 - properties:
                     inlet:
+                      enum: [ 'HostPortWithSSLPassthrough' ]
+                    hostPortWithSSLPassthrough: { }
+                  required: [ 'hostPortWithSSLPassthrough' ]
+                - properties:
+                    inlet:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
               x-kubernetes-validations:
-                - message: .spec.controllerVersion should be explicitly set to 1.9 for .spec.annotationValidationEnabled to make effect
-                  rule: 'self.annotationValidationEnabled == true ? self.controllerVersion == ''1.9'': true'
                 - message: .spec.controllerVersion should be explicitly set to 1.10 for .spec.enableHTTP3 to make effect
                   rule: 'self.enableHTTP3 == true ? self.controllerVersion == ''1.10'': true'
       additionalPrinterColumns:

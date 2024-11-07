@@ -1,0 +1,22 @@
+candi:
+  fixes:
+    - summary: Remove bb-package-module-install function dupicate.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9101
+dhctl:
+  fixes:
+    - summary: Enable default preflight checks for dhctl server bootstrap operation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9013
+docs:
+  fixes:
+    - summary: Added description of built-in audit rules of the module `runtime-audit-engine`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9117
+istio:
+  fixes:
+    - summary: Revert Istio operator RBAC.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9116
+      impact: The previous fix was breaking the deployment of new versions of istiod.
+registrypackages:
+  fixes:
+    - summary: Fix detection of iptables nft support in iptables registry-package during install.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9121
+

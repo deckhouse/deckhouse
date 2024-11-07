@@ -80,7 +80,7 @@ module-1 module-2
 kubectl get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
-После создания ресурса `ModuleSource` и успешной синхронизации, в кластере должны начать появляться _релизы модулей_ — ресурсы [ModuleRelease](cr.html#modulerelease) (DKP создает их автоматически, создавать их не нужно). Посмотреть список релизов можно с помощью следующей команды:
+После создания ресурса `ModuleSource` и успешной синхронизации, в кластере должны начать появляться _релизы модулей_ — ресурсы [ModuleRelease](../../cr.html#modulerelease) (DKP создает их автоматически, создавать их не нужно). Посмотреть список релизов можно с помощью следующей команды:
 
 ```shell
 kubectl get mr
@@ -97,11 +97,11 @@ module-two-v1.2.0          Superseded   deckhouse       48d
 module-two-v1.2.1          Superseded   deckhouse       48d              
 module-two-v1.2.3          Deployed     deckhouse       48d              
 module-two-v1.2.4          Superseded   deckhouse       44d              
-module-two-v1.2.5          Pending      deckhouse       44d              Waiting for manual approval
+module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
 
 ```
 
-Если есть релиз модуля в статусе `Deployed`, то такой модуль можно [включить](#включение-модуля) в кластере. Если релиз модуля находится в статусе `Superseded`, это значит что релиз модуля устарел, и есть более новый релиз, который его заменил.
+Если есть релиз модуля в статусе `Deployed`, то такой модуль можно [включить](#включение-модуля-в-кластере) в кластере. Если релиз модуля находится в статусе `Superseded`, это значит что релиз модуля устарел, и есть более новый релиз, который его заменил.
 
 {% alert level="warning" %}
 Если релиз модуля находится в статусе Pending, то это значит что он требует ручного подтверждения для установки (смотри далее [про политику обновления модуля](#политика-обновления-модуля)). Подтвердить релиз модуля можно следующей командой (укажите имя _moduleRelease_):
@@ -267,7 +267,7 @@ module-test                           900      Disabled   example
 - Выполнить следующую команду (укажите имя модуля):
 
   ```shell
-  kubectl -ti -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable <MODULE_NAME>
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
   ```
 
 - Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.
@@ -299,7 +299,7 @@ module-test                           900      Disabled   example
 
   Пример вывода информации об ошибке модуля `module-1`:
 
-  ```shell
+  ```console
   $ kubectl get moduleconfig module-1
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-1    true                7s    Ignored: unknown module name
@@ -313,10 +313,10 @@ kubectl get mr
 
 Пример вывода:
 
-```shell
+```console
 $ kubectl get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
-module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for manual approval
+module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
 
 В примере вывода показан _ModuleRelease_, когда режим обновления (параметр [update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) ресурса _ModuleUpdatePolicy_ установлен в `Manual`. В этом случае необходимо вручную подтвердить установку новой версии модуля, установив на релиз аннотацию `modules.deckhouse.io/approved="true"`:

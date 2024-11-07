@@ -3,7 +3,7 @@ cpu: 10m
 memory: 50Mi
 {{- end }}
 ---
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -37,6 +37,7 @@ spec:
   template:
     metadata:
       annotations:
+        {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
         safe-agent-updater-daemonset-generation: {{ include "agent_daemonset_template" (list . "undefined") | sha256sum | quote }}
       labels:
         app: safe-agent-updater

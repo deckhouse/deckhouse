@@ -61,7 +61,7 @@ function nodeuser_patch() {
           sleep 1
         done
 
-        if curl -sS --fail -x "" \
+        if d8-curl -sS --fail -x "" \
           --max-time 10 \
           -XPATCH \
           -H "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
@@ -184,7 +184,12 @@ function main() {
   default_shell="/bin/bash"
   comment="created by deckhouse"
 
-  mkdir -p $home_base_path
+	if [ -d "$home_base_path" ]; then
+		chmod -c 755  $home_base_path
+		chown -c root:root $home_base_path
+	else
+		mkdir -p $home_base_path
+	fi
 
   for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
     user_name="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .name' <<< "$node_users_json")"
@@ -272,7 +277,15 @@ function main() {
     done
     if [[ "$is_user_id_found" == "false" ]]; then
       if [ "$local_user_id" -gt "1000" ]; then
-        userdel -r "$(id -nu $local_user_id)"
+        while true
+        do
+          # Emulate pkill -U $local_user_id
+          ps aux | grep "^$(id -nu $local_user_id)" | awk '{print $2}' | xargs kill -9
+
+          if userdel -r "$(id -nu $local_user_id)"; then
+            break
+          fi
+        done
       else
         bb-log-error "Strange user with UID: $local_user_id, cannot delete it"
         return

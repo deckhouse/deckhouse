@@ -44,9 +44,9 @@ const (
 )
 
 type Client interface {
-	Image(tag string) (v1.Image, error)
-	Digest(tag string) (string, error)
-	ListTags() ([]string, error)
+	Image(ctx context.Context, tag string) (v1.Image, error)
+	Digest(ctx context.Context, tag string) (string, error)
+	ListTags(ctx context.Context) ([]string, error)
 }
 
 type client struct {
@@ -91,7 +91,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	return r, nil
 }
 
-func (r *client) Image(tag string) (v1.Image, error) {
+func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 	imageURL := r.registryURL + ":" + tag
 
 	var nameOpts []name.Option
@@ -115,13 +115,15 @@ func (r *client) Image(tag string) (v1.Image, error) {
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge image
-		ctx, cancel := context.WithTimeout(context.Background(), r.options.timeout)
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
 		// seems weird - yes! but we can't call cancel here, otherwise Image outside this function would be inaccessible
 		go func() {
-			<-ctx.Done()
+			<-ctxWTO.Done()
 			cancel()
 		}()
 
+		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
+	} else {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
@@ -131,7 +133,7 @@ func (r *client) Image(tag string) (v1.Image, error) {
 	)
 }
 
-func (r *client) ListTags() ([]string, error) {
+func (r *client) ListTags(ctx context.Context) ([]string, error) {
 	var nameOpts []name.Option
 	if r.options.useHTTP {
 		nameOpts = append(nameOpts, name.Insecure)
@@ -152,20 +154,22 @@ func (r *client) ListTags() ([]string, error) {
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge amount of tags
-		ctx, cancel := context.WithTimeout(context.Background(), r.options.timeout)
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
 		go func() {
-			<-ctx.Done()
+			<-ctxWTO.Done()
 			cancel()
 		}()
 
+		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
+	} else {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
 	return remote.List(repo, imageOptions...)
 }
 
-func (r *client) Digest(tag string) (string, error) {
-	image, err := r.Image(tag)
+func (r *client) Digest(ctx context.Context, tag string) (string, error) {
+	image, err := r.Image(ctx, tag)
 	if err != nil {
 		return "", err
 	}
@@ -186,7 +190,8 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 
 	dockerCfg, err := base64.StdEncoding.DecodeString(dockerCfgBase64)
 	if err != nil {
-		return authn.AuthConfig{}, err
+		// if base64 decoding failed, try to use input as it is
+		dockerCfg = []byte(dockerCfgBase64)
 	}
 	auths := gjson.Get(string(dockerCfg), "auths").Map()
 	authConfig := authn.AuthConfig{}

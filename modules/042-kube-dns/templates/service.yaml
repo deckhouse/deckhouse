@@ -13,11 +13,11 @@ spec:
   ports:
   - name: dns
     port: 53
-    targetPort: 5353
+    targetPort: dns
     protocol: UDP
   - name: dns-tcp
     port: 53
-    targetPort: 5353
+    targetPort: dns-tcp
     protocol: TCP
 ---
 apiVersion: v1
@@ -33,11 +33,11 @@ spec:
   ports:
   - name: dns
     port: 53
-    targetPort: 5353
+    targetPort: dns
     protocol: UDP
   - name: dns-tcp
     port: 53
-    targetPort: 5353
+    targetPort: dns-tcp
     protocol: TCP
 ---
 apiVersion: v1

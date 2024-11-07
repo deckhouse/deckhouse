@@ -1,197 +1,34 @@
-{{- if ne $.Env "development" -}}
-{{- $_ := set . "Env" "EE" }}
+{{- $_ := set . "Env" (.Env | default "EE") }}
+{{- $_ := set . "UsePrebuildJekyllImage" true }}
+{{- $_ := set . "Mode" "production" }}
+{{- $_ := set . "Edition" "EE" }}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") -}}
+  {{- $_ := set . "Edition" $.Env }}
+{{- else if eq $.Env "FE"  }}
+  {{- $_ := set . "Edition" "EE" }}
+{{- else }}
+  {{- $_ := set . "Mode" $.Env }}
 {{- end }}
-
-{{- $_ := set . "YQ4_VERSION" "v4.9.6" }}
-
----
 project: deckhouse-web
 configVersion: 1
 ---
 # Base Images
-{{ $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
+{{- $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
   {{- range $k, $v := .Images }}
-    {{ $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if or (eq $.Env "development") (eq $.Env "module") }}
-      {{ $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+    {{- $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
+    {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
+      {{- if or ( ne $k "BASE_JEKYLL" ) ( and (not $.UsePrebuildJekyllImage ) ( eq $k "BASE_JEKYLL" ) )}}
+        {{- $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
+      {{- end }}
     {{- end }}
     {{- if ne $k "REGISTRY_PATH" }}
       {{- $_ := set $.Images $k $baseImagePath }}
     {{- end }}
   {{- end }}
 ---
-image: web
-from: {{ .Images.BASE_NGINX_ALPINE }}
-ansible:
-  setup:
-  - name: "Setup /etc/nginx/nginx.conf"
-    copy:
-      content: |
-        {{- .Files.Get ".werf/nginx.conf" | nindent 8 }}
-      dest: /etc/nginx/nginx.conf
-import:
-- image: static-pages
-  add: /app/_site
-  to: /app
-  before: setup
+{{- $context := . }}
+{{- $_ := set $context "ModuleName" "docs" }}
+{{- $_ := set $context "ImageName" "web" }}
+{{- $_ := set $context "ModulePath" "../../" }}
+{{ tpl (.Files.Get "werf-web.inc.yaml") $context }}
 ---
-image: static-pages
-from: {{ .Images.BASE_JEKYLL }}
-fromCacheVersion: 20210713
-docker:
-  ENV:
-    LANG: en_US.UTF-8
-    LC_ALL: en_US.UTF-8
-ansible:
-  install:
-    - name: "Install tools"
-      shell: |
-        apk add rsync jq
-        wget https://github.com/mikefarah/yq/releases/download/{{ .YQ4_VERSION }}/yq_linux_amd64 -O /usr/bin/yq && chmod +x /usr/bin/yq
-    - name: "Update system rubygems and install gem bundler"
-      shell: |
-        gem update --system 3.2.3
-        gem install bundler -v 2.4.3
-    - name: "Install dependencies"
-      shell: bundle install
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-  setup:
-    - name: "Get modules data"
-      shell: |
-        ./modules_list.sh 1>_data/modules.yaml
-        cat modules_menu_skip  | cut -d\- -f 2-  | jq -nRc '[inputs] | map({"name":.}) | {module_names:.}' > _data/exclude.json
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-    - name: "{{ .Env }} version. Merging modules of different releases"
-      shell: |
-        cp -rf /src/be/modules /src >& /dev/null
-        cp -rf /src/se/modules /src >& /dev/null
-        cp -rf /src/ee/modules /src >& /dev/null
-        cp -rf /src/fe/modules /src >& /dev/null
-        cp /src/modules/010-prometheus-crd/crds/*.yaml /src/modules/300-prometheus/crds
-        rm -rf /src/modules/010-prometheus-crd
-      args:
-        executable: /bin/bash
-    - name: "Preparing modules structure"
-      shell: |
-        export MODULES_SRC_DIR=/src/modules
-        export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
-        export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
-        bash ./modules_prepare.sh
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-    - name: "Add permalinks"
-      shell: |
-        for i in $(find . -regex '.*.md' -print); do
-          grep -q "^---" $i
-          if [ $? -gt 0 ]; then continue; fi
-          cat $i | tr -d '\n' | grep -lv "^---.*permalink: .*---" &> /dev/null
-          if [ $? -eq 0 ]; then
-            # permalink is absent, add permalink
-            PERMALINK="/$(echo $i | sed -E 's#(modules_)(en|ru)/#\2/modules/#' | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#^\.\/##' | sed 's#readme\.html$##' )"
-            sed -i "1apermalink: $PERMALINK" $i
-          fi
-        done
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-    - name: "Generate configuration schemas"
-      shell: |
-        export MODULES_DIR=modules_en
-        bash ./modules_generate_configuration.sh
-        export MODULES_DIR=modules_ru MODULES_LANG=ru
-        bash ./modules_generate_configuration.sh
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation
-    - name: "Generate cluster configuration schemas"
-      shell: |
-        export MODULES_DIR=modules_en
-        bash ./generate_cluster_configuration.sh
-        export MODULES_DIR=modules_ru MODULES_LANG=ru
-        bash ./generate_cluster_configuration.sh
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation
-    - name: "Generate CR schemas"
-      shell: |
-        export MODULES_DIR=modules_en
-        bash ./modules_generate_cr.sh
-        export MODULES_DIR=modules_ru
-        bash ./modules_generate_cr.sh
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation
-    - name: "Prepare OSS licence info"
-      shell: |
-        export MODULES_DIR=/src/modules
-        bash ./modules_generate_ossinfo.sh
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-    - name: "Extract the default Kubernetes version"
-      shell: |
-        echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-    - name: "Make the supported OS & K8S version array"
-      shell: |
-        sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
-      args:
-        warn: false
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/_data/
-    - name: "Convert editions structure"
-      shell: |
-        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' > editions.json
-      args:
-        warn: false
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/_data/
-    - name: "Get Deckhouse CLI version"
-      shell: |
-        grep -E '^\{\{- \$version' /src/registrypackages/werf.inc.yaml | sed -E 's/.+\"(.+)\".+/version: "\1"/' >> deckhouse-cli.yaml
-        echo "Deckhouse CLI version: $(cat deckhouse-cli.yaml)"
-      args:
-        warn: false
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/_data/
-    - shell: |
-        mkdir -m 777 -p /app/_site/
-        {{- if eq $.Env "development" }}
-        JEKYLL_ENV=development jekyll build -d /app/_site/ --profile -t
-        {{- else }}
-        JEKYLL_ENV=production jekyll build -d /app/_site/
-        {{- end }}
-      args:
-        warn: false
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/documentation/
-git:
-- add: /docs
-  to: /srv/jekyll-data
-  owner: jekyll
-  group: jekyll
-  includePaths:
-    - site/_config.yml
-    - site/_includes/head.html
-    - site/Gemfile
-    - site/Gemfile.lock
-    - documentation
-  excludePaths:
-    - '**/werf*.yaml'
-    - '**/docker-compose.yml'
-    - '**/Makefile'
-    - '**/.werf'
-    - '**/.helm'
-    - documentation/pages/internal
-    - documentation/config
-  stageDependencies:
-    install: ['site/Gemfile','site/Gemfile.lock']
-    setup: '**/*'
-{{ tpl (.Files.Get "werf-git-section.inc.yaml") . }}

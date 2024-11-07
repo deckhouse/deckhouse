@@ -19,15 +19,17 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 )
 
 const (
 	// defaultRepository is the repository address from deckhouse-registry secret.
-	DefaultRepository = ""
+	DefaultRepository = "__default__"
 )
 
 var ErrPackageNotFound = errors.New("package not found")
 
 type Client interface {
-	GetPackage(ctx context.Context, config *ClientConfig, digest string) (int64, io.ReadCloser, error)
+	GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, io.ReadCloser, error)
 }

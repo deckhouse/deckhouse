@@ -32,7 +32,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd"]
+  enabledModules: ["vertical-pod-autoscaler"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -54,7 +54,6 @@ const globalValues = `
       worker: 1
     podSubnet: 10.0.1.0/16
     kubernetesVersion: "%s.4"
-    defaultStorageClass: fastssd
 `
 
 const moduleValues = `
@@ -281,7 +280,7 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
-			f.ValuesSetFromYaml("cloudProviderOpenstack.internal.defaultStorageClass", `slowhdd`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `slowhdd`)
 			f.HelmRender()
 		})
 
@@ -528,11 +527,11 @@ ca
 			})
 		})
 
-		Context("vertical-pod-autoscaler-crd module enabled", func() {
+		Context("vertical-pod-autoscaler module enabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd"]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.HelmRender()
 			})
@@ -545,7 +544,7 @@ ca
 			})
 		})
 
-		Context("vertical-pod-autoscaler-crd module disabled", func() {
+		Context("vertical-pod-autoscaler module disabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
