@@ -111,6 +111,9 @@ func (s *TestMatrixSuite) changeSymlinks() {
 		"/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager/",
 		"/deckhouse/modules/040-node-manager/cloud-providers/vsphere",
 	)
+	s.changeSymlink(
+		"/deckhouse/ee/modules/030-cloud-provider-dynamix/candi",
+		"/deckhouse/ee/candi/cloud-providers/dynamix/")
 }
 
 // restoreSymlinks restores symlinks in module dir to original place

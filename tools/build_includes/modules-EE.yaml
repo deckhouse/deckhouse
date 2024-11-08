@@ -94,6 +94,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/030-cloud-provider-dynamix
+  to: /deckhouse/modules/030-cloud-provider-dynamix
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
   stageDependencies:
@@ -121,6 +126,11 @@
         - '**/*.go'
 - add: /ee/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/040-node-manager/capi/dynamix
+  to: /deckhouse/modules/040-node-manager/capi/dynamix
   stageDependencies:
     setup:
         - '**/*.go'

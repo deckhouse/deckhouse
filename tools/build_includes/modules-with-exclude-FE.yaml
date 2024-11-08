@@ -169,6 +169,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/030-cloud-provider-dynamix
+  to: /deckhouse/modules/030-cloud-provider-dynamix
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
   excludePaths:
@@ -236,6 +249,19 @@
     - .build.yaml
 - add: /ee/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/040-node-manager/capi/dynamix
+  to: /deckhouse/modules/040-node-manager/capi/dynamix
   excludePaths:
     - docs
     - README.md
