@@ -58,12 +58,6 @@ const (
 
 	deckhouseDiscoverySecret = "deckhouse-discovery"
 
-	moduleSourceReleaseExistsFinalizer = "modules.deckhouse.io/release-exists"
-	moduleSourceModuleExistsFinalizer  = "modules.deckhouse.io/module-exists"
-
-	moduleSourceAnnotationForceDelete      = "modules.deckhouse.io/force-delete"
-	moduleSourceAnnotationRegistryChecksum = "modules.deckhouse.io/registry-spec-checksum"
-
 	defaultScanInterval = 3 * time.Minute
 
 	maxConcurrentReconciles = 3
@@ -385,8 +379,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 	// set finalizer
 	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, func(obj *v1alpha1.ModuleSource) bool {
-		if len(source.Status.AvailableModules) > 0 && !controllerutil.ContainsFinalizer(source, moduleSourceModuleExistsFinalizer) {
-			controllerutil.AddFinalizer(source, moduleSourceModuleExistsFinalizer)
+		if len(source.Status.AvailableModules) > 0 && !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
+			controllerutil.AddFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 			return true
 		}
 		return false
@@ -399,8 +393,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 }
 
 func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {
-	if controllerutil.ContainsFinalizer(source, moduleSourceReleaseExistsFinalizer) {
-		if source.GetAnnotations()[moduleSourceAnnotationForceDelete] != "true" {
+	if controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists) {
+		if source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationForceDelete] != "true" {
 			// list deployed ModuleReleases associated with the ModuleSource
 			releases := new(v1alpha1.ModuleReleaseList)
 			if err := r.client.List(ctx, releases, client.MatchingLabels{"source": source.Name, "status": "deployed"}); err != nil {
@@ -420,7 +414,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 			}
 
-			controllerutil.RemoveFinalizer(source, moduleSourceReleaseExistsFinalizer)
+			controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists)
 			if err := r.client.Update(ctx, source); err != nil {
 				r.log.Errorf("failed to update the '%s' module source: %v", source.Name, err)
 				return ctrl.Result{Requeue: true}, nil
@@ -428,7 +422,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 		}
 	}
 
-	if controllerutil.ContainsFinalizer(source, moduleSourceModuleExistsFinalizer) {
+	if controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
 		for _, module := range source.Status.AvailableModules {
 			if err := r.cleanSourceInModule(ctx, source.Name, module.Name); err != nil {
 				r.log.Errorf("failed to clean source in the '%s' module, during deleting the '%s' module source", module.Name, source.Name)
@@ -436,7 +430,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 			}
 		}
 
-		controllerutil.RemoveFinalizer(source, moduleSourceModuleExistsFinalizer)
+		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 		if err := r.client.Update(ctx, source); err != nil {
 			r.log.Errorf("failed to update the '%s' module source: %v", source.Name, err)
 			return ctrl.Result{Requeue: true}, nil

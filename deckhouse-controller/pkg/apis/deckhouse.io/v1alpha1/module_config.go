@@ -27,6 +27,8 @@ const (
 	ModuleConfigKind     = "ModuleConfig"
 
 	AllowDisableAnnotation = "modules.deckhouse.io/allow-disable"
+
+	ModuleConfigFinalizer = "modules.deckhouse.io/module-config"
 )
 
 var (

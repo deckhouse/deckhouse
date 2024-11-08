@@ -168,7 +168,7 @@ func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion st
 		return nil, fmt.Errorf("fetch image: %w", err)
 	}
 
-	return moduletools.ExtractDocs(img), nil
+	return moduletools.ExtractDocs(img)
 }
 
 func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, error) {

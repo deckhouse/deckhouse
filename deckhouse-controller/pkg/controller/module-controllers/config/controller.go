@@ -45,8 +45,6 @@ import (
 const (
 	controllerName = "d8-module-config-controller"
 
-	moduleConfigFinalizer = "modules.deckhouse.io/module-config"
-
 	deleteReleasesAfter = 5 * time.Minute
 )
 
@@ -136,7 +134,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
-	r.log.Debugf("handle the event for the module '%s' config", moduleConfig.Name)
+	// send event to addon-operator
 	r.handler.HandleEvent(ctx, moduleConfig, config.EventUpdate)
 
 	r.log.Debugf("refresh the '%s' module config status", moduleConfig.Name)
@@ -195,10 +193,18 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		return ctrl.Result{}, nil
 	}
 
-	// skip embedded modules
-	if module.IsEmbedded() {
-		r.log.Debugf("skip the '%s' embedded module", module.Name)
-		return ctrl.Result{}, nil
+	// set finalizer
+	err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(obj *v1alpha1.ModuleConfig) bool {
+		// to handle delete event
+		if !controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer) {
+			controllerutil.AddFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
+			return true
+		}
+		return false
+	})
+	if err != nil {
+		r.log.Errorf("failed to set finalizer the '%s' module config: %v", moduleConfig.Name, err)
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// skip system modules
@@ -207,17 +213,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		return ctrl.Result{}, nil
 	}
 
-	err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(obj *v1alpha1.ModuleConfig) bool {
-		// to handle delete event
-		if !controllerutil.ContainsFinalizer(moduleConfig, moduleConfigFinalizer) {
-			controllerutil.AddFinalizer(moduleConfig, moduleConfigFinalizer)
-			return true
-		}
-		return false
-	})
-	if err != nil {
-		r.log.Errorf("failed to set finalizer the '%s' module: %v", module.Name, err)
-		return ctrl.Result{Requeue: true}, nil
+	// skip embedded modules
+	if module.IsEmbedded() {
+		r.log.Debugf("skip the '%s' embedded module", module.Name)
+		return ctrl.Result{}, nil
 	}
 
 	updatePolicy := module.Properties.UpdatePolicy
@@ -232,7 +231,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		if !slices.Contains(module.Properties.AvailableSources, moduleConfig.Spec.Source) {
 			moduleConfig.Status.Message = "The wrong source"
 			if err = r.client.Status().Update(ctx, moduleConfig); err != nil {
-				r.log.Errorf("failed to update the '%s' module conifg status: %v", module.Name, err)
+				r.log.Errorf("failed to update the '%s' module conifg status: %v", moduleConfig.Name, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, nil
@@ -276,7 +275,9 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 }
 
 func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
+	// send event to addon-operator
 	r.handler.HandleEvent(ctx, moduleConfig, config.EventDelete)
+
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -324,14 +325,14 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	err = utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(obj *v1alpha1.ModuleConfig) bool {
-		if controllerutil.ContainsFinalizer(moduleConfig, moduleConfigFinalizer) {
-			controllerutil.RemoveFinalizer(moduleConfig, moduleConfigFinalizer)
+		if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer) {
+			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
 			return true
 		}
 		return false
 	})
 	if err != nil {
-		r.log.Errorf("failed to remove finalizer from the '%s' module: %v", module.Name, err)
+		r.log.Errorf("failed to remove finalizer from the '%s' module config: %v", moduleConfig.Name, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
 

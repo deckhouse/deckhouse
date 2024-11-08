@@ -25,6 +25,12 @@ import (
 const (
 	ModuleSourceResource = "modulesources"
 	ModuleSourceKind     = "ModuleSource"
+
+	ModuleSourceFinalizerReleaseExists = "modules.deckhouse.io/release-exists"
+	ModuleSourceFinalizerModuleExists  = "modules.deckhouse.io/module-exists"
+
+	ModuleSourceAnnotationForceDelete      = "modules.deckhouse.io/force-delete"
+	ModuleSourceAnnotationRegistryChecksum = "modules.deckhouse.io/registry-spec-checksum"
 )
 
 var (

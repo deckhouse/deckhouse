@@ -82,13 +82,13 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 	// if no annotations - only set the current checksum value
 	if len(source.ObjectMeta.Annotations) == 0 {
 		source.ObjectMeta.Annotations = map[string]string{
-			moduleSourceAnnotationRegistryChecksum: currentChecksum,
+			v1alpha1.ModuleSourceAnnotationRegistryChecksum: currentChecksum,
 		}
 		return nil
 	}
 
 	// if the annotation matches current checksum - there is nothing to do here
-	if source.ObjectMeta.Annotations[moduleSourceAnnotationRegistryChecksum] == currentChecksum {
+	if source.ObjectMeta.Annotations[v1alpha1.ModuleSourceAnnotationRegistryChecksum] == currentChecksum {
 		return ErrSettingsNotChanged
 	}
 
@@ -122,7 +122,7 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 		}
 	}
 
-	source.ObjectMeta.Annotations[moduleSourceAnnotationRegistryChecksum] = currentChecksum
+	source.ObjectMeta.Annotations[v1alpha1.ModuleSourceAnnotationRegistryChecksum] = currentChecksum
 
 	return nil
 }
@@ -136,7 +136,7 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 		return false, fmt.Errorf("failed to list module releases: %v", err)
 	}
 	if len(moduleReleases.Items) == 0 {
-		r.log.Warnf("no module release with '%s' checksum for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
+		r.log.Debugf("no module release with '%s' checksum for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
 		return false, nil
 	}
 
@@ -255,12 +255,12 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName st
 	}
 
 	if module.Properties.Source != sourceName {
-		r.log.Warnf("the '%s' source not active source for the '%s' module, skip it", sourceName, moduleName)
+		r.log.Debugf("the '%s' source not active source for the '%s' module, skip it", sourceName, moduleName)
 		return nil, nil
 	}
 
 	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-		r.log.Warnf("skip the '%s' disabled module", moduleName)
+		r.log.Debugf("skip the '%s' disabled module", moduleName)
 		return nil, nil
 	}
 
