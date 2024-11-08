@@ -206,6 +206,9 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 }
 
 func matchAggregationRule(rule *rbacv1.AggregationRule, roleLabels map[string]string) bool {
+	if rule == nil {
+		return false
+	}
 	for _, selector := range rule.ClusterRoleSelectors {
 		if selector.MatchLabels != nil {
 			if labels.SelectorFromSet(selector.MatchLabels).Matches(labels.Set(roleLabels)) {
