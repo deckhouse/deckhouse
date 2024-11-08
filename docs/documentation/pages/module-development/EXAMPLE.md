@@ -81,7 +81,7 @@ This section provides an example of creating a `helloworld` module based on [mod
 1. Replace the image in the Deployment manifest with the Deckhouse Kubernetes Platform library helper. This will allow you to use the current content-based image tag.
 
    ```shell
-   sed -i -E 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloworld") }}/g' templates/deployment.yaml
+   sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloworld") }}/g' templates/deployment.yaml
    ```
 
 1. Delete module hooks, CRDs, and temporary files.
