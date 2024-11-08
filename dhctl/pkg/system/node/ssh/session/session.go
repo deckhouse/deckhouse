@@ -281,6 +281,7 @@ func (s *Session) Copy() *Session {
 func (s *Session) resetUsedHosts() {
 	s.remainingHosts = make([]Host, len(s.availableHosts))
 	copy(s.remainingHosts, s.availableHosts)
+	s.host = ""
 }
 
 // selectNewHost selects new host from available and updates remaining hosts

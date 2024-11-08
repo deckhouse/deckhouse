@@ -30,6 +30,16 @@ const (
 	tooManyWarn      = "Too many master SSH-hosts. Maybe you want to delete nodes, but pass hosts for delete via --ssh-host?"
 
 	checkHostsMsg = "Please check, is correct mapping node name to host?"
+	checkWarnMsg  = `Warning! %s
+If you lose connection to node, converge may not be finished.
+Also, SSH connectivity to another nodes will not check before converge node.
+
+And be attentive when you create new control-plane nodes and change another control-plane instances both.
+dhctl can not add new master IP's for connection.
+
+%s
+Do you want to continue?
+`
 )
 
 func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, runConfirm func(string) bool) (map[string]string, error) {
@@ -52,30 +62,6 @@ func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, runConfi
 		warnMsg = tooManyWarn
 	}
 
-	// Выводить информацию о новых master
-	if warnMsg != "" {
-		forConfirmation := make([]string, userPassedHostsLen)
-		for i, host := range userPassedHosts {
-			forConfirmation[i] = fmt.Sprintf("%s -> %s", host.Name, host.Host)
-		}
-		msg := fmt.Sprintf(`Warning! %s
-If you lose connection to node, converge may not be finished.
-Also, SSH connectivity to another nodes will not check before converge node.
-
-And be attentive when you create new control-plane nodes and change another control-plane instances both.
-dhctl can not add new master IP's for connection.
-
-%s
-Do you want to continue?
-`, warnMsg, strings.Join(forConfirmation, "\n"))
-
-		if !runConfirm(msg) {
-			return nil, fmt.Errorf("Hosts warning was not confirmed.")
-		}
-
-		return nodeToHost, nil
-	}
-
 	var nodesSorted []string
 	nodesSorted = append(nodesSorted, nodesNames...)
 	sort.Strings(nodesSorted)
@@ -83,20 +69,30 @@ Do you want to continue?
 	forConfirmation := make([]string, userPassedHostsLen)
 
 	for i, host := range userPassedHosts {
-		nodeName := nodesSorted[i]
-		if nodeName == host.Name {
-			forConfirmation[i] = fmt.Sprintf("%s -> %s", nodeName, host.Host)
-		} else {
-			forConfirmation[i] = fmt.Sprintf("%s (%s) -> %s", nodeName, host.Name, host.Host)
+		nodeNameTrue := false
+		for _, nodeName := range nodesSorted {
+			if nodeName == host.Name {
+				forConfirmation[i] = fmt.Sprintf("%s -> %s", nodeName, host.Host)
+				nodeToHost[nodeName] = host.Host
+				nodeNameTrue = true
+				break
+			}
 		}
-		nodeToHost[nodeName] = host.Host
+		if !nodeNameTrue {
+			forConfirmation[i] = fmt.Sprintf("%s -> %s (ignored)", host.Name, host.Host)
+		}
 	}
 
-	msg := fmt.Sprintf("%s\n%s\n", checkHostsMsg, strings.Join(forConfirmation, "\n"))
-
-	if !runConfirm(msg) {
-		return nil, fmt.Errorf("Node name to host mapping was not confirmed. Please pass hosts in order.")
+	if warnMsg != "" {
+		msg := fmt.Sprintf(checkWarnMsg, warnMsg, strings.Join(forConfirmation, "\n"))
+		if !runConfirm(msg) {
+			return nil, fmt.Errorf("Hosts warning was not confirmed.")
+		}
+	} else {
+		msg := fmt.Sprintf("%s\n%s\n", checkHostsMsg, strings.Join(forConfirmation, "\n"))
+		if !runConfirm(msg) {
+			return nil, fmt.Errorf("Node name to host mapping was not confirmed. Please pass hosts in order.")
+		}
 	}
-
 	return nodeToHost, nil
 }
