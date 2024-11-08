@@ -14,6 +14,8 @@ ${__interval_rv}
 
 Fast forward feature in Trickster make thin bars in graphs and thin cards in heatmap. It is fixed with filtering single small distance between timestamps for timeStep and card width calculation.
 
+> **Note!** `Trickster` module is deprecated.
+
 ### Useful version
 
 Patch build.go to display useful information in Help popup menu.
