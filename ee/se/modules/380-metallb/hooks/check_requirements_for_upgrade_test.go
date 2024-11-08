@@ -151,9 +151,6 @@ kind: Service
 metadata:
   name: nginx1
   namespace: nginx1
-  annotations:
-    metallb.universe.tf/address-pool: "aaa"
-    metallb.universe.tf/ip-allocated-from-pool: "bbb"
 spec:
   clusterIP: 1.2.3.4
   ports:
@@ -165,7 +162,6 @@ spec:
   selector:
     app: nginx1
   type: LoadBalancer
-  loadBalancerClass: test
 ---
 apiVersion: v1
 kind: Service
@@ -174,6 +170,27 @@ metadata:
   namespace: nginx2
   annotations:
     metallb.universe.tf/address-pool: "aaa"
+spec:
+  clusterIP: 2.3.4.5
+  ports:
+  - port: 7474
+    protocol: TCP
+    targetPort: 7474
+  externalTrafficPolicy: Local
+  internalTrafficPolicy: Cluster
+  selector:
+    app: nginx2
+  type: LoadBalancer
+  loadBalancerClass: test
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx3
+  namespace: nginx3
+  annotations:
+    metallb.universe.tf/address-pool: "aaa"
+    metallb.universe.tf/ip-allocated-from-pool: "bbb"
 spec:
   clusterIP: 2.3.4.5
   ports:
@@ -260,6 +277,8 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_l2advertisement_ns_mismatch" {
 					Expect(*metric.Value).To(Equal(float64(1)))
+					Expect(metric.Labels["name"]).To(Equal("zone-b"))
+					Expect(metric.Labels["namespace"]).To(Equal("metallb"))
 				}
 			}
 		})
@@ -282,6 +301,8 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_ipaddress_pool_ns_mismatch" {
 					Expect(*metric.Value).To(Equal(float64(1)))
+					Expect(metric.Labels["name"]).To(Equal("pool-3"))
+					Expect(metric.Labels["namespace"]).To(Equal("metallb"))
 				}
 			}
 		})
@@ -304,6 +325,7 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_l2advertisement_node_selectors_mismatch" {
 					Expect(*metric.Value).To(Equal(float64(1)))
+					Expect(metric.Labels["name"]).To(Equal("zone-b"))
 				}
 			}
 		})
@@ -323,11 +345,16 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 			Expect(configurationStatus).To(Equal("Misconfigured"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
+			counter := 0
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_orphaned_loadbalancer_detected" {
 					Expect(*metric.Value).To(Equal(float64(1)))
+					Expect(metric.Labels["name"]).To(Or(Equal("nginx1"), Equal("nginx2")))
+					Expect(metric.Labels["namespace"]).To(Or(Equal("nginx1"), Equal("nginx2")))
+					counter++
 				}
 			}
+			Expect(counter).To(Equal(2))
 		})
 	})
 })

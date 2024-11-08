@@ -131,7 +131,7 @@
         plk_create_group_if_not_exists__d8_metallb_upgrade_failed: D8MetallbOrphanedLoadBalancerDetectedGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         plk_grouped_by__d8_metallb_upgrade_failed: D8MetallbOrphanedLoadBalancerDetectedGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         description: |
-          The Service `{{$labels.name}}` is orphaned. A Service must have any of the following properties:
+          The Service `{{$labels.name}}` in `{{$labels.namespace}}` namespace is orphaned. A Service must have any of the following properties:
           - have the loadBalancerClass,
           - have the `metallb.universe.tf/address-pool` annotation,
           - have the `metallb.universe.tf/ip-allocated-from-pool` annotation.

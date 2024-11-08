@@ -100,3 +100,8 @@ type ModuleConfigStatus struct {
 	Version string `json:"version"`
 	Message string `json:"message"`
 }
+
+type ServiceInfoForAlert struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+}

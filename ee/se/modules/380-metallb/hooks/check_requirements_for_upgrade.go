@@ -104,14 +104,29 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	if service.Spec.Type != v1.ServiceTypeLoadBalancer {
 		return nil, nil
 	}
-	if service.Spec.LoadBalancerClass != nil {
-		if _, ok := service.Annotations["metallb.universe.tf/address-pool"]; ok {
-			if _, ok := service.Annotations["metallb.universe.tf/ip-allocated-from-pool"]; ok {
-				return nil, nil
-			}
-		}
+
+	if service.Spec.LoadBalancerClass == nil {
+		return ServiceInfoForAlert{
+			Name:      service.Name,
+			Namespace: service.Namespace,
+		}, nil
 	}
-	return service.Name, nil
+
+	if _, ok := service.Annotations["metallb.universe.tf/address-pool"]; !ok {
+		return ServiceInfoForAlert{
+			Name:      service.Name,
+			Namespace: service.Namespace,
+		}, nil
+	}
+
+	if _, ok := service.Annotations["metallb.universe.tf/ip-allocated-from-pool"]; !ok {
+		return ServiceInfoForAlert{
+			Name:      service.Name,
+			Namespace: service.Namespace,
+		}, nil
+	}
+
+	return nil, nil
 }
 
 func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
@@ -203,14 +218,15 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 	}
 
 	// Search orphaned Services
-	serviceNameSnaps := input.Snapshots["services"]
-	for _, serviceNameSnap := range serviceNameSnaps {
-		if serviceNameSnap != nil {
-			if serviceName, ok := serviceNameSnap.(string); ok {
+	serviceSnaps := input.Snapshots["services"]
+	for _, serviceSnap := range serviceSnaps {
+		if serviceSnap != nil {
+			if service, ok := serviceSnap.(ServiceInfoForAlert); ok {
 				requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
 				input.MetricsCollector.Set("d8_metallb_orphaned_loadbalancer_detected", 1,
 					map[string]string{
-						"name": serviceName,
+						"name":      service.Name,
+						"namespace": service.Namespace,
 					}, metrics.WithGroup("D8MetallbOrphanedLoadBalancerDetected"))
 			}
 		}
