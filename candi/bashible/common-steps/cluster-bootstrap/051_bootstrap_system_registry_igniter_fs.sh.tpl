@@ -59,36 +59,29 @@ EOF
 {{- end }}
 
 # Auth certs
-if [ ! -f "$IGNITER_DIR/auth.key" ]; then
-    openssl genrsa -out "$IGNITER_DIR/auth.key" 2048
-fi
-if [ ! -f "$IGNITER_DIR/auth.csr" ]; then
-    openssl req -new -key "$IGNITER_DIR/auth.key" \
-    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
-    -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
-    -out "$IGNITER_DIR/auth.csr"
-fi
-if [ ! -f "$IGNITER_DIR/auth.crt" ]; then
-    openssl x509 -req -in "$IGNITER_DIR/auth.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
-    -out "$IGNITER_DIR/auth.crt" -days 365 -sha256 \
-    -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
-fi
+openssl genrsa -out "$IGNITER_DIR/auth.key" 2048
+
+openssl req -new -key "$IGNITER_DIR/auth.key" \
+-subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
+-addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
+-out "$IGNITER_DIR/auth.csr"
+
+openssl x509 -req -in "$IGNITER_DIR/auth.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
+-out "$IGNITER_DIR/auth.crt" -days 365 -sha256 \
+-extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
+
 
 # Distribution certs
-if [ ! -f "$IGNITER_DIR/distribution.key" ]; then
-    openssl genrsa -out "$IGNITER_DIR/distribution.key" 2048
-fi
-if [ ! -f "$IGNITER_DIR/distribution.csr" ]; then
-    openssl req -new -key "$IGNITER_DIR/distribution.key" \
-    -subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
-    -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
-    -out "$IGNITER_DIR/distribution.csr"
-fi
-if [ ! -f "$IGNITER_DIR/distribution.crt" ]; then
-    openssl x509 -req -in "$IGNITER_DIR/distribution.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
-    -out "$IGNITER_DIR/distribution.crt" -days 365 -sha256 \
-    -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
-fi
+openssl genrsa -out "$IGNITER_DIR/distribution.key" 2048
+
+openssl req -new -key "$IGNITER_DIR/distribution.key" \
+-subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
+-addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
+-out "$IGNITER_DIR/distribution.csr"
+
+openssl x509 -req -in "$IGNITER_DIR/distribution.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
+-out "$IGNITER_DIR/distribution.crt" -days 365 -sha256 \
+-extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 
 bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
 server:
