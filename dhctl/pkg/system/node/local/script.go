@@ -103,6 +103,9 @@ func (s *Script) ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err 
 	if s.sudo {
 		cmd.Sudo()
 	}
+	if s.ctx != nil {
+		cmd.WithContext(s.ctx)
+	}
 
 	if err = cmd.Run(); err != nil {
 		log.DebugF("stdout: %s\n\nstderr: %s\n", cmd.StdoutBytes(), cmd.StderrBytes())
