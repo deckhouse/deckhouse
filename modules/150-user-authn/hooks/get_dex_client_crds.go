@@ -70,6 +70,16 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	id := fmt.Sprintf("dex-client-%s@%s", name, namespace)
 	legacyID := fmt.Sprintf("dex-client-%s:%s", name, namespace)
 
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+
 	return DexClient{
 		ID:              id,
 		LegacyID:        legacyID,
@@ -78,8 +88,8 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		Name:            name,
 		Namespace:       namespace,
 		Spec:            spec,
-		Labels:          obj.GetLabels(),
-		Annotations:     obj.GetAnnotations(),
+		Labels:          labels,
+		Annotations:     annotations,
 	}, nil
 }
 
