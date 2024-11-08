@@ -77,7 +77,6 @@ func (c *MasterNodeGroupController) populateNodeToHost() error {
 		if c.commanderMode {
 			return true
 		}
-		// надо проверять что это авто конверж для 1 master's кластера через 1 -> 3 -> 1
 		return input.NewConfirmation().WithMessage(msg).Ask()
 	})
 	if err != nil {
@@ -345,7 +344,7 @@ func (c *MasterNodeGroupController) updateNode(nodeName string) error {
 				log.InfoLn("Aborted")
 				return nil
 			}
-			// место в котором делается мульти мастер
+
 			c.convergeState.Phase = PhaseScaleToMultiMaster
 
 			err := c.convergeStateStore.SetState(c.convergeState)
