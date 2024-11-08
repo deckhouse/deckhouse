@@ -52,6 +52,9 @@ metadata:
 rules:
   - apiGroups: ["deckhouse.io"]
     resources: ["moduleconfigs"]
+    verbs: ["list", "watch"]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["moduleconfigs"]
     resourceNames: ["system-registry"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
