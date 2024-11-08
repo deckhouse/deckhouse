@@ -183,10 +183,8 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 			continue
 		}
 		if matchAggregationRule(found.Rule, role.Labels) {
-			if role.Rule == nil {
-				if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
-					namespaces[namespace] = true
-				}
+			if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
+				namespaces[namespace] = true
 				continue
 			}
 			for _, nestedSnap := range manageRoles {
@@ -243,7 +241,7 @@ func createBinding(binding *filteredManageBinding, useRoleName string, namespace
 }
 
 func deletedRole(role *filteredManageRole) bool {
-	if strings.Contains(role.Name, "d8:manage") {
+	if strings.HasPrefix(role.Name, "d8:manage") {
 		if strings.HasSuffix(role.Name, ":admin") || strings.HasSuffix(role.Name, ":user") {
 			return true
 		}
