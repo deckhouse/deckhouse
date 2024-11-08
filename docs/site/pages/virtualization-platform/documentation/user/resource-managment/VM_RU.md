@@ -524,7 +524,7 @@ d8 k delete vmbda attach-blank-disk
 Перед запуском миграции посмотрите текущий статус виртуальной машины:
 
 ```bash
-kubectl get vm
+d8 k get vm
 # NAME                                   PHASE     NODE           IPADDRESS     AGE
 # linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
 ```
@@ -568,7 +568,7 @@ d8 v evict <vm-name>
 
 Блок `.spec.settings.virtualMachineCIDRs` в конфигурации модуля virtualization задает список подсетей для назначения ip-адресов виртуальным машинам (общий пул ip-адресов). Все адреса в этих подсетях доступны для использования, за исключением первого (адрес сети) и последнего (широковещательный адрес).
 
-Ресурс [VirtualMachineIPAddressLease](../../../reference/cr.html#VirtualMachineIPAddressLease (`vmipl`): Кластерный ресурс, который управляет арендой IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
+Ресурс [VirtualMachineIPAddressLease](../../../reference/cr.html#VirtualMachineIPAddressLease) (`vmipl`): Кластерный ресурс, который управляет арендой IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
 
 Чтобы посмотреть список аренд IP-адресов (`vmipl`), используйте команду:
 
@@ -578,7 +578,7 @@ d8 k get vmipl
 # ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
-Ресурс `VirtualMachineIPAddress` (`vmip`): Проектный/неймспейсный ресурс, который отвечает за резервирование арендованных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по явному запросу.
+Ресурс [VirtualMachineIPAddressLease](../../../reference/cr.html#VirtualMachineIPAddressLease) (`vmip`): Проектный/неймспейсный ресурс, который отвечает за резервирование арендованных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по явному запросу.
 
 Чтобы посмотреть список `vmip`, используйте команду:
 
@@ -591,7 +591,7 @@ d8 k get vmipl
 По умолчанию ip-адрес виртуальной машине назначается автоматически из подсетей, определенных в модуле и закрепляется за ней до её удаления. Проверить назначенный ip-адрес можно с помощью команды:
 
 ```bash
-k get vmip
+d8 k get vmip
 # NAME             ADDRESS       STATUS     VM         AGE
 # linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
