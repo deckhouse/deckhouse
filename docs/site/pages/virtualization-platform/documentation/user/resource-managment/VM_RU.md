@@ -550,7 +550,7 @@ EOF
 Сразу после создания ресурса `vmip`, выполните команду:
 
 ```bash
-kubectl get vm -w
+d8 k get vm -w
 # NAME                                  PHASE       NODE           IPADDRESS     AGE
 # linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
 # linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m

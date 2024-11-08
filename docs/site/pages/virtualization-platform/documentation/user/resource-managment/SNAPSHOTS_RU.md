@@ -100,7 +100,7 @@ EOF
 - виртуальная машина выключена;
 - в операционной системе виртуальной машины установлен агент (qemu-guest-agent), и операция по "заморозке" файловой системы прошла успешно.
 
-Если целостность и консистентность неважны, снимок можно создать на работающей виртуальной машине и без "заморозки" файловой системы. Для этого в спецификации ресурса [VirtualMachineSnapshot](../../../reference/cr.html#virtualmachinesnapshot укажите:
+Если целостность и консистентность неважны, снимок можно создать на работающей виртуальной машине и без "заморозки" файловой системы. Для этого в спецификации ресурса [VirtualMachineSnapshot](../../../reference/cr.html#virtualmachinesnapshot) укажите:
 
 ```yaml
 spec:
@@ -155,7 +155,7 @@ EOF
 
 Для восстановления виртуальных машин из снимков используется ресурс [VirtualMachineRestore](../../../reference/cr.html#virtualmachinerestore).
 
-В процессе восстановления будет создана новая виртуальная машина, а также все её зависимые ресурсы (диски, IP-адрес, ресурс со сценарием автоматизации (`Secret`) и ресурсы для динамического подключения дисков ([VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment)).
+В процессе восстановления будет создана новая виртуальная машина, а также все её зависимые ресурсы (диски, IP-адрес, ресурс со сценарием автоматизации (`Secret`) и ресурсы для динамического подключения дисков [VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment)) .
 
 Если возникает конфликт имен между существующими и восстанавливаемыми ресурсами для [VirtualMachine](../../../reference/cr.html#virtualmachine), [VirtualDisk](../../../reference/cr.html#virtualdisk) или [VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment), восстановление не будет успешно. Чтобы избежать этого, используйте параметр `nameReplacements`.
 
