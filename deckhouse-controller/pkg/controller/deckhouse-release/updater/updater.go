@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	d8_cfg "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -185,10 +186,10 @@ func (api *KubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.Deckh
 }
 
 func (api *KubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, error) {
-	key := client.ObjectKey{Namespace: "kube-system", Name: "d8-cluster-configuration"}
+	key := client.ObjectKey{Namespace: d8_cfg.APINamespaceName, Name: d8_cfg.DeckhouseClusterConfigurationConfigMapName}
 	secret := new(corev1.Secret)
 	if err := api.client.Get(ctx, key, secret); err != nil {
-		return false, fmt.Errorf("check kubernetes version: failed to get secret: %s", err.Error())
+		return false, fmt.Errorf("check kubernetes version: failed to get secret: %w", err)
 	}
 
 	var clusterConf struct {
@@ -199,7 +200,7 @@ func (api *KubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, err
 		return false, fmt.Errorf("check kubernetes version: expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
 	}
 	if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
-		return false, fmt.Errorf("check kubernetes version: failed to unmarshal cluster configuration: %s", err)
+		return false, fmt.Errorf("check kubernetes version: failed to unmarshal cluster configuration: %w", err)
 	}
-	return clusterConf.KubernetesVersion == "Automatic", nil
+	return clusterConf.KubernetesVersion == d8_cfg.K8sAutomaticVersion, nil
 }

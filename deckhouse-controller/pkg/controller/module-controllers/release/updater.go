@@ -222,7 +222,7 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	}
 	err = enableModule(k.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
 	if err != nil {
-		return fmt.Errorf("module deploy failed: %v", err)
+		return fmt.Errorf("module deploy failed: %w", err)
 	}
 
 	// disable target module hooks so as not to invoke them before restart
@@ -257,7 +257,7 @@ func (k *kubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, error
 	key := client.ObjectKey{Namespace: "kube-system", Name: "d8-cluster-configuration"}
 	secret := new(corev1.Secret)
 	if err := k.client.Get(ctx, key, secret); err != nil {
-		return false, fmt.Errorf("check kubernetes version: failed to get secret: %s", err.Error())
+		return false, fmt.Errorf("check kubernetes version: failed to get secret: %w", err)
 	}
 
 	var clusterConf struct {
@@ -268,7 +268,7 @@ func (k *kubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, error
 		return false, fmt.Errorf("check kubernetes version: expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
 	}
 	if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
-		return false, fmt.Errorf("check kubernetes version: failed to unmarshal cluster configuration: %s", err)
+		return false, fmt.Errorf("check kubernetes version: failed to unmarshal cluster configuration: %w", err)
 	}
 	return clusterConf.KubernetesVersion == "Automatic", nil
 }

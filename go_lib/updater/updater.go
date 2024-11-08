@@ -492,7 +492,8 @@ func (u *Updater[R]) runReleaseDeploy(predictedRelease R, currentRelease *R) err
 }
 
 // PredictNextRelease runs prediction of the next release to deploy.
-// it skips patch releases and save only the latest one
+// It skips patch releases and saves only the latest one.
+// Also, the metrics of the referenced release are updated.
 func (u *Updater[R]) PredictNextRelease(release R) {
 	for index, rl := range u.releases {
 		if rl.GetPhase() == PhaseDeployed {
@@ -624,7 +625,9 @@ func (u *Updater[R]) processPendingRelease(index int, release R, releaseRequirem
 		if u.predictedReleaseIndex >= 0 {
 			previousPredictedRelease := u.releases[u.predictedReleaseIndex]
 			if previousPredictedRelease.GetVersion().Major() < release.GetVersion().Major() || previousPredictedRelease.GetVersion().Minor() < release.GetVersion().Minor() {
-				_ = u.updateStatus(release, fmt.Sprintf("Awaiting for %s release to be deployed", previousPredictedRelease.GetName()), PhasePending)
+				if err := u.updateStatus(release, fmt.Sprintf("Awaiting for %s release to be deployed", previousPredictedRelease.GetName()), PhasePending); err != nil {
+					u.logger.Error("update status", slog.String("error", err.Error()))
+				}
 				return
 			}
 			// it's a patch for predicted release, continue
