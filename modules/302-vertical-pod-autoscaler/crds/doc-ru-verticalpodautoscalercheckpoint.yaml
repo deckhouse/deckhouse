@@ -3,45 +3,70 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema: &schema
-        description: |
-          Чекпоинт внутреннего состояния VPA.
-
-          Используется для восстановления после перезапуска recommender'а.
+        description: Контрольная точка внутреннего состояния VPA, используемая для восстановления после перезапуска механизма рекомендаций.
         properties:
+          apiVersion:
+            description: |-
+              Определяет версионированную схему представления этого объекта. Серверы должны преобразовывать распознанные схемы в последнее внутреннее значение и могут отклонять непризнанные значения.
+              
+              [Больше информации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
+          kind:
+            description: |-
+              Значение, представляющее REST-ресурс, который описывает данный объект. Серверы могут определить его из конечной точки, к которой клиент отправляет запросы. Не может быть изменено. Используется в CamelCase. 
+              
+              [Больше информации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
+          metadata:
           spec:
+            description: |-
+              Спецификация чекпоинта. 
+               
+              [Больше информации](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status).
             properties:
               containerName:
-                description: Имя контейнера.
+                description: |-
+                  Название контейнера, для которого был создан чекпоинт. 
               vpaObjectName:
-                description: Имя объекта VPA.
+                description: |-
+                  Название объекта VPA, в котором хранится объект VerticalPodAutoscalerCheckpoint.
           status:
             description: Данные чекпоинта.
             properties:
               cpuHistogram:
-                description: Чекпоинт гистограммы использования CPU.
+                description: |-
+                  Чекпоинт гистограммы (histogram) для потребления CPU.
                 properties:
                   bucketWeights:
-                    description: Сопоставление индекса бакета с его весом.
+                    description: Отображение от индекса корзины к весу корзины.
                   referenceTimestamp:
-                    description: Контрольная временная метка для сэмплов, собранных в этой гистограмме.
+                    description: Reference timestamp for samples collected within
+                      this histogram.
                   totalWeight:
-                    description: Сумма сэмплов, которая будет использоваться как делитель для весов из BucketWeights.
+                    description: Sum of samples to be used as denominator for weights
+                      from BucketWeights.
               firstSampleStart:
-                description: Отметка времени первого сэмпла из гистограммы.
+                description: Timestamp of the fist sample from the histograms.
               lastSampleStart:
-                description: Отметка времени последнего сэмпла из гистограммы.
+                description: Timestamp of the last sample from the histograms.
               lastUpdateTime:
-                description: Отметка времени последнего обновления статуса.
+                description: The time when the status was last refreshed.
               memoryHistogram:
-                description: Чекпоинт гистограммы потребления памяти.
+                description: Checkpoint of histogram for consumption of memory.
                 properties:
                   bucketWeights:
-                    description: Сопоставление индекса бакета с его весом.
+                    description: Map from bucket index to bucket weight.
                   referenceTimestamp:
-                    description: Контрольная временная метка для сэмплов, собранных в этой гистограмме.
+                    description: Reference timestamp for samples collected within
+                      this histogram.
                   totalWeight:
-                    description: Сумма сэмплов, которая будет использоваться как делитель для весов из BucketWeights.
+                    description: Sum of samples to be used as denominator for weights
+                      from BucketWeights.
               totalSamplesCount:
-                description: Общее количество сэмплов в гистограммах.
+                description: Total number of samples in the histograms.
               version:
-                description: Версия формата сохраненных данных.
+                description: Version of the format of the stored data.
+  - name: v1beta2
+    schema:
+      openAPIV3Schema: *schema
+    served: true
+    storage: false
+    deprecated: true
