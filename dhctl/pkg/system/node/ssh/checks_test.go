@@ -17,6 +17,7 @@ package ssh
 import (
 	"testing"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +29,7 @@ func TestSSHHostChecks(t *testing.T) {
 		}
 		cases := []struct {
 			title      string
-			passedHost []string
+			passedHost []session.Host
 			warnMsg    string
 		}{
 			{
@@ -39,13 +40,13 @@ func TestSSHHostChecks(t *testing.T) {
 
 			{
 				title:      "User passed less hosts than nodes",
-				passedHost: []string{"127.0.0.1"},
+				passedHost: []session.Host{{Host: "127.0.0.1", Name: "master-0"}},
 				warnMsg:    notEnthoughtWarn,
 			},
 
 			{
 				title:      "User passed more hosts than nodes",
-				passedHost: []string{"127.0.0.1", "127.0.0.2", "127.0.0.3"},
+				passedHost: []session.Host{{Host: "127.0.0.1", Name: "master-0"}, {Host: "127.0.0.2"}, {Host: "127.0.0.3"}},
 				warnMsg:    tooManyWarn,
 			},
 		}
@@ -85,7 +86,7 @@ func TestSSHHostChecks(t *testing.T) {
 			}
 		}
 
-		passedHosts := []string{"127.0.0.1", "127.0.0.2", "127.0.0.3"}
+		passedHosts := []session.Host{{Host: "127.0.0.1", Name: "master-0"}, {Host: "127.0.0.2", Name: "master-1"}, {Host: "127.0.0.3", Name: "master-2"}}
 
 		t.Run("Does not confirm nodes to hosts mapping", func(t *testing.T) {
 			nodes := []string{"master-0", "master-1", "master-2"}
@@ -116,9 +117,9 @@ func TestSSHHostChecks(t *testing.T) {
 
 				require.NoError(t, err, "should not return error")
 				require.Equal(t, nodesToHosts, map[string]string{
-					"master-0": passedHosts[0],
-					"master-1": passedHosts[1],
-					"master-2": passedHosts[2],
+					"master-0": passedHosts[0].Host,
+					"master-1": passedHosts[1].Host,
+					"master-2": passedHosts[2].Host,
 				}, "nodes names should sorted")
 			})
 
@@ -128,9 +129,9 @@ func TestSSHHostChecks(t *testing.T) {
 
 				require.NoError(t, err, "should not return error")
 				require.Equal(t, nodesToHosts, map[string]string{
-					"master-0": passedHosts[0],
-					"master-1": passedHosts[1],
-					"master-2": passedHosts[2],
+					"master-0": passedHosts[0].Host,
+					"master-1": passedHosts[1].Host,
+					"master-2": passedHosts[2].Host,
 				}, "nodes names should sorted")
 			})
 		})
