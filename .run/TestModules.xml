@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="TestModules" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="deckhouse" />
+    <working_directory value="$PROJECT_DIR$/" />
+    <root_directory value="$PROJECT_DIR$" />
+    <kind value="DIRECTORY" />
+    <package value="github.com/deckhouse/deckhouse/modules/110-istio/hooks" />
+    <directory value="$PROJECT_DIR$/modules" />
+    <filePath value="$PROJECT_DIR$" />
+    <framework value="gotest" />
+    <pattern value="$PROJECT_DIR$/modules... $PROJECT_DIR$/global-hooks/... $PROJECT_DIR$/ee/modules/... $PROJECT_DIR$/ee/fe/modules/... $PROJECT_DIR$/ee/be/modules/... $PROJECT_DIR$/ee/se/modules/... " />
+    <method v="2" />
+  </configuration>
+</component>

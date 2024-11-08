@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="TestController" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="deckhouse" />
+    <working_directory value="$PROJECT_DIR$" />
+    <go_parameters value="-v" />
+    <kind value="DIRECTORY" />
+    <package value="github.com/deckhouse/deckhouse/deckhouse-controller/" />
+    <directory value="$PROJECT_DIR$/deckhouse-controller" />
+    <filePath value="$PROJECT_DIR$" />
+    <framework value="gotest" />
+    <pattern value="$PROJECT_DIR$/deckhouse-controller/..." />
+    <method v="2" />
+  </configuration>
+</component>

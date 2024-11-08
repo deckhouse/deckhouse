@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="run deckhouse controller" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="deckhouse" />
+    <working_directory value="$PROJECT_DIR$" />
+    <go_parameters value="-v" />
+    <kind value="PACKAGE" />
+    <package value="github.com/deckhouse/deckhouse/deckhouse-controller/cmd/deckhouse-controller" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/deckhouse-controller/cmd/deckhouse-controller/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

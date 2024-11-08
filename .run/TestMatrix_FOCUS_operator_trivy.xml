@@ -1,0 +1,18 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="TestMatrix FOCUS=operator-trivy" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="deckhouse" />
+    <working_directory value="$PROJECT_DIR$/testing/matrix" />
+    <parameters value=" -testify.m ^TestMatrix$" />
+    <envs>
+      <env name="FOCUS" value="operator-trivy" />
+    </envs>
+    <root_directory value="$PROJECT_DIR$" />
+    <kind value="PACKAGE" />
+    <package value="github.com/deckhouse/deckhouse/testing/matrix" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$" />
+    <framework value="gotest" />
+    <pattern value="^\QTestMatrix\E$" />
+    <method v="2" />
+  </configuration>
+</component>
