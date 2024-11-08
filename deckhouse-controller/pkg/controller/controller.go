@@ -166,6 +166,15 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 						},
 					},
 				},
+				// for deckhouse.io apis
+				&v1alpha1.Module{}:              {},
+				&v1alpha1.ModuleConfig{}:        {},
+				&v1alpha1.ModuleDocumentation{}: {},
+				&v1alpha1.ModuleRelease{}:       {},
+				&v1alpha1.ModuleSource{}:        {},
+				&v1alpha1.ModuleUpdatePolicy{}:  {},
+				&v1alpha1.ModulePullOverride{}:  {},
+				&v1alpha1.DeckhouseRelease{}:    {},
 			},
 		},
 	})
