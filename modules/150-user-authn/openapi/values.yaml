@@ -151,10 +151,12 @@ properties:
               type: string
             labels:
               type: object
+              default: {}
               additionalProperties:
                 type: string
             annotations:
               type: object
+              default: {}
               additionalProperties:
                 type: string
             spec:
