@@ -45,6 +45,7 @@ lang: ru
    ```shell
    rm -rf templates/*
    cp -fR .tmp-chart/helm/hello-world/templates/* templates/
+   cp .tmp-chart/helm/hello-world/values.yaml values.yaml
    ```
 
 1. Замените в шаблонах чарта путь `.Values` на `.Values.helloworld`.
@@ -60,7 +61,12 @@ lang: ru
    Параметры модуля указываются в OpenAPI-схеме в директории [openapi](../structure/#openapi). Выполните следующую команду, чтобы преобразовать JSON-схему параметров чарта в OpenAPI-схему модуля:
 
    ```shell
-   yq -P .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
+   jq 'walk(
+      if type == "object" and .type == "object" and (keys | length) == 1
+      then . + {additionalProperties: true}
+      else .
+      end
+   )' .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
    ```
 
 1. Опишите правило сборки образа контейнера приложения.

@@ -44,6 +44,7 @@ This section provides an example of creating a `helloworld` module based on [mod
    ```shell
    rm -rf templates/*
    cp -fR .tmp-chart/helm/hello-world/templates/* templates/
+   cp .tmp-chart/helm/hello-world/values.yaml values.yaml
    ```
 
 1. Replace the `.Values` path in the chart templates with `.Values.helloworld`.
@@ -59,7 +60,12 @@ This section provides an example of creating a `helloworld` module based on [mod
    The module parameters are specified in the OpenAPI schema in the [openapi](../structure/#openapi) directory. Execute the following command to convert the JSON schema of the chart parameters to the OpenAPI schema of the module:
 
    ```shell
-   yq -P .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
+   jq 'walk(
+      if type == "object" and .type == "object" and (keys | length) == 1
+      then . + {additionalProperties: true}
+      else .
+      end
+   )' .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
    ```
 
 1. Define a rule for building an application container image.
