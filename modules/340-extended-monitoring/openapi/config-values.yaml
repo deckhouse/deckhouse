@@ -109,7 +109,7 @@ properties:
         type: boolean
         default: false
         description: |
-          Enables certExporter.
+          Enables x509-certificate-exporter.
   nodeSelector:
     type: object
     additionalProperties:
