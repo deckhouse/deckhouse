@@ -70,6 +70,7 @@ require (
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/slok/kubewebhook/v2 v2.5.0
 	golang.org/x/mod v0.20.0
+	golang.org/x/text v0.19.0
 	k8s.io/cli-runtime v0.29.0
 	k8s.io/code-generator v0.29.0
 	k8s.io/klog/v2 v2.130.1
@@ -228,7 +229,6 @@ require (
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/term v0.25.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
