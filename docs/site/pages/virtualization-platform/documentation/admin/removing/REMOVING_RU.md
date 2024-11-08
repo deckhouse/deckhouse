@@ -13,7 +13,7 @@ lang: ru
 2. Узнайте канал обновления, заданный в кластере. Для этого выполните команду:
 
    ```shell
-   kubectl get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
+   d8 k get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
    ```
 
 3. Запустите инсталлятор Deckhouse:
