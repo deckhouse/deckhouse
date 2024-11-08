@@ -118,6 +118,10 @@ func PrepareBashibleBundle(bundleName, nodeIP string, dataDevices terraform.Data
 }
 
 func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string) error {
+	if err := context.Cause(ctx); err != nil {
+		return err
+	}
+
 	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
@@ -127,7 +131,13 @@ func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tm
 	bundleDir := "bashible"
 
 	_, err := bundleCmd.ExecuteBundle(parentDir, bundleDir)
+	ctxError := context.Cause(ctx)
+
 	if err != nil {
+		if ctxError != nil {
+			return fmt.Errorf("bundle '%s' error: %w", bundleDir, ctxError)
+		}
+
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
 			return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
@@ -137,9 +147,10 @@ func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tm
 			return frontend.ErrBashibleTimeout
 		}
 
-		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
+		return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 	}
-	return nil
+
+	return ctxError
 }
 
 func checkBashibleAlreadyRun(nodeInterface node.Interface) (bool, error) {
@@ -323,18 +334,18 @@ func setupSSHTunnelToSystemRegistryAuth(sshCl *ssh.Client) (*frontend.Tunnel, er
 func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
 	var wg sync.WaitGroup
 
-	ctx, ctxCancel := context.WithCancel(ctx)
+	ctx, ctxCancel := context.WithCancelCause(ctx)
 
-	log.InfoLn("PushDockerImagesToSystemRegistry: Starting")
+	log.DebugLn("PushDockerImagesToSystemRegistry: Starting")
 
 	defer func() {
-		log.InfoLn("PushDockerImagesToSystemRegistry: Stopping")
-		ctxCancel()
+		log.DebugLn("PushDockerImagesToSystemRegistry: Stopping")
+		ctxCancel(nil)
 
-		log.InfoLn("PushDockerImagesToSystemRegistry: Waiting background operations")
+		log.DebugLn("PushDockerImagesToSystemRegistry: Waiting for background operations stop")
 		wg.Wait()
 
-		log.InfoLn("PushDockerImagesToSystemRegistry: Stopped")
+		log.DebugLn("PushDockerImagesToSystemRegistry: Stopped")
 	}()
 
 	distributionHost := "127.0.0.1:5001"
@@ -342,7 +353,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 		sshClient := wrapper.Client()
 
-		log.InfoLn("PushDockerImagesToSystemRegistry: Creating auth tunnel")
+		log.DebugLn("PushDockerImagesToSystemRegistry: Creating auth tunnel")
 
 		// Create auth tunnel
 		authTun, err := setupSSHTunnelToSystemRegistryAuth(sshClient)
@@ -353,21 +364,27 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			defer ctxCancel(nil)
 
 			err := frontend.RecreateSshTun(ctx, authTun, func() (*frontend.Tunnel, error) {
 				return setupSSHTunnelToSystemRegistryAuth(sshClient)
 			})
-			ctxCancel()
+
+			if ctx.Err() != nil {
+				// Context was cancelled, skipping error processing
+				return
+			}
 
 			if err != nil {
 				log.ErrorF("error re-creating ssh tunnel for remote docker auth service: %s", err.Error())
+				ctxCancel(fmt.Errorf("recreate auth tunnel error: %w", err))
 			}
 		}()
 
 		if sshClient.Settings.BastionHost == "" {
 			distributionHost = fmt.Sprintf("%s:5001", sshClient.Settings.Host())
 		} else {
-			log.InfoLn("PushDockerImagesToSystemRegistry: Creating distribution tunnel")
+			log.DebugLn("PushDockerImagesToSystemRegistry: Creating distribution tunnel")
 
 			// Create distribution tunnel, if BastionHost != ""
 			distributionTun, err := setupSSHTunnelToSystemRegistryDistribution(sshClient)
@@ -378,37 +395,45 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
+				defer ctxCancel(nil)
 
 				err := frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
 					return setupSSHTunnelToSystemRegistryDistribution(sshClient)
 				})
-				ctxCancel()
+
+				if ctx.Err() != nil {
+					// Context was cancelled, skipping error processing
+					return
+				}
 
 				if err != nil {
 					log.ErrorF("error re-creating ssh tunnel for remote docker distribution service: %s", err.Error())
+					ctxCancel(fmt.Errorf("recreate docker distribution tunnel error: %w", err))
 				}
 			}()
 		}
 	}
 
-	for i := 0; i < 30; i += 5 {
-		log.WarnF("Sleeping before images push: %v/30\n", i+5)
+	// TODO: Debug code, remove before release
+	// for i := 0; i < 30; i += 5 {
+	// 	log.WarnF("Sleeping before images push: %v/30\n", i+5)
 
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(5 * time.Second):
-		}
-	}
+	// 	select {
+	// 	case <-ctx.Done():
+	// 		return context.Cause(ctx)
+	// 	case <-time.After(5 * time.Second):
+	// 	}
+	// }
+	// TODO: End of debug code
 
-	if isContextDone(ctx) {
-		return nil
+	if err := context.Cause(ctx); err != nil {
+		return err
 	}
 
 	log.InfoLn("Unpacking and validating images bundle")
 	unpackedBundlePath, err := mirror.UnpackAndValidateImgBundle(registryData.ImagesBundlePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot unpack and validate images bundle: %w", err)
 	}
 
 	pushCtx := libmirrorCtx.PushContext{
@@ -432,6 +457,12 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 	}
 
 	log.InfoLn("Pushing images to registry")
+
+	// TODO: Debug code, remove before release
+	// log.WarnLn("Not really pushing will made, just crash")
+	// return errors.New("image push error for debugging")
+	// TODO: End of debug code
+
 	return mirror.Push(&pushCtx)
 }
 
@@ -478,7 +509,7 @@ func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, 
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return context.Cause(ctx)
 		case <-time.After(5 * time.Second):
 			isExist, err := isSystemRegistryLockFileExists(ctx, nodeInterface)
 			if err != nil {
@@ -486,19 +517,21 @@ func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, 
 				continue
 			}
 
-			if isExist {
-				log.InfoLn("RegistryImagesPusher: Start pushing images")
-				err := pushDockerImagesToSystemRegistry(ctx, nodeInterface, registryData)
-				log.InfoLn("RegistryImagesPusher: Done pushing images")
-
-				if err != nil {
-					log.WarnF("RegistryImagesPusher: Pushing images error: %v\n", err)
-					return err
-				}
-
-				log.InfoLn("RegistryImagesPusher: Removing lock")
-				return removeSystemRegistryLockFile(ctx, nodeInterface)
+			if !isExist {
+				continue
 			}
+
+			log.DebugLn("RegistryImagesPusher: Start pushing images")
+			err = pushDockerImagesToSystemRegistry(ctx, nodeInterface, registryData)
+			log.DebugLn("RegistryImagesPusher: Done pushing images")
+
+			if err != nil {
+				log.DebugF("RegistryImagesPusher: Pushing images error: %v\n", err)
+				return fmt.Errorf("push images error: %w", err)
+			}
+
+			log.DebugLn("RegistryImagesPusher: Removing lock")
+			return removeSystemRegistryLockFile(ctx, nodeInterface)
 		}
 	}
 }
@@ -706,6 +739,10 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 			return nil
 		})
 
+		if err != nil {
+			return fmt.Errorf("cannot create %s directories: %w", app.DeckhouseNodeTmpPath, err)
+		}
+
 		// in end of pipeline steps bashible write "OK" to this file
 		// we need creating it before because we do not want handle errors from cat
 		return retry.NewLoop(fmt.Sprintf("Prepare %s", DHCTLEndBootstrapBashiblePipeline), 30, 10*time.Second).Run(func() error {
@@ -743,23 +780,56 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 	}
 
 	var tombWg sync.WaitGroup
-	tombCtx, tombCtxCancel := context.WithCancel(context.Background())
+	tombCtx, tombCtxCancel := context.WithCancelCause(context.Background())
+
+	tombWg.Add(1)
+	defer tombWg.Done()
 
 	tomb.RegisterOnShutdown("Stopping background processes", func() {
-		tombCtxCancel()
+		tombCtxCancel(errors.New("shutdown requested"))
 
-		log.InfoLn("Waiting for background processes")
+		log.DebugLn("Waiting for background processes")
 		tombWg.Wait()
 	})
 
+	if err = context.Cause(tombCtx); err != nil {
+		// context was cancelled
+		return err
+	}
+
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
 		BreakIf(func(err error) bool {
-			return false ||
-				errors.Is(err, frontend.ErrBashibleTimeout) ||
-				errors.Is(err, errorRegistryConfigError)
+			if context.Cause(tombCtx) != nil {
+				// Context was cancelled
+				return true
+			}
 
+			if errors.Is(err, errorRegistryConfigError) {
+				return true
+			}
+
+			if errors.Is(err, frontend.ErrBashibleTimeout) {
+				return true
+			}
+
+			return false
 		}).
 		Run(func() error {
+			ctx, ctxCancel := context.WithCancelCause(tombCtx)
+			var wg sync.WaitGroup
+
+			defer func() {
+				log.InfoLn("Waiting for ExecuteBundle background operations done")
+				ctxCancel(nil)
+				wg.Wait()
+				log.DebugLn("All ExecuteBundle background operations done")
+			}()
+
+			if err = context.Cause(ctx); err != nil {
+				// Context was cancelled
+				return err
+			}
+
 			// we do not need to restart tunnel because we have HealthMonitor
 			log.DebugLn("Check bundle routine start")
 			ready, err := checkBashibleAlreadyRun(nodeInterface)
@@ -776,55 +846,60 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 				return err
 			}
 
-			ctx, ctxCancel := context.WithCancel(tombCtx)
-
-			var wg sync.WaitGroup
-			defer func() {
-				log.InfoLn("Waiting for background operations")
-				ctxCancel()
-				wg.Wait()
-				log.InfoLn("All background operations done")
-			}()
+			if err = context.Cause(ctx); err != nil {
+				// Context was cancelled
+				return err
+			}
 
 			if cfg.Registry.Mode == "Detached" {
 				// Run Docker pusher
 				registryData, ok := cfg.Registry.ModeSpecificFields.(config.DetachedModeRegistryData)
 				if !ok {
 					return fmt.Errorf(
-						"%v, incorrect registry extra data, expected detached data type",
+						"%w, incorrect registry extra data, expected detached data type",
 						errorRegistryConfigError,
 					)
 				}
 
 				log.DebugLn("Cleaning previous image push lock file if needed")
 				if cleanLockFileErr := removeSystemRegistryLockFile(ctx, nodeInterface); cleanLockFileErr != nil {
-					return fmt.Errorf("cannot clean images push lock file: %v", cleanLockFileErr)
+					return fmt.Errorf("cannot clean images push lock file: %+v", cleanLockFileErr)
 				}
 
 				log.DebugLn("Starting SystemRegistry images pusher")
 				wg.Add(1)
-				tombWg.Add(1)
 				go func(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) {
 					defer func() {
 						log.DebugLn("Stopped SystemRegistry images pusher")
 						wg.Done()
-						tombWg.Done()
 					}()
 
 					if err := waitAndPushDockerImages(ctx, nodeInterface, registryData); err != nil {
-						if isContextDone(ctx) {
+						log.DebugF("RegistryImagesPusher: Done, err: %+v\n", err)
+
+						if ctx.Err() != nil {
+							// if context was cancelled, stop silently
 							return
 						}
 
-						log.ErrorF("RegistryImagesPusher: got error: %v\n", err)
+						log.ErrorF("Cannot push images to system registry: %v\n", err)
 
-						panic(err)
+						// Cancel context in case of error to stop bashible bundle execution
+						ctxCancel(fmt.Errorf("cannot push to system registry: %w", err))
 					}
 				}(ctx, nodeInterface, &registryData)
 			}
 
+			if err = context.Cause(ctx); err != nil {
+				// Context was cancelled
+				return err
+			}
+
 			log.DebugLn("Start execute bashible bundle routine")
-			return ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir)
+			err = ExecuteBashibleBundle(ctx, nodeInterface, templateController.TmpDir)
+			log.DebugF("Done execute bashible bundle, err: %+v\n", err)
+
+			return err
 		})
 }
 
@@ -1155,13 +1230,4 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 		return nil
 	})
 	return nodesFromCache, err
-}
-
-func isContextDone(ctx context.Context) bool {
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
 }
