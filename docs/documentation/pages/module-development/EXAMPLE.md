@@ -30,7 +30,7 @@ This section provides an example of creating a `helloworld` module based on [mod
    Run the following command to add the module name to the `module.yaml` file or edit it manually:
 
    ```shell
-   sed -i '' -e 's/^name:.*$/name: helloworld/' module.yaml
+   sed -i -e 's/^name:.*$/name: helloworld/' module.yaml
    ```
 
 1. Clone the [hello-world](https://github.com/giantswarm/hello-world-app) chart source code into a temporary directory.
@@ -51,7 +51,7 @@ This section provides an example of creating a `helloworld` module based on [mod
    > This is due to the architectural feature of [addon-operator](https://github.com/flant/addon-operator). You have to stick to it to be able to access module values.
 
    ```shell
-   sed -i '' -e 's/.Values/.Values.helloworld/g' $(find templates/ -type f)
+   sed -i -e 's/.Values/.Values.helloworld/g' $(find templates/ -type f)
    ```
 
 1. Add the OpenAPI schema of the module settings.
@@ -75,7 +75,7 @@ This section provides an example of creating a `helloworld` module based on [mod
 1. Replace the image in the Deployment manifest with the Deckhouse Kubernetes Platform library helper. This will allow you to use the current content-based image tag.
 
    ```shell
-   sed -i '' -E 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloworld") }}/g' templates/deployment.yaml
+   sed -i -E 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloworld") }}/g' templates/deployment.yaml
    ```
 
 1. Delete module hooks, CRDs, and temporary files.
