@@ -1,4 +1,4 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Outgoing traffic management"
 permalink: en/virtualization-platform/documentation/admin/platform-management/traffic-control/egress.html
 ---
