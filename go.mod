@@ -12,7 +12,7 @@ require (
 	github.com/deckhouse/deckhouse/dhctl v0.0.0 // use non-existent version for replace
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v1.5.2
+	github.com/flant/addon-operator v1.5.3-0.20241107164507-a38325ae9db3
 	github.com/flant/kube-client v1.2.2
 	github.com/flant/shell-operator v1.5.1
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
