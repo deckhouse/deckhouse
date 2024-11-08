@@ -1,6 +1,6 @@
-{{- define "cert_exporter_resources" }}
+{{- define "x509_certificate_exporter_resources" }}
 cpu: 50m
-memory: 50Mi
+memory: 150Mi
 {{- end }}
 
 {{- if .Values.extendedMonitoring.certificates.exporterEnabled }}
@@ -9,21 +9,21 @@ memory: 50Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: cert-exporter
+  name: x509-certificate-exporter
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cert-exporter")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "x509-certificate-exporter")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: cert-exporter
+    name: x509-certificate-exporter
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: cert-exporter
+    - containerName: x509-certificate-exporter
       minAllowed:
-        {{- include "cert_exporter_resources" . | nindent 8 }}
+        {{- include "x509_certificate_exporter_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 100m
         memory: 100Mi
@@ -33,23 +33,23 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cert-exporter
+  name: x509-certificate-exporter
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cert-exporter")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "x509-certificate-exporter")) | nindent 2 }}
 spec:
-  replicas: 1
-  revisionHistoryLimit: 2
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
       module: {{ $.Chart.Name }}
-      app: cert-exporter
+      app: x509-certificate-exporter
+  revisionHistoryLimit: 2
+  strategy:
+    type: Recreate
+  replicas: 1
   template:
     metadata:
       labels:
         module: {{ $.Chart.Name }}
-        app: cert-exporter
+        app: x509-certificate-exporter
     spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
@@ -57,22 +57,31 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
-      serviceAccountName: cert-exporter
+      restartPolicy: Always
+      serviceAccountName: x509-certificate-exporter
       containers:
-      - name: cert-exporter
+      - name: x509-certificate-exporter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "certExporter") }}
-        args:
-        - --monitor-secrets=true
-        - --monitor-certificates=false
-        - --monitor-files=false
-        - --address=127.0.0.1:9000
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "cert_exporter_resources" . | nindent 12 }}
             {{- end }}
+        image: {{ include "helm_lib_module_image" (list . "x509CertificateExporter") }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --watch-kube-secrets
+        - --secret-type=kubernetes.io/tls:tls.crt
+        - --secret-type=Opaque:cert.crt
+        - --secret-type=Opaque:tls.crt
+        - --max-cache-duration=3600s
+        - --kube-api-rate-limit-qps=3
+        - --kube-api-rate-limit-burst=5
+        - --listen-address=:9793
+        ports:
+        - name: metrics
+          containerPort: 9793
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -103,7 +112,7 @@ spec:
                   apiVersion: v1
                   resource: deployments
                   subresource: prometheus-metrics
-                  name: cert-exporter
+                  name: x509-certificate-exporter
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
