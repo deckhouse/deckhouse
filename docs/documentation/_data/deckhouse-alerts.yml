@@ -1529,7 +1529,7 @@ alerts:
       module: metallb
       edition: se
       description: |
-        The Service `{{$labels.name}}` is orphaned. A Service must have any of the following properties:
+        The Service `{{$labels.name}}` in `{{$labels.namespace}}` namespace is orphaned. A Service must have any of the following properties:
         - have the loadBalancerClass,
         - have the `metallb.universe.tf/address-pool` annotation,
         - have the `metallb.universe.tf/ip-allocated-from-pool` annotation.
