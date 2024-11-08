@@ -74,11 +74,19 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	if labels == nil {
 		labels = make(map[string]string)
 	}
+	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
+	delete(labels, "certmanager.k8s.io/certificate-name")
+
+	// Secrets with that labels lead to ArgoCD control over them.
+	delete(labels, "argocd.argoproj.io/instance")
+	delete(labels, "argocd.argoproj.io/secret-type")
 
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
+
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
 	return DexClient{
 		ID:              id,

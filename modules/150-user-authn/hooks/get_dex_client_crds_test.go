@@ -58,6 +58,10 @@ kind: DexClient
 metadata:
   name: opendistro
   namespace: test
+  labels:
+    test-label: test-value
+  annotations:
+    test-annotation: test-value
 spec:
   redirectURIs:
   - https://opendistro.example.com/callback
@@ -93,7 +97,13 @@ spec:
   },
   "legacyID": "dex-client-opendistro:test",
   "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
-  "clientSecret": "test"
+  "clientSecret": "test",
+  "labels": {
+    "test-label": "test-value"
+  },
+  "annotations": {
+    "test-annotation": "test-value"
+  }
 }]`))
 			})
 
@@ -152,7 +162,9 @@ spec:
   },
   "clientSecret": "test",
   "legacyID": "dex-client-opendistro:test",
-  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji"
+  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
+  "labels": {},
+  "annotations": {}
 }]`))
 				})
 			})
@@ -215,7 +227,9 @@ spec:
   "name": "grafana",
   "namespace": "test-grafana",
   "spec": {"redirectURIs": ["https://grafana.example.com/callback"]},
-  "clientSecret": "test"
+  "clientSecret": "test",
+  "labels": {},
+  "annotations": {}
 },
 {
   "id": "dex-client-opendistro@test",
@@ -225,7 +239,9 @@ spec:
   "name": "opendistro",
   "namespace": "test",
   "spec": {"redirectURIs": ["https://opendistro.example.com/callback"]},
-  "clientSecret": "test"
+  "clientSecret": "test",
+  "labels": {},
+  "annotations": {}
 }]`))
 		})
 	})
