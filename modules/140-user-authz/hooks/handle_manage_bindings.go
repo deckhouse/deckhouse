@@ -183,8 +183,10 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 			continue
 		}
 		if matchAggregationRule(found.Rule, role.Labels) {
-			if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
-				namespaces[namespace] = true
+			if role.Rule == nil {
+				if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
+					namespaces[namespace] = true
+				}
 				continue
 			}
 			for _, nestedSnap := range manageRoles {
