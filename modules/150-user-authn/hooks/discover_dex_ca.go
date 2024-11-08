@@ -121,7 +121,7 @@ func discoverDexCA(input *go_hook.HookInput) error {
 		}
 
 		if dexCA == "" {
-			input.LogEntry.Warnln("cannot get ca.crt or tls.crt from secret, his is ok for first run")
+			input.Logger.Warn("cannot get ca.crt or tls.crt from secret, his is ok for first run")
 			input.Values.Remove(dexCAPath)
 			return nil
 		}

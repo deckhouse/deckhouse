@@ -58,7 +58,9 @@ function check_python() {
 bb-package-fetch-blob() {
   local REPOSITORY="${REPOSITORY:-}"
   local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
-
+  local no_proxy=${PACKAGES_PROXY_ADDRESSES}
+  local NO_PROXY=${PACKAGES_PROXY_ADDRESSES}
+  
   check_python
 
   cat - <<EOF | $python_binary

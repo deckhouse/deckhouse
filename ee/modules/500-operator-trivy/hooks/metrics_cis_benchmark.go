@@ -72,7 +72,7 @@ func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
 
 	snap := input.Snapshots[cisBenchmarkQueue]
 	if len(snap) == 0 {
-		input.LogEntry.Errorln("No CIS benchmark found")
+		input.Logger.Error("No CIS benchmark found")
 		return nil
 	}
 
@@ -87,7 +87,7 @@ func cisBencmarkMetricHandler(input *go_hook.HookInput) error {
 	case compReport.SummaryControls != nil:
 		generateSummaryMetrics(input.MetricsCollector, compReport.SummaryControls)
 	default:
-		input.LogEntry.Errorln("CIS benchmark didn't run")
+		input.Logger.Error("CIS benchmark didn't run")
 	}
 	return nil
 }

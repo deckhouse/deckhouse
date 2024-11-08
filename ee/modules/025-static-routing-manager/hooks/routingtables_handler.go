@@ -172,12 +172,12 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 	// Init vars
 	routingTableIDMin, err := strconv.Atoi(input.Values.Get(routingTableIDMinPath).String())
 	if err != nil {
-		input.LogEntry.Errorf("unable to get routingTableIDMin from moduleConfig values")
+		input.Logger.Errorf("unable to get routingTableIDMin from moduleConfig values")
 		return nil
 	}
 	routingTableIDMax, err := strconv.Atoi(input.Values.Get(routingTableIDMaxPath).String())
 	if err != nil {
-		input.LogEntry.Errorf("unable to get routingTableIDMax from moduleConfig values")
+		input.Logger.Errorf("unable to get routingTableIDMax from moduleConfig values")
 		return nil
 	}
 	idi := idIterator{
@@ -202,7 +202,7 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 		nrtis := nrtRaw.(SDNInternalNodeRoutingTableInfo)
 		actualNodeRoutingTables[nrtis.Name] = nrtis
 		if _, ok := allNodes[nrtis.NodeName]; !ok && nrtis.IsDeleted {
-			input.LogEntry.Infof("An orphan NRT %v was found. It will be deleted", nrtis.Name)
+			input.Logger.Infof("An orphan NRT %v was found. It will be deleted", nrtis.Name)
 			lib.DeleteFinalizer(
 				input,
 				nrtis.Name,
@@ -239,10 +239,10 @@ func routingTablesHandler(input *go_hook.HookInput) error {
 
 		// Generate desired IPRoutingTableID
 		if rti.IPRoutingTableID == 0 {
-			input.LogEntry.Infof("RoutingTable %v needs to be updated", rti.Name)
+			input.Logger.Infof("RoutingTable %v needs to be updated", rti.Name)
 			tmpDRTS.IPRoutingTableID, err = idi.pickNextFreeID()
 			if err != nil {
-				input.LogEntry.Warnf("can't pick free ID for RoutingTable %v, error: %v", rti.Name, err)
+				input.Logger.Warnf("can't pick free ID for RoutingTable %v, error: %v", rti.Name, err)
 				tmpDRTS.localErrors = append(tmpDRTS.localErrors, err.Error())
 			}
 		} else {

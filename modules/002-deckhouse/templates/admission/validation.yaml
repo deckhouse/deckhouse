@@ -43,6 +43,7 @@ webhooks:
         operations:
           - CREATE
           - UPDATE
+          - DELETE
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent

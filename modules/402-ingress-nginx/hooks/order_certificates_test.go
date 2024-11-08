@@ -20,31 +20,28 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/cloudflare/cfssl/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("ingress-nginx :: hooks :: order_certificates", func() {
 	f := HookExecutionConfigInit("", "")
-	var log = logrus.New()
-	log.Level = logrus.InfoLevel
-	log.Out = os.Stdout
-	var logEntry = log.WithContext(context.TODO())
 
-	selfSignedCA, _ := certificate.GenerateCA(logEntry, "kube-rbac-proxy-ca-key-pair")
-	cert, _ := certificate.GenerateSelfSignedCert(logEntry, "test", selfSignedCA, certificate.WithSigningDefaultExpiry(10*365*24*time.Hour))
+	logger := log.NewNop()
+
+	selfSignedCA, _ := certificate.GenerateCA(logger, "kube-rbac-proxy-ca-key-pair")
+	cert, _ := certificate.GenerateSelfSignedCert(logger, "test", selfSignedCA, certificate.WithSigningDefaultExpiry(10*365*24*time.Hour))
 
 	selfSignedCAKey := addIndentsToMultilineString(selfSignedCA.Key, 4)
 	selfSignedCACert := addIndentsToMultilineString(selfSignedCA.Cert, 4)

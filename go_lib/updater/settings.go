@@ -14,6 +14,11 @@
 
 package updater
 
-type Settings interface {
-	GetDisruptionApprovalMode() (string, bool)
+import "github.com/deckhouse/deckhouse/go_lib/hooks/update"
+
+type Settings struct {
+	NotificationConfig     NotificationConfig
+	DisruptionApprovalMode string
+	Mode                   UpdateMode
+	Windows                update.Windows
 }

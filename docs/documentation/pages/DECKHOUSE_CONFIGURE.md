@@ -157,7 +157,22 @@ Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parame
 </tbody>
 </table>
 
-> **Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module). Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
+### Things to keep in mind when working with the Minimal module set on bare metal
+
+{% alert level="warning" %}
+**Note** that several basic modules are not included in the `Minimal` set of modules (for example, the CNI module).
+
+Deckhouse with the `Minimal` module set and no basic modules included will only be able to operate in an already deployed cluster.
+{% endalert %}
+
+To install Deckhouse with the `Minimal` module set on bare metal, you must be sure to enable the following modules by specifying them in the installer configuration file:
+
+* registry-packages-proxy;
+* cloud-data-crd;
+* node-manager;
+* cni-cilium (or another CNI control module if necessary);
+* kube-dns;
+* control-plane-manager.
 
 ## Managing placement of Deckhouse components
 
@@ -177,7 +192,7 @@ You cannot set `nodeSelector` and `tolerations` for modules:
 
 {% raw %}
 * The *monitoring*-related modules (`operator-prometheus`, `prometheus` and `vertical-pod-autoscaler`):
-  * Deckhouse examines nodes to determine a [nodeSelector](modules/300-prometheus/configuration.html#parameters-nodeselector) in the following order:
+  * Deckhouse examines nodes to determine a [nodeSelector](https://deckhouse.io/products/kubernetes-platform/documentation/modules/300-prometheus/configuration.html#parameters-nodeselector) in the following order:
     1. It checks if a node with the `node-role.deckhouse.io/MODULE_NAME` label is present in the cluster.
     1. It checks if a node with the `node-role.deckhouse.io/monitoring` label is present in the cluster.
     1. It checks if a node with the `node-role.deckhouse.io/system` label is present in the cluster.

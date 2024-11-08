@@ -1,7 +1,13 @@
-{{- $binaries := "/bin/sh /bin/cp /bin/df /bin/du /bin/tail /bin/awk" }}
+{{- $binaries := "/bin/sh /bin/mv /bin/df /bin/du /bin/tail /bin/awk /bin/tar /bin/gzip /bin/chmod" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+git:
+- add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint.sh
+  to: /entrypoint.sh
+  stageDependencies:
+    setup:
+    - '**/*'
 import:
 - artifact: {{ .ModuleName }}/etcd-artifact
   add: /etcdctl
@@ -11,6 +17,8 @@ import:
   add: /relocate
   to: /
   before: setup
+docker:
+  ENTRYPOINT: ["/entrypoint.sh"]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_ALT_P11 }}

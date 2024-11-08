@@ -177,7 +177,7 @@ func writeLogs(log *slog.Logger, reader io.ReadCloser, writer io.Writer, mx *syn
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		mx.Lock()
-		_, err := fmt.Fprintf(writer, scanner.Text())
+		_, err := fmt.Fprintf(writer, scanner.Text()+"\n")
 		mx.Unlock()
 		if err != nil {
 			log.Error("failed to write dhctl instance logs", logger.Err(err))

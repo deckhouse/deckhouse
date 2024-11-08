@@ -105,7 +105,7 @@ func migrationGroups(input *go_hook.HookInput) error {
 			},
 		}
 
-		input.LogEntry.Printf("Create Group %s with members %s", dexGroup.Spec.Name, dexGroup.Spec.Members)
+		input.Logger.Infof("Create Group %s with members %s", dexGroup.Spec.Name, dexGroup.Spec.Members)
 		input.PatchCollector.Create(dexGroup, object_patch.IgnoreIfExists())
 	}
 

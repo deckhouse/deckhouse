@@ -5,6 +5,7 @@ $( document ).ready(function() {
             if (e.target.value.length > 0 ) $(".search__results").addClass("active");
             else $(".search__results").removeClass("active");
           });
+
 });
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -227,20 +228,22 @@ function changeHandler(e) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  let top;
   let header = document.querySelector('header');
   let lastScrollTop = 0;
   let topOffsetToTransform = 25;
 
-  const headerTransforms = () => {
-    let top = window.scrollY
-
-    changeShadow(top)
-    changeOffset(top)
-
+  const calcScroll = () => {
+    top = window.scrollY
     lastScrollTop = top
   }
 
-  window.onscroll = headerTransforms
+  window.onscroll = calcScroll
+  window.addEventListener('scroll', () => changeOffset(top))
+
+  if (!header.classList.contains('header_float')) {
+    window.addEventListener('scroll', () => changeShadow(top))
+  }
 
   const changeShadow = (top) => {
     if (!header.classList.contains('header_float') && top >=

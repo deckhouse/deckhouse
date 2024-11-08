@@ -26,11 +26,10 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
-	"github.com/flant/addon-operator/pkg/utils/logger"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/versionmatcher"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -47,15 +46,16 @@ var (
 var _ extenders.Extender = &Extender{}
 
 type Extender struct {
-	logger         logger.Logger
+	logger         *log.Logger
 	versionMatcher *versionmatcher.Matcher
 	mtx            sync.Mutex
 	err            error
 }
 
+// TODO: refactor
 func Instance() *Extender {
 	once.Do(func() {
-		instance = &Extender{logger: log.WithField("extender", Name), versionMatcher: versionmatcher.New(true)}
+		instance = &Extender{logger: log.Default().With("extender", Name), versionMatcher: versionmatcher.New(true)}
 	})
 	return instance
 }
@@ -174,10 +174,14 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 
 func (e *Extender) ValidateBaseVersion(baseVersion string) (string, error) {
 	if name, err := e.versionMatcher.ValidateBaseVersion(baseVersion); err != nil {
-		e.logger.Errorf("requirements of the '%s' module are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
-		return name, fmt.Errorf("requirements of the '%s' module are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
+		if name != "" {
+			e.logger.Errorf("requirements of the '%s' module are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
+			return name, fmt.Errorf("requirements of the '%s' module are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
+		}
+		e.logger.Errorf("requirements cannot be checked: kubernetes version is invalid: %s", err.Error())
+		return "", fmt.Errorf("requirements cannot be checked: kubernetes version is invalid: %s", err.Error())
 	}
-	e.logger.Debugf("requirements of the '%s' module are satisfied", baseVersion)
+	e.logger.Debugf("modules requirements for '%s' kubernets version are satisfied", baseVersion)
 	return "", nil
 }
 

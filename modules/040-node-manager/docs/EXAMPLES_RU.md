@@ -421,7 +421,7 @@ spec:
       ca-file-updated   
 ```
 
-### Добавления сертификата в ОС и containerd
+### Добавление сертификата в ОС и containerd
 
 {% alert level="warning" %}
 Данный пример приведен для ОС Ubuntu.  

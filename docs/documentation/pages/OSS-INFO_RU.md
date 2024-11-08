@@ -1,6 +1,7 @@
 ---
 title: Информация об используемом ПО
 permalink: ru/oss_info.html
+description: Информация о стороннем ПО, используемом в Deckhouse Kubernetes Platform. 
 lang: ru
 ---
 

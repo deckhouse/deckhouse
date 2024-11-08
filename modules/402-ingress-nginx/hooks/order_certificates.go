@@ -131,7 +131,7 @@ func orderCertificate(input *go_hook.HookInput) error {
 			}
 		}
 
-		info, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+		info, err := certificate.GenerateSelfSignedCert(input.Logger,
 			fmt.Sprintf("nginx-ingress:%s", controller.Name),
 			caAuthority,
 			certificate.WithGroups("ingress-nginx:auth"),

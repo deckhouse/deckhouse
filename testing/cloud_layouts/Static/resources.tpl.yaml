@@ -18,38 +18,56 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
-  name: caps-0
+  name: caps-redos
 spec:
   privateSSHKey: '${b64_SSH_KEY}'
-  user: '${WORKER_0_USER}'
+  user: '${WORKER_REDOS_USER}'
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
 metadata:
-  name: worker-0
+  name: worker-redos
 spec:
-  address: '${WORKER_0_IP}'
+  address: '${WORKER_REDOS_IP}'
   credentialsRef:
     kind: SSHCredentials
-    name: caps-0
+    name: caps-redos
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
-  name: caps-1
+  name: caps-opensuse
 spec:
   privateSSHKey: '${b64_SSH_KEY}'
-  user: '${WORKER_1_USER}'
+  user: '${WORKER_OPENSUSE_USER}'
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
 metadata:
-  name: worker-1
+  name: worker-opensuse
 spec:
-  address: '${WORKER_1_IP}'
+  address: '${WORKER_OPENSUSE_IP}'
   credentialsRef:
     kind: SSHCredentials
-    name: caps-1
+    name: caps-opensuse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps-rosa
+spec:
+  privateSSHKey: '${b64_SSH_KEY}'
+  user: '${WORKER_ROSA_USER}'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static-rosa
+spec:
+  address: '${WORKER_ROSA_IP}'
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps-rosa
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -58,7 +76,7 @@ metadata:
 spec:
   nodeType: Static
   staticInstances:
-    count: 2
+    count: 3
   disruptions:
     approvalMode: Manual
   nodeTemplate:
@@ -159,3 +177,59 @@ metadata:
   namespace: d8-system
 data:
   .file: "content"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: apt-rpm-updated-fix
+spec:
+  weight: 2
+  bundles:
+  - "*"
+  nodeGroups:
+  - "system"
+  content: |
+    export DEBIAN_FRONTEND=noninteractive
+    bb-flag? apt-rpm-updated && return 0
+    bb-log-info 'Updating apt cache'
+
+    set +Eeuo pipefail
+    OUTPUT=$(apt-get update 2>&1)
+    EXIT_CODE=$?
+    set -Eeuo pipefail
+
+    echo "$OUTPUT"
+    if echo "$OUTPUT" | grep -q "error reading from /var/lib/apt/lists/partial"; then
+        rm -rf /var/lib/apt/lists/partial/*
+    fi
+
+    if [ $EXIT_CODE -eq 0 ]; then
+        bb-flag-set apt-rpm-updated
+    fi
+    return $EXIT_CODE
+---
+# testing creating multiple resources for one non exists resource
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-ns-with-multiple-resources
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: application-controller-sa
+    app.kubernetes.io/instance: argocd
+    app.kubernetes.io/name: argocd-application-controller-sa
+    app.kubernetes.io/part-of: argocd
+  name: argocd-application-controller-sa
+  namespace: test-ns-with-multiple-resources
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-application-controller-sa
+  namespace: test-ns-with-multiple-resources
+  annotations:
+    kubernetes.io/service-account.name: argocd-application-controller-sa
+type: kubernetes.io/service-account-token

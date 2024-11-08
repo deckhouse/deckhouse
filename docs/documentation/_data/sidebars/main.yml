@@ -58,6 +58,10 @@ entries:
                 ru: Запуск в кластере
               url: /module-development/run/
             - title:
+                en: Module dependencies
+                ru: Зависимости модуля
+              url: /module-development/dependencies/
+            - title:
                 en: Versioning
                 ru: Версионирование
               url: /module-development/versioning/
@@ -575,6 +579,7 @@ entries:
                     ru: Настройки
                   url: /modules/350-node-local-dns/configuration.html
             - title: static-routing-manager
+              d8Revision: ee
               folders:
                 - title:
                     en: Description
@@ -637,31 +642,6 @@ entries:
                 en: Configuration
                 ru: Настройки
               url: /modules/500-openvpn/configuration.html
-    - title:
-        en: Delivery
-        ru: Доставка
-      moduleName: delivery
-      d8Revision: ee
-      featureStatus: deprecated
-      folders:
-        - title:
-            en: Description
-            ru: Описание
-          url: /modules/502-delivery/
-        - title:
-            en: Usage
-            ru: Примеры
-          url: /modules/502-delivery/usage.html
-        - title:
-            en: Reference
-            ru: Справка
-          folders:
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/502-delivery/configuration.html
-            - title: Custom Resources
-              url: /modules/502-delivery/cr.html
     - title:
         en: Network Load Balancing
         ru: Балансировка трафика
@@ -857,17 +837,6 @@ entries:
             en: Other modules
             ru: Другие модули
           folders:
-            - title: flant-integration
-              d8Revision: ee
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/600-flant-integration/
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/600-flant-integration/configuration.html
             - title: operator-prometheus
               folders:
                 - title:
@@ -1219,10 +1188,9 @@ entries:
     - title:
         en: Storage
         ru: Хранилище
-        moduleName: ceph-csi
-      featureStatus: deprecated
       folders:
         - title: ceph-csi
+          featureStatus: deprecated
           folders:
             - title:
                 ru: Описание

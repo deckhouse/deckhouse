@@ -125,7 +125,7 @@ func (h *Hook) Handle(input *go_hook.HookInput) error {
 	// Try to restore generated password from the Secret, or generate a new one.
 	pass, err := h.restoreGeneratedPasswordFromSnapshot(input.Snapshots[secretBindingName])
 	if err != nil {
-		input.LogEntry.Infof("No password in Secret, generate new one: %s", err)
+		input.Logger.Infof("No password in Secret, generate new one: %s", err)
 		pass = GeneratePassword()
 	}
 

@@ -1,0 +1,31 @@
+candi:
+  fixes:
+    - summary: removed the single-disk output filter
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10327
+    - summary: Check for transparent hugepages before trying to disable them in sysctl-tuner
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10299
+ci:
+  fixes:
+    - summary: Updated TESTS_IMAGE_NAME to BASE_GOLANG_23_BULLSEYE in github workflow
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10282
+cloud-provider-zvirt:
+  fixes:
+    - summary: Add to the instance a status about zvirtinstance.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10236
+cni-cilium:
+  features:
+    - summary: Add ability to explicitly specify network interfaces for Virtual IP in EgressGateway.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10326
+common:
+  fixes:
+    - summary: Add `/bin/true` to `init` image
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10372
+deckhouse-tools:
+  fixes:
+    - summary: Rebuild d8-cli images when used version changes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10267
+docs:
+  fixes:
+    - summary: Changed the link to releases on the Deckhouse FAQ page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10352
+

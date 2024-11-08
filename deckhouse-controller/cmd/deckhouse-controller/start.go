@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"syscall"
@@ -27,7 +28,6 @@ import (
 	"github.com/flant/kube-client/client"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +44,7 @@ import (
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -54,31 +55,33 @@ const (
 	retryPeriod      = 10
 )
 
-func start(_ *kingpin.ParseContext) error {
-	sh_app.AppStartMessage = version()
+func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
+	return func(_ *kingpin.ParseContext) error {
+		sh_app.AppStartMessage = version()
 
-	ctx := context.Background()
+		ctx := context.Background()
 
-	operator := addon_operator.NewAddonOperator(ctx)
+		operator := addon_operator.NewAddonOperator(ctx, addon_operator.WithLogger(logger.Named("addon-operator")))
 
-	operator.StartAPIServer()
+		operator.StartAPIServer()
 
-	if os.Getenv("DECKHOUSE_HA") == "true" {
-		log.Info("Desckhouse is starting in HA mode")
-		runHAMode(ctx, operator)
+		if os.Getenv("DECKHOUSE_HA") == "true" {
+			logger.Info("Desckhouse is starting in HA mode")
+			runHAMode(ctx, operator, logger)
+			return nil
+		}
+
+		err := run(ctx, operator, logger)
+		if err != nil {
+			logger.Error("run", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+
 		return nil
 	}
-
-	err := run(ctx, operator)
-	if err != nil {
-		log.Error(err)
-		os.Exit(1)
-	}
-
-	return nil
 }
 
-func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
+func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator, logger *log.Logger) {
 	var identity string
 	podName := os.Getenv("DECKHOUSE_POD")
 	if len(podName) == 0 {
@@ -122,14 +125,14 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
 		RetryPeriod:   time.Duration(retryPeriod) * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
-				err := run(ctx, operator)
+				err := run(ctx, operator, logger)
 				if err != nil {
-					log.Info(err)
+					operator.Logger.Info("run", slog.String("error", err.Error()))
 					os.Exit(1)
 				}
 			},
 			OnStoppedLeading: func() {
-				log.Info("Restarting because the leadership was handed over")
+				operator.Logger.Info("Restarting because the leadership was handed over")
 				operator.Stop()
 				os.Exit(1)
 			},
@@ -137,7 +140,7 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
 		ReleaseOnCancel: true,
 	})
 	if err != nil {
-		log.Error(err)
+		operator.Logger.Error("run", slog.String("error", err.Error()))
 	}
 
 	go func() {
@@ -153,7 +156,7 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
 	operator.LeaderElector.Run(ctx)
 }
 
-func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
+func run(ctx context.Context, operator *addon_operator.AddonOperator, logger *log.Logger) error {
 	err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml")
 	if err != nil {
 		return err
@@ -167,7 +170,7 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 
 	deckhouseConfigC := make(chan utils.Values, 1)
 
-	kubeConfigBackend := backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig"))
+	kubeConfigBackend := backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, logger.With("KubeConfigManagerBackend", "ModuleConfig"))
 	kubeConfigChannel := kubeConfigBackend.GetEventsChannel()
 
 	operator.SetupKubeConfigManager(kubeConfigBackend)
@@ -177,12 +180,12 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
 		return err
 	}
 
-	validation.RegisterAdmissionHandlers(operator)
-
-	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage)
+	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage, logger.Named("deckhouse-controller"))
 	if err != nil {
 		return err
 	}
+
+	validation.RegisterAdmissionHandlers(operator, dController, operator.MetricStorage)
 
 	operator.ModuleManager.SetModuleEventsChannel(kubeConfigChannel)
 

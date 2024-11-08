@@ -174,7 +174,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		log.ErrorLn(err)
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
-		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["alpine"].(string))
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["init"].(string))
 	}
 
 	deckhouseDeployment := &appsv1.Deployment{
@@ -208,6 +208,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhousePodTemplate := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: deckhouseDeployment.Spec.Selector.MatchLabels,
+			Annotations: map[string]string{
+				"kubectl.kubernetes.io/default-container": "deckhouse",
+			},
 		},
 		Spec: apiv1.PodSpec{
 			HostNetwork:        true,
@@ -534,7 +537,7 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 }
 
 func generateSecret(name, namespace string, data map[string][]byte, labels map[string]string) *apiv1.Secret {
-	preparedLabels := map[string]string{"heritage": "deckhouse"}
+	preparedLabels := make(map[string]string)
 	for key, value := range labels {
 		preparedLabels[key] = value
 	}
@@ -557,7 +560,9 @@ func SecretWithTerraformState(data []byte) *apiv1.Secret {
 		map[string][]byte{
 			"cluster-tf-state.json": data,
 		},
-		nil,
+		map[string]string{
+			"heritage": "deckhouse",
+		},
 	)
 }
 
@@ -588,7 +593,12 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 		data["cloud-provider-discovery-data.json"] = discoveryData
 	}
 
-	return generateSecret("d8-provider-cluster-configuration", "kube-system", data, nil)
+	return generateSecret(
+		"d8-provider-cluster-configuration",
+		"kube-system",
+		data,
+		nil,
+	)
 }
 
 func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
@@ -596,8 +606,12 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 	if configData != nil {
 		data["static-cluster-configuration.yaml"] = configData
 	}
-
-	return generateSecret("d8-static-cluster-configuration", "kube-system", data, nil)
+	return generateSecret(
+		"d8-static-cluster-configuration",
+		"kube-system",
+		data,
+		nil,
+	)
 }
 
 func SecretNameForNodeTerraformState(nodeName string) string {
@@ -617,6 +631,7 @@ func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []b
 			"node.deckhouse.io/node-group":      nodeGroup,
 			"node.deckhouse.io/node-name":       nodeName,
 			"node.deckhouse.io/terraform-state": "",
+			"heritage":                          "deckhouse",
 		},
 	)
 }
@@ -636,7 +651,9 @@ func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 		map[string][]byte{
 			nodeName: devicePath,
 		},
-		map[string]string{},
+		map[string]string{
+			"heritage": "deckhouse",
+		},
 	)
 }
 

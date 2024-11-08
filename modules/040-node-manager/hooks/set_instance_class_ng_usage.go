@@ -102,7 +102,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 		// Kind is changed, so objects in "dynamic-kind" can be ignored. Update kind and stop the hook.
 		if kindInUse != kindFromSecret {
 			if kindFromSecret == "" {
-				input.LogEntry.Infof("InstanceClassKind has changed from '%s' to '': disable binding 'ics'", kindInUse)
+				input.Logger.Infof("InstanceClassKind has changed from '%s' to '': disable binding 'ics'", kindInUse)
 				*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 					Name:       "ics",
 					Action:     "Disable",
@@ -110,7 +110,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 					ApiVersion: "",
 				})
 			} else {
-				input.LogEntry.Infof("InstanceClassKind has changed from '%s' to '%s': update kind for binding 'ics'", kindInUse, kindFromSecret)
+				input.Logger.Infof("InstanceClassKind has changed from '%s' to '%s': update kind for binding 'ics'", kindInUse, kindFromSecret)
 				*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 					Name:       "ics",
 					Action:     "UpdateKind",

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-export LC_MESSAGES=en_US.UTF 
+export LC_MESSAGES=en_US.UTF-8
 
 grow_partition() {
   # /dev/sda1 => /sys/block/*/sda1/partition
@@ -74,7 +74,7 @@ for partition in $(mount | grep -vE "kubernetes.io" | grep "ext4" | awk '{print 
   fi
 
   # partition = /dev/mapper/vgubuntu-root. LVM partition.
-  if [[ "${partition}" =~ ^/dev/mapper/[a-z\-]+$ ]]; then
+  if [[ "${partition}" =~ ^/dev/mapper/[A-Za-z0-9-]+$ ]]; then
     if grow_lvm "${partition}"; then
       resize2fs "${partition}"
     fi

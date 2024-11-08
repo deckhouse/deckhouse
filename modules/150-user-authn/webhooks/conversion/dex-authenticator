@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+
+# Copyright 2024 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+configVersion: v1
+kubernetesCustomResourceConversion:
+  - name: v1_to_v2alpha1
+    crdName: dexauthenticators.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1
+      toVersion: deckhouse.io/v2alpha1
+  - name: v2alpha1_to_v1
+    crdName: dexauthenticators.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v2alpha1
+      toVersion: deckhouse.io/v1
+  - name: v1_to_v1alpha1
+    crdName: dexauthenticators.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1
+      toVersion: deckhouse.io/v1alpha1
+  - name: v1alpha1_to_v1
+    crdName: dexauthenticators.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha1
+      toVersion: deckhouse.io/v1
+EOF
+}
+
+function __on_conversion::v2alpha1_to_v1() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+    if .apiVersion == "deckhouse.io/v2alpha1" then
+      .apiVersion = "deckhouse.io/v1" |
+      .spec += {
+        applicationDomain: .spec.applications[0].domain,
+        applicationIngressClassName: .spec.applications[0].ingressClassName,
+        applicationIngressCertificateSecretName: (.spec.applications[0].ingressSecretName // null),
+        signOutURL: (.spec.applications[0].signOutURL // null),
+        whitelistSourceRanges: (.spec.applications[0].whitelistSourceRanges // null),
+        additionalApplications: (
+          if (.spec.applications | length) > 1 then
+            .spec.applications[1:]
+          else
+            null
+          end
+        )
+      } |
+      del(.spec.applications) |
+      (if .spec.additionalApplications == null then del(.spec.additionalApplications) else . end)
+    else
+      .
+    end
+  )'); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of dexproviders.deckhouse.io failed"}
+EOF
+  fi
+}
+
+function __on_conversion::v1_to_v1alpha1() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+    if .apiVersion == "deckhouse.io/v1" then
+      .apiVersion = "deckhouse.io/v1alpha1"
+    else . end
+  )'); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of dexproviders.deckhouse.io failed"}
+EOF
+  fi
+}
+
+function __on_conversion::v1alpha1_to_v1() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+    if .apiVersion == "deckhouse.io/v1alpha1" then
+      .apiVersion = "deckhouse.io/v1"
+    else . end
+  )'); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of dexproviders.deckhouse.io failed"}
+EOF
+  fi
+}
+
+function __on_conversion::v1_to_v2alpha1() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+    if .apiVersion == "deckhouse.io/v1" then
+      .apiVersion = "deckhouse.io/v2alpha1" |
+      .spec.sendAuthorizationHeader = .spec.sendAuthorizationHeader |
+      .spec.applications = [{
+        domain: .spec.applicationDomain,
+        ingressClassName: .spec.applicationIngressClassName
+      } +
+      (if .spec.applicationIngressCertificateSecretName then {ingressSecretName: .spec.applicationIngressCertificateSecretName} else {} end) +
+      (if .spec.signOutURL then {signOutURL: .spec.signOutURL} else {} end) +
+      (if .spec.whitelistSourceRanges then {whitelistSourceRanges: .spec.whitelistSourceRanges} else {} end)] +
+      (.spec.additionalApplications // []) |
+      del(.spec.applicationDomain, .spec.applicationIngressClassName, .spec.applicationIngressCertificateSecretName, .spec.additionalApplications, .spec.signOutURL, .spec.whitelistSourceRanges)
+    else
+      .
+    end
+  )'); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of dexproviders.deckhouse.io failed"}
+EOF
+  fi
+}
+
+hook::run "$@"
