@@ -34,6 +34,7 @@
  - **[deckhouse-controller]** adding an alert that manual confirmation is required to install mr [#9943](https://github.com/deckhouse/deckhouse/pull/9943)
  - **[deckhouse-controller]** Get rid of crd modules. [#9593](https://github.com/deckhouse/deckhouse/pull/9593)
  - **[deckhouse-controller]** Improve module validation. [#9293](https://github.com/deckhouse/deckhouse/pull/9293)
+ - **[dhctl]** In commander mode connect to controlled clusters via commander agent instead of SSH [#10342](https://github.com/deckhouse/deckhouse/pull/10342)
  - **[dhctl]** Upon editing configuration secrets, create them if they are missing from cluster [#9689](https://github.com/deckhouse/deckhouse/pull/9689)
  - **[dhctl]** Reduces code duplication in the gRPC server message handler and log sender, refactors the graceful shutdown mechanism, and adds support for proper log output for multiple parallel instances of the dhctl server. [#9096](https://github.com/deckhouse/deckhouse/pull/9096)
  - **[dhctl]** Reduce manual operations when converging control plane nodes. [#8380](https://github.com/deckhouse/deckhouse/pull/8380)
@@ -42,6 +43,8 @@
  - **[multitenancy-manager]** Add projects render validation. [#9607](https://github.com/deckhouse/deckhouse/pull/9607)
  - **[operator-trivy]** Add support for insecure registries. [#10124](https://github.com/deckhouse/deckhouse/pull/10124)
  - **[operator-trivy]** Bump operator-trivy version to `0.22.0`. [#10045](https://github.com/deckhouse/deckhouse/pull/10045)
+ - **[static-routing-manager]** Add the ability to create routes with "via dev" and without specifying a gateway IP. [#10277](https://github.com/deckhouse/deckhouse/pull/10277)
+    Pods of static-routing-manager will be restarted.
  - **[user-authn]** Allow device flow for Kubernets API [#10140](https://github.com/deckhouse/deckhouse/pull/10140)
  - **[user-authn]** Refresh groups on updating tokens. [#9598](https://github.com/deckhouse/deckhouse/pull/9598)
  - **[user-authz]** Improve rbacv2 hook to support custom roles, and roles extending and add docs. [#10241](https://github.com/deckhouse/deckhouse/pull/10241)
@@ -56,11 +59,13 @@
  - **[candi]** Seamless change of clusterDomain. [#9739](https://github.com/deckhouse/deckhouse/pull/9739)
  - **[candi]** Use statically built `lsblk`. [#9666](https://github.com/deckhouse/deckhouse/pull/9666)
  - **[candi]** Added the ability to configure Node DNS servers via the Azure Cloud Provider. [#9554](https://github.com/deckhouse/deckhouse/pull/9554)
+ - **[cloud-provider-aws]** Fix for deploying a cluster in a local zone. [#10491](https://github.com/deckhouse/deckhouse/pull/10491)
  - **[cloud-provider-aws]** revert "Added the ability to specify your IAM role" [#10435](https://github.com/deckhouse/deckhouse/pull/10435)
  - **[cloud-provider-vcd]** Fix vCloudDirector catalogs sharing. [#9802](https://github.com/deckhouse/deckhouse/pull/9802)
  - **[cloud-provider-yandex]** Add support a hybrid cluster in yandex CSI driver [#9861](https://github.com/deckhouse/deckhouse/pull/9861)
  - **[cloud-provider-zvirt]** Add to the instance a status about zvirtinstance. [#10236](https://github.com/deckhouse/deckhouse/pull/10236)
  - **[cloud-provider-zvirt]** 401 Unauthorized error fixed in zvirt csi-node. [#10035](https://github.com/deckhouse/deckhouse/pull/10035)
+ - **[cni-cilium]** Fixed `excludedCIDRs` option in EgressGatewayPolicies [#10493](https://github.com/deckhouse/deckhouse/pull/10493)
  - **[cni-cilium]** Disable the metrics server in the "egress-gateway-agent" because we don't use it. [#10208](https://github.com/deckhouse/deckhouse/pull/10208)
     The pods of the egress-gateway-agent will be restarted.
  - **[common]** Add `/bin/true` to `init` image [#10372](https://github.com/deckhouse/deckhouse/pull/10372)
@@ -97,10 +102,12 @@
  - **[monitoring-kubernetes]** Fixed formula for triggering alerts `KubeletNodeFSInodesUsage` and `KubeletImageFSInodesUsage`. [#9436](https://github.com/deckhouse/deckhouse/pull/9436)
  - **[multitenancy-manager]** Fix prometheus labels for ingress traffic in Project templates. [#10117](https://github.com/deckhouse/deckhouse/pull/10117)
  - **[multitenancy-manager]** Change logs format to JSON. [#9955](https://github.com/deckhouse/deckhouse/pull/9955)
+ - **[node-manager]** ignore heartbeat annotation on hook [#10368](https://github.com/deckhouse/deckhouse/pull/10368)
  - **[node-manager]** Fixed several RBAC resources in the node-manager module. [#9596](https://github.com/deckhouse/deckhouse/pull/9596)
  - **[operator-trivy]** Fix policies bundle error. [#10199](https://github.com/deckhouse/deckhouse/pull/10199)
  - **[prometheus]** Fix labels for prometheus pod antiAffinity. [#10117](https://github.com/deckhouse/deckhouse/pull/10117)
  - **[prometheus]** Fix stuck GrafanaDashboardDeprecation alerts [#10024](https://github.com/deckhouse/deckhouse/pull/10024)
+ - **[user-authn]** Add a patch to fix the problem with offline sessions that are not created/updated properly, which causes random refresh problems. [#10486](https://github.com/deckhouse/deckhouse/pull/10486)
  - **[user-authn]** Trim spaces from email field on the login form. [#10057](https://github.com/deckhouse/deckhouse/pull/10057)
 
 ## Chore
@@ -108,6 +115,7 @@
 
  - **[candi]** Bump patch versions of Kubernetes images: `v1.28.15`, `v1.29.10`, `v1.30.6` [#10340](https://github.com/deckhouse/deckhouse/pull/10340)
     Kubernetes control-plane components will restart, kubelet will restart.
+ - **[cloud-provider-yandex]** Changed behavior of externalIPAddresses key in terraform. [#10485](https://github.com/deckhouse/deckhouse/pull/10485)
  - **[cni-cilium]** Replacing iptables with precompiled binaries. [#10103](https://github.com/deckhouse/deckhouse/pull/10103)
     The pods will be restarted.
  - **[cni-cilium]** Updating `cilium` and its components to version 1.14.14 [#9650](https://github.com/deckhouse/deckhouse/pull/9650)
