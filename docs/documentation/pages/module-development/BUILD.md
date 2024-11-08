@@ -36,6 +36,7 @@ When developing multiple modules and publishing them to GitHub Packages, you sho
 Example of adapting a [module template](https://github.com/deckhouse/modules-template/) for using a PAT:
 - In the cloned repository at Github, on the _Settings -> Secrets and variables -> Actions_ page create a Secret named `TOKEN` containing a PAL.
 - Replace the `GITHUB_TOKEN` variable with `TOKEN`:
+
     ```shell
     cd <REPO>
     sed -i -e 's/GITHUB_TOKEN/TOKEN/g' $(find .github/workflows/ -type f)
