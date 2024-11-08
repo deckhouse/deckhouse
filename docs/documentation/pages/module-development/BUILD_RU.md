@@ -35,8 +35,8 @@ Deckhouse Kubernetes Platform (DKP) использует container registry дл
 {% endalert %}
 
 Пример адаптации [шаблона модуля](https://github.com/deckhouse/modules-template/) для использования PAL:
-- В вашем репозитории Github, склонированном из шаблона модуля, на странице _Settings -> Secrets and variables -> Actions_ создайте Secret с названием `TOKEN` содержащий PAL.
-- Замените переменную `GITHUB_TOKEN` на `TOKEN` в Github Workflow:
+- В вашем форке или скопированном репозитории на странице _Settings -> Secrets and variables -> Actions_ создайте Secret с названием `TOKEN` содержащий PAL.
+- Замените переменную `GITHUB_TOKEN` на `TOKEN` в `.github/workflows/`:
 
     ```shell
     cd <REPO>
