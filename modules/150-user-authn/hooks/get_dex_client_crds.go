@@ -43,6 +43,9 @@ type DexClient struct {
 	//   basic auth credentials part
 	LegacyID        string `json:"legacyID"`
 	LegacyEncodedID string `json:"legacyEncodedID"`
+
+	Labels      map[string]string `json:"labels"`
+	Annotations map[string]string `json:"annotations"`
 }
 
 type DexClientSecret struct {
@@ -75,6 +78,8 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		Name:            name,
 		Namespace:       namespace,
 		Spec:            spec,
+		Labels:          obj.GetLabels(),
+		Annotations:     obj.GetAnnotations(),
 	}, nil
 }
 
