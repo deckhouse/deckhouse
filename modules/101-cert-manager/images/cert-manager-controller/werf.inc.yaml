@@ -10,7 +10,7 @@ docker:
   ENTRYPOINT: ["/bin/cert-manager-controller"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE }}
+from: {{ $.Images.BASE_GOLANG_21_BULLSEYE }}
 git:
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -30,6 +30,5 @@ shell:
   - git clone -b "v{{ $version }}" --single-branch --depth=1 {{ $.SOURCE_REPO }}/jetstack/cert-manager.git
   - cd /build/cert-manager
   - git apply /patches/*.patch --verbose
-  - export GO_VERSION=${GOLANG_VERSION}
   - export RELEASE_VERSION="v{{ $version }}-flant"
   - GOPROXY={{ $.GOPROXY }} make CTR=jq _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64
