@@ -348,7 +348,7 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 
 		// Check if the node PKI secret exists
 		secret, err := k8s.GetRegistryNodeSecret(ctx, r.KubeClient, masterNode.Name)
-		if !apierrors.IsNotFound(err) {
+		if err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 
