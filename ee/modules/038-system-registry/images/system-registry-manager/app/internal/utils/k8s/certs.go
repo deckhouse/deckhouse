@@ -6,17 +6,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package k8s
 
 import (
-	"context"
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/cloudflare/cfssl/helpers"
 	"github.com/cloudflare/cfssl/initca"
 	cfssllog "github.com/cloudflare/cfssl/log"
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"time"
 )
 
@@ -25,6 +20,8 @@ const (
 	RegistryCAKey    = "registry-ca.key"
 	AuthCert         = "auth.crt"
 	AuthKey          = "auth.key"
+	AuthTokenCert    = "token.crt"
+	AuthTokenKey     = "token.key"
 	DistributionCert = "distribution.crt"
 	DistributionKey  = "distribution.key"
 )
@@ -39,8 +36,8 @@ func init() {
 	cfssllog.Level = cfssllog.LevelFatal
 }
 
-// GenerateCA generates a new CA certificate and key.
-func GenerateCA() (caCertPEM []byte, caKeyPEM []byte, err error) {
+// generateCA generates a new CA certificate and key.
+func generateCA() (caCertPEM []byte, caKeyPEM []byte, err error) {
 
 	caRequest := &csr.CertificateRequest{
 		CN: "embedded-registry-ca",
@@ -65,8 +62,8 @@ func Validator(req *csr.CertificateRequest) error {
 	return nil
 }
 
-// GenerateCertificate generates a new certificate and key signed by the provided CA certificate and key.
-func GenerateCertificate(commonName string, hosts []string, caCertPEM []byte, caKeyPEM []byte) (certPEM, keyPEM []byte, err error) {
+// generateCertificate generates a new certificate and key signed by the provided CA certificate and key.
+func generateCertificate(commonName string, hosts []string, caCertPEM []byte, caKeyPEM []byte) (certPEM, keyPEM []byte, err error) {
 
 	req := csr.CertificateRequest{
 		CN: commonName,
@@ -114,58 +111,4 @@ func GenerateCertificate(commonName string, hosts []string, caCertPEM []byte, ca
 	}
 
 	return certPEM, keyPEM, nil
-}
-
-// EnsureCASecret ensures that the CA secret exists in the cluster. If it does not exist, it generates a new CA certificate and key.
-func EnsureCASecret(ctx context.Context, kubeClient *kubernetes.Clientset) (bool, []byte, []byte, error) {
-
-	registryCASecret, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Get(ctx, "registry-pki", metav1.GetOptions{})
-	if err == nil {
-		caCertPEM := registryCASecret.Data[RegistryCACert]
-		caKeyPEM := registryCASecret.Data[RegistryCAKey]
-		return false, caCertPEM, caKeyPEM, nil
-	}
-
-	if !apierrors.IsNotFound(err) {
-		return false, nil, nil, err
-	}
-
-	// Secret does not exist, generate a new CA certificate and key
-	caCertPEM, caKeyPEM, err := GenerateCA()
-	if err != nil {
-		return false, nil, nil, err
-	}
-
-	// Create the CA secret
-	if err := CreateCASecret(ctx, kubeClient, caCertPEM, caKeyPEM); err != nil {
-		return false, nil, nil, err
-	}
-
-	return true, caCertPEM, caKeyPEM, nil
-}
-
-// CreateCASecret creates a new CA secret in the specified namespace
-func CreateCASecret(ctx context.Context, kubeClient *kubernetes.Clientset, caCertPEM, caKeyPEM []byte) error {
-	labels := map[string]string{
-		labelHeritageKey: labelHeritageValue,
-		labelModuleKey:   labelModuleValue,
-		labelTypeKey:     labelCaSecretTypeValue,
-	}
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "registry-pki",
-			Namespace: RegistryNamespace,
-			Labels:    labels,
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			RegistryCACert: caCertPEM,
-			RegistryCAKey:  caKeyPEM,
-		},
-	}
-
-	// Create the secret in Kubernetes
-	_, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Create(ctx, secret, metav1.CreateOptions{})
-	return err
 }

@@ -87,7 +87,7 @@ func GetMasterNodes(ctx context.Context, kubeClient *kubernetes.Clientset) ([]Ma
 		masterNodes = append(masterNodes, masterNode)
 	}
 
-	masterNodes = masterNodes[:1] // #TODO for now, we will use only the first master node
+	//masterNodes = masterNodes[:1] // #TODO for now, we will use only the first master node
 
 	return masterNodes, nil
 }

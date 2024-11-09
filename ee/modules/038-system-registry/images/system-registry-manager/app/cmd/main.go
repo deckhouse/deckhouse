@@ -108,27 +108,36 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 		return fmt.Errorf("unable to set up manager: %w", err)
 	}
 
-	// Add leader status update runnable
-	err = mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-		status.isLeader = true
-		<-ctx.Done()
-		status.isLeader = false
-		return nil
-	}))
-	if err != nil {
-		return fmt.Errorf("unable to add leader runnable: %w", err)
-	}
-
-	// Create registry controller
-	reconciler := &controllers.RegistryReconciler{
+	// Create a new instance of RegistryReconciler
+	reconciler := controllers.RegistryReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		KubeClient: kubeClient,
 		Recorder:   mgr.GetEventRecorderFor("embedded-registry-controller"),
 		HttpClient: httpClient,
 	}
+
+	// Set up the controller with the manager
 	if err := reconciler.SetupWithManager(mgr, ctx); err != nil {
 		return fmt.Errorf("unable to create controller: %w", err)
+	}
+	// Add leader status update runnable
+	err = mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		// When this manager becomes the leader
+		status.isLeader = true
+
+		// Call SecretsStartupCheckCreate with the existing reconciler instance
+		if err := reconciler.SecretsStartupCheckCreate(ctx); err != nil {
+			return fmt.Errorf("failed to initialize secrets: %w", err)
+		}
+
+		// Wait until the context is done to handle graceful shutdown
+		<-ctx.Done()
+		status.isLeader = false
+		return nil
+	}))
+	if err != nil {
+		return fmt.Errorf("unable to add leader runnable: %w", err)
 	}
 
 	// Start the manager

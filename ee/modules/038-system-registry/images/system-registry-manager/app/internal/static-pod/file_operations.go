@@ -32,6 +32,8 @@ type Pki struct {
 	CaCert           string
 	AuthCert         string
 	AuthKey          string
+	AuthTokenCert    string
+	AuthTokenKey     string
 	DistributionCert string
 	DistributionKey  string
 }
@@ -43,6 +45,8 @@ type ConfigHashes struct {
 	CaCertHash               string
 	AuthCertHash             string
 	AuthKeyHash              string
+	AuthTokenCertHash        string
+	AuthTokenKeyHash         string
 	DistributionCertHash     string
 	DistributionKeyHash      string
 }
@@ -66,6 +70,7 @@ type User struct {
 type UpstreamRegistry struct {
 	Scheme   string
 	Host     string
+	Path     string
 	CA       string
 	User     string
 	Password string
@@ -227,6 +232,9 @@ func (config *EmbeddedRegistryConfig) validate() error {
 		if config.Registry.UpstreamRegistry.Host == "" {
 			missingFields = append(missingFields, "UpstreamRegistry.Host")
 		}
+		if config.Registry.UpstreamRegistry.Path == "" {
+			missingFields = append(missingFields, "UpstreamRegistry.Path")
+		}
 		if config.Registry.UpstreamRegistry.User == "" {
 			missingFields = append(missingFields, "UpstreamRegistry.User")
 		}
@@ -257,6 +265,12 @@ func (config *EmbeddedRegistryConfig) validate() error {
 	}
 	if config.Pki.AuthKey == "" {
 		missingFields = append(missingFields, "Pki.AuthKey")
+	}
+	if config.Pki.AuthTokenCert == "" {
+		missingFields = append(missingFields, "Pki.AuthTokenCert")
+	}
+	if config.Pki.AuthTokenKey == "" {
+		missingFields = append(missingFields, "Pki.AuthTokenCert")
 	}
 	if config.Pki.DistributionCert == "" {
 		missingFields = append(missingFields, "Pki.DistributionCert")
@@ -330,6 +344,8 @@ func (pki *Pki) savePkiFiles(basePath string, configHashes *ConfigHashes) (bool,
 		"ca.crt":           {pki.CaCert, &configHashes.CaCertHash},
 		"auth.crt":         {pki.AuthCert, &configHashes.AuthCertHash},
 		"auth.key":         {pki.AuthKey, &configHashes.AuthKeyHash},
+		"token.crt":        {pki.AuthTokenCert, &configHashes.AuthTokenCertHash},
+		"token.key":        {pki.AuthTokenKey, &configHashes.AuthTokenKeyHash},
 		"distribution.crt": {pki.DistributionCert, &configHashes.DistributionCertHash},
 		"distribution.key": {pki.DistributionKey, &configHashes.DistributionKeyHash},
 	}

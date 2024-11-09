@@ -74,6 +74,15 @@ func DeleteAllRegistryNodeSecrets(ctx context.Context, kubeClient *kubernetes.Cl
 	return deletedSecrets, nil
 }
 
+func GetRegistryNodeSecret(ctx context.Context, kubeClient *kubernetes.Clientset, nodeName string) (*corev1.Secret, error) {
+	secretName := fmt.Sprintf("registry-node-%s-pki", nodeName)
+	secret, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
+}
+
 // GetAllRegistryNodeSecrets returns all registry node secrets in the cluster
 func GetAllRegistryNodeSecrets(ctx context.Context, kubeClient *kubernetes.Clientset) ([]corev1.Secret, error) {
 	labelSelector := fmt.Sprintf("%s=%s,%s=%s", labelModuleKey, labelModuleValue, labelTypeKey, labelNodeSecretTypeValue)
@@ -107,42 +116,6 @@ func generateRegistryPassword() (string, string, error) {
 	}
 
 	return string(password), string(hash), nil
-}
-
-// GetRegistryUser returns the registry user by name
-func GetRegistryUser(ctx context.Context, kubeClient *kubernetes.Clientset, userName string) (*RegistryUser, error) {
-	// Get the secret by name
-	secret, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Get(ctx, userName, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return &RegistryUser{
-		UserName:       string(secret.Data["name"]),
-		Password:       string(secret.Data["password"]),
-		HashedPassword: string(secret.Data["passwordHash"]),
-	}, nil
-}
-
-// CreateRegistryUser creates a new registry user in the cluster
-func CreateRegistryUser(ctx context.Context, kubeClient *kubernetes.Clientset, userName string) (*RegistryUser, error) {
-	// Check if the secret already exists
-	_, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Get(ctx, userName, metav1.GetOptions{})
-	if err == nil {
-		return nil, fmt.Errorf("secret %s already exists", userName)
-	}
-	if !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-
-	// Generate a new password
-	password, hashedPassword, err := generateRegistryPassword()
-	if err != nil {
-		return nil, err
-	}
-
-	// Create the secret
-	return CreateRegistryUserSecret(ctx, kubeClient, userName, password, hashedPassword)
 }
 
 // CreateRegistryUserSecret creates a new secret in the cluster with the given user data
@@ -198,13 +171,13 @@ func CreateNodePKISecret(ctx context.Context, kubeClient *kubernetes.Clientset, 
 	}
 
 	// generate registry node distribution certificates
-	distributionCert, distributionKey, err := GenerateCertificate("embedded-registry-distribution", hosts, caCertPEM, caKeyPEM)
+	distributionCert, distributionKey, err := generateCertificate("embedded-registry-distribution", hosts, caCertPEM, caKeyPEM)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
 	// generate registry node auth certificates
-	authCert, authKey, err := GenerateCertificate("embedded-registry-auth", hosts, caCertPEM, caKeyPEM)
+	authCert, authKey, err := generateCertificate("embedded-registry-auth", hosts, caCertPEM, caKeyPEM)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -232,4 +205,78 @@ func CreateNodePKISecret(ctx context.Context, kubeClient *kubernetes.Clientset, 
 	}
 
 	return distributionCert, distributionKey, authCert, authKey, nil
+}
+
+// EnsureCASecret ensures that the CA secret exists in the cluster. If it does not exist, it generates a new CA certificate and key.
+func EnsureCASecret(ctx context.Context, kubeClient *kubernetes.Clientset) (bool, []byte, []byte, []byte, []byte, error) {
+
+	registryCASecret, err := GetCASecret(ctx, kubeClient)
+	if err == nil {
+		caCertPEM := registryCASecret.Data[RegistryCACert]
+		caKeyPEM := registryCASecret.Data[RegistryCAKey]
+		authTokenCertPEM := registryCASecret.Data[AuthTokenCert]
+		authTokenKeyPEM := registryCASecret.Data[AuthTokenKey]
+
+		return false, caCertPEM, caKeyPEM, authTokenCertPEM, authTokenKeyPEM, nil
+	}
+
+	// if any error other than NotFound, return the error
+	if !apierrors.IsNotFound(err) {
+		return false, nil, nil, nil, nil, err
+	}
+
+	// Secret does not exist, generate a new CA certificate and key
+	caCertPEM, caKeyPEM, err := generateCA()
+	if err != nil {
+		return false, nil, nil, nil, nil, err
+	}
+
+	// Generate the auth token certificate and key
+	authTokenCertPEM, authTokenKeyPEM, err := generateCertificate("embedded-registry-auth-token", nil, caCertPEM, caKeyPEM)
+	if err != nil {
+		return false, nil, nil, nil, nil, err
+	}
+
+	// Create the CA secret
+	if err := CreateRegistryCaPKISecret(ctx, kubeClient, caCertPEM, caKeyPEM, authTokenCertPEM, authTokenKeyPEM); err != nil {
+		return false, nil, nil, nil, nil, err
+	}
+
+	return true, caCertPEM, caKeyPEM, authTokenCertPEM, authTokenKeyPEM, nil
+}
+
+func GetCASecret(ctx context.Context, kubeClient *kubernetes.Clientset) (*corev1.Secret, error) {
+	secret, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Get(ctx, "registry-pki", metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
+}
+
+// CreateRegistryCaPKISecret creates a new CA secret in the specified namespace
+func CreateRegistryCaPKISecret(ctx context.Context, kubeClient *kubernetes.Clientset, caCertPEM, caKeyPEM, authCertPEM, authKeyPEM []byte) error {
+	labels := map[string]string{
+		labelHeritageKey: labelHeritageValue,
+		labelModuleKey:   labelModuleValue,
+		labelTypeKey:     labelCaSecretTypeValue,
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "registry-pki",
+			Namespace: RegistryNamespace,
+			Labels:    labels,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			RegistryCACert: caCertPEM,
+			RegistryCAKey:  caKeyPEM,
+			AuthTokenCert:  authCertPEM,
+			AuthTokenKey:   authKeyPEM,
+		},
+	}
+
+	// Create the secret in Kubernetes
+	_, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Create(ctx, secret, metav1.CreateOptions{})
+	return err
 }
