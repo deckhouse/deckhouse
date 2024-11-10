@@ -29,9 +29,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
-
 	"gopkg.in/yaml.v3"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -203,7 +201,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			l.log.Debugf("process the '%s' module definition from the '%s' dir", def.Name, dir)
 			module, err := l.processModuleDefinition(def)
 			if err != nil {
-				return fmt.Errorf("failed to process the '%s' module definition: %w", def.Name, err)
+				return fmt.Errorf("process the '%s' module definition: %w", def.Name, err)
 			}
 
 			if _, ok := l.modules[def.Name]; ok {
@@ -213,7 +211,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 
 			l.log.Debugf("ensure the '%s' module", def.Name)
 			if err = l.ensureModule(ctx, def, !strings.HasPrefix(def.Path, d8env.GetDownloadedModulesDir())); err != nil {
-				return fmt.Errorf("failed to ensure the '%s' embedded module: %w", def.Name, err)
+				return fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
 			}
 
 			l.modules[def.Name] = module
@@ -223,12 +221,12 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	// clear deleted embedded modules
 	modulesList := new(v1alpha1.ModuleList)
 	if err := l.client.List(ctx, modulesList); err != nil {
-		return fmt.Errorf("failed to list all modules: %w", err)
+		return fmt.Errorf("list all modules: %w", err)
 	}
 	for _, module := range modulesList.Items {
 		if module.IsEmbedded() && l.modules[module.Name] == nil {
 			if err := l.client.Delete(ctx, &module); err != nil {
-				return fmt.Errorf("failed to delete module '%s': %w", module.Name, err)
+				return fmt.Errorf("delete the '%s' emebedded module: %w", module.Name, err)
 			}
 		}
 	}
@@ -267,7 +265,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *Definition, embedded boo
 				l.log.Debugf("the '%s' embedded module not found, create it", def.Name)
 				if err = l.client.Create(ctx, module); err != nil {
 					l.log.Errorf("failed to create '%s' module: %v", def.Name, err)
-					return err
+					return fmt.Errorf("create the '%s' embedded module: %w", def.Name, err)
 				}
 			}
 
@@ -314,7 +312,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *Definition, embedded boo
 			if needsUpdate {
 				l.log.Debugf("the '%s' module has changed", def.Name)
 				if err := l.client.Update(ctx, module); err != nil {
-					return err
+					return fmt.Errorf("update the '%s' embedded module: %w", def.Name, err)
 				}
 			}
 
@@ -363,7 +361,7 @@ func readDir(dir string) ([]os.DirEntry, error) {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("path '%s' does not exist", dir)
 		}
-		return nil, fmt.Errorf("failed to list modules directory '%s': %w", dir, err)
+		return nil, fmt.Errorf("list modules directory '%s': %w", dir, err)
 	}
 	return dirEntries, nil
 }
@@ -386,7 +384,7 @@ func (l *Loader) resolveDirEntry(dirPath string, entry os.DirEntry) (string, str
 			}
 		}
 
-		return "", "", fmt.Errorf("failed to resolve '%s' as a possible symlink: %w", absPath, err)
+		return "", "", fmt.Errorf("resolve '%s' as a possible symlink: %w", absPath, err)
 	}
 
 	if targetPath != "" {

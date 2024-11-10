@@ -17,20 +17,36 @@ limitations under the License.
 package validation
 
 import (
-	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
+	"net/http"
+
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 )
 
-type ModuleStorage interface {
+type registerer interface {
+	RegisterHandler(route string, handler http.Handler)
+}
+
+type moduleStorage interface {
 	GetModuleByName(name string) (*moduleloader.Module, error)
 }
 
-// RegisterAdmissionHandlers register validation webhook handlers for admission server built-in in addon-operator
-func RegisterAdmissionHandlers(operator *addonoperator.AddonOperator, moduleStorage ModuleStorage, metricStorage *metricstorage.MetricStorage) {
-	operator.AdmissionServer.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(moduleStorage, metricStorage, configtools.NewValidator(operator.ModuleManager)))
-	operator.AdmissionServer.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
-	operator.AdmissionServer.RegisterHandler("/validate/v1/configuration-secret", kubernetesVersionHandler(operator.ModuleManager))
+type moduleManager interface {
+	IsModuleEnabled(name string) bool
+}
+
+// RegisterAdmissionHandlers registers validation webhook handlers for admission server built-in in addon-operator
+func RegisterAdmissionHandlers(
+	registerer registerer,
+	client client.Client,
+	mm moduleManager,
+	configValidator *configtools.Validator,
+	storage moduleStorage,
+	metricStorage *metricstorage.MetricStorage) {
+	registerer.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(client, storage, metricStorage, configValidator))
+	registerer.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
+	registerer.RegisterHandler("/validate/v1/configuration-secret", kubernetesVersionHandler(mm))
 }

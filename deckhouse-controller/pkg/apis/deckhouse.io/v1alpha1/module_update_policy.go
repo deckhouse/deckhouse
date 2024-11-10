@@ -27,6 +27,8 @@ import (
 const (
 	ModuleUpdatePolicyResource = "moduleupdatepolicies"
 	ModuleUpdatePolicyKind     = "ModuleUpdatePolicy"
+
+	ModuleUpdatePolicyModeIgnore = "Ignore"
 )
 
 var (

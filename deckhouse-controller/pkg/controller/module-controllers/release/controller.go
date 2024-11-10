@@ -413,8 +413,8 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 			}
 		}
 
-		if policy.Spec.Update.Mode == "Ignore" {
-			if err := r.updateModuleReleaseStatusMessage(ctx, mr, disabledByIgnorePolicy); err != nil {
+		if policy.Spec.Update.Mode == v1alpha1.ModuleUpdatePolicyModeIgnore {
+			if err = r.updateModuleReleaseStatusMessage(ctx, mr, disabledByIgnorePolicy); err != nil {
 				return result, fmt.Errorf("update module release status message: %w", err)
 			}
 			return ctrl.Result{RequeueAfter: defaultCheckInterval * 4}, nil
@@ -656,7 +656,7 @@ func (r *moduleReleaseReconciler) PreflightCheck(ctx context.Context) (err error
 	r.clusterUUID = r.getClusterUUID(ctx)
 
 	// Check if controller's dependencies have been initialized
-	//_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
+	// _ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
 	//	func(context.Context) (bool, error) {
 	//		// TODO: add modulemanager initialization check r.moduleManager.AreModulesInited() (required for reloading modules without restarting deckhouse)
 	//		return deckhouseconfig.IsServiceInited(), nil

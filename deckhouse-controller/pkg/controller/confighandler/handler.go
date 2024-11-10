@@ -21,7 +21,6 @@ import (
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/utils"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -74,8 +73,8 @@ func (h *Handler) HandleEvent(ctx context.Context, moduleConfig *v1alpha1.Module
 		}
 
 		// remove annotation if module disabled
-		if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.AllowDisableAnnotation]; ok && !*moduleConfig.Spec.Enabled {
-			delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.AllowDisableAnnotation)
+		if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok && !*moduleConfig.Spec.Enabled {
+			delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
 			if err = h.client.Update(ctx, moduleConfig); err != nil {
 				h.configEventCh <- config.Event{Key: moduleConfig.Name, Config: kubeConfig, Err: err}
 				return

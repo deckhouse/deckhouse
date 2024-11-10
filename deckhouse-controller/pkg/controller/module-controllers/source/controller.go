@@ -23,13 +23,11 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid/v5"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -144,7 +142,7 @@ func (r *reconciler) setClusterUUID(ctx context.Context) error {
 
 	// attempt to read the cluster UUID from a secret
 	secret := new(corev1.Secret)
-	if err := r.client.Get(ctx, types.NamespacedName{Namespace: deckhouseNamespace, Name: deckhouseDiscoverySecret}, secret); err != nil {
+	if err := r.client.Get(ctx, client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDiscoverySecret}, secret); err != nil {
 		r.log.Warnf("failed to read clusterUUID from the 'deckhouse-discovery' secret: %v. Generating random uuid", err)
 		r.clusterUUID = uuid.Must(uuid.NewV4()).String()
 		return nil
@@ -231,12 +229,12 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 
 	// remove the source from available sources in deleted modules
-	nameSet := make(map[string]bool)
+	namesSet := make(map[string]bool)
 	for _, pulledModuleName := range pulledModules {
-		nameSet[pulledModuleName] = true
+		namesSet[pulledModuleName] = true
 	}
 	for _, availableModule := range source.Status.AvailableModules {
-		if !nameSet[availableModule.Name] {
+		if !namesSet[availableModule.Name] {
 			if err = r.cleanSourceInModule(ctx, source.Name, availableModule.Name); err != nil {
 				r.log.Errorf("failed to clean the module from the '%s' module source: %v", availableModule.Name, err)
 				return ctrl.Result{Requeue: true}, nil
@@ -273,22 +271,22 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 		}
 
-		// clear error
+		// clear pull error
 		availableModule.PullError = ""
 
 		// get update policy
 		policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, moduleName)
 		if err != nil {
-			return fmt.Errorf("failed to get update policy for the '%s' module: %w", moduleName, err)
+			return fmt.Errorf("get update policy for the '%s' module: %w", moduleName, err)
 		}
 
 		// TODO(ipaqsa): can be removed
 		availableModule.Policy = policy.Name
 
 		// create or update module
-		module, err := r.ensureModule(ctx, source.Name, moduleName)
+		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
-			return fmt.Errorf("failed to ensure module for the '%s' module source: %w", moduleName, err)
+			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
 		}
 
 		if module == nil {
@@ -299,7 +297,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		exist, err := utils.ModulePullOverrideExists(ctx, r.client, source.Name, moduleName)
 		if err != nil {
-			return fmt.Errorf("failed to get pull override for the '%s' module: %w", moduleName, err)
+			return fmt.Errorf("get pull override for the '%s' module: %w", moduleName, err)
 		}
 
 		if exist {
@@ -314,7 +312,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// check if release exists
 		exist, err = r.releaseExists(ctx, source.Name, moduleName, cachedChecksum)
 		if err != nil {
-			return fmt.Errorf("failed to check if the module '%s' has a release: %w", moduleName, err)
+			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
 		if !exist {
 			// if release does not exist, clear checksum to trigger meta downloading
@@ -334,7 +332,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exist) {
 			r.log.Debugf("ensure module release for the '%s' module for the '%s' module source", moduleName, source.Name)
 			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
-				return fmt.Errorf("failed to ensure module release for the '%s': %w", moduleName, err)
+				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
 			}
 			availableModule.Checksum = meta.Checksum
 		} else {
@@ -345,25 +343,14 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return true
 			})
 			if err != nil {
-				return fmt.Errorf("failed to update the '%s' module: %w", moduleName, err)
+				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 			}
 		}
 		availableModules = append(availableModules, availableModule)
-
-		// update release channel
-		err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-			if module.Properties.ReleaseChannel != policy.Spec.ReleaseChannel {
-				module.Properties.ReleaseChannel = policy.Spec.ReleaseChannel
-				return true
-			}
-			return false
-		})
-		if err != nil {
-			return fmt.Errorf("failed to update release channel or version for the '%s' module: %w", moduleName, err)
-		}
 	}
-	// update status
-	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(obj *v1alpha1.ModuleSource) bool {
+
+	// update source status
+	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 		source.Status.Message = ""
 		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
@@ -374,19 +361,19 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		return true
 	})
 	if err != nil {
-		return fmt.Errorf("failed to update the '%s' module source status: %w", source.Name, err)
+		return fmt.Errorf("update the '%s' module source status: %w", source.Name, err)
 	}
 
 	// set finalizer
-	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, func(obj *v1alpha1.ModuleSource) bool {
-		if len(source.Status.AvailableModules) > 0 && !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
+	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+		if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
 			controllerutil.AddFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 			return true
 		}
 		return false
 	})
 	if err != nil {
-		return fmt.Errorf("failed to set finalizer to the '%s' module source: %w", source.Name, err)
+		return fmt.Errorf("set finalizer to the '%s' module source: %w", source.Name, err)
 	}
 
 	return nil
@@ -403,7 +390,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 			// prevent deletion if there are deployed releases
 			if len(releases.Items) > 0 {
-				err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(obj *v1alpha1.ModuleSource) bool {
+				err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 					source.Status.Message = "The ModuleSource contains at least 1 Deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue"
 					return true
 				})

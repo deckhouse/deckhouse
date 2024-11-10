@@ -41,6 +41,9 @@ spec:
                       name:
                         type: string
                         description: Имя модуля.
+                      pullError:
+                        type: string
+                        description: Ошибка скачивания модуля.
                       checksum:
                         type: string
                         description: Чексумма релиза.
@@ -52,9 +55,6 @@ spec:
                 message:
                   type: string
                   description: Сообщение с детальной ошибкой.
-                moduleErrors:
-                  type: array
-                  description: Сообщения с ошибками установки модулей.
       subresources:
         status: {}
       additionalPrinterColumns:

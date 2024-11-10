@@ -16,16 +16,14 @@ package config
 
 import (
 	"context"
-	"slices"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -194,7 +192,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	// set finalizer
-	err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(obj *v1alpha1.ModuleConfig) bool {
+	err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 		// to handle delete event
 		if !controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer) {
 			controllerutil.AddFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
@@ -227,22 +225,19 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 	// change source by module config
 	if moduleConfig.Spec.Source != "" && module.Properties.Source != moduleConfig.Spec.Source {
-		// TODO(ipaqsa): move to validation webhook
-		if !slices.Contains(module.Properties.AvailableSources, moduleConfig.Spec.Source) {
-			moduleConfig.Status.Message = "The wrong source"
-			if err = r.client.Status().Update(ctx, moduleConfig); err != nil {
-				r.log.Errorf("failed to update the '%s' module conifg status: %v", moduleConfig.Name, err)
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{}, nil
+		if err = r.changeModuleSource(ctx, module, module.Properties.AvailableSources[0], updatePolicy); err != nil {
+			r.log.Debugf("failed to change source for the '%s' module: %v", module.Name, err)
+			return ctrl.Result{Requeue: true}, nil
 		}
-		return r.changeModuleSource(ctx, module, moduleConfig.Spec.Source, updatePolicy)
 	}
 
 	if module.Properties.Source == "" {
 		// change source by available source
 		if len(module.Properties.AvailableSources) == 1 {
-			return r.changeModuleSource(ctx, module, module.Properties.AvailableSources[0], updatePolicy)
+			if err = r.changeModuleSource(ctx, module, module.Properties.AvailableSources[0], updatePolicy); err != nil {
+				r.log.Debugf("failed to change source for the '%s' module: %v", module.Name, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
 		}
 
 		// set conflict
@@ -259,7 +254,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	// update only the update policy if nothing else has changed
-	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(obj *v1alpha1.Module) bool {
+	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		if module.Properties.UpdatePolicy != updatePolicy {
 			module.Properties.UpdatePolicy = updatePolicy
 			return true
@@ -267,7 +262,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		return false
 	})
 	if err != nil {
-		r.log.Errorf("failed to update the '%s' module update policy: %v", module.Name, err)
+		r.log.Errorf("failed to update the '%s' module`s update policy: %v", module.Name, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -314,7 +309,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		}
 	}
 
-	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(obj *v1alpha1.Module) bool {
+	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		module.Properties.UpdatePolicy = ""
 		module.Properties.Source = ""
 		return true
@@ -324,7 +319,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	err = utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(obj *v1alpha1.ModuleConfig) bool {
+	err = utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 		if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer) {
 			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
 			return true
@@ -339,7 +334,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Module, source, updatePolicy string) (ctrl.Result, error) {
+func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Module, source, updatePolicy string) error {
 	r.log.Debugf("set new '%s' source to the '%s' module", source, module.Name)
 	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		module.Status.Phase = v1alpha1.ModulePhaseDownloading
@@ -347,8 +342,7 @@ func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Mo
 		return true
 	})
 	if err != nil {
-		r.log.Errorf("failed to change the module source to the '%s' module: %v", module.Name, err)
-		return ctrl.Result{Requeue: true}, nil
+		return fmt.Errorf("update the '%s' module status: %w", module.Name, err)
 	}
 	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		module.Properties.Source = source
@@ -356,8 +350,7 @@ func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Mo
 		return true
 	})
 	if err != nil {
-		r.log.Errorf("failed to change the module source to the '%s' module: %v", module.Name, err)
-		return ctrl.Result{Requeue: true}, nil
+		return fmt.Errorf("update the '%s' module: %w", module.Name, err)
 	}
-	return ctrl.Result{}, err
+	return nil
 }

@@ -1,4 +1,4 @@
-# ModuleSource without annotation and generation
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:

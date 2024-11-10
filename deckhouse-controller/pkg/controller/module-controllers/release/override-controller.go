@@ -112,7 +112,7 @@ func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) (err 
 	c.clusterUUID = c.getClusterUUID(ctx)
 
 	// Check if controller's dependencies have been initialized
-	//_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
+	// _ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
 	//	func(context.Context) (bool, error) {
 	//		// TODO: add modulemanager initialization check c.moduleManager.AreModulesInited() (required for reloading modules without restarting deckhouse)
 	//		return deckhouseconfig.IsServiceInited(), nil

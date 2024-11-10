@@ -74,7 +74,7 @@ spec:
                     - NotInstalled
                     - Downloading
                     - Enqueued
-                    - WaitSynchronization
+                    - WaitSync
                     - Pending
                     - Conflict
                     - Ready
@@ -118,7 +118,7 @@ spec:
         - name: Source
           jsonPath: .properties.source
           type: string
-          description: The source of the module it provided by one (otherwise empty).'
+          description: The source of the module it provided by one.
         - name: Version
           jsonPath: .properties.version
           type: string
@@ -132,7 +132,7 @@ spec:
           jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].status
           description: The module`s enabled status
           type: string
-        - name: Enabled Info
+        - name: Disabled Message
           jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].message
           description: The modules` enabled information.
           type: string

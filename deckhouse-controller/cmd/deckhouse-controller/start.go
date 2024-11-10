@@ -146,33 +146,32 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 }
 
 func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
-	err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml")
-	if err != nil {
+	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml"); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 
 	// we have to lock the controller run if dhctl lock configmap exists
-	if err = lockOnBootstrap(ctx, operator.KubeClient()); err != nil {
+	if err := lockOnBootstrap(ctx, operator.KubeClient()); err != nil {
 		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
 	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, operator, logger.Named("deckhouse-controller"))
 	if err != nil {
-		return fmt.Errorf("deckhouse controller creating: %w", err)
+		return fmt.Errorf("create deckhouse controller: %w", err)
 	}
 
-	// load module from FS, start pluggable controllers and run deckhouse config event loop
+	// load modules from FS, start pluggable controllers and run deckhouse config event loop
 	if err = deckhouseController.Start(ctx); err != nil {
-		return err
+		return fmt.Errorf("start deckhouse controller: %w", err)
 	}
 
 	if err = operator.Start(ctx); err != nil {
-		return err
+		return fmt.Errorf("start operator: %w", err)
 	}
 
 	debugserver.RegisterRoutes(operator.DebugServer)
 
-	// Block main thread by waiting signals from OS.
+	// block main thread by waiting signals from OS.
 	utilsignal.WaitForProcessInterruption(func() {
 		operator.Stop()
 		os.Exit(0)

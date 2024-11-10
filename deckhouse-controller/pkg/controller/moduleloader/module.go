@@ -16,11 +16,12 @@ package moduleloader
 
 import (
 	"fmt"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Module struct {
@@ -30,7 +31,7 @@ type Module struct {
 	stage       string
 	labels      map[string]string
 
-	needConfirm               bool
+	needConfirmDisable        bool
 	needConfirmDisableMessage string
 }
 
@@ -54,7 +55,7 @@ func newModule(def *Definition, staticValues utils.Values, configBytes, valuesBy
 		labels:                    labels,
 		description:               def.Description,
 		stage:                     def.Stage,
-		needConfirm:               def.DisableOptions.Confirmation,
+		needConfirmDisable:        def.DisableOptions.Confirmation,
 		needConfirmDisableMessage: def.DisableOptions.Message,
 	}, nil
 }
@@ -63,8 +64,8 @@ func (m *Module) GetBasicModule() *modules.BasicModule {
 	return m.basic
 }
 
-func (m *Module) GetConfirmationReason() (string, bool) {
-	return m.needConfirmDisableMessage, m.needConfirm
+func (m *Module) GetConfirmationDisableReason() (string, bool) {
+	return m.needConfirmDisableMessage, m.needConfirmDisable
 }
 
 func calculateLabels(name string) map[string]string {

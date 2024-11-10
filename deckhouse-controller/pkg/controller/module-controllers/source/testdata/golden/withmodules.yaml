@@ -4,23 +4,28 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  finalizers:
+    - modules.deckhouse.io/module-exists
   creationTimestamp: null
   name: test-source-1
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   registry:
     ca: ""
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
-  releaseChannel: ""
 status:
   message: ""
-  moduleErrors: []
   modules:
-  - name: bar
-  - name: foo
-  modulesCount: 2
+  - name: disabledmodule
+  - name: enabledmodule
+    checksum: 'sha256:'
+  - name: notthissourcemodule
+  - name: withpolicymodule
+    checksum: 'sha256:'
+    policy: test-alpha
+  modulesCount: 4
   syncTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -28,11 +33,11 @@ kind: ModuleRelease
 metadata:
   creationTimestamp: null
   labels:
-    module: bar
+    module: enabledmodule
     modules.deckhouse.io/update-policy: ""
-    release-checksum: 853ae90f0351324bd73ea615e6487517
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
     source: test-source-1
-  name: bar-v1.2.3
+  name: enabledmodule-v1.2.3
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
     controller: true
@@ -41,7 +46,7 @@ metadata:
     uid: ""
   resourceVersion: "1"
 spec:
-  moduleName: bar
+  moduleName: enabledmodule
   version: 1.2.3
   weight: 900
 status:
@@ -56,11 +61,11 @@ kind: ModuleRelease
 metadata:
   creationTimestamp: null
   labels:
-    module: foo
-    modules.deckhouse.io/update-policy: ""
-    release-checksum: 853ae90f0351324bd73ea615e6487517
+    module: withpolicymodule
+    modules.deckhouse.io/update-policy: "test-alpha"
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
     source: test-source-1
-  name: foo-v1.2.3
+  name: withpolicymodule-v1.2.3
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
     controller: true
@@ -69,7 +74,7 @@ metadata:
     uid: ""
   resourceVersion: "1"
 spec:
-  moduleName: foo
+  moduleName: withpolicymodule
   version: 1.2.3
   weight: 900
 status:

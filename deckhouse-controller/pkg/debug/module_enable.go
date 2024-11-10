@@ -21,7 +21,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	kubeclient "github.com/flant/kube-client/client"
 	"gopkg.in/alecthomas/kingpin.v2"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"

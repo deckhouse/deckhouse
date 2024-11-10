@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -51,6 +52,7 @@ import (
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -153,13 +155,14 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				&v1alpha1.ModuleRelease{}:       {},
 				&v1alpha1.ModuleSource{}:        {},
 				&v1alpha1.ModuleUpdatePolicy{}:  {},
+				&v1alpha2.ModuleUpdatePolicy{}:  {},
 				&v1alpha1.ModulePullOverride{}:  {},
 				&v1alpha1.DeckhouseRelease{}:    {},
 			},
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("controller runtime manager creating: %w", err)
+		return nil, fmt.Errorf("create controller runtime manager: %w", err)
 	}
 
 	deckhouseConfigCh := make(chan utils.Values, 1)
@@ -193,6 +196,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil)
 
+	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
 
 	bundle := os.Getenv("DECKHOUSE_BUNDLE")
@@ -202,35 +206,35 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger.Named("deckhouse-release-controller"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
 	err = moduleconfig.RegisterController(runtimeManager, configHandler, operator.ModuleManager, operator.MetricStorage, loader, bundle, logger.Named("module-config-controller"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("register module config: %w", err)
 	}
 
 	err = modulesource.RegisterController(runtimeManager, dc, embeddedPolicy, logger.Named("module-source-controller"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
 
 	err = modulerelease.NewModuleReleaseController(runtimeManager, dc, embeddedPolicy, operator.ModuleManager, operator.MetricStorage, preflightCountDown, logger.Named("module-release-controller"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create module release controller: %w", err)
 	}
 
 	err = modulerelease.NewModulePullOverrideController(runtimeManager, dc, operator.ModuleManager, preflightCountDown, logger.Named("module-pull-override-controller"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create module pull override controller: %w", err)
 	}
 
 	err = docbuilder.NewModuleDocumentationController(runtimeManager, dc, logger.Named("module-documentation-controller"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create module documentation controller: %w", err)
 	}
 
-	validation.RegisterAdmissionHandlers(operator, loader, operator.MetricStorage)
+	validation.RegisterAdmissionHandlers(operator.AdmissionServer, runtimeManager.GetClient(), operator.ModuleManager, configtools.NewValidator(operator.ModuleManager), loader, operator.MetricStorage)
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
@@ -252,12 +256,13 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 		c.startPluggableModulesControllers(ctx)
 	}
 
-	// load module and ensure from FS at start
+	// load and ensure modules from FS at start
 	if err := c.moduleLoader.LoadModulesFromFS(ctx); err != nil {
 		return err
 	}
 
-	go c.runDeckhouseConfigObserver()
+	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
+	go c.syncDeckhouseSettings()
 
 	return nil
 }
@@ -276,8 +281,8 @@ func (c *DeckhouseController) startPluggableModulesControllers(ctx context.Conte
 	c.logger.Info("the preflight checks are done")
 }
 
-// runDeckhouseConfigObserver updates embeddedPolicy and deckhouseSettings with the configuration from the deckhouse moduleConfig
-func (c *DeckhouseController) runDeckhouseConfigObserver() {
+// syncDeckhouseSettings updates embeddedPolicy and deckhouse settings by the deckhouse moduleConfig
+func (c *DeckhouseController) syncDeckhouseSettings() {
 	for {
 		deckhouseConfig := <-c.deckhouseConfigCh
 

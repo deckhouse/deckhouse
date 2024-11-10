@@ -6,8 +6,6 @@ metadata:
   finalizers:
     - modules.deckhouse.io/release-exists
   name: test
-spec:
-  releaseChannel: alpha
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
@@ -28,7 +26,7 @@ status:
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ModuleUpdatePolicy
 metadata:
   name: echo
