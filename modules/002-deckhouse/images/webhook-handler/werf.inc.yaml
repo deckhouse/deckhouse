@@ -77,7 +77,7 @@ shell:
   install:
     - export GOPROXY={{ .GOPROXY }}
     - cd /src
-    - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /label-converter label-converter.go
+    - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /label-converter label_converter.go
     - chown 64535:64535 /label-converter
     - chmod 755 /label-converter
 ---

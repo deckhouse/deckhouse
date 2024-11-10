@@ -52,8 +52,17 @@ function __on_conversion::alpha1_to_alpha2() {
      else . end
   )')
   then
+    data=""
+    for obj in $(jq -c './/[] | .[]' <<< ${converted}); do
+      node_selector="$(jq -cr '.spec.nodeSelector//""' <<< ${obj})"
+      if [ -n "${node_selector}" ]; then
+        new_node_selector="$(echo "${node_selector}" | ./label-converter --to-set | sed 's|"|\"|g')"
+        obj="$(sed "s|\"${node_selector}\"|${new_node_selector}|g" <<< ${obj})"
+      fi
+      data="${data}${obj},"
+    done
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"convertedObjects": $converted}
+{"convertedObjects": [${data%?}]}
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
