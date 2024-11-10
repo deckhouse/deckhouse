@@ -12,6 +12,10 @@ properties:
       
       Если указать `false`, будет принудительно использоваться `emptyDir`.
 
+  insecureDbRegistry:
+    description: |
+      Разрешает Trivy использовать незащищенные и незашифрованные (non-ssl) подключения для скачивания базы данных уязвимостей.
+
   additionalVulnerabilityReportFields:
     description: |
       Список дополнительных полей из базы уязвимостей, добавляемых к отчетам об уязвимостях (VulnerabilityReport).
@@ -48,3 +52,7 @@ properties:
   insecureRegistries:
     description: |
       Хранилище образов контейнеров (container registry), к которым разрешены незащищённые соединения.
+
+  nonSslRegistries:
+    description: |
+      Хранилище образов контейнеров (container registry), к которым разрешены незашифрованные (non-ssl) подключения.

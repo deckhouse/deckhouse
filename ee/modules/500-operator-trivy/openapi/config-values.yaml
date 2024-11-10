@@ -13,6 +13,14 @@ properties:
       **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
       
       If `false` is specified, `emptyDir` will be forced to be used.
+  insecureDbRegistry:
+    type: boolean
+    default: false
+    description: |
+      Allows Trivy to download the database using insecure and unencrypted connections (non-ssl).
+
+    x-doc-default: false
+    x-examples: [true, false]
   additionalVulnerabilityReportFields:
     type: array
     description: |
@@ -101,10 +109,25 @@ properties:
     -
       - app
       - env
+
   insecureRegistries:
     type: array
-    x-doc-example: [["my.registry.com", "http-only.registry.io"]]
+    x-examples:
+    -
+      - my.registry.com
+      - http-only.registry.io
     items:
       type: string
     description: |
       Container registries to which insecure connections are allowed.
+
+  nonSslRegistries:
+    type: array
+    x-examples:
+    -
+      - my.registry.com
+      - http-only.registry.io
+    items:
+      type: string
+    description: |
+      Container registries to which unencrypted (non-ssl) connections are allowed.
