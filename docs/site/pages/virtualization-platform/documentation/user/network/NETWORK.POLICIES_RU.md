@@ -1,10 +1,8 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Сетевые политики"
 permalink: ru/virtualization-platform/documentation/user/network/network-policies.html
 lang: ru
 ---
-# Network policies
-
 ## Основные положения
 Для управления входящим и исходящим трафиком виртуальных машин на уровне 3 или 4 модели OSI используются стандартные сетевые политики Kubernetes. Более подробно об этом можно прочитать в официальной документации [Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/).  
 
@@ -13,88 +11,44 @@ lang: ru
 - `egress`
 
 Для управления внутрикластерым трафиком рекомендуется использовать `podSelector` и `namespaceSelector`, а для сетевого взаимодействия за пределами кластера - `ipBlock`.
+Правила сетевых политик применяются одновременно по принципу их складывания для всех виртуальных машин, которые соответствуют указанным меткам.
 
-## Примеры использования
-
-Например, есть две виртуальные машины в пространстве имён `netpol-example`. По умолчанию входящий и исходящий трафик неограничены.
+Дальнейшие примеры будут показаны на примере проекта `test-project` с двумя виртуальными машинами в пространстве имён `test-project`. По умолчанию входящий и исходящий трафик неограничены.
 ```bash
-$ kubectl get vm -n netpol-example 
-NAME                  PHASE     NODE           IPADDRESS     AGE
-netpol-example-vm-a   Running   virtlab-1   10.66.20.68   7m47s
-netpol-example-vm-b   Running   virtlab-2   10.66.20.69   7m47s
+$ d8 k get vm -n test-project
+NAME   PHASE     NODE           IPADDRESS     AGE
+vm-a   Running   virtlab-2      10.66.20.70   5m
+vm-b   Running   virtlab-1      10.66.20.71   5m
 ```
 
-Проверка сетевого доступа от `netpol-example-vm-b` до `netpol-example-vm-a`.
+Виртуальные машины имеют соответствующие им метки.
 ```bash
-[21:30:12] cloud@netpol-example-vm-b:~$ ping -c 4 10.66.20.68
-PING 10.66.20.68 (10.66.20.68) 56(84) bytes of data.
-64 bytes from 10.66.20.68: icmp_seq=1 ttl=63 time=0.581 ms
-64 bytes from 10.66.20.68: icmp_seq=2 ttl=63 time=0.621 ms
-64 bytes from 10.66.20.68: icmp_seq=3 ttl=63 time=0.715 ms
-64 bytes from 10.66.20.68: icmp_seq=4 ttl=63 time=0.847 ms
-
---- 10.66.20.68 ping statistics ---
-4 packets transmitted, 4 received, 0% packet loss, time 3160ms
-rtt min/avg/max/mdev = 0.581/0.691/0.847/0.102 ms
-```
-
-Виртуальные машины и pod'ы, в которых они запущены, имеют соответствующие метки.
-```bash
-$ kubectl get vm -n netpol-example -o yaml | less
-...
+$ d8 k get vm -n test-project -o yaml | less
 - apiVersion: virtualization.deckhouse.io/v1alpha2
   kind: VirtualMachine
   metadata:
-...
     labels:
       vm: a
-    name: netpol-example-vm-a
-    namespace: netpol-example
-...
+    name: vm-a
+    namespace: test-project
 - apiVersion: virtualization.deckhouse.io/v1alpha2
   kind: VirtualMachine
   metadata:
-...
     labels:
       vm: b
-    name: netpol-example-vm-b
-    namespace: netpol-example
-...
-```
-```bash
-$ kubectl get pod -n netpol-example -o yaml | less
-...
-- apiVersion: v1
-  kind: Pod
-  metadata:
-...
-    labels:
-...
-      vm: a
-...
-    name: virt-launcher-netpol-example-vm-a-r9h5x
-    namespace: netpol-example
-...
-- apiVersion: v1
-  kind: Pod
-  metadata:
-...
-    labels:
-...
-      vm: b
-...
-    name: virt-launcher-netpol-example-vm-b-flmxh
-    namespace: netpol-example
-...
+    name: vm-b
+    namespace: test-project
 ```
 
-Пример сетевой политики, ограничивающей любой входящий трафика для `netpol-example-vm-a`. Для всех виртуальных машин, а значит и для pod'ов с меткой `vm: a` в пространстве имён `netpol-example` будет применена сетевая политика с типом `Ingress`. И так как никаких `ingress` правил в спецификации не указано, то будет ограничен весь входящий трафик.
+## Изоляция всего входящего трафика виртуальной машины
+
+Сетевая политика, ограничивающая любой входящий трафика для виртуальных машин с меткой `vm-a` в пространстве имён `test-project`:
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: vm-a-deny-ingress
-  namespace: netpol-example
+  namespace: test-project
 spec:
   podSelector:
     matchLabels:
@@ -102,23 +56,24 @@ spec:
   policyTypes:
     - Ingress
 ```
+Policy type `Ingress` означает, что будут применены правила для входящего трафика. Так как никаких `ingress` правил в спецификации не указано, то будет ограничен весь входящий трафик.
 
-После применения политики в namespace, проверяем, что до `netpol-example-vm-a` нет сетевого доступа.
-```bash
-[21:30:29] cloud@netpol-example-vm-b:~$ ping -c 4 10.66.20.68
-PING 10.66.20.68 (10.66.20.68) 56(84) bytes of data.
-
---- 10.66.20.68 ping statistics ---
-4 packets transmitted, 0 received, 100% packet loss, time 3124ms
+По такому же принципу можно ограничить и исходящий трафик, добавив `Egress` в блок `spec/policyTypes`.
+```yaml
+policyTypes:
+  - Egress
+  - Ingress
 ```
 
-Пример сетевой политики, которая разрешает входящий трафик от `netpol-example-vm-b` до `netpol-example-vm-a`. Здесь снова посредством `podSelector` для всех виртуальных машин и pod'ов с меткой `vm: a` применяется сетевая политика с типом `Ingress`. Но здесь указано `ingress` правило, которое разрешает входящий трафик `from` из виртуальных машин и pod'ов c меткой `vm: b`.
+## Разрешение входящего трафика между виртуальными машинами
+
+Тот же проект. Сетевая политика, разрешающая входящий трафик от виртуальных машин с меткой `vm-b` до виртуальных машин с меткой `vm-a`.
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-ingress-from-vm-b-to-vm-a
-  namespace: netpol-example
+  namespace: test-project
 spec:
   podSelector:
     matchLabels:
@@ -131,38 +86,66 @@ spec:
   policyTypes:
     - Ingress
 ```
+С помощью `spec.podSelector` для всех виртуальных машин с меткой `vm: a` применяется сетевая политика с типом `Ingress`. В спецификации `spec.ingress` указано правило, которое разрешает входящий трафик `from` из виртуальных машин с меткой `vm: b`.
 
-Проверка входящего трафика от `netpol-example-vm-b` до `netpol-example-vm-a`. При этом видно, что остальной входящий трафик до `netpol-example-vm-a` не разрешён на примере запросов с master узла `virtlab-0`. Но с него же есть доступ до `netpol-example-vm-b`, так как для этой виртуально машины нет ограничений на входящий трафик.
-```bash
-[22:00:01] cloud@netpol-example-vm-b:~$ ping -c 4 10.66.20.68
-PING 10.66.20.68 (10.66.20.68) 56(84) bytes of data.
-64 bytes from 10.66.20.68: icmp_seq=1 ttl=63 time=0.982 ms
-64 bytes from 10.66.20.68: icmp_seq=2 ttl=63 time=0.380 ms
-64 bytes from 10.66.20.68: icmp_seq=3 ttl=63 time=0.698 ms
-64 bytes from 10.66.20.68: icmp_seq=4 ttl=63 time=0.927 ms
+## Разрешение исходящего трафика виртуальной машины за пределы кластера
 
---- 10.66.20.68 ping statistics ---
-4 packets transmitted, 4 received, 0% packet loss, time 3048ms
-rtt min/avg/max/mdev = 0.380/0.746/0.982/0.237 ms
-
-root@virtlab-0:~# ping -c 4 10.66.20.69
-PING 10.66.20.69 (10.66.20.69) 56(84) bytes of data.
-64 bytes from 10.66.20.69: icmp_seq=1 ttl=63 time=0.800 ms
-64 bytes from 10.66.20.69: icmp_seq=2 ttl=63 time=0.659 ms
-64 bytes from 10.66.20.69: icmp_seq=3 ttl=63 time=0.358 ms
-64 bytes from 10.66.20.69: icmp_seq=4 ttl=63 time=0.684 ms
-
---- 10.66.20.69 ping statistics ---
-4 packets transmitted, 4 received, 0% packet loss, time 3053ms
-rtt min/avg/max/mdev = 0.358/0.625/0.800/0.163 ms
-root@virtlab-0:~# ping -c 4 10.66.20.68
-PING 10.66.20.68 (10.66.20.68) 56(84) bytes of data.
-
---- 10.66.20.68 ping statistics ---
-4 packets transmitted, 0 received, 100% packet loss, time 3051ms
+Сетевая политика, разрешающая исходящий трафик от виртуальных машин с меткой `vm-a` до внешнего адреса 8.8.8.8:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-from-vm-a-to-8-8-8-8
+  namespace: test-project
+spec:
+  podSelector:
+    matchLabels:
+      vm: a
+  egress:
+    - to:
+      - ipBlock:
+          cidr: 8.8.8.8/32
+        ports:
+          - protocol: TCP
+            port: 53
+  policyTypes:
+    - Egress
 ```
-В данном примере используются две сетевые политики, правила которых действуют одновременно по принципу их складывания для всех ресурсов, которые соответствуют указанным `podSelector`.
+Policy type `Egress` указывает на то, что будут применены правила исходящего трафика в спецификации `spec.egress`. Также указаны протокол `TCP` и порт `53`, на который разрешён трафик.
+
+Порты могут быть указаны в виде диапазона с помощью дополнительного поля `endPort` в блоке `ports`.
+```yaml
+ports:
+  - protocol: TCP
+    port: 32000
+    endPort: 32768
+```
+
+## Разрешение входящего трафика между пространствами имён
+
+Сетевая политика разрешает входящий трафик до виртуальных машин с меткой `vm: a` из пространства имён `another-project`, которое имеет соответствующую метку `kubernetes.io/metadata.name: another-project`.
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-from-namespace-another-project-to-vm-a
+  namespace: test-project
+spec:
+  podSelector:
+    matchLabels:
+      vm: a
+  ingress:
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: another-project
+  policyTypes:
+    - Ingress
+```
 
 ## Полезные ссылки
+
+С полным описанием спецификации сетевых политик можно ознакомиться по адресу `https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicy-v1-networking-k8s-io`, где v.1.31 версия Kubernetes релиза. При необходимости укажите поддерживаемую в вашем кластере версию.
+
 - https://kubernetes.io/docs/concepts/services-networking/network-policies
 - https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicy-v1-networking-k8s-io
