@@ -6,7 +6,7 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
   labels:
-    backup.deckhouse.io/cluster-config: ""
+    backup.deckhouse.io/cluster-config: "true"
   name: prometheusrules.monitoring.coreos.com
 spec:
   group: monitoring.coreos.com
