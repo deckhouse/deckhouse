@@ -29,7 +29,7 @@ shell:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_DEPS_VERSION=v2.53.2 PROMETHEUS_VERSION=v2.53.2-0.0.1
   - git clone -b "${PROMETHEUS_DEPS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus-deps
   - mkdir /prometheus && cd /prometheus
-  - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.OBSERVABILITY_SOURCE_REPO }}/prometheus-plus-plus
+  - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.OBSERVABILITY_SOURCE_REPO }}/prometheus-plus-plus prometheus
   - cd /prometheus/prometheus
   - rm -rf web && cp -r /prometheus-deps/web .
   - cd web/ui && npm run build
