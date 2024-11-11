@@ -5,9 +5,10 @@ permalink: en/virtualization-platform/documentation/admin/install/requirements.h
 
 ## Preparing the infrastructure
 
-Before installing, ensure that:
-- the server's OS is in the list of supported OS (or compatible with them) and SSH access to the server with key-based authentication is configured;
-- you have access to the container registry with Deckhouse images (default is `registry.deckhouse.io`).
+- Minimum requirements: 4 CPUs, 8GB RAM, 60GB disk space on fast disk (400+ IOPS)
+- Linux kernel version >= 5.7
+- x86_64 c CPU with Intel-VT (vmx) or AMD-V (svm) instruction support
+
 
 ## Supported OS
 
@@ -21,12 +22,3 @@ Before installing, ensure that:
 | Debian                      | 10, 11, 12                      |
 | Rocky                       | Linux 8, 9                      |
 | Ubuntu                      | 18.04, 20.04, 22.04, 24.04      |
-
-## Requirements for storage systems
-
-To ensure the platform operates correctly, you need to install at least one or more storage systems that provide:
-- data persistence;
-- proper functioning of virtual disks;
-- correct operation of the internal Container Registry (DVCR).
-
-To view the list of supported storage systems, please follow the link.

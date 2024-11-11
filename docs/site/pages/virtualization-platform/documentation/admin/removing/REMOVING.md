@@ -3,52 +3,63 @@ title: "Removing the platform"
 permalink: en/virtualization-platform/documentation/admin/removing/removing.html
 ---
 
-Follow the steps below to delete a cluster that has been manually installed (e.g., on bare metal):
+To delete a cluster, several steps need to be followed:
 
-1. [Delete](../modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the extra nodes from the cluster.
+1. Remove all additional nodes from the cluster:
 
-2. Find out the update channel set in the cluster. To do this, run the command:
+   TODO: решить удаляем или приносим кусок инструкции
 
+   > **Attention!** If there are LINSTOR/DRBD storage pools on the node being cleaned, make sure to migrate resources off the node and delete the LINSTOR/DRBD node, following [the instructions](/modules/sds-replicated-volume/stable/faq.html#how-to-migrate-resources-off-a-node).
+
+   1.1. Remove the node from the Kubernetes cluster:
    ```shell
-   kubectl get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
+   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k delete node <node>
+   ```
+
+   1.2. Run the cleanup script on the node:
+   ```shell
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+   ```
+
+2. Check the update channel set in the cluster. To do this, run the command:
+   ```shell
+   d8 k get mc deckhouse -o jsonpath='{.spec.settings.releaseChannel}'
    ```
 
 3. Run the Deckhouse installer:
-
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
-     registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+      registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
    ```
 
    where:
-   - `<MOUNT_OPTIONS>` — parameters for mounting files in the installer container, such as SSH access keys;
-   - `<DECKHOUSE_REVISION>` — the Deckhouse [edition](../revision-comparison.html) (e.g., `ee` — for the Enterprise Edition, `ce` — for the Community Edition, etc.)
-   - `<RELEASE_CHANNEL>` — the Deckhouse [release channel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) in kebab-case. Note that it must match the one set in `config.yml`:
-     - `alpha` — for the *Alpha* release channel;
-     - `beta` — for the *Beta* release channel;
-     - `early-access` — for the *Early Access* release channel;
-     - `stable` — for the *Stable* release channel;
-     - `rock-solid` — for the *Rock Solid* release channel.
+   - `<MOUNT_OPTIONS>` — the options for mounting files into the installer container, such as SSH access keys;
+   - `<DECKHOUSE_REVISION>` — [edition](../editions.html) of the platform (e.g., `ee` — for Enterprise Edition, `ce` — for Community Edition, etc.)
+   - `<RELEASE_CHANNEL>` — [update channel](../update_channels.html) of the platform in kebab-case. It should match the one set in `config.yml`:
+     - `alpha` — for the *Alpha* update channel;
+     - `beta` — for the *Beta* update channel;
+     - `early-access` — for the *Early Access* update channel;
+     - `stable` — for the *Stable* update channel;
+     - `rock-solid` — for the *Rock Solid* update channel.
 
-   Below is an example command to run the Deckhouse CE installer container:
-
+   Example of running the installer container for the CE edition:
    ```shell
    docker run -it --pull=always \
-     -v "$PWD/dhctl-tmp:/tmp/dhctl" \
-     -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
+      -v "$PWD/dhctl-tmp:/tmp/dhctl" \
+      -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
    ```
 
-4. Run the command below to delete the cluster:
-
+4. Execute the cluster removal command:
    ```shell
    dhctl destroy --ssh-user=<USER> \
-     --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-     --yes-i-am-sane-and-i-understand-what-i-am-doing \
-     --ssh-host=<MASTER_IP>
+      --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+      --yes-i-am-sane-and-i-understand-what-i-am-doing \
+      --ssh-host=<MASTER_IP>
    ```
 
    where:
-   - `<USER>` — the user of the remote machine that ran the installation;
-   - `<MASTER_IP>` — the IP address of the cluster's master node.
+   - `<USER>` — the user of the remote machine from which the installation was performed;
+   - `<MASTER_IP>` — IP address of the master node in the cluster.
 
-The installer will then connect to the master node and delete all Deckhouse and Kubernetes cluster components on it.
+   The installer will connect to the master node and remove all Deckhouse components and the Kubernetes cluster from it.

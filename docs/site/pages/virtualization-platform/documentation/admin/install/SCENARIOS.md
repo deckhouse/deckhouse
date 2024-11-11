@@ -3,6 +3,7 @@ title: "Setup scenarios"
 permalink: en/virtualization-platform/documentation/admin/install/scenarios.html
 ---
 
-In a typical high availability (HA) mode configuration, it is recommended to use 3 master nodes to ensure stability and plan for "n+1" worker nodes depending on your workload. Each virtual machine should be located on a separate physical machine.
+In a typical configuration, it is recommended to use 3 master nodes to ensure stability and any number of worker nodes to run virtual machines.
 
-*Note:* ControlPlane in the standard setup is not used for running virtual machines.
+To calculate the number of worker nodes, use the formula: N + 1, where N is the desired number of virtual machines to run divided by 10. 
+An additional worker node is required to migrate virtual machines in case of failure or scheduled maintenance.
