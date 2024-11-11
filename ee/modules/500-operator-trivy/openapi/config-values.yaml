@@ -17,7 +17,9 @@ properties:
     type: boolean
     default: false
     description: |
-      Allows Trivy to download the database using insecure and unencrypted connections (non-ssl).
+      Allows Trivy to download vulnerability databases using insecure HTTPS connections (not passed TLS certificate verification) or HTTP connections.
+
+      The list of addresses to which such connections are allowed must be specified in the [insecureRegistries](#parameters-insecureregistries) parameter.
 
     x-doc-default: false
     x-examples: [true, false]
@@ -112,6 +114,10 @@ properties:
 
   insecureRegistries:
     type: array
+    description: |
+      List of container registry addresses to which insecure HTTPS connections (not passed TLS certificate verification) or HTTP connections are allowed.
+
+      > The parameter [insecureDbRegistry](#parameters-insecuredbregistry) must be enabled.
     x-examples:
     -
       - my.registry.com

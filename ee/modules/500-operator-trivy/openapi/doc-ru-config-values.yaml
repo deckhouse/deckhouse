@@ -14,7 +14,9 @@ properties:
 
   insecureDbRegistry:
     description: |
-      Разрешает Trivy использовать незащищенные и незашифрованные (non-ssl) подключения для скачивания базы данных уязвимостей.
+      Разрешает Trivy скачивать базы данных уязвимостей используя недоверенные HTTPS-подключения (не прошедшие проверку TLS-сертификата) или подключения по HTTP.
+      
+      Список адресов, к которым разрешены такие подключения, необходимо указать в параметре [insecureRegistries](#parameters-insecureregistries).
 
   additionalVulnerabilityReportFields:
     description: |
