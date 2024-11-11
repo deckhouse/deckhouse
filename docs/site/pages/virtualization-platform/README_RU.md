@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Введение"
 permalink: ru/virtualization-platform/documentation/readme.html
 lang: ru
 ---
