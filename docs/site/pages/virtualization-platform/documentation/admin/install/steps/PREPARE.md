@@ -1,9 +1,7 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Prepare the environment"
 permalink: en/virtualization-platform/documentation/admin/install/steps/prepare.html
 ---
-
-## Environment preparation
 
 Before installing the platform, please complete the following steps to prepare the infrastructure:
 

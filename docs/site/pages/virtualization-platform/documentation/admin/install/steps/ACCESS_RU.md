@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Первичная настройка доступа"
 permalink: ru/virtualization-platform/documentation/admin/install/steps/access.html
 lang: ru
 ---

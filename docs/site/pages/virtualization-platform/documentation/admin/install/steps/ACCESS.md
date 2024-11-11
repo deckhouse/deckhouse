@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Initial access configuration"
 permalink: en/virtualization-platform/documentation/admin/install/steps/access.html
 ---
 

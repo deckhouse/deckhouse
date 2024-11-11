@@ -1,9 +1,7 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Removing the platform"
 permalink: en/virtualization-platform/documentation/admin/removing/removing.html
 ---
-
-## Deleting a static cluster
 
 Follow the steps below to delete a cluster that has been manually installed (e.g., on bare metal):
 

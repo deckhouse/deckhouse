@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Обновление платформы"
 permalink: ru/virtualization-platform/documentation/admin/update/update.html
 lang: ru
 ---

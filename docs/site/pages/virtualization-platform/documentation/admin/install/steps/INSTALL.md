@@ -1,9 +1,7 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Platform installation"
 permalink: en/virtualization-platform/documentation/admin/install/steps/install.html
 ---
-
-# Installing Deckhouse
 
 > When you install Deckhouse Enterprise Edition from the official `registry.deckhouse.io` container registry, you must first log in with your license key:
 >
@@ -59,10 +57,3 @@ dhctl bootstrap \
 - `/resources.yml` — file with the resource manifests;
 - `<SSH_USER>` — SSH user on the server;
 - `--ssh-agent-private-keys` — file with the private SSH key for connecting via SSH.
-
-# Required modules
-
-The following modules must be installed for the platform to work:
-- Cilium
-- Storage
-- Virtualization

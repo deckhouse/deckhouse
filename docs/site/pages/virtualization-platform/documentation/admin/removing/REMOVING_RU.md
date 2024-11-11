@@ -1,10 +1,8 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Удаление платформы"
 permalink: ru/virtualization-platform/documentation/admin/removing/removing.html
 lang: ru
 ---
-
-## Удаление статического кластера
 
 Для удаления кластера, установленного вручную (например, bare metal), нужно выполнить несколько шагов:
 

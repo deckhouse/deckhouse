@@ -1,10 +1,8 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Подготовка окружения"
 permalink: ru/virtualization-platform/documentation/admin/install/steps/prepare.html
 lang: ru
 ---
-
-# Подготовка окружения
 
 Перед установкой платформы требуется выполнить следующие шаги для подготовки инфраструктуры:
 

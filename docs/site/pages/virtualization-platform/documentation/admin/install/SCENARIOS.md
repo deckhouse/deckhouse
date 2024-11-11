@@ -1,15 +1,7 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Setup scenarios"
 permalink: en/virtualization-platform/documentation/admin/install/scenarios.html
 ---
-
-## Minimal
-
-
-## "All-in-One"
-
-
-## Typical Configuration
 
 In a typical high availability (HA) mode configuration, it is recommended to use 3 master nodes to ensure stability and plan for "n+1" worker nodes depending on your workload. Each virtual machine should be located on a separate physical machine.
 

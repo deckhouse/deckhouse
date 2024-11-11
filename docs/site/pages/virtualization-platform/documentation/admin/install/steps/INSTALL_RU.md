@@ -1,5 +1,5 @@
 ---
-title: "Установка"
+title: "Установка платформы"
 permalink: ru/virtualization-platform/documentation/admin/install/steps/install.html
 lang: ru
 ---
