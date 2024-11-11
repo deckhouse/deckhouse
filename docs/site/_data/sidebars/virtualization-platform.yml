@@ -18,6 +18,10 @@ entries:
             ru: Редакции платформы
           url: /virtualization-platform/documentation/admin/editions.html
         - title:
+            en: Update channels
+            ru: Каналы обновлений
+          url: /virtualization-platform/documentation/admin/update-channels.html
+        - title:
             en: Install
             ru: Установка платформы
           folders:
