@@ -181,7 +181,6 @@ spec:
   selector:
     app: nginx2
   type: LoadBalancer
-  loadBalancerClass: test
 ---
 apiVersion: v1
 kind: Service
