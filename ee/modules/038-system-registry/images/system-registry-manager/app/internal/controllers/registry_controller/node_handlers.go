@@ -103,7 +103,7 @@ func (r *RegistryReconciler) prepareEmbeddedRegistryConfig(node k8s.MasterNode, 
 			},
 			RegistryMode:     r.embeddedRegistry.mc.Settings.Mode,
 			HttpSecret:       "http-secret",
-			UpstreamRegistry: upstreamRegistry, // Будет пустым для режимов Direct и Detached
+			UpstreamRegistry: upstreamRegistry, // Will be empty for non-Proxy modes
 		},
 		Images: staticpod.Images{
 			DockerDistribution: r.embeddedRegistry.images.DockerDistribution,
