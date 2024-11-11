@@ -1487,7 +1487,7 @@ alerts:
       description: |
         IpAddressPool `{{$labels.name}}` is located in namespace `{{$labels.namespace}}`, but must be located in namespace `d8-metallb`.
       summary: |
-        MetalLB module misconfiguration.
+        Failure of MetalLB module update request verification.
       severity: "4"
       markupFormat: markdown
     - name: D8MetallbL2AdvertisementNodeSelectorsMismatch
@@ -1498,7 +1498,7 @@ alerts:
       description: |
         L2Advertisement `{{$labels.name}}`: there must only be one matchLabels (not matchExpressions) in the nodeSelectors.
       summary: |
-        MetalLB module misconfiguration.
+        Failure of MetalLB module update request verification.
       severity: "4"
       markupFormat: markdown
     - name: D8MetallbL2AdvertisementNSMismatch
@@ -1509,7 +1509,7 @@ alerts:
       description: |
         L2Advertisement `{{$labels.name}}` is located in namespace `{{$labels.namespace}}`, but must be located in namespace `d8-metallb`.
       summary: |
-        MetalLB module misconfiguration.
+        Failure of MetalLB module update request verification.
       severity: "4"
       markupFormat: markdown
     - name: D8MetallbNotOnlyLayer2Pools
@@ -1520,7 +1520,7 @@ alerts:
       description: |
         There must not be `layer2` and `bgp` IP pools type in the cluster at the same time.
       summary: |
-        MetalLB module misconfiguration.
+        Failure of MetalLB module update request verification.
       severity: "4"
       markupFormat: markdown
     - name: D8MetallbOrphanedLoadBalancerDetected
@@ -1534,7 +1534,7 @@ alerts:
         - have the `metallb.universe.tf/address-pool` annotation,
         - have the `metallb.universe.tf/ip-allocated-from-pool` annotation.
       summary: |
-        MetalLB module misconfiguration.
+        Failure of MetalLB module update request verification.
       severity: "4"
       markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
