@@ -54,7 +54,7 @@ spec:
   envFrom:
     - configMapRef:
         name: prometheus-pp-envs
-  version: v2.45.2
+  version: v2.53.2
   enableRemoteWriteReceiver: true
   enableFeatures:
   - memory-snapshot-on-shutdown # https://ganeshvernekar.com/blog/prometheus-tsdb-snapshot-on-shutdown/
