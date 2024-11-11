@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: prometheus
-    backup.deckhouse.io/cluster-config: ""
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
