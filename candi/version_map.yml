@@ -105,7 +105,7 @@ k8s:
     status: available
     patch: 6
     bashible: *bashible
-    clusterAutoscalerPatch: 1
+    clusterAutoscalerPatch: '0'
     crictlPatch: 1
     ccm:
       openstack: v1.30.0
@@ -133,7 +133,7 @@ k8s:
     status: preview
     patch: 1
     bashible: *bashible
-    clusterAutoscalerPatch: 1
+    clusterAutoscalerPatch: '0'
     crictlPatch: 1
     ccm:
       openstack: v1.31.0
