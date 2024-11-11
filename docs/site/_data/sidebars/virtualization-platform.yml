@@ -4,7 +4,7 @@ entries:
     - title:
         en: Overview
         ru: Введение
-      url: /virtualization-platform/documentation/readme.html
+      url: /virtualization-platform/documentation/
     - title:
         en: Administration guide
         ru: Руководство администратора
