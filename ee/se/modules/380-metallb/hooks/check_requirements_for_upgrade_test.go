@@ -190,7 +190,7 @@ metadata:
   namespace: nginx3
   annotations:
     metallb.universe.tf/address-pool: "aaa"
-    metallb.universe.tf/ip-allocated-from-pool: "bbb"
+    metallb.universe.tf/ip-allocated-from-pool: "aaa"
 spec:
   clusterIP: 2.3.4.5
   ports:
