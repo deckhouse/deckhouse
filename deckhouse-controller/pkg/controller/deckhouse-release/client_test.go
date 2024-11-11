@@ -27,7 +27,6 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/flant/shell-operator/pkg/metric_storage"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func setupFakeController(
@@ -95,10 +95,10 @@ func setupControllerSettings(
 	rec := &deckhouseReleaseReconciler{
 		client:         cl,
 		dc:             dc,
-		logger:         log.New(),
+		logger:         log.NewNop(),
 		moduleManager:  stubModulesManager{},
 		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
-		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true),
+		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())
 

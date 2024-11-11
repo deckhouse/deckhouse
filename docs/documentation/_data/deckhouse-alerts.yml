@@ -1281,7 +1281,7 @@ alerts:
       description: |-
         Current kubernetes version "{{ $labels.k8s_version }}" is deprecated, and its support will be removed within 6 months
 
-        Please migrate to the next kubernetes version (at least 1.27)
+        Please migrate to the next kubernetes version (at least 1.28)
 
         Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
       summary: |
@@ -2395,7 +2395,7 @@ alerts:
 
         Some of the objects were left by old upmeter-agent pods due to Upmeter update or downscale.
 
-        Leave only newest objects corresponding to upemter-agent pods, when the reason it investigated.
+        Leave only newest objects corresponding to upmeter-agent pods, when the reason it investigated.
 
         See `kubectl get upmeterhookprobes.deckhouse.io`.
       summary: |

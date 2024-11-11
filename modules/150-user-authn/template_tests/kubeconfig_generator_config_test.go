@@ -210,7 +210,7 @@ Multiline
 					Expect(cl.Get("client_secret").String()).To(Equal(dexClientAppSecret))
 					Expect(cl.Get("issuer").String()).To(Equal("https://dex.example.com/"))
 					Expect(cl.Get("k8s_master_uri").String()).To(Equal(a.masterURI))
-					Expect(cl.Get("name").String()).To(Equal(fmt.Sprintf(a.id)))
+					Expect(cl.Get("name").String()).To(Equal(a.id))
 					Expect(cl.Get("redirect_uri").String()).To(Equal(fmt.Sprintf("https://kubeconfig.example.com/callback/%v", i)))
 					Expect(cl.Get("short_description").String()).To(Equal(a.desc))
 					Expect(cl.Get("scopes.0").String()).To(Equal("audience:server:client_id:kubernetes"))

@@ -97,7 +97,7 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 
 	nodeGroups, machines, nodes, err := prepareChaosData(input)
 	if err != nil {
-		input.LogEntry.Infof(err.Error()) // just info message, already have a victim
+		input.Logger.Infof(err.Error()) // just info message, already have a victim
 		return nil
 	}
 
@@ -109,7 +109,7 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 
 		chaosPeriod, err := time.ParseDuration(ng.ChaosPeriod)
 		if err != nil {
-			input.LogEntry.Warnf("chaos period (%s) for NodeGroup:%s is invalid", ng.ChaosPeriod, ng.Name)
+			input.Logger.Warnf("chaos period (%s) for NodeGroup:%s is invalid", ng.ChaosPeriod, ng.Name)
 			continue
 		}
 

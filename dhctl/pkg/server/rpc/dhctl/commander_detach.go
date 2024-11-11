@@ -90,7 +90,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderDetach(ctx, message.Start, logWriter)
+					result := s.commanderDetachSafe(ctx, message.Start, logWriter)
 					sendCh <- &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}}
 				}()
 
@@ -101,6 +101,20 @@ connectionProcessor:
 			}
 		}
 	}
+}
+
+func (s *Service) commanderDetachSafe(
+	ctx context.Context,
+	request *pb.CommanderDetachStart,
+	logWriter io.Writer,
+) (result *pb.CommanderDetachResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.CommanderDetachResult{Err: panicMessage(ctx, r)}
+		}
+	}()
+
+	return s.commanderDetach(ctx, request, logWriter)
 }
 
 func (s *Service) commanderDetach(

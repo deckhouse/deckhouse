@@ -1,0 +1,93 @@
+---
+image: tests-prebuild
+fromImage: base-for-go
+git:
+- add: /
+  to: /deckhouse
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+  includePaths:
+  - deckhouse-controller
+  - dhctl
+  - candi
+  - modules
+  - global-hooks
+  - go_lib
+  - pkg
+  - shell_lib.sh
+  - shell_lib
+  - jq_lib
+  - helm_lib
+  - testing
+  - go.mod
+  - go.sum
+  - editions.yaml
+  excludePaths:
+  {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
+  - docs
+  - modules/*/docs
+  - modules/*/README.md
+  - modules/*/images
+  - modules/*/webhooks
+  - modules/0[1-9][1-9]-*/crds     # we need here only the 000-common/crds
+  - modules/[1-9][0-9][0-9]-*/crds
+  - candi/cloud-providers/*/layouts
+  - candi/cloud-providers/*/terraform-modules
+- url: https://github.com/flant/shell-operator
+  tag: v1.1.3
+  add: /frameworks/shell
+  to: /deckhouse/shell-operator/frameworks/shell
+  {{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
+  {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+import:
+- artifact: deckhouse-controller
+  add: /out/deckhouse-controller
+  to: /usr/bin/deckhouse-controller
+  after: setup
+- artifact: jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  after: setup
+- artifact: version-map-artifact
+  add: /version_map_{{ $.Env }}.yml
+  to: /deckhouse/candi/version_map.yml
+  after: setup
+- artifact: golangci-lint-artifact
+  add: /usr/local/bin/golangci-lint
+  to: /usr/local/bin/golangci-lint
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - go install github.com/onsi/ginkgo/ginkgo@latest
+  - go install github.com/go-delve/delve/cmd/dlv@latest
+  setup:
+    {{- range $_, $edition := $.Editions }}
+      {{- if not $edition.skipFixingImports }}
+    - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
+      {{- end }}
+      {{- end }}
+
+docker:
+  ENV:
+    ADDON_OPERATOR_NAMESPACE: tests
+    DECKHOUSE_POD: tests
+    MODULES_DIR: /deckhouse/modules
+    GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
+    PATH: ${PATH}:/usr/local/go/bin:/root/go/bin
+---
+image: tests
+fromImage: tests-prebuild
+import:
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/images_digests.json
+  after: setup
+- image: images-digests
+  add: /images_digests.json
+  to: /deckhouse/modules/040-node-manager/images_digests.json
+  after: setup

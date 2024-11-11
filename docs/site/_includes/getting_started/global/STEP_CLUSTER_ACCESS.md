@@ -9,7 +9,7 @@ Deckhouse have finished installation process. It remains to make some settings, 
 Connect to the master node via SSH (the IP address of the master node was printed by the installer upon completion of the installation, but you can also find it using the cloud provider web interface/CLI tool):
 {% snippetcut %}
 ```shell
-ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
+ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
 

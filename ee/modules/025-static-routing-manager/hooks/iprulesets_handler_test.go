@@ -503,7 +503,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 		})
 	})
 
@@ -654,7 +654,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).NotTo(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).NotTo(HaveLen(0))
 			nirs11Name := "testirs1" + "-" + lib.GenerateShortHash("testirs1"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nirsKeyPath).String()).To(Equal("[]"))
 			Expect(f.ValuesGet(nirsKeyPath + ".0.name").String()).NotTo(Equal(nirs11Name))
@@ -680,7 +680,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).NotTo(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).NotTo(HaveLen(0))
 			nirs31Name := "testirs3" + "-" + lib.GenerateShortHash("testirs3"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nirsKeyPath).String()).NotTo(Equal("[]"))
 			Expect(f.ValuesGet(nirsKeyPath + ".0.name").String()).To(Equal(nirs31Name))
@@ -810,7 +810,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 			Expect(f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs666").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs666").Field("status").Exists()).To(BeTrue())
 			irsstatusraw := f.KubernetesGlobalResource(v1alpha1.IRSKind, "testirs666").Field("status").String()

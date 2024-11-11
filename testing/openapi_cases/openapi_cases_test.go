@@ -18,7 +18,6 @@ package openapi_cases
 
 import (
 	"fmt"
-	"io"
 	"path/filepath"
 	"testing"
 
@@ -26,7 +25,8 @@ import (
 	"github.com/flant/addon-operator/pkg/values/validation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func TestOpenAPICases(t *testing.T) {
@@ -70,7 +70,8 @@ var _ = Describe("OpenAPI case tests", func() {
 
 func ExecuteTestCases(testCases *TestCases) {
 	// Silence addon-operator logger. (Validation, moduleManager)
-	log.SetOutput(io.Discard)
+	logger := log.NewNop()
+	log.SetDefault(logger)
 
 	modulePath, _ := filepath.Split(testCases.dir)
 	moduleName := filepath.Base(modulePath)

@@ -120,7 +120,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) erro
 	}
 
 	if !needMigration {
-		input.LogEntry.Info("Skipping migration of root disk volume")
+		input.Logger.Info("Skipping migration of root disk volume")
 		return nil
 	}
 
@@ -153,7 +153,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) erro
 	}
 
 	if !needMigratieMasters && !needMigrateNGs {
-		input.LogEntry.Info("Skipping migration diskSizeGB because migration already done or diskSizeGB already set")
+		input.Logger.Info("Skipping migration diskSizeGB because migration already done or diskSizeGB already set")
 		return nil
 	}
 

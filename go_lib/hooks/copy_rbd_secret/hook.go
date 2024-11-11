@@ -138,7 +138,7 @@ func copyRBDSecretHandlerWithArgs(input *go_hook.HookInput, namespace string) er
 
 		existingSecret, ok := secretsToCopy[userSecret]
 		if !ok {
-			input.LogEntry.WithField("secretName", userSecret).Warn("secret not found")
+			input.Logger.With("secretName", userSecret).Warn("secret not found")
 			continue
 		}
 

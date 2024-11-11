@@ -80,11 +80,56 @@ resource "aws_route_table_association" "kube_public" {
   route_table_id = aws_route_table.kube_public.id
 }
 
-module "base-infrastructure-iam" {
-  source                       = "../../../terraform-modules/base-infrastructure-iam"
-  prefix                       = local.prefix
-  providerClusterConfiguration = var.providerClusterConfiguration
-  tags                         = local.tags
+resource "aws_iam_role" "node" {
+  name = "${local.prefix}-node"
+
+  assume_role_policy = <<-EOF
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Action": "sts:AssumeRole",
+        "Principal": {
+          "Service": "ec2.amazonaws.com"
+        },
+        "Effect": "Allow"
+      }
+    ]
+  }
+  EOF
+
+  tags = local.tags
+}
+
+resource "aws_iam_role_policy" "node" {
+  name = "${local.prefix}-node"
+  role = aws_iam_role.node.id
+
+  policy = <<-EOF
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          %{for policy in local.additional_role_policies}
+          "${policy}",
+          %{endfor}
+          "ec2:DescribeTags",
+          "ec2:DescribeInstances"
+        ],
+        "Resource": [
+          "*"
+        ]
+      }
+    ]
+  }
+  EOF
+}
+
+resource "aws_iam_instance_profile" "node" {
+  name = "${local.prefix}-node"
+  role = aws_iam_role.node.id
 }
 
 resource "aws_key_pair" "ssh" {

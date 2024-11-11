@@ -31,7 +31,6 @@ import (
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/go-logr/logr"
-	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -64,6 +63,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -93,9 +93,11 @@ type DeckhouseController struct {
 	sourceModules           map[string]string
 	embeddedDeckhousePolicy *helpers.ModuleUpdatePolicySpecContainer
 	deckhouseSettings       *helpers.DeckhouseSettingsContainer
+
+	logger *log.Logger
 }
 
-func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage) (*DeckhouseController, error) {
+func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage, logger *log.Logger) (*DeckhouseController, error) {
 	mcClient, err := versioned.NewForConfig(config)
 	if err != nil {
 		return nil, err
@@ -164,6 +166,15 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 						},
 					},
 				},
+				// for deckhouse.io apis
+				&v1alpha1.Module{}:              {},
+				&v1alpha1.ModuleConfig{}:        {},
+				&v1alpha1.ModuleDocumentation{}: {},
+				&v1alpha1.ModuleRelease{}:       {},
+				&v1alpha1.ModuleSource{}:        {},
+				&v1alpha1.ModuleUpdatePolicy{}:  {},
+				&v1alpha1.ModulePullOverride{}:  {},
+				&v1alpha1.DeckhouseRelease{}:    {},
 			},
 		},
 	})
@@ -189,27 +200,27 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 
 	var preflightCountDown sync.WaitGroup
 
-	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer, metricStorage, &preflightCountDown)
+	err = deckhouse_release.NewDeckhouseReleaseController(ctx, mgr, dc, mm, dsContainer, metricStorage, &preflightCountDown, logger.Named("release"))
 	if err != nil {
 		return nil, fmt.Errorf("new Deckhouse release controller: %w", err)
 	}
 
-	err = source.NewModuleSourceController(mgr, dc, embeddedDeckhousePolicy, &preflightCountDown)
+	err = source.NewModuleSourceController(mgr, dc, embeddedDeckhousePolicy, &preflightCountDown, logger.Named("module-source"))
 	if err != nil {
 		return nil, err
 	}
 
-	err = release.NewModuleReleaseController(mgr, dc, embeddedDeckhousePolicy, mm, metricStorage, &preflightCountDown)
+	err = release.NewModuleReleaseController(mgr, dc, embeddedDeckhousePolicy, mm, metricStorage, &preflightCountDown, logger.Named("module-release"))
 	if err != nil {
 		return nil, err
 	}
 
-	err = release.NewModulePullOverrideController(mgr, dc, mm, &preflightCountDown)
+	err = release.NewModulePullOverrideController(mgr, dc, mm, &preflightCountDown, logger.Named("pull-override"))
 	if err != nil {
 		return nil, err
 	}
 
-	err = docbuilder.NewModuleDocumentationController(mgr, dc)
+	err = docbuilder.NewModuleDocumentationController(mgr, dc, logger.Named("module-documentation"))
 	if err != nil {
 		return nil, err
 	}
@@ -227,6 +238,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		embeddedDeckhousePolicy: embeddedDeckhousePolicy,
 		deckhouseSettings:       dsContainer,
 		metricStorage:           metricStorage,
+		logger:                  logger,
 	}, nil
 }
 
@@ -433,7 +445,7 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
-			dml.metricStorage.GroupedVault.ExpireGroupMetrics(metricGroup)
+			dml.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 			moduleConfig, moduleErr := dml.kubeClient.DeckhouseV1alpha1().ModuleConfigs().Get(dml.ctx, configName, v1.GetOptions{})
 
 			// if module config found
@@ -460,7 +472,7 @@ func (dml *DeckhouseController) updateModuleConfigStatus(configName string) erro
 				converter := conversion.Store().Get(moduleConfig.Name)
 
 				if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
-					dml.metricStorage.GroupedVault.GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
+					dml.metricStorage.Grouped().GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
 						"name":    moduleConfig.Name,
 						"version": strconv.Itoa(moduleConfig.Spec.Version),
 						"latest":  strconv.Itoa(converter.LatestVersion()),

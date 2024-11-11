@@ -83,7 +83,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 
 	snap := input.Snapshots["configuration_checksums_secret"]
 	if len(snap) == 0 {
-		input.LogEntry.Warn("no configuration_checksums_secret snapshot found. Skipping run")
+		input.Logger.Warn("no configuration_checksums_secret snapshot found. Skipping run")
 		return nil
 	}
 	approver.ngChecksums = snap[0].(shared.ConfigurationChecksum)
@@ -267,13 +267,13 @@ func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateAp
 	// and deckhouse will malfunction and drain single node does not matter we always reboot
 	// single control plane node without problem
 	if nodeNg.Name == "master" && nodeNg.Status.Nodes == 1 {
-		input.LogEntry.Warn("Skip drain single control-plane node")
+		input.Logger.Warn("Skip drain single control-plane node")
 		return false
 	}
 
 	// we can not drain single node with deckhouse
 	if node.Name == ar.deckhouseNodeName && nodeNg.Status.Ready < 2 {
-		input.LogEntry.Warnf("Skip drain node %s with deckhouse pod because node-group %s contains single node and deckhouse will not run after drain", node.Name, nodeNg.Name)
+		input.Logger.Warnf("Skip drain node %s with deckhouse pod because node-group %s contains single node and deckhouse will not run after drain", node.Name, nodeNg.Name)
 		return false
 	}
 
@@ -319,7 +319,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 
 		// If approvalMode == RollingUpdate simply delete machine
 		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
-			input.LogEntry.Infof("Delete machine d8-cloud-instance-manager/%s due to RollingUpdate strategy", node.Name)
+			input.Logger.Infof("Delete machine d8-cloud-instance-manager/%s due to RollingUpdate strategy", node.Name)
 			input.PatchCollector.Delete("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name, object_patch.InBackground())
 			continue
 		}

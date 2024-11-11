@@ -47,7 +47,7 @@ internal:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
+			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").String()).To(MatchJSON(`["1.1"]`))
 
