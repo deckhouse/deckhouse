@@ -36,32 +36,32 @@ spec:
                   Чекпоинт гистограммы (histogram) для потребления CPU.
                 properties:
                   bucketWeights:
-                    description: Отображение от индекса корзины к весу корзины.
+                    description: Сопоставление индекса бакета с его весом.
                   referenceTimestamp:
-                    description: Опорная временная метка для образцов, собранных
+                    description: Контроольная временная метка для сэмплов, собранных
                       в этой гистограмме.
                   totalWeight:
-                    description: Сумма образцов, используемая в качестве знаменателя
+                    description: Сумма сэмплов, которая будет использоваться как делитель
                       для весов из BucketWeights.
               firstSampleStart:
-                description: Временная метка первого образца из гистограмм.
+                description: Отметка времени первого сэмпла из гистограмм.
               lastSampleStart:
-                description: Временная метка последнего образца из гистограмм.
+                description: Отметка времени последнего сэмпла из гистограмм.
               lastUpdateTime:
                 description: Время, когда статус был обновлен в последний раз.
               memoryHistogram:
-                description: Контрольная точка гистограммы для анализа потребления памяти.
+                description: Чекпоинт гистограммы для анализа потребления памяти.
                 properties:
                   bucketWeights:
-                    description: Отображение от индекса бакета (bucket) к весу бакета.
+                    description: Сопоставление индекса бакета с его весом.
                   referenceTimestamp:
-                    description: Опорная временная метка для образцов, собранных
+                    description: Чекпоинт для сэмплов, собранных
                       в этой гистограмме.
                   totalWeight:
-                    description: Сумма образцов, используемая в качестве знаменателя
+                    description: Сумма сэмплов, которая будет использоваться как делитель
                       для весов из BucketWeights.
               totalSamplesCount:
-                description: Общее количество образцов в гистограммах.
+                description: Общее количество сэмплов в гистограммах.
               version:
                 description: Версия формата сохраненных данных.
   - name: v1beta2
