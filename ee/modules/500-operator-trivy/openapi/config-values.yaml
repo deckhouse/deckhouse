@@ -13,6 +13,16 @@ properties:
       **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
       
       If `false` is specified, `emptyDir` will be forced to be used.
+  additionalVulnerabilityReportFields:
+    type: array
+    description: |
+      A list of additional fields from the vulnerability database to add to the VulnerabilityReport.
+    items:
+      type: string
+    x-examples:
+    -
+      - Class
+      - Target
   severities:
     type: array
     description: |
@@ -26,10 +36,10 @@ properties:
         - MEDIUM
         - HIGH
         - CRITICAL
-    x-example:
-      severities:
-        - UNKNOWN
-        - CRITICAl
+    x-examples:
+    -
+      - UNKNOWN
+      - CRITICAl
   linkCVEtoBDU:
     type: boolean
     default: false
@@ -87,7 +97,8 @@ properties:
       The values of these labels will correspond to the values of the scanned resources' labels.
     items:
       type: string
-    x-example:
+    x-examples:
+    -
       - app
       - env
   insecureRegistries:

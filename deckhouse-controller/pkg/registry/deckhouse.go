@@ -25,7 +25,6 @@ import (
 
 	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"gopkg.in/yaml.v2"
 
@@ -98,7 +97,10 @@ func (svc *deckhouseReleaseService) ListDeckhouseReleases(ctx context.Context) (
 func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelease.ReleaseMetadata, error) {
 	var meta = new(dhRelease.ReleaseMetadata)
 
-	rc := mutate.Extract(img)
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return nil, err
+	}
 	defer rc.Close()
 
 	rr := &releaseReader{
@@ -106,7 +108,7 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 		changelogReader: bytes.NewBuffer(nil),
 	}
 
-	err := rr.untarMetadata(rc)
+	err = rr.untarMetadata(rc)
 	if err != nil {
 		return nil, err
 	}

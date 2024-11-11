@@ -48,8 +48,13 @@ import (
 )
 
 var (
-	golden     bool
-	mDelimiter *regexp.Regexp
+	golden       bool
+	mDelimiter   *regexp.Regexp
+	ManifestStub = func() (*v1.Manifest, error) {
+		return &v1.Manifest{
+			Layers: []v1.Descriptor{},
+		}, nil
+	}
 )
 
 func init() {
@@ -125,9 +130,12 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("ms-with-registry.yaml", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
-		}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+			},
+		}, nil)
 
 		suite.setupController(string(suite.fetchTestFileData("ms-with-registry.yaml")))
 		ms := suite.getModuleSource(suite.testMSName)
@@ -137,9 +145,12 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("ms-with-policy.yaml", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
-		}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+			},
+		}, nil)
 
 		suite.setupController(string(suite.fetchTestFileData("with-policy.yaml")))
 		ms := suite.getModuleSource(suite.testMSName)
@@ -154,9 +165,12 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 				return nil, errors.New("fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/baz/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]")
 			}
 
-			return &crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
-			}}, nil
+			return &crfake.FakeImage{
+				ManifestStub: ManifestStub,
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+				},
+			}, nil
 		})
 
 		suite.setupController(string(suite.fetchTestFileData("with-error.yaml")))
@@ -168,9 +182,12 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	suite.Run("With stale registry error", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil) // baz module was removed
 		dependency.TestDC.CRClient.ImageMock.Return(
-			&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
-			}}, nil,
+			&crfake.FakeImage{
+				ManifestStub: ManifestStub,
+				LayersStub: func() ([]v1.Layer, error) {
+					return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+				},
+			}, nil,
 		)
 
 		suite.setupController(string(suite.fetchTestFileData("with-stale-error.yaml")))

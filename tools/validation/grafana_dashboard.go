@@ -69,10 +69,11 @@ func RunGrafanaDashboardValidation(info *DiffInfo) (exitCode int) {
 func isGrafanaDashboard(fileName string) bool {
 	fileName = strings.ToLower(fileName)
 	return strings.Contains(fileName, "grafana-dashboards") &&
-		strings.HasSuffix(fileName, ".json")
+		(strings.HasSuffix(fileName, ".json") || strings.HasSuffix(fileName, ".tpl"))
 }
 
 func validateGrafanaDashboardFile(fileName string, fileContent []byte) *Messages {
+	fmt.Printf("Validating %s grafana dashboard definition\n", fileName)
 	msgs := NewMessages()
 
 	dashboard := gjson.ParseBytes(fileContent)

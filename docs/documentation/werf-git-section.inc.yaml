@@ -117,8 +117,22 @@
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
+- add: /ee/candi/cloud-providers/dynamix/openapi
+  to: /src/ee/modules/030-cloud-provider-dynamix/crds
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*instance_class.yaml']
+  stageDependencies:
+    setup: ['**/*']
 - add: /ee/candi/cloud-providers/vsphere/openapi
   to: /src/ee/modules/030-cloud-provider-vsphere/openapi
+  owner: jekyll
+  group: jekyll
+  includePaths: ['*cluster_configuration.yaml']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/dynamix/openapi
+  to: /src/ee/modules/030-cloud-provider-dynamix/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
@@ -222,6 +236,13 @@
     setup: ['**/*']
 - add: /ee/candi/cloud-providers/vsphere/docs
   to: /src/ee/modules/030-cloud-provider-vsphere/docs
+  owner: jekyll
+  group: jekyll
+  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
+  stageDependencies:
+    setup: ['**/*']
+- add: /ee/candi/cloud-providers/dynamix/docs
+  to: /src/ee/modules/030-cloud-provider-dynamix/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']

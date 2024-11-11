@@ -12,6 +12,10 @@ properties:
       
       Если указать `false`, будет принудительно использоваться `emptyDir`.
 
+  additionalVulnerabilityReportFields:
+    description: |
+      Список дополнительных полей из базы уязвимостей, добавляемых к отчетам об уязвимостях (VulnerabilityReport).
+
   severities:
     description: |
       Фильтрация отчетов уязвимостей по уровню их критичности.

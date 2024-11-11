@@ -6,3 +6,10 @@ metadata:
     heritage: deckhouse
 spec:
   scope: "0.990"
+  group: networking.istio.io
+  names:
+    plural: testcrds
+    singular: testcrd
+    kind: TestCrd
+  versions:
+    - name: v1
