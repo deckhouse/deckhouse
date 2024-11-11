@@ -31,7 +31,7 @@ shell:
   - mkdir /prometheus && cd /prometheus
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.OBSERVABILITY_SOURCE_REPO }}/prometheus-plus-plus prometheus
   - cd /prometheus/prometheus/web/ui
-  - mv /prometheus-deps/web/ui/* .
+  - rm -rf ./* && mv /prometheus-deps/web/ui/* .
   - npm run build
   - cd /prometheus/prometheus
   - scripts/compress_assets.sh
