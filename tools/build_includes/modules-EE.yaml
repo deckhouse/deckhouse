@@ -219,11 +219,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/160-multitenancy-manager
-  to: /deckhouse/modules/160-multitenancy-manager
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/300-prometheus/hooks/common_test.go
   to: /deckhouse/modules/300-prometheus/hooks/common_test.go
   stageDependencies:
