@@ -61,8 +61,6 @@ data:
   {{- end }}
   {{- range $idx, $registry := .Values.operatorTrivy.insecureRegistries }}
   trivy.insecureRegistry.{{ $idx }}: {{ $registry | quote }}
-  {{- end }}
-  {{- range $idx, $registry := .Values.operatorTrivy.nonSslRegistries }}
   trivy.nonSslRegistry.{{ $idx }}: {{ $registry | quote }}
   {{- end }}
   trivy.slow: "true"

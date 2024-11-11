@@ -174,26 +174,6 @@ insecureRegistries:
 			Expect(cm.Exists()).To(BeTrue())
 			Expect(cm.Field(`data`).Map()["trivy.insecureRegistry.0"].String()).To(Equal("example.com"))
 			Expect(cm.Field(`data`).Map()["trivy.insecureRegistry.1"].String()).To(Equal("test.example.com:8080"))
-		})
-	})
-
-	Context("Operator trivy with non-ssl registry set", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("operatorTrivy", `
-nonSslRegistries:
-- example.com
-- test.example.com:8080`)
-
-			f.HelmRender()
-		})
-
-		It("Everything must render properly for cluster", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-		})
-
-		It("Operator trivy has proper nonSslRegistry.[id] set", func() {
-			cm := f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config")
-			Expect(cm.Exists()).To(BeTrue())
 			Expect(cm.Field(`data`).Map()["trivy.nonSslRegistry.0"].String()).To(Equal("example.com"))
 			Expect(cm.Field(`data`).Map()["trivy.nonSslRegistry.1"].String()).To(Equal("test.example.com:8080"))
 		})

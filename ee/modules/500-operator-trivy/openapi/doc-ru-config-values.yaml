@@ -52,7 +52,3 @@ properties:
   insecureRegistries:
     description: |
       Хранилище образов контейнеров (container registry), к которым разрешены незащищённые соединения.
-
-  nonSslRegistries:
-    description: |
-      Хранилище образов контейнеров (container registry), к которым разрешены незашифрованные (non-ssl) подключения.

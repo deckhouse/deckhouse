@@ -120,14 +120,3 @@ properties:
       type: string
     description: |
       Container registries to which insecure connections are allowed.
-
-  nonSslRegistries:
-    type: array
-    x-examples:
-    -
-      - my.registry.com
-      - http-only.registry.io
-    items:
-      type: string
-    description: |
-      Container registries to which unencrypted (non-ssl) connections are allowed.
