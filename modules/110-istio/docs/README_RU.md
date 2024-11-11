@@ -18,29 +18,27 @@ webIfaces:
 
 ## Конфигурация Istio и Cilium
 
-Когда вы разворачиваете `Cilium` и `Istio` вместе, обратите внимание:
+Когда вы разворачиваете Cilium и Istio вместе, обратите внимание на то, что вы можете  использовать либо управляющие политики L7 HTTP Cilium, либо Istio.  Не рекомендуется использовать обе эти функции одновременно, чтобы избежать проблем с «split-brain». Примеры для уровня 7 вы можете посмотреть на сайте [Cilium](https://docs.cilium.io/en/latest/security/policy/language/#l7-policy).
 
-Можно использовать либо управляющие политики L7 HTTP `Cilium`, либо `Istio`, но не рекомендуется использовать обе эти функции одновременно, чтобы избежать проблем с «split-brain». Примеры для уровня 7 вы можете посмотреть на сайте [Cilium](https://docs.cilium.io/en/latest/security/policy/language/#l7-policy).
+Чтобы использовать управляющие политики L7 HTTP Cilium вместе с Istio:
 
-Чтобы использовать управляющие политики L7 HTTP `Cilium` вместе с `Istio`:
-
-* **В режиме Sidecar:** Отключите `Istio mTLS` для тех рабочих нагрузок, которые вы хотите управлять с помощью политики L7 Cilium, настроив `mtls.mode=DISABLE` в [PeerAuthentication Istio](https://istio.io/latest/docs/reference/config/security/peer_authentication/#PeerAuthentication).
+* **В режиме Sidecar:** Отключите Istio mTLS для тех рабочих нагрузок, которые вы хотите управлять с помощью политики L7 Cilium, настроив `mtls.mode=DISABLE` в [PeerAuthentication Istio](https://istio.io/latest/docs/reference/config/security/peer_authentication/#PeerAuthentication).
 
 * **В режиме Ambient:**  Удалите те рабочие нагрузки, которыми вы хотите управлять с помощью политики L7 Cilium, удалив метку `istio.io/dataplane-mode` из пространства имен или добавив аннотацию для подов, которые вы хотите управлять с помощью Cilium L7, с указанием `ambient.istio.io/redirection: disabled`.
 
-В случае, если это не будет сделано, трафик между управляемыми `Istio` нагрузками будет зашифрован Istio с помощью mTLS, и Cilium не сможет обработать его для применения политики L7.
+В случае, если это не будет сделано, трафик между управляемыми Istio нагрузками будет зашифрован Istio с помощью mTLS, и Cilium не сможет обработать его для применения политики L7.
 
-Если используются управляющие политики L7 HTTP `Istio`, отключать `mTLS` между рабочими нагрузками не требуется.
+Если используются управляющие политики L7 HTTP Istio, отключать mTLS между рабочими нагрузками не требуется.
 
-При использовании `Istio mTLS` в режиме Ambient с управляющими политиками L7 HTTP Istio, трафик между рабочими нагрузками будет зашифрован и туннелирован в и из подов `Istio` через порт 15008. Подробнее о перенаправлении трафика - на сайте [Istio](https://istio.io/latest/docs/ops/ambient/usage/traffic-redirection/). В этом случае `Cilium NetworkPolicy` все равно будет применяться к зашифрованному и туннелированному трафику L4, входящему и исходящему из управляемых `Istio` подов, но `Cilium` не будет иметь доступа к реальным источнику и назначению этого трафика L4, или какой-либо информации L7. Это означает, что `Istio` должен использоваться для обеспечения политики для трафика между управляемыми `Istio` и защищенными `mTLS` нагрузками на уровне L4 или выше. Входящий трафик в управляемые `Istio` нагрузки от неуправляемых `Istio` нагрузок будет полностью подпадать под действием `Kubernetes NetworkPolicy`, обеспечиваемой `Cilium`, так как он не будет туннелирован или зашифрован.
+При использовании Istio mTLS в режиме Ambient с управляющими политиками L7 HTTP Istio, трафик между рабочими нагрузками будет зашифрован и туннелирован в и из подов Istio через порт 15008. Подробнее о перенаправлении трафика - на сайте [Istio](https://istio.io/latest/docs/ops/ambient/usage/traffic-redirection/). В этом случае Cilium `NetworkPolicy` все равно будет применяться к зашифрованному и туннелированному трафику L4, входящему и исходящему из управляемых Istio подов, но Cilium не будет иметь доступа к реальным источнику и назначению этого трафика L4, или какой-либо информации L7. Это означает, что Istio должен использоваться для обеспечения политики для трафика между управляемыми Istio и защищенными mTLS нагрузками на уровне L4 или выше. Входящий трафик в управляемые Istio нагрузки от неуправляемых Istio нагрузок будет полностью подпадать под действием Kubernetes `NetworkPolicy`, обеспечиваемой Cilium, так как он не будет туннелирован или зашифрован.
 
-При использовании `Istio` в режиме Sidecar с [автоматической инъекцией sidecar](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#automatic-sidecar-injection), вместе с режимом наложения Cilium (VXLAN или GENEVE), поды `istiod` должны работать с `hostNetwork: true` для обеспечения доступности серверу API.
+При использовании Istio в режиме Sidecar с [автоматической инъекцией sidecar](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#automatic-sidecar-injection), вместе с режимом наложения Cilium (VXLAN или GENEVE), поды `istiod` должны работать с `hostNetwork: true` для обеспечения доступности серверу API.
 
-Более подробно с конфигурацией `Istio` можно ознакомиться [на сайте Istio](https://docs.cilium.io/en/latest/network/servicemesh/istio/#istio-configuration).
+Более подробно с конфигурацией Istio можно ознакомиться [на сайте Istio](https://docs.cilium.io/en/latest/network/servicemesh/istio/#istio-configuration).
 
 ## Задачи, которые решает Istio
 
-[`Istio`](https://istio.io/) — фреймворк централизованного управления сетевым трафиком, реализующий подход Service Mesh.
+[Istio](https://istio.io/) — фреймворк централизованного управления сетевым трафиком, реализующий подход Service Mesh.
 
 Istio решает для приложений следующие задачи:
 
