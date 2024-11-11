@@ -59,6 +59,7 @@ COPY patches/metrics-SetSSLExpireTime.patch /
 COPY patches/util.patch /
 COPY patches/fix-cleanup.patch /
 COPY patches/geoip.patch /
+COPY patches/new-metrics.patch /
 ENV GOARCH=amd64
 RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
     # jaegertracing hunter deps
@@ -70,6 +71,7 @@ RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/in
     patch -p1 < /util.patch && \
     patch -p1 < /fix-cleanup.patch && \
     patch -p1 < /geoip.patch && \
+    patch -p1 < /new-metrics.patch && \
     make GO111MODULE=on USE_DOCKER=false build
 
 # Build nginx for ingress controller
