@@ -2,11 +2,11 @@
 title: "Модуль admission-policy-engine: Custom Resources (от Gatekeeper)"
 ---
 
-## Mutation
+## Mutation Custom Resources
 
 [Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#mutation-crds)
 
-Позволяет Gatekeeper на основе настраиваемых политик изменять ресурсы Kubernetes в момент их запроса.
+Представляют собой набор настраиваемых политик модификации ресурсов Kubernets в момент их создания.
 
 ### AssignMetadata
 
