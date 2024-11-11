@@ -173,7 +173,7 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*con
 	for _, item := range list.Items {
 		values, err := mc.fetchValuesFromModuleConfig(&item)
 		if err != nil {
-			return nil, fmt.Errorf("fetch values: %w", err)
+			return nil, fmt.Errorf("fetch values from module config '%s': %w", item.Name, err)
 		}
 
 		if item.Name == "global" {
