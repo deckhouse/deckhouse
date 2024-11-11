@@ -156,7 +156,6 @@ metadata:
     chart: istio
     heritage: Tiller
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: destinationrules.networking.istio.io
 spec:
   group: networking.istio.io
@@ -3245,7 +3244,6 @@ metadata:
     chart: istio
     heritage: Tiller
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: gateways.networking.istio.io
 spec:
   group: networking.istio.io
@@ -3507,7 +3505,6 @@ metadata:
     chart: istio
     heritage: Tiller
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: proxyconfigs.networking.istio.io
 spec:
   group: networking.istio.io
@@ -3574,7 +3571,6 @@ metadata:
     chart: istio
     heritage: Tiller
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: serviceentries.networking.istio.io
 spec:
   group: networking.istio.io
@@ -3850,7 +3846,6 @@ metadata:
     chart: istio
     heritage: Tiller
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: sidecars.networking.istio.io
 spec:
   group: networking.istio.io
@@ -4224,7 +4219,6 @@ metadata:
     chart: istio
     heritage: Tiller
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: virtualservices.networking.istio.io
 spec:
   group: networking.istio.io
@@ -5898,7 +5892,6 @@ metadata:
     chart: istio
     heritage: Tiller
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: workloadentries.networking.istio.io
 spec:
   group: networking.istio.io
@@ -6028,7 +6021,6 @@ metadata:
     chart: istio
     heritage: Tiller
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: workloadgroups.networking.istio.io
 spec:
   group: networking.istio.io
@@ -6357,7 +6349,6 @@ metadata:
     heritage: Tiller
     istio: security
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: authorizationpolicies.security.istio.io
 spec:
   group: security.istio.io
@@ -6748,7 +6739,6 @@ metadata:
     heritage: Tiller
     istio: security
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: peerauthentications.security.istio.io
 spec:
   group: security.istio.io
@@ -6842,7 +6832,6 @@ metadata:
     heritage: Tiller
     istio: security
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: requestauthentications.security.istio.io
 spec:
   group: security.istio.io
@@ -7039,7 +7028,6 @@ metadata:
     heritage: Tiller
     istio: telemetry
     release: istio
-    backup.deckhouse.io/cluster-config: "true"
   name: telemetries.telemetry.istio.io
 spec:
   group: telemetry.istio.io
