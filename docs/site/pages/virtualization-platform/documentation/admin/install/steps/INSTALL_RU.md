@@ -1,12 +1,12 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Установка"
 permalink: ru/virtualization-platform/documentation/admin/install/steps/install.html
 lang: ru
 ---
 
-# Установка Deckhouse
+TODO: вставить инфу про инсталлятор и конифиг файлы
 
-> При установке Deckhouse редакции Enterprise Edition из официального container registry `registry.deckhouse.io` необходимо предварительно авторизоваться с помощью лицензионного ключа:
+> При установке платформы отличной от [редакции](../../editions.html) Community Edition из официального container registry `registry.deckhouse.io` необходимо предварительно авторизоваться с помощью лицензионного ключа:
 >
 > ```shell
 > docker login -u license-token registry.deckhouse.io
@@ -60,10 +60,3 @@ dhctl bootstrap \
 - `/resources.yml` — файл манифестов ресурсов;
 - `<SSH_USER>` — пользователь на сервере для подключения по SSH;
 - `--ssh-agent-private-keys` — файл приватного SSH-ключа для подключения по SSH.
-
-# Требуемые модули
-
-Для работы платформы необходимо установить следующие модули:
-- Cilium
-- Storage
-- Virtualization

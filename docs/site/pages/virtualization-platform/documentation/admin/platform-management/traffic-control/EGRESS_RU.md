@@ -4,20 +4,13 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/tr
 lang: ru
 ---
 
-{% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
-
-## Мотивация
+{% alert level="warning" %} Функция недоступна в Community Edition {% endalert %}
 
 В развернутом кластере ряд узлов могут не иметь доступ к внешнему миру для обеспечения требований безопасности.
 В таком случае доступ в интернет осуществляет через предварительно выделенные узлы, имеющие доступ во внешний мир.
 
 Перенаправление трафика в таком случае происходит через преднастроенные Egress-шлюзы (`EgressGateway`)
 согласно описанной политике (`EgressGatewayPolicy`).
-
-## Требования
-
-Модуль cni-cilium является обязательным для обеспечения работы виртуализации.
-Необходимо убедиться, что он предустановлен и включен.
 
 ## Группы узлов Egress-шлюза
 
@@ -51,7 +44,7 @@ spec:
     # В качестве IP-адреса будет использоваться primary IP-адрес на публичном сетевом интерфейсе узла.
     mode: PrimaryIPFromEgressGatewayNodeInterface
     primaryIPFromEgressGatewayNodeInterface:
-      # Предварительно необходимо настроить сетевую подсистему на всех Egress-узлах, 
+      # Предварительно необходимо настроить сетевую подсистему на всех Egress-узлах,
       # так как на всех узлах группы "публичный" интерфейс должен иметь одинаковое имя (например, eth1).
       interfaceName: eth1
 EOF
@@ -101,10 +94,10 @@ EOF
 Чтобы проверить пригодность узлов для включение в группу Egress-шлюза, выполните команды:
 
 ```shell
-# Вывести узлы, попадающие под spec.nodeSelector: 
+# Вывести узлы, попадающие под spec.nodeSelector:
 d8 k get nodes -l node-role.deckhouse.io/egress="" -ojson | jq -r '.items[].metadata.name'
 
-# Вывести узлы в состоянии Ready: 
+# Вывести узлы в состоянии Ready:
 d8 k get nodes -ojson | jq -r '.items[] | select(.status.conditions[] | select(.type == "Ready" and .status == "True")) | .metadata.name'
 
 # Вывести узлы, не находящиеся на техническом обслуживании:
@@ -148,7 +141,7 @@ spec:
   selectors:
     - podSelector:
         matchLabels:
-          # Данная политика будет применена для все виртуальных машин с меткой app=backend в пространстве default   
+          # Данная политика будет применена для все виртуальных машин с меткой app=backend в пространстве default
           app: backend
           io.kubernetes.pod.namespace: default
 EOF
@@ -162,9 +155,3 @@ curl ip.flant.ru
 
 Будет отображен либо IP адрес главного узла (если Egress-шлюз в режиме `PrimaryIPFromEgressGatewayNodeInterface`),
 либо виртуальный IP адрес (для режима `VirtualIPAddress`)
-
-
-
-## TODO NOTES:
-
-**1. EgressGateway/EgressGatewayPolicy только для CE. Нужно ли опсание для CiliumEgressGatewayPolicy?**
