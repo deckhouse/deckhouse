@@ -154,13 +154,13 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator, logg
 func run(ctx context.Context, operator *addon_operator.AddonOperator, logger *log.Logger) error {
 	err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml")
 	if err != nil {
-		return err
+		return fmt.Errorf("ensure crds: %w", err)
 	}
 
 	// we have to lock the controller run if dhctl lock configmap exists
 	err = lockOnBootstrap(ctx, operator.KubeClient())
 	if err != nil {
-		return err
+		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
 	deckhouseConfigC := make(chan utils.Values, 1)
@@ -172,12 +172,12 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator, logger *lo
 
 	err = operator.Setup()
 	if err != nil {
-		return err
+		return fmt.Errorf("addon operator setup: %w", err)
 	}
 
 	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage, logger.Named("deckhouse-controller"))
 	if err != nil {
-		return err
+		return fmt.Errorf("deckhouse controller creating: %w", err)
 	}
 
 	validation.RegisterAdmissionHandlers(operator, dController, operator.MetricStorage)
@@ -197,12 +197,12 @@ func run(ctx context.Context, operator *addon_operator.AddonOperator, logger *lo
 	// Loads deckhouse modules from the fs and Starts main event lop
 	err = dController.DiscoverDeckhouseModules(ctx, operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
 	if err != nil {
-		return err
+		return fmt.Errorf("discover deckhouse modules: %w", err)
 	}
 
 	err = operator.Start(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("addon operator start: %w", err)
 	}
 
 	debugserver.RegisterRoutes(operator.DebugServer)
