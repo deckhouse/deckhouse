@@ -76,10 +76,10 @@ function __on_conversion::alpha2_to_alpha1() {
      if .apiVersion ==  "deckhouse.io/v1alpha2" then
        .apiVersion = "deckhouse.io/v1alpha1" |
        if .spec.nodeLabelSelector then .spec.deschedulerPolicy.globalParameters.nodeSelector = .spec.nodeLabelSelector end |
-       del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.nodeAffinityType) |
-       del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.thresholds) |
-       del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.targetThresholds) |
-       del(.spec.deschedulerPolicy.strategies.highNodeUtilization.thresholds) |
+       del(.spec.strategies.removePodsViolatingNodeAffinity.nodeAffinityType) |
+       del(.spec.strategies.lowNodeUtilization.thresholds) |
+       del(.spec.strategies.lowNodeUtilization.targetThresholds) |
+       del(.spec.strategies.highNodeUtilization.thresholds) |
        if .spec.strategies.removeDuplicates.enabled then .spec.deschedulerPolicy.strategies.removeDuplicates.enabled = .spec.strategies.removeDuplicates.enabled end |
        if .spec.strategies.removePodsViolatingNodeAffinity.enabled then .spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled = .spec.strategies.removePodsViolatingNodeAffinity.enabled end |
        if .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled then .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled = .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled end |
@@ -88,18 +88,16 @@ function __on_conversion::alpha2_to_alpha1() {
      else . end
   )')
   then
-
-    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
     data=""
     for obj in $(jq -c './/[] | .[]' <<< ${converted}); do
       node_selector="$(jq -cr '.spec.deschedulerPolicy.globalParameters.nodeSelector//""' <<< ${obj})"
       if [ -n "${node_selector}" ]; then
         new_node_selector="$(echo "${node_selector}" | label-converter --to-equality | sed 's|"|\"|g')"
-        obj="$(sed "s|\"${node_selector}\"|${new_node_selector}|g" <<< ${obj})"
+        obj="$(sed "s|${node_selector}|\"${new_node_selector}\"|g" <<< ${obj})"
       fi
       data="${data}${obj},"
     done
-
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
 {"convertedObjects": [${data%?}]}
 EOF
   else
