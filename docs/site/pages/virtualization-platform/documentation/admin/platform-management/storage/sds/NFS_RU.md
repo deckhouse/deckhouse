@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/csi-nfs.html
+title: "NFS-хранилище"
+permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/sds/nfs.html
 lang: ru
 ---

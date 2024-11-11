@@ -1,4 +1,4 @@
 ---
-title: "Deckhouse Virtualization Platform"
-permalink: en/virtualization-platform/documentation/admin/platform-management/storage/csi-seph.html
+title: "CEPH Storage"
+permalink: en/virtualization-platform/documentation/admin/platform-management/storage/ceph.html
 ---

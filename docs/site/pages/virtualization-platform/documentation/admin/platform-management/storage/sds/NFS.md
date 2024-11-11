@@ -1,4 +1,4 @@
 ---
-title: "Deckhouse Virtualization Platform"
-permalink: en/virtualization-platform/documentation/admin/platform-management/storage/csi-nfs.html
+title: "NFS Storage"
+permalink: en/virtualization-platform/documentation/admin/platform-management/storage/nfs.html
 ---

@@ -102,20 +102,20 @@ entries:
                     ru: Программно определяемые
                   folders:
                     - title:
-                        en: Local
-                        ru: Локальные на основе LVM
-                      url: /virtualization-platform/platform-management/documentation/admin/storage/sds/local.html
+                        en: Local storage
+                        ru: Локальное хранилище
+                      url: /virtualization-platform/platform-management/documentation/admin/storage/sds/lvm-local.html
                     - title:
-                        en: Repliacted
-                        ru: Реплицируемые на основе LVM
-                      url: /virtualization-platform/platform-management/documentation/admin/storage/sds/replicated.html
+                        en: Replicated storage
+                        ru: Реплицируемое хранилище
+                      url: /virtualization-platform/platform-management/documentation/admin/storage/sds/lvm-replicated.html
                     - title:
-                        en: NFS-storage
-                        ru: NFS-хранилища
+                        en: NFS storage
+                        ru: NFS хранилище
                       url: /virtualization-platform/documentation/admin/platform-management/storage/sds/nfs.html
                     - title:
-                        en: CEPH-storage
-                        ru: CEPH-хранилища
+                        en: CEPH storage
+                        ru: CEPH хранилище
                       url: /virtualization-platform/documentation/admin/platform-management/storage/sds/ceph.html
                 - title:
                     en: Hardware
