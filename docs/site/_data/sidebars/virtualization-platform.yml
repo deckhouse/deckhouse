@@ -98,25 +98,33 @@ entries:
                     ru: Поддерживаемые хранилища
                   url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
                 - title:
-                    en: sds-local-volume
-                    ru: sds-local-volume
-                  url: /virtualization-platform/platform-management/documentation/admin/storage/sds-local-volume.html
+                    en: SDS
+                    ru: Программно определяемые
+                  folders:
+                    - title:
+                        en: Local
+                        ru: Локальные на основе LVM
+                      url: /virtualization-platform/platform-management/documentation/admin/storage/sds/local.html
+                    - title:
+                        en: Repliacted
+                        ru: Реплицируемые на основе LVM
+                      url: /virtualization-platform/platform-management/documentation/admin/storage/sds/replicated.html
+                    - title:
+                        en: NFS-storage
+                        ru: NFS-хранилища
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/nfs.html
+                    - title:
+                        en: CEPH-storage
+                        ru: CEPH-хранилища
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/ceph.html
                 - title:
-                    en: sds-replicated-volume
-                    ru: sds-replicated-volume
-                  url: /virtualization-platform/platform-management/documentation/admin/storage/csi-replicated-volume.html
-                - title:
-                    en: csi-nfs
-                    ru: csi-nfs
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/csi-nfs.html
-                - title:
-                    en: csi-ceph
-                    ru: csi-ceph
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/csi-seph.html
-                - title:
-                    en: csi-yadro
-                    ru: csi-yadro
-                  url: /virtualization-platform/platform-management/storage/csi-yadro.html
+                    en: Hardware
+                    ru: Аппаратные
+                  folders:
+                    - title:
+                        en: yadro
+                        ru: yadro
+                      url: /virtualization-platform/platform-management/storage/hardware/yadro.html
             - title:
                 en: Virtualization
                 ru: Виртуализация
