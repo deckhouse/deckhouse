@@ -37,7 +37,7 @@ function __on_conversion::alpha1_to_alpha2() {
   if converted=$(context::jq -r '.review.request.objects//[] | map(
      if .apiVersion ==  "deckhouse.io/v1alpha1" then
        .apiVersion = "deckhouse.io/v1alpha2" |
-       if .spec.deschedulerPolicy.globalParameters.nodeSelector then .spec.nodeSelector = .spec.deschedulerPolicy.globalParameters.nodeSelector end |
+       if .spec.deschedulerPolicy.globalParameters.nodeSelector then .spec.nodeLabelSelector = .spec.deschedulerPolicy.globalParameters.nodeSelector end |
        del(.spec.deschedulerPolicy.strategies.removeFailedPods) |
        del(.spec.deschedulerPolicy.strategies.removePodsHavingTooManyRestarts) |
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeTaints) |
@@ -54,9 +54,9 @@ function __on_conversion::alpha1_to_alpha2() {
   then
     data=""
     for obj in $(jq -c './/[] | .[]' <<< ${converted}); do
-      node_selector="$(jq -cr '.spec.nodeSelector//""' <<< ${obj})"
+      node_selector="$(jq -cr '.spec.nodeLabelSelector//""' <<< ${obj})"
       if [ -n "${node_selector}" ]; then
-        new_node_selector="$(echo "${node_selector}" | ./label-converter --to-set | sed 's|"|\"|g')"
+        new_node_selector="$(echo "${node_selector}" | label-converter --to-set | sed 's|"|\"|g')"
         obj="$(sed "s|\"${node_selector}\"|${new_node_selector}|g" <<< ${obj})"
       fi
       data="${data}${obj},"
@@ -75,7 +75,7 @@ function __on_conversion::alpha2_to_alpha1() {
   if converted=$(context::jq -r '.review.request.objects//[] | map(
      if .apiVersion ==  "deckhouse.io/v1alpha2" then
        .apiVersion = "deckhouse.io/v1alpha1" |
-       if .spec.nodeSelector then .spec.deschedulerPolicy.globalParameters.nodeSelector = .spec.nodeSelector end |
+       if .spec.nodeLabelSelector then .spec.deschedulerPolicy.globalParameters.nodeSelector = .spec.nodeLabelSelector end |
        del(.spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.nodeAffinityType) |
        del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.thresholds) |
        del(.spec.deschedulerPolicy.strategies.lowNodeUtilization.targetThresholds) |
@@ -85,12 +85,22 @@ function __on_conversion::alpha2_to_alpha1() {
        if .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled then .spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled = .spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled end |
        if .spec.strategies.highNodeUtilization.enabled then .spec.deschedulerPolicy.strategies.highNodeUtilization.enabled = .spec.strategies.highNodeUtilization.enabled end |
        if .spec.strategies.lowNodeUtilization.enabled then .spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled = .spec.strategies.lowNodeUtilization.enabled end
-
      else . end
   )')
   then
+
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
-{"convertedObjects": $converted}
+    data=""
+    for obj in $(jq -c './/[] | .[]' <<< ${converted}); do
+      node_selector="$(jq -cr '.spec.deschedulerPolicy.globalParameters.nodeSelector//""' <<< ${obj})"
+      if [ -n "${node_selector}" ]; then
+        new_node_selector="$(echo "${node_selector}" | label-converter --to-equality | sed 's|"|\"|g')"
+        obj="$(sed "s|\"${node_selector}\"|${new_node_selector}|g" <<< ${obj})"
+      fi
+      data="${data}${obj},"
+    done
+
+{"convertedObjects": [${data%?}]}
 EOF
   else
     cat <<EOF >"$CONVERSION_RESPONSE_PATH"
