@@ -49,25 +49,25 @@ spec:
             description: |-
               Defines the versioned schema of this representation
               of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. 
-              
-              [More info](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
+              internal value, and may reject unrecognized values.
+
+              More information [in the documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
           kind:
             description: |-
               Kind is a string value representing the REST resource this
               object represents. Servers may infer this from the endpoint the client
               submits requests to. Cannot be updated. In CamelCase.
-              
-              [More info](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
+
+              More information [in the documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             type: string
           metadata:
             type: object
           spec:
             description: |-
-              Specification of the behavior of the autoscaler. 
-              
-              [More info](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status).
+              Specification of the behavior of the autoscaler.
+
+              More information [in the documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status).
             properties:
               recommenders:
                 description: |-
@@ -93,12 +93,12 @@ spec:
                 description: |-
                   Controls how the autoscaler computes recommended resources.
                   The resource policy may be used to set constraints on the recommendations
-                  for individual containers. 
-                  
+                  for individual containers.
+
                   If any individual containers need to
                   be excluded from getting the VPA recommendations, then it must be
                   disabled explicitly by setting mode to `Off` under `containerPolicies`.
-                  
+
                   If not specified, the autoscaler computes recommended resources
                   for all containers in the pod, without additional constraints.
                 properties:
@@ -181,7 +181,7 @@ spec:
                   scale subresource (the pod set is retrieved from the controller's
                   `ScaleStatus`) or some well known controllers (e.g. for DaemonSet
                   the pod set is read from the controller's spec).
-                  
+
                   If VerticalPodAutoscaler
                   cannot use specified target it will report `ConfigUnsupported` condition.
                   Note that VerticalPodAutoscaler does not require full implementation
@@ -196,13 +196,13 @@ spec:
                   kind:
                     description: |-
                       Kind of the referent.
-                      
+
                       [More info](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
                     type: string
                   name:
                     description: |-
-                      Name of the referent. 
-                      
+                      Name of the referent.
+
                       [More info](http://kubernetes.io/docs/user-guide/identifiers#names).
                     type: string
                 required:
