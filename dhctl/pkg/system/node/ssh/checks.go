@@ -42,7 +42,7 @@ Do you want to continue?
 `
 )
 
-// надо прокидывать c.convergeState.Phase и если оно равно PhaseScaleToSingleMaster и число старых конектнов 3 то не задавать вопроса про лишние коннекты.
+// 
 func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, runConfirm func(string) bool) (map[string]string, error) {
 	userPassedHostsLen := len(userPassedHosts)
 	replicas := len(nodesNames)
