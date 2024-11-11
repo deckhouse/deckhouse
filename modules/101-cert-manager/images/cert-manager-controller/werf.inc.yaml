@@ -23,7 +23,7 @@ mount:
 shell:
   beforeInstall:
   - apt update
-  - apt install patch jq -y
+  - apt install patch jq rsync curl -y
   install:
   - mkdir /build
   - cd /build
