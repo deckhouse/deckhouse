@@ -38,7 +38,7 @@ spec:
                   bucketWeights:
                     description: Сопоставление индекса бакета с его весом.
                   referenceTimestamp:
-                    description: Контроольная временная метка для сэмплов, собранных
+                    description: Контрольная временная метка для сэмплов, собранных
                       в этой гистограмме.
                   totalWeight:
                     description: Сумма сэмплов, которая будет использоваться как делитель
@@ -48,7 +48,7 @@ spec:
               lastSampleStart:
                 description: Отметка времени последнего сэмпла из гистограмм.
               lastUpdateTime:
-                description: Время, когда статус был обновлен в последний раз.
+                description: Отметка времени последнего обновления статуса.
               memoryHistogram:
                 description: Чекпоинт гистограммы для анализа потребления памяти.
                 properties:
