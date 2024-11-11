@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -123,6 +124,14 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 func syncBindings(input *go_hook.HookInput) error {
+	// TODO: removed deleted roles, can be removed after 1.67
+	for _, roleSnap := range input.Snapshots["manageRoles"] {
+		role := roleSnap.(*filteredManageRole)
+		if deletedRole(role) {
+			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRole", "", role.Name)
+		}
+	}
+
 	expected := make(map[string]bool)
 	for _, snap := range input.Snapshots["manageBindings"] {
 		binding := snap.(*filteredManageBinding)
@@ -137,7 +146,7 @@ func syncBindings(input *go_hook.HookInput) error {
 	// delete excess use bindings
 	for _, snap := range input.Snapshots["useBindings"] {
 		existing := snap.(*filteredUseBinding)
-		if _, ok := expected[existing.RoleName]; !ok {
+		if _, ok := expected[existing.Name]; !ok {
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
 	}
@@ -150,6 +159,10 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 	var found *filteredManageRole
 	for _, snap := range manageRoles {
 		if role := snap.(*filteredManageRole); role.Name == roleName {
+			// TODO: skip deleted roles, can be removed after 1.67
+			if deletedRole(role) {
+				continue
+			}
 			found = role
 			var ok bool
 			if useRole, ok = found.Labels["rbac.deckhouse.io/use-role"]; !ok {
@@ -165,17 +178,26 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 	var namespaces = make(map[string]bool)
 	for _, snap := range manageRoles {
 		role := snap.(*filteredManageRole)
+		// TODO: skip deleted roles, can be removed after 1.67
+		if deletedRole(role) {
+			continue
+		}
 		if matchAggregationRule(found.Rule, role.Labels) {
-			if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
-				namespaces[namespace] = true
+			if role.Rule == nil {
+				if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
+					namespaces[namespace] = true
+				}
+				continue
 			}
-			if role.Rule != nil {
-				for _, nestedSnap := range manageRoles {
-					nested := nestedSnap.(*filteredManageRole)
-					if matchAggregationRule(role.Rule, nested.Labels) {
-						if namespace, ok := nested.Labels["rbac.deckhouse.io/namespace"]; ok {
-							namespaces[namespace] = true
-						}
+			for _, nestedSnap := range manageRoles {
+				// TODO: skip deleted roles, can be removed after 1.67
+				if deletedRole(role) {
+					continue
+				}
+				nested := nestedSnap.(*filteredManageRole)
+				if matchAggregationRule(role.Rule, nested.Labels) {
+					if namespace, ok := nested.Labels["rbac.deckhouse.io/namespace"]; ok {
+						namespaces[namespace] = true
 					}
 				}
 			}
@@ -221,4 +243,13 @@ func createBinding(binding *filteredManageBinding, useRoleName string, namespace
 		},
 		Subjects: binding.Subjects,
 	}
+}
+
+func deletedRole(role *filteredManageRole) bool {
+	if strings.HasPrefix(role.Name, "d8:manage") {
+		if strings.HasSuffix(role.Name, ":admin") || strings.HasSuffix(role.Name, ":user") {
+			return true
+		}
+	}
+	return false
 }
