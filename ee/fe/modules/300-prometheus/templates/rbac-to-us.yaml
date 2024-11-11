@@ -2,9 +2,9 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: access-to-prometheus-cpp-http
+  name: access-to-prometheus-pp-http
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
 rules:
 - apiGroups: ["monitoring.coreos.com"]
   resources: ["prometheuses/http"]
@@ -14,18 +14,18 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: access-to-prometheus-cpp-http
+  name: access-to-prometheus-pp-http
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: access-to-prometheus-cpp-http
+  name: access-to-prometheus-pp-http
 subjects:
 - kind: User
   name: d8-monitoring:scraper
 - kind: ServiceAccount
-  name: prometheus-cpp
+  name: prometheus-pp
   namespace: d8-monitoring
 - kind: ServiceAccount
   name: aggregating-proxy
@@ -33,7 +33,7 @@ subjects:
 - kind: Group
   name: ingress-nginx:auth
 - kind: Group
-  name: prometheus-cpp:auth
+  name: prometheus-pp:auth
 {{- if (.Values.global.enabledModules | has "upmeter") }}
 - kind: ServiceAccount
   name: upmeter-agent
@@ -41,7 +41,7 @@ subjects:
 {{- end }}
 {{- if (.Values.global.enabledModules | has "prometheus-metrics-adapter") }}
 - kind: ServiceAccount
-  name: prometheus-cpp-metrics-adapter
+  name: prometheus-pp-metrics-adapter
   namespace: d8-monitoring
 {{- end }}
 {{- if (.Values.global.enabledModules | has "flant-integration") }}

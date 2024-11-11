@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-pp-envs
+data:
+  GOGC: "30"
+  MALLOC_CONF: "background_thread:true,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"

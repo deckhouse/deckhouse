@@ -2,17 +2,17 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: prometheus-cpp
+  name: prometheus-pp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
 secrets:
-- name: prometheus-cpp-token
+- name: prometheus-pp-token
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:prometheus-cpp:prometheus-cpp
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  name: d8:prometheus-pp:prometheus-pp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources:
@@ -29,22 +29,22 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:prometheus-cpp:prometheus-cpp
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  name: d8:prometheus-pp:prometheus-pp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:prometheus-cpp:prometheus-cpp
+  name: d8:prometheus-pp:prometheus-pp
 subjects:
 - kind: ServiceAccount
-  name: prometheus-cpp
+  name: prometheus-pp
   namespace: d8-monitoring
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:prometheus-cpp:prometheus-cpp:scraper
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  name: d8:prometheus-pp:prometheus-pp:scraper
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources:
@@ -56,26 +56,26 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:prometheus-cpp:prometheus-cpp:scraper
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  name: d8:prometheus-pp:prometheus-pp:scraper
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:prometheus-cpp:prometheus-cpp:scraper
+  name: d8:prometheus-pp:prometheus-pp:scraper
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: User
   name: d8-monitoring:scraper
 - kind: ServiceAccount
-  name: prometheus-cpp
+  name: prometheus-pp
   namespace: d8-monitoring
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: prometheus-cpp
+  name: prometheus-pp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources:
@@ -85,21 +85,21 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: prometheus-cpp
+  name: prometheus-pp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: prometheus-cpp
+  name: prometheus-pp
 subjects:
 - kind: ServiceAccount
-  name: prometheus-cpp
+  name: prometheus-pp
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:prometheus-cpp:prometheus-cpp:rbac-proxy
+  name: d8:prometheus-pp:prometheus-pp:rbac-proxy
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -107,5 +107,5 @@ roleRef:
   name: d8:rbac-proxy
 subjects:
 - kind: ServiceAccount
-  name: prometheus-cpp
+  name: prometheus-pp
   namespace: d8-monitoring

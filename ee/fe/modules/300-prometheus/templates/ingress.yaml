@@ -3,9 +3,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: prometheus-cpp
+  name: prometheus-pp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-cpp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
   annotations:
     web.deckhouse.io/export-name: "prometheus"
     web.deckhouse.io/export-icon: "/public/img/prometheus.ico"
@@ -43,26 +43,26 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . "grafana") }}
     http:
       paths:
-      - path: /prometheus-cpp(/|$)(.*)
+      - path: /prometheus-pp(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
-            name: prometheus-cpp
+            name: prometheus-pp
             port:
               name: https
   {{- if (include "helm_lib_ha_enabled" .) }}
-      - path: /prometheus-cpp-main-0(/|$)(.*)
+      - path: /prometheus-pp-main-0(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
-            name: prometheus-cpp-main-0
+            name: prometheus-pp-main-0
             port:
               name: https
-      - path: /prometheus-cpp-main-1(/|$)(.*)
+      - path: /prometheus-pp-main-1(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
-            name: prometheus-cpp-main-1
+            name: prometheus-pp-main-1
             port:
               name: https
   {{- end }}
