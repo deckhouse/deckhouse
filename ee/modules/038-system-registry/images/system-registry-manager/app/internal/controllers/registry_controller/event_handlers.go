@@ -3,12 +3,14 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package controllers
+package registry_controller
 
 import (
 	"context"
+	"embeded-registry-manager/internal/utils/k8s"
 	"encoding/json"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,6 +18,61 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"strings"
 )
+
+func (r *RegistryReconciler) handleNodeAdd(ctx context.Context, mgr ctrl.Manager, node *corev1.Node) {
+	logger := ctrl.LoggerFrom(ctx)
+	logger.Info("Node added", "nodeName", node.Name)
+
+	r.embeddedRegistry.mutex.Lock()
+	r.embeddedRegistry.masterNodes[node.Name] = k8s.MasterNode{
+		Name:              node.Name,
+		Address:           node.Status.Addresses[0].Address,
+		CreationTimestamp: node.CreationTimestamp.Time,
+	}
+	r.embeddedRegistry.mutex.Unlock()
+
+	select {
+	case <-mgr.Elected():
+		// Only the leader should reconcile
+		req := reconcile.Request{
+			NamespacedName: client.ObjectKey{
+				Name:      "registry-node-" + node.Name + "-pki",
+				Namespace: k8s.RegistryNamespace,
+			},
+		}
+		_, err := r.Reconcile(ctx, req)
+		if err != nil {
+			logger.Error(err, "Reconcile failed")
+		}
+	default:
+		logger.Info("Not the leader, skipping Reconcile")
+	}
+}
+
+func (r *RegistryReconciler) handleNodeDelete(ctx context.Context, mgr ctrl.Manager, node *corev1.Node) {
+	logger := ctrl.LoggerFrom(ctx)
+
+	r.embeddedRegistry.mutex.Lock()
+	delete(r.embeddedRegistry.masterNodes, node.Name)
+	r.embeddedRegistry.mutex.Unlock()
+	logger.Info("Node deleted", "nodeName", node.Name)
+	select {
+	case <-mgr.Elected():
+		// Only the leader should reconcile
+		req := reconcile.Request{
+			NamespacedName: client.ObjectKey{
+				Name:      "registry-node-" + node.Name + "-pki",
+				Namespace: k8s.RegistryNamespace,
+			},
+		}
+		_, err := r.Reconcile(ctx, req)
+		if err != nil {
+			logger.Error(err, "Reconcile failed")
+		}
+	default:
+		logger.Info("Not the leader, skipping Reconcile")
+	}
+}
 
 func (r *RegistryReconciler) secretEventHandler() handler.EventHandler {
 	secretsToWatch := []string{
@@ -53,15 +110,8 @@ func (r *RegistryReconciler) secretEventHandler() handler.EventHandler {
 	})
 }
 
-func (r *RegistryReconciler) handleModuleConfigCreate(ctx context.Context, obj interface{}) {
+func (r *RegistryReconciler) handleModuleConfigChange(ctx context.Context, mgr ctrl.Manager, obj interface{}) {
 	logger := ctrl.LoggerFrom(ctx)
-	logger.Info("CREATE")
-	r.handleModuleConfigChange(ctx, obj)
-}
-
-func (r *RegistryReconciler) handleModuleConfigChange(ctx context.Context, obj interface{}) {
-	logger := ctrl.LoggerFrom(ctx)
-	logger.Info("CHANGE")
 	unstructuredObj, ok := obj.(*unstructured.Unstructured)
 	if !ok {
 		logger.Error(fmt.Errorf("failed to convert object to unstructured"), "failed to convert object to unstructured")
@@ -73,8 +123,6 @@ func (r *RegistryReconciler) handleModuleConfigChange(ctx context.Context, obj i
 		logger.Error(err, "failed to extract fields from ModuleConfig")
 		return
 	}
-
-	delete(settingsMap, "imagesOverride")
 
 	settingsJSON, err := json.Marshal(settingsMap)
 	if err != nil {
@@ -89,19 +137,38 @@ func (r *RegistryReconciler) handleModuleConfigChange(ctx context.Context, obj i
 		return
 	}
 
-	r.embeddedRegistry.Mutex.Lock()
+	r.embeddedRegistry.mutex.Lock()
 	r.embeddedRegistry.mc.Enabled = enabled
 	r.embeddedRegistry.mc.Settings = settings
-	r.embeddedRegistry.Mutex.Unlock()
-
+	r.embeddedRegistry.mutex.Unlock()
 	logger.Info("ModuleConfig updated", "enabled", r.embeddedRegistry.mc.Enabled, "settings", r.embeddedRegistry.mc.Settings)
+
+	select {
+	case <-mgr.Elected():
+		// Only the leader should reconcile
+		for nodeName := range r.embeddedRegistry.masterNodes {
+			req := reconcile.Request{
+				NamespacedName: client.ObjectKey{
+					Name:      "registry-node-" + nodeName + "-pki",
+					Namespace: k8s.RegistryNamespace,
+				},
+			}
+			_, err := r.Reconcile(ctx, req)
+			if err != nil {
+				logger.Error(err, "Reconcile failed")
+			}
+		}
+
+	default:
+		logger.Info("Not the leader, skipping Reconcile")
+	}
 }
 
 func (r *RegistryReconciler) handleModuleConfigDelete(ctx context.Context) {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Error(fmt.Errorf("ModuleConfig was deleted"), "ModuleConfig was deleted")
-	r.embeddedRegistry.Mutex.Lock()
-	defer r.embeddedRegistry.Mutex.Unlock()
+	r.embeddedRegistry.mutex.Lock()
+	defer r.embeddedRegistry.mutex.Unlock()
 	// Reset the ModuleConfig settings to default when deleted
 	r.embeddedRegistry.mc.Enabled = false
 	r.embeddedRegistry.mc.Settings = RegistryConfig{}

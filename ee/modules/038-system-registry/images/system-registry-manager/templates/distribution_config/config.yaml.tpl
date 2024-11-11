@@ -28,6 +28,8 @@ proxy:
   remoteurl: "{{ .Registry.UpstreamRegistry.Scheme }}://{{ .Registry.UpstreamRegistry.Host }}"
   username: {{ quote .Registry.UpstreamRegistry.User }}
   password: {{ quote .Registry.UpstreamRegistry.Password }}
+  remotepathonly: {{ quote .Registry.UpstreamRegistry.Path }}
+  localpathalias: "/system/deckhouse"
   ttl: 72h
 {{- end }}
 auth:
@@ -35,5 +37,5 @@ auth:
     realm: "https://{{ .IpAddress }}:5051/auth"
     service: Docker registry
     issuer: Registry server
-    rootcertbundle: /system_registry_pki/auth.crt
+    rootcertbundle: /system_registry_pki/token.crt
     autoredirect: false

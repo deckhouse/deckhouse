@@ -3,7 +3,7 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package controllers
+package registry_controller
 
 import (
 	"context"
@@ -18,7 +18,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"net/http"
 	"os"
 	"regexp"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -56,13 +55,13 @@ type ProxyConfig struct {
 }
 
 type embeddedRegistry struct {
-	Mutex          sync.Mutex
+	mutex          sync.Mutex
 	mc             ModuleConfig
 	caPKI          k8s.Certificate
 	authTokenPKI   k8s.Certificate
 	registryRwUser k8s.RegistryUser
 	registryRoUser k8s.RegistryUser
-	masterNodes    []k8s.MasterNode
+	masterNodes    map[string]k8s.MasterNode
 	images         staticpod.Images
 }
 
@@ -73,13 +72,13 @@ type RegistryReconciler struct {
 	Recorder         record.EventRecorder
 	HttpClient       *httpclient.Client
 	embeddedRegistry embeddedRegistry
+	deletedSecrets   sync.Map
 }
 
 var nodePKISecretRegex = regexp.MustCompile(`^registry-node-.*-pki$`)
 
 // SetupWithManager sets up the controller with the Manager to watch for changes in both Pods and Secrets.
 func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Context) error {
-
 	// Set up the field indexer to index Pods by spec.nodeName
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &corev1.Pod{}, "spec.nodeName", func(obj client.Object) []string {
 		pod := obj.(*corev1.Pod)
@@ -87,6 +86,7 @@ func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Cont
 	}); err != nil {
 		return fmt.Errorf("failed to set up index on spec.nodeName: %w", err)
 	}
+	r.embeddedRegistry.masterNodes = make(map[string]k8s.MasterNode)
 
 	// Set up moduleConfig informer
 	moduleConfig := &unstructured.Unstructured{}
@@ -104,13 +104,13 @@ func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Cont
 			AddFunc: func(obj interface{}) {
 				unstructuredObj, ok := obj.(*unstructured.Unstructured)
 				if ok && unstructuredObj.GetName() == k8s.RegistryMcName {
-					r.handleModuleConfigCreate(ctx, obj)
+					r.handleModuleConfigChange(ctx, mgr, obj)
 				}
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				unstructuredObj, ok := newObj.(*unstructured.Unstructured)
 				if ok && unstructuredObj.GetName() == k8s.RegistryMcName {
-					r.handleModuleConfigChange(ctx, newObj)
+					r.handleModuleConfigChange(ctx, mgr, newObj)
 				}
 
 			},
@@ -126,13 +126,55 @@ func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Cont
 		return fmt.Errorf("unable to add event handler for ModuleConfig: %w", err)
 	}
 
+	// Set up Node informer
+	nodeInformer, err := mgr.GetCache().GetInformer(ctx, &corev1.Node{})
+	if err != nil {
+		return fmt.Errorf("unable to get informer for Node: %w", err)
+	}
+
+	// Add event handler for Node
+	_, err = nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			if node, ok := obj.(*corev1.Node); ok {
+				if hasMasterLabel(node) {
+					r.handleNodeAdd(ctx, mgr, node)
+				}
+			}
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldNode, okOld := oldObj.(*corev1.Node)
+			newNode, okNew := newObj.(*corev1.Node)
+			if okOld && okNew {
+				oldIsMaster := hasMasterLabel(oldNode)
+				newIsMaster := hasMasterLabel(newNode)
+				switch {
+				case !oldIsMaster && newIsMaster:
+					r.handleNodeAdd(ctx, mgr, newNode)
+				case oldIsMaster && !newIsMaster:
+					r.handleNodeDelete(ctx, mgr, oldNode)
+				}
+			}
+		},
+		DeleteFunc: func(obj interface{}) {
+			if node, ok := obj.(*corev1.Node); ok {
+				if hasMasterLabel(node) {
+					r.handleNodeDelete(ctx, mgr, node)
+				}
+			}
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("unable to add event handler for Node: %w", err)
+	}
+
 	bldr := ctrl.NewControllerManagedBy(mgr)
 	bldr.Named("embedded-registry-controller")
 
 	// Watch for changes in Secrets
-	err = bldr.Watches(&corev1.Secret{}, r.secretEventHandler()).WithOptions(controller.Options{
-		MaxConcurrentReconciles: 1,
-	}).Complete(r)
+	err = bldr.Watches(&corev1.Secret{}, r.secretEventHandler()).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: 1,
+		}).Complete(r)
 	if err != nil {
 		return fmt.Errorf("unable to complete controller: %w", err)
 	}
@@ -141,15 +183,21 @@ func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Cont
 }
 
 func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	//logger := ctrl.LoggerFrom(ctx)
+	logger := ctrl.LoggerFrom(ctx)
 	// Lock the mutex for the embedded registry struct to prevent simultaneous writes
-	r.embeddedRegistry.Mutex.Lock()
-	defer r.embeddedRegistry.Mutex.Unlock()
+	r.embeddedRegistry.mutex.Lock()
+	defer r.embeddedRegistry.mutex.Unlock()
+
+	secret := &corev1.Secret{}
+	err := r.Get(ctx, req.NamespacedName, secret)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, err
+	}
 
 	switch {
 	// Check if the secret is the registry-pki secret
 	case req.NamespacedName.Name == "registry-pki":
-		err := r.handleRegistryCaPKI(ctx, req)
+		err := r.handleRegistryCaPKI(ctx, req, secret)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -158,131 +206,69 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	case nodePKISecretRegex.MatchString(req.NamespacedName.Name):
 		nodeName := strings.TrimPrefix(strings.TrimSuffix(req.NamespacedName.Name, "-pki"), "registry-node-")
 
-		node, err := r.handleNodePKI(ctx, req, nodeName)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		err := r.handleNodePKI(ctx, req, nodeName, secret)
 
-		err = r.syncRegistryStaticPods(ctx, node)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, nil
 
 	// Check if the secret is the registry-user-rw secret
 	case req.NamespacedName.Name == "registry-user-rw":
-		_, err := r.handleRegistryUser(ctx, req, "registry-user-rw", &r.embeddedRegistry.registryRwUser)
+		_, err := r.handleRegistryUser(ctx, req, "registry-user-rw", &r.embeddedRegistry.registryRwUser, secret)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	// Check if the secret is the registry-user-ro secret
 	case req.NamespacedName.Name == "registry-user-ro":
-		_, err := r.handleRegistryUser(ctx, req, "registry-user-ro", &r.embeddedRegistry.registryRoUser)
+		_, err := r.handleRegistryUser(ctx, req, "registry-user-ro", &r.embeddedRegistry.registryRoUser, secret)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	for _, node := range r.embeddedRegistry.masterNodes {
-		_ = r.syncRegistryStaticPods(ctx, node)
+	// Sync the registry static pods
+	var response []byte
+	var reconcileErr error
+	var nodesToSync []k8s.MasterNode
+
+	if r.embeddedRegistry.mc.Settings.Mode == "Detached" {
+		firstNode := k8s.GetFirstCreatedNodeForSync(r.embeddedRegistry.masterNodes)
+		nodesToSync = []k8s.MasterNode{*firstNode}
+
+	} else {
+		for _, node := range r.embeddedRegistry.masterNodes {
+			nodesToSync = append(nodesToSync, node)
+		}
 	}
 
+	for _, node := range nodesToSync {
+		if r.embeddedRegistry.mc.Settings.Mode == "Direct" {
+			response, reconcileErr = r.deleteNodeRegistry(ctx, node.Name)
+		} else {
+			response, reconcileErr = r.syncRegistryStaticPods(ctx, node)
+		}
+		if reconcileErr != nil {
+			logger.Info("Failed to reconcile registry", "node", node.Name, "error", reconcileErr)
+		} else {
+			logger.Info("Reconciled registry", "node", node.Name, "response", string(response))
+		}
+	}
 	return ctrl.Result{}, nil
 }
 
-func (r *RegistryReconciler) syncRegistryStaticPods(ctx context.Context, node k8s.MasterNode) error {
-	logger := ctrl.LoggerFrom(ctx)
+func (r *RegistryReconciler) syncRegistryStaticPods(ctx context.Context, node k8s.MasterNode) ([]byte, error) {
 
-	upstreamRegistry := staticpod.UpstreamRegistry{}
-
+	// Prepare the upstream registry struct
+	var upstreamRegistry staticpod.UpstreamRegistry
 	if r.embeddedRegistry.mc.Settings.Mode == "Proxy" {
-		upstreamRegistry.Scheme = r.embeddedRegistry.mc.Settings.Proxy.Scheme
-		upstreamRegistry.Host = r.embeddedRegistry.mc.Settings.Proxy.Host
-		upstreamRegistry.Path = r.embeddedRegistry.mc.Settings.Proxy.Path
-		upstreamRegistry.CA = r.embeddedRegistry.mc.Settings.Proxy.CA
-		upstreamRegistry.User = r.embeddedRegistry.mc.Settings.Proxy.User
-		upstreamRegistry.Password = r.embeddedRegistry.mc.Settings.Proxy.Password
+		upstreamRegistry = r.prepareUpstreamRegistry()
 	}
 
-	data := staticpod.EmbeddedRegistryConfig{
-		Registry: staticpod.RegistryDetails{
-			UserRw: staticpod.User{
-				Name:         r.embeddedRegistry.registryRwUser.UserName,
-				PasswordHash: r.embeddedRegistry.registryRwUser.HashedPassword,
-			},
-			UserRo: staticpod.User{
-				Name:         r.embeddedRegistry.registryRoUser.UserName,
-				PasswordHash: r.embeddedRegistry.registryRoUser.HashedPassword,
-			},
-			RegistryMode:     r.embeddedRegistry.mc.Settings.Mode,
-			HttpSecret:       "http-secret",
-			UpstreamRegistry: upstreamRegistry,
-		},
-		Images: staticpod.Images{
-			DockerDistribution: r.embeddedRegistry.images.DockerDistribution,
-			DockerAuth:         r.embeddedRegistry.images.DockerAuth,
-		},
-		Pki: staticpod.Pki{
-			CaCert:           string(r.embeddedRegistry.caPKI.Cert),
-			AuthCert:         string(node.AuthCertificate.Cert),
-			AuthKey:          string(node.AuthCertificate.Key),
-			AuthTokenCert:    string(r.embeddedRegistry.authTokenPKI.Cert),
-			AuthTokenKey:     string(r.embeddedRegistry.authTokenPKI.Key),
-			DistributionCert: string(node.DistributionCertificate.Cert),
-			DistributionKey:  string(node.DistributionCertificate.Key),
-		},
-	}
+	// Prepare the embedded registry config struct
+	data := r.prepareEmbeddedRegistryConfig(node, upstreamRegistry)
 
-	var pods corev1.PodList
+	return r.createNodeRegistry(ctx, node.Name, data)
 
-	err := r.List(ctx, &pods, client.MatchingLabels{
-		"app": "system-registry-manager",
-	}, client.MatchingFields{
-		"spec.nodeName": node.Name,
-	})
-
-	if err != nil {
-		logger.Error(err, "Failed to list pods", "node", node.Name)
-		return err
-	}
-	if len(pods.Items) == 0 {
-		logger.Error(fmt.Errorf("system-registry-manager pod not found"), "system-registry-manager pod not found", "node", node.Name)
-		return err
-	}
-	if pods.Items[0].Status.PodIP == "" {
-		logger.Error(fmt.Errorf("system-registry-manager pod IP is empty"), "system-registry-manager pod IP is empty", "node", node.Name)
-		return err
-	}
-
-	response, err := r.HttpClient.Send(fmt.Sprintf("https://%s:4577/staticpod/create", pods.Items[0].Status.PodIP), http.MethodPost, data)
-	if err != nil {
-		logger.Info("Failed to reconcile registry", "node", node.Name, "error", err)
-	} else {
-		logger.Info("Reconcile registry", "node", node.Name, "response", string(response))
-	}
-
-	return nil
-}
-
-func (r *embeddedRegistry) getMasterNodeFromEmbeddedRegistryStruct(nodeName string) (k8s.MasterNode, bool) {
-	for i, node := range r.masterNodes {
-		if node.Name == nodeName {
-			return r.masterNodes[i], true
-		}
-	}
-	return k8s.MasterNode{}, false
-}
-
-func (r *embeddedRegistry) updateMasterNode(masterNode k8s.MasterNode) {
-	// Update the node in the embedded registry struct if it exists
-	for i, node := range r.masterNodes {
-		if node.Name == masterNode.Name {
-			r.masterNodes[i] = masterNode
-			return
-		}
-	}
-	// Add the node to the embedded registry struct if it doesn't exist
-	r.masterNodes = append(r.masterNodes, masterNode)
 }
 
 func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) error {
@@ -290,8 +276,8 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 	logger.Info("Embedded registry startup initialization", "component", "registry-controller")
 
 	// Lock mutex to ensure thread safety
-	r.embeddedRegistry.Mutex.Lock()
-	defer r.embeddedRegistry.Mutex.Unlock()
+	r.embeddedRegistry.mutex.Lock()
+	defer r.embeddedRegistry.mutex.Unlock()
 
 	// Get the required environment variables
 	registryAddress := os.Getenv("REGISTRY_ADDRESS")
@@ -308,7 +294,7 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 	r.embeddedRegistry.images.DockerDistribution = fmt.Sprintf("%s%s@%s", registryAddress, registryPath, imageDockerDistribution)
 
 	// Ensure	 CA certificate exists and create if not
-	isGenerated, caCertPEM, caKeyPEM, authTokenCertPEM, authTokenKeyPEM, err := k8s.EnsureCASecret(ctx, r.KubeClient)
+	isGenerated, caCertPEM, caKeyPEM, authTokenCertPEM, authTokenKeyPEM, err := k8s.EnsureCASecret(ctx, r.Client)
 	if err != nil {
 		return err
 	}
@@ -318,7 +304,7 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 		logger.Info("New registry root CA generated", "secret", "registry-pki", "component", "registry-controller")
 
 		// Delete all PKI secrets
-		deletedSecrets, err := k8s.DeleteAllRegistryNodeSecrets(ctx, r.KubeClient)
+		deletedSecrets, err := k8s.DeleteAllRegistryNodeSecrets(ctx, r.Client)
 		if err != nil {
 			return err
 		}
@@ -339,26 +325,20 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 		Key:  authTokenKeyPEM,
 	}
 
-	masterNodes, err := k8s.GetMasterNodes(ctx, r.KubeClient)
-	if err != nil {
-		return err
-	}
-
-	for _, masterNode := range masterNodes {
-
+	for masterNodeName, masterNode := range r.embeddedRegistry.masterNodes {
 		// Check if the node PKI secret exists
-		secret, err := k8s.GetRegistryNodeSecret(ctx, r.KubeClient, masterNode.Name)
+		secret, err := k8s.GetRegistryNodeSecret(ctx, r.Client, masterNodeName)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 
 		// Create the node PKI secret if it doesn't exist
-		if secret == nil {
-			dc, dk, ac, ak, err := k8s.CreateNodePKISecret(ctx, r.KubeClient, masterNode, caCertPEM, caKeyPEM)
+		if len(secret.Data) == 0 {
+			dc, dk, ac, ak, err := k8s.CreateNodePKISecret(ctx, r.Client, masterNode, caCertPEM, caKeyPEM)
 			if err != nil {
 				return err
 			}
-			logger.Info("Node secret created", "nodeName", masterNode.Name, "component", "registry-controller")
+			logger.Info("Node secret created", "nodeName", masterNodeName, "component", "registry-controller")
 
 			masterNode.AuthCertificate = k8s.Certificate{
 				Cert: ac,
@@ -381,27 +361,27 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 		}
 
 		// Add the node to the embedded registry struct
-		r.embeddedRegistry.masterNodes = append(r.embeddedRegistry.masterNodes, masterNode)
+		r.embeddedRegistry.masterNodes[masterNode.Name] = masterNode
 	}
 
 	// Ensure registry user secrets exist and create if not
 	var registryUserRwSecret *k8s.RegistryUser
 	var registryUserRoSecret *k8s.RegistryUser
 
-	registryUserRwSecret, err = k8s.GetRegistryUser(ctx, r.KubeClient, "registry-user-rw")
+	registryUserRwSecret, err = k8s.GetRegistryUser(ctx, r.Client, "registry-user-rw")
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			registryUserRwSecret, err = k8s.CreateRegistryUser(ctx, r.KubeClient, "registry-user-rw")
+			registryUserRwSecret, err = k8s.CreateRegistryUser(ctx, r.Client, "registry-user-rw")
 			logger.Info("Created registry rw user secret", "component", "registry-controller")
 		} else {
 			return err
 		}
 	}
 
-	registryUserRoSecret, err = k8s.GetRegistryUser(ctx, r.KubeClient, "registry-user-ro")
+	registryUserRoSecret, err = k8s.GetRegistryUser(ctx, r.Client, "registry-user-ro")
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			registryUserRoSecret, err = k8s.CreateRegistryUser(ctx, r.KubeClient, "registry-user-ro")
+			registryUserRoSecret, err = k8s.CreateRegistryUser(ctx, r.Client, "registry-user-ro")
 			logger.Info("Created registry ro user secret", "component", "registry-controller")
 		} else {
 			return err
@@ -411,9 +391,9 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 	// Fill the embedded registry struct with the registry user secrets
 	r.embeddedRegistry.registryRwUser = *registryUserRwSecret
 	r.embeddedRegistry.registryRoUser = *registryUserRoSecret
-
 	logger.Info("Embedded registry startup initialization complete", "component", "registry-controller")
 	return nil
+
 }
 
 // extractModuleConfigFieldsFromObject extracts the 'enabled' and 'settings' fields from the ModuleConfig CR
@@ -429,4 +409,9 @@ func (r *RegistryReconciler) extractModuleConfigFieldsFromObject(cr *unstructure
 		return false, nil, fmt.Errorf("field 'settings' not found or failed to parse: %w", err)
 	}
 	return enabled, settings, nil
+}
+
+func hasMasterLabel(node *corev1.Node) bool {
+	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
+	return isMaster
 }

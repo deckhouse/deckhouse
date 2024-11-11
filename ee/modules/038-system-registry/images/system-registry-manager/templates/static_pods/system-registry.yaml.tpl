@@ -11,6 +11,8 @@ metadata:
     caCertHash: {{ quote .ConfigHashes.CaCertHash }}
     authCertHash: {{ quote .ConfigHashes.AuthCertHash }}
     authKeyHash: {{ quote .ConfigHashes.AuthKeyHash }}
+    authTokenCertHash: {{ quote .ConfigHashes.AuthTokenCertHash }}
+    authTokenKeyHash: {{ quote .ConfigHashes.AuthTokenKeyHash }}
     distributionCertHash: {{ quote .ConfigHashes.DistributionCertHash }}
     distributionKeyHash: {{ quote .ConfigHashes.DistributionKeyHash }}
   name: system-registry

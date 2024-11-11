@@ -5,8 +5,8 @@ server:
 token:
   issuer: "Registry server"
   expiration: 900
-  certificate: "/system_registry_pki/auth.crt"
-  key: "/system_registry_pki/auth.key"
+  certificate: "/system_registry_pki/token.crt"
+  key: "/system_registry_pki/token.key"
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.

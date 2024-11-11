@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"embeded-registry-manager/internal/controllers/registry_controller"
 	staticpodmanager "embeded-registry-manager/internal/static-pod"
 	"encoding/json"
 	"fmt"
@@ -24,7 +25,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"embeded-registry-manager/internal/controllers"
 	httpclient "embeded-registry-manager/internal/utils/http_client"
 
 	"k8s.io/client-go/kubernetes"
@@ -109,7 +109,7 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 	}
 
 	// Create a new instance of RegistryReconciler
-	reconciler := controllers.RegistryReconciler{
+	reconciler := registry_controller.RegistryReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		KubeClient: kubeClient,

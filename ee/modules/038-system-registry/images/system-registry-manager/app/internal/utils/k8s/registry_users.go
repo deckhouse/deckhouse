@@ -8,15 +8,17 @@ package k8s
 import (
 	"context"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetRegistryUser returns the registry user by name
-func GetRegistryUser(ctx context.Context, kubeClient *kubernetes.Clientset, userName string) (*RegistryUser, error) {
+func GetRegistryUser(ctx context.Context, kc client.Client, userName string) (*RegistryUser, error) {
 	// Get the secret by name
-	secret, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Get(ctx, userName, metav1.GetOptions{})
+	var secret corev1.Secret
+	err := kc.Get(ctx, types.NamespacedName{Name: userName, Namespace: RegistryNamespace}, &secret)
 	if err != nil {
 		return nil, err
 	}
@@ -29,14 +31,16 @@ func GetRegistryUser(ctx context.Context, kubeClient *kubernetes.Clientset, user
 }
 
 // CreateRegistryUser creates a new registry user in the cluster
-func CreateRegistryUser(ctx context.Context, kubeClient *kubernetes.Clientset, userName string) (*RegistryUser, error) {
+func CreateRegistryUser(ctx context.Context, kc client.Client, userName string) (*RegistryUser, error) {
 	// Check if the secret already exists
-	_, err := kubeClient.CoreV1().Secrets(RegistryNamespace).Get(ctx, userName, metav1.GetOptions{})
-	if err == nil {
-		return nil, fmt.Errorf("secret %s already exists", userName)
-	}
+	var secret corev1.Secret
+	err := kc.Get(ctx, types.NamespacedName{Name: userName, Namespace: RegistryNamespace}, &secret)
 	if !apierrors.IsNotFound(err) {
 		return nil, err
+	}
+
+	if err == nil {
+		return nil, fmt.Errorf("secret %s already exists", userName)
 	}
 
 	// Generate a new password
@@ -46,5 +50,5 @@ func CreateRegistryUser(ctx context.Context, kubeClient *kubernetes.Clientset, u
 	}
 
 	// Create the secret
-	return CreateRegistryUserSecret(ctx, kubeClient, userName, password, hashedPassword)
+	return CreateRegistryUserSecret(ctx, kc, userName, password, hashedPassword)
 }
