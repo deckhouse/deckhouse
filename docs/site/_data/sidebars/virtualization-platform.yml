@@ -197,30 +197,30 @@ entries:
                 en: Virtual Machine Publishing
                 ru: Публикация ВМ
               url: /virtualization-platform/documentation/user/network/vm-publishing.html
-    - title:
-        en: Architecture
-        ru: Архитектура
-      folders:
-        - title:
-            en: Functional specifications
-            ru: Функциональные характеристики
-          url: /virtualization-platform/documentation/architecture/functional-specifications.html
-        - title:
-            en: Overall architecture
-            ru: Общая архитектура
-          url: /virtualization-platform/documentation/architecture/overall-architecture.html
-        - title:
-            en: Scheme of interaction of the platform components
-            ru: Схема взаимодействия компонентов платформы
-          url: /virtualization-platform/documentation/architecture/scheme.html
-        - title:
-            en: Used ports
-            ru: Используемые порты
-          url: /virtualization-platform/documentation/architecture/used-ports.html
-        - title:
-            en: Table
-            ru: Таблица
-          url: /virtualization-platform/documentation/architecture/table.html
+    #- title:
+    #    en: Architecture
+    #    ru: Архитектура
+    #  folders:
+    #    - title:
+    #        en: Functional specifications
+    #        ru: Функциональные характеристики
+    #      url: /virtualization-platform/documentation/architecture/functional-specifications.html
+    #    - title:
+    #        en: Overall architecture
+    #        ru: Общая архитектура
+    #      url: /virtualization-platform/documentation/architecture/overall-architecture.html
+    #    - title:
+    #        en: Scheme of interaction of the platform components
+    #        ru: Схема взаимодействия компонентов платформы
+    #      url: /virtualization-platform/documentation/architecture/scheme.html
+    #    - title:
+    #        en: Used ports
+    #        ru: Используемые порты
+    #      url: /virtualization-platform/documentation/architecture/used-ports.html
+    #    - title:
+    #        en: Table
+    #        ru: Таблица
+    #      url: /virtualization-platform/documentation/architecture/table.html
     - title:
         en: Modules
         ru: Модули
@@ -251,15 +251,15 @@ entries:
                 en: D8
                 ru: D8
               url: /virtualization-platform/documentation/reference/console-utilities/d8.html
-    - title:
-        en: DVP editions
-        ru: Список версий DVP
-      folders:
-        - title:
-            en: Configuration module
-            ru: Конфигурации модуля
-          url: /virtualization-platform/documentation/dvp-editions/changelog.html
-    - title:
-        en: FAQ
-        ru: FAQ
-      url: /virtualization-platform/documentation/faq.html
+    #- title:
+    #    en: DVP editions
+    #    ru: Список  DVP
+    #  folders:
+    #    - title:
+    #        en: Configuration module
+    #        ru: Конфигурации модуля
+    #      url: /virtualization-platform/documentation/dvp-editions/changelog.html
+    #- title:
+    #    en: FAQ
+    #    ru: FAQ
+    #  url: /virtualization-platform/documentation/faq.html
