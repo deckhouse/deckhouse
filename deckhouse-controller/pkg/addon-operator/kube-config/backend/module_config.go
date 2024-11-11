@@ -17,6 +17,7 @@ package backend
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -166,13 +167,13 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*con
 
 	list, err := mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list module configs: %w", err)
 	}
 
 	for _, item := range list.Items {
 		values, err := mc.fetchValuesFromModuleConfig(&item)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fetch values from module config '%s': %w", item.Name, err)
 		}
 
 		if item.Name == "global" {
@@ -210,7 +211,7 @@ func (mc ModuleConfigBackend) fetchValuesFromModuleConfig(item *v1alpha1.ModuleC
 
 	newVersion, newSettings, err := converter.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
 	if err != nil {
-		return utils.Values{}, err
+		return utils.Values{}, fmt.Errorf("convert: %w", err)
 	}
 
 	item.Spec.Version = newVersion

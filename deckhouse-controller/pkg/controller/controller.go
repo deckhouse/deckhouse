@@ -100,7 +100,7 @@ type DeckhouseController struct {
 func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module_manager.ModuleManager, metricStorage *metric_storage.MetricStorage, logger *log.Logger) (*DeckhouseController, error) {
 	mcClient, err := versioned.NewForConfig(config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("versioned client creating: %w", err)
 	}
 
 	dc := dependency.NewDependencyContainer()
@@ -109,7 +109,7 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 	for _, add := range []func(s *runtime.Scheme) error{corev1.AddToScheme, coordv1.AddToScheme, v1alpha1.AddToScheme, appsv1.AddToScheme} {
 		err = add(scheme)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("add to scheme: %w", err)
 		}
 	}
 
@@ -179,13 +179,13 @@ func NewDeckhouseController(ctx context.Context, config *rest.Config, mm *module
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("controller runtime manager creating: %w", err)
 	}
 
 	// register extenders
 	for _, extender := range extenders.Extenders() {
 		if err = mm.AddExtender(extender); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("add extender: %w", err)
 		}
 	}
 
@@ -263,7 +263,7 @@ func (dml *DeckhouseController) DiscoverDeckhouseModules(ctx context.Context, mo
 	// we have to get all source module for deployed releases
 	err = dml.setupSourceModules(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("setup source modules: %w", err)
 	}
 
 	go dml.runEventLoop(moduleEventC)
