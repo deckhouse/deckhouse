@@ -5,11 +5,7 @@
         description: |
           There is deprecated istio version `{{"{{$labels.version}}"}}` installed.
           Impact — version support will be removed in future deckhouse releases. The higher alert severity — the higher probability of support cancelling.
-          {{ if .Values.global.modules.publicDomainTemplate }}
-          Upgrading instructions — {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/products/kubernetes-platform/documentation/{{ $.Values.global.deckhouseVersion }}/modules/110-istio/examples.html#upgrading-istio.
-          {{- else }}
           Upgrading instructions — https://deckhouse.io/documentation/{{ $.Values.global.deckhouseVersion }}/modules/110-istio/examples.html#upgrading-istio.
-          {{- end }}
         plk_markup_format: markdown
         plk_labels_as_annotations: pod,instance
         plk_protocol_version: "1"
@@ -27,11 +23,7 @@
         description: |
           The current istio version `{{"{{$labels.istio_version}}"}}` may not work properly with the current k8s version `{{"{{$labels.k8s_version}}"}}`, because it is unsupported officially.
           Please upgrade istio as soon as possible.
-          {{ if .Values.global.modules.publicDomainTemplate }}
-          Upgrading instructions — {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/products/kubernetes-platform/documentation/{{ $.Values.global.deckhouseVersion }}/modules/110-istio/examples.html#upgrading-istio.
-          {{- else }}
           Upgrading instructions — https://deckhouse.io/documentation/{{ $.Values.global.deckhouseVersion }}/modules/110-istio/examples.html#upgrading-istio.
-          {{- end }}
         plk_markup_format: markdown
         plk_labels_as_annotations: pod,instance
         plk_protocol_version: "1"
