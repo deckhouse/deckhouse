@@ -4,7 +4,15 @@ permalink: ru/virtualization-platform/documentation/readme.html
 lang: ru
 ---
 
-Deckhouse Virtualization Platform позволяет декларативно создавать, запускать и управлять виртуальными машинами и их ресурсами.
+Вы находитесь на главной странице документации Deckhouse Virtualization Platform.
+
+Deckhouse Virtualization Platform (далее платформа) предназначена для запуска, управления и оркестрации виртуальных машин и связанных с ними ресурсами. Платформа основывается на платформе Deckhouse Kubernetes Platform, но предназначается для запуска виртуальных машин.
+
+
+
+В тестовых целях
+
+Управление ресурсами
 
 {% alert level="warning" %}
 Если вы планируете использовать Deckhouse Virtualization Platform в production-среде, рекомендуется разворачивать его на физических серверах. Развертывание Deckhouse Virtualization Platform на виртуальных машинах также возможно, но в этом случае необходимо включить nested-виртуализацию.
