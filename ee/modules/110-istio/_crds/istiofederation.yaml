@@ -1,17 +1,18 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: istiomulticlusters.deckhouse.io
+  name: istiofederations.deckhouse.io
   labels:
     heritage: deckhouse
     module: istio
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
   names:
-    plural: istiomulticlusters
-    singular: istiomulticluster
-    kind: IstioMulticluster
+    plural: istiofederations
+    singular: istiofederation
+    kind: IstioFederation
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
@@ -32,16 +33,18 @@ spec:
               type: object
               x-doc-d8Revision: ee
               required:
+              - trustDomain
               - metadataEndpoint
               properties:
-                enableIngressGateway:
-                  type: boolean
-                  default: true
+                trustDomain:
+                  type: string
                   x-doc-d8Revision: ee
                   description: |
-                    Should Istio use ingressgateways to access remote Pods?
+                    The `TrustDomain` of the remote cluster.
 
-                    If remote Pods are accessible directly from our cluster ("flat" network), it is efficient not to use extra hop.
+                    A mandatory parameter, however, it isn't used currently since Istio cannot match TrustDomain with the root CA.
+                  pattern: '^[0-9a-zA-Z._-]+$'
+                  x-doc-examples: ['cluster.local']
                 metadataEndpoint:
                   type: string
                   x-doc-d8Revision: ee
@@ -70,10 +73,6 @@ spec:
                     private:
                       type: object
                       properties:
-                        apiHost:
-                          type: string
-                        networkName:
-                          type: string
                         ingressGateways:
                           type: array
                           items:
@@ -83,6 +82,22 @@ spec:
                                 type: string
                               port:
                                 type: integer
+                        publicServices:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              hostname:
+                                type: string
+                              ports:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    name:
+                                      type: string
+                                    port:
+                                      type: integer
                     privateLastFetchTimestamp:
                       format: date-time
                       type: string
