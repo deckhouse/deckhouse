@@ -61,10 +61,14 @@ git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/label-converter
   to: /src
   includePaths:
-  - '**/*'
+  - '**/*.go'
+  - '**/go.mod'
+  - '**/go.sum'
   stageDependencies:
     install:
-    - '**/*'
+    - '**/*.go'
+    - '**/go.mod'
+    - '**/go.sum'
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-label-converter-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
