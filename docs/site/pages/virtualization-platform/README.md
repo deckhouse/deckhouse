@@ -1,4 +1,4 @@
 ---
 title: "Overview"
-permalink: en/virtualization-platform/documentation/readme.html
+permalink: en/virtualization-platform/documentation/
 ---

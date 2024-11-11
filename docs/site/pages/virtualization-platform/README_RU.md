@@ -1,6 +1,6 @@
 ---
 title: "Введение"
-permalink: ru/virtualization-platform/documentation/readme.html
+permalink: ru/virtualization-platform/documentation/
 lang: ru
 ---
 
