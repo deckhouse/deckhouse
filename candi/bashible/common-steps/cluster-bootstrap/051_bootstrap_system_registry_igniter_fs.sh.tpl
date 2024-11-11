@@ -62,7 +62,6 @@ EOF
 openssl genrsa -out "$IGNITER_DIR/auth.key" 2048
 
 openssl req -new -key "$IGNITER_DIR/auth.key" \
--subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
 -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
 -out "$IGNITER_DIR/auth.csr"
 
@@ -75,7 +74,6 @@ openssl x509 -req -in "$IGNITER_DIR/auth.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "
 openssl genrsa -out "$IGNITER_DIR/distribution.key" 2048
 
 openssl req -new -key "$IGNITER_DIR/distribution.key" \
--subj "/C=RU/ST=MO/L=Moscow/O=Flant/OU=Deckhouse Registry/CN=system-registry" \
 -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
 -out "$IGNITER_DIR/distribution.csr"
 
