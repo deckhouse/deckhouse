@@ -95,7 +95,7 @@ EOF
 Признаки пригодного узла:
 
 1. Узел в состоянии Ready;
-  2. Узел не находится в состоянии технического обслуживания (cordon);
+2. Узел не находится в состоянии технического обслуживания (cordon);
 3. cilium-agent на узле в состоянии Ready.
 
 Чтобы проверить пригодность узлов для включение в группу Egress-шлюза, выполните команды:
@@ -107,7 +107,7 @@ d8 k get nodes -l node-role.deckhouse.io/egress="" -ojson | jq -r '.items[].meta
 # Вывести узлы в состоянии Ready: 
 d8 k get nodes -ojson | jq -r '.items[] | select(.status.conditions[] | select(.type == "Ready" and .status == "True")) | .metadata.name'
 
-# Вывести узлы, не находящиеся на тезническом обслуживании:
+# Вывести узлы, не находящиеся на техническом обслуживании:
 d8 k get nodes --field-selector spec.unschedulable=false -ojson | jq -r .items[].metadata.name
 
 # Вывести узлы, на которых запущен cilium-agent:

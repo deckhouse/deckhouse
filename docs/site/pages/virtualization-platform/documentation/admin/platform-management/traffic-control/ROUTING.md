@@ -1,4 +1,4 @@
 ---
-title: "Deckhouse Virtualization Platform"
-permalink: en/virtualization-platform/documentation/admin/platform-management/storage/supported_storage.html
+title: "Routing management"
+permalink: en/virtualization-platform/documentation/admin/platform-management/traffic-control/routing.html
 ---
