@@ -25,6 +25,7 @@ shell:
   - git checkout v2.7.0
     # Use batch/v1 for fetching cronjob jobs https://github.com/kubernetes/dashboard/pull/7465
   - git cherry-pick f79f3a5e25df152df6164ddfaf2ffc1f09e5058f
+  - rm -rf .git
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}

@@ -22,6 +22,7 @@ shell:
       url = {{ .SOURCE_REPO }}/msune/libcdada.git
     EOF
   - git submodule update --init
+  - rm -rf /src/.git
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromArtifact: common/relocate-artifact
