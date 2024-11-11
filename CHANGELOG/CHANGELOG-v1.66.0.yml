@@ -1,0 +1,143 @@
+candi:
+  features:
+    - summary: Added support of new cloud provider - Dynamix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9009
+  fixes:
+    - summary: Change selinux configuration requirements
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10495
+    - summary: Fix LC_MESSAGES unknown locale.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10440
+    - summary: Added explicit addition of basible-server address into the NO_PROXY parameter
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10283
+    - summary: Change permissions for containerd dir.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10133
+ci:
+  features:
+    - summary: new CloudPermanent nodes starts on e2e tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10269
+  fixes:
+    - summary: >-
+        Add more reactions for check milestone job: reopened and synchronize (to trigger job when it
+        is needed).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10338
+    - summary: >-
+        Get new PR info on each run of the Check PR milestone job. This fixes the problem when
+        developers need to make a commit to retrigger the job.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10337
+    - summary: Change EKS resource naming.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9702
+common:
+  features:
+    - summary: change logrus to slog
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10308
+control-plane-manager:
+  fixes:
+    - summary: 'Label `heritage: deckhouse` in namespace kube-system.'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10224
+deckhouse-controller:
+  features:
+    - summary: change logrus to slog
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10308
+    - summary: Update manager's cache.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9356
+  fixes:
+    - summary: Increased internal module CRD buffer
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10515
+    - summary: keep modules documentation in sync with modules in registry
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10487
+dhctl:
+  features:
+    - summary: Improve panic handling. Fixed line breaks in logs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10473
+    - summary: Print cloud objects which will be destroyed when dhctl destroy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10181
+    - summary: Remove validation rules to enable master nodegroup auto converge.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10052
+    - summary: Add parallel bootstrap `cloudpermanent` nodes to dhctl.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10015
+docs:
+  fixes:
+    - summary: Revert some steps for Bare Metal in the Getting Started until 1.66 will be released.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10511
+    - summary: keep modules documentation in sync with modules in registry
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10487
+    - summary: Fix blinking of the docs button in the Getting started and the Guide.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10429
+    - summary: Fix description generation on Getting Started pages. Add the description for the guide.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10424
+    - summary: Editing specs for the service-with-healthchecks module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10335
+global-hooks:
+  features:
+    - summary: Add the `global.defaultClusterStorageClass` setting.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9591
+      impact: >-
+        cloud-provider's `storageClass.default` parameter was deprecated (not used anymore) and
+        replaced with `global.defaultClusterStorageClass`
+ingress-nginx:
+  features:
+    - summary: Add worker_max_connections, worker_processes and worker_rlimit_nofile metrics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10154
+      impact: ingress-nginx controllers' pods will be recreated.
+istio:
+  fixes:
+    - summary: Enhancing upmeter-related resources ignoring by istiod
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10334
+monitoring-kubernetes:
+  fixes:
+    - summary: Minor 'Nodes' dashboard improvements.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10339
+multitenancy-manager:
+  features:
+    - summary: Move the multitenancy-manager module to CE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10505
+  fixes:
+    - summary: Fix multitenancy-manager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10253
+node-manager:
+  fixes:
+    - summary: >-
+        Fix handling of machine creation errors in the `machine-controller-manager`(`vsphere`
+        driver).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10225
+operator-prometheus:
+  features:
+    - summary: Added `backup.deckhouse.io/cluster-config` label to relevant operator CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10298
+operator-trivy:
+  features:
+    - summary: Add extra fields to vulnerability reports.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10460
+pkg:
+  features:
+    - summary: Add logger implementation over slog.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10422
+    - summary: change logrus to slog
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10308
+  fixes:
+    - summary: lib logger panic fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10488
+      impact: <what to expect for users, possibly MULTI-LINE>, required if impact_level is high ↓
+prometheus:
+  features:
+    - summary: Added `longtermPodAntiAffinity` options to module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10324
+  fixes:
+    - summary: Timeout for disk metrics retrieve in Prometheus hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10331
+testing:
+  fixes:
+    - summary: Fix test script not pausing if kube API is temporarily unavailable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10478
+tools:
+  fixes:
+    - summary: fixed generation of config chunks for werf
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10347
+user-authn:
+  features:
+    - summary: Add ability to set multiple domains for DexAuthenticator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10452
+  fixes:
+    - summary: Numbers in dex groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10211
+
