@@ -58,7 +58,7 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 func handleNamespaces(input *go_hook.HookInput) error {
 	snap := input.Snapshots["namespaces"]
 	if len(snap) == 0 {
-		input.LogEntry.Warnln("deckhouse namespaces not found")
+		input.Logger.Warn("deckhouse namespaces not found")
 		return nil
 	}
 

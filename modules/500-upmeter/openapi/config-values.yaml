@@ -1,4 +1,4 @@
-x-config-version: 2
+x-config-version: 3
 type: object
 required:
   - auth
@@ -9,14 +9,18 @@ properties:
       - type: boolean
         enum: [false]
     x-examples: [false, "default"]
-    description: |
-      The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+    description: |-
+      The name of StorageClass that will be used in the cluster by default.
 
-      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
+      The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
 
-      **CAUTION!** Setting this value to one that differs from the current one (in the existing PVC) will result in disk re-provisioning and data loss.
+      The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
 
-      Setting it to `false` forces the use of an emptyDir volume.
+       If `false` is specified, `emptyDir` will be forced to be used.
+
+      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+
+      **Warning.** When migrating Upmeter with local storage to other nodes, the pods will enter a Pending state. In this situation, it will be necessary to back up the Upmeter database, delete the old PVCs, and manually restart the pod. Here, local storage refers to a StorageClass associated not with network storage but with a local volume on a node (for example, a StorageClass created by the local-path-provisioner module).
   auth:
     type: object
     default: {}
@@ -171,13 +175,6 @@ properties:
           `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
 
           Setting it to `false` forces the use of an emptyDir volume.
-      ingressClass:
-        type: string
-        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
-        description: |
-          The class of the Ingress controller used for the smoke-mini.
-
-          Optional. By default, the `modules.ingressClass` global value is used
       https:
         type: object
         x-examples:
@@ -340,3 +337,11 @@ properties:
       Node tolerations for Upmeter server. The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+
+  ingressClass:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+    description: |
+      The class of the Ingress controller used for the Upmeter.
+
+      Optional. By default, the `modules.ingressClass` global value is used

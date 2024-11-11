@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -34,6 +35,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	oci_tools "github.com/sylabs/oci-tools/pkg/mutate"
 	"github.com/tidwall/gjson"
 )
 
@@ -44,9 +46,9 @@ const (
 )
 
 type Client interface {
-	Image(tag string) (v1.Image, error)
-	Digest(tag string) (string, error)
-	ListTags() ([]string, error)
+	Image(ctx context.Context, tag string) (v1.Image, error)
+	Digest(ctx context.Context, tag string) (string, error)
+	ListTags(ctx context.Context) ([]string, error)
 }
 
 type client struct {
@@ -91,7 +93,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	return r, nil
 }
 
-func (r *client) Image(tag string) (v1.Image, error) {
+func (r *client) Image(ctx context.Context, tag string) (v1.Image, error) {
 	imageURL := r.registryURL + ":" + tag
 
 	var nameOpts []name.Option
@@ -115,13 +117,15 @@ func (r *client) Image(tag string) (v1.Image, error) {
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge image
-		ctx, cancel := context.WithTimeout(context.Background(), r.options.timeout)
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
 		// seems weird - yes! but we can't call cancel here, otherwise Image outside this function would be inaccessible
 		go func() {
-			<-ctx.Done()
+			<-ctxWTO.Done()
 			cancel()
 		}()
 
+		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
+	} else {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
@@ -131,7 +135,7 @@ func (r *client) Image(tag string) (v1.Image, error) {
 	)
 }
 
-func (r *client) ListTags() ([]string, error) {
+func (r *client) ListTags(ctx context.Context) ([]string, error) {
 	var nameOpts []name.Option
 	if r.options.useHTTP {
 		nameOpts = append(nameOpts, name.Insecure)
@@ -152,20 +156,22 @@ func (r *client) ListTags() ([]string, error) {
 
 	if r.options.timeout > 0 {
 		// add default timeout to prevent endless request on a huge amount of tags
-		ctx, cancel := context.WithTimeout(context.Background(), r.options.timeout)
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
 		go func() {
-			<-ctx.Done()
+			<-ctxWTO.Done()
 			cancel()
 		}()
 
+		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
+	} else {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
 	return remote.List(repo, imageOptions...)
 }
 
-func (r *client) Digest(tag string) (string, error) {
-	image, err := r.Image(tag)
+func (r *client) Digest(ctx context.Context, tag string) (string, error) {
+	image, err := r.Image(ctx, tag)
 	if err != nil {
 		return "", err
 	}
@@ -295,4 +301,27 @@ func parse(rawURL string) (*url.URL, error) {
 		return url.ParseRequestURI(rawURL)
 	}
 	return url.Parse("//" + rawURL)
+}
+
+// Extract flattens the image to a single layer and returns ReadCloser for fetching the content
+func Extract(image v1.Image) (io.ReadCloser, error) {
+	flattenedImage, err := oci_tools.Squash(image)
+	if err != nil {
+		return nil, fmt.Errorf("flattening image to a single layer: %w", err)
+	}
+
+	imageLayers, err := flattenedImage.Layers()
+	if err != nil {
+		return nil, fmt.Errorf("getting the image's layers: %w", err)
+	}
+	if len(imageLayers) != 1 {
+		return nil, fmt.Errorf("unexpected number of layers: %w", err)
+	}
+
+	rc, err := imageLayers[0].Uncompressed()
+	if err != nil {
+		return nil, fmt.Errorf("uncompress the layer: %w", err)
+	}
+
+	return rc, nil
 }

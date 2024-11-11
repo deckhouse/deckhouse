@@ -28,13 +28,13 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
 	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
@@ -104,7 +104,7 @@ func (dml *DeckhouseController) processModuleDefinition(def models.DeckhouseModu
 		return nil, err
 	}
 
-	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb)
+	dm, err := models.NewDeckhouseModule(def, moduleStaticValues, cb, vb, dml.logger)
 	if err != nil {
 		return nil, fmt.Errorf("new deckhouse module: %w", err)
 	}

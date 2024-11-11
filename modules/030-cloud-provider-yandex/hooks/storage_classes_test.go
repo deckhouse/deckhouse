@@ -26,13 +26,21 @@ import (
 var _ = Describe("Modules :: cloud-provider-yandex :: hooks :: storage_classes ::", func() {
 	const (
 		initValuesString = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+`
+
+		initValuesStringExcludeHdd = `
+global:
+  discovery: {}
 cloudProviderYandex:
   internal: {}
   storageClass:
     exclude:
     - .*-hdd
     - bar
-    default: baz
 `
 	)
 
@@ -44,9 +52,42 @@ cloudProviderYandex:
 			f.RunHook()
 		})
 
-		It("Should discover storageClasses with default set", func() {
+		It("Should discover storageClasses with default storageClass set to network-hdd", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-hdd",
+	"type": "network-hdd"
+  },
+  {
+	"name": "network-ssd",
+	"type": "network-ssd"
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated"
+  },
+  {
+	"name": "network-ssd-io-m3",
+	"type": "network-ssd-io-m3"
+  }
+]
+`))
+		})
+	})
+
+	b := HookExecutionConfigInit(initValuesStringExcludeHdd, `{}`)
+
+	Context("Empty cluster", func() {
+		BeforeEach(func() {
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+			b.RunHook()
+		})
+
+		It("Should discover storageClasses with default NOT set", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
 	"name": "network-ssd",
@@ -62,9 +103,6 @@ cloudProviderYandex:
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderYandex.internal.defaultStorageClass").String()).To(Equal(`baz`))
 		})
-
 	})
-
 })

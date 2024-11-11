@@ -5,6 +5,8 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
+  labels:
+    backup.deckhouse.io/cluster-config: "true"
   name: probes.monitoring.coreos.com
 spec:
   group: monitoring.coreos.com

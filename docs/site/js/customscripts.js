@@ -5,6 +5,7 @@ $( document ).ready(function() {
             if (e.target.value.length > 0 ) $(".search__results").addClass("active");
             else $(".search__results").removeClass("active");
           });
+
 });
 
 document.addEventListener("DOMContentLoaded", function() {

@@ -73,12 +73,12 @@ func setCNISecretData(moduleName string) func(input *go_hook.HookInput) error {
 	return func(input *go_hook.HookInput) error {
 		cniSecretSnap := input.Snapshots["cni_secret"]
 		if len(cniSecretSnap) == 0 {
-			input.LogEntry.Info("No cni secret received, skipping setting values")
+			input.Logger.Info("No cni secret received, skipping setting values")
 			return nil
 		}
 
 		if len(cniSecretSnap) > 1 {
-			input.LogEntry.Info("Multiple secret received, skipping setting values")
+			input.Logger.Info("Multiple secret received, skipping setting values")
 			return nil
 		}
 

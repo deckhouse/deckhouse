@@ -92,7 +92,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.converge(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.convergeSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
 					sendCh <- &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}}
 				}()
 
@@ -123,6 +123,21 @@ connectionProcessor:
 	}
 }
 
+func (s *Service) convergeSafe(
+	ctx context.Context,
+	request *pb.ConvergeStart,
+	switchPhase phases.DefaultOnPhaseFunc,
+	logWriter io.Writer,
+) (result *pb.ConvergeResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.ConvergeResult{Err: panicMessage(ctx, r)}
+		}
+	}()
+
+	return s.converge(ctx, request, switchPhase, logWriter)
+}
+
 func (s *Service) converge(
 	ctx context.Context,
 	request *pb.ConvergeStart,
@@ -143,6 +158,7 @@ func (s *Service) converge(
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
+	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {

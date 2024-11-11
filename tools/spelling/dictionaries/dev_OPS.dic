@@ -1,4 +1,4 @@
-1949
+1952
 1GB
 2GB
 5XX
@@ -292,6 +292,7 @@ deckhouse
 Deckhouse
 DeckhouseRelease
 DeckhouseReleases
+defaultClusterStorageClass
 DefaultContainerResourcePolicy
 descheduled
 descheduler
@@ -344,7 +345,6 @@ dst
 eBPF
 EBS
 ECMP
-ECR
 EdgeRouter
 ee
 EE
@@ -625,6 +625,7 @@ LoadBalancers
 LoadBalancerWithProxyProtocol
 loadbalancing
 localhost
+localpath
 LocalPathProvisioner
 localpref
 Lockbox
@@ -663,6 +664,7 @@ maxReplicas
 maxSurgePerZone
 maxUnavailable
 Mayastor
+mc
 md
 memberlist
 memcached

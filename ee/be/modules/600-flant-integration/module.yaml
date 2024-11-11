@@ -1,5 +1,0 @@
-name: flant-integration
-weight: 600
-
-requirements:
-  bootstrapped: true

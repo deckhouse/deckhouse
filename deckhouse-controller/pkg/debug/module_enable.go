@@ -18,47 +18,49 @@ import (
 	"fmt"
 
 	"github.com/flant/kube-client/client"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	deckhouse_config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func DefineModuleConfigDebugCommands(kpApp *kingpin.Application) {
+func DefineModuleConfigDebugCommands(kpApp *kingpin.Application, logger *log.Logger) {
 	moduleCmd := kpApp.GetCommand("module")
 
 	var moduleName string
 	moduleEnableCmd := moduleCmd.Command("enable", "Enable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.").
 		Action(func(_ *kingpin.ParseContext) error {
-			log.SetLevel(log.ErrorLevel)
-			cli := client.New()
+			logger.SetLevel(log.LevelError)
+			cli := client.New(client.WithLogger(logger))
 			err := cli.Init()
 			if err != nil {
 				return err
 			}
 
-			return moduleSwitch(cli, moduleName, true, "enable")
+			return moduleSwitch(cli, moduleName, true, "enable", logger)
 		})
 	moduleEnableCmd.Arg("module_name", "").Required().StringVar(&moduleName)
 
 	moduleDisableCmd := moduleCmd.Command("disable", "Disable module via spec.enabled flag in the ModuleConfig resource. Use snake-case for the module name.").
 		Action(func(_ *kingpin.ParseContext) error {
-			log.SetLevel(log.ErrorLevel)
-			cli := client.New()
+			logger.SetLevel(log.LevelError)
+			cli := client.New(client.WithLogger(logger))
 			err := cli.Init()
 			if err != nil {
 				return err
 			}
 
-			return moduleSwitch(cli, moduleName, false, "disable")
+			return moduleSwitch(cli, moduleName, false, "disable", logger)
 		})
 	moduleDisableCmd.Arg("module_name", "").Required().StringVar(&moduleName)
 }
 
-func moduleSwitch(kubeClient *client.Client, moduleName string, enabled bool, actionDesc string) error {
+func moduleSwitch(kubeClient *client.Client, moduleName string, enabled bool, actionDesc string, logger *log.Logger) error {
 	// Init logging for console output.
-	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true, ForceColors: true})
-	log.SetLevel(log.ErrorLevel)
+
+	// TODO: check formatters?
+	// log.SetFormatter(&log.TextFormatter{DisableTimestamp: true, ForceColors: true})
+	logger.SetLevel(log.LevelError)
 
 	err := deckhouse_config.SetModuleConfigEnabledFlag(kubeClient, moduleName, enabled)
 	if err != nil {

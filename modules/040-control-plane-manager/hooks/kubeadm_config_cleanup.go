@@ -54,7 +54,7 @@ func handleKubeadmConfig(input *go_hook.HookInput) error {
 	if len(snap) == 0 {
 		return nil
 	}
-	input.LogEntry.Info("Deleting CM kubeadm-config")
+	input.Logger.Info("Deleting CM kubeadm-config")
 	input.PatchCollector.Delete("v1", "ConfigMap", "kube-system", "kubeadm-config")
 
 	return nil

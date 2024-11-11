@@ -24,9 +24,6 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/openapi/config-values.yaml$' 
   else
     echo "WARNING: Schema ${schema_path} found but there is no '<!-- SCHEMA -->' placeholder in the ${module_path}/docs/CONFIGURATION.md"
   fi
-  if [ $module_name == "ingress-nginx" ]; then
-    cat _data/schemas/${module_name}/config-values.yaml
-  fi
 done
 
 if [ -d /src/global ]; then

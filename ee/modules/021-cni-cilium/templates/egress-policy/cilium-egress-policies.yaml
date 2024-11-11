@@ -14,7 +14,7 @@ spec:
     {{- $egp.destinationCIDRs | toYaml | nindent 2 }}
   {{- if $egp.excludedCIDRs }}
   excludedCIDRs:
-    {{- $egp.destinationCIDRs | toYaml | nindent 2 }}
+    {{- $egp.excludedCIDRs | toYaml | nindent 2 }}
   {{- end }}
   egressGateway:
     nodeSelector:

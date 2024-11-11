@@ -269,7 +269,7 @@ func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.Reverse
 	checker := ssh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
 	killer := ssh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
 
-	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
+	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s:%s", listenAddress, port, listenAddress, port))
 	err = tun.Up()
 	if err != nil {
 		return nil, err

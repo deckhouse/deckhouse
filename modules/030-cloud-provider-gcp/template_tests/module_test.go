@@ -257,7 +257,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
-			f.ValuesSetFromYaml("cloudProviderGcp.internal.defaultStorageClass", `pd-ssd-replicated`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `pd-ssd-replicated`)
 			f.HelmRender()
 		})
 

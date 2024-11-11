@@ -39,6 +39,7 @@ func ossModuleRule(name, moduleRoot string) linterrors.LintRuleErrorsList {
 				"MODULE001",
 				moduleLabel(name),
 				nil,
+				"%s",
 				ossFileErrorMessage(err),
 			)
 
@@ -157,6 +158,7 @@ var skipOssChecks = map[string]struct{}{
 	"025-static-routing-manager":              {},
 	"030-cloud-provider-aws":                  {},
 	"030-cloud-provider-azure":                {},
+	"030-cloud-provider-dynamix":              {},
 	"030-cloud-provider-gcp":                  {},
 	"030-cloud-provider-openstack":            {},
 	"030-cloud-provider-vsphere":              {},

@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/shell-operator/pkg/metric_storage"
+	cp "github.com/otiai10/copy"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,21 +38,23 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func newModuleUpdater(logger logger.Logger, nConfig *updater.NotificationConfig, mode string,
-	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage) *updater.Updater[*v1alpha1.ModuleRelease] {
-	return updater.NewUpdater[*v1alpha1.ModuleRelease](logger, nConfig, mode,
-		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage),
-		newSettings(), newWebhookDataSource(logger), enabledModules)
+func newModuleUpdater(dc dependency.Container, logger *log.Logger, settings *updater.Settings,
+	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
+) *updater.Updater[*v1alpha1.ModuleRelease] {
+	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, settings,
+		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage, enabledModules),
+		newWebhookDataSource(logger), enabledModules)
 }
 
-func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
+func newWebhookDataSource(logger *log.Logger) *webhookDataSource {
 	return &webhookDataSource{logger: logger}
 }
 
 type webhookDataSource struct {
-	logger logger.Logger
+	logger *log.Logger
 }
 
 func (s *webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.ModuleRelease, applyTime time.Time) {
@@ -70,8 +74,9 @@ func (s *webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.
 	output.ModuleName = release.GetModuleName()
 }
 
-func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client, downloadedModulesDir string, symlinksDir string,
-	moduleManager moduleManager, dc dependency.Container) *kubeAPI {
+func newKubeAPI(ctx context.Context, logger *log.Logger, client client.Client, downloadedModulesDir string, symlinksDir string,
+	moduleManager moduleManager, dc dependency.Container, clusterUUID string,
+) *kubeAPI {
 	return &kubeAPI{
 		ctx:                  ctx,
 		logger:               logger,
@@ -80,19 +85,20 @@ func newKubeAPI(ctx context.Context, logger logger.Logger, client client.Client,
 		symlinksDir:          symlinksDir,
 		moduleManager:        moduleManager,
 		dc:                   dc,
+		clusterUUID:          clusterUUID,
 	}
 }
 
 type kubeAPI struct {
-	//TODO: remove
-	ctx context.Context
-	// d8ClientSet        versioned.Interface
-	logger               logger.Logger
+	// TODO: move context from struct field to arguments
+	ctx                  context.Context
+	logger               *log.Logger
 	client               client.Client
 	downloadedModulesDir string
 	symlinksDir          string
 	moduleManager        moduleManager
 	dc                   dependency.Container
+	clusterUUID          string
 }
 
 func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phase string) error {
@@ -136,7 +142,18 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 		return fmt.Errorf("get module source: %w", err)
 	}
 
-	md := downloader.NewModuleDownloader(k.dc, k.downloadedModulesDir, &ms, utils.GenerateRegistryOptions(&ms))
+	tmpDir, err := os.MkdirTemp("", "module*")
+	if err != nil {
+		return fmt.Errorf("cannot create tmp directory: %w", err)
+	}
+	defer func() {
+		if err = os.RemoveAll(tmpDir); err != nil {
+			k.logger.Errorf("cannot remove old module dir %q: %s", tmpDir, err.Error())
+		}
+	}()
+
+	options := utils.GenerateRegistryOptionsFromModuleSource(&ms, k.clusterUUID, k.logger)
+	md := downloader.NewModuleDownloader(k.dc, tmpDir, &ms, options)
 	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
 		return fmt.Errorf("download module: %w", err)
@@ -147,30 +164,40 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 		return fmt.Errorf("update module release download statistic: %w", err)
 	}
 
-	moduleVersionPath := path.Join(k.downloadedModulesDir, moduleName, "v"+release.Spec.Version.String())
+	tmpModuleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
 	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
-	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, moduleName))
 
 	def := models.DeckhouseModuleDefinition{
 		Name:   moduleName,
 		Weight: release.Spec.Weight,
-		Path:   moduleVersionPath,
+		Path:   tmpModuleVersionPath,
 	}
-	err = validateModule(def)
+	values := make(addonutils.Values)
+	if module := k.moduleManager.GetModule(moduleName); module != nil {
+		values = module.GetConfigValues(false)
+	}
+	err = validateModule(def, values, k.logger)
 	if err != nil {
-		k.logger.Errorf("Module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 		release.Status.Phase = v1alpha1.PhaseSuspended
-		if e := k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase); e != nil {
-			return e
-		}
-
-		return nil
+		_ = k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase)
+		return fmt.Errorf("module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 	}
+
+	moduleVersionPath := path.Join(k.downloadedModulesDir, moduleName, "v"+release.Spec.Version.String())
+	if err = os.RemoveAll(moduleVersionPath); err != nil {
+		return fmt.Errorf("cannot remove old module dir %q: %w", moduleVersionPath, err)
+	}
+
+	if err = cp.Copy(tmpModuleVersionPath, moduleVersionPath); err != nil {
+		return fmt.Errorf("copy module dir: %w", err)
+	}
+	def.Path = moduleVersionPath
 
 	// search symlink for module by regexp
 	// module weight for a new version of the module may be different from the old one,
 	// we need to find a symlink that contains the module name without looking at the weight prefix.
 	currentModuleSymlink, err := findExistingModuleSymlink(k.symlinksDir, moduleName)
+	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", def.Weight, moduleName))
 	if err != nil {
 		currentModuleSymlink = "900-" + moduleName // fallback
 	}
@@ -211,7 +238,8 @@ func (k *kubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.ModuleR
 }
 
 func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
-	ds *downloader.DownloadStatistic) error {
+	ds *downloader.DownloadStatistic,
+) error {
 	release.Status.Size = ds.Size
 	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
 
@@ -219,29 +247,32 @@ func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, rele
 }
 
 type metricsUpdater struct {
-	metricStorage *metric_storage.MetricStorage
+	metricStorage  *metric_storage.MetricStorage
+	enabledModules []string
 }
 
-func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpdater {
+func newMetricsUpdater(metricStorage *metric_storage.MetricStorage, enabledModules []string) *metricsUpdater {
 	return &metricsUpdater{
-		metricStorage: metricStorage,
+		enabledModules: enabledModules,
+		metricStorage:  metricStorage,
 	}
 }
 
 func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
-
 }
 
-func (m *metricsUpdater) WaitingManual(name string, _ float64) {
-	m.metricStorage.GaugeSet("d8_module_release_waiting_manual", 1, map[string]string{"name": name})
-}
+func (m *metricsUpdater) WaitingManual(release *v1alpha1.ModuleRelease, totalPendingManualReleases float64) {
+	if !slices.Contains(m.enabledModules, release.GetModuleName()) {
+		return
+	}
 
-type settings struct{}
-
-func (s *settings) GetDisruptionApprovalMode() (string, bool) {
-	return "", false
-}
-
-func newSettings() *settings {
-	return &settings{}
+	m.metricStorage.GaugeSet(
+		"d8_module_release_waiting_manual",
+		totalPendingManualReleases,
+		map[string]string{
+			"name":       release.GetName(),
+			"kind":       "module",
+			"moduleName": release.GetModuleName(),
+			"version":    "v" + release.Spec.Version.String(),
+		})
 }
