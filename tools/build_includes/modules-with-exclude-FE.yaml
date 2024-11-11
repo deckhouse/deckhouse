@@ -471,6 +471,11 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/fe/modules/300-prometheus/templates/prometheus-pp-envs.yaml
+  to: /deckhouse/modules/300-prometheus/templates/prometheus-pp-envs.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/fe/modules/300-prometheus/templates/prometheus-token.yaml
   to: /deckhouse/modules/300-prometheus/templates/prometheus-token.yaml
   stageDependencies:
