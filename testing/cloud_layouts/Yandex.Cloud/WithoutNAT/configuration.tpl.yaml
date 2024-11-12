@@ -83,3 +83,4 @@ spec:
   enabled: true
   settings:
     ebpfExporterEnabled: false # openSUSE
+    earlyOomEnabled: false # openSUSE
