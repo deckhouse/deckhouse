@@ -73,7 +73,7 @@ func Test_assertProject(t *testing.T) {
 			},
 		},
 		{
-			name:    "empty licence leads to error",
+			name:    "empty license leads to error",
 			wantErr: true,
 			project: ossProject{
 				Name:        "Dex",
@@ -140,7 +140,7 @@ func Test_projectList(t *testing.T) {
 - name: a
   description: a
   link: https://example.com
-  licence: Opachke 2.0
+  license: Opachke 2.0
 `,
 		},
 		{
@@ -150,11 +150,11 @@ func Test_projectList(t *testing.T) {
 - name: a
   description: a
   link: https://example.com
-  licence: Opachke 2.0
+  license: Opachke 2.0
 - name: b
   description: b
   link: https://example.com
-  licence: Opachke 2.0
+  license: Opachke 2.0
 `,
 		},
 	}

@@ -86,7 +86,7 @@ shell:
         export MODULES_DIR=modules_ru
         bash ./modules_generate_cr.sh
 
-        # "Preparing OSS licence info..."
+        # "Preparing OSS license info..."
         export MODULES_DIR=/src/modules
         bash ./modules_generate_ossinfo.sh
 
