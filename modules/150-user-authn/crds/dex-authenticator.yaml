@@ -30,9 +30,9 @@ spec:
             After the `DexAuthenticator` object appears in the namespace, the following objects will be created:
             * Deployment containing OAuth2-Proxy and Redis containers;
             * Service, pointing to OAuth2-Proxy;
-            * Ingress, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
+            * Ingress resource, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
             * Secrets, needed to access Dex.
-            
+
             **Warning.** After restarting a pod with an OAuth2-Proxy, the current Access Token and ID Token will be queried (using the refresh token) and stored in a Redis memory.
           x-doc-examples:
             - apiVersion: deckhouse.io/v1
@@ -69,8 +69,8 @@ spec:
                 applicationDomain:
                   type: string
                   description: |-
-                    The external address for the application from which the user request will be redirected for authorization in Dex.
-                          
+                    The external address for the application (DNS domain for Ingress resource) from which the user request will be redirected for authentication in Dex.
+
                     **Warning.** Must be specified without HTTP scheme.
                   x-doc-examples: ['my-app.domain.com']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -80,17 +80,21 @@ spec:
                 applicationIngressCertificateSecretName:
                   type: string
                   description: |-
-                    The name of the Secret containing the TLS certificate (from the domain `applicationDomain`) that is used in the application's Ingress object. The Secret must be located in the same namespace as the DexAuthenticator.
+                    The name of the Secret containing the TLS certificate for the application domain (is used in the Ingress resource). The Secret must be located in the same namespace as the DexAuthenticator.
                   x-doc-examples: ['ingress-tls']
                   pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
                 applicationIngressClassName:
                   type: string
-                  description: 'The name of the Ingress class to be used in the Ingress object (it must match the Ingress class name for `applicationDomain`).'
+                  description: |
+                    The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
                   x-doc-examples: ['nginx']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 signOutURL:
                   type: string
-                  description: 'Specify the URL of the application from which requests will be redirected to the sign-out URL in `dex-authenticator`.'
+                  description: |-
+                    The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
+
+                    It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
                 keepUsersLoggedInFor:
                   type: string
                   description: |-
@@ -102,7 +106,7 @@ spec:
                   type: array
                   description: |-
                     A list of groups whose members are allowed to connect to the client.
-                    
+
                     **By default**, all groups can connect.
                   x-doc-default: 'All groups are allowed.'
                   items:
@@ -127,7 +131,7 @@ spec:
                 tolerations:
                   description: |-
                     If specified the `dex-authenticator` pods tolerations.
-                    
+
                     **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:
                     properties:
@@ -170,7 +174,7 @@ spec:
                 additionalApplications:
                   type: array
                   description: |
-                    A list of additional applications (Ingress resources) for which user requests will be redirected to Dex for authentication.
+                    A list of additional applications for which user authentication is required.
                   items:
                     type: object
                     required:
@@ -180,22 +184,25 @@ spec:
                       domain:
                         type: string
                         description: |-
-                          The external address for the application from which the user request will be redirected for authorization in Dex.
-                          
+                          Application domain from which the user request will be redirected for authentication in Dex.
+
                           **Warning.** Must be specified without HTTP scheme.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       ingressSecretName:
                         type: string
-                        description: 'The name of the Secret containing the TLS certificate (from the domain domain) used in the applications Ingress object. The Secret must be in the same namespace as DexAuthenticator.'
+                        description: 'The name of the Secret containing the TLS certificate (from the domain) used in the applications Ingress resource. The Secret must be in the same namespace as DexAuthenticator.'
                         pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
                       ingressClassName:
                         type: string
-                        description: 'The name of the Ingress class that will be used in the Ingress object (it must match the name of the Ingress class for `applicationDomain` and `domain`).'
+                        description: |-
+                          The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       signOutURL:
                         type: string
                         description: |-
-                          Provide the URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
+                          The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
+
+                          It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
                       whitelistSourceRanges:
                         type: array
                         description: |
@@ -224,7 +231,7 @@ spec:
                 applications:
                   type: array
                   description: |
-                    A list of applications (Ingress resources) to which user requests will be redirected for authentication in Dex.
+                    A list of applications for which user authentication is required.
                   items:
                     type: object
                     required:
@@ -234,28 +241,30 @@ spec:
                       domain:
                         type: string
                         description: |-
-                          The external address for the application from which the user request will be redirected for authorization in Dex. 
-                          
+                          An application domain (for Ingress resources) from which the user request will be redirected for authentication in Dex.
+
                           **Warning.** Must be specified without HTTP scheme.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       ingressSecretName:
                         type: string
                         description: |-
-                          The name of the Secret containing the TLS certificate (for the `applicationDomain`), which is used in the application's Ingress object. The Secret must be located in the same namespace as the DexAuthenticator.
+                          The name of the Secret containing the TLS certificate for the application domain (is used in the Ingress resource). The Secret must be located in the same namespace as the DexAuthenticator.
                         pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
                       ingressClassName:
                         type: string
                         description: |-
-                          The name of the Ingress class to be used in the Ingress object (it must match the Ingress class name for `applicationDomain`).
+                          The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       signOutURL:
                         type: string
                         description: |-
-                          Provide the URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
+                          The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
+
+                          It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
                       whitelistSourceRanges:
                         type: array
                         description: |
-                          CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, If not specified.
+                          CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, if not specified.
                         items:
                           type: string
                           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
@@ -266,13 +275,14 @@ spec:
                   type: string
                   description: |-
                     User session will be kept for specified amount of time even if user will not log in.
+
                     Specified with  `s`, `m` or `h` suffix.
                   x-doc-default: '168h'
                 allowedGroups:
                   type: array
                   description: |-
-                    A list of groups whose members are allowed to connect to the client. B
-                    
+                    A list of groups whose members are allowed to connect to the client.
+
                     **By default**, all groups can connect.
                   x-doc-default: 'All groups are allowed.'
                   items:
@@ -283,13 +293,13 @@ spec:
                   x-kubernetes-preserve-unknown-fields: true
                   description: |-
                     If specified, the `dex-authenticator` pods nodeSelector.
-                    
+
                     **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                   type: object
                 tolerations:
                   description: |-
                     If specified the `dex-authenticator` pods tolerations.
-                    
+
                     **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:
                     properties:
