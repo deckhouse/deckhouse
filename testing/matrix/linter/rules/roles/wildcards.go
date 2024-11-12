@@ -43,6 +43,10 @@ var skipCheckWildcards = map[string][]string{
 		// We read all resources from the `deckhouse.io` api group
 		"d8:deckhouse:webhook-handler",
 	},
+	"prometheus-metrics-adapter/templates/rbac-for-us.yaml": {
+		// In the case of external.metrics.k8s.io, the "resource" is a metric with an arbitrary name, so we have to use a wildcard.
+		"d8:prometheus-metrics-adapter:horizontal-pod-autoscaler-external-metrics",
+	},
 	"vertical-pod-autoscaler/templates/rbac-for-us.yaml": {
 		// VPA can scale CR and must have access to */scale subresources.
 		"d8:vertical-pod-autoscaler:controllers-reader",
@@ -64,9 +68,6 @@ var skipCheckWildcards = map[string][]string{
 	},
 	"operator-prometheus/templates/rbac-for-us.yaml": {
 		"d8:operator-prometheus",
-	},
-	"prometheus-metrics-adapter/templates/rbac-for-us.yaml": {
-		"d8:prometheus-metrics-adapter:horizontal-pod-autoscaler-external-metrics",
 	},
 	"ingress-nginx/templates/kruise/rbac-for-us.yaml": {
 		"d8:ingress-nginx:kruise-role",
