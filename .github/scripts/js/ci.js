@@ -1227,6 +1227,7 @@ You can trigger release related actions by commenting on this issue:
   - \`edition\` is one of \`${availableEditions}\`
 - \`/build git_ref\` will run build for release related refs.
   - \`git_ref\` is ${possibleGitRefs}
+  - \`/build/<edition> git_ref\` will also build specified edition
 
 
 **Note 1:**
