@@ -54,7 +54,7 @@ func TestSSHHostChecks(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
 				t.Run("Does not confirm incorrect host warning", func(t *testing.T) {
-					nodesToHosts, err := CheckSSHHosts(c.passedHost, nodes, func(msg string) bool {
+					nodesToHosts, err := CheckSSHHosts(c.passedHost, nodes, "all-nodes", func(msg string) bool {
 						require.Contains(t, msg, c.warnMsg, "Incorrect warning")
 						return false
 					})
@@ -64,7 +64,7 @@ func TestSSHHostChecks(t *testing.T) {
 				})
 
 				t.Run("Confirm incorrect host warning", func(t *testing.T) {
-					nodesToHosts, err := CheckSSHHosts(c.passedHost, nodes, func(msg string) bool {
+					nodesToHosts, err := CheckSSHHosts(c.passedHost, nodes, "all-nodes", func(msg string) bool {
 						require.Contains(t, msg, c.warnMsg, "Incorrect warning")
 						return true
 					})
@@ -90,7 +90,7 @@ func TestSSHHostChecks(t *testing.T) {
 
 		t.Run("Does not confirm nodes to hosts mapping", func(t *testing.T) {
 			nodes := []string{"master-0", "master-1", "master-2"}
-			nodesToHosts, err := CheckSSHHosts(passedHosts, nodes, func(msg string) bool {
+			nodesToHosts, err := CheckSSHHosts(passedHosts, nodes, "all-nodes", func(msg string) bool {
 				assertNotShowIncorrectCountWarn(t, msg)
 
 				require.Contains(t, msg, checkHostsMsg, "Incorrect message")
@@ -113,7 +113,7 @@ func TestSSHHostChecks(t *testing.T) {
 
 			t.Run("Nodes passed in incorrect order", func(t *testing.T) {
 				nodes := []string{"master-1", "master-2", "master-0"}
-				nodesToHosts, err := CheckSSHHosts(passedHosts, nodes, confirmFunc)
+				nodesToHosts, err := CheckSSHHosts(passedHosts, nodes, "all-nodes", confirmFunc)
 
 				require.NoError(t, err, "should not return error")
 				require.Equal(t, nodesToHosts, map[string]string{
@@ -125,7 +125,7 @@ func TestSSHHostChecks(t *testing.T) {
 
 			t.Run("Nodes passed in correct order", func(t *testing.T) {
 				nodes := []string{"master-0", "master-1", "master-2"}
-				nodesToHosts, err := CheckSSHHosts(passedHosts, nodes, confirmFunc)
+				nodesToHosts, err := CheckSSHHosts(passedHosts, nodes, "all-nodes", confirmFunc)
 
 				require.NoError(t, err, "should not return error")
 				require.Equal(t, nodesToHosts, map[string]string{
@@ -134,6 +134,17 @@ func TestSSHHostChecks(t *testing.T) {
 					"master-2": passedHosts[2].Host,
 				}, "nodes names should sorted")
 			})
+
+			t.Run("Reducing a cluster to a single master", func(t *testing.T) {
+				nodes := []string{"master-0"}
+				nodesToHosts, err := CheckSSHHosts(passedHosts, nodes, "scale-to-single-master", confirmFunc)
+
+				require.NoError(t, err, "should not return error")
+				require.Equal(t, nodesToHosts, map[string]string{
+					"master-0": passedHosts[0].Host,
+				}, "nodes names should sorted")
+			})
+
 		})
 	})
 }

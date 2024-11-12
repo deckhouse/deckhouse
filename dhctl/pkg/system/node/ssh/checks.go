@@ -42,8 +42,7 @@ Do you want to continue?
 `
 )
 
-// 
-func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, runConfirm func(string) bool) (map[string]string, error) {
+func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, phase string, runConfirm func(string) bool) (map[string]string, error) {
 	userPassedHostsLen := len(userPassedHosts)
 	replicas := len(nodesNames)
 
@@ -59,6 +58,8 @@ func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, runConfi
 		warnMsg = notPassedWarn
 	case userPassedHostsLen < replicas:
 		warnMsg = notEnthoughtWarn
+	case userPassedHostsLen == 3 && replicas == 1 && phase == "scale-to-single-master":
+		warnMsg = ""
 	case userPassedHostsLen > replicas:
 		warnMsg = tooManyWarn
 	}

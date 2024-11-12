@@ -73,7 +73,7 @@ func (c *MasterNodeGroupController) populateNodeToHost() error {
 		nodesNames = append(nodesNames, nodeName)
 	}
 
-	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, func(msg string) bool {
+	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
 		if c.commanderMode {
 			return true
 		}
