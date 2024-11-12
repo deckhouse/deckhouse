@@ -80,16 +80,72 @@ spec:
 {% offtopic title="Пример файла ресурсов..." %}
 
 ```yaml
+---
+# Создать группу из двух рабочих узлов
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  disruptions:
+    approvalMode: Manual
+  nodeType: Static
+  staticInstances:
+    count: 2
+---
+# SSH-ключ, для доступа к рабочим узлам для автоматизированной установки
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: worker-key
+spec:
+  # имя технического ползователя, созданного на этапе подготовки узлов платформы
+  user: install-user
+  # закрытый ключ, созданный на этапе подготовки узлов платформы, кодированный в base64 формате
+  privateSSHKey: ZXhhbXBsZQo=
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: worker-01
+  labels:
+    role: worker
+spec:
+  # Адрес первого рабочего узла
+  address: 192.88.99.10
+  credentialsRef:
+    kind: SSHCredentials
+    name: worker-key
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: worker-01
+  labels:
+    role: worker
+spec:
+  # Адрес второго рабочего узла
+  address: 192.88.99.20
+  credentialsRef:
+    kind: SSHCredentials
+    name: worker-key
+---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main
 spec:
-  ingressClass: "nginx"
-  controllerVersion: "1.1"
-  inlet: "LoadBalancer"
+  inlet: HostPort
+  enableIstioSidecar: true
+  ingressClass: nginx
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
   nodeSelector:
-    node.deckhouse.io/group: worker
+    node-role.kubernetes.io/master: ''
+  tolerations:
+    - effect: NoSchedule
+      operator: Exists
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
