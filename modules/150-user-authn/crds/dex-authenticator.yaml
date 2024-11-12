@@ -69,7 +69,7 @@ spec:
                 applicationDomain:
                   type: string
                   description: |-
-                    The external address for the application (DNS domain for Ingress resource) from which the user request will be redirected for authentication in Dex.
+                    An address for the application (DNS domain for Ingress resource) from which the user request will be redirected for authentication in Dex.
 
                     **Warning.** Must be specified without HTTP scheme.
                   x-doc-examples: ['my-app.domain.com']
