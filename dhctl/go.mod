@@ -166,3 +166,5 @@ replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.
 replace github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy => ../go_lib/registry-packages-proxy
 
 replace github.com/deckhouse/deckhouse/pkg/log => ../pkg/log
+
+replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ../go_lib/dependency/k8s/drain
