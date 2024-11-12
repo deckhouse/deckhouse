@@ -200,7 +200,7 @@ func (m *Module) SetConditionFalse(condName string, reason, message string) {
 				m.Status.Conditions[idx].Reason = reason
 			}
 			if cond.Message != message {
-				m.Status.Conditions[idx].Message = cond.Message
+				m.Status.Conditions[idx].Message = message
 			}
 			return
 		}
