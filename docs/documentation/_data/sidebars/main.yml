@@ -1092,7 +1092,6 @@ entries:
             - title: FAQ
               url: /modules/140-user-authz/faq.html
         - title: Multitenancy
-          d8Revision: ee
           featureStatus: experimental
           moduleName: multitenancy-manager
           folders:
