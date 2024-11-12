@@ -20,7 +20,7 @@ spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: StatefulSet
-    name: prometheus-pp
+    name: prometheus-pp-main
   updatePolicy:
     updateMode: {{ .Values.prometheus.vpa.updateMode | quote }}
   resourcePolicy:
@@ -43,7 +43,7 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
-  name: prometheus-pp
+  name: pp-main
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 spec:
