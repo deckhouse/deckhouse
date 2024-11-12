@@ -10,71 +10,40 @@ lang: ru
 
 ### Файл конфигурации установки
 
-TODO: поправить ссылки 
+TODO: поправить ссылки
 
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
 - [InitConfiguration](configuration.html#initconfiguration) — начальные параметры [конфигурации платформы](../#конфигурация-deckhouse). С этой конфигурацией платформа запустится после установки.
 
   В этом ресурсе, в частности, указываются параметры, без которых платформа не запустится или будет работать некорректно. Например, параметры [размещения компонентов платформы](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) и другие.
-  
+
 - [ClusterConfiguration](configuration.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т. д.
-  
+
   > Использовать ресурс `ClusterConfiguration` в конфигурации необходимо, только если при установке платформы нужно предварительно развернуть кластер Kubernetes. То есть `ClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
 - [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — параметры кластера Kubernetes, развертываемого на серверах bare metal или на виртуальных машинах в неподдерживаемых облаках.
 
-  > Как и в случае с ресурсом `ClusterConfiguration`, ресурс`StaticClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.  
+  > Как и в случае с ресурсом `ClusterConfiguration`, ресурс`StaticClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
 - `ModuleConfig` — набор ресурсов, содержащих параметры конфигурации [встроенных модулей платформы](../).
 
 Если кластер изначально создается с узлами, выделенными под определенный вид нагрузки (системные узлы, узлы под мониторинг и т. п.), то для модулей использующих тома постоянного хранилища (например, для модуля `prometheus`), рекомендуется явно указывать соответствующий nodeSelector в конфигурации модуля. Например, для модуля `prometheus` это параметр [nodeSelector](../modules/300-prometheus/configuration.html#parameters-nodeselector).
-
-TODO: поправить манифесты
 
 {% offtopic title="Пример файла конфигурации установки..." %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
-clusterType: Cloud
-cloud:
-  provider: Azure
-  prefix: cloud-demo
-podSubnetCIDR: 10.111.0.0/16
-serviceSubnetCIDR: 10.222.0.0/16
+clusterType: Static
+podSubnetCIDR: 10.88.0.0/16
+serviceSubnetCIDR: 10.99.0.0/16
 kubernetesVersion: "Automatic"
-clusterDomain: cluster.local
+clusterDomain: "cluster.local"
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   releaseChannel: Stable
----
-apiVersion: deckhouse.io/v1
-kind: AzureClusterConfiguration
-layout: Standard
-sshPublicKey: <SSH_PUBLIC_KEY>
-vNetCIDR: 10.241.0.0/16
-subnetCIDR: 10.241.0.0/24
-masterNodeGroup:
-  replicas: 3
-  instanceClass:
-    machineSize: Standard_D4ds_v4
-    urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140
-    enableExternalIP: true
-provider:
-  subscriptionId: <SUBSCRIPTION_ID>
-  clientId: <CLIENT_ID>
-  clientSecret: <CLIENT_SECRET>
-  tenantId: <TENANT_ID>
-  location: westeurope
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-flannel
-spec:
-  enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -84,30 +53,18 @@ spec:
   enabled: true
   settings:
     modules:
-      publicDomainTemplate: "%s.k8s.example.com"
+      publicDomainTemplate: "%s.dvp.example.com"
   version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: node-manager
+  name: cni-cilium
 spec:
   version: 1
   enabled: true
   settings:
-    allowedBundles: ["ubuntu-lts"]
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: prometheus
-spec:
-  version: 2
-  enabled: true
-  # Укажите, в случае использование выделенных узлов для мониторинга. 
-  # settings:
-  #   nodeSelector:
-  #     node.deckhouse.io/group: monitoring
+    tunnelMode: VXLAN
 ```
 
 {% endofftopic %}
@@ -135,27 +92,6 @@ spec:
     node.deckhouse.io/group: worker
 ---
 apiVersion: deckhouse.io/v1
-kind: AzureInstanceClass
-metadata:
-  name: worker
-spec:
-  machineSize: Standard_F4
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  cloudInstances:
-    classReference:
-      kind: AzureInstanceClass
-      name: worker
-    maxPerZone: 3
-    minPerZone: 1
-    zones: ["1"]
-  nodeType: CloudEphemeral
----
-apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: admin
@@ -173,71 +109,6 @@ metadata:
 spec:
   email: admin@deckhouse.io
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse-admin
-spec:
-  enabled: true
-```
-
-{% endofftopic %}
-
-TODO: следующий раздел кажется избыточным
-
-### Post-bootstrap-скрипт
-
-После успешной установки платформы инсталлятор может запустить скрипт на одном из master-узлов. С помощью скрипта можно выполнять дополнительную настройку, собирать информацию о настройке и т. п.
-
-Post-bootstrap-скрипт можно указать с помощью параметра `--post-bootstrap-script-path` при запуске инсталляции (см. далее).
-
-{% offtopic title="Пример скрипта, выводящего IP-адрес балансировщика..." %}
-Пример скрипта, который выводит IP-адрес балансировщика после развертывания кластера в облаке и установки платформы:
-
-```shell
-#!/usr/bin/env bash
-
-set -e
-set -o pipefail
-
-
-INGRESS_NAME="nginx"
-
-
-echo_err() { echo "$@" 1>&2; }
-
-# declare the variable
-lb_ip=""
-
-# get the load balancer IP
-for i in {0..100}
-do
-  if lb_ip="$(kubectl -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
-    if [ -n "$lb_ip" ]; then
-      break
-    fi
-  fi
-
-  lb_ip=""
-
-  sleep 5
-done
-
-if [ -n "$lb_ip" ]; then
-  echo_err "The load balancer external IP: $lb_ip"
-else
-  echo_err "Could not get the external IP of the load balancer"
-  exit 1
-fi
-
-outContent="{\"frontend_ips\":[\"$lb_ip\"]}"
-
-if [ -z "$OUTPUT" ]; then
-  echo_err "The OUTPUT env is empty. The result was not saved to the output file."
-else
-  echo "$outContent" > "$OUTPUT"
-fi
 ```
 
 {% endofftopic %}
