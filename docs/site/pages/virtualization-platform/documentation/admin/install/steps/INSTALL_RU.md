@@ -130,6 +130,22 @@ spec:
     kind: SSHCredentials
     name: worker-key
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  enabled: true
+  settings:
+    dvcr:
+      storage:
+        persistentVolumeClaim:
+          size: 10G
+        type: PersistentVolumeClaim
+    virtualMachineCIDRs:
+      - 192.168.10.0/24
+  version: 1
+---
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
