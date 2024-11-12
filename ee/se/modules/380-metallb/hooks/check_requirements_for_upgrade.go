@@ -8,8 +8,6 @@ package hooks
 
 import (
 	"fmt"
-	"slices"
-	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -90,7 +88,7 @@ func applyModuleConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert Metallb ModuleConfig: %v", err)
 	}
-	return mc.Spec.Version, nil
+	return mc, nil
 }
 
 func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -144,17 +142,27 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 	if len(mcSnaps) != 1 {
 		return nil
 	}
-	if version, ok := mcSnaps[0].(int); ok && version >= 2 {
+	mc, ok := mcSnaps[0].(*ModuleConfig)
+	if !ok || mc.Spec.Version >= 2 {
 		return nil
 	}
 
-	ipAddressPoolNamesFromL2A := make([]string, 0, 8)
+	// Are only layer2 pools in the cluster?
+	protocols := make(map[string]bool)
+	l2AdvertisementsCount := len(input.Snapshots["l2_advertisements"])
+	for _, pool := range mc.Spec.Settings.AddressPools {
+		protocols[pool.Protocol] = true
+		if (protocols["layer2"] && protocols["bgp"]) || (protocols["bgp"] && l2AdvertisementsCount > 0) {
+			requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
+			input.MetricsCollector.Set("d8_metallb_not_only_layer2_pools", 1,
+				map[string]string{}, metrics.WithGroup("D8MetallbNotOnlyLayer2Pools"))
+			break
+		}
+	}
+
 	l2AdvertisementSnaps := input.Snapshots["l2_advertisements"]
 	for _, l2AdvertisementSnap := range l2AdvertisementSnaps {
 		if l2Advertisement, ok := l2AdvertisementSnap.(L2AdvertisementInfo); ok {
-			// Collect names of ipAddressPools from L2Advertisement
-			ipAddressPoolNamesFromL2A = append(ipAddressPoolNamesFromL2A, l2Advertisement.IPAddressPools...)
-
 			// Check the namespace
 			if l2Advertisement.Namespace != "d8-metallb" {
 				requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
@@ -185,7 +193,6 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 		}
 	}
 
-	ipAddressPoolNamesFromIAP := make([]string, 0, 8)
 	ipAddressPoolSnaps := input.Snapshots["ip_address_pools"]
 	for _, ipAddressPoolSnap := range ipAddressPoolSnaps {
 		if ipAddressPool, ok := ipAddressPoolSnap.(IPAddressPoolInfo); ok {
@@ -198,18 +205,7 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 						"name":      ipAddressPool.Name,
 					}, metrics.WithGroup("D8MetallbIpAddressPoolNSMismatch"))
 			}
-			// Collect names of ipAddressPools from IPAddressPools
-			ipAddressPoolNamesFromIAP = append(ipAddressPoolNamesFromIAP, ipAddressPool.Name)
 		}
-	}
-
-	// Are only layer2 pools in the cluster?
-	sort.Strings(ipAddressPoolNamesFromL2A) // Only layer2 pools
-	sort.Strings(ipAddressPoolNamesFromIAP) // All pools of cluster
-	if !slices.Equal(ipAddressPoolNamesFromL2A, ipAddressPoolNamesFromIAP) {
-		requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
-		input.MetricsCollector.Set("d8_metallb_not_only_layer2_pools", 1,
-			map[string]string{}, metrics.WithGroup("D8MetallbNotOnlyLayer2Pools"))
 	}
 
 	// Search orphaned Services
@@ -226,8 +222,6 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 					"namespace": service.Namespace,
 				}, metrics.WithGroup("D8MetallbOrphanedLoadBalancerDetected"))
 		}
-
 	}
-
 	return nil
 }
