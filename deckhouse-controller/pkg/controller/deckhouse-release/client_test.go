@@ -95,7 +95,7 @@ func setupControllerSettings(
 	rec := &deckhouseReleaseReconciler{
 		client:         cl,
 		dc:             dc,
-		logger:         log.NewNop(),
+		logger:         log.Default(),
 		moduleManager:  stubModulesManager{},
 		updateSettings: helpers.NewDeckhouseSettingsContainer(ds),
 		metricStorage:  metric_storage.NewMetricStorage(context.Background(), "", true, log.NewNop()),

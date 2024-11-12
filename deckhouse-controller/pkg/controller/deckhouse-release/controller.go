@@ -80,7 +80,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage,
 	preflightCountDown *sync.WaitGroup, logger *log.Logger,
 ) error {
-	lg := logger.With("component", "DeckhouseRelease")
+	lg := log.Default().Named("DeckhouseRelease")
 
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
@@ -141,7 +141,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	release := new(v1alpha1.DeckhouseRelease)
 	err = r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
-		r.logger.Debugf("get release: %s", err.Error())
+		r.logger.Debug("get release", "err", err)
 		// The DeckhouseRelease resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
@@ -152,7 +152,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	if !release.DeletionTimestamp.IsZero() {
-		r.logger.Debugf("release deletion timestamp: %s", release.DeletionTimestamp.String())
+		r.logger.Debug("release deletion timestamp", "timestamp", release.DeletionTimestamp)
 		return result, nil
 	}
 
@@ -203,7 +203,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
 	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
-		r.logger.Debugf("release phase: %s", dr.Status.Phase)
+		r.logger.Debug("leave the current release phase", "phase", dr.Status.Phase)
 		return result, nil
 
 	case v1alpha1.PhaseDeployed:
@@ -412,7 +412,7 @@ func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Resu
 	var result ctrl.Result
 	var notReadyErr *updater.NotReadyForDeployError
 	if errors.As(err, &notReadyErr) {
-		r.logger.Info(err.Error())
+		r.logger.Debug("ignoring NotReadyForDeployError", "err", err)
 		// TODO: requeue all releases if deckhouse update settings is changed
 		// requeueAfter := notReadyErr.RetryDelay()
 		// if requeueAfter == 0 {
