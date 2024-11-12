@@ -25,7 +25,8 @@ spec:
                 customAuthToken:
                   description: Пользовательский токен, передаваемый в качестве заголовка `X-Auth-Token`.
                 headers:
-                  description: HTTP-заголовки, которые будут добавлены к запросу.
+                  description: |
+                    HTTP-заголовки, которые будут добавлены к запросу. Допустимые заголовки: X-Scope-OrgID
                 writeRelabelConfigs:
                   description: |
                     Параметры для relabel'инга данных для отправки.
