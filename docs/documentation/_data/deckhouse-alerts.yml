@@ -1518,7 +1518,7 @@ alerts:
       module: metallb
       edition: se
       description: |
-        There must not be `layer2` and `bgp` IP pools type in the cluster at the same time.
+        There must not be `Layer2` and `BGP` IP pools configured at the same time in ModuleConfig version 1.
       summary: |
         MetaLB module misconfiguration.
       severity: "4"
