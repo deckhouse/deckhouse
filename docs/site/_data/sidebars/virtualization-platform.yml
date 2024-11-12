@@ -33,10 +33,10 @@ entries:
                 en: Requirements
                 ru: Требования
               url: /virtualization-platform/documentation/admin/install/requirements.html
-            - title:
-                en: Setup scenarios
-                ru: Сценарии установки
-              url: /virtualization-platform/documentation/admin/install/scenarios.html
+            # - title:
+            #     en: Setup scenarios
+            #     ru: Сценарии установки
+            #   url: /virtualization-platform/documentation/admin/install/scenarios.html
             - title:
                 en: Installation steps
                 ru: Порядок установки
