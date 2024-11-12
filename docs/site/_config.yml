@@ -191,7 +191,6 @@ defaults:
       path: "*/160-multitenancy-manager"
       type: "pages"
     values:
-      d8Revision: ee
       featureStatus: experimental
 timezone: Europe/Moscow
 
