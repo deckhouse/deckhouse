@@ -312,7 +312,6 @@ spec:
 
 ## Дополнительные настройки containerd
 
-{% endraw %}
 {% alert level="info" %}
 Пример `NodeGroupConfiguration` основан на функциях, заложенных в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
 {% endalert %}
@@ -320,15 +319,12 @@ spec:
 {% alert level="danger" %}
 Добавление кастомных настроек вызывает перезапуск сервиса `containerd`.
 {% endalert %}
-{% raw %}
 
 Bashible на узлах объединяет конфигурацию containerd для Deckhouse с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
 
-{% endraw %}
 {% alert level="warning" %}
 Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`, но их работу придётся обеспечивать самостоятельно. Также, лучше изменением конфигурации не затрагивать master-узлы (nodeGroup `master`).
 {% endalert %}
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -415,11 +411,9 @@ spec:
 
 ### Как настроить сертификат для дополнительного registry?
 
-{% endraw %}
 {% alert level="info" %}
 Помимо containerd сертификат можно [одновременно добавить](examples.html#добавление-сертификата-в-ос-и-containerd) и в ОС.
 {% endalert %}
-{% raw %}
 
 Пример `NodeGroupConfiguration` для настройки сертификата для дополнительного registry:
 
