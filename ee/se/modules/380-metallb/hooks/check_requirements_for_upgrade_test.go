@@ -9,6 +9,7 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"sort"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -149,18 +150,17 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: nginx0
+  namespace: nginx0
+spec:
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: nginx1
   namespace: nginx1
 spec:
-  clusterIP: 1.2.3.4
-  ports:
-  - port: 7474
-    protocol: TCP
-    targetPort: 7474
-  externalTrafficPolicy: Local
-  internalTrafficPolicy: Cluster
-  selector:
-    app: nginx1
   type: LoadBalancer
 ---
 apiVersion: v1
@@ -168,19 +168,9 @@ kind: Service
 metadata:
   name: nginx2
   namespace: nginx2
-  annotations:
-    metallb.universe.tf/address-pool: "aaa"
 spec:
-  clusterIP: 2.3.4.5
-  ports:
-  - port: 7474
-    protocol: TCP
-    targetPort: 7474
-  externalTrafficPolicy: Local
-  internalTrafficPolicy: Cluster
-  selector:
-    app: nginx2
   type: LoadBalancer
+  loadBalancerClass: nginx2
 ---
 apiVersion: v1
 kind: Service
@@ -188,20 +178,31 @@ metadata:
   name: nginx3
   namespace: nginx3
   annotations:
-    metallb.universe.tf/address-pool: "aaa"
-    metallb.universe.tf/ip-allocated-from-pool: "aaa"
+    metallb.universe.tf/address-pool: "nginx3"
 spec:
-  clusterIP: 2.3.4.5
-  ports:
-  - port: 7474
-    protocol: TCP
-    targetPort: 7474
-  externalTrafficPolicy: Local
-  internalTrafficPolicy: Cluster
-  selector:
-    app: nginx2
   type: LoadBalancer
-  loadBalancerClass: test
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx4
+  namespace: nginx4
+  annotations:
+    metallb.universe.tf/ip-allocated-from-pool: "nginx4"
+spec:
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx5
+  namespace: nginx5
+  annotations:
+    metallb.universe.tf/address-pool: "nginx5"
+    metallb.universe.tf/ip-allocated-from: "nginx5"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: nginx5
 `
 )
 
@@ -344,16 +345,16 @@ var _ = Describe("Metallb hooks :: check requirements for upgrade ::", func() {
 			Expect(configurationStatus).To(Equal("Misconfigured"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
-			counter := 0
+			var orphanedServiceNames []string
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_orphaned_loadbalancer_detected" {
 					Expect(*metric.Value).To(Equal(float64(1)))
-					Expect(metric.Labels["name"]).To(Or(Equal("nginx1"), Equal("nginx2")))
-					Expect(metric.Labels["namespace"]).To(Or(Equal("nginx1"), Equal("nginx2")))
-					counter++
+					orphanedServiceNames = append(orphanedServiceNames, metric.Labels["name"])
 				}
 			}
-			Expect(counter).To(Equal(2))
+			sort.Strings(orphanedServiceNames)
+			Expect(len(orphanedServiceNames)).To(Equal(1))
+			Expect(orphanedServiceNames).To(Equal([]string{"nginx1"}))
 		})
 	})
 })

@@ -105,28 +105,25 @@ func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		return nil, nil
 	}
 
-	if service.Spec.LoadBalancerClass == nil {
-		return ServiceInfoForAlert{
-			Name:      service.Name,
-			Namespace: service.Namespace,
-		}, nil
+	olbsInfo := OrphanedLoadBalancerServiceInfo{
+		Name:       service.Name,
+		Namespace:  service.Namespace,
+		IsOrphaned: true,
 	}
 
-	if _, ok := service.Annotations["metallb.universe.tf/address-pool"]; !ok {
-		return ServiceInfoForAlert{
-			Name:      service.Name,
-			Namespace: service.Namespace,
-		}, nil
+	if service.Spec.LoadBalancerClass != nil {
+		olbsInfo.IsOrphaned = false
 	}
 
-	if _, ok := service.Annotations["metallb.universe.tf/ip-allocated-from-pool"]; !ok {
-		return ServiceInfoForAlert{
-			Name:      service.Name,
-			Namespace: service.Namespace,
-		}, nil
+	if _, ok := service.Annotations["metallb.universe.tf/address-pool"]; ok {
+		olbsInfo.IsOrphaned = false
 	}
 
-	return nil, nil
+	if _, ok := service.Annotations["metallb.universe.tf/ip-allocated-from-pool"]; ok {
+		olbsInfo.IsOrphaned = false
+	}
+
+	return olbsInfo, nil
 }
 
 func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
@@ -147,17 +144,18 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 	if len(mcSnaps) != 1 {
 		return nil
 	}
-	if version, ok := mcSnaps[0].(int); ok {
-		if version == 2 {
-			return nil
-		}
+	if version, ok := mcSnaps[0].(int); ok && version >= 2 {
+		return nil
 	}
 
 	ipAddressPoolNamesFromL2A := make([]string, 0, 8)
 	l2AdvertisementSnaps := input.Snapshots["l2_advertisements"]
 	for _, l2AdvertisementSnap := range l2AdvertisementSnaps {
 		if l2Advertisement, ok := l2AdvertisementSnap.(L2AdvertisementInfo); ok {
-			// Check a namespace
+			// Collect names of ipAddressPools from L2Advertisement
+			ipAddressPoolNamesFromL2A = append(ipAddressPoolNamesFromL2A, l2Advertisement.IPAddressPools...)
+
+			// Check the namespace
 			if l2Advertisement.Namespace != "d8-metallb" {
 				requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
 				input.MetricsCollector.Set("d8_metallb_l2advertisement_ns_mismatch", 1,
@@ -168,14 +166,13 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 			}
 
 			// There should only be one matchLabels (not matchExpressions) in nodeSelectors
-			if len(l2Advertisement.NodeSelectors) > 0 {
-				if len(l2Advertisement.NodeSelectors) != 1 {
-					requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
-					input.MetricsCollector.Set("d8_metallb_l2advertisement_node_selectors_mismatch", 1,
-						map[string]string{
-							"name": l2Advertisement.Name,
-						}, metrics.WithGroup("D8MetallbL2AdvertisementNodeSelectorsMismatch"))
-				}
+			if len(l2Advertisement.NodeSelectors) > 1 {
+				requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
+				input.MetricsCollector.Set("d8_metallb_l2advertisement_node_selectors_mismatch", 1,
+					map[string]string{
+						"name": l2Advertisement.Name,
+					}, metrics.WithGroup("D8MetallbL2AdvertisementNodeSelectorsMismatch"))
+			} else if len(l2Advertisement.NodeSelectors) == 1 {
 				nodeSelector := l2Advertisement.NodeSelectors[0]
 				if len(nodeSelector.MatchExpressions) > 0 {
 					requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
@@ -185,8 +182,6 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 						}, metrics.WithGroup("D8MetallbL2AdvertisementNodeSelectorsMismatch"))
 				}
 			}
-			// Collect names of ipAddressPools from L2Advertisement
-			ipAddressPoolNamesFromL2A = append(ipAddressPoolNamesFromL2A, l2Advertisement.IPAddressPools...)
 		}
 	}
 
@@ -220,16 +215,18 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 	// Search orphaned Services
 	serviceSnaps := input.Snapshots["services"]
 	for _, serviceSnap := range serviceSnaps {
-		if serviceSnap != nil {
-			if service, ok := serviceSnap.(ServiceInfoForAlert); ok {
-				requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
-				input.MetricsCollector.Set("d8_metallb_orphaned_loadbalancer_detected", 1,
-					map[string]string{
-						"name":      service.Name,
-						"namespace": service.Namespace,
-					}, metrics.WithGroup("D8MetallbOrphanedLoadBalancerDetected"))
-			}
+		if serviceSnap == nil {
+			continue
 		}
+		if service, ok := serviceSnap.(OrphanedLoadBalancerServiceInfo); ok && service.IsOrphaned {
+			requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
+			input.MetricsCollector.Set("d8_metallb_orphaned_loadbalancer_detected", 1,
+				map[string]string{
+					"name":      service.Name,
+					"namespace": service.Namespace,
+				}, metrics.WithGroup("D8MetallbOrphanedLoadBalancerDetected"))
+		}
+
 	}
 
 	return nil

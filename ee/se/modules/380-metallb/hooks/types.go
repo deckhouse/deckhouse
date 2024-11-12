@@ -101,7 +101,8 @@ type ModuleConfigStatus struct {
 	Message string `json:"message"`
 }
 
-type ServiceInfoForAlert struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+type OrphanedLoadBalancerServiceInfo struct {
+	Name       string `json:"name,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	IsOrphaned bool   `json:"isOrphaned,omitempty"`
 }
