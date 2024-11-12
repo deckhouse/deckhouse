@@ -6,6 +6,10 @@ entries:
         ru: Введение
       url: /virtualization-platform/documentation/
     - title:
+        en: Going to production
+        ru: Подготовка к production
+      url: /virtualization-platform/going-to-production.html
+    - title:
         en: Administration guide
         ru: Руководство администратора
       folders:
