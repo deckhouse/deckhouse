@@ -8,7 +8,7 @@ entries:
     - title:
         en: Going to production
         ru: Подготовка к production
-      url: /virtualization-platform/going-to-production.html
+      url: /virtualization-platform/guides/going-to-production.html
     - title:
         en: Administration guide
         ru: Руководство администратора
@@ -112,11 +112,11 @@ entries:
                     - title:
                         en: Local storage
                         ru: Локальное хранилище
-                      url: /virtualization-platform/platform-management/documentation/admin/storage/sds/lvm-local.html
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html
                     - title:
                         en: Replicated storage
                         ru: Реплицируемое хранилище
-                      url: /virtualization-platform/platform-management/documentation/admin/storage/sds/lvm-replicated.html
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
                     - title:
                         en: NFS storage
                         ru: NFS хранилище
@@ -132,7 +132,7 @@ entries:
                     - title:
                         en: yadro
                         ru: yadro
-                      url: /virtualization-platform/platform-management/storage/hardware/yadro.html
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/hardware/yadro.html
             - title:
                 en: Virtualization
                 ru: Виртуализация

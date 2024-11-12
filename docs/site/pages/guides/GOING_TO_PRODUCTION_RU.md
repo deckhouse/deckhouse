@@ -1,6 +1,6 @@
 ---
 title: Подготовка к production
-permalink: ru/guides/production.html
+permalink: ru/virtualization-platform/guides/going-to-production.html
 description: Рекомендации по подготовке кластера Deckhouse Kubernetes Platform для работы в продуктивной среде.
 lang: ru
 ---

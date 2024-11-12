@@ -1,8 +1,4 @@
----
-title: "Подготовка к production"
-permalink: ru/virtualization-platform/going-to-production.html
-lang: ru
----
+
 
 TODO: пофиксить все ссылки
 
