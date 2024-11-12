@@ -131,11 +131,14 @@ spec:
 			Expect(configurationStatus).To(Equal("Misconfigured"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
+			found := false
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_not_only_layer2_pools" {
+					found = true
 					Expect(*metric.Value).To(Equal(float64(1)))
 				}
 			}
+			Expect(found).To(BeTrue(), "Expected to find 'd8_metallb_not_only_layer2_pools' metric")
 		})
 	})
 
@@ -174,11 +177,14 @@ metadata:
 			Expect(configurationStatus).To(Equal("Misconfigured"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
+			found := false
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_not_only_layer2_pools" {
+					found = true
 					Expect(*metric.Value).To(Equal(float64(1)))
 				}
 			}
+			Expect(found).To(BeTrue(), "Expected to find 'd8_metallb_not_only_layer2_pools' metric")
 		})
 	})
 
@@ -218,13 +224,16 @@ metadata:
 			Expect(configurationStatus).To(Equal("Misconfigured"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
+			found := false
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_l2advertisement_ns_mismatch" {
+					found = true
 					Expect(*metric.Value).To(Equal(float64(1)))
 					Expect(metric.Labels["name"]).To(Equal("zone-b"))
 					Expect(metric.Labels["namespace"]).To(Equal("metallb"))
 				}
 			}
+			Expect(found).To(BeTrue(), "Expected to find 'd8_metallb_l2advertisement_ns_mismatch' metric")
 		})
 	})
 
@@ -264,13 +273,16 @@ metadata:
 			Expect(configurationStatus).To(Equal("Misconfigured"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
+			found := false
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_ipaddress_pool_ns_mismatch" {
+					found = true
 					Expect(*metric.Value).To(Equal(float64(1)))
 					Expect(metric.Labels["name"]).To(Equal("pool-2"))
 					Expect(metric.Labels["namespace"]).To(Equal("metallb"))
 				}
 			}
+			Expect(found).To(BeTrue(), "Expected to find 'd8_metallb_ipaddress_pool_ns_mismatch' metric")
 		})
 	})
 
@@ -323,12 +335,15 @@ spec:
 			Expect(configurationStatus).To(Equal("Misconfigured"))
 
 			metrics := f.MetricsCollector.CollectedMetrics()
+			found := false
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_l2advertisement_node_selectors_mismatch" {
+					found = true
 					Expect(*metric.Value).To(Equal(float64(1)))
 					Expect(metric.Labels["name"]).To(Equal("zone-b"))
 				}
 			}
+			Expect(found).To(BeTrue(), "Expected to find 'd8_metallb_l2advertisement_node_selectors_mismatch' metric")
 		})
 	})
 
@@ -414,12 +429,16 @@ spec:
 
 			metrics := f.MetricsCollector.CollectedMetrics()
 			var orphanedServiceNames []string
+			found := false
 			for _, metric := range metrics {
 				if metric.Name == "d8_metallb_orphaned_loadbalancer_detected" {
+					found = true
 					Expect(*metric.Value).To(Equal(float64(1)))
 					orphanedServiceNames = append(orphanedServiceNames, metric.Labels["name"])
 				}
 			}
+			Expect(found).To(BeTrue(), "Expected to find 'd8_metallb_orphaned_loadbalancer_detected' metric")
+
 			sort.Strings(orphanedServiceNames)
 			Expect(len(orphanedServiceNames)).To(Equal(1))
 			Expect(orphanedServiceNames).To(Equal([]string{"nginx1"}))

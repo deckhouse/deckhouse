@@ -131,7 +131,7 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 		"D8MetallbL2AdvertisementNSMismatch",
 		"D8MetallbOrphanedLoadBalancerDetected",
 		"D8MetallbL2AdvertisementNodeSelectorsMismatch",
-		"D8MetallbNotOnlyLayer2Pools",
+		"D8MetallbBothBGPAndL2PoolsConfigured",
 	} {
 		input.MetricsCollector.Expire(alertGroup)
 	}
@@ -155,7 +155,7 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 		if protocols["bgp"] && (protocols["layer2"] || l2AdvertisementsCount > 0) {
 			requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
 			input.MetricsCollector.Set("d8_metallb_not_only_layer2_pools", 1,
-				map[string]string{}, metrics.WithGroup("D8MetallbNotOnlyLayer2Pools"))
+				map[string]string{}, metrics.WithGroup("D8MetallbBothBGPAndL2PoolsConfigured"))
 			break
 		}
 	}

@@ -104,7 +104,7 @@
           IpAddressPool `{{$labels.name}}` is located in namespace `{{$labels.namespace}}`, but must be located in namespace `d8-metallb`.
         summary: MetaLB module misconfiguration.
 
-    - alert: D8MetallbNotOnlyLayer2Pools
+    - alert: D8MetallbBothBGPAndL2PoolsConfigured
       expr: d8_metallb_not_only_layer2_pools == 1
       for: 5m
       labels:
@@ -113,10 +113,10 @@
       annotations:
         plk_markup_format: "markdown"
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_metallb_upgrade_failed: D8MetallbNotOnlyLayer2PoolsGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-        plk_grouped_by__d8_metallb_upgrade_failed: D8MetallbNotOnlyLayer2PoolsGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_create_group_if_not_exists__d8_metallb_upgrade_failed: D8MetallbBothBGPAndL2PoolsConfiguredGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_metallb_upgrade_failed: D8MetallbBothBGPAndL2PoolsConfiguredGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         description: |
-          There must not be `layer2` and `bgp` IP pools type in the cluster at the same time.
+          There must not be `Layer2` and `BGP` IP pools configured at the same time in ModuleConfig version 1.
         summary: MetaLB module misconfiguration.
 
     - alert: D8MetallbOrphanedLoadBalancerDetected
