@@ -1,4 +1,4 @@
 ---
 title: "Disks"
-permalink: en/virtualization-platform/documentation/user/resource-managment/disks.html
+permalink: en/virtualization-platform/documentation/user/resource-management/disks.html
 ---

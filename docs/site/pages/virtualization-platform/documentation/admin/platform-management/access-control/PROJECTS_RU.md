@@ -1,6 +1,6 @@
 ---
 title: "Проекты"
-permalink: ru/virtualization-platform/documentation/admin/access-control/projects.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/access-control/projects.html
 lang: ru
 ---
 

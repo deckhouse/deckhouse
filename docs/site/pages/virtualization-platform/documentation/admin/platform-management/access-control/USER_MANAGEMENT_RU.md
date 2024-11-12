@@ -1,6 +1,6 @@
 ---
 title: "Управление пользователями"
-permalink: ru/virtualization-platform/documentation/admin/access-control/user-management.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/access-control/user-management.html
 lang: ru
 ---
 

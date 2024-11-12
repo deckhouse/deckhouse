@@ -1,4 +1,4 @@
 ---
 title: "Projects"
-permalink: en/virtualization-platform/documentation/admin/access-control/projects.html
+permalink: en/virtualization-platform/documentation/admin/platform-management/access-control/projects.html
 ---

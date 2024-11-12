@@ -1,6 +1,6 @@
 ---
 title: "Ролевая модель"
-permalink: ru/virtualization-platform/documentation/admin/access-control/role-model.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/access-control/role-model.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Диски"
-permalink: ru/virtualization-platform/documentation/user/resource-managment/disks.html
+permalink: ru/virtualization-platform/documentation/user/resource-management/disks.html
 lang: ru
 ---
 

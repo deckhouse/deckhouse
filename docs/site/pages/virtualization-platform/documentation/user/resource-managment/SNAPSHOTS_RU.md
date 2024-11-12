@@ -1,6 +1,6 @@
 ---
 title: "Снимки"
-permalink: ru/virtualization-platform/documentation/user/resource-managment/snapshots.html
+permalink: ru/virtualization-platform/documentation/user/resource-management/snapshots.html
 lang: ru
 ---
 
