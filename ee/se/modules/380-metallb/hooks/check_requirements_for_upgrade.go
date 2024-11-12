@@ -152,7 +152,7 @@ func checkAllRequirementsForUpgrade(input *go_hook.HookInput) error {
 	l2AdvertisementsCount := len(input.Snapshots["l2_advertisements"])
 	for _, pool := range mc.Spec.Settings.AddressPools {
 		protocols[pool.Protocol] = true
-		if (protocols["layer2"] && protocols["bgp"]) || (protocols["bgp"] && l2AdvertisementsCount > 0) {
+		if (protocols["bgp"] && (protocols["layer2"] || l2AdvertisementsCount > 0)) {
 			requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
 			input.MetricsCollector.Set("d8_metallb_not_only_layer2_pools", 1,
 				map[string]string{}, metrics.WithGroup("D8MetallbNotOnlyLayer2Pools"))
