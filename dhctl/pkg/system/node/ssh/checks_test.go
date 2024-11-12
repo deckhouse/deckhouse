@@ -142,7 +142,7 @@ func TestSSHHostChecks(t *testing.T) {
 				require.NoError(t, err, "should not return error")
 				require.Equal(t, nodesToHosts, map[string]string{
 					"master-0": passedHosts[0].Host,
-				}, "nodes names should sorted")
+				}, "nodes name must be the same")
 			})
 
 		})
