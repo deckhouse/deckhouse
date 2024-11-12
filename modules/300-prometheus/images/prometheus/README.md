@@ -54,7 +54,7 @@ docker cp prometheus-deps:/prometheus/prometheus/web/ .
 docker rm -f prometheus-deps
 ```
 
-Before commiting your changes, remove the `.gitignore` files, so that all
+Before committing your changes, remove the `.gitignore` files, so that all
 changes made by `npm install` are included into the repository.
 
 ```shell
