@@ -184,7 +184,7 @@ spec:
                       domain:
                         type: string
                         description: |-
-                          Application domain from which the user request will be redirected for authentication in Dex.
+                          An application domain from which the user request will be redirected for authentication in Dex.
 
                           **Warning.** Must be specified without HTTP scheme.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
