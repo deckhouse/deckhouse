@@ -81,7 +81,7 @@ spec:
       runAsUser: 0
     volumeMounts:
     - mountPath: /prometheus-db
-      name: prometheus-pp-db
+      name: prometheus-pp-main-db
       subPath: prometheus-db
   containers:
   - name: prometheus
