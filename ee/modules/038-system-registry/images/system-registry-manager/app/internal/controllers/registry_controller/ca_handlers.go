@@ -17,6 +17,7 @@ func (r *RegistryReconciler) handleRegistryCaPKI(ctx context.Context, req ctrl.R
 	logger := ctrl.LoggerFrom(ctx)
 	err := r.Get(ctx, req.NamespacedName, secret)
 
+	// #TODO Check if error not 404
 	if apierrors.IsNotFound(err) {
 		logger.Info("Registry PKI was deleted", "Secret Name", req.NamespacedName.Name)
 
@@ -52,7 +53,7 @@ func (r *RegistryReconciler) handleRegistryCaPKI(ctx context.Context, req ctrl.R
 		logger.Info("New Registry registry-pki generated")
 	}
 
-	// If the secret exists, check if the CA certificate has changed
+	// If the secret exists, check if the CA certificate has changed TODO Check another fields
 	if string(secret.Data[k8s.RegistryCAKey]) == string(r.embeddedRegistry.caPKI.Key) {
 		logger.Info("Registry PKI not changed")
 		return nil

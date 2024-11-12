@@ -131,7 +131,7 @@ func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Cont
 	if err != nil {
 		return fmt.Errorf("unable to get informer for Node: %w", err)
 	}
-
+	// #TODO
 	// Add event handler for Node
 	_, err = nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -253,6 +253,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			logger.Info("Reconciled registry", "node", node.Name, "response", string(response))
 		}
 	}
+	// #TODO
 	return ctrl.Result{}, nil
 }
 

@@ -83,7 +83,7 @@ func main() {
 	// Set up and start manager
 	if err := setupAndStartManager(ctx, cfg, kubeClient, HttpClient, status); err != nil {
 		ctrl.Log.Error(err, "Failed to start the embedded registry manager", "component", "main")
-		os.Exit(1)
+		os.Exit(1) // #TODO
 	}
 }
 
@@ -171,7 +171,7 @@ func startStaticPodManager(ctx context.Context, kubeClient *kubernetes.Clientset
 	if err := staticpodmanager.Run(ctx, kubeClient); err != nil {
 		ctrl.Log.Error(err, "Failed to run static pod manager", "component", "main")
 		status.staticPodManagerRunning = false
-		os.Exit(1)
+		os.Exit(1) // #TODO
 	}
 }
 
