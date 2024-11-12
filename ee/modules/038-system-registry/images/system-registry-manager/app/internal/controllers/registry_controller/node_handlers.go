@@ -13,7 +13,6 @@ import (
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -179,22 +178,6 @@ func (r *RegistryReconciler) createNodeRegistry(ctx context.Context, nodeName st
 		return nil, err
 	}
 	return r.HttpClient.Send(fmt.Sprintf("https://%s:4577/staticpod/create", podIP), http.MethodPost, data)
-}
-
-func (r *RegistryReconciler) deleteNodePKISecret(ctx context.Context, secretName string, namespace string) error {
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: namespace,
-		},
-	}
-
-	if err := r.Delete(ctx, secret); err != nil {
-		return err
-	}
-
-	r.deletedSecrets.Store(secretName, true)
-	return nil
 }
 
 func (r *RegistryReconciler) ensureNodePKISecret(ctx context.Context, secret *corev1.Secret, nodeName string) (*k8s.MasterNode, error) {
