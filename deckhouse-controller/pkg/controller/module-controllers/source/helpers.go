@@ -60,7 +60,7 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 				if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager) {
 					return r.client.Delete(ctx, module)
 				}
-				return nil
+				module.Properties.AvailableSources = []string{}
 			}
 
 			if len(module.Properties.AvailableSources) > 1 {

@@ -22,7 +22,7 @@ status:
       checksum: 'sha256:'
     - name: errormodule
       policy: test-alpha
-      pullError: "fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/baz/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]"
+      pullError: "fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]"
   modulesCount: 2
   syncTime: "2019-10-17T15:33:00Z"
 ---

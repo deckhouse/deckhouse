@@ -34,7 +34,6 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -373,7 +372,7 @@ status:
 		ms = suite.getModuleSource("test-source-2")
 		require.NoError(suite.T(), err)
 		assert.Len(suite.T(), ms.Finalizers, 1)
-		assert.Equal(suite.T(), ms.Status.Message, "ModuleSource contains at least 1 Deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue")
+		assert.Equal(suite.T(), ms.Status.Message, "The source contains at least 1 deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue")
 	})
 
 	suite.Run("source with finalizer, annotation and release", func() {
@@ -427,14 +426,13 @@ status:
 		assert.Empty(suite.T(), result.RequeueAfter)
 
 		ms = suite.getModuleSource("test-source-3")
-		require.NoError(suite.T(), err)
 		assert.Len(suite.T(), ms.Finalizers, 0)
 	})
 }
 
 func (suite *ControllerTestSuite) TestInvalidRegistry() {
 	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "false")
-	invalidMS := `
+	invalidSource := `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
@@ -445,8 +443,12 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 `
-	ms := suite.createFakeModuleSource(invalidMS)
-	_, err := suite.ctr.Reconcile(context.TODO(), controllerruntime.Request{NamespacedName: types.NamespacedName{Name: ms.Name}})
+
+	suite.setupTestController(invalidSource)
+
+	ms := suite.getModuleSource("test-source")
+
+	_, err := suite.ctr.handleModuleSource(context.Background(), ms)
 	require.NoError(suite.T(), err)
 
 	ms = suite.getModuleSource(ms.Name)
@@ -454,21 +456,10 @@ spec:
 	assert.Len(suite.T(), ms.Status.AvailableModules, 0)
 }
 
-func (suite *ControllerTestSuite) createFakeModuleSource(yamlObj string) *v1alpha1.ModuleSource {
-	var ms v1alpha1.ModuleSource
-	err := yaml.Unmarshal([]byte(yamlObj), &ms)
-	require.NoError(suite.T(), err)
-
-	err = suite.kubeClient.Create(context.TODO(), &ms)
-	require.NoError(suite.T(), err)
-
-	return &ms
-}
-
 func (suite *ControllerTestSuite) getModuleSource(name string) *v1alpha1.ModuleSource {
-	var ms v1alpha1.ModuleSource
-	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &ms)
+	source := new(v1alpha1.ModuleSource)
+	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, source)
 	require.NoError(suite.T(), err)
 
-	return &ms
+	return source
 }

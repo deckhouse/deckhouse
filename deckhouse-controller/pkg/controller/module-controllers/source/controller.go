@@ -22,11 +22,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofrs/uuid/v5"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -52,10 +51,6 @@ import (
 const (
 	controllerName = "d8-module-source-controller"
 
-	deckhouseNamespace = "d8-system"
-
-	deckhouseDiscoverySecret = "deckhouse-discovery"
-
 	defaultScanInterval = 3 * time.Minute
 
 	maxConcurrentReconciles = 3
@@ -64,11 +59,12 @@ const (
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
 
-func RegisterController(runtimeManager manager.Manager, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) error {
+func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) error {
 	r := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
 		log:                  logger,
+		moduleManager:        mm,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
 		dependencyContainer:  dc,
@@ -77,7 +73,7 @@ func RegisterController(runtimeManager manager.Manager, dc dependency.Container,
 	r.init.Add(1)
 
 	// add preflight to set the cluster UUID
-	if err := runtimeManager.Add(manager.RunnableFunc(r.setClusterUUID)); err != nil {
+	if err := runtimeManager.Add(manager.RunnableFunc(r.preflight)); err != nil {
 		return err
 	}
 
@@ -133,28 +129,29 @@ type reconciler struct {
 	log                  *log.Logger
 	dependencyContainer  dependency.Container
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
+	moduleManager        moduleManager
 	downloadedModulesDir string
 	clusterUUID          string
 }
 
-func (r *reconciler) setClusterUUID(ctx context.Context) error {
+type moduleManager interface {
+	AreModulesInited() bool
+}
+
+func (r *reconciler) preflight(ctx context.Context) error {
 	defer r.init.Done()
 
-	// attempt to read the cluster UUID from a secret
-	secret := new(corev1.Secret)
-	if err := r.client.Get(ctx, client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDiscoverySecret}, secret); err != nil {
-		r.log.Warnf("failed to read clusterUUID from the 'deckhouse-discovery' secret: %v. Generating random uuid", err)
-		r.clusterUUID = uuid.Must(uuid.NewV4()).String()
-		return nil
+	// wait until module manager init
+	r.log.Debug("wait until module manager is inited")
+	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
+		return r.moduleManager.AreModulesInited(), nil
+	}); err != nil {
+		r.log.Errorf("failed to init module manager: %v", err)
+		return err
 	}
 
-	if clusterUUID, ok := secret.Data["clusterUUID"]; ok {
-		r.clusterUUID = string(clusterUUID)
-		return nil
-	}
+	r.clusterUUID = utils.GetClusterUUID(ctx, r.client)
 
-	// generate a random UUID if the key is missing
-	r.clusterUUID = uuid.Must(uuid.NewV4()).String()
 	return nil
 }
 
@@ -391,7 +388,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 			// prevent deletion if there are deployed releases
 			if len(releases.Items) > 0 {
 				err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
-					source.Status.Message = "The ModuleSource contains at least 1 Deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue"
+					source.Status.Message = "The source contains at least 1 deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue"
 					return true
 				})
 				if err != nil {
@@ -400,12 +397,12 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 				}
 				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 			}
+		}
 
-			controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists)
-			if err := r.client.Update(ctx, source); err != nil {
-				r.log.Errorf("failed to update the '%s' module source: %v", source.Name, err)
-				return ctrl.Result{Requeue: true}, nil
-			}
+		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists)
+		if err := r.client.Update(ctx, source); err != nil {
+			r.log.Errorf("failed to update the '%s' module source: %v", source.Name, err)
+			return ctrl.Result{Requeue: true}, nil
 		}
 	}
 

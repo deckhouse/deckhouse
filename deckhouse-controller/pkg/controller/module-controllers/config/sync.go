@@ -129,11 +129,11 @@ func (r *reconciler) syncModuleConfigs(ctx context.Context) error {
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		configs := new(v1alpha1.ModuleConfigList)
 		if err := r.client.List(ctx, configs); err != nil {
-			return err
+			return fmt.Errorf("list module configs: %w", err)
 		}
 		for _, moduleConfig := range configs.Items {
 			if err := r.refreshModuleConfigStatus(ctx, moduleConfig.Name); err != nil {
-				return err
+				return fmt.Errorf("refresh module configs: %w", err)
 			}
 		}
 		return nil

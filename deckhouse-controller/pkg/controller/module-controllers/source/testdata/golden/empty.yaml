@@ -13,3 +13,8 @@ spec:
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
+status:
+  message: ""
+  modules: null
+  modulesCount: 0
+  syncTime: null

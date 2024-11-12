@@ -18,8 +18,9 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"time"
 
+	"github.com/gofrs/uuid/v5"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -33,7 +34,9 @@ import (
 )
 
 const (
-	SyncedPollPeriod = 100 * time.Millisecond
+	deckhouseNamespace = "d8-system"
+
+	deckhouseDiscoverySecret = "deckhouse-discovery"
 )
 
 // GenerateRegistryOptionsFromModuleSource fetches settings from ModuleSource and generate registry options from them
@@ -201,4 +204,19 @@ func ModulePullOverrideExists(ctx context.Context, cli client.Client, sourceName
 		return false, err
 	}
 	return len(mpos.Items) > 0, nil
+}
+
+func GetClusterUUID(ctx context.Context, cli client.Client) string {
+	// attempt to read the cluster UUID from a secret
+	secret := new(corev1.Secret)
+	if err := cli.Get(ctx, client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDiscoverySecret}, secret); err != nil {
+		return uuid.Must(uuid.NewV4()).String()
+	}
+
+	if clusterUUID, ok := secret.Data["clusterUUID"]; ok {
+		return string(clusterUUID)
+	}
+
+	// generate a random UUID if the key is missing
+	return uuid.Must(uuid.NewV4()).String()
 }

@@ -139,7 +139,7 @@ func (l *Loader) processModuleDefinition(def *Definition) (*Module, error) {
 		return nil, err
 	}
 
-	module, err := newModule(def, moduleStaticValues, configBytes, vb, l.log)
+	module, err := newModule(def, moduleStaticValues, configBytes, vb, l.log.Named("module"))
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,6 @@ func (l *Loader) ensureModule(ctx context.Context, def *Definition, embedded boo
 				}
 				l.log.Debugf("the '%s' embedded module not found, create it", def.Name)
 				if err = l.client.Create(ctx, module); err != nil {
-					l.log.Errorf("failed to create '%s' module: %v", def.Name, err)
 					return fmt.Errorf("create the '%s' embedded module: %w", def.Name, err)
 				}
 			}
@@ -290,27 +289,28 @@ func (l *Loader) ensureModule(ctx context.Context, def *Definition, embedded boo
 				needsUpdate = true
 			}
 
-			// set deckhouse version to embedded modules
-			if embedded && module.Properties.Version != l.version {
-				module.Properties.Version = l.version
-				needsUpdate = true
-			}
+			if embedded {
+				// set deckhouse release channel to embedded modules
+				if module.Properties.ReleaseChannel != l.embeddedPolicy.Get().ReleaseChannel {
+					module.Properties.ReleaseChannel = l.embeddedPolicy.Get().ReleaseChannel
+					needsUpdate = true
+				}
 
-			// set deckhouse release channel to embedded modules
-			if embedded && module.Properties.ReleaseChannel != l.embeddedPolicy.Get().ReleaseChannel {
-				module.Properties.ReleaseChannel = l.embeddedPolicy.Get().ReleaseChannel
-				needsUpdate = true
-			}
+				// set deckhouse version to embedded modules
+				if module.Properties.Version != l.version {
+					module.Properties.Version = l.version
+					needsUpdate = true
+				}
 
-			// set embedded source to embedded modules
-			// TODO(ipaqsa): it is needed for migration, can be removed after 1.68
-			if embedded && module.Properties.Source != v1alpha1.ModuleSourceEmbedded {
-				module.Properties.Source = v1alpha1.ModuleSourceEmbedded
-				needsUpdate = true
+				// set embedded source to embedded modules
+				// TODO(ipaqsa): it is needed for migration, can be removed after 1.68
+				if module.Properties.Source != v1alpha1.ModuleSourceEmbedded {
+					module.Properties.Source = v1alpha1.ModuleSourceEmbedded
+					needsUpdate = true
+				}
 			}
 
 			if needsUpdate {
-				l.log.Debugf("the '%s' module has changed", def.Name)
 				if err := l.client.Update(ctx, module); err != nil {
 					return fmt.Errorf("update the '%s' embedded module: %w", def.Name, err)
 				}
