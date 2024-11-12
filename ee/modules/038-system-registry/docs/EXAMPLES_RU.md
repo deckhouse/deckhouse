@@ -122,12 +122,12 @@ description: ""
   - `settings.mode` - выбранный режим embedded registry
   - `settings.detached` - параметры для режима detached (если `registry.mode: Detached`). Подробнее в разделе [настройка](./configuration.html)
 
-- TODO:
+- **TODO**:
 - Дождитесь применения конфигурации для `containerd` через bashible
 - Выполните переключение на новый адрес docker registry. Для подключения используйте адрес: ...
 
 ## Выключение модуля
 
-- TODO:
+- **TODO**:
 - Переключение на другой registry
 - Отключение модуля embedded registry

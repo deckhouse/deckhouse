@@ -9,11 +9,11 @@ description: ""
 
 - **Управление жизненным циклом компонентов `embedded-registry`**:
   - Настройка и reconcile компонентов `embedded-registry` для поддержания Registry в соответствия заданной конфигурации.
-  - TODO: Создание и управление учетными записями пользователей `embedded-registry` (`ro` и `rw` пользователи).
+  - **TODO**: Создание и управление учетными записями пользователей `embedded-registry` (`ro` и `rw` пользователи).
   - Обновление сертификатов для внутренних компонентов `embedded-registry`.
-  - TODO: Выполнение проверок при переключении между режимами работы (`Mirror` и `Proxy` режимы).
+  - **TODO**: Выполнение проверок при переключении между режимами работы (`Mirror` и `Proxy` режимы).
   - Проверка доступности и работоспособности `upstream registry` при переключении между различными upstream источниками в `Proxy` режиме.
-  - TODO: Переключение в режим работы `HA` (`High Availability`), для повышения надежности и отказоустойчивости (доступно в `Proxy` режиме).
+  - **TODO**: Переключение в режим работы `HA` (`High Availability`), для повышения надежности и отказоустойчивости (доступно в `Proxy` режиме).
 
 - **Управление образами для Mirror режима**:
   - Ротация образов для старых релизов (доступно в `Mirror` режиме). Позволяет удалять неиспользуемые образы прошлых релизов, тем самым оптимизируя использование хранилища и поддерживая актуальность данных в registry.
@@ -22,7 +22,7 @@ description: ""
 
 - **embedded-registry-manager** - контроллер осуществляющий управление компонентами `embedded-registry`, который запускается на всех master-узлах кластера (узлы с лейблом `nnode-role.kubernetes.io/master: ""`). Контроллер предназначенный для развертывания `embedded-registry` и поддержки конфигурации registry в актуальном состоянии.
 
-- **embedded-registry** - TODO(что управляется manager-ом): static pod комопнент выполняющий функцию хранилища docker образов, построенный на базе [docker distribution](https://github.com/distribution/distribution) и [docker auth](https://github.com/cesanta/docker_auth).
+- **embedded-registry** - **TODO**(что управляется manager-ом): static pod комопнент выполняющий функцию хранилища docker образов, построенный на базе [docker distribution](https://github.com/distribution/distribution) и [docker auth](https://github.com/cesanta/docker_auth).
 
 ## Режимы работы
 
