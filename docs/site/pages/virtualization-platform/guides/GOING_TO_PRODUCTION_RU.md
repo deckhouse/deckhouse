@@ -42,8 +42,6 @@ TODO: пофиксить все ссылки
 
 Рекомендуются следующие минимальные ресурсы для инфраструктурных узлов в зависимости от их роли в кластере:
 - **Мастер-узел** — 4 CPU, 8 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS);
-- **Frontend-узел** — 2 CPU, 4 ГБ RAM, 50 ГБ дискового пространства;
-- **Узел мониторинга** (для нагруженных кластеров) — 4 CPU, 8 ГБ RAM; 50 ГБ дискового пространства на быстром диске (400+ IOPS).
 - **Системный узел**:
   - 2 CPU, 4 ГБ RAM, 50 ГБ дискового пространства — если в кластере есть выделенные узлы мониторинга;
   - 4 CPU, 8 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS) — если в кластере нет выделенных узлов мониторинга.
@@ -70,48 +68,6 @@ TODO: пофиксить все ссылки
 Может быть полезно:
 - [Как добавить мастер-узлы в облачном кластере...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/faq.html#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master)
 - [Работа со статическими узлами...](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/040-node-manager/#работа-со-статическими-узлами)
-
-### Frontend-узлы
-
-{% alert %}
-Выделите два или более frontend-узла.
-
-Используйте inlet `LoadBalancer` для OpenStack и облачных сервисов, где возможен автоматический заказ балансировщика (Yandex Cloud, VK Cloud, Selectel Cloud, AWS, GCP, Azure и т. п.). Используйте inlet `HostPort` с внешним балансировщиком для bare metal или vSphere.
-{% endalert %}
-
-Frontend-узлы балансируют входящий трафик. На них работают Ingress-контроллеры. У [NodeGroup](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup) frontend-узлов установлен label `node-role.deckhouse.io/frontend`. Читайте подробнее про [выделение узлов под определенный вид нагрузки...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки)
-
-Используйте более одного frontend-узла. Frontend-узлы должны выдерживать трафик при отказе как минимум одного frontend-узла.
-
-Например, если в кластере два frontend-узла, то каждый frontend-узел должен справляться со всей нагрузкой на кластер в случае, если второй выйдет из строя. Если в кластере три frontend-узла, то каждый frontend-узел должен выдерживать увеличение нагрузки как минимум в полтора раза.
-
-Выберите [тип inlet'а](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) (он определяет способ поступления трафика).
-
-При развертывании кластера с помощью Deckhouse в облачной инфраструктуре, в которой поддерживается заказ балансировщиков (например, решения на базе OpenStack, сервисы Yandex Cloud, VK Cloud, Selectel Cloud, AWS, GCP, Azure и т. п.), используйте inlet `LoadBalancer` или `LoadBalancerWithProxyProtocol`.
-
-В средах, в которых автоматический заказ балансировщиков недоступен (в bare-metal-кластерах, vSphere, некоторых решениях на базе OpenStack), используйте inlet `HostPort` или `HostPortWithProxyProtocol`. В этом случае можно либо добавить несколько A&#8209;записей в DNS для соответствующего домена, либо использовать внешний сервис балансировки нагрузки (например, взять решения от Cloudflare, Qrator или настроить metallb).
-
-{% alert level="warning" %}
-Inlet `HostWithFailover` подходит для кластеров с одним frontend-узлом. Он позволяет сократить время недоступности Ingress-контроллера при его обновлении. Такой тип inlet'а подойдет, например, для важных сред разработки, но **не рекомендуется для production**.
-{% endalert %}
-
-Алгоритм выбора inlet'а:
-
-![Алгоритм выбора inlet'а]({{ assets["guides/going_to_production/ingress-inlet-ru.svg"].digest_path }})
-
-### Узлы мониторинга
-
-{% alert %}
-Для нагруженных кластеров выделите два узла мониторинга с быстрыми дисками.
-{% endalert %}
-
-Узлы мониторинга служат для запуска Grafana, Prometheus и других компонентов мониторинга. У [NodeGroup](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup) узлов мониторинга установлен label `node-role.deckhouse.io/monitoring`.
-
-В нагруженных кластерах со множеством алертов и большими объемами метрик под мониторинг рекомендуется выделить отдельные узлы. Если этого не сделать, компоненты мониторинга будут размещены на [системных узлах](#системные-узлы).
-
-При выделении узлов под мониторинг важно, чтобы на них были быстрые диски. Для этого можно привязать `storageClass` на быстрых дисках ко всем компонентам Deckhouse (глобальный параметр [storageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)) или выделить отдельный `storageClass` только для компонентов мониторинга (параметры [storageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) и [longtermStorageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) модуля `prometheus`).
-
-Если кластер изначально создается с узлами, выделенными под определенный вид нагрузки (системные узлы, узлы под мониторинг и т. п.), то для модулей использующих тома постоянного хранилища (например, для модуля `prometheus`), рекомендуется явно указывать соответствующий nodeSelector в конфигурации модуля. Например, для модуля `prometheus` это параметр [nodeSelector](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-nodeselector).
 
 ### Системные узлы
 
