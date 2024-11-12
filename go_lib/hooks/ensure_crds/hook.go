@@ -207,7 +207,7 @@ func NewCRDsInstaller(client k8s.Client, crdsGlob string) (*CRDsInstaller, error
 	return &CRDsInstaller{
 		k8sClient: client,
 		installer: addonoperator.NewCRDsInstaller(
-			client,
+			client.Dynamic(),
 			crds,
 			addonoperator.WithExtraLabels(defaultLabels),
 			addonoperator.WithFileFilter(func(crdFilePath string) bool {
