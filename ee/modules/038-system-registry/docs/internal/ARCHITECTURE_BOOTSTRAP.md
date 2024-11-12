@@ -5,6 +5,7 @@ description: ""
 
 To pass parameters to a module during the bootstrap stage, [InitConfiguration](candi/openapi/init_configuration.yaml) is used.
 Example:
+
 ```yaml
 apiVersion: deckhouse.io/v2alpha1
 kind: InitConfiguration
