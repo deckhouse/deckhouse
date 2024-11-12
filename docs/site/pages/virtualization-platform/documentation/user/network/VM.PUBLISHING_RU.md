@@ -68,7 +68,125 @@ EOF
 
 ![](/images/virtualization-platform/lb-loadbalancer.ru.png)
 
-### Публикация сервисов виртуальной машины с использованием Ingress
+### Использование сервисов с активными проверками
+
+Ресурс [ServiceWithHealthcheck](../../../reference/cr.html#servicewithhealthcheck) позволяет для сервиса настраивать активные проверки на заданные TCP-порты. Если проверки для виртуальных машин не будут успешными, эти машины не будут включены в балансировку трафика.
+
+Поддерживаются следующие виды проверок:
+
+- `TCP` — обычная проверка с помощью установки TCP-соединения.
+- `HTTP` — возможность отправить HTTP-запрос и ожидать определённый код ответа.
+- `PostgreSQL` — возможность отправить SQL-запрос и ожидать его успешного завершения.
+
+Пример сервиса с проверкой HTTP:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ServiceWithHealthchecks
+metadata:
+  name: linux-vm-active-http-check
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    # лейбл по которому сервис определяет на какую виртуальную машину направлять трафик
+    app: nginx
+  healthcheck:
+    probes:
+    - mode: HTTP
+      http:
+        targetPort: 8080
+        method: GET
+        path: /healthz
+EOF
+```
+
+Пример сервиса с проверкой TCP:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ServiceWithHealthchecks
+metadata:
+  name:  linux-vm-active-tcp-check
+spec:
+  ports:
+  - port: 25
+    protocol: TCP
+    targetPort: 2525
+  selector:
+    # лейбл по которому сервис определяет на какую виртуальную машину направлять трафик
+    app: nginx
+  healthcheck:
+    probes:
+    - mode: TCP
+      http:
+        targetPort: 2525
+EOF
+```
+
+Пример сервиса с проверкой PostgreSQL для чтения:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ServiceWithHealthchecks
+metadata:
+  name: postgres-read
+spec:
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres
+  healthcheck:
+    probes:
+    - mode: PostgreSQL
+      postgreSQL:
+        targetPort: 5432
+        dbName: postgres
+        authSecretName: cred-secret
+        query: "SELECT 1"
+EOF
+```
+
+Пример сервиса с проверкой PostgreSQL для записи:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ServiceWithHealthchecks
+metadata:
+  name: postgres-write
+spec:
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres
+  healthcheck:
+    probes:
+    - mode: PostgreSQL
+      postgreSQL:
+        targetPort: 5432
+        dbName: postgres
+        authSecretName: cred-secret
+        query: "SELECT NOT pg_is_in_recovery()"
+EOF
+```
+
+где, `authSecretName` это название секрета с учетными данными для доступа к PostgreSQL. Пример создания такого секрета:
+
+```
+d8 k create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
+```
+
+## Публикация сервисов виртуальной машины с использованием Ingress
 
 `Ingress` позволяет управлять входящими HTTP/HTTPS запросами и маршрутизировать их к различным серверам в рамках вашего кластера. Это наиболее подходящий метод, если вы хотите использовать доменные имена и SSL-терминацию для доступа к вашим виртуальным машинам.
 
@@ -116,9 +234,10 @@ spec:
 EOF
 ```
 
-#### Как защитить приложение опубликованное через Ingress
+### Как защитить приложение опубликованное через Ingress
 
 Чтобы включить аутентификацию через Dex для приложения, выполните следующие шаги:
+
 1. Создайте custom resource [DexAuthenticator](../../../reference/cr.html#dexauthenticator).
 
    Создание `DexAuthenticator` в кластере приводит к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к Dex. После появления custom resource `DexAuthenticator` в указанном namespace появятся необходимые объекты Deployment, Service, Ingress, Secret.
@@ -147,12 +266,12 @@ EOF
      keepUsersLoggedInFor: "720h"
      # Список групп, пользователям которых разрешено проходить аутентификацию.
      allowedGroups:
-     - everyone
-     - admins
+       - everyone
+       - admins
      # Список адресов и сетей, с которых разрешено проходить аутентификацию.
      whitelistSourceRanges:
-     - 1.1.1.1/32
-     - 192.168.0.0/24
+       - 1.1.1.1/32
+       - 192.168.0.0/24
    ```
 
 2. Подключите приложение к Dex.
@@ -162,9 +281,9 @@ EOF
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
    - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
-      - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`;
-      - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
-      - `C_DOMAIN` — домен кластера (параметр `clusterDomain`) ресурса `ClusterConfiguration`).
+     - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`;
+     - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
+     - `C_DOMAIN` — домен кластера (параметр `clusterDomain`) ресурса `ClusterConfiguration`).
 
    Ниже представлен пример аннотаций на Ingress-ресурсе приложения, для подключения его к Dex:
 
@@ -175,17 +294,17 @@ EOF
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
 
-#### Настройка ограничений на основе CIDR
+### Настройка ограничений на основе CIDR
 
 В DexAuthenticator нет встроенной системы управления разрешением аутентификации на основе IP-адреса пользователя. Вместо этого вы можете воспользоваться аннотациями для Ingress-ресурсов:
 
-* Если нужно ограничить доступ по IP и оставить прохождение аутентификации в Dex, добавьте аннотацию с указанием разрешенных CIDR через запятую:
+- Если нужно ограничить доступ по IP и оставить прохождение аутентификации в Dex, добавьте аннотацию с указанием разрешенных CIDR через запятую:
 
   ```yaml
   nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1
   ```
 
-* Если необходимо, чтобы пользователи из указанных сетей освобождались от прохождения аутентификации в Dex, а пользователи из остальных сетей обязательно аутентифицировались в Dex, добавьте следующую аннотацию:
+- Если необходимо, чтобы пользователи из указанных сетей освобождались от прохождения аутентификации в Dex, а пользователи из остальных сетей обязательно аутентифицировались в Dex, добавьте следующую аннотацию:
 
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
