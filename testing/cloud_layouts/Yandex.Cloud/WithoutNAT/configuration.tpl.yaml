@@ -90,5 +90,6 @@ metadata:
   name: node-manager
 spec:
   version: 1
+  enabled: true
   settings:
     earlyOomEnabled: false # openSUSE
