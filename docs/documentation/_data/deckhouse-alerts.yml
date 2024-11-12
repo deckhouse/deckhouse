@@ -1512,7 +1512,7 @@ alerts:
         MetaLB module misconfiguration.
       severity: "4"
       markupFormat: markdown
-    - name: D8MetallbNotOnlyLayer2Pools
+    - name: D8MetallbBothBGPAndL2PoolsConfigured
       sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
