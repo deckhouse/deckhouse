@@ -55,7 +55,7 @@ docker rm -f prometheus-deps
 ```
 
 Before commiting your changes, remove the `.gitignore` files, so that all
-changes made by `npm install` are included into the repostiory.
+changes made by `npm install` are included into the repository.
 
 ```shell
 find . -name ".gitignore" -type f -delete
