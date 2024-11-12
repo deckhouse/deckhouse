@@ -187,5 +187,11 @@ defaults:
       type: "pages"
     values:
       featureStatus: experimental
+  - scope:
+      path: "*/038-system-registry"
+      type: "pages"
+    values:
+      d8Revision: ee
+      # featureStatus: experimental
 timezone: Europe/Moscow
 

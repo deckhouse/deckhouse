@@ -188,6 +188,7 @@ apiVersions:
                 enum: [HTTP, HTTPS]
                 default: HTTPS
           detached:
+            x-doc-d8Revision: ee
             type: object
             description: Detached mode properties.
             properties:
@@ -203,6 +204,7 @@ apiVersions:
                   The type of data storage for the system registry module.
                 default: Fs
           proxy:
+            x-doc-d8Revision: ee
             type: object
             description: Proxy mode properties.
             properties:
