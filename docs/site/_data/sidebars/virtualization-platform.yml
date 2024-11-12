@@ -98,6 +98,10 @@ entries:
                 ru: Управление трафиком
               folders:
                 - title:
+                    en: VM Networks
+                    ru: Сети виртуальных машин
+                  url: /virtualization-platform/documentation/admin/platform-management/traffic-control/vm-network.html
+                - title:
                     en: Ingress
                     ru: Управление входящим трафиком
                   url: /virtualization-platform/documentation/admin/platform-management/traffic-control/ingress.html
@@ -109,6 +113,14 @@ entries:
                     en: Routing
                     ru: Настройка маршрутизации
                   url: /virtualization-platform/documentation/admin/platform-management/traffic-control/routing.html
+                - title:
+                    en: DNS settings
+                    ru: Настройка DNS
+                  url: /virtualization-platform/documentation/admin/platform-management/traffic-control/dns.html
+                - title:
+                    en: NTP settings
+                    ru: Настройка NTP
+                  url: /virtualization-platform/documentation/admin/platform-management/traffic-control/ntp.html
             - title:
                 en: Storage
                 ru: Хранилища
@@ -149,6 +161,10 @@ entries:
                 en: Virtualization
                 ru: Виртуализация
               folders:
+                - title:
+                    en: Reliability
+                    ru: Механизмы обеспечения нажености
+                  url: /virtualization-platform/documentation/admin/platform-management/virtualization/reliability.html
                 - title:
                     en: Virtual Machine Classes
                     ru: Классы виртуальных машин
