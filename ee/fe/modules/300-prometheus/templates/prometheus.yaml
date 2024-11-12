@@ -15,7 +15,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: prometheus-pp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -45,12 +45,12 @@ kind: Prometheus
 metadata:
   name: cpp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 spec:
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
-  image: {{ include "helm_lib_module_image" (list $ "prometheus-pp") }}
+  image: {{ include "helm_lib_module_image" (list $ "prometheuspp") }}
   envFrom:
     - configMapRef:
         name: prometheus-pp-envs

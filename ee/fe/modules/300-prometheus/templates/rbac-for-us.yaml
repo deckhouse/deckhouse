@@ -4,7 +4,7 @@ kind: ServiceAccount
 metadata:
   name: prometheus-pp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 secrets:
 - name: prometheus-pp-token
 ---
@@ -12,7 +12,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:prometheus-pp:prometheus-pp
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources:
@@ -30,7 +30,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:prometheus-pp:prometheus-pp
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -44,7 +44,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:prometheus-pp:prometheus-pp:scraper
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources:
@@ -57,7 +57,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:prometheus-pp:prometheus-pp:scraper
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -75,7 +75,7 @@ kind: Role
 metadata:
   name: prometheus-pp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources:
@@ -87,7 +87,7 @@ kind: RoleBinding
 metadata:
   name: prometheus-pp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
