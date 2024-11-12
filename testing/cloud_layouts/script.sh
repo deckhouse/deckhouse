@@ -466,7 +466,7 @@ set -Eeuo pipefail
 
 >&2 echo "Download yq..."
 
-/opt/deckhouse/bin/d8-curl -sSLf -o /opt/deckhouse/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+/opt/deckhouse/bin/d8-curl -sSLfk -o /opt/deckhouse/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
 
 >&2 echo "chmod yq..."
 
