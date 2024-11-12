@@ -20,7 +20,6 @@ func (r *RegistryReconciler) handleRegistryUser(ctx context.Context, req ctrl.Re
 	err := r.Get(ctx, req.NamespacedName, secret)
 	if apierrors.IsNotFound(err) {
 		// Recreate the registry user secret with existing data if user is not empty
-		//if utils.AllNotEmpty(user.UserName, user.Password, user.HashedPassword) {
 		if user.UserName != "" && user.Password != "" && user.HashedPassword != "" {
 			_, err := k8s.CreateRegistryUserSecret(ctx, r.Client, user.UserName, user.Password, user.HashedPassword)
 			if err != nil {
