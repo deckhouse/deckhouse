@@ -295,7 +295,7 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 	r.embeddedRegistry.images.DockerDistribution = fmt.Sprintf("%s%s@%s", registryAddress, registryPath, imageDockerDistribution)
 
 	// Ensure	 CA certificate exists and create if not
-	isGenerated, caCertPEM, caKeyPEM, authTokenCertPEM, authTokenKeyPEM, err := k8s.EnsureCASecret(ctx, r.Client)
+	isGenerated, caCertStruct, err := k8s.EnsureCASecret(ctx, r.Client)
 	if err != nil {
 		return err
 	}
@@ -316,14 +316,14 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 
 	// Fill the embedded registry struct with the CA PKI
 	r.embeddedRegistry.caPKI = k8s.Certificate{
-		Cert: caCertPEM,
-		Key:  caKeyPEM,
+		Cert: caCertStruct.CACertPEM,
+		Key:  caCertStruct.CAKeyPEM,
 	}
 
 	// Fill the embedded registry struct with the Auth Token PKI
 	r.embeddedRegistry.authTokenPKI = k8s.Certificate{
-		Cert: authTokenCertPEM,
-		Key:  authTokenKeyPEM,
+		Cert: caCertStruct.AuthTokenCertPEM,
+		Key:  caCertStruct.AuthTokenKeyPEM,
 	}
 
 	for masterNodeName, masterNode := range r.embeddedRegistry.masterNodes {
@@ -335,7 +335,13 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 
 		// Create the node PKI secret if it doesn't exist
 		if len(secret.Data) == 0 {
-			dc, dk, ac, ak, err := k8s.CreateNodePKISecret(ctx, r.Client, masterNode, caCertPEM, caKeyPEM)
+			dc, dk, ac, ak, err := k8s.CreateNodePKISecret(
+				ctx,
+				r.Client,
+				masterNode,
+				caCertStruct.CACertPEM,
+				caCertStruct.CAKeyPEM,
+			)
 			if err != nil {
 				return err
 			}

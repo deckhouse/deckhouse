@@ -24,10 +24,13 @@ func (r *RegistryReconciler) handleRegistryCaPKI(ctx context.Context, req ctrl.R
 		// Recreate the registry PKI secret with existing CA data if it exists
 		if r.embeddedRegistry.caPKI.Cert != nil && r.embeddedRegistry.caPKI.Key != nil &&
 			r.embeddedRegistry.authTokenPKI.Cert != nil && r.embeddedRegistry.authTokenPKI.Key != nil {
-			err := k8s.CreateRegistryCaPKISecret(ctx, r.Client,
-				r.embeddedRegistry.caPKI.Cert, r.embeddedRegistry.caPKI.Key,
-				r.embeddedRegistry.authTokenPKI.Cert, r.embeddedRegistry.authTokenPKI.Key,
-			)
+			caStruct := k8s.CASecretData{
+				CACertPEM:        r.embeddedRegistry.caPKI.Cert,
+				CAKeyPEM:         r.embeddedRegistry.caPKI.Key,
+				AuthTokenCertPEM: r.embeddedRegistry.authTokenPKI.Cert,
+				AuthTokenKeyPEM:  r.embeddedRegistry.authTokenPKI.Key,
+			}
+			err := k8s.CreateRegistryCaPKISecret(ctx, r.Client, caStruct)
 			if err != nil {
 				return err
 			} else {
@@ -36,19 +39,19 @@ func (r *RegistryReconciler) handleRegistryCaPKI(ctx context.Context, req ctrl.R
 			}
 		}
 
-		_, caCertPEM, caKeyPEM, authTokenCertPEM, authTokenKeyPEM, err := k8s.EnsureCASecret(ctx, r.Client)
+		_, caStruct, err := k8s.EnsureCASecret(ctx, r.Client)
 		if err != nil {
 			return err
 		}
 
 		// Fill the embedded registry struct with the CA PKI and Auth Token PKI
 		r.embeddedRegistry.caPKI = k8s.Certificate{
-			Cert: caCertPEM,
-			Key:  caKeyPEM,
+			Cert: caStruct.CACertPEM,
+			Key:  caStruct.CAKeyPEM,
 		}
 		r.embeddedRegistry.authTokenPKI = k8s.Certificate{
-			Cert: authTokenCertPEM,
-			Key:  authTokenKeyPEM,
+			Cert: caStruct.AuthTokenCertPEM,
+			Key:  caStruct.AuthTokenKeyPEM,
 		}
 		logger.Info("New Registry registry-pki generated")
 	}

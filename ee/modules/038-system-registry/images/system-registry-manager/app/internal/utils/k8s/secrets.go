@@ -33,6 +33,13 @@ type RegistryUser struct {
 	HashedPassword string
 }
 
+type CASecretData struct {
+	CACertPEM        []byte
+	CAKeyPEM         []byte
+	AuthTokenCertPEM []byte
+	AuthTokenKeyPEM  []byte
+}
+
 const (
 	labelModuleKey           = "module"
 	labelModuleValue         = "embedded-registry"
@@ -214,41 +221,48 @@ func CreateNodePKISecret(ctx context.Context, kc client.Client, node MasterNode,
 }
 
 // EnsureCASecret ensures that the CA secret exists in the cluster. If it does not exist, it generates a new CA certificate and key.
-func EnsureCASecret(ctx context.Context, kc client.Client) (bool, []byte, []byte, []byte, []byte, error) {
+func EnsureCASecret(ctx context.Context, kc client.Client) (bool, CASecretData, error) {
+	var caSecretStruct CASecretData
 
+	// Check if the CA secret already exists
 	registryCASecret, err := GetCASecret(ctx, kc)
 	if err == nil {
-		caCertPEM := registryCASecret.Data[RegistryCACert]
-		caKeyPEM := registryCASecret.Data[RegistryCAKey]
-		authTokenCertPEM := registryCASecret.Data[AuthTokenCert]
-		authTokenKeyPEM := registryCASecret.Data[AuthTokenKey]
+		caSecretStruct.CACertPEM = registryCASecret.Data[RegistryCACert]
+		caSecretStruct.CAKeyPEM = registryCASecret.Data[RegistryCAKey]
+		caSecretStruct.AuthTokenCertPEM = registryCASecret.Data[AuthTokenCert]
+		caSecretStruct.AuthTokenKeyPEM = registryCASecret.Data[AuthTokenKey]
 
-		return false, caCertPEM, caKeyPEM, authTokenCertPEM, authTokenKeyPEM, nil
+		// Return the existing secret
+		return false, caSecretStruct, nil
 	}
 
 	// if any error other than NotFound, return the error
 	if !apierrors.IsNotFound(err) {
-		return false, nil, nil, nil, nil, err
+		return false, caSecretStruct, err
 	}
-
 	// Secret does not exist, generate a new CA certificate and key
-	caCertPEM, caKeyPEM, err := generateCA()
+	caSecretStruct.CACertPEM, caSecretStruct.CAKeyPEM, err = generateCA()
 	if err != nil {
-		return false, nil, nil, nil, nil, err
+		return false, caSecretStruct, err
 	}
 
 	// Generate the auth token certificate and key
-	authTokenCertPEM, authTokenKeyPEM, err := generateCertificate("embedded-registry-auth-token", nil, caCertPEM, caKeyPEM)
+	caSecretStruct.AuthTokenCertPEM, caSecretStruct.AuthTokenKeyPEM, err = generateCertificate(
+		"embedded-registry-auth-token",
+		nil,
+		caSecretStruct.CACertPEM,
+		caSecretStruct.CAKeyPEM,
+	)
 	if err != nil {
-		return false, nil, nil, nil, nil, err
+		return false, caSecretStruct, err
 	}
 
 	// Create the CA secret
-	if err := CreateRegistryCaPKISecret(ctx, kc, caCertPEM, caKeyPEM, authTokenCertPEM, authTokenKeyPEM); err != nil {
-		return false, nil, nil, nil, nil, err
+	if err := CreateRegistryCaPKISecret(ctx, kc, caSecretStruct); err != nil {
+		return false, caSecretStruct, err
 	}
 
-	return true, caCertPEM, caKeyPEM, authTokenCertPEM, authTokenKeyPEM, nil
+	return true, caSecretStruct, nil
 }
 
 func GetCASecret(ctx context.Context, kc client.Client) (*corev1.Secret, error) {
@@ -258,7 +272,7 @@ func GetCASecret(ctx context.Context, kc client.Client) (*corev1.Secret, error) 
 }
 
 // CreateRegistryCaPKISecret creates a new CA secret in the specified namespace
-func CreateRegistryCaPKISecret(ctx context.Context, kc client.Client, caCertPEM, caKeyPEM, authCertPEM, authKeyPEM []byte) error {
+func CreateRegistryCaPKISecret(ctx context.Context, kc client.Client, caSecretStruct CASecretData) error {
 	secretLabels := map[string]string{
 		labelHeritageKey: labelHeritageValue,
 		labelModuleKey:   labelModuleValue,
@@ -273,10 +287,10 @@ func CreateRegistryCaPKISecret(ctx context.Context, kc client.Client, caCertPEM,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			RegistryCACert: caCertPEM,
-			RegistryCAKey:  caKeyPEM,
-			AuthTokenCert:  authCertPEM,
-			AuthTokenKey:   authKeyPEM,
+			RegistryCACert: caSecretStruct.CACertPEM,
+			RegistryCAKey:  caSecretStruct.CAKeyPEM,
+			AuthTokenCert:  caSecretStruct.AuthTokenCertPEM,
+			AuthTokenKey:   caSecretStruct.AuthTokenKeyPEM,
 		},
 	}
 
