@@ -62,13 +62,25 @@ entries:
                 ru: Управление узлами
               folders:
                 - title:
+                    en: NodeGroup description
+                    ru: Описание NodeGroup
+                  url: /virtualization-platform/documentation/admin/platform-management/node-management/node-group.html
+                - title:
                     en: Adding a node
                     ru: Добавление узла
                   url: /virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html
                 - title:
-                    en: Configuration
-                    ru: Настройка
+                    en: Node сonfiguration
+                    ru: Настройка узлов
                   url: /virtualization-platform/documentation/admin/platform-management/node-management/configuration.html
+                - title:
+                    en: Configuration examples
+                    ru: Примеры конфигураций
+                  url: /virtualization-platform/documentation/admin/platform-management/node-management/examples.html
+                - title:
+                    en: Advanced configuration
+                    ru: Расширенные настройки
+                  url: /virtualization-platform/documentation/admin/platform-management/node-management/advanced.html
             - title:
                 en: Control plane settings
                 ru: Настройки плоскости управления
