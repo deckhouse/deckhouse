@@ -292,8 +292,8 @@ jobs:
           fi
 
           # Add edition name for non-FE tests on branch
-          if [[ -n ${WERF_ENV} && ${WERF_ENV} != "FE" ]]; then
-            IMAGE_EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
 
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
@@ -755,8 +755,8 @@ jobs:
           fi
 
           # Add edition name for non-FE tests on branch
-          if [[ -n ${WERF_ENV} && ${WERF_ENV} != "FE" ]]; then
-            IMAGE_EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
 
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
@@ -1226,8 +1226,8 @@ jobs:
           fi
 
           # Add edition name for non-FE tests on branch
-          if [[ -n ${WERF_ENV} && ${WERF_ENV} != "FE" ]]; then
-            IMAGE_EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
 
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
@@ -1685,8 +1685,8 @@ jobs:
           fi
 
           # Add edition name for non-FE tests on branch
-          if [[ -n ${WERF_ENV} && ${WERF_ENV} != "FE" ]]; then
-            IMAGE_EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
 
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
@@ -2152,8 +2152,8 @@ jobs:
           fi
 
           # Add edition name for non-FE tests on branch
-          if [[ -n ${WERF_ENV} && ${WERF_ENV} != "FE" ]]; then
-            IMAGE_EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
 
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
@@ -2611,8 +2611,8 @@ jobs:
           fi
 
           # Add edition name for non-FE tests on branch
-          if [[ -n ${WERF_ENV} && ${WERF_ENV} != "FE" ]]; then
-            IMAGE_EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
 
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
@@ -3074,8 +3074,8 @@ jobs:
           fi
 
           # Add edition name for non-FE tests on branch
-          if [[ -n ${WERF_ENV} && ${WERF_ENV} != "FE" ]]; then
-            IMAGE_EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
 
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
@@ -3549,8 +3549,8 @@ jobs:
           fi
 
           # Add edition name for non-FE tests on branch
-          if [[ -n ${WERF_ENV} && ${WERF_ENV} != "FE" ]]; then
-            IMAGE_EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
           fi
 
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
