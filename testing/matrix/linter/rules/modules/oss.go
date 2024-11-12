@@ -112,7 +112,7 @@ func assertOssProject(i int, p ossProject) error {
 	// Licence
 
 	if strings.TrimSpace(p.Licence) == "" {
-		complaints = append(complaints, "licence must not be empty")
+		complaints = append(complaints, "license must not be empty")
 	}
 
 	// Logo
@@ -196,5 +196,5 @@ type ossProject struct {
 	Description string `yaml:"description"`    // example: A Federated OpenID Connect Provider with pluggable connectors
 	Link        string `yaml:"link"`           // example: https://github.com/dexidp/dex
 	Logo        string `yaml:"logo,omitempty"` // example: https://dexidp.io/img/logos/dex-horizontal-color.png
-	Licence     string `yaml:"licence"`        // example: Apache License 2.0
+	Licence     string `yaml:"license"`        // example: Apache License 2.0
 }
