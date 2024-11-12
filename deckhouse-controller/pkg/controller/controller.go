@@ -267,7 +267,7 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	return nil
 }
 
-// startPluggableModulesControllers starts all child controllers linked with Modules
+// startPluggableModulesControllers starts all child controllers
 func (c *DeckhouseController) startPluggableModulesControllers(ctx context.Context) {
 	// syncs the fs with the cluster state, starts the manager and various controllers
 	go func() {

@@ -139,12 +139,13 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 		module := new(v1alpha1.Module)
 		if err = cli.Get(context.Background(), client.ObjectKey{Name: cfg.Name}, module); err != nil {
 			if apierrors.IsNotFound(err) {
-				return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+				return allowResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
 			}
+			return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
 		}
 
 		if cfg.Spec.Source != "" && !slices.Contains(module.Properties.AvailableSources, cfg.Spec.Source) {
-			return rejectResult(fmt.Sprintf("the '%s' module source not found", cfg.Spec.Source))
+			return rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module", cfg.Spec.Source, cfg.Name))
 		}
 
 		var warning string
@@ -156,7 +157,7 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 				if !apierrors.IsNotFound(err) {
 					return nil, fmt.Errorf("get the '%s' module policy: %w", cfg.Spec.UpdatePolicy, err)
 				}
-				warning = "update policy not found"
+				warning = fmt.Sprintf("the '%s' module policy not found", cfg.Spec.UpdatePolicy)
 			}
 		}
 
