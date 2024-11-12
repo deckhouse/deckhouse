@@ -122,8 +122,8 @@ spec:
 `))
 			f.RunHook()
 		})
-		It(`ConfigurationStatus is Misconfigured and
-				the 'd8_metallb_not_only_layer2_pools' metric is 1`, func() {
+		It("ConfigurationStatus is Misconfigured and "+
+			"the 'd8_metallb_not_only_layer2_pools' metric is 1", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			configurationStatusRaw, exists := requirements.GetValue(metallbConfigurationStatusKey)
 			Expect(exists).To(BeTrue())
