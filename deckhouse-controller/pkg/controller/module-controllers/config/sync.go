@@ -188,17 +188,3 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 	}
 	return nil
 }
-
-// refreshModule refreshes module status by addon-operator
-func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			module := new(v1alpha1.Module)
-			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
-				return err
-			}
-			r.refreshModuleStatus(module)
-			return r.client.Status().Update(ctx, module)
-		})
-	})
-}

@@ -298,9 +298,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		}
 
 		if exist {
-			availableModules = append(availableModules, availableModule)
 			// skip overridden module
 			availableModule.Overridden = true
+			availableModules = append(availableModules, availableModule)
 			continue
 		}
 

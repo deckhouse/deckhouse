@@ -17,6 +17,7 @@ limitations under the License.
 package config
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -26,6 +27,9 @@ import (
 	kubeconfig "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
 	scriptextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
 	staticextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -34,10 +38,26 @@ import (
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 )
 
+// refreshModule refreshes module status by addon-operator
+func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
+	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			module := new(v1alpha1.Module)
+			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
+				return err
+			}
+			r.refreshModuleStatus(module)
+			return r.client.Status().Update(ctx, module)
+		})
+	})
+}
+
 func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	basicModule := r.moduleManager.GetModule(module.Name)
-	// TODO(ipaqas): how to handle it ?
 	if basicModule == nil {
+		module.Status.Phase = v1alpha1.ModuleMessageNotInstalled
+		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 		return
 	}
 
@@ -91,6 +111,9 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 
 		return
 	}
+
+	// clear hook state
+	module.Status.HooksState = ""
 
 	updatedBy, updatedByErr := r.moduleManager.GetUpdatedByExtender(module.Name)
 	if updatedByErr != nil {
@@ -149,6 +172,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		module.Status.Phase = v1alpha1.ModulePhasePending
 	}
 	module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, reason, message)
+	module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, reason, message)
 }
 
 func (r *reconciler) refreshConfigStatus(config *v1alpha1.ModuleConfig) {
