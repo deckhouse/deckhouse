@@ -6771,9 +6771,9 @@
               "exponent": 0.5,
               "fill": "#b4ff00",
               "mode": "scheme",
-              "reverse": false,
+              "reverse": true,
               "scale": "exponential",
-              "scheme": "RdYlBu",
+              "scheme": "Turbo",
               "steps": 128
             },
             "exemplars": {
@@ -6886,9 +6886,9 @@
               "fill": "#b4ff00",
               "min": 0,
               "mode": "scheme",
-              "reverse": false,
+              "reverse": true,
               "scale": "exponential",
-              "scheme": "RdYlBu",
+              "scheme": "Turbo",
               "steps": 128
             },
             "exemplars": {
@@ -7955,9 +7955,9 @@
               "fill": "#b4ff00",
               "min": 0,
               "mode": "scheme",
-              "reverse": false,
+              "reverse": true,
               "scale": "exponential",
-              "scheme": "RdYlBu",
+              "scheme": "Turbo",
               "steps": 128
             },
             "exemplars": {
@@ -8070,9 +8070,9 @@
               "fill": "#b4ff00",
               "min": 0,
               "mode": "scheme",
-              "reverse": false,
+              "reverse": true,
               "scale": "exponential",
-              "scheme": "RdYlBu",
+              "scheme": "Turbo",
               "steps": 128
             },
             "exemplars": {
