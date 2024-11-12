@@ -43,7 +43,7 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
-  name: cpp
+  name: prometheus-pp
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 spec:
@@ -148,7 +148,6 @@ spec:
       - labelSelector:
           matchLabels:
             app.kubernetes.io/name: prometheus-pp
-            prometheus: cpp
         topologyKey: kubernetes.io/hostname
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
@@ -184,16 +183,16 @@ spec:
       checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
   serviceMonitorSelector:
     matchLabels:
-      prometheus: cpp
+      prometheus: pp
   podMonitorSelector:
     matchLabels:
-      prometheus: cpp
+      prometheus: pp
   probeSelector:
     matchLabels:
-      prometheus: cpp
+      prometheus: pp
   scrapeConfigSelector:
     matchLabels:
-      prometheus: cpp
+      prometheus: pp
   secrets:
   - alertmanagers-tls-config
   rules:
@@ -201,7 +200,7 @@ spec:
       resendDelay: 29s
   ruleSelector:
     matchLabels:
-      prometheus: cpp
+      prometheus: pp
       component: rules
 {{- if .Values.prometheus.internal.remoteWrite }}
   remoteWrite:
