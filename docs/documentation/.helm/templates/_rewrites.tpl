@@ -1,4 +1,5 @@
 {{- define "rewrites" }}
+rewrite ^/(.+/modules)/[0-9]+-([^/]+/.*)$ /$1/$2 permanent;
 rewrite ^/documentation/(.*)$ /products/kubernetes-platform/documentation/$1 permanent;
 rewrite ^/(.+)/modules/030-cloud-provider-openstack/usage.html$ /$1/modules/030-cloud-provider-openstack/examples.html redirect;
 rewrite ^/(.+)/modules/030-cloud-provider-vsphere/usage.html$ /$1/modules/030-cloud-provider-vsphere/docs/examples.html redirect;
