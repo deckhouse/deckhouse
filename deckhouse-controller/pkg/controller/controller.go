@@ -251,9 +251,14 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 // Start loads and ensures modules from FS, starts pluggable controllers and runs deckhouse config event loop
 func (c *DeckhouseController) Start(ctx context.Context) error {
-	// run preflight checks first
+	// run preflight checks
 	if d8env.GetDownloadedModulesDir() != "" {
 		c.startPluggableModulesControllers(ctx)
+	}
+
+	// wait for cache sync
+	if ok := c.runtimeManager.GetCache().WaitForCacheSync(ctx); !ok {
+		return fmt.Errorf("wait for cache sync")
 	}
 
 	// load and ensure modules from FS at start

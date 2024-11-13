@@ -203,7 +203,6 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	case bootstrappedextender.Name:
 		reason = v1alpha1.ModuleReasonClusterBootstrappedExtender
 		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
-
 	}
 
 	if module.Status.Phase != v1alpha1.ModulePhaseNotInstalled {

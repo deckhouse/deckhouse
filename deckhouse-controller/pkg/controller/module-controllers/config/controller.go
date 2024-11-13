@@ -92,7 +92,7 @@ func RegisterController(
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleConfig{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		Complete(configController)
 }
 
