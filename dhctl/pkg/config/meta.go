@@ -23,13 +23,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	util_time "github.com/deckhouse/deckhouse/dhctl/pkg/util/time"
 )
 
 type MetaConfig struct {
@@ -80,7 +80,7 @@ type ProxyModeRegistryData struct {
 	UpstreamRegistryData   RegistryData       `json:"-"`
 	InternalRegistryAccess RegistryAccessData `json:"-"`
 	RegistryStorageMode    string             `json:"-"`
-	TTL                    time.Duration      `json:"-"`
+	TTL                    util_time.Duration `json:"-"`
 }
 
 type DetachedModeRegistryData struct {

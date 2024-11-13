@@ -16,7 +16,7 @@ package config
 
 import (
 	"fmt"
-	"time"
+	util_time "github.com/deckhouse/deckhouse/dhctl/pkg/util/time"
 )
 
 const (
@@ -115,7 +115,7 @@ type RegistryDirectModeProperties struct {
 type RegistryProxyModeProperties struct {
 	RegistryDirectModeProperties
 	StorageMode string        `json:"storageMode,omitempty"`
-	TTL         time.Duration `json:"ttl,omitempty"`
+	TTL         util_time.Duration `json:"ttl,omitempty"`
 }
 
 type RegistryDetachedModeProperties struct {
