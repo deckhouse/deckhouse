@@ -327,21 +327,23 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		}
 
 		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exist) {
+			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+				if module.Status.Phase == v1alpha1.ModulePhaseNotInstalled {
+					module.Status.Phase = v1alpha1.ModulePhaseDownloading
+					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
+					return true
+				}
+				return false
+			})
+			if err != nil {
+				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
+			}
+
 			r.log.Debugf("ensure module release for the '%s' module for the '%s' module source", moduleName, source.Name)
 			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
 				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
 			}
 			availableModule.Checksum = meta.Checksum
-		} else {
-			r.log.Debugf("the '%s' module in the '%s' module source not changed", moduleName, source.Name)
-			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				module.Status.Phase = v1alpha1.ModulePhaseReady
-				module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
-				return true
-			})
-			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
-			}
 		}
 		availableModules = append(availableModules, availableModule)
 	}

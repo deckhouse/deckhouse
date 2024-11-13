@@ -256,16 +256,18 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			}
 		}
 
-		// set conflict if there are several available sources
-		err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-			module.Status.Phase = v1alpha1.ModulePhaseConflict
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
-			return true
-		})
-		if err != nil {
-			r.log.Errorf("failed to set conlflict to the '%s' module: %v", module.Name, err)
-			return ctrl.Result{Requeue: true}, nil
+		if len(module.Properties.AvailableSources) > 1 {
+			// set conflict if there are several available sources
+			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+				module.Status.Phase = v1alpha1.ModulePhaseConflict
+				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
+				return true
+			})
+			if err != nil {
+				r.log.Errorf("failed to set conlflict to the '%s' module: %v", module.Name, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
 		}
 	}
 
@@ -352,15 +354,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Module, source, updatePolicy string) error {
 	r.log.Debugf("set new '%s' source to the '%s' module", source, module.Name)
-	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		module.Status.Phase = v1alpha1.ModulePhaseDownloading
-		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonChangeSource, v1alpha1.ModuleMessageChangeSource)
-		return true
-	})
-	if err != nil {
-		return fmt.Errorf("update the '%s' module status: %w", module.Name, err)
-	}
-	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		module.Properties.Source = source
 		module.Properties.UpdatePolicy = updatePolicy
 		return true

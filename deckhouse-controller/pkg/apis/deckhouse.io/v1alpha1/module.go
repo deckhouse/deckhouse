@@ -55,7 +55,7 @@ const (
 	ModuleReasonDisabled                    = "Disabled"
 	ModuleReasonInit                        = "Init"
 	ModuleReasonConflict                    = "Conflict"
-	ModuleReasonChangeSource                = "ChangeSource"
+	ModuleReasonDownloading                 = "Downloading"
 	ModuleReasonHookError                   = "HookError"
 	ModuleReasonModuleError                 = "ModuleError"
 	ModuleReasonEnqueued                    = "Enqueued"
@@ -74,7 +74,7 @@ const (
 	ModuleMessageDisabled                    = "disabled"
 	ModuleMessageInit                        = "init"
 	ModuleMessageConflict                    = "several available sources"
-	ModuleMessageChangeSource                = "changing source"
+	ModuleMessageDownloading                 = "downloading"
 	ModuleMessageEnqueued                    = "enqueued"
 	ModuleMessageWaitSync                    = "run sync tasks"
 	ModuleMessageOnStartupHook               = "completed OnStartup hooks"
@@ -202,7 +202,7 @@ func (m *Module) SetConditionTrue(condName string) {
 	})
 }
 
-func (m *Module) SetConditionFalse(condName string, reason, message string) {
+func (m *Module) SetConditionFalse(condName, reason, message string) {
 	for idx, cond := range m.Status.Conditions {
 		if cond.Type == condName {
 			m.Status.Conditions[idx].LastProbeTime = metav1.Now()
