@@ -145,10 +145,8 @@ Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parame
 <td>
 <ul style="columns: 3">
 {%- for moduleName in site.data.bundles.bundleModules[bundle] %}
-{%- assign isExcluded = site.data.exclude.module_names | where: "name", moduleName %}
-{%- if isExcluded.size > 0 %}{% continue %}{% endif %}
-<li>
-{{ moduleName }}</li>
+{%- if site.data.excludedModules contains moduleName %}{% continue %}{% endif %}
+<li>{{ moduleName }}</li>
 {%- endfor %}
 </ul>
 </td>
