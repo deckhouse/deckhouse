@@ -38,10 +38,6 @@ function get_data_device_secret() {
   fi
 }
 
-if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
-  exit 0
-fi
-
 if [ -f /var/lib/bashible/system-registry-data-device-installed ]; then
   exit 0
 fi
