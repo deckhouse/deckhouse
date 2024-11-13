@@ -18,4 +18,3 @@ config:
      allowFromPaths:
      - ~/go-pkg-cache
      - ~/.ssh/known_hosts
-     - /home/steam/.ssh

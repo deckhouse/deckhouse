@@ -47,8 +47,8 @@ git:
     - 'go.mod'
     - 'go.sum'
 mount:
-- fromPath: /home/steam/.ssh
-  to: /root/.ssh
+- fromPath: ~/.ssh/known_hosts
+  to: /root/.ssh/known_hosts
 shell:
   install:
   - cd /src
