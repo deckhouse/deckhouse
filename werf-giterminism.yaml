@@ -17,3 +17,5 @@ config:
      allowBuildDir: true
      allowFromPaths:
      - ~/go-pkg-cache
+     - ~/.ssh/known_hosts
+     - /home/steam/.ssh

@@ -46,12 +46,16 @@ git:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
+mount:
+- fromPath: /home/steam/.ssh
+  to: /root/.ssh
 shell:
   install:
   - cd /src
   - git clone --depth 1 -b openssl-{{ $opensslVersion }} {{ .SOURCE_REPO }}/openssl/openssl.git ./openssl
   - git clone --depth 1 -b v{{ $libcapNgVersion }} {{ .SOURCE_REPO }}/stevegrubb/libcap-ng.git ./libcap-ng
   - git clone --depth 1 -b v{{ $openvpnVersion }} {{ .SOURCE_REPO }}/OpenVPN/openvpn.git ./openvpn
+  - rm -r ./openssl/.git ./libcap-ng/.git ./openvpn/.git
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
