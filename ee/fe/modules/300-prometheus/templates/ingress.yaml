@@ -5,7 +5,7 @@ kind: Ingress
 metadata:
   name: prometheus-pp
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp" "prometheus" "pp")) | nindent 2 }}
   annotations:
     web.deckhouse.io/export-name: "prometheus"
     web.deckhouse.io/export-icon: "/public/img/prometheus.ico"
@@ -50,20 +50,4 @@ spec:
             name: prometheus-pp
             port:
               name: https
-  {{- if (include "helm_lib_ha_enabled" .) }}
-      - path: /prometheus-pp-main-0(/|$)(.*)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: prometheus-pp-main-0
-            port:
-              name: https
-      - path: /prometheus-pp-main-1(/|$)(.*)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: prometheus-pp-main-1
-            port:
-              name: https
-  {{- end }}
 {{- end }}
