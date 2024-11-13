@@ -37,7 +37,7 @@ var (
 	SSHBastionUser       = os.Getenv("USER")
 	SSHUser              = os.Getenv("USER")
 	SSHHosts             = make([]session.Host, 0)
-	sSHHostsRaw          = make([]string, 0)
+	sshHostsRaw          = make([]string, 0)
 	SSHPort              = ""
 	SSHExtraArgs         = ""
 
@@ -77,7 +77,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.Flag("ssh-host", "SSH destination hosts, can be specified multiple times").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_HOSTS")).
-		StringsVar(&sSHHostsRaw)
+		StringsVar(&sshHostsRaw)
 	cmd.Flag("ssh-port", "SSH destination port").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_PORT")).
@@ -98,8 +98,8 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		return nil
 	})
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
-		if len(sSHHostsRaw) > 0 {
-			for i, host := range sSHHostsRaw {
+		if len(sshHostsRaw) > 0 {
+			for i, host := range sshHostsRaw {
 				SSHHosts = append(SSHHosts, session.Host{Host: host, Name: strconv.Itoa(i)})
 			}
 		}

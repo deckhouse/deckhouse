@@ -58,6 +58,10 @@ func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, phase st
 		warnMsg = notPassedWarn
 	case userPassedHostsLen < replicas:
 		warnMsg = notEnthoughtWarn
+	// Happens only when we make destructive changes to the only master in the cluster and
+	// to avoid reporting a warning that the number of replicas does not match the number
+	// of servers accessed by ssh when the number of masters is reduced.
+	// 1 -> 3 -> update(0) -> (message) -> 1
 	case userPassedHostsLen == 3 && replicas == 1 && phase == "scale-to-single-master":
 		warnMsg = ""
 	case userPassedHostsLen > replicas:
