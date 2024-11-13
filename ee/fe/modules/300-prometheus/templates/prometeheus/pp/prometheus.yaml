@@ -9,7 +9,7 @@ memory: 25Mi
 {{- end }}
 
 {{- $configMap := lookup "v1" "ConfigMap" .Release.Namespace "test" }}
-{{- if not $configMap }}
+{{- if $configMap }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
