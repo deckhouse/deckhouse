@@ -59,7 +59,7 @@
   {%- if page.lang == 'ru' %}
   <td style="text-align: center; width: 170px;">
     {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == "true" %}
-      <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
+      <img src="{{ partially_supported_img_url }}" data-tippy-content="{{ site.data.i18n.common['note_ce_notguaranteed'][page.lang] }}">
     {% else %}
       <img src="{{ supported_img_url }}">
     {% endif %}

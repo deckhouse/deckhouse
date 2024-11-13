@@ -24,17 +24,15 @@ osDistributions:
     url: https://www.centos.org/download/
     note_content:
       ru: |
-        <b>CentOS Linux 8</b> не поддерживается разработчиками дистрибутива и с 31 мая 2024 года является EOL.<br>
-        <b>CentOS Linux 7</b> не поддерживается разработчиками дистрибутива и с 30 июня 2024 года является EOL.
+        <b>CentOS 7 и 8</b> более не поддерживаются разработчиками дистрибутива CentOS
       en: |
-        <b>CentOS Linux 8</b> is not supported by the developers of the distribution and has been EOL since May 31, 2024.<br>
-        <b>CentOS Linux 7</b> is not supported by the developers of the distribution and has been EOL since June 30, 2024.
+        <b>CentOS 7 and 8</b> are no longer supported by CentOS developers
   debian:
     name: Debian
     url: https://www.debian.org/download
     note_content:
-      ru: <b>Debian 10</b> не поддерживается разработчиками дистрибутива и c 30 июня 2024 является EOL.
-      en: <b>Debian 10</b> is not supported by the developers of the distribution and has been EOL since June 30, 2024.
+      ru: <b>Debian 10</b> более не поддерживается разработчиками дистрибутива Debian
+      en: <b>Debian 10</b> is no longer supported by Debian developers
   opensuse:
     name: openSUSE
     url: https://get.opensuse.org/
@@ -42,14 +40,14 @@ osDistributions:
     name: Rocky Linux
     url: https://rockylinux.org/download
     note_content:
-      ru: Для <b>Rocky 8</b> прекращена активная поддержка разработчиками дистрибутива (продолжается только поддержка безопасности) и c 31 мая 2024 дистрибутив является EOL.
-      en: For <b>Rocky 8</b>, active support by the distribution developers has been discontinued (only security support continues) and since May 31, 2024, the distribution is EOL.
+      ru: Для <b>Rocky Linux 8</b> прекращена активная поддержка разработчиками дистрибутива Rocky Linux (продолжается только поддержка безопасности)
+      en: Active support for <b>Rocky Linux 8</b> has been discontinued by Rocky Linux developers (there is only security support)
   ubuntu:
     name: Ubuntu
     url: https://ubuntu.com/download/server
     note_content:
-      ru: <b>Ubuntu 18.04</b> не поддерживается разработчиками дистрибутива и c 31 мая 2023 является EOL.
-      en: <b>Ubuntu 18.04</b> is not supported by the developers of the distribution and has been EOL since May 31, 2023.
+      ru: <b>Ubuntu 18.04</b> более не поддерживается разработчиками дистрибутива Ubuntu
+      en: <b>Ubuntu 18.04</b> is no longer supported by Ubuntu developers
   '_redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
@@ -61,7 +59,8 @@ osDistributions:
     ru_support: 'true'
     en_support: 'false'
     note_content:
-      ru: 'Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>).'
+      ru: |
+        Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
   '_mosos-arbat':
     name: 'МОС ОС'
     url: https://os.mos.ru/
