@@ -14,7 +14,7 @@ spec:
     tlsSkipVerify: true
     timeInterval: 30s
   secureJsonData:
-    httpHeaderValue1: bearer {{ $token }} 
+    httpHeaderValue1: Bearer {{ $token }} 
   type: prometheus
   url: https://prometheus-pp.d8-monitoring.svc.cluster.local:9090
 {{- end -}}
