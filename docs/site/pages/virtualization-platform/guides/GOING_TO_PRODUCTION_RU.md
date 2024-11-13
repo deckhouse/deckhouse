@@ -12,7 +12,7 @@ TODO: пофиксить все ссылки
 
 Выберите [канал обновлений](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-release-channels.html) и [режим обновлений](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html#parameters-releasechannel), который соответствует вашим ожиданиям. Чем стабильнее канал обновлений, тем позже до него доходит новая функциональность.
 
-При возможности применяйте разные каналы обновлений для различных кластеров. Для кластера разработки выбирайте менее стабильный канал обновлений по сравнению с тестовым или stage-кластером (pre-prod кластером).
+По возможности используйте разные каналы обновлений для кластеров. Для кластера разработки используйте менее стабильный канал обновлений, нежели для тестового или stage-кластера (pre-production-кластер).
 
 Мы рекомендуем использовать канал обновлений `Early Access` или `Stable` для production-кластеров. Если в production-окружении более одного кластера, предпочтительно использовать для них разные каналы обновлений. Например, `Early Access` для одного, а `Stable` — для другого. Если использовать разные каналы обновлений по каким-либо причинам невозможно, рекомендуется устанавливать разные окна обновлений.
 
@@ -38,10 +38,13 @@ TODO: пофиксить все ссылки
 
 {% alert %}
 Выделяйте от 4 CPU / 8 ГБ RAM на инфраструктурные узлы. Для мастер-узлов и узлов мониторинга используйте быстрые диски.
+Учтите, что при использовании программно определяемых хранилищ, на узлах потребуются дополнительные диски для хранения данных.
 {% endalert %}
 
 Рекомендуются следующие минимальные ресурсы для инфраструктурных узлов в зависимости от их роли в кластере:
 - **Мастер-узел** — 4 CPU, 8 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS);
+- **Frontend-узел** — 2 CPU, 4 ГБ RAM, 50 ГБ дискового пространства;
+- **Узел мониторинга** (для нагруженных кластеров) — 4 CPU, 8 ГБ RAM; 50 ГБ дискового пространства на быстром диске (400+ IOPS).
 - **Системный узел**:
   - 2 CPU, 4 ГБ RAM, 50 ГБ дискового пространства — если в кластере есть выделенные узлы мониторинга;
   - 4 CPU, 8 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS) — если в кластере нет выделенных узлов мониторинга.
@@ -50,7 +53,7 @@ TODO: пофиксить все ссылки
 Примерный расчет ресурсов, необходимых для кластера:
 - **Типовой кластер**: 3 мастер-узла, 2 frontend-узла, 2 системных узла. Такая конфигурация потребует **от 24 CPU и 48 ГБ RAM**, плюс быстрые диски с 400+ IOPS для мастер-узлов.
 - **Кластер с повышенной нагрузкой** (с выделенными узлами мониторинга): 3 мастер-узла, 2 frontend-узла, 2 системных узла, 2 узла мониторинга. Такая конфигурация потребует **от 28 CPU и 64 ГБ RAM**, плюс быстрые диски с 400+ IOPS для мастер-узлов и узлов мониторинга.
-- Для компонентов Deckhouse желательно выделить отдельный [storageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) на быстрых дисках.
+- Для компонентов платформы желательно выделить отдельный [storageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) на быстрых дисках.
 - Добавьте к этому worker-узлы с учетом характера полезной нагрузки.
 
 ## Особенности конфигурации
@@ -63,11 +66,46 @@ TODO: пофиксить все ссылки
 
 Всегда используйте три мастер-узла — такое количество обеспечит отказоустойчивость и позволит безопасно выполнять обновление мастер-узлов. В большем числе мастер-узлов нет необходимости, а два узла не обеспечат кворума.
 
-Конфигурация мастер-узлов для облачных кластеров настраивается в параметре [masterNodeGroup](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup).
-
 Может быть полезно:
-- [Как добавить мастер-узлы в облачном кластере...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/faq.html#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master)
 - [Работа со статическими узлами...](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/040-node-manager/#работа-со-статическими-узлами)
+
+### Frontend-узлы
+
+{% alert %}
+Выделите два или более frontend-узла.
+
+Используйте inlet `HostPort` с внешним балансировщиком.
+{% endalert %}
+
+Frontend-узлы балансируют входящий трафик. На них работают Ingress-контроллеры. У [NodeGroup](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup) frontend-узлов установлен label `node-role.deckhouse.io/frontend`. Читайте подробнее про [выделение узлов под определенный вид нагрузки...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки)
+
+Используйте более одного frontend-узла. Frontend-узлы должны выдерживать трафик при отказе как минимум одного frontend-узла.
+
+Например, если в кластере два frontend-узла, то каждый frontend-узел должен справляться со всей нагрузкой на кластер в случае, если второй выйдет из строя. Если в кластере три frontend-узла, то каждый frontend-узел должен выдерживать увеличение нагрузки как минимум в полтора раза.
+
+Выберите [тип inlet'а](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) (он определяет способ поступления трафика).
+
+{% alert level="warning" %}
+Inlet `HostWithFailover` подходит для кластеров с одним frontend-узлом. Он позволяет сократить время недоступности Ingress-контроллера при его обновлении. Такой тип inlet'а подойдет, например, для важных сред разработки, но **не рекомендуется для production**.
+{% endalert %}
+
+Алгоритм выбора inlet'а:
+
+![Алгоритм выбора inlet'а]({{ assets["guides/going_to_production/ingress-inlet-ru.svg"].digest_path }})
+
+### Узлы мониторинга
+
+{% alert %}
+Для нагруженных кластеров выделите два узла мониторинга с быстрыми дисками.
+{% endalert %}
+
+Узлы мониторинга служат для запуска Grafana, Prometheus и других компонентов мониторинга. У [NodeGroup](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup) узлов мониторинга установлен label `node-role.deckhouse.io/monitoring`.
+
+В нагруженных кластерах со множеством алертов и большими объемами метрик под мониторинг рекомендуется выделить отдельные узлы. Если этого не сделать, компоненты мониторинга будут размещены на [системных узлах](#системные-узлы).
+
+При выделении узлов под мониторинг важно, чтобы на них были быстрые диски. Для этого можно привязать `storageClass` на быстрых дисках ко всем компонентам Deckhouse (глобальный параметр [storageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)) или выделить отдельный `storageClass` только для компонентов мониторинга (параметры [storageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) и [longtermStorageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) модуля `prometheus`).
+
+Если кластер изначально создается с узлами, выделенными под определенный вид нагрузки (системные узлы, узлы под мониторинг и т. п.), то для модулей использующих тома постоянного хранилища (например, для модуля `prometheus`), рекомендуется явно указывать соответствующий nodeSelector в конфигурации модуля. Например, для модуля `prometheus` это параметр [nodeSelector](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-nodeselector).
 
 ### Системные узлы
 
@@ -75,11 +113,11 @@ TODO: пофиксить все ссылки
 Выделите два системных узла.
 {% endalert %}
 
-Системные узлы предназначены для запуска модулей Deckhouse. У [NodeGroup](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup) системных узлов установлен label `node-role.deckhouse.io/system`.
+Системные узлы предназначены для запуска модулей платформы. У [NodeGroup](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup) системных узлов установлен label `node-role.deckhouse.io/system`.
 
-Выделите два системных узла. В этом случае модули Deckhouse будут работать на них, не пересекаясь с пользовательскими приложениями кластера. Читайте подробнее про [выделение узлов под определенный вид нагрузки...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+Выделите два системных узла. В этом случае модули платформы будут работать на них, не пересекаясь с пользовательскими приложениями кластера. Читайте подробнее про [выделение узлов под определенный вид нагрузки...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
-Компонентам Deckhouse желательно выделить быстрые диски (глобальный параметр [storageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)).
+Компонентам платформы желательно выделить быстрые диски (глобальный параметр [storageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)).
 
 ## Уведомление о событиях мониторинга
 
@@ -87,7 +125,7 @@ TODO: пофиксить все ссылки
 Настройте отправку алертов через [внутренний](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#как-добавить-alertmanager) Alertmanager или подключите [внешний](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#как-добавить-внешний-дополнительный-alertmanager).
 {% endalert %}
 
-Мониторинг будет работать сразу после установки Deckhouse, однако для production этого недостаточно. Чтобы получать уведомления об инцидентах, настройте [встроенный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#как-добавить-alertmanager) в Deckhouse Alertmanager или [подключите свой](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#как-добавить-внешний-дополнительный-alertmanager) Alertmanager.
+Мониторинг будет работать сразу после установки платформы, однако для production этого недостаточно. Чтобы получать уведомления об инцидентах, настройте [встроенный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#как-добавить-alertmanager) в Deckhouse Alertmanager или [подключите свой](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#как-добавить-внешний-дополнительный-alertmanager) Alertmanager.
 
 С помощью custom resource [CustomAlertmanager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager) можно настроить отправку уведомлений на [электронную почту](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), в [Slack](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), в [Telegram](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/usage.html#отправка-алертов-в-telegram), через [webhook](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), а также другими способами.
 
