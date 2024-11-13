@@ -221,6 +221,7 @@
     </div>
   </header>
 </div>
+{%- unless site.mode == "module" %}
 {%- if page.lang == "ru" %}
   <div class="header header__product-menu">
     <div class="container">
@@ -234,7 +235,6 @@
         </svg>
         <span>Kubernetes Platform</span>
       </div>
-{%- unless site.mode == "module" %}
   {%- if page.lang == 'ru' %}
       <ul class="nav">
         {%- assign dkpMenuData = site.data.topnav-l2-products[page.lang] | where: "url", "/products/kubernetes-platform/" | first %}
@@ -244,7 +244,7 @@
         {%- endfor %}
       </ul>
   {%- endif %}
-{%- endunless %}
     </div>
   </div>
 {%- endif %}
+{%- endunless %}
