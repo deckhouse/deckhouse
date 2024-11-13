@@ -183,6 +183,7 @@
           {% endfor %}
         </ul>
       </div>
+    {%- unless site.mode == "module" %}
       <div class="header__right-box">
         {%- if page.lang == "ru" %}
           <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">Документация</a>
@@ -218,6 +219,7 @@
         {%- endif %}
           </a>
       </div>
+   {%- endunless %}
     </div>
   </header>
 </div>
