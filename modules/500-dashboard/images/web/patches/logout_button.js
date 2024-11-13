@@ -1,4 +1,3 @@
-
 function setupLogoutButton() {
   let flag = false;
 
