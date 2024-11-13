@@ -1,4 +1,8 @@
-
+---
+title: Подготовка DVP к production
+permalink: ru/virtualization-platform/guides/going-to-production.html
+description: Рекомендации по подготовке Deckhouse Virtualization Platform для работы в продуктивной среде.
+---
 
 TODO: пофиксить все ссылки
 

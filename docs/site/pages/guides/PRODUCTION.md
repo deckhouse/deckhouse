@@ -1,6 +1,6 @@
 ---
 title: Going to Production
-permalink: en/virtualization-platform/guides/going-to-production.html
+permalink: en/guides/production.html
 description: Recommendations for preparing Deckhouse Kubernetes Platform cluster for production environment.
 ---
 
