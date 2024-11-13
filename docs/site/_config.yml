@@ -187,10 +187,5 @@ defaults:
       type: "pages"
     values:
       featureStatus: experimental
-  - scope:
-      path: "*/160-multitenancy-manager"
-      type: "pages"
-    values:
-      featureStatus: experimental
 timezone: Europe/Moscow
 
