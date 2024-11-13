@@ -41,6 +41,7 @@
  - **[go_lib]** Ability to watch info about deckhouse release and module releases in the registry from cli. [#10046](https://github.com/deckhouse/deckhouse/pull/10046)
  - **[metallb]** Added pre-upgrade compatibility check for metallb configuration. [#10289](https://github.com/deckhouse/deckhouse/pull/10289)
  - **[multitenancy-manager]** Add projects render validation. [#9607](https://github.com/deckhouse/deckhouse/pull/9607)
+ - **[operator-trivy]** Add a setting for downloading images from insecure registries. [#10607](https://github.com/deckhouse/deckhouse/pull/10607)
  - **[operator-trivy]** Add support for insecure registries. [#10124](https://github.com/deckhouse/deckhouse/pull/10124)
  - **[operator-trivy]** Bump operator-trivy version to `0.22.0`. [#10045](https://github.com/deckhouse/deckhouse/pull/10045)
  - **[static-routing-manager]** Add the ability to create routes with "via dev" and without specifying a gateway IP. [#10277](https://github.com/deckhouse/deckhouse/pull/10277)
@@ -52,6 +53,7 @@
 ## Fixes
 
 
+ - **[candi]** Delete quotes for `primary_mac` value in bootstrap-network script. [#10572](https://github.com/deckhouse/deckhouse/pull/10572)
  - **[candi]** Check for transparent hugepages before trying to disable them in sysctl-tuner [#10294](https://github.com/deckhouse/deckhouse/pull/10294)
  - **[candi]** Add RSA in tls-cipher-suites apiserver for CIS Benchmark 1.6 [#10238](https://github.com/deckhouse/deckhouse/pull/10238)
  - **[candi]** candi/version_map.yml updated to use the latest changes in yandex-cloud-controller-manager [#9855](https://github.com/deckhouse/deckhouse/pull/9855)
@@ -92,6 +94,7 @@
  - **[go_lib]** Clean up module documentation when deleting module [#9985](https://github.com/deckhouse/deckhouse/pull/9985)
  - **[go_lib]** add probe to the cloud-data reconciler [#9915](https://github.com/deckhouse/deckhouse/pull/9915)
  - **[go_lib]** cloud-data-discoverer continues its operation despite temporary issues within the cluster. [#9570](https://github.com/deckhouse/deckhouse/pull/9570)
+ - **[ingress-nginx]** Fix ingress validation rule for multiply ingress-controllers. [#10604](https://github.com/deckhouse/deckhouse/pull/10604)
  - **[ingress-nginx]** Add check for existing label. [#10449](https://github.com/deckhouse/deckhouse/pull/10449)
  - **[istio]** SA token path in api-proxy container fixed. [#10454](https://github.com/deckhouse/deckhouse/pull/10454)
  - **[kube-dns]** Seamless change of clusterDomain. [#9739](https://github.com/deckhouse/deckhouse/pull/9739)
@@ -109,6 +112,7 @@
  - **[prometheus]** Fix stuck GrafanaDashboardDeprecation alerts [#10024](https://github.com/deckhouse/deckhouse/pull/10024)
  - **[user-authn]** Add a patch to fix the problem with offline sessions that are not created/updated properly, which causes random refresh problems. [#10486](https://github.com/deckhouse/deckhouse/pull/10486)
  - **[user-authn]** Trim spaces from email field on the login form. [#10057](https://github.com/deckhouse/deckhouse/pull/10057)
+ - **[user-authz]** Get rid of manage admin and user roles, and fix the rbacv2 hook. [#10504](https://github.com/deckhouse/deckhouse/pull/10504)
 
 ## Chore
 
@@ -157,6 +161,7 @@
     The pods will be restarted.
  - **[openvpn]** changed the images to distroless [#9981](https://github.com/deckhouse/deckhouse/pull/9981)
     Updating openvpn to 2.6.*
+ - **[operator-trivy]** Add a setting for downloading images from insecure registries. [#10559](https://github.com/deckhouse/deckhouse/pull/10559)
  - **[prometheus]** Update information about migration Prometheus and Upmeter pods with the local storage to other nodes. [#10194](https://github.com/deckhouse/deckhouse/pull/10194)
  - **[prometheus]** marked the old api *.deckhouse.io as deprecated [#10021](https://github.com/deckhouse/deckhouse/pull/10021)
  - **[prometheus]** move externalLabels to remoteWrite section [#9752](https://github.com/deckhouse/deckhouse/pull/9752)
