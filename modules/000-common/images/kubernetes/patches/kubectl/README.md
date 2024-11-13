@@ -1,4 +1,4 @@
-### drain-kruise-daemonset.patch
+### drain-kruise-DaemonSet.patch
 
 This version is patched to ignore kruise pods of DaemonSet.
 
