@@ -14,4 +14,4 @@ spec:
     protocol: TCP
     targetPort: https
   selector:
-    prometheus: pp-main
+    prometheus: pp
