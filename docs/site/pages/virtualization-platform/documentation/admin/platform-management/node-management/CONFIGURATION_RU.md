@@ -7,25 +7,32 @@ lang: ru
 ## Пользовательские настройки на узлах
 
 Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](cr.html#nodegroupconfiguration). Ресурс позволяет выполнять на узлах bash-скрипты, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
+
 - Установка и настройки дополнительных пакетов ОС.
 
   Примеры:
-  - [установка kubectl-плагина](configuration-examples.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
-  - [настройка containerd с поддержкой Nvidia GPU](advanced.html#как-использовать-containerd-с-поддержкой-nvidia-gpu).
+  - [установка kubectl-плагина](configuration-containerd.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
 
 - Обновление ядра ОС на конкретную версию.
 
   Примеры:
-  - [обновление ядра Debian](configuration-examples.html#для-дистрибутивов-основанных-на-debian);
-  - [обновление ядра CentOS](configuration-examples.html#для-дистрибутивов-основанных-на-centos).
+  - [обновление ядра Debian](configuration-os.html#для-дистрибутивов-основанных-на-debian);
+  - [обновление ядра CentOS](configuration-os.html#для-дистрибутивов-основанных-на-centos).
 
 - Изменение параметров ОС.
 
   Примеры:
-  - [настройка параметра sysctl](configuration-examples.html#задание-параметра-sysctl);
-  - [добавление корневого сертификата](configuration-examples.html#добавление-корневого-сертификата-в-хост).
+  - [настройка параметра sysctl](configuration-os.html#задание-параметра-sysctl);
+  - [добавление корневого сертификата](configuration-os.html#добавление-registry-с-авторизацией).
 
 - Сбор информации на узле и выполнение других подобных действий.
+
+- Настройка containerd.
+
+  Примеры:
+  - [настройка метрик](configure-containerd.html#дополнительные-настройки-containerd);
+  - [добавление приватного registry](configure-containerd.html#добавление-дополнительного-registry);
+
 
 ## Настройки NodeGroupConfiguration
 
@@ -164,47 +171,3 @@ rm /var/lib/bashible/configuration_checksum
 
 1. Скрипты в deckhouse выполняются раз в 4 часа или на основании внешних триггеров. Поэтому важно писать скрипты таким образом, чтобы они производили проверку необходимости своих изменений в системе перед выполнением действий, а не производили изменения каждый раз при запуске.
 2. При выборе [приоритета](cr.html#nodegroupconfiguration-v1alpha1-spec-weight) пользовательских скриптов важно учитывать [встроенные скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/node-group) которые производят различные действия в т.ч. установку и настройку сервисов. Например, если в скрипте планируется произвести перезапуск сервиса, а сервис устанавливается встроенным скриптом с приоритетом N, то приоритет пользовательского скрипта должен быть как минимум N+1, иначе, при развертывании нового узла пользовательский скрипт выйдет с ошибкой.
-
-Полезные особенности некоторых скриптов:
-
-* [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/node-group/032_configure_containerd.sh.tpl) - производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также **перезапуск** сервиса. Следует учитывать что директория `/etc/containerd/conf.d/` не создается автоматически, а также что создание файлов в этой директории следует производить в скриптах с приоритетом менее `32`
-
-## Примеры `NodeGroupConfiguration`
-
-### Установка плагина cert-manager для kubectl на master-узлах
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: add-cert-manager-plugin.sh
-spec:
-  weight: 100
-  bundles:
-  - "*"
-  nodeGroups:
-  - "master"
-  content: |
-    if [ -x /usr/local/bin/kubectl-cert_manager ]; then
-      exit 0
-    fi
-    curl -L https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/kubectl-cert_manager-linux-amd64.tar.gz -o - | tar -zxvf - kubectl-cert_manager
-    mv kubectl-cert_manager /usr/local/bin
-```
-
-### Задание параметра sysctl
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: sysctl-tune.sh
-spec:
-  weight: 100
-  bundles:
-  - "*"
-  nodeGroups:
-  - "*"
-  content: |
-    sysctl -w vm.max_map_count=262144
-```

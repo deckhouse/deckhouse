@@ -296,25 +296,10 @@ status:
 
 Подробности [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
 
-## Как выделить узлы под системные компоненты?
-
-### Фронтенд
-
-Для **Ingress**-контроллеров используйте `NodeGroup` со следующей конфигурацией:
-
-```yaml
-nodeTemplate:
-  labels:
-    node-role.deckhouse.io/frontend: ""
-  taints:
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      value: frontend
-```
 
 ### Системные
 
-`NodeGroup` для компонентов подсистем Deckhouse будут с такими параметрами:
+Компоненты Deckhouse используют лейблы и тэйнты для назначения узлов. Системные компоненты могут быть назначены на отдельные узлы с помощью такой `NodeGroup`:
 
 ```yaml
 nodeTemplate:
@@ -326,7 +311,49 @@ nodeTemplate:
       value: system
 ```
 
+TODO ссылка про подробности куда-то в dkp? Или в этой доке сделать раздел?
+
 ### Компоненты controler plane виртуализации
 
-TODO
-Мы на system выезжаем?
+TODO Надо какую-то группу придумать для control plane компонентов виртуализации. Или они просто на system выезжают?
+
+
+## Как выделить узлы под виртуальные машины?
+
+Чтобы виртуальные машины запускались на узлах определённой группы, помимо создания самой группы, нужен ресурс VirtualMachineClass с nodeSelector.
+
+Например, для группы vm-workers это может выглядеть так:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: vm-worker
+spec:
+  nodeType: Static
+```
+
+VirtualMachineClass с nodeSelector для группы vm-worker:
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineClass
+metadata:
+  name: vm-worker
+spec:
+  nodeSelector:
+  matchExpressions:
+    - key: node.deckhouse.io/group
+      operator: In
+      values:
+        - vm-worker
+```
+
+Фрагмент манифеста виртуальной машины, которая будет запускаться на узлах группы vm-worker:
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineClass
+metadata: ...
+spec:
+  virtualMachineClassName: vm-workers
+```
+

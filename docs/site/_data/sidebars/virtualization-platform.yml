@@ -74,13 +74,13 @@ entries:
                     ru: Настройка узлов
                   url: /virtualization-platform/documentation/admin/platform-management/node-management/configuration.html
                 - title:
-                    en: Configuration examples
-                    ru: Примеры конфигураций
-                  url: /virtualization-platform/documentation/admin/platform-management/node-management/examples.html
+                    en: OS configuration
+                    ru: Настройка OS
+                  url: /virtualization-platform/documentation/admin/platform-management/node-management/configure-os.html
                 - title:
-                    en: Advanced configuration
-                    ru: Расширенные настройки
-                  url: /virtualization-platform/documentation/admin/platform-management/node-management/advanced.html
+                    en: Containerd configuration
+                    ru: Настройка containerd
+                  url: /virtualization-platform/documentation/admin/platform-management/node-management/configure-containerd.html
             - title:
                 en: Control plane settings
                 ru: Настройки плоскости управления
