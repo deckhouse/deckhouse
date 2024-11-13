@@ -34,7 +34,7 @@ ansible:
       shell: |
         export MODULES_DIR=/comparison
         bash ./modules_list.sh 1>_data/modules.yaml
-        cat modules_menu_skip  | cut -d\- -f 2-  | jq -nRc '[inputs] | map({"name":.}) | {module_names:.}' > _data/exclude.json
+        cat modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
       args:
         executable: /bin/bash
         chdir: /srv/jekyll-data/documentation/
