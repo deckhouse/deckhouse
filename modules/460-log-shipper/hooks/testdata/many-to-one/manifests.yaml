@@ -16,6 +16,8 @@ metadata:
   name: test-kubernetes
 spec:
   type: KubernetesPods
+  kubernetesPods:
+    keepDeletedFilesOpenedFor: 10h
   destinationRefs:
     - test-vector-dest
 ---
