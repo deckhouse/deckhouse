@@ -4,7 +4,8 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-Для управления томами на основе NFS можно использовать модуль csi-nfs, позводяющий создавать `StorageClass` через создание пользовательских ресурсов `NFSStorageClass`.
+Для управления томами на основе протокола NFS (Network File System) можно использовать модуль csi-nfs,
+позводяющий создавать `StorageClass` через создание пользовательских ресурсов `NFSStorageClass`.
 
 ## Включение модуля
 

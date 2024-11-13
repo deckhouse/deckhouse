@@ -7,7 +7,7 @@ lang: ru
 ## TODO: Описать процесс создания снапшота (не для настроек CSI поддерживается создание снапшотов).
 ## TODO: Тут описан внутренний модуль ceph-csi. Есть еще и внешний, позже сравню их, вероятно еще что-то будет принесено оттуда.
 
-Чтобы создать StorageClass’ы на базе RBD или файловой системы Ceph, можно использовать модуль ceph-csi, 
+Чтобы создать StorageClass’ы на базе RBD (RADOS Block Device) или файловой системы Ceph, можно использовать модуль ceph-csi, 
 который позволяет настроить подключение к одному или нескольким Ceph-кластерам.
 
 Чтобы включить модуль ceph-csi, примените следующий ресурс `ModuleConfig`:
@@ -62,8 +62,8 @@ spec:
         # Название пула, в котором будут создаваться RBD-образы.
         pool: kubernetes-rbd
         # Политика возврата для Persistent Volume.
-        # По умолчанию: "Retain"
-        # Допустимые значения: "Delete", "Retain"
+        # По умолчанию: "Retain".
+        # Допустимые значения: "Delete", "Retain".
         # [Подробнее...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
         reclaimPolicy: Delete
   cephfs:
@@ -81,8 +81,8 @@ spec:
         # Название пула, в котором будут создаваться RBD-образы.
         pool: cephfs_data
         # Политика возврата для Persistent Volume.
-        # По умолчанию: "Retain"
-        # Допустимые значения: "Delete", "Retain"
+        # По умолчанию: "Retain".
+        # Допустимые значения: "Delete", "Retain".
         # [Подробнее...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
         reclaimPolicy: Delete
 EOF
