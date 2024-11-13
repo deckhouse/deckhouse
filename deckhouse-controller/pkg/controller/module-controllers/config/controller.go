@@ -44,8 +44,8 @@ import (
 const (
 	controllerName = "d8-module-config-controller"
 
-	// if a module is disabled more than two weeks, it will be uninstalled at next deckhouse restart
-	deleteReleasesAfter = 120 * time.Hour
+	// if a module is disabled more than three days, it will be uninstalled at next deckhouse restart
+	deleteReleasesAfter = 72 * time.Hour
 
 	maxConcurrentReconciles = 3
 

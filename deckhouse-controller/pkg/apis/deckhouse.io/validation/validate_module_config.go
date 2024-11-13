@@ -145,7 +145,7 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 		}
 
 		if cfg.Spec.Source != "" && !slices.Contains(module.Properties.AvailableSources, cfg.Spec.Source) {
-			return rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module", cfg.Spec.Source, cfg.Name))
+			return rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, module.Properties.AvailableSources))
 		}
 
 		var warning string

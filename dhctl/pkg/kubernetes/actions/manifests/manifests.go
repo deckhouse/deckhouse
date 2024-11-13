@@ -316,6 +316,11 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 	}
 
+	modulesDirs := []string{
+		"/deckhouse/modules",
+		"/deckhouse/downloaded/modules",
+	}
+
 	deckhouseContainerEnv := []apiv1.EnvVar{
 		{
 			Name: "DECKHOUSE_POD",
@@ -393,33 +398,25 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Name:  "ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS",
 			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled",
 		},
+		{
+			Name:  "DOWNLOADED_MODULES_DIR",
+			Value: modulesDirs[1],
+		},
+		{
+			Name:  "EXTERNAL_MODULES_DIR",
+			Value: modulesDirs[1],
+		},
+		{
+			Name:  "MODULES_DIR",
+			Value: strings.Join(modulesDirs, addonOpUtils.PathsSeparator),
+		},
 	}
 
 	// Deployment composition
 	deckhouseContainer.Env = deckhouseContainerEnv
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
-	deckhouseDeployment.Spec.Template = deckhousePodTemplate
-
-	modulesDirs := []string{
-		"/deckhouse/modules",
-	}
-
-	const downloadedModulesDir = "/deckhouse/downloaded/modules"
-	modulesDirs = append(modulesDirs, downloadedModulesDir)
 	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
-	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
-		Name:  "DOWNLOADED_MODULES_DIR",
-		Value: downloadedModulesDir,
-	})
-	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
-		Name:  "EXTERNAL_MODULES_DIR",
-		Value: downloadedModulesDir,
-	})
-
-	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
-		Name:  "MODULES_DIR",
-		Value: strings.Join(modulesDirs, addonOpUtils.PathsSeparator),
-	})
+	deckhouseDeployment.Spec.Template = deckhousePodTemplate
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
 }
