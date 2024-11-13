@@ -144,9 +144,8 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 
 	if len(endpointsList) != 0 {
 		// Set embedded registry endpoints
-		input.Logger.Infof("Found embedded registry endpoints: %v", endpointsList)
+		input.Logger.Info("Found embedded registry endpoints: %v", endpointsList)
 		input.Values.Set("nodeManager.internal.systemRegistry.addresses", endpointsList) // TODO systemRegistry to embeddedRegistry here and in code below
-
 	} else {
 		// If endpoints are not present, remove them from values
 		input.Logger.Warn("Embedded registry endpoints not found")
@@ -200,7 +199,7 @@ func handleEmbeddedRegistryData(input *go_hook.HookInput) error {
 	} else {
 		// Set embedded registry CA value
 		caCert := caCertSnap[0].(string)
-		input.Logger.Infof("found embedded registry CA")
+		input.Logger.Info("found embedded registry CA")
 		input.Values.Set("nodeManager.internal.systemRegistry.registryCA", caCert)
 	}
 
