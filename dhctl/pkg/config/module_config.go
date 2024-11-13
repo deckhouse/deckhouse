@@ -130,6 +130,7 @@ func CheckOrSetupSystemRegistryModuleConfig(cfg *DeckhouseInstaller) error {
 				"ca":          modeSpecificFields.UpstreamRegistryData.CA,
 				"user":        user,
 				"password":    password,
+				"ttl":         modeSpecificFields.TTL.String(),
 			},
 		}
 	case DetachedModeRegistryData:

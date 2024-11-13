@@ -211,6 +211,15 @@ apiVersions:
               <<: *directProperties
               storageMode:
                 <<: *storageMode
+              ttl:
+                type: string
+                description: |
+                  TTL specifies the expiration time for cached content, after which it will be automatically cleaned up.
+                  Default: If not set, the TTL defaults to 7 days (168 hours).
+                  Persistent Cache: If set to 0, the cache will never expire.
+                x-example:
+                  - "168h"
+                default: 168h
         oneOf:
           - required: [mode]
             properties:

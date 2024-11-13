@@ -167,7 +167,7 @@ proxy:
   password: "$UPSTREAM_REGISTRY_PASSWORD"
   remotepathonly: "{{ .registry.upstreamRegistry.path }}"
   localpathalias: "{{ .registry.path }}"
-  ttl: 72h
+  ttl: "{{ .registry.ttl }}"
 {{- end }}
 auth:
   token:

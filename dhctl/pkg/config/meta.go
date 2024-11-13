@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
@@ -79,6 +80,7 @@ type ProxyModeRegistryData struct {
 	UpstreamRegistryData   RegistryData       `json:"-"`
 	InternalRegistryAccess RegistryAccessData `json:"-"`
 	RegistryStorageMode    string             `json:"-"`
+	TTL                    time.Duration      `json:"-"`
 }
 
 type DetachedModeRegistryData struct {
@@ -318,6 +320,7 @@ func (m *MetaConfig) prepareDataFromInitClusterConfig() error {
 					DockerCfg: properties.DockerCfg,
 				},
 				RegistryStorageMode: properties.StorageMode,
+				TTL:                 properties.TTL,
 			},
 		}
 	case "Detached":
@@ -829,6 +832,7 @@ func (rData ProxyModeRegistryData) DeepCopy() ProxyModeRegistryData {
 		UpstreamRegistryData:   rData.UpstreamRegistryData,
 		InternalRegistryAccess: rData.InternalRegistryAccess,
 		RegistryStorageMode:    rData.RegistryStorageMode,
+		TTL:                    rData.TTL,
 	}
 }
 
@@ -955,6 +959,7 @@ func (r Registry) ConvertToMap() (map[string]interface{}, error) {
 		mapData["registryStorageMode"] = modeSpecificFields.RegistryStorageMode
 		mapData["internalRegistryAccess"] = modeSpecificFields.InternalRegistryAccess.ConvertToMap()
 		mapData["upstreamRegistry"], err = modeSpecificFields.UpstreamRegistryData.ConvertToMap()
+		mapData["ttl"] = modeSpecificFields.TTL.String()
 		if err != nil {
 			return nil, err
 		}

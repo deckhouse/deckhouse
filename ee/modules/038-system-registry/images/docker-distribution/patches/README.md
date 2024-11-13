@@ -14,7 +14,6 @@ proxy:
   localpathalias: "system/deckhouse"
   username: "..."
   password: "..."
-  ttl: 72h
 ```
 Allows you to specify the allowed path to the registry, as well as replace the path for accessing the caching (local) registry
 
@@ -31,3 +30,19 @@ Adds logic for working with `/scheduler-state.json` file:
 - If the mode is not proxy, the file is deleted;
 
 It is necessary to switch from `Detached` to `Proxy` registry mode.
+
+
+### 003-ttl-option-for-proxy-mode.patch
+
+Added the `ttl` parameter for proxy mode operation.
+
+- **TTL**: Specifies the expiry time for cached content, which will be automatically cleaned up upon expiration. 
+  - If not set, it defaults to `7 * 24` hours.
+  - If set to zero, the cache will never expire.
+
+Example:
+```yaml
+proxy:
+  ...
+  ttl: 72h
+```

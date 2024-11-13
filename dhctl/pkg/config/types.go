@@ -14,7 +14,10 @@
 
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 const (
 	CloudClusterType  = "Cloud"
@@ -111,7 +114,8 @@ type RegistryDirectModeProperties struct {
 
 type RegistryProxyModeProperties struct {
 	RegistryDirectModeProperties
-	StorageMode string `json:"storageMode,omitempty"`
+	StorageMode string        `json:"storageMode,omitempty"`
+	TTL         time.Duration `json:"ttl,omitempty"`
 }
 
 type RegistryDetachedModeProperties struct {
