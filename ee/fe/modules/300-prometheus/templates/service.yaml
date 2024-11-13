@@ -14,5 +14,4 @@ spec:
     protocol: TCP
     targetPort: https
   selector:
-    prometheus: pp
-    app.kubernetes.io/name: prometheus-pp
+    prometheus: pp-main

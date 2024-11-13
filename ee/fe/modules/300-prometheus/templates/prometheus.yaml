@@ -143,14 +143,6 @@ spec:
               app.kubernetes.io/name: prometheus
               prometheus: longterm
           topologyKey: kubernetes.io/hostname
-{{- if (include "helm_lib_ha_enabled" .) }}
-      requiredDuringSchedulingIgnoredDuringExecution:
-      - labelSelector:
-          matchLabels:
-            app.kubernetes.io/name: prometheus
-            prometheus: main
-        topologyKey: kubernetes.io/hostname
-{{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
   externalLabels:
