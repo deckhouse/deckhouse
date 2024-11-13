@@ -1,0 +1,6 @@
+global:
+  modules:
+    publicDomainTemplate: ""
+    https:
+      mode: Disabled
+  deckhouseVersion: v1
