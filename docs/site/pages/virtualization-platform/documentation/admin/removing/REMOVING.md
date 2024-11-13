@@ -7,10 +7,6 @@ To delete a cluster, several steps need to be followed:
 
 1. Remove all additional nodes from the cluster:
 
-   TODO: решить удаляем или приносим кусок инструкции
-
-   > **Attention!** If there are LINSTOR/DRBD storage pools on the node being cleaned, make sure to migrate resources off the node and delete the LINSTOR/DRBD node, following [the instructions](/modules/sds-replicated-volume/stable/faq.html#how-to-migrate-resources-off-a-node).
-
    1.1. Remove the node from the Kubernetes cluster:
    ```shell
    d8 k drain <node> --ignore-daemonsets --delete-local-data
