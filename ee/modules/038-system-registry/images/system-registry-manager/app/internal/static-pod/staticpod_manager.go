@@ -9,10 +9,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/client-go/kubernetes"
 	"net/http"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sync"
+
+	"k8s.io/client-go/kubernetes"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (

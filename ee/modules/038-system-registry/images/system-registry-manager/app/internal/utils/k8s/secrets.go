@@ -9,15 +9,16 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	"math/big"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"golang.org/x/crypto/bcrypt"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type NodeSecretData struct {

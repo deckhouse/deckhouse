@@ -7,10 +7,12 @@ package registry_controller
 
 import (
 	"context"
-	"embeded-registry-manager/internal/utils/k8s"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"embeded-registry-manager/internal/utils/k8s"
 )
 
 func (r *RegistryReconciler) handleRegistryCaPKI(ctx context.Context, req ctrl.Request, secret *corev1.Secret) error {

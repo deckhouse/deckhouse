@@ -7,16 +7,18 @@ package registry_controller
 
 import (
 	"context"
-	"embeded-registry-manager/internal/utils/k8s"
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
+
+	"embeded-registry-manager/internal/utils/k8s"
 )
 
 func (r *RegistryReconciler) handleNodeAdd(ctx context.Context, mgr ctrl.Manager, node *corev1.Node) {

@@ -6,13 +6,14 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package k8s
 
 import (
+	"time"
+
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/cloudflare/cfssl/helpers"
 	"github.com/cloudflare/cfssl/initca"
 	cfssllog "github.com/cloudflare/cfssl/log"
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
-	"time"
 )
 
 const (

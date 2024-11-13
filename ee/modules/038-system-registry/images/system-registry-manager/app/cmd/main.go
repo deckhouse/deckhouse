@@ -7,28 +7,25 @@ package main
 
 import (
 	"context"
-	"embeded-registry-manager/internal/controllers/registry_controller"
-	staticpodmanager "embeded-registry-manager/internal/static-pod"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
-
-	"os"
 	"time"
-
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	httpclient "embeded-registry-manager/internal/utils/http_client"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	"embeded-registry-manager/internal/controllers/registry_controller"
+	staticpodmanager "embeded-registry-manager/internal/static-pod"
+	httpclient "embeded-registry-manager/internal/utils/http_client"
 )
 
 type managerStatus struct {

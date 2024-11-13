@@ -7,11 +7,13 @@ package registry_controller
 
 import (
 	"context"
-	"embeded-registry-manager/internal/utils/k8s"
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"embeded-registry-manager/internal/utils/k8s"
 )
 
 func (r *RegistryReconciler) handleRegistryUser(ctx context.Context, req ctrl.Request, secretName string, user *k8s.RegistryUser, secret *corev1.Secret) (bool, error) {

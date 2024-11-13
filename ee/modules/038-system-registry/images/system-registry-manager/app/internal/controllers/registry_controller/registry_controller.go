@@ -7,10 +7,12 @@ package registry_controller
 
 import (
 	"context"
-	staticpod "embeded-registry-manager/internal/static-pod"
-	httpclient "embeded-registry-manager/internal/utils/http_client"
-	"embeded-registry-manager/internal/utils/k8s"
 	"fmt"
+	"os"
+	"regexp"
+	"strings"
+	"sync"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -18,13 +20,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"os"
-	"regexp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"strings"
-	"sync"
+
+	staticpod "embeded-registry-manager/internal/static-pod"
+	httpclient "embeded-registry-manager/internal/utils/http_client"
+	"embeded-registry-manager/internal/utils/k8s"
 )
 
 type ModuleConfig struct {

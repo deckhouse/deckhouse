@@ -7,16 +7,18 @@ package registry_controller
 
 import (
 	"context"
-	staticpod "embeded-registry-manager/internal/static-pod"
-	"embeded-registry-manager/internal/utils/k8s"
 	"errors"
 	"fmt"
+	"net/http"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	staticpod "embeded-registry-manager/internal/static-pod"
+	"embeded-registry-manager/internal/utils/k8s"
 )
 
 var ErrNodeNotFound = errors.New("node not found in masterNodes")
