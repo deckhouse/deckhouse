@@ -1,0 +1,20 @@
+candi:
+  fixes:
+    - summary: Delete quotes for `primary_mac` value in bootstrap-network script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10572
+ingress-nginx:
+  fixes:
+    - summary: Fix ingress validation rule for multiply ingress-controllers.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10604
+operator-trivy:
+  features:
+    - summary: Add a setting for downloading images from insecure registries.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10607
+  fixes:
+    - summary: Update trivy tag.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10615
+user-authz:
+  fixes:
+    - summary: Get rid of manage admin and user roles, and fix the rbacv2 hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10504
+
