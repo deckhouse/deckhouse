@@ -180,10 +180,10 @@ require (
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	helm.sh/helm/v3 v3.14.2 // indirect
 	honnef.co/go/tools v0.1.4 // indirect
-	k8s.io/api v0.29.8 // indirect
+	k8s.io/api v0.29.10 // indirect
 	k8s.io/apiextensions-apiserver v0.29.0 // indirect
-	k8s.io/apimachinery v0.29.8 // indirect
-	k8s.io/client-go v0.29.8 // indirect
+	k8s.io/apimachinery v0.29.10 // indirect
+	k8s.io/client-go v0.29.10 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	mvdan.cc/gofumpt v0.1.1 // indirect
