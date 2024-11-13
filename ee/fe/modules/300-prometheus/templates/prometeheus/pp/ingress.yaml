@@ -1,6 +1,6 @@
+{{- if .Values.prometheus.internal.prometheusPlusPlus.configMapFound }}
 {{- if .Values.global.modules.publicDomainTemplate }}
-{{- $configMap := lookup "v1" "ConfigMap" .Release.Namespace "test" }}
-{{- if $configMap }}---
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

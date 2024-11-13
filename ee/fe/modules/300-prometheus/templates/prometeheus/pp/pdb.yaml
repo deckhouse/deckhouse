@@ -1,5 +1,4 @@
-{{- $configMap := lookup "v1" "ConfigMap" .Release.Namespace "test" }}
-{{- if $configMap }}
+{{- if .Values.prometheus.internal.prometheusPlusPlus.configMapFound }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

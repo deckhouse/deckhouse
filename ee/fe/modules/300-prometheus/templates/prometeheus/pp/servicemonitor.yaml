@@ -1,5 +1,4 @@
-{{- $configMap := lookup "v1" "ConfigMap" .Release.Namespace "test" }}
-{{- if $configMap }}
+{{- if .Values.prometheus.internal.prometheusPlusPlus.configMapFound }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

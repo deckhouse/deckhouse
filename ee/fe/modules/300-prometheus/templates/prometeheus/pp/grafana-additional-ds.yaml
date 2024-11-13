@@ -1,8 +1,5 @@
-{{- $configMap := lookup "v1" "ConfigMap" .Release.Namespace "test" }}
-{{- if $configMap }}
+{{- if .Values.prometheus.internal.prometheusPlusPlus.configMapFound }}
 ---
-{{- $token := (lookup "v1" "Secret" "d8-monitoring" "prometheus-token").data.token | b64dec -}}
-{{- if $token -}}
 apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
 metadata:
@@ -18,5 +15,4 @@ spec:
     httpHeaderValue1: Bearer {{ $token }} 
   type: prometheus
   url: https://prometheus-pp.d8-monitoring.svc.cluster.local:9090
-{{- end -}}
 {{- end }}
