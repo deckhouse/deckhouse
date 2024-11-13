@@ -234,7 +234,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if r.embeddedRegistry.mc.Settings.Mode == "Detached" {
 		firstNode := k8s.GetFirstCreatedNodeForSync(r.embeddedRegistry.masterNodes)
 		nodesToSync = []k8s.MasterNode{*firstNode}
-
+		logger.Info("Detached mode, syncing registry only on the first created master node", "node", firstNode.Name)
 	} else {
 		for _, node := range r.embeddedRegistry.masterNodes {
 			nodesToSync = append(nodesToSync, node)
