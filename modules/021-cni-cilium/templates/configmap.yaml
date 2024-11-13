@@ -55,7 +55,7 @@ data:
   endpoint-interface-mac: "f6:e1:74:94:b8:1a"
   {{- end }}
 
-  {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
+  {{- if eq .Values.cniCilium.masqueradeMode "BPF" }}
   enable-bpf-masquerade: "true"
   enable-ipv4-egress-gateway: "true"
     {{- if has .Values.cniCilium.internal.mode (list "Direct" "DirectWithNodeRoutes") }}

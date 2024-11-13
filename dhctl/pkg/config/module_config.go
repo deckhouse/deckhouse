@@ -17,10 +17,15 @@ limitations under the License.
 package config
 
 import (
+	"strings"
+
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 const (
@@ -92,4 +97,102 @@ func buildModuleConfig(
 	}
 
 	return mc, nil
+}
+
+func CheckOrSetupArbitaryCNIModuleConfig(cfg *DeckhouseInstaller) error {
+	for _, moduleConfig := range cfg.ModuleConfigs {
+		switch moduleConfig.GetName() {
+		case "cni-cilium", "cni-flannel", "cni-simple-bridge":
+			if *moduleConfig.Spec.Enabled {
+				log.InfoF("Found enabled ModuleConfig for '%s' cni, skipping creation.\n", moduleConfig.Name)
+				return nil
+			}
+		}
+	}
+
+	log.InfoLn("Doesn't found ModuleConfig for cni, creating.")
+	schemasStore := NewSchemaStore()
+	cniMC := &ModuleConfig{}
+	cniMC.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   ModuleConfigGroup,
+		Version: ModuleConfigVersion,
+		Kind:    ModuleConfigKind,
+	})
+
+	cniMC.Spec.Enabled = pointer.Bool(true)
+
+	// get provider cluster configuration
+	type providerClusterConfiguration struct {
+		Kind string `json:"kind"`
+	}
+
+	pcc := providerClusterConfiguration{}
+	err := yaml.Unmarshal(cfg.ProviderClusterConfig, &pcc)
+	if err != nil {
+		return err
+	}
+
+	// get cloud discovery data
+	type cloudDiscoveryData struct {
+		PodNetworkMode string `json:"podNetworkMode"`
+	}
+
+	cd := cloudDiscoveryData{}
+	err = yaml.Unmarshal(cfg.CloudDiscovery, &cd)
+	if err != nil {
+		return err
+	}
+
+	providerName := strings.ToLower(strings.TrimSuffix(pcc.Kind, "ClusterConfiguration"))
+
+	switch providerName {
+	case "openstack":
+		cniMC.SetName("cni-cilium")
+		v := schemasStore.GetModuleConfigVersion("cni-cilium")
+		cniMC.Spec.Version = v
+		if cd.PodNetworkMode == "VXLAN" {
+			cniMC.Spec.Settings = SettingsValues{
+				"tunnelMode":     "VXLAN",
+				"masqueradeMode": "BPF",
+			}
+		} else {
+			cniMC.Spec.Settings = SettingsValues{
+				"tunnelMode":       "Disabled",
+				"masqueradeMode":   "Netfilter",
+				"createNodeRoutes": true,
+			}
+		}
+
+	case "aws", "yandex", "gcp", "azure":
+		cniMC.SetName("cni-simple-bridge")
+		v := schemasStore.GetModuleConfigVersion("cni-simple-bridge")
+		cniMC.Spec.Version = v
+
+	// static or unknown provider
+	default:
+		cniMC.SetName("cni-cilium")
+		v := schemasStore.GetModuleConfigVersion("cni-cilium")
+		cniMC.Spec.Version = v
+		cniMC.Spec.Settings = SettingsValues{
+			"tunnelMode":       "Disabled",
+			"masqueradeMode":   "Netfilter",
+			"createNodeRoutes": true,
+		}
+	}
+	doc, err := yaml.Marshal(cniMC)
+	if err != nil {
+		return err
+	}
+
+	_, err = schemasStore.Validate(&doc)
+	if err != nil {
+		return err
+	}
+
+	if cfg.ModuleConfigs == nil {
+		cfg.ModuleConfigs = []*ModuleConfig{cniMC}
+	} else {
+		cfg.ModuleConfigs = append(cfg.ModuleConfigs, cniMC)
+	}
+	return nil
 }
