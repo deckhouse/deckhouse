@@ -160,7 +160,7 @@ spec:
     prometheus: deckhouse
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""
-  serviceAccountName: prometheus-pp
+  serviceAccountName: prometheus
   podMonitorNamespaceSelector:
     matchLabels:
       prometheus.deckhouse.io/monitor-watcher-enabled: "true"
@@ -184,16 +184,16 @@ spec:
       checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
   serviceMonitorSelector:
     matchLabels:
-      prometheus: pp
+      prometheus: main
   podMonitorSelector:
     matchLabels:
-      prometheus: pp
+      prometheus: main
   probeSelector:
     matchLabels:
-      prometheus: pp
+      prometheus: main
   scrapeConfigSelector:
     matchLabels:
-      prometheus: pp
+      prometheus: main
   secrets:
   - alertmanagers-tls-config
   rules:
@@ -201,42 +201,9 @@ spec:
       resendDelay: 29s
   ruleSelector:
     matchLabels:
-      prometheus: pp
+      prometheus: main
       component: rules
-{{- if .Values.prometheus.internal.remoteWrite }}
-  remoteWrite:
-  {{- range .Values.prometheus.internal.remoteWrite }}
-  - url: {{ .spec.url }}
-    {{- if .spec.basicAuth }}
-    basicAuth:
-      username:
-        name: d8-prometheus-remote-write-{{ .name }}
-        key: username
-      password:
-        name: d8-prometheus-remote-write-{{ .name }}
-        key: password
-    {{- else if .spec.bearerToken }}
-    bearerToken: {{ .spec.bearerToken }}
-    {{- end }}
-    {{- if .spec.customAuthToken }}
-    headers:
-      X-Auth-Token: {{ .spec.customAuthToken }}
-    {{- end }}
-    {{- if .spec.writeRelabelConfigs }}
-    writeRelabelConfigs:
-    {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
-    {{- end }}
-    {{- if .spec.tlsConfig }}
-      {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
-      {{- if .spec.tlsConfig.ca }}
-        {{- $_ := unset $tlsConfig "ca" }}
-        {{- $_ = set $tlsConfig "ca" (dict "configMap" (dict "name" (printf "d8-prometheus-pp-remote-write-ca-%s" .name) "key" "ca.crt")) }}
-      {{- end }}
-    tlsConfig:
-      {{- $tlsConfig | toYaml | nindent 6 }}
-    {{- end }}
-  {{- end }}
-{{- end }}
+  remoteWrite: {}
   additionalScrapeConfigs:
     name: prometheus-main-additional-configs
     key: scrapes.yaml
@@ -260,27 +227,7 @@ spec:
 {{- end }}
 {{- if or $alertmanagers_byservice $alertmanagers_internal }}
   alerting:
-    alertmanagers:
-  {{- if $alertmanagers_byservice }}
-    {{- range .Values.prometheus.internal.alertmanagers.byService }}
-    - namespace: {{ .namespace }}
-      name: {{ .name }}
-      port: {{ .port }}
-      scheme: http
-      pathPrefix: {{ .pathPrefix }}
-    {{- end }}
-  {{- end }}
-  {{- if $alertmanagers_internal }}
-    {{- range .Values.prometheus.internal.alertmanagers.internal }}
-    - namespace: d8-monitoring
-      name: {{ .name }}
-      port: https
-      scheme: https
-      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
-      tlsConfig:
-        insecureSkipVerify: true
-    {{- end }}
-  {{- end }}
+    alertmanagers: []
 {{- end }}
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/
