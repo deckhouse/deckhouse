@@ -464,14 +464,6 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 
->&2 echo "Download yq..."
-
-/opt/deckhouse/bin/d8-curl -sSLfk -o /opt/deckhouse/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
-
->&2 echo "chmod yq..."
-
-chmod +x /opt/deckhouse/bin/yq
-
 >&2 echo "Create release file ..."
 
 echo "$release" > /tmp/releaseFile.yaml
@@ -504,7 +496,15 @@ metadata:
 spec:
   version: v1.96.3
   requirements: {}
-' | /opt/deckhouse/bin/yq '. | load("/tmp/releaseFile.yaml") as \$d1 | .spec.requirements=\$d1.requirements' | kubectl apply -f -
+' | python3 -c "
+import yaml, sys
+
+data = yaml.safe_load(sys.stdin)
+with open('/tmp/releaseFile.yaml') as f:
+  d1 = yaml.safe_load(f)
+data['spec']['requirements'] = d1.get('requirements', {})
+print(yaml.dump(data))
+" | kubectl apply -f -
 
 >&2 echo "Remove release file ..."
 
