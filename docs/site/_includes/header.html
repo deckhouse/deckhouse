@@ -183,11 +183,12 @@
           {% endfor %}
         </ul>
       </div>
-    {%- unless site.mode == "module" %}
       <div class="header__right-box">
-        {%- if page.lang == "ru" %}
-          <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">Документация</a>
-        {%- endif %}
+        {%- unless site.mode == "module" %}
+           {%- if page.lang == "ru" %}
+             <a href="/products/kubernetes-platform/documentation/v1/deckhouse-overview.html" class="button button--outline">Документация</a>
+           {%- endif %}
+        {%- endunless %}
         {%- if page.lang == "ru" %}
           <a class="lang-switcher" href="
             {%- if site.mode == 'module' %}/en
@@ -219,7 +220,6 @@
         {%- endif %}
           </a>
       </div>
-   {%- endunless %}
     </div>
   </header>
 </div>
