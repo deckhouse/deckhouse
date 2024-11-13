@@ -1449,6 +1449,17 @@ alerts:
         MetalLB BGP session down.
       severity: "4"
       markupFormat: markdown
+    - name: D8MetallbBothBGPAndL2PoolsConfigured
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        There must not be `Layer2` and `BGP` IP pools configured at the same time in ModuleConfig version 1.
+      summary: |
+        MetaLB module misconfiguration.
+      severity: "4"
+      markupFormat: markdown
     - name: D8MetalLBConfigNotLoaded
       sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
@@ -1477,6 +1488,53 @@ alerts:
         ```
       summary: |
         MetalLB running on a stale configuration, because the latest config failed to load.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbIpAddressPoolNSMismatch
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        IpAddressPool `{{$labels.name}}` is located in namespace `{{$labels.namespace}}`, but must be located in namespace `d8-metallb`.
+      summary: |
+        MetaLB module misconfiguration.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbL2AdvertisementNodeSelectorsMismatch
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        L2Advertisement `{{$labels.name}}`: there must only be one matchLabels (not matchExpressions) in the nodeSelectors.
+      summary: |
+        MetaLB module misconfiguration.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbL2AdvertisementNSMismatch
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        L2Advertisement `{{$labels.name}}` is located in namespace `{{$labels.namespace}}`, but must be located in namespace `d8-metallb`.
+      summary: |
+        MetaLB module misconfiguration.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbOrphanedLoadBalancerDetected
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        The Service `{{$labels.name}}` in `{{$labels.namespace}}` namespace is orphaned. A Service must have any of the following properties:
+        - have the loadBalancerClass,
+        - have the `metallb.universe.tf/address-pool` annotation,
+        - have the `metallb.universe.tf/ip-allocated-from-pool` annotation.
+      summary: |
+        MetaLB module misconfiguration.
       severity: "4"
       markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
