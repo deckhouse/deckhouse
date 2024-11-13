@@ -58,16 +58,11 @@ var (
 	serviceAccount = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
 	// deckhouse service account
 	deckhouseServiceAccount = "system:serviceaccount:d8-system:deckhouse"
-
-	// leader election timers
-	leaseDuration = 15 * time.Second
-	renewDeadline = 10 * time.Second
-	retryPeriod = 2 * time.Second
 )
 
 const (
 	haModeEnv    = "HA_MODE"
-	controllerId = "multitenancy-manager"
+	controllerName = "multitenancy-manager"
 )
 
 func main() {
@@ -76,7 +71,7 @@ func main() {
 	flag.Parse()
 
 	// setup logger
-	log := ctrl.Log.WithName(controllerId)
+	log := ctrl.Log.WithName(controllerName)
 	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.StacktraceLevel(zapcore.PanicLevel)))
 
 	log.Info(fmt.Sprintf("starting multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
@@ -148,12 +143,8 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 
 	if os.Getenv(haModeEnv) == "true" {
 		managerOpts.LeaderElection = true
-		managerOpts.LeaderElectionID = controllerId
+		managerOpts.LeaderElectionID = controllerName
 		managerOpts.LeaderElectionNamespace = helmNamespace
-		managerOpts.LeaderElectionResourceLock = "leases"
-		managerOpts.LeaseDuration = &leaseDuration
-		managerOpts.RenewDeadline = &renewDeadline
-		managerOpts.RetryPeriod = &retryPeriod
 	}
 
 	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), managerOpts)
