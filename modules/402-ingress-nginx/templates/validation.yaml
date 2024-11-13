@@ -22,7 +22,7 @@ spec:
     - expression: '!(has(object.spec.{{ $spec }} ) && object.spec.inlet != "{{ $inlet }}" )'
       reason: Forbidden
 {{- if semverCompare ">= 1.27" $kubernetesVersion }}
-      messageExpression: '''parameters "spec.{{ $spec }}" avalible only for inlet "{{ $inlet }}"'''
+      messageExpression: '''parameters "spec.{{ $spec }}" available only for inlet "{{ $inlet }}"'''
 {{- end }}
 {{- end }}
 ---
