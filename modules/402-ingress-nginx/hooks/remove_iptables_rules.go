@@ -39,7 +39,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, removeIptablesRules)
 
 func objFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-
 	inlet, ok, err := unstructured.NestedString(obj.Object, "spec", "inlet")
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get controllerVersion field from ingress controller %s: %w", obj.GetName(), err)
