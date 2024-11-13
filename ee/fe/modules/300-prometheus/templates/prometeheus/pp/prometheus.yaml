@@ -8,7 +8,8 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- if (lookup "v1" "ConfigMap" "d8-monitoring" "prometheus-pp-envs") -}}
+{{- $configMap := lookup "v1" "ConfigMap" .Release.Namespace "test" }}
+{{- if not $configMap }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1

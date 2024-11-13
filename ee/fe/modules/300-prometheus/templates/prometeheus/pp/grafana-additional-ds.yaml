@@ -1,4 +1,5 @@
-{{- if (lookup "v1" "ConfigMap" "d8-monitoring" "prometheus-pp-envs") -}}
+{{- $configMap := lookup "v1" "ConfigMap" .Release.Namespace "test" }}
+{{- if not $configMap }}
 ---
 {{- $token := (lookup "v1" "Secret" "d8-monitoring" "prometheus-token").data.token | b64dec -}}
 {{- if $token -}}

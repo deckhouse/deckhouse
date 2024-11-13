@@ -1,6 +1,6 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
-{{- if (lookup "v1" "ConfigMap" "d8-monitoring" "prometheus-pp-envs") -}}
----
+{{- $configMap := lookup "v1" "ConfigMap" .Release.Namespace "test" }}
+{{- if not $configMap }}---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
