@@ -4,7 +4,7 @@ title: "The admission-policy-engine module: FAQ"
 
 ## How do I configure alternative security policy management solutions?
 
-For DKP to work correctly, extended privileges are required to run and operate system component payloads. If you are using an alternative security policy management solution (e.g., Kyverno) instead of the admission-policy-engine module, it is necessary to configure exceptions for the following namespaces:
+For DKP to work correctly, extended privileges are required to run and operate system component payloads. If you are using some alternative security policy management solution (e. g., Kyverno) instead of the admission-policy-engine module, you have to configure exceptions for the following namespaces:
 
 - `kube-system`;
 - all namespaces with the `d8-*` prefix (e.g., `d8-system`).
