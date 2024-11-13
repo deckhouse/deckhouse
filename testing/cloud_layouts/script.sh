@@ -509,7 +509,7 @@ metadata:
 spec:
   version: v1.96.3
   requirements: {}
-' | $python_binary -c "
+' | \$python_binary -c "
 import yaml, sys
 
 data = yaml.safe_load(sys.stdin)
