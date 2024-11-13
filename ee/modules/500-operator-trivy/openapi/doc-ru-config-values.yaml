@@ -16,8 +16,6 @@ properties:
     description: |
       Разрешает Trivy скачивать базы данных уязвимостей используя недоверенные HTTPS-подключения (не прошедшие проверку TLS-сертификата) или подключения по HTTP.
 
-      Список адресов, к которым разрешены такие подключения, необходимо указать в параметре [insecureRegistries](#parameters-insecureregistries).
-
   additionalVulnerabilityReportFields:
     description: |
       Список дополнительных полей из базы уязвимостей, добавляемых к отчетам об уязвимостях (VulnerabilityReport).
@@ -54,5 +52,3 @@ properties:
   insecureRegistries:
     description: |
       Список адресов хранилищ образов контейнеров (container registry), к которым разрешены недоверенные HTTPS-подключения (не прошедшие проверку TLS-сертификата) и подключения по HTTP.
-
-      > Для работы необходимо включение параметра [insecureDbRegistry](#parameters-insecuredbregistry).
