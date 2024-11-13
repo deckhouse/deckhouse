@@ -269,6 +269,16 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/fe/modules/300-prometheus/images/prometheuspp
+  to: /deckhouse/modules/300-prometheus/images/prometheuspp
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/fe/modules/300-prometheus/templates/prometeheus
+  to: /deckhouse/modules/300-prometheus/templates/prometeheus
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   stageDependencies:

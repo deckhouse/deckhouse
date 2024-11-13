@@ -1,0 +1,20 @@
+{{- if (lookup "v1" "ConfigMap" "d8-monitoring" "prometheus-pp-envs") -}}
+---
+{{- $token := (lookup "v1" "Secret" "d8-monitoring" "prometheus-token").data.token | b64dec -}}
+{{- if $token -}}
+apiVersion: deckhouse.io/v1
+kind: GrafanaAdditionalDatasource
+metadata:
+  name: prometheus-pp
+spec:
+  access: Proxy
+  jsonData:
+    httpHeaderName1: Authorization
+    tlsSkipVerify: true
+    timeInterval: 30s
+  secureJsonData:
+    httpHeaderValue1: bearer {{ $token }} 
+  type: prometheus
+  url: https://prometheus-pp.d8-monitoring.svc.cluster.local:9090
+{{- end -}}
+{{- end }}
