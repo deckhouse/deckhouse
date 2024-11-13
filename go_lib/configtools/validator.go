@@ -132,7 +132,6 @@ func (v *Validator) Validate(config *v1alpha1.ModuleConfig) ValidationResult {
 	}
 
 	if module := v.valuesValidator.GetModule(config.Name); module == nil {
-		result.Warning = "module not installed"
 		return result
 	}
 

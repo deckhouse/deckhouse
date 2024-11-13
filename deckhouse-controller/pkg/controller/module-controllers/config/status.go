@@ -38,7 +38,7 @@ import (
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 )
 
-// refreshModule refreshes module status by addon-operator
+// refreshModule refreshes module in cluster
 func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -52,6 +52,43 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 	})
 }
 
+// refreshModuleConfig refreshes module config in cluster
+func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string) error {
+	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			r.log.Debugf("refresh the '%s' module config status", configName)
+
+			metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
+			r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
+			moduleConfig := new(v1alpha1.ModuleConfig)
+			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+
+			r.refreshModuleConfigStatus(moduleConfig)
+			if err := r.client.Status().Update(ctx, moduleConfig); err != nil {
+				return err
+			}
+
+			// update metrics
+			converter := conversion.Store().Get(moduleConfig.Name)
+			if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
+				r.metricStorage.Grouped().GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
+					"name":    moduleConfig.Name,
+					"version": strconv.Itoa(moduleConfig.Spec.Version),
+					"latest":  strconv.Itoa(converter.LatestVersion()),
+				})
+			}
+			return nil
+		})
+	})
+}
+
+// refreshModuleStatus refreshes module status by addon-operator
 func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	basicModule := r.moduleManager.GetModule(module.Name)
 	if basicModule == nil {
@@ -128,44 +165,45 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 
 	switch extenders.ExtenderName(updatedBy) {
 	case "", staticextender.Name:
-		reason = "Bundle"
-		message = "turned off by bundle"
+		reason = v1alpha1.ModuleReasonBundle
+		message = v1alpha1.ModuleMessageBundle
 		if !module.IsEmbedded() {
-			reason = "Disabled"
-			message = "disabled"
+			reason = v1alpha1.ModuleReasonDisabled
+			message = v1alpha1.ModuleMessageDisabled
 		}
 
 	case kubeconfig.Name:
-		reason = "ModuleConfig"
-		message = "turned off by module config"
+		reason = v1alpha1.ModuleReasonModuleConfig
+		message = v1alpha1.ModuleMessageModuleConfig
 
 	case dynamicextender.Name:
-		reason = "DynamicGlobalHookExtender"
-		message = "turned off by global hook"
+		reason = v1alpha1.ModuleReasonDynamicGlobalHookExtender
+		message = v1alpha1.ModuleMessageDynamicGlobalHookExtender
 
 	case scriptextender.Name:
-		reason = "EnabledScriptExtender"
-		message = "turned off by enabled script"
+		reason = v1alpha1.ModuleReasonEnabledScriptExtender
+		message = v1alpha1.ModuleMessageEnabledScriptExtender
 
 	case d7sversionextender.Name:
-		reason = "DeckhouseVersionExtender"
+		reason = v1alpha1.ModuleReasonDeckhouseVersionExtender
 		_, errMsg := d7sversionextender.Instance().Filter(module.Name, map[string]string{})
-		message = "turned off by deckhouse version"
+		message = v1alpha1.ModuleMessageDeckhouseVersionExtender
+		if errMsg != nil {
+			message += ": " + errMsg.Error()
+		}
+
+	case k8sversionextender.Name:
+		reason = v1alpha1.ModuleReasonKubernetesVersionExtender
+		_, errMsg := k8sversionextender.Instance().Filter(module.Name, map[string]string{})
+		message = v1alpha1.ModuleMessageKubernetesVersionExtender
 		if errMsg != nil {
 			message += ": " + errMsg.Error()
 		}
 
 	case bootstrappedextender.Name:
-		reason = "ClusterBootstrappedExtender"
-		message = "turned off because the cluster not bootstrapped yet"
+		reason = v1alpha1.ModuleReasonClusterBootstrappedExtender
+		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
 
-	case k8sversionextender.Name:
-		reason = "KubernetesVersionExtender"
-		_, errMsg := k8sversionextender.Instance().Filter(module.Name, map[string]string{})
-		message = "turned off by kubernetes version"
-		if errMsg != nil {
-			message += ": " + errMsg.Error()
-		}
 	}
 
 	if module.Status.Phase != v1alpha1.ModulePhaseNotInstalled {
@@ -175,7 +213,8 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, reason, message)
 }
 
-func (r *reconciler) refreshConfigStatus(config *v1alpha1.ModuleConfig) {
+// refreshModuleConfigStatus refreshes module config status by addon-operator
+func (r *reconciler) refreshModuleConfigStatus(config *v1alpha1.ModuleConfig) {
 	validationResult := r.configValidator.Validate(config)
 	if validationResult.HasError() {
 		config.Status.Version = ""

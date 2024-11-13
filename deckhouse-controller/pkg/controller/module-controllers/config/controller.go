@@ -25,6 +25,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -43,7 +44,13 @@ import (
 const (
 	controllerName = "d8-module-config-controller"
 
-	deleteReleasesAfter = 5 * time.Minute
+	// if a module is disabled more than two weeks, it will be uninstalled at next deckhouse restart
+	deleteReleasesAfter = 120 * time.Hour
+
+	maxConcurrentReconciles = 3
+
+	moduleDeckhouse = "deckhouse"
+	moduleGlobal    = "global"
 )
 
 func RegisterController(
@@ -74,7 +81,11 @@ func RegisterController(
 		return err
 	}
 
-	configController, err := controller.New(controllerName, runtimeManager, controller.Options{Reconciler: r})
+	configController, err := controller.New(controllerName, runtimeManager, controller.Options{
+		MaxConcurrentReconciles: maxConcurrentReconciles,
+		NeedLeaderElection:      ptr.To(false),
+		Reconciler:              r,
+	})
 	if err != nil {
 		return err
 	}
@@ -132,11 +143,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
-	// send event to addon-operator
+	// send event to addon-operator(it is not necessary for NotInstalled modules)
 	r.handler.HandleEvent(ctx, moduleConfig, config.EventUpdate)
 
-	r.log.Debugf("refresh the '%s' module config status", moduleConfig.Name)
-	if err := r.refreshModuleConfigStatus(ctx, moduleConfig.Name); err != nil {
+	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -157,25 +167,16 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 	enabled := module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)
 
-	if moduleConfig.IsEnabled() {
-		// enable module
-		if !enabled {
-			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)
-				return true
-			})
-			if err != nil {
-				r.log.Errorf("failed to enable the '%s' module: %v", module.Name, err)
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{Requeue: true}, nil
-		}
-	}
-
 	if !moduleConfig.IsEnabled() {
 		// disable module
 		if enabled {
+			r.log.Debugf("disable the '%s' module", moduleConfig.Name)
 			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+				// modules in Conflict should not be installed, and they cannot receive events, so set NotInstalled phase manually
+				if module.Status.Phase == v1alpha1.ModulePhaseConflict {
+					module.Status.Phase = v1alpha1.ModulePhaseNotInstalled
+					module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+				}
 				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 				return true
@@ -184,11 +185,26 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 				r.log.Errorf("failed to disable the '%s' module: %v", module.Name, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
-			return ctrl.Result{}, nil
 		}
+
 		// skip disabled modules
 		r.log.Debugf("skip the '%s' disabled module", module.Name)
 		return ctrl.Result{}, nil
+	}
+
+	if moduleConfig.IsEnabled() {
+		// enable module
+		if !enabled {
+			r.log.Debugf("enable the '%s' module", moduleConfig.Name)
+			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+				module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)
+				return true
+			})
+			if err != nil {
+				r.log.Errorf("failed to enable the '%s' module: %v", module.Name, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
 	}
 
 	// set finalizer
@@ -206,7 +222,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	// skip system modules
-	if module.Name == "deckhouse" || module.Name == "global" {
+	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
 		r.log.Debugf("skip the '%s' system module", module.Name)
 		return ctrl.Result{}, nil
 	}
@@ -219,7 +235,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 	updatePolicy := module.Properties.UpdatePolicy
 	// change update policy by module config
-	if moduleConfig.Spec.UpdatePolicy != module.Properties.UpdatePolicy {
+	if updatePolicy != moduleConfig.Spec.UpdatePolicy {
 		updatePolicy = moduleConfig.Spec.UpdatePolicy
 	}
 
@@ -240,7 +256,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			}
 		}
 
-		// set conflict
+		// set conflict if there are several available sources
 		err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 			module.Status.Phase = v1alpha1.ModulePhaseConflict
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
@@ -289,7 +305,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	// skip system modules
-	if module.Name == "deckhouse" || module.Name == "global" {
+	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
 		r.log.Debugf("skip the '%s' system module", module.Name)
 		return ctrl.Result{}, nil
 	}

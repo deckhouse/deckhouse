@@ -157,7 +157,7 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 				if !apierrors.IsNotFound(err) {
 					return nil, fmt.Errorf("get the '%s' module policy: %w", cfg.Spec.UpdatePolicy, err)
 				}
-				warning = fmt.Sprintf("the '%s' module policy not found", cfg.Spec.UpdatePolicy)
+				warning = fmt.Sprintf("the '%s' module policy not found, the policy from the deckhouse settings will be used instead", cfg.Spec.UpdatePolicy)
 			}
 		}
 

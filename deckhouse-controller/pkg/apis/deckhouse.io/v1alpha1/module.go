@@ -44,27 +44,41 @@ const (
 	ModulePhaseReady        = "Ready"
 	ModulePhaseError        = "Error"
 
-	ModuleReasonNotInstalled = "NotInstalled"
-	ModuleReasonDisabled     = "Disabled"
-	ModuleReasonInit         = "Init"
-	ModuleReasonConflict     = "Conflict"
-	ModuleReasonChangeSource = "ChangeSource"
-	ModuleReasonHookError    = "HookError"
-	ModuleReasonModuleError  = "ModuleError"
-	ModuleReasonEnqueued     = "Enqueued"
-	ModuleReasonWaitSync     = "WaitSync"
-	ModuleReasonPending      = "Pending"
-	ModuleReasonError        = "Error"
+	ModuleReasonBundle                      = "Bundle"
+	ModuleReasonModuleConfig                = "ModuleConfig"
+	ModuleReasonDynamicGlobalHookExtender   = "DynamicGlobalHookExtender"
+	ModuleReasonEnabledScriptExtender       = "EnabledScriptExtender"
+	ModuleReasonDeckhouseVersionExtender    = "DeckhouseVersionExtender"
+	ModuleReasonKubernetesVersionExtender   = "KubernetesVersionExtender"
+	ModuleReasonClusterBootstrappedExtender = "ClusterBootstrappedExtender"
+	ModuleReasonNotInstalled                = "NotInstalled"
+	ModuleReasonDisabled                    = "Disabled"
+	ModuleReasonInit                        = "Init"
+	ModuleReasonConflict                    = "Conflict"
+	ModuleReasonChangeSource                = "ChangeSource"
+	ModuleReasonHookError                   = "HookError"
+	ModuleReasonModuleError                 = "ModuleError"
+	ModuleReasonEnqueued                    = "Enqueued"
+	ModuleReasonWaitSync                    = "WaitSync"
+	ModuleReasonPending                     = "Pending"
+	ModuleReasonError                       = "Error"
 
-	ModuleMessageNotInstalled  = "not installed"
-	ModuleMessageDisabled      = "disabled"
-	ModuleMessageInit          = "init"
-	ModuleMessageConflict      = "several available sources"
-	ModuleMessageChangeSource  = "changing source"
-	ModuleMessageEnqueued      = "enqueued"
-	ModuleMessageWaitSync      = "run sync tasks"
-	ModuleMessageOnStartupHook = "completed OnStartup hooks"
-	ModuleMessageHooksDisabled = "hooks disabled"
+	ModuleMessageBundle                      = "turned off by bundle"
+	ModuleMessageModuleConfig                = "turned off by module config"
+	ModuleMessageDynamicGlobalHookExtender   = "turned off by global hook"
+	ModuleMessageEnabledScriptExtender       = "turned off by enabled script"
+	ModuleMessageDeckhouseVersionExtender    = "turned off by deckhouse version"
+	ModuleMessageKubernetesVersionExtender   = "turned off by kubernetes version"
+	ModuleMessageClusterBootstrappedExtender = "turned off because the cluster not bootstrapped yet"
+	ModuleMessageNotInstalled                = "not installed"
+	ModuleMessageDisabled                    = "disabled"
+	ModuleMessageInit                        = "init"
+	ModuleMessageConflict                    = "several available sources"
+	ModuleMessageChangeSource                = "changing source"
+	ModuleMessageEnqueued                    = "enqueued"
+	ModuleMessageWaitSync                    = "run sync tasks"
+	ModuleMessageOnStartupHook               = "completed OnStartup hooks"
+	ModuleMessageHooksDisabled               = "hooks disabled"
 )
 
 var (
@@ -209,6 +223,8 @@ func (m *Module) SetConditionFalse(condName string, reason, message string) {
 	m.Status.Conditions = append(m.Status.Conditions, ModuleCondition{
 		Type:               condName,
 		Status:             corev1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
 		LastProbeTime:      metav1.Now(),
 		LastTransitionTime: metav1.Now(),
 	})

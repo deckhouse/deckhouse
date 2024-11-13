@@ -17,7 +17,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -28,7 +27,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
 // syncModules syncs modules at start
@@ -124,7 +122,7 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 	return r.runModuleEventLoop(ctx)
 }
 
-// syncModuleConfigs syncs module configs at start up
+// syncModuleConfigs syncs module configs at start
 func (r *reconciler) syncModuleConfigs(ctx context.Context) error {
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		configs := new(v1alpha1.ModuleConfigList)
@@ -132,47 +130,11 @@ func (r *reconciler) syncModuleConfigs(ctx context.Context) error {
 			return fmt.Errorf("list module configs: %w", err)
 		}
 		for _, moduleConfig := range configs.Items {
-			if err := r.refreshModuleConfigStatus(ctx, moduleConfig.Name); err != nil {
-				return fmt.Errorf("refresh module configs: %w", err)
+			if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
+				return fmt.Errorf("refresh the '%s' module config: %w", moduleConfig.Name, err)
 			}
 		}
 		return nil
-	})
-}
-
-// refreshModuleConfigStatus refreshes module config and module status by addon-operator
-func (r *reconciler) refreshModuleConfigStatus(ctx context.Context, configName string) error {
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			r.log.Debugf("refresh the '%s' module config status", configName)
-
-			metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
-			r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
-
-			moduleConfig := new(v1alpha1.ModuleConfig)
-			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return err
-			}
-
-			r.refreshConfigStatus(moduleConfig)
-			if err := r.client.Status().Update(ctx, moduleConfig); err != nil {
-				return err
-			}
-
-			// update metrics
-			converter := conversion.Store().Get(moduleConfig.Name)
-			if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
-				r.metricStorage.Grouped().GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
-					"name":    moduleConfig.Name,
-					"version": strconv.Itoa(moduleConfig.Spec.Version),
-					"latest":  strconv.Itoa(converter.LatestVersion()),
-				})
-			}
-			return nil
-		})
 	})
 }
 
@@ -183,7 +145,7 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 			continue
 		}
 		if err := r.refreshModule(ctx, event.ModuleName); err != nil {
-			r.log.Errorf("failed to handle the event: failed to refresh the '%s' module: %v", event.ModuleName, err)
+			r.log.Errorf("failed to handle the event for the '%s' module: %v", event.ModuleName, err)
 		}
 	}
 	return nil
