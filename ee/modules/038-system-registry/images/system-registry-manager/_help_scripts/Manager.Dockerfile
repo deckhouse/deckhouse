@@ -6,8 +6,8 @@ ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-ma
     GO_LIB_PATH_TO=/deckhouse/go_lib/system-registry-manager
 
 # Set GOPROXY and GOSUMDB
-#ENV GOPROXY=https://puller:EH6ohvo2aishieleihaijaif3ibieR6i@nexusoss.borzykh.com/repository/golang-proxy
-#ENV GOSUMDB='sum.golang.org https://puller:EH6ohvo2aishieleihaijaif3ibieR6i@nexusoss.borzykh.com/repository/golang-sum-proxy'
+#ENV GOPROXY=http://10.211.55.2:8081/repository/golang-proxy
+#ENV GOSUMDB='sum.golang.org http://10.211.55.2:8081/repository/golang-sum-proxy'
 
 # Create tmp dir
 RUN mkdir -m 1777 /tmp-tmp
@@ -40,11 +40,11 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 #RUN mkdir -p /tmp-tmp/dlv && chmod -R 777 /tmp-tmp/dlv
 
 # Copy binary, templates and dlv into new container
-FROM --platform=linux/amd64 scratch
-#FROM --platform=linux/amd64 ubuntu:22.04
-#RUN apt-get -y update && apt-get -y install iproute2 curl
-#ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager
-#COPY $MANAGER_PATH_FROM/templates /templates
+#FROM --platform=linux/amd64 scratch
+FROM --platform=linux/amd64 ubuntu:22.04
+RUN apt-get -y update && apt-get -y install iproute2 curl vim
+ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager
+COPY $MANAGER_PATH_FROM/templates /templates
 COPY --from=builder /tmp-tmp /tmp
 COPY --from=builder /manager /manager
 #COPY --from=builder /go/bin/linux_amd64/dlv /dlv
