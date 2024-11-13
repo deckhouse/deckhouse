@@ -464,6 +464,19 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 
+>&2 echo "Check python ..."
+function check_python() {
+  for pybin in python3 python2 python; do
+    if command -v "\$pybin" >/dev/null 2>&1; then
+      python_binary="\$pybin"
+      return 0
+    fi
+  done
+  echo "Python not found, exiting..."
+  return 1
+}
+check_python
+
 >&2 echo "Create release file ..."
 
 echo "$release" > /tmp/releaseFile.yaml
@@ -496,7 +509,7 @@ metadata:
 spec:
   version: v1.96.3
   requirements: {}
-' | python3 -c "
+' | $python_binary -c "
 import yaml, sys
 
 data = yaml.safe_load(sys.stdin)
