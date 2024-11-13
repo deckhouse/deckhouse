@@ -15,6 +15,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -69,6 +70,7 @@ type embeddedRegistry struct {
 
 type RegistryReconciler struct {
 	client.Client
+	APIReader        client.Reader // To use for objects without cache
 	Scheme           *runtime.Scheme
 	KubeClient       *kubernetes.Clientset
 	Recorder         record.EventRecorder
@@ -423,4 +425,44 @@ func (r *RegistryReconciler) extractModuleConfigFieldsFromObject(cr *unstructure
 func hasMasterLabel(node *corev1.Node) bool {
 	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
 	return isMaster
+}
+
+func (r *RegistryReconciler) getWithFallback(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	logger := ctrl.LoggerFrom(ctx)
+	err := r.Client.Get(ctx, key, obj, opts...)
+	// Object found in cache, return
+	if err == nil {
+		return nil
+	}
+
+	// Error other than not found, return err
+	if !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	logger.Info("Object not found in cache, trying to Get directly")
+	return r.APIReader.Get(ctx, key, obj, opts...)
+}
+
+func (r *RegistryReconciler) listWithFallback(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	logger := ctrl.LoggerFrom(ctx)
+	err := r.Client.List(ctx, list, opts...)
+	// Error other than not found, return err
+	if err != nil {
+		return err
+	}
+
+	// Can't extract list items, return err
+	items, err := meta.ExtractList(list)
+	if err != nil {
+		return err
+	}
+
+	// Object found in cache, return
+	if len(items) > 0 {
+		return nil
+	}
+
+	logger.Info("Object not found in cache, trying to List directly")
+	return r.APIReader.List(ctx, list, opts...)
 }

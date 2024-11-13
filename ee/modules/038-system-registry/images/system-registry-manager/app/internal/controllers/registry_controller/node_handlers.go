@@ -124,8 +124,7 @@ func (r *RegistryReconciler) prepareEmbeddedRegistryConfig(node k8s.MasterNode, 
 
 func (r *RegistryReconciler) getPodIPForNode(ctx context.Context, nodeName string) (string, error) {
 	var pods corev1.PodList
-
-	err := r.List(ctx, &pods, client.MatchingLabels{
+	err := r.listWithFallback(ctx, &pods, client.MatchingLabels{
 		"app": "system-registry-manager",
 	}, client.MatchingFields{
 		"spec.nodeName": nodeName,
