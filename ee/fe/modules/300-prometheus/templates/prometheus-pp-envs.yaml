@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: prometheus-pp-envs
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp" "prometheus" "pp")) | nindent 2 }}
 data:
   GOGC: "30"
   MALLOC_CONF: "background_thread:true,tcache_max:4096,dirty_decay_ms:5000,muzzy_decay_ms:5000"

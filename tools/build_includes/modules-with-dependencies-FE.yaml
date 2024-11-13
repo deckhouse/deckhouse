@@ -865,38 +865,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus-token.yaml
-  to: /deckhouse/modules/300-prometheus/templates/prometheus-token.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/fe/modules/300-prometheus/templates/prometheus.yaml
   to: /deckhouse/modules/300-prometheus/templates/prometheus.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/rbac-for-us.yaml
-  to: /deckhouse/modules/300-prometheus/templates/rbac-for-us.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/rbac-to-us.yaml
-  to: /deckhouse/modules/300-prometheus/templates/rbac-to-us.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/remote-write-secrets.yaml
-  to: /deckhouse/modules/300-prometheus/templates/remote-write-secrets.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/scrape-interval-configmap.yaml
-  to: /deckhouse/modules/300-prometheus/templates/scrape-interval-configmap.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/service-affinitive.yaml
-  to: /deckhouse/modules/300-prometheus/templates/service-affinitive.yaml
   stageDependencies:
     setup:
         - '**/*'
