@@ -1862,3 +1862,34 @@ select#contact-select {
     color: #ddd;
   }
 }
+
+.tippy-box[data-theme~='light'] {
+  border: 1px solid #C4CAD4;
+  background: #EFF3F9;
+  box-shadow: 0 8px 16px 0 rgba(138, 150, 168, 0.40);
+
+  .tippy-content {
+    text-align: start;
+    color: #00122C;
+  }
+
+  .tippy-svg-arrow {
+    bottom: -14px;
+  }
+}
+
+.tippy-box[data-theme~='light-large'] {
+  border: 1px solid #C4CAD4;
+  background: #EFF3F9;
+  box-shadow: 0 8px 16px 0 rgba(138, 150, 168, 0.40);
+
+  .tippy-content {
+    text-align: start;
+    padding: 32px 40px 64px 40px;
+    color: #00122C;
+  }
+
+  .tippy-svg-arrow {
+    right: -9px;
+  }
+}
