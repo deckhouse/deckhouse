@@ -9,7 +9,7 @@ For DKP to work correctly, extended privileges are required to run and operate s
 - `kube-system`;
 - all namespaces with the `d8-*` prefix (e.g., `d8-system`).
 
-## How to extend Pod Security Standards policies?
+## How do I extend Pod Security Standards policies?
 
 > Pod Security Standards respond to the `security.deckhouse.io/pod-policy: restricted` or `security.deckhouse.io/pod-policy: baseline` label.
 
