@@ -47,13 +47,10 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-pp" "prometheus" "pp")) | nindent 2 }}
 spec:
-  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  replicas: 1
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
   image: {{ include "helm_lib_module_image" (list $ "prometheuspp") }}
-  envFrom:
-    - configMapRef:
-        name: prometheus-pp-envs
   version: v2.53.2
   enableRemoteWriteReceiver: true
   enableFeatures:
@@ -87,6 +84,9 @@ spec:
   - name: prometheus
     startupProbe:
       failureThreshold: 300
+    envFrom:
+      - configMapRef:
+          name: prometheus-pp-envs
   - name: kube-rbac-proxy
     {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
     image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -195,7 +195,7 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
-  remoteWrite: {}
+  remoteWrite: []
   additionalScrapeConfigs:
     name: prometheus-main-additional-configs
     key: scrapes.yaml
