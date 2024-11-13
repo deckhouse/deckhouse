@@ -35,7 +35,7 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
 spec:
-  replicas: 1
+  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -67,6 +67,13 @@ spec:
           args:
             - /multitenancy-manager
             - --allow-orphan-namespaces={{ .Values.multitenancyManager.allowNamespacesWithoutProjects }}
+          env:
+            - name: HA_MODE
+{{- if (include "helm_lib_ha_enabled" .) }}
+              value: "true"
+{{- else }}
+              value: "false"
+{{- end }}
           ports:
             - containerPort: 9090
               name: healthz

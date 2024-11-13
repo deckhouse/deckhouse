@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -59,13 +60,18 @@ var (
 	deckhouseServiceAccount = "system:serviceaccount:d8-system:deckhouse"
 )
 
+const (
+	haModeEnv    = "HA_MODE"
+	controllerName = "multitenancy-manager"
+)
+
 func main() {
 	var allowOrphanNamespaces bool
 	flag.BoolVar(&allowOrphanNamespaces, "allow-orphan-namespaces", true, "allow to create a namespace which is not a part of a Project")
 	flag.Parse()
 
 	// setup logger
-	log := ctrl.Log.WithName("multitenancy-manager")
+	log := ctrl.Log.WithName(controllerName)
 	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.StacktraceLevel(zapcore.PanicLevel)))
 
 	log.Info(fmt.Sprintf("starting multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
@@ -133,6 +139,12 @@ func setupRuntimeManager(log logr.Logger) (ctrl.Manager, error) {
 		Metrics: metrics.Options{
 			BindAddress: "0",
 		},
+	}
+
+	if os.Getenv(haModeEnv) == "true" {
+		managerOpts.LeaderElection = true
+		managerOpts.LeaderElectionID = controllerName
+		managerOpts.LeaderElectionNamespace = helmNamespace
 	}
 
 	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), managerOpts)
