@@ -22,6 +22,14 @@ properties:
       Create routes to Pods on other Nodes.
 
       All Nodes must be located in the same L2 domain.
+  masqueradeMode:
+    type: string
+    enum: ["Netfilter", "BPF"]
+    default: "BPF"
+    description: |
+      Cilium masquerade work mode.
+      * - `Netfilter` - use kernel Netfilter(iptables/nf_tables).
+      * - `BPF` - use cilium BPF.
   tunnelMode:
     type: string
     enum: ["Disabled", "VXLAN"]
