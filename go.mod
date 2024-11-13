@@ -58,6 +58,7 @@ require (
 )
 
 require (
+	github.com/coreos/go-iptables v0.8.0
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/ettle/strcase v0.2.0
