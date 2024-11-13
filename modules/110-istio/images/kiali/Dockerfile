@@ -1,7 +1,7 @@
 ARG BASE_ALT
 
 # original kiali
-FROM quay.io/kiali/kiali:v1.67.2@sha256:92fec2b44580519b922d37747114865df4cc4cd51a2fe8342f090c8941e6905d as artifact
+FROM quay.io/kiali/kiali:v1.81.0@sha256:c3d71c47a8f970b896b6cbf92718276bfc7205037f90155cdd37ee2fb57e8962 as artifact
 
 FROM $BASE_ALT
 # get all from original kiali
