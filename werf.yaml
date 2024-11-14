@@ -338,7 +338,7 @@ shell:
   - |
     if [ -z "$CI_COMMIT_TAG" ]; then
         # Получение последнего тега
-        latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/deckhouse/deckhouse.git 'v*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
+        latest_tag=$(git -c "versionsort.suffix=-" ls-remote --exit-code --refs --sort="version:refname" --tags https://github.com/deckhouse/deckhouse.git "v*.*.*" | tail --lines=1 | cut --delimiter="/" --fields=3)
         echo "Latest tag: $latest_tag"
 
         # Разделение тега на части версия
