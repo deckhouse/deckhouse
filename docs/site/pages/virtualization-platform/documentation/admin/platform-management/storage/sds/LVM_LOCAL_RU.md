@@ -1,5 +1,5 @@
 ---
-title: "Локальное на основе LVM"
+title: "Локальное хранилище"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html
 lang: ru
 ---
