@@ -52,6 +52,8 @@ shell:
   - cd /go/src/github.com/cilium/cilium
   - find /patches -name '*.patch' | xargs git apply --verbose
   - go mod tidy && go mod vendor && go mod verify
+  # it is hack for adding file from patch to installing proccess of cilium build
+  - git add bpf/lib/dhcp.h 
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
