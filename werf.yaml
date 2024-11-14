@@ -335,6 +335,7 @@ shell:
   - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
   {{- end }}
 {{- end }}
+  - export CI_D8_VERSION=${CI_COMMIT_TAG}
   - |
     if [ -z "$CI_COMMIT_TAG" ]; then
         latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/deckhouse/deckhouse.git 'v*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
@@ -347,9 +348,6 @@ shell:
 
         new_version="${major}.${new_minor}.${new_patch}-${CI_COMMIT_REF_SLUG:-main}+${WERF_COMMIT_HASH::7}"
         export CI_D8_VERSION=${new_version}
-    else
-        # if tag is used
-        export CI_D8_VERSION=${CI_COMMIT_TAG}
     fi
   - cd /deckhouse
   # Generate hooks imports for particular edition
