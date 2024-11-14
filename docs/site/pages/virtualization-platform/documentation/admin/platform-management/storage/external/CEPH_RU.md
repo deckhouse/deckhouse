@@ -4,33 +4,34 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-## TODO: Описать процесс создания снапшота (не для настроек CSI поддерживается создание снапшотов).
-## TODO: Тут описан внутренний модуль ceph-csi. Есть еще и внешний, позже сравню их, вероятно еще что-то будет принесено оттуда.
-
-Чтобы создать StorageClass’ы на базе RBD (RADOS Block Device) или файловой системы Ceph, можно использовать модуль ceph-csi, 
+Чтобы создать StorageClass’ы на основе RBD (RADOS Block Device) или файловой системы Ceph, можно использовать модуль csi-ceph, 
 который позволяет настроить подключение к одному или нескольким Ceph-кластерам.
 
-Чтобы включить модуль ceph-csi, примените следующий ресурс `ModuleConfig`:
+## Включение модуля
+
+Чтобы включить модуль csi-ceph, примените следующий ресурс `ModuleConfig`:
 
 ```yaml
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: ceph-csi
+  name: csi-ceph
 spec:
   enabled: true
 EOF
 ```
 
-Чтобы подключить Ceph-кластер и настроить StorageClass’ы, примените следующий ресурс `CephCSIDriver`:
+## Подключение к Ceph-кластеру
+
+Чтобы настроить подключение к Ceph-кластеру, необходимо применить ресурс `CephClusterConnection`. Пример ресурса приведен ниже.
 
 ```yaml
 d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: CephCSIDriver
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: CephClusterConnection
 metadata:
-  name: example
+  name: ceph-cluster-1
 spec:
   # FSID/UUID Ceph-кластера.
   # Получить FSID/UUID Ceph-кластера можно с помощью команды `ceph fsid`.
@@ -38,63 +39,93 @@ spec:
   # Список IP-адресов ceph-mon’ов в формате 10.0.0.10:6789.
   monitors:
     - 10.0.0.10:6789
+EOF
+```
+
+Проверить создание подключения можно командой (Phase должен быть Created):
+
+```shell
+d8 k get cephclusterconnection ceph-cluster-1
+```
+
+## Аутентификация
+
+Чтобы пройти аутентификацию в Ceph-кластере, необходимо определит параметры аутентификации в ресурсе `CephClusterAuthentication`:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: CephClusterAuthentication
+metadata:
+  name: ceph-auth-1
+spec:
   # Имя пользователя без `client.`.
   userID: admin
   # Ключ авторизации, соответствующий userID.
   userKey: AQDbc7phl+eeGRAAaWL9y71mnUiRHKRFOWMPCQ==
-  rbd:
-    # Описание StorageClass’ов для Rados Block Device (RBD).
-    storageClasses:
-        # Включает возможность изменять размер тома, редактируя соответствующий объект PersistentVolumeClaim.
-        # По умолчанию: true.
-        # [Подробнее...](https://kubernetes.io/docs/concepts/storage/storage-classes/#allow-volume-expansion)
-      - allowVolumeExpansion: true
-        #  Файловая система по умолчанию для создаваемых Persistent Volumes. 
-        # По умолчанию: "ext4".
-        # Допустимые значения: "ext4", "xfs".
-        defaultFSType: ext4
-        # Список опций монтирования.
-        mountOptions:
-          - discard
-        # Суфикс, который будет использован для созданного StorageClass’а.
-        # В качестве первой части используется имя созданного CephCSIDriver.
-        namePostfix: csi-rbd
-        # Название пула, в котором будут создаваться RBD-образы.
-        pool: kubernetes-rbd
-        # Политика возврата для Persistent Volume.
-        # По умолчанию: "Retain".
-        # Допустимые значения: "Delete", "Retain".
-        # [Подробнее...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
-        reclaimPolicy: Delete
-  cephfs:
-    # Описание StorageClass’ов для CephFS.
-    storageClasses:
-        # Включает возможность изменять размер тома, редактируя соответствующий объект PersistentVolumeClaim.
-        # По умолчанию true.
-        # [Подробнее...](https://kubernetes.io/docs/concepts/storage/storage-classes/#allow-volume-expansion)
-      - allowVolumeExpansion: true
-        # Имя файловой системы CephFS.
-        fsName: cephfs
-        # Суфикс, который будет использован для созданного StorageClass’а.
-        # В качестве первой части используется имя созданного CephCSIDriver.
-        namePostfix: csi-cephfs
-        # Название пула, в котором будут создаваться RBD-образы.
-        pool: cephfs_data
-        # Политика возврата для Persistent Volume.
-        # По умолчанию: "Retain".
-        # Допустимые значения: "Delete", "Retain".
-        # [Подробнее...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
-        reclaimPolicy: Delete
 EOF
 ```
 
-Созданные StorageClass'ы можно проверить с помощью команды:
-```yaml
-d8 k get StorageClass
+## Создание StorageClass'а
 
-# NAME                 PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-# example-csi-rbd      rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
-# example-csi-cephfs   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
+Создание StorageClass’ов осуществляется через ресурс `CephStorageClass`, который определяет конфигурацию для желаемого
+класса хранения. Ручное создание ресурса `StorageClass` без `CephStorageClass` может привести к нежелательному поведению.
+
+Пример создания StorageClass’а на основе RBD (RADOS Block Device):
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: CephStorageClass
+metadata:
+  name: ceph-rbd-sc
+spec:
+  clusterConnectionName: ceph-cluster-1
+  clusterAuthenticationName: ceph-auth-1
+  reclaimPolicy: Delete
+  type: RBD
+  rbd:
+    defaultFSType: ext4
+    pool: ceph-rbd-pool
+EOF
 ```
 
-Модуль ceph-csi позволяет подключить несколько Ceph-кластеров. Для каждого подключения нужно создать соответсвующий ресурс `CephCSIDriver`.
+Пример создания StorageClass’а на основе файловой системы Ceph:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: CephStorageClass
+metadata:
+  name: ceph-fs-sc
+spec:
+  clusterConnectionName: ceph-cluster-1
+  clusterAuthenticationName: ceph-auth-1
+  reclaimPolicy: Delete
+  type: CephFS
+  cephFS:
+    fsName: cephfs
+EOF
+```
+
+Проверьте, что созданные CephStorageClass'ы перешли в состояние `Created` и соответствующие StorageClass'ы создались:
+
+```shell
+d8 k get cephstorageclass
+
+# NAME          PHASE     AGE
+# ceph-rbd-sc   Created   1h
+# ceph-fs-sc    Created   1h
+```
+
+Созданный StorageClass можно проверить с помощью команды:
+```shell
+d8 k get sc
+
+# NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+# ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
+# ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
+```
+
+Если StorageClass'ы появились, значит настройка модуля csi-ceph завершена.
+Теперь пользователи могут создавать `PersistentVolume`, указывая созданные StorageClass`ы.
