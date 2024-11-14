@@ -14,11 +14,14 @@ properties:
   defaultClusterStorageClass:
     type: string
     default: null
-    description: |
+    description: |-
       The name of the StorageClass that will be annotated as default in the cluster.
-        * If the value is omitted, the current default StorageClass will be kept, if it exists in the cluster.
-          Otherwise, the first StorageClass created by the cloud-provider module will be used (if any cloud-provider module is used).
-        * Use this parameter to change the default StorageClass in the cluster, since manually adding default-annotations to StorageClasses is prohibited.
+      If the parameter is omitted, the default StorageClass is either:
+
+       * an arbitrary StorageClass present in the cluster that has the default annotation;
+       * The first (alphabetically) StorageClass created by the cloud provider module (if any cloud provider module is used).
+
+      Use this parameter to change the default StorageClass in the cluster, as manually adding the default annotation to a StorageClass is not allowed. 
   highAvailability:
     type: boolean
     description: |
