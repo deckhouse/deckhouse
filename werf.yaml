@@ -335,7 +335,6 @@ shell:
   - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
   {{- end }}
 {{- end }}
-  - export CI_D8_VERSION=${CI_COMMIT_TAG}
   - |
     if [ -z "$CI_COMMIT_TAG" ]; then
         latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/deckhouse/deckhouse.git 'v*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
@@ -347,7 +346,7 @@ shell:
         new_patch=0
 
         new_version="${major}.${new_minor}.${new_patch}-${CI_COMMIT_REF_SLUG:-main}+${WERF_COMMIT_HASH::7}"
-        export CI_D8_VERSION=${new_version}
+        export CI_COMMIT_TAG=${new_version}
     fi
   - cd /deckhouse
   # Generate hooks imports for particular edition
@@ -356,8 +355,8 @@ shell:
   # into separate phases.
   - go mod download
   - cd /deckhouse/deckhouse-controller
-  - echo "D8_VERSION ${CI_D8_VERSION}"
-  - D8_VERSION={{- env "CI_D8_VERSION" | default "dev" }} ./go-build.sh
+  - echo "D8_VERSION ${CI_COMMIT_TAG}"
+  - D8_VERSION={{- env "CI_COMMIT_TAG" | default "dev" }} ./go-build.sh
   - mv deckhouse-controller /out
 ---
 artifact: dhctl
