@@ -318,7 +318,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 
 	modulesDirs := []string{
 		"/deckhouse/modules",
-		"/deckhouse/downloaded/modules",
+		"/deckhouse/downloaded",
 	}
 
 	deckhouseContainerEnv := []apiv1.EnvVar{
