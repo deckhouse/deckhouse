@@ -337,21 +337,9 @@ shell:
 {{- end }}
   - |
     if [ -z "$CI_COMMIT_TAG" ]; then
-        # Указывает на временную папку для клонирования данных
-        TEMP_DIR=$(mktemp -d)
-
-        # Клонирование только тегов из удаленного репозитория
-        git clone --bare --depth 1 --filter=blob:none --tags https://github.com/deckhouse/deckhouse.git "$TEMP_DIR"
-
-        # Переход в папку с bare-репозиторием
-        cd "$TEMP_DIR" || exit
-
         # Получение последнего тега
-        latest_tag=$(git tag | sort -V | tail -n 1)
+        latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/deckhouse/deckhouse.git 'v*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
         echo "Latest tag: $latest_tag"
-
-        # Чистка временной директории
-        rm -rf "$TEMP_DIR"
 
         # Разделение тега на части версия
         IFS='.' read -r -a version_parts <<< "$latest_tag"
@@ -380,7 +368,10 @@ shell:
   - cd /deckhouse/deckhouse-controller
   - D8_VERSION={{- env "CI_COMMIT_TAG" | env "CI_D8_VERSION" | default "dev" }} ./go-build.sh
   - mv deckhouse-controller /out
-
+  git -c 'versionsort.suffix=-' \
+  ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/deckhouse/deckhouse.git 'v*.*.*' \
+  | tail --lines=1 \
+  | cut --delimiter='/' --fields=3
 ---
 artifact: dhctl
 fromImage: base-for-go
