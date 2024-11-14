@@ -355,6 +355,7 @@ shell:
   # into separate phases.
   - go mod download
   - cd /deckhouse/deckhouse-controller
+  - echo "D8 ${CI_D8_VERSION}"
   - D8_VERSION={{- env "CI_COMMIT_TAG" | env "CI_D8_VERSION" | default "dev" }} ./go-build.sh
   - mv deckhouse-controller /out
 ---
