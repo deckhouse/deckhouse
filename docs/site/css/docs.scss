@@ -1874,6 +1874,10 @@ select#contact-select {
     color: #00122C;
   }
 
+  .tippy-content code {
+    background: #E2E5E9;
+  }
+
   .tippy-svg-arrow {
     bottom: -14px;
   }
@@ -1888,6 +1892,10 @@ select#contact-select {
     text-align: start;
     padding: 32px 40px 64px 40px;
     color: #00122C;
+  }
+
+  .tippy-content code {
+    background: #E2E5E9;
   }
 
   .tippy-svg-arrow {
