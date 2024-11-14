@@ -4,11 +4,20 @@ osDistributions:
     url: https://www.altlinux.org/
     ru_support: 'true'
     en_support: 'false'
+    cse_support:
+      versions:
+        - '8 СП'
   astra:
     name: Astra Linux Special Edition
     url: https://astralinux.ru/products/astra-linux-special-edition/
     ru_support: 'true'
     en_support: 'false'
+    cse_support:
+      versions:
+        - '1.7.2'
+        - '1.7.3'
+        - '1.7.4'
+        - '1.7.5'
     note_content:
       ru: |
         В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>.<br>
@@ -52,6 +61,9 @@ osDistributions:
     url: https://redos.red-soft.ru/product/server/
     ru_support: 'true'
     en_support: 'false'
+    cse_support:
+      versions:
+        - '7.3'
   '_rosa':
     name: 'РОСА Сервер'
     url: https://rosa.ru
