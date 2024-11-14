@@ -9,6 +9,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -26,17 +27,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{MatchNames: []string{
 				"prometheus-pp-envs",
 			}},
+			FilterFunc: filterTokenSecret,
 		},
 	},
 }, handleConfigMaps)
 
+func filterPrometheusConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return obj.Object, nil
+}
+
 func handleConfigMaps(input *go_hook.HookInput) error {
 	prometheusConfigMapSnapshots := input.Snapshots["prometheus_config_map"]
 
-	if len(prometheusConfigMapSnapshots) > 0 {
-		input.Values.Set("prometheus.internal.prometheusPlusPlus.configMapFound", true)
-	} else {
+	if len(prometheusConfigMapSnapshots) == 0 {
 		input.Values.Set("prometheus.internal.prometheusPlusPlus.configMapFound", false)
+	} else {
+		input.Values.Set("prometheus.internal.prometheusPlusPlus.configMapFound", true)
 	}
 
 	return nil
