@@ -471,8 +471,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus
-  to: /deckhouse/modules/300-prometheus/templates/prometheus
+- add: /ee/fe/modules/300-prometheus/templates/prometheus/pp
+  to: /deckhouse/modules/300-prometheus/templates/prometheus/pp
   excludePaths:
     - docs
     - README.md
