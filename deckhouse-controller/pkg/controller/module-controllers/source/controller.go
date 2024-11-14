@@ -456,7 +456,7 @@ func (r *moduleSourceReconciler) getReleasePolicy(sourceName, moduleName string,
 func (r *moduleSourceReconciler) updateModuleSourceStatus(ctx context.Context, msCopy *v1alpha1.ModuleSource) error {
 	msCopy.Status.SyncTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 
-	return r.client.Status().Update(ctx, msCopy)
+	return r.client.Status().Update(ctx, msCopy, client.FieldOwner("bubububu"))
 }
 
 // checkAndPropagateRegistrySettings checks if modules source registry settings were updated (comparing registryChecksumAnnotation annotation and current registry spec)
