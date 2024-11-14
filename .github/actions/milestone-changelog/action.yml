@@ -93,6 +93,6 @@ runs:
           ${{ steps.changelog.outputs.release_markdown }}
 
           For more information, see the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-${{ steps.changelog.outputs.minor_version }}.md) and minor version [release changes](https://github.com/deckhouse/deckhouse/releases/tag/${{ steps.changelog.outputs.minor_version }}.0).
-        labels: changelog, auto
+        labels: changelog, auto, status/backport
         token: ${{ inputs.token }}
         delete-branch: true
