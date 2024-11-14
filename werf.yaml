@@ -355,7 +355,6 @@ shell:
   # into separate phases.
   - go mod download
   - cd /deckhouse/deckhouse-controller
-  - echo "D8_VERSION ${CI_COMMIT_TAG}"
   - D8_VERSION=${CI_COMMIT_TAG} ./go-build.sh
   - mv deckhouse-controller /out
 ---
