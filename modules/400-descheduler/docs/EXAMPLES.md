@@ -6,7 +6,7 @@ title: "The descheduler module: examples"
 
 ```yaml
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Descheduler
 metadata:
   name: low-node-utilization
@@ -23,7 +23,7 @@ spec:
 
 ```yaml
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Descheduler
 metadata:
   name: high-node-utilization
