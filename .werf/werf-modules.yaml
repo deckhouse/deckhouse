@@ -56,6 +56,8 @@ args:
   SOURCE_REPO: {{ .SOURCE_REPO }}
   CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
   OBSERVABILITY_SOURCE_REPO: {{ .OBSERVABILITY_SOURCE_REPO }}
+  STRONGHOLD_PULL_TOKEN: {{ .STRONGHOLD_PULL_TOKEN }}
+  DECKHOUSE_PRIVATE_REPO: {{ .DECKHOUSE_PRIVATE_REPO }}
   # proxies for various packages
   GOPROXY: {{ .GOPROXY }}
   {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
@@ -130,6 +132,8 @@ dependencies:
       {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
       {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
       {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
+      {{- $_ := set $ctx "DECKHOUSE_PRIVATE_REPO" $Root.DECKHOUSE_PRIVATE_REPO }}
+      {{- $_ := set $ctx "STRONGHOLD_PULL_TOKEN" $Root.STRONGHOLD_PULL_TOKEN }}
       {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
       {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
 ---
