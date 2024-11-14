@@ -356,7 +356,7 @@ shell:
   - go mod download
   - cd /deckhouse/deckhouse-controller
   - echo "D8_VERSION ${CI_COMMIT_TAG}"
-  - D8_VERSION={{- env "CI_COMMIT_TAG" | default "dev" }} ./go-build.sh
+  - D8_VERSION=${CI_COMMIT_TAG} ./go-build.sh
   - mv deckhouse-controller /out
 ---
 artifact: dhctl
