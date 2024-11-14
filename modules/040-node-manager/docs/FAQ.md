@@ -23,7 +23,36 @@ You can add a static node to the cluster manually ([an example](examples.html#ma
 
 To add a static node to a cluster (bare metal server or virtual machine), follow these steps:
 
-1. Prepare the required resources — servers/virtual machines, install specific OS packages, add mount points, configure the network, etc.
+1. Prepare the required resources:
+
+   Allocate a server (or a virtual machine), configure networking, etc. If required, install specific OS packages and add the mount points on the node.
+
+   Create a user (caps in the example below) and add it to sudoers by running the following command on the server:
+   ```shell
+   useradd -m -s /bin/bash caps
+   usermod -aG sudo caps
+   ```
+
+   Allow the user to run sudo commands without having to enter a password. For this, add the following line to the sudo configuration on the server (you can either edit the /etc/sudoers file, or run the sudo visudo command, or use some other method):
+   ```shell
+   caps ALL=(ALL) NOPASSWD: ALL
+   ```
+
+   Set UsePAM "yes" in /etc/ssh/sshd_config on server and restart sshd service. Generate a pair of SSH keys with an empty passphrase on the server:
+   ```shell
+   ssh-keygen -t rsa -f caps-id -C "" -N ""
+   ```
+   The public and private keys of the caps user will be stored in the caps-id.pub and caps-id files in the current directory on the server.
+
+   Add the generated public key to the /home/caps/.ssh/authorized_keys file of the caps user by executing the following commands in the keys directory on the server:
+   ```shell
+   mkdir -p /home/caps/.ssh
+   cat caps-id.pub >> /home/caps/.ssh/authorized_keys
+   chmod 700 /home/caps/.ssh
+   chmod 600 /home/caps/.ssh/authorized_keys
+   chown -R caps:caps /home/caps/
+   ```
+
 1. Create the [SSHCredentials](cr.html#sshcredentials) resource.
 1. Create the [StaticInstance](cr.html#staticinstance) resource.
 1. Create the [NodeGroup](cr.html#nodegroup) resource with the `Static` [nodeType](cr.html#nodegroup-v1-spec-nodetype), specify the [desired number of nodes](cr.html#nodegroup-v1-spec-staticinstances-count) in the group and, if necessary, the [filter](cr.html#nodegroup-v1-spec-staticinstances-labelselector) for `StaticInstance`.
