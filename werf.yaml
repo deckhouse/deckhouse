@@ -335,13 +335,6 @@ shell:
   - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
   {{- end }}
 {{- end }}
-  - cd /deckhouse
-  # Generate hooks imports for particular edition
-  - go generate ./tools/register.go
-  # Go modules depend on `register-go-hooks.go` file, hence we cannot split downloading dependencies and building
-  # into separate phases.
-  - go mod download
-  - cd /deckhouse/deckhouse-controller
   - |
     if [ -z "$CI_COMMIT_TAG" ]; then
         # Указывает на временную папку для клонирования данных
@@ -375,6 +368,13 @@ shell:
 
         echo "Generated version: $new_version"
     fi
+  - cd /deckhouse
+  # Generate hooks imports for particular edition
+  - go generate ./tools/register.go
+  # Go modules depend on `register-go-hooks.go` file, hence we cannot split downloading dependencies and building
+  # into separate phases.
+  - go mod download
+  - cd /deckhouse/deckhouse-controller
   - D8_VERSION={{- env "CI_COMMIT_TAG" | env "CI_D8_VERSION" | default "dev" }} ./go-build.sh
   - mv deckhouse-controller /out
 
