@@ -333,7 +333,9 @@ entries:
                   url: /modules/cloud-provider-vsphere/examples.html
                 - title: FAQ
                   url: /modules/cloud-provider-vsphere/faq.html
-            - title: Dynamix
+            - title:
+                en: Dynamix
+                ru: Базис.DynamiX
               d8Revision: ee
               featureStatus: experimental
               folders:

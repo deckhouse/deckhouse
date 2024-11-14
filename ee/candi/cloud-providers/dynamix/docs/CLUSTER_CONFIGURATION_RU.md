@@ -1,6 +1,6 @@
 ---
-title: "Cloud provider — Dynamix: настройки провайдера"
-description: Настройки облачного провайдера Deckhouse для Dynamix.
+title: "Cloud provider — Базис.DynamiX: настройки провайдера"
+description: Настройки облачного провайдера Deckhouse для Базис.DynamiX.
 ---
 
 {% alert level="info" %}

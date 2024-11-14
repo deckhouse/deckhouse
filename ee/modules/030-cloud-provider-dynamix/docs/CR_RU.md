@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Dynamix: Custom Resources"
+title: "Cloud provider — Базис.DynamiX: Custom Resources"
 ---
 
 <!-- SCHEMA -->
