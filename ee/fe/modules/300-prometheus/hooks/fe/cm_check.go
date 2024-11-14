@@ -13,7 +13,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        "/modules/prometheus/cm_check",
+	Queue: "/modules/prometheus/cm_check",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "prometheus_config_map",

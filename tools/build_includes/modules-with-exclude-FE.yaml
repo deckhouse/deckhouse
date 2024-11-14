@@ -474,8 +474,8 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/fe/modules/300-prometheus/templates/prometeheus
-  to: /deckhouse/modules/300-prometheus/templates/prometeheus
+- add: /ee/fe/modules/300-prometheus/templates/prometheus
+  to: /deckhouse/modules/300-prometheus/templates/prometheus
   excludePaths:
     - docs
     - README.md

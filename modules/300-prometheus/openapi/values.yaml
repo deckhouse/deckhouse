@@ -58,6 +58,11 @@ properties:
             type: number
           diskUsage:
             type: number
+      prometheusPlusPlus:
+        type: array
+        default: []
+        x-examples:
+        - [{"enabled": true, "prometheusToken": "aaa111bbb"}]
       prometheusLongterm:
         type: object
         default: {}

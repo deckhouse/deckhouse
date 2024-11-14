@@ -274,21 +274,16 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/fe/modules/300-prometheus/templates/prometeheus
-  to: /deckhouse/modules/300-prometheus/templates/prometeheus
+- add: /ee/fe/modules/300-prometheus/templates/prometheus
+  to: /deckhouse/modules/300-prometheus/templates/prometheus
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/fe/modules/300-prometheus/hooks/cm_check.go
-  to: /deckhouse/modules/300-prometheus/hooks/cm_check.go
+- add: /ee/fe/modules/300-prometheus/hooks/fe
+  to: /deckhouse/modules/300-prometheus/hooks/fe
   stageDependencies:
     setup:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/hooks/token.go
-  to: /deckhouse/modules/300-prometheus/hooks/token.go
-  stageDependencies:
-    setup:
-        - '**/*'
+        - '**/*.go'
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   stageDependencies:
