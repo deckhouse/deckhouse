@@ -265,6 +265,7 @@ shell:
   install:
   # Use v1.60.1 for go1.23 - https://github.com/golangci/golangci-lint/issues/4837
   - export GOPROXY={{ .GOPROXY }}
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 {{ .SOURCE_REPO }}/golangci/golangci-lint --branch v1.60.1
   - cd golangci-lint/
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
@@ -390,6 +391,7 @@ shell:
   install:
   - mkdir /src
   - cd /src
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -b V_9_7_P1 --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssh/openssh-portable .
   - autoreconf
   - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix /ssh

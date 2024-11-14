@@ -46,9 +46,6 @@ git:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
-mount:
-- fromPath: ~/ssh-known-hosts
-  to: /root/.ssh
 shell:
   install:
   - cd /src
