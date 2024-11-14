@@ -69,7 +69,7 @@ spec:
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'system-registry-mc'
-      expression: 'object.metadata.name == "system-registry"'
+      expression: 'oldObject.metadata.name == "system-registry"'
   validations:
     - expression: 'false'
       reason: Forbidden
@@ -77,7 +77,7 @@ spec:
 {{- else }}
   validations:
     - expression: |
-        !(object.metadata.name == "system-registry")
+        !(oldObject.metadata.name == "system-registry")
       reason: Forbidden
 {{- end }}
 ---
