@@ -13,6 +13,7 @@
       "cloud-provider-vcd",
       "cloud-provider-yandex",
       "cloud-provider-zvirt",
+      "cloud-provider-dynamix",
       "ceph-csi",
       "cni-simple-bridge",
       "terraform-manager",
@@ -70,6 +71,7 @@
       "cloud-provider-vcd",
       "cloud-provider-yandex",
       "cloud-provider-zvirt",
+      "cloud-provider-dynamix",
       "ceph-csi",
       "cni-simple-bridge",
       "terraform-manager",
@@ -109,7 +111,8 @@
     "languages": ["ru"],
     "name": "SE+",
     "excludeModules": [
-      "dashboard"
+      "dashboard",
+      "cloud-provider-dynamix"
     ],
     "includeModules": [
       "cloud-provider-vsphere",
