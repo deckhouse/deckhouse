@@ -7,9 +7,12 @@ properties:
     default: {}
     properties:
       prometheusPlusPlus:
-        prometheusToken:
-          type: string
-          default: ""
-        configMapFound:
-          type: boolean
-          default: false
+        type: object
+        default: {}
+        properties:
+          prometheusToken:
+            type: string
+            default: ""
+          configMapFound:
+            type: boolean
+            default: false
