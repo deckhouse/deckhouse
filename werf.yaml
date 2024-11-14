@@ -353,12 +353,13 @@ shell:
         new_patch=0
 
         # Подготовка новой версии с суффиксом и метаданными
-        new_version="${major}.${new_minor}.${new_patch}-${CI_COMMIT_REF_SLUG:-main}+${GITHUB_SHA::7}"
+        new_version="${major}.${new_minor}.${new_patch}-${CI_COMMIT_REF_SLUG:-main}+${WERF_COMMIT_HASH::7}"
         export CI_D8_VERSION=${new_version}
 
         echo "Generated version: $new_version"
         echo ${CI_COMMIT_REF_SLUG}
-        echo ${GITHUB_SHA::7}
+        echo ${CI_COMMIT_REF_NAME}
+        echo ${CI_COMMIT_TAG}
         env
         echo "CI_D8_VERSION: $CI_D8_VERSION"
     fi
