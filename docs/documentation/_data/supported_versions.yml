@@ -115,26 +115,28 @@ registries:
     url: https://quay.io/
     additionalInfo:
       ru: |
-        <em>Требуется добавить поддержку <a href="https://access.redhat.com/documentation/en-us/red_hat_quay/3/html/use_red_hat_quay/oci-intro#other-oci-artifacts-with-quay" target="_blank">дополнительных типов артефактов OCI.</a></em>
+        <em>Требуется добавить поддержку дополнительных типов артефактов OCI.</em>
+        <em>Подробнее можно ознакомиться <a href="https://docs.redhat.com/en/documentation/red_hat_quay/3/html/manage_red_hat_quay/supported-oci-media-types#configuring-additional-oci-media-types-proc" target="_blank">тут</a> или <a href="https://docs.projectquay.io/manage_quay.html#configuring-additional-oci-media-types-proc" target="_blank">тут</a></em>
         <pre>
         FEATURE_GENERAL_OCI_SUPPORT: true
         ALLOWED_OCI_ARTIFACT_TYPES:
-          "application/vnd.aquasec.trivy.config.v1+json":
-            - "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
-          "application/octet-stream":
-            - "application/deckhouse.io.bdu.layer.v1.tar+gzip"
-          "application/vnd.oci.empty.v1+json":
-            - "application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip"
+          application/octet-stream:
+            - application/deckhouse.io.bdu.layer.v1.tar+gzip
+            - application/vnd.cncf.openpolicyagent.layer.v1.tar+gzip
+          application/vnd.aquasec.trivy.config.v1+json:
+            - application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
+            - application/vnd.aquasec.trivy.db.layer.v1.tar+gzip
         </pre>
       en: |
-        <em>It is required to add support for <a href="https://access.redhat.com/documentation/en-us/red_hat_quay/3/html/use_red_hat_quay/oci-intro#other-oci-artifacts-with-quay" target="_blank">additional types of OCI artifacts.</a></em>
+        <em>It is required to add support for additional types of OCI artifacts.</em>
+        <em>More information you can get <a href="https://docs.redhat.com/en/documentation/red_hat_quay/3/html/manage_red_hat_quay/supported-oci-media-types#configuring-additional-oci-media-types-proc" target="_blank">here</a> or <a href="https://docs.projectquay.io/manage_quay.html#configuring-additional-oci-media-types-proc" target="_blank">here</a></em>
         <pre>
         FEATURE_GENERAL_OCI_SUPPORT: true
         ALLOWED_OCI_ARTIFACT_TYPES:
-          "application/vnd.aquasec.trivy.config.v1+json":
-            - "application/vnd.aquasec.trivy.db.layer.v1.tar+gzip"
-          "application/octet-stream":
-            - "application/deckhouse.io.bdu.layer.v1.tar+gzip"
-          "application/vnd.oci.empty.v1+json":
-            - "application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip"
+          application/octet-stream:
+            - application/deckhouse.io.bdu.layer.v1.tar+gzip
+            - application/vnd.cncf.openpolicyagent.layer.v1.tar+gzip
+          application/vnd.aquasec.trivy.config.v1+json:
+            - application/vnd.aquasec.trivy.javadb.layer.v1.tar+gzip
+            - application/vnd.aquasec.trivy.db.layer.v1.tar+gzip
         </pre>
