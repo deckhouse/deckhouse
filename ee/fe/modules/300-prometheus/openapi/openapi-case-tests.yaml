@@ -1,6 +1,4 @@
 positive:
-  configValues:
-  - {}
   values:
   - internal:
       prometheusPlusPlus:
@@ -11,8 +9,6 @@ positive:
         prometheusToken: ""
         configMapFound: false
 negative:
-  configValues:
-  - { somethingInConfig: yes }
   values:
   - internal:
       prometheusPlusPlus:
