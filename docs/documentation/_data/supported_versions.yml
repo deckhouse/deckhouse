@@ -10,22 +10,40 @@ osDistributions:
     ru_support: 'true'
     en_support: 'false'
     note_content:
-      ru: 'В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>'
+      ru: |
+        В версии <b>1.8</b> рекомендуется использовать ядро <b>linux-image-6.1-debug</b>.<br>
+        Перечень поддержки некоторыми модулями DKP версий ядра Linux в Astra 1.8:<br>
+        <ul>
+          <li><b>linux-image-6.1</b> – cni-cilium;</li>
+          <li><b>linux-image-6.1-debug</b> – cni-cilium, runtime-audit-engine;</li>
+          <li><b>linux-image-6.6</b> – cni-cilium.</li>
+        </ul>
   centos:
     name: CentOS
     url: https://www.centos.org/download/
     note_content:
-      ru: 'CentOS Linux 8 не поддерживается разработчиками с 31 мая 2024 года.<br>CentOS Linux 7 не поддерживается разработчиками с 30 июня 2024 года.'
-      en: 'CentOS Linux 8 end of life is May 31, 2024.<br>CentOS Linux 7 end of life is June 30, 2024.'
+      ru: |
+        <b>CentOS 7 и 8</b> более не поддерживаются разработчиками дистрибутива CentOS
+      en: |
+        <b>CentOS 7 and 8</b> are no longer supported by CentOS developers
   debian:
     name: Debian
     url: https://www.debian.org/download
+    note_content:
+      ru: <b>Debian 10</b> более не поддерживается разработчиками дистрибутива Debian
+      en: <b>Debian 10</b> is no longer supported by Debian developers
   rocky:
     name: Rocky Linux
     url: https://rockylinux.org/download
+    note_content:
+      ru: Для <b>Rocky Linux 8</b> прекращена активная поддержка разработчиками дистрибутива Rocky Linux (продолжается только поддержка безопасности)
+      en: Active support for <b>Rocky Linux 8</b> has been discontinued by Rocky Linux developers (there is only security support)
   ubuntu:
     name: Ubuntu
     url: https://ubuntu.com/download/server
+    note_content:
+      ru: <b>Ubuntu 18.04</b> более не поддерживается разработчиками дистрибутива Ubuntu
+      en: <b>Ubuntu 18.04</b> is no longer supported by Ubuntu developers
   '_redos':
     name: 'РЕД ОС'
     url: https://redos.red-soft.ru/product/server/
@@ -37,7 +55,8 @@ osDistributions:
     ru_support: 'true'
     en_support: 'false'
     note_content:
-      ru: 'Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>).'
+      ru: |
+        Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
 
 k8s_statuses:
   end-of-life:
