@@ -269,18 +269,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/fe/modules/300-prometheus/images/prometheuspp
-  to: /deckhouse/modules/300-prometheus/images/prometheuspp
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus
-  to: /deckhouse/modules/300-prometheus/templates/prometheus
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/fe/modules/300-prometheus/hooks/fe
-  to: /deckhouse/modules/300-prometheus/hooks/fe
+- add: /ee/fe/modules/300-prometheus
+  to: /deckhouse/modules/300-prometheus
   stageDependencies:
     setup:
         - '**/*.go'
