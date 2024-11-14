@@ -401,7 +401,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":         "imageHash-registrypackages-amazonEc2Utils220",
-		"containerd1720":            "imageHash-registrypackages-containerd1720",
+		"containerd200":             "imageHash-registrypackages-containerd200",
 		"crictl127":                 "imageHash-registrypackages-crictl127",
 		"crictl128":                 "imageHash-registrypackages-crictl128",
 		"crictl129":                 "imageHash-registrypackages-crictl129",
