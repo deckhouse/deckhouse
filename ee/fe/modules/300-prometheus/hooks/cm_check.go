@@ -13,7 +13,6 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Queue:        "/modules/prometheus/cm_check",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
