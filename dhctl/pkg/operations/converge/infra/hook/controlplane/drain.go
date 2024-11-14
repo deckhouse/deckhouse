@@ -40,6 +40,7 @@ func drainNode(kubeCl *client.KubernetesClient, nodeName string) error {
 	node, err := kubeCl.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
+			log.InfoF("Node '%s' has been deleted. Skip\n", nodeName)
 			return nil
 		}
 

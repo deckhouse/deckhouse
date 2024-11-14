@@ -22,6 +22,7 @@ import (
 	"time"
 
 	flantkubeclient "github.com/flant/kube-client/client"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -102,6 +103,10 @@ func removeLabelsFromNode(kubeCl *client.KubernetesClient, nodeName string, labe
 	return retry.NewLoop(fmt.Sprintf("Remove labels from node %s", nodeName), 45, 5*time.Second).Run(func() error {
 		node, err := kubeCl.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
+			if errors.IsNotFound(err) {
+				log.InfoF("Node '%s' has been deleted. Skip\n", nodeName)
+				return nil
+			}
 			return err
 		}
 
