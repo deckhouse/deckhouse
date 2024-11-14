@@ -1,5 +1,7 @@
 ## Patches
 
+Use https://github.com/deckhouse/3p-distribution/tree/embedded-registry-v2.8.3
+
 ### 001-remote-and-local-path-options.patch
 
 Added 2 parameters for proxy operation mode:
