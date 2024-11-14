@@ -586,12 +586,11 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform in Dynamix"
-      ru: "Deckhouse Kubernetes Platform в Dynamix"
+      ru: "Deckhouse Kubernetes Platform в Базис.DynamiX"
     type: cloud
     name:
-      en: "Dynamix"
-      ru: "Dynamix"
+      en: "Базис.DynamiX"
+      ru: "Базис.DynamiX"
     steps:
       step2:
         name:
