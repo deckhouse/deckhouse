@@ -1,3 +1,4 @@
+{%- include getting_started/global/partials/NOTICES.liquid %}
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
 ## Выбор образа ВМ
