@@ -371,11 +371,11 @@ shell:
 
         # Подготовка новой версии с суффиксом и метаданными
         new_version="${major}.${new_minor}.${new_patch}-prerelease+${CI_COMMIT_REF_SLUG:-main}"
-        export D8_PRERELEASE_VERSION=${new_version}
+        export CI_D8_VERSION=${new_version}
 
         echo "Generated version: $new_version"
     fi
-  - D8_VERSION={{- env "CI_COMMIT_TAG" | env "D8_PRERELEASE_VERSION" | default "dev" }} ./go-build.sh
+  - D8_VERSION={{- env "CI_COMMIT_TAG" | env "CI_D8_VERSION" | default "dev" }} ./go-build.sh
   - mv deckhouse-controller /out
 
 ---
