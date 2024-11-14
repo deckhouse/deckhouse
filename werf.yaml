@@ -357,10 +357,11 @@ shell:
         export CI_D8_VERSION=${new_version}
 
         echo "Generated version: $new_version"
+        echo ${CI_COMMIT_REF_SLUG}
+        echo ${GITHUB_SHA::7
+        env
         echo "CI_D8_VERSION: $CI_D8_VERSION"
     fi
-  - env | grep "CI_"
-  - env | grep "GITHUB"
   - cd /deckhouse
   # Generate hooks imports for particular edition
   - go generate ./tools/register.go
