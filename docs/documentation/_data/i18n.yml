@@ -257,8 +257,8 @@ common:
 
 comparison:
   except_parameters:
-    en: "Except for the following parameters:<br />"
-    ru: "Кроме следующих параметров:<br />"
+    en: "Except for the following parameters:<br />"
+    ru: "Кроме следующих параметров:<br />"
 
 features:
   experimental:

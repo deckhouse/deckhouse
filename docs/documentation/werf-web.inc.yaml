@@ -101,7 +101,7 @@ shell:
         sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
 
         echo '[] Converting editions structure...'
-        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' > editions.json
+        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - editions-addition.json > editions.json
 
 {{ if ne .ModuleName "docs" }}
         # "Converting public documentation links to internal relative..."
