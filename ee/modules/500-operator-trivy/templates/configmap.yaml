@@ -61,12 +61,19 @@ data:
   {{- end }}
   {{- range $idx, $registry := .Values.operatorTrivy.insecureRegistries }}
   trivy.insecureRegistry.{{ $idx }}: {{ $registry | quote }}
+  trivy.nonSslRegistry.{{ $idx }}: {{ $registry | quote }}
   {{- end }}
   trivy.slow: "true"
   trivy.dbRepository: {{ $dbRepository }}
   trivy.javaDbRepository: {{ $javaDbRepository }}
   trivy.command: "image"
+  {{- if .Values.operatorTrivy.insecureDbRegistry }}
+  TRIVY_INSECURE: {{ .Values.operatorTrivy.insecureDbRegistry | quote }}
+  trivy.dbRepositoryInsecure: {{ .Values.operatorTrivy.insecureDbRegistry | quote }}
+  {{- else }}
+  TRIVY_INSECURE: "false"
   trivy.dbRepositoryInsecure: "false"
+  {{- end }}
   trivy.useBuiltinRegoPolicies: "true"
   trivy.supportedConfigAuditKinds: "Workload,Service,Role,ClusterRole,NetworkPolicy,Ingress,LimitRange,ResourceQuota"
   trivy.timeout: "5m0s"
