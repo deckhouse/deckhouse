@@ -1,4 +1,4 @@
-{{- if .Values.prometheus.internal.prometheusPlusPlus.configMapFound }}
+{{- if .Values.prometheus.internal.prometheusPlusPlus.enabled }}
 ---
 apiVersion: deckhouse.io/v1
 kind: GrafanaAdditionalDatasource
@@ -12,7 +12,7 @@ spec:
     tlsSkipVerify: true
     timeInterval: 30s
   secureJsonData:
-    httpHeaderValue1: Bearer {{ $token }} 
+    httpHeaderValue1: Bearer {{ .Values.prometheus.internal.prometheusPlusPlus.prometheusToken }} 
   type: prometheus
   url: https://prometheus-pp.d8-monitoring.svc.cluster.local:9090
 {{- end }}

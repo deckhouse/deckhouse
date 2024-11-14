@@ -1,4 +1,4 @@
-{{- if .Values.prometheus.internal.prometheusPlusPlus.configMapFound }}
+{{- if .Values.prometheus.internal.prometheusPlusPlus.enabled }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

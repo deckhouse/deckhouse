@@ -14,7 +14,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
-	Queue: "/modules/prometheus/cm_check",
+	Queue:        "/modules/prometheus/cm_check",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "prometheus_config_map",
@@ -41,9 +41,9 @@ func handleConfigMaps(input *go_hook.HookInput) error {
 	prometheusConfigMapSnapshots := input.Snapshots["prometheus_config_map"]
 
 	if len(prometheusConfigMapSnapshots) == 0 {
-		input.Values.Set("prometheus.internal.prometheusPlusPlus.configMapFound", false)
+		input.Values.Set("prometheus.internal.prometheusPlusPlus.enabled", false)
 	} else {
-		input.Values.Set("prometheus.internal.prometheusPlusPlus.configMapFound", true)
+		input.Values.Set("prometheus.internal.prometheusPlusPlus.enabled", true)
 	}
 
 	return nil
