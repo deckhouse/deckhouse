@@ -23,18 +23,18 @@ spec:
     - name: 'system-registry-mc'
       expression: 'object.metadata.name == "system-registry"'
   validations:
-    - expression: 'object.spec.settings.mode == request.oldObject.spec.settings.mode'
+    - expression: 'object.spec.settings.mode == oldObject.spec.settings.mode'
       reason: Forbidden
       message: "Changing the 'settings.mode' field in 'ModuleConfig/system-registry' is not allowed when the registry is in use."
-    - expression: 'object.spec.enabled == request.oldObject.spec.enabled || object.spec.enabled == true'
+    - expression: 'object.spec.enabled == oldObject.spec.enabled || object.spec.enabled == true'
       reason: Forbidden
       message: "Disabling 'ModuleConfig/system-registry' is not allowed when the registry is in use."
 {{- else }}
   validations:
     - expression: |
         !(object.metadata.name == "system-registry" &&
-          !(object.spec.settings.mode == request.oldObject.spec.settings.mode) && 
-          !(object.spec.enabled == request.oldObject.spec.enabled || object.spec.enabled == true))
+          !(object.spec.settings.mode == oldObject.spec.settings.mode) && 
+          !(object.spec.enabled == oldObject.spec.enabled || object.spec.enabled == true))
       reason: Forbidden
 {{- end }}
 ---
