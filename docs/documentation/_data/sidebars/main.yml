@@ -294,81 +294,6 @@ entries:
                   url: /modules/cloud-provider-openstack/examples.html
                 - title: FAQ
                   url: /modules/cloud-provider-openstack/faq.html
-            - title: VMware vSphere
-              d8Revision: ee
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-vsphere/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-vsphere/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-vsphere/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-vsphere/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-vsphere/configuration.html
-                    - title: Custom Resources
-                      url: /modules/cloud-provider-vsphere/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/cloud-provider-vsphere/examples.html
-                - title: FAQ
-                  url: /modules/cloud-provider-vsphere/faq.html
-            - title:
-                en: Dynamix
-                ru: Базис.DynamiX
-              d8Revision: ee
-              featureStatus: experimental
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/cloud-provider-dynamix/
-                - title:
-                    en: Installation
-                    ru: Установка
-                  folders:
-                    - title:
-                        en: Preparing environment
-                        ru: Подготовка окружения
-                      url: /modules/cloud-provider-dynamix/environment.html
-                    - title:
-                        en: Layouts
-                        ru: Схемы размещения
-                      url: /modules/cloud-provider-dynamix/layouts.html
-                    - title:
-                        en: Provider configuration
-                        ru: Настройка провайдера
-                      url: /modules/cloud-provider-dynamix/cluster_configuration.html
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/cloud-provider-dynamix/configuration.html
-                    - title: Custom Resources
-                      url: /modules/cloud-provider-dynamix/cr.html
             - title: VMware Cloud Director
               d8Revision: ee
               featureStatus: experimental
@@ -409,6 +334,45 @@ entries:
                   url: /modules/cloud-provider-vcd/examples.html
                 - title: FAQ
                   url: /modules/cloud-provider-vcd/faq.html
+            - title: VMware vSphere
+              d8Revision: ee
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/cloud-provider-vsphere/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/cloud-provider-vsphere/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/cloud-provider-vsphere/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/cloud-provider-vsphere/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/cloud-provider-vsphere/configuration.html
+                    - title: Custom Resources
+                      url: /modules/cloud-provider-vsphere/cr.html
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/cloud-provider-vsphere/examples.html
+                - title: FAQ
+                  url: /modules/cloud-provider-vsphere/faq.html
             - title: Yandex Cloud
               folders:
                 - title:
@@ -483,6 +447,42 @@ entries:
                       url: /modules/cloud-provider-zvirt/cr.html
                 - title: FAQ
                   url: /modules/cloud-provider-zvirt/faq.html
+            - title:
+                en: Dynamix
+                ru: Базис.DynamiX
+              d8Revision: ee
+              featureStatus: experimental
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/cloud-provider-dynamix/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/cloud-provider-dynamix/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/cloud-provider-dynamix/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/cloud-provider-dynamix/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/cloud-provider-dynamix/configuration.html
+                    - title: Custom Resources
+                      url: /modules/cloud-provider-dynamix/cr.html
         - title:
             en: Control plane management
             ru: Управление control plane
