@@ -1,0 +1,98 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+
+{{- if eq global.modulesImages.registry.address "embedded-registry.d8-system.svc:5001" }}
+
+---
+{{/* Check update ModuleConfig/system-registry */}}
+{{- $policyName := "mc-update-embedded-registry.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["UPDATE"]
+      resources:   ["moduleconfigs"]
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  matchConditions:
+    - name: 'system-registry-mc'
+      expression: 'object.metadata.name == "system-registry"'
+  validations:
+    - expression: 'object.spec.settings.mode == request.oldObject.spec.settings.mode'
+      reason: Forbidden
+      message: "Changing the 'settings.mode' field in 'ModuleConfig/system-registry' is not allowed when the registry is in use."
+    - expression: 'object.spec.enabled == request.oldObject.spec.enabled || object.spec.enabled == true'
+      reason: Forbidden
+      message: "Disabling 'ModuleConfig/system-registry' is not allowed when the registry is in use."
+{{- else }}
+  validations:
+    - expression: |
+        !(object.metadata.name == "system-registry" &&
+          !(object.spec.settings.mode == request.oldObject.spec.settings.mode) && 
+          !(object.spec.enabled == request.oldObject.spec.enabled || object.spec.enabled == true))
+      reason: Forbidden
+{{- end }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  validationActions: [Deny, Audit]
+{{- end }}
+{{/* End ModuleConfig/system-registry update validation */}}
+
+---
+{{/* Check delete ModuleConfig/system-registry */}}
+{{- $policyName := "mc-delete-embedded-registry.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations: ["DELETE"]
+        resources: ["moduleconfigs"]
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  matchConditions:
+    - name: 'system-registry-mc'
+      expression: 'object.metadata.name == "system-registry"'
+  validations:
+    - expression: 'false'
+      reason: Forbidden
+      message: "Deletion of 'ModuleConfig/system-registry' is not allowed."
+{{- else }}
+  validations:
+    - expression: |
+        !(object.metadata.name == "system-registry")
+      reason: Forbidden
+{{- end }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "system-registry-manager")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  validationActions: [Deny, Audit]
+{{- end }}
+{{/* End ModuleConfig/system-registry delete validation */}}
+---
+{{- end }}
+
+{{- end }}
