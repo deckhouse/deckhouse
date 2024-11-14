@@ -58,6 +58,19 @@ properties:
             type: number
           diskUsage:
             type: number
+      prometheusPlusPlus:
+        type: object
+        default: {}
+        x-examples:
+          - prometheusToken: "aaa111bbb"
+            enabled: true
+        properties:
+          prometheusToken:
+            type: string
+            default: ""
+          enabled:
+            type: boolean
+            default: false
       prometheusLongterm:
         type: object
         default: {}
@@ -420,5 +433,3 @@ properties:
           password:
             type: string
             x-examples: ["p4ssw0rd"]
-
-
