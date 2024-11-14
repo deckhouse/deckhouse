@@ -348,6 +348,7 @@ shell:
 
         # Получение последнего тега
         latest_tag=$(git tag | sort -V | tail -n 1)
+        echo "Latest tag: $latest_tag"
 
         # Чистка временной директории
         rm -rf "$TEMP_DIR"
@@ -357,6 +358,7 @@ shell:
         major=${version_parts[0]}
         minor=${version_parts[1]}
         patch=${version_parts[2]}
+        echo "Major: $major Minor: $minor Patch: $patch"
 
         # Инкрементирование minor версии и сброс patch версии
         new_minor=$((minor + 1))
@@ -367,6 +369,7 @@ shell:
         export CI_D8_VERSION=${new_version}
 
         echo "Generated version: $new_version"
+        echo "CI_D8_VERSION: $CI_D8_VERSION"
     fi
   - cd /deckhouse
   # Generate hooks imports for particular edition
