@@ -23,3 +23,11 @@ lang: ru
 
 ## Как назначить StorageClass по умолчанию?
 
+Чтобы назначить StorageClass платформы по умолчанию, нужно указать желаемый класс хранения в глобальной конфигурации.
+Пример команды для установки класс хранения по умолчанию:
+
+```shell
+# Укажите имя своего StorageClass'a.
+DEFAULT_STORAGE_CLASS=replicated-storage-class
+kubectl patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
+```
