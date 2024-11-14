@@ -111,12 +111,12 @@
     "languages": ["ru"],
     "name": "SE+",
     "excludeModules": [
-      "dashboard",
-      "cloud-provider-dynamix"
+      "dashboard"
     ],
     "includeModules": [
       "cloud-provider-vsphere",
-      "cloud-provider-zvirt"
+      "cloud-provider-zvirt",
+      "cloud-provider-dynamix"
     ]
   }
 }
