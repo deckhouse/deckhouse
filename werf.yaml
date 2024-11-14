@@ -360,7 +360,7 @@ shell:
         echo ${CI_COMMIT_REF_SLUG}
         echo ${CI_COMMIT_REF_NAME}
         echo ${CI_COMMIT_TAG}
-        env
+        env | grep CI
         echo "CI_D8_VERSION: $CI_D8_VERSION"
     fi
   - cd /deckhouse
