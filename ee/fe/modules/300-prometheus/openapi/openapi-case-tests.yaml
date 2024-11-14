@@ -1,0 +1,24 @@
+positive:
+  configValues:
+  - {}
+  values:
+  - internal:
+      prometheusPlusPlus:
+        prometheusToken: "example-token"
+        configMapFound: true
+  - internal:
+      prometheusPlusPlus:
+        prometheusToken: ""
+        configMapFound: false
+negative:
+  configValues:
+  - { somethingInConfig: yes }
+  values:
+  - internal:
+      prometheusPlusPlus:
+        prometheusToken: 12345
+        configMapFound: "yes"
+  - internal: {}
+  - internal:
+      prometheusPlusPlus:
+        unexpectedField: "value"
