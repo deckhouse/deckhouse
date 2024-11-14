@@ -347,6 +347,9 @@ shell:
 
         new_version="${major}.${new_minor}.${new_patch}-${CI_COMMIT_REF_SLUG:-main}+${WERF_COMMIT_HASH::7}"
         export CI_D8_VERSION=${new_version}
+    else
+        # if tag is used
+        export CI_D8_VERSION=${CI_COMMIT_TAG}
     fi
   - cd /deckhouse
   # Generate hooks imports for particular edition
@@ -355,8 +358,8 @@ shell:
   # into separate phases.
   - go mod download
   - cd /deckhouse/deckhouse-controller
-  - echo "D8 ${CI_D8_VERSION}"
-  - D8_VERSION={{- env "CI_COMMIT_TAG" | env "CI_D8_VERSION" | default "dev" }} ./go-build.sh
+  - echo "D8_VERSION ${CI_D8_VERSION}"
+  - D8_VERSION={{- env "CI_D8_VERSION" | default "dev" }} ./go-build.sh
   - mv deckhouse-controller /out
 ---
 artifact: dhctl
