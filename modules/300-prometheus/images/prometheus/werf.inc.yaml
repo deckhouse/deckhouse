@@ -7,6 +7,7 @@ mount:
 shell:
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.14.0 {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
   - cd /promu
   - go build -ldflags="-s -w" -o promu ./main.go
@@ -34,8 +35,10 @@ shell:
   install:
   - export NODE_MAJOR=20
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.45.2
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus-deps
   - mkdir /prometheus && cd /prometheus
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus
   - cd /prometheus/prometheus/web/ui
   - mv /prometheus-deps/* .

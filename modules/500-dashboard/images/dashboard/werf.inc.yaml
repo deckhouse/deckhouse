@@ -20,6 +20,7 @@ fromArtifact: common/src-artifact
 shell:
   install:
   - cd /src
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ .SOURCE_REPO }}/kubernetes/dashboard .
   - git config --global user.email "builder@deckhouse.io"
   - git checkout v2.7.0

@@ -25,6 +25,7 @@ mount:
 shell:
   install:
     - mkdir /src
+    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
     - cd /src
     - for ifile in $(ls /patches/*.patch); do git apply $ifile; done

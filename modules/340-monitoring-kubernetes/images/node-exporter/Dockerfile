@@ -12,6 +12,7 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
+RUN echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --depth 1 --branch v1.8.1 ${SOURCE_REPO}/prometheus/node_exporter.git /node_exporter
 WORKDIR /node_exporter/
 

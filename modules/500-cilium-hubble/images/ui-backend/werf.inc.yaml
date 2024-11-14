@@ -19,6 +19,7 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - export "GOARCH=amd64"
   - mkdir -p /go/src/github.com/cilium/hubble-ui
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /go/src/github.com/cilium/hubble-ui
   - cd /go/src/github.com/cilium/hubble-ui/backend
   - find /patches -name '*.patch' | xargs git apply --verbose

@@ -21,6 +21,7 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64
   - mkdir -p /go/src/github.com/cilium/cilium
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   - cd /go/src/github.com/cilium/cilium
   - find /patches -name '*.patch' | xargs git apply --verbose

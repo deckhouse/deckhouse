@@ -12,6 +12,7 @@ shell:
     - apk add --no-cache git
     - mkdir -p /src
     - cd /src
+    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b v0.14.5 {{ $.SOURCE_REPO }}/metallb/metallb.git .
     - git config --global user.email "builder@deckhouse.io"
     - git checkout 7ebb4a2e569930bcbf303e95ff801240c4cb466b

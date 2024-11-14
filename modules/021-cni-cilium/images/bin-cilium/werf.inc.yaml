@@ -39,6 +39,7 @@ mount:
 shell:
   beforeInstall:
   - mkdir -p /go/src/github.com/cilium/cilium
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   setup:
   - export GOROOT=/usr/local/go GOPATH=/go

@@ -32,6 +32,7 @@ shell:
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
+    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform.git /src
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .

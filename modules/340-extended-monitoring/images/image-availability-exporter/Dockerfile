@@ -13,6 +13,7 @@ ENV GOPROXY=${GOPROXY}
 WORKDIR /src
 ENV GOARCH=amd64
 RUN apk add patch git
+RUN echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --depth 1 --branch v0.9.0 ${SOURCE_REPO}/deckhouse/k8s-image-availability-exporter.git .
 COPY patches/001-support-legacy-annotation.patch /src/
 RUN patch -p1 < 001-support-legacy-annotation.patch

@@ -29,6 +29,7 @@ git:
 shell:
   install:
   - mkdir -p /src
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.2.1 {{ $.SOURCE_REPO }}/flant/cloud-provider-vsphere.git /src
   - cd /src
   - find /patches -name '*.patch' -exec git apply {} \;
@@ -56,6 +57,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ $.SOURCE_REPO }}/flant/vsphere-csi-driver.git /src
   - cd /src
   - git checkout 6189afc2522d83a96d3857110c61478710110347

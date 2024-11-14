@@ -10,12 +10,14 @@ FROM $BASE_ALT as base-alt
 FROM $BASE_ALPINE_DEV as dumb-init-builder
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
+RUN echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 
 # Build luarocks assets
 FROM $BASE_ALT_DEV as luarocks-builder
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
+RUN echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN apt-get install -y lua5.1-devel \
     && git clone --branch 0.5.1 ${SOURCE_REPO}/starwing/lua-protobuf \
     && cd lua-protobuf/ \
@@ -43,6 +45,7 @@ COPY patches/fix-cleanup.patch /
 COPY patches/add-http3.patch /
 COPY patches/new-metrics.patch /
 ENV GOARCH=amd64
+RUN echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
     patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \

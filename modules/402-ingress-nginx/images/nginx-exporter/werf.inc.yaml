@@ -8,6 +8,7 @@ shell:
   install:
   - mkdir /src
   - cd /src
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.8.0 {{ $.SOURCE_REPO }}/nginxinc/nginx-prometheus-exporter.git .
   - go mod edit -go 1.20
   - go get github.com/prometheus/client_golang@v1.17.0

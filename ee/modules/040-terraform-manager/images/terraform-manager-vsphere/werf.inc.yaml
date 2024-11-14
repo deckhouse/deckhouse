@@ -21,6 +21,7 @@ shell:
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
+    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.vsphere.version }}-flant.1 {{ $.SOURCE_REPO }}/deckhouse/3p-terraform-provider-vsphere.git /src
     - cd /src
     - make fmt

@@ -21,6 +21,7 @@ shell:
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
+    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.gcp.version }}-flant.1 {{ $.SOURCE_REPO }}/flant/terraform-provider-google.git /src
     - cd /src
     - go mod download

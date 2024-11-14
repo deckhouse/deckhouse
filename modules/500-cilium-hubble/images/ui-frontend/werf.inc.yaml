@@ -15,6 +15,7 @@ shell:
   - export "TARGETOS=linux"
   - export "TARGETARCH=amd64"
   - mkdir -p /app
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /app
   - cd /app
   - find /patches -name '*.patch' | xargs git apply --verbose

@@ -31,6 +31,7 @@ mount:
 shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ .SOURCE_REPO }}/mikefarah/yq --branch "v4.9.6"
   - cd yq/
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/yq
@@ -44,6 +45,7 @@ mount:
 shell:
   install:
   - export GOPROXY={{ .GOPROXY }}
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ .SOURCE_REPO }}/mikefarah/yq --branch v2.4.1
   - cd yq/
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/yq
@@ -53,6 +55,7 @@ artifact: semver-artifact
 from: {{ $.Images.BASE_ALPINE_DEV }}
 shell:
   install:
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ .SOURCE_REPO }}/fsaintjacques/semver-tool --branch 2.1.0
   - cd /semver-tool/
   - make install
@@ -62,6 +65,7 @@ artifact: tini-artifact
 from: {{ $.Images.BASE_ALPINE_DEV }}
 shell:
   install:
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0
   - cd /tini/
   - export CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"

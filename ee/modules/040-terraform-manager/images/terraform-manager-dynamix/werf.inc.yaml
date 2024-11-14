@@ -18,6 +18,7 @@ shell:
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
+    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch {{ .TF.decort.version }} {{ $.SOURCE_REPO }}/BASIS/terraform-provider-decort.git /src
     - cd /src
     - go mod tidy

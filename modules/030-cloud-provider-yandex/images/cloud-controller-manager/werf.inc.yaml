@@ -27,6 +27,7 @@ mount:
   to: /go/pkg
 shell:
   install:
+    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch {{ $value.ccm.yandex }} https://github.com/deckhouse/yandex-cloud-controller-manager.git /src
     - cd /src
     - export GOPROXY={{ $.GOPROXY }}

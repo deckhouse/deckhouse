@@ -72,6 +72,7 @@ mount:
 shell:
   install:
   - export GOPROXY={{ $.GOPROXY }}
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v3.4.3 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-random.git /src-provider-random
   - cd /src-provider-random
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\""

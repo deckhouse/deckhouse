@@ -11,6 +11,7 @@ shell:
   install:
     - mkdir /src
     - cd /src
+    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/descheduler.git .
     - GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version={{ $version }} -X main.gitCommit=b59995eeb8b3733c635059c041aa30c8c04f5e33" -o descheduler sigs.k8s.io/descheduler/cmd/descheduler
     - chown 64535:64535 descheduler

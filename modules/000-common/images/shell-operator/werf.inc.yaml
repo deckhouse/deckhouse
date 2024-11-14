@@ -41,6 +41,7 @@ shell:
   - apk add --no-cache automake autoconf libtool build-base git
   install:
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ .SOURCE_REPO }}/flant/jq.git
   - cd /jq
   - git reset --hard {{ $jqVersion }}

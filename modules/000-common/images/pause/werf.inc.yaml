@@ -16,6 +16,7 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - mkdir /src
+    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v1.28.0 {{ $.SOURCE_REPO }}/kubernetes/kubernetes.git /src
     - cd /src
     - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 build/pause/linux/pause.c
