@@ -353,12 +353,14 @@ shell:
         new_patch=0
 
         # Подготовка новой версии с суффиксом и метаданными
-        new_version="${major}.${new_minor}.${new_patch}-prerelease+${CI_COMMIT_REF_SLUG:-main}"
+        new_version="${major}.${new_minor}.${new_patch}-${CI_COMMIT_REF_SLUG:-main}+${GITHUB_SHA::7}"
         export CI_D8_VERSION=${new_version}
 
         echo "Generated version: $new_version"
         echo "CI_D8_VERSION: $CI_D8_VERSION"
     fi
+  - env | grep "CI_"
+  - env | grep "GITHUB"
   - cd /deckhouse
   # Generate hooks imports for particular edition
   - go generate ./tools/register.go
