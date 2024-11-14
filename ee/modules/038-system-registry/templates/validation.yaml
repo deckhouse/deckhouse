@@ -73,7 +73,7 @@ spec:
   validations:
     - expression: 'false'
       reason: Forbidden
-      message: "Deletion of 'ModuleConfig/system-registry' is not allowed."
+      message: "Deletion of 'ModuleConfig/system-registry' is not allowed when the registry is in use."
 {{- else }}
   validations:
     - expression: |
