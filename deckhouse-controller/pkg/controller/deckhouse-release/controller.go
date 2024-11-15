@@ -80,12 +80,10 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage,
 	preflightCountDown *sync.WaitGroup, logger *log.Logger,
 ) error {
-	lg := logger.With("component", "DeckhouseRelease")
-
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
 		dc:                 dc,
-		logger:             lg,
+		logger:             logger,
 		moduleManager:      moduleManager,
 		updateSettings:     updateSettings,
 		metricStorage:      metricStorage,
@@ -119,11 +117,11 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		return err
 	}
 
-	lg.Info("Controller started")
+	r.logger.Info("Controller started")
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DeckhouseRelease{}).
-		WithEventFilter(logWrapper{lg, newEventFilter()}).
+		WithEventFilter(logWrapper{r.logger, newEventFilter()}).
 		Complete(ctr)
 }
 

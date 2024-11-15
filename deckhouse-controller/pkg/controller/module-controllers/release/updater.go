@@ -33,9 +33,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -167,7 +167,7 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	tmpModuleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
 	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
 
-	def := models.DeckhouseModuleDefinition{
+	def := moduleloader.Definition{
 		Name:   moduleName,
 		Weight: release.Spec.Weight,
 		Path:   tmpModuleVersionPath,

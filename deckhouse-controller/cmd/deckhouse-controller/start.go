@@ -23,11 +23,10 @@ import (
 	"syscall"
 	"time"
 
-	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
-	"github.com/flant/addon-operator/pkg/utils"
+	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/kube-client/client"
-	sh_app "github.com/flant/shell-operator/pkg/app"
-	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
+	shapp "github.com/flant/shell-operator/pkg/app"
+	utilsignal "github.com/flant/shell-operator/pkg/utils/signal"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,13 +36,9 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addon-operator/kube-config/backend"
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
-	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -57,11 +52,11 @@ const (
 
 func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 	return func(_ *kingpin.ParseContext) error {
-		sh_app.AppStartMessage = version()
+		shapp.AppStartMessage = version()
 
 		ctx := context.Background()
 
-		operator := addon_operator.NewAddonOperator(ctx, addon_operator.WithLogger(logger.Named("addon-operator")))
+		operator := addonoperator.NewAddonOperator(ctx, addonoperator.WithLogger(logger.Named("addon-operator")))
 
 		operator.StartAPIServer()
 
@@ -71,8 +66,7 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 			return nil
 		}
 
-		err := run(ctx, operator, logger)
-		if err != nil {
+		if err := run(ctx, operator, logger); err != nil {
 			logger.Error("run", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
@@ -81,7 +75,7 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 	}
 }
 
-func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator, logger *log.Logger) {
+func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
 	var identity string
 	podName := os.Getenv("DECKHOUSE_POD")
 	if len(podName) == 0 {
@@ -151,64 +145,34 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator, logg
 	operator.LeaderElector.Run(ctx)
 }
 
-func run(ctx context.Context, operator *addon_operator.AddonOperator, logger *log.Logger) error {
-	err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml")
-	if err != nil {
+func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
+	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml"); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 
 	// we have to lock the controller run if dhctl lock configmap exists
-	err = lockOnBootstrap(ctx, operator.KubeClient())
-	if err != nil {
+	if err := lockOnBootstrap(ctx, operator.KubeClient()); err != nil {
 		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
-	deckhouseConfigC := make(chan utils.Values, 1)
-
-	kubeConfigBackend := backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, logger.With("KubeConfigManagerBackend", "ModuleConfig"))
-	kubeConfigChannel := kubeConfigBackend.GetEventsChannel()
-
-	operator.SetupKubeConfigManager(kubeConfigBackend)
-
-	err = operator.Setup()
+	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, operator, logger.Named("deckhouse-controller"))
 	if err != nil {
-		return fmt.Errorf("addon operator setup: %w", err)
+		return fmt.Errorf("create deckhouse controller: %w", err)
 	}
 
-	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage, logger.Named("deckhouse-controller"))
-	if err != nil {
-		return fmt.Errorf("deckhouse controller creating: %w", err)
+	// load modules from FS, start pluggable controllers and run deckhouse config event loop
+	if err = deckhouseController.Start(ctx); err != nil {
+		return fmt.Errorf("start deckhouse controller: %w", err)
 	}
 
-	validation.RegisterAdmissionHandlers(operator, dController, operator.MetricStorage)
-
-	operator.ModuleManager.SetModuleEventsChannel(kubeConfigChannel)
-
-	operator.ModuleManager.SetModuleLoader(dController)
-
-	// Init deckhouse-config service with ModuleManager instance.
-	d8config.InitService(operator.ModuleManager)
-
-	// Runs preflight checks first (restore the modules' file system)
-	if d8env.GetDownloadedModulesDir() != "" {
-		dController.StartPluggableModulesControllers(ctx)
-	}
-
-	// Loads deckhouse modules from the fs and Starts main event lop
-	err = dController.DiscoverDeckhouseModules(ctx, operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
-	if err != nil {
-		return fmt.Errorf("discover deckhouse modules: %w", err)
-	}
-
-	err = operator.Start(ctx)
-	if err != nil {
-		return fmt.Errorf("addon operator start: %w", err)
+	if err = operator.Start(ctx); err != nil {
+		return fmt.Errorf("start operator: %w", err)
 	}
 
 	debugserver.RegisterRoutes(operator.DebugServer)
 
-	// Block main thread by waiting signals from OS.
-	utils_signal.WaitForProcessInterruption(func() {
+	// block main thread by waiting signals from OS.
+	utilsignal.WaitForProcessInterruption(func() {
 		operator.Stop()
 		os.Exit(0)
 	})

@@ -33,6 +33,10 @@ const (
 	PhaseSuperseded      = "Superseded"
 	PhaseSuspended       = "Suspended"
 	PhaseSkipped         = "Skipped"
+
+	ModuleReleaseLabelSource          = "source"
+	ModuleReleaseLabelModule          = "module"
+	ModuleReleaseLabelReleaseChecksum = "release-checksum"
 )
 
 var (

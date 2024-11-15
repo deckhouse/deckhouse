@@ -76,49 +76,46 @@ spec:
               properties:
                 syncTime:
                   type: string
-                  description: "When the repository was synchronized."
+                  description: When the repository was synchronized.
                 modulesCount:
                   type: integer
-                  description: "Number of modules available."
+                  description: The number of modules available.
                 modules:
                   type: array
-                  description: "List of modules available from the source and their update policies."
+                  description: The list of modules available from the source and their update policies.
                   items:
                     type: object
                     properties:
                       name:
                         type: string
-                        description: "Module name."
+                        description: The module name.
+                      checksum:
+                        type: string
+                        description: The module checksum.
+                      pullError:
+                        type: string
+                        description: The module pull error.
                       policy:
                         type: string
-                        description: "Policy name."
+                        description: The module policy name.
                       overridden:
                         type: boolean
-                        description: "If ModulePullOverride for this module exists."
+                        description: If ModulePullOverride for this module exists.
                 message:
                   type: string
-                moduleErrors:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      name:
-                        type: string
-                      error:
-                        type: string
       subresources:
         status: {}
       additionalPrinterColumns:
         - name: count
           type: integer
           jsonPath: .status.modulesCount
-          description: "Number of modules available."
+          description: The number of modules available.
         - name: sync
           type: date
           jsonPath: .status.syncTime
           format: date-time
-          description: 'When the repository was synchronized.'
+          description: When the repository was synchronized.
         - name: msg
           type: string
           jsonPath: .status.message
-          description: 'Error message if exists.'
+          description: The error message if exists.
