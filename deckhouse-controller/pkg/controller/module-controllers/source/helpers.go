@@ -193,6 +193,25 @@ func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UI
 		if meta.ModuleDefinition != nil {
 			moduleRelease.Spec.Requirements = meta.ModuleDefinition.Requirements
 		}
+
+		// if it's a first release for a Module, we have to install it immediately
+		// without any update Windows and update.mode manual approval
+		// the easiest way is to check the count or ModuleReleases for this module
+		{
+			mrList := new(v1alpha1.ModuleReleaseList)
+			err = r.client.List(ctx, mrList, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName}, client.Limit(1))
+			if err != nil {
+				return fmt.Errorf("failed to fetch ModuleRelease list: %w", err)
+			}
+			if len(mrList.Items) == 0 {
+				// no any other releases
+				if len(moduleRelease.Annotations) == 0 {
+					moduleRelease.Annotations = make(map[string]string, 1)
+				}
+				moduleRelease.Annotations["release.deckhouse.io/apply-now"] = "true"
+			}
+		}
+
 		if err = r.client.Create(ctx, moduleRelease); err != nil {
 			return fmt.Errorf("create module release: %w", err)
 		}

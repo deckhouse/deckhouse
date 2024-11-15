@@ -4,9 +4,9 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
-  finalizers:
-    - modules.deckhouse.io/module-exists
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/module-exists
   name: test-source-1
   resourceVersion: "1001"
 spec:
@@ -16,19 +16,23 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  message: "Some errors occurred. Inspect status for details"
+  message: Some errors occurred. Inspect status for details
   modules:
-    - name: enabledmodule
-      checksum: 'sha256:'
-    - name: errormodule
-      policy: test-alpha
-      pullError: "fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]"
+  - checksum: 'sha256:'
+    name: enabledmodule
+  - name: errormodule
+    policy: test-alpha
+    pullError: |-
+      fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:
+            MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]
   modulesCount: 2
   syncTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    release.deckhouse.io/apply-now: "true"
   creationTimestamp: null
   labels:
     module: enabledmodule
@@ -37,11 +41,11 @@ metadata:
     source: test-source-1
   name: enabledmodule-v1.2.3
   ownerReferences:
-    - apiVersion: deckhouse.io/v1alpha1
-      controller: true
-      kind: ModuleSource
-      name: test-source-1
-      uid: ""
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test-source-1
+    uid: ""
   resourceVersion: "1"
 spec:
   moduleName: enabledmodule
