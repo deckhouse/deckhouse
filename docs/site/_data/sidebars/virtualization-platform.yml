@@ -142,41 +142,45 @@ entries:
                     ru: Настройка NTP
                   url: /virtualization-platform/documentation/admin/platform-management/traffic-control/ntp.html
             - title:
-                en: Storage
-                ru: Хранилища
+                en: Storage management
+                ru: Управление хранилищами
               folders:
                 - title:
-                    en: Supported Storage
-                    ru: Поддерживаемые хранилища
+                    en: Storage settings
+                    ru: Настройка хранилищ
                   url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
                 - title:
-                    en: SDS
-                    ru: Программно определяемые
+                    en: Supported storages
+                    ru: Поддерживаемые хранилища
                   folders:
                     - title:
-                        en: Local storage
-                        ru: Локальное хранилище
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html
+                        en: SDS
+                        ru: Программно определяемые
+                      folders:
+                        - title:
+                            en: Local storage based on LVM
+                            ru: Локальные на основе LVM
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html
+                        - title:
+                            en: Replicated storage based on LVM
+                            ru: Реплицируемые на основе LVM
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
                     - title:
-                        en: Replicated storage
-                        ru: Реплицируемое хранилище
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
-                    - title:
-                        en: NFS storage
-                        ru: NFS хранилище
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/nfs.html
-                    - title:
-                        en: CEPH storage
-                        ru: CEPH хранилище
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/ceph.html
-                - title:
-                    en: Hardware
-                    ru: Аппаратные
-                  folders:
-                    - title:
-                        en: yadro
-                        ru: yadro
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/hardware/yadro.html
+                        en: External
+                        ru: Внешние
+                      folders:
+                        - title:
+                            en: Yadro
+                            ru: Yadro
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/hardware/yadro.html
+                        - title:
+                            en: NFS storage
+                            ru: NFS-хранилище
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/nfs.html
+                        - title:
+                            en: CEPH storage
+                            ru: CEPH-хранилище
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/ceph.html
             - title:
                 en: Virtualization
                 ru: Виртуализация

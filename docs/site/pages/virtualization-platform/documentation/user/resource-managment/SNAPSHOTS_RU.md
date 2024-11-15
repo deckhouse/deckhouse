@@ -52,7 +52,7 @@ EOF
 Для просмотра списка снимков дисков, выполните следующую конмаду:
 
 ```bash
-d k get vdsnapshot
+d8 k get vdsnapshot
 # NAME                   PHASE     CONSISTENT   AGE
 # linux-vm-root-snapshot Ready     true         3m2s
 ```

@@ -29,5 +29,5 @@ lang: ru
 ```shell
 # Укажите имя своего StorageClass'a.
 DEFAULT_STORAGE_CLASS=replicated-storage-class
-kubectl patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
+d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
 ```

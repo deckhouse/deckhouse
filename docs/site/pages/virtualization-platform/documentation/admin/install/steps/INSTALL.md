@@ -197,7 +197,7 @@ lb_ip=""
 # get the load balancer IP
 for i in {0..100}
 do
-  if lb_ip="$(kubectl -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
+  if lb_ip="$(d8 k -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
     if [ -n "$lb_ip" ]; then
       break
     fi
