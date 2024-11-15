@@ -53,7 +53,7 @@ shell:
   - find /patches -name '*.patch' | xargs git apply --verbose
   - go mod tidy && go mod vendor && go mod verify
   # git-adding files from patches to force build script take them into account
-  - git add bpf/lib/dhcp.h 
+  - git add .
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
