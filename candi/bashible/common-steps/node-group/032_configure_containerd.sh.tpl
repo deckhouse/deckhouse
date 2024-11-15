@@ -38,40 +38,6 @@ if [ -f /var/lib/bashible/cgroup_config ] && [ "$(cat /var/lib/bashible/cgroup_c
   systemd_cgroup=false
 fi
 
-mkdir -p /etc/containerd/certs.d/docker.io
-bb-sync-file /etc/containerd/certs.d/docker.io/host.toml - << EOF
-server = "https://docker.io"
-[host."https://registry-1.docker.io"]
-  capabilities = ["pull", "resolve"]
-EOF
-
-bb-sync-file /etc/containerd/certs.d/{{ .registry.address }}/hosts.toml - << EOF
-[host."{{ .registry.scheme }}://{{ .registry.address }}"]
-  capabilities = ["pull", "resolve"]  
-  
-{{- if .registry.ca }}
-  ca = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
-{{- end }}
-{{- if eq .registry.scheme "http" }}
- skip_verify = true
-{{- end }}
-{{- if .registry.auth }}
-  [host."{{ .registry.scheme }}://{{ .registry.address }}".header]
-    authorization = "Basic {{ .registry.auth | default "" }}"
-{{- end }}
-EOF
-
-{{- if eq .runType "Normal" }}
-  {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
-    {{- if $ca }}
-mkdir -p /etc/containerd/certs.d/{{ $registryAddr | lower }}
-bb-sync-file /etc/containerd/certs.d/{{ $registryAddr | lower }}/hosts.toml - << EOF
-ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
-[host] # https://github.com/containerd/containerd/issues/10027
-    {{- end }}
-  {{- end }}
-{{- end }}
-
 # generated using `containerd config default` by containerd version `containerd containerd.io 2.0.0 207ad711eabd375a01713109a8a197d197ff6542`
 bb-sync-file /etc/containerd/deckhouse.toml - << EOF
 version = 3
@@ -121,7 +87,32 @@ oom_score = 0
       sandbox_image = {{ $sandbox_image | quote }}
 
     [plugins.'io.containerd.cri.v1.images'.registry]
-      config_path = '/etc/containerd/certs.d'
+      config_path = ''
+
+      [plugins."io.containerd.cri.v1.images".registry.mirrors]
+        [plugins."io.containerd.cri.v1.images".registry.mirrors."docker.io"]
+          endpoint = ["https://registry-1.docker.io"]
+        [plugins."io.containerd.cri.v1.images".registry.mirrors."{{ .registry.address }}"]
+          endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
+      [plugins."io.containerd.cri.v1.images".registry.configs]
+        [plugins."io.containerd.cri.v1.images".registry.configs."{{ .registry.address }}".auth]
+          auth = "{{ .registry.auth | default "" }}"
+  {{- if .registry.ca }}
+        [plugins."io.containerd.cri.v1.images".registry.configs."{{ .registry.address }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/registry-ca.crt"
+  {{- end }}
+  {{- if eq .registry.scheme "http" }}
+        [plugins."io.containerd.cri.v1.images".registry.configs."{{ .registry.address }}".tls]
+          insecure_skip_verify = true
+  {{- end }}
+  {{- if eq .runType "Normal" }}
+    {{- range $registryAddr,$ca := .normal.moduleSourcesCA }}
+      {{- if $ca }}
+        [plugins."io.containerd.cri.v1.images".registry.configs."{{ $registryAddr | lower }}".tls]
+          ca_file = "/opt/deckhouse/share/ca-certificates/{{ $registryAddr | lower }}-ca.crt"
+      {{- end }}
+    {{- end }}
+  {{- end }}
 
     [plugins.'io.containerd.cri.v1.images'.image_decryption]
       key_model = ''    
