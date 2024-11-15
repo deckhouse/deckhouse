@@ -241,7 +241,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 	// change source by module config
 	if moduleConfig.Spec.Source != "" && module.Properties.Source != moduleConfig.Spec.Source {
-		if err = r.changeModuleSource(ctx, module, module.Properties.AvailableSources[0], updatePolicy); err != nil {
+		if err = r.changeModuleSource(ctx, module, moduleConfig.Spec.Source, updatePolicy); err != nil {
 			r.log.Debugf("failed to change source for the '%s' module: %v", module.Name, err)
 			return ctrl.Result{Requeue: true}, nil
 		}

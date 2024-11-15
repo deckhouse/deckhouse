@@ -49,9 +49,9 @@ import (
 )
 
 var (
-	golden       bool
-	mDelimiter   *regexp.Regexp
-	ManifestStub = func() (*v1.Manifest, error) {
+	generateGolden     bool
+	manifestsDelimiter *regexp.Regexp
+	manifestStub       = func() (*v1.Manifest, error) {
 		return &v1.Manifest{
 			Layers: []v1.Descriptor{},
 		}, nil
@@ -59,51 +59,46 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&golden, "golden", false, "generate golden files")
-	mDelimiter = regexp.MustCompile("(?m)^---$")
+	flag.BoolVar(&generateGolden, "golden", false, "generate golden files")
+	manifestsDelimiter = regexp.MustCompile("(?m)^---$")
+}
+
+type ControllerTestSuite struct {
+	suite.Suite
+
+	client client.Client
+	r      *reconciler
+
+	goldenFile    string
+	source        string
+	compareGolden bool
 }
 
 func TestControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(ControllerTestSuite))
 }
 
-type ControllerTestSuite struct {
-	suite.Suite
+func (suite *ControllerTestSuite) setupTestController(raw string) {
+	manifests := releaseutil.SplitManifests(raw)
 
-	kubeClient client.Client
-	ctr        *reconciler
-
-	testDataFileName string
-	testMSName       string
-	compareGolden    bool
-}
-
-func (suite *ControllerTestSuite) SetupSuite() {
-	flag.Parse()
-	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
-}
-
-func (suite *ControllerTestSuite) setupTestController(yamlDoc string) {
-	manifests := releaseutil.SplitManifests(yamlDoc)
-
-	var initObjects = make([]client.Object, 0, len(manifests))
+	var objects = make([]client.Object, 0, len(manifests))
 	for _, manifest := range manifests {
-		obj := suite.parseObject(manifest)
-		initObjects = append(initObjects, obj)
+		obj := suite.parseKubernetesObject([]byte(manifest))
+		objects = append(objects, obj)
 	}
 
 	sc := runtime.NewScheme()
 	_ = v1alpha1.SchemeBuilder.AddToScheme(sc)
 	_ = v1alpha2.SchemeBuilder.AddToScheme(sc)
-	cl := fake.NewClientBuilder().
+	suite.client = fake.NewClientBuilder().
 		WithScheme(sc).
-		WithObjects(initObjects...).
+		WithObjects(objects...).
 		WithStatusSubresource(&v1alpha1.Module{}, &v1alpha1.ModuleSource{}, &v1alpha1.ModuleRelease{}).
 		Build()
 
-	rec := &reconciler{
+	suite.r = &reconciler{
 		init:                 new(sync.WaitGroup),
-		client:               cl,
+		client:               suite.client,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dependencyContainer:  dependency.NewDependencyContainer(),
 		log:                  log.NewNop(),
@@ -115,47 +110,48 @@ func (suite *ControllerTestSuite) setupTestController(yamlDoc string) {
 			ReleaseChannel: "Stable",
 		}),
 	}
-
-	suite.ctr = rec
-	suite.kubeClient = cl
 }
 
-func (suite *ControllerTestSuite) parseObject(obj string) client.Object {
-	var res client.Object
-
-	var typ runtime.TypeMeta
-
-	err := yaml.Unmarshal([]byte(obj), &typ)
+func (suite *ControllerTestSuite) parseKubernetesObject(raw []byte) client.Object {
+	metaType := new(runtime.TypeMeta)
+	err := yaml.Unmarshal(raw, metaType)
 	require.NoError(suite.T(), err)
 
-	switch typ.Kind {
-	case "ModuleSource":
-		var ms v1alpha1.ModuleSource
-		err = yaml.Unmarshal([]byte(obj), &ms)
-		require.NoError(suite.T(), err)
-		res = &ms
-		suite.testMSName = ms.Name
+	var obj client.Object
 
-	case "ModuleRelease":
-		var mr v1alpha1.ModuleRelease
-		err = yaml.Unmarshal([]byte(obj), &mr)
+	switch metaType.Kind {
+	case v1alpha1.ModuleSourceGVK.Kind:
+		source := new(v1alpha1.ModuleSource)
+		err = yaml.Unmarshal(raw, source)
 		require.NoError(suite.T(), err)
-		res = &mr
+		obj = source
+		suite.source = source.Name
 
-	case "ModuleUpdatePolicy":
-		var mup v1alpha2.ModuleUpdatePolicy
-		err = yaml.Unmarshal([]byte(obj), &mup)
+	case v1alpha1.ModuleReleaseGVK.Kind:
+		release := new(v1alpha1.ModuleRelease)
+		err = yaml.Unmarshal(raw, release)
 		require.NoError(suite.T(), err)
-		res = &mup
+		obj = release
 
-	case "Module":
-		var m v1alpha1.Module
-		err = yaml.Unmarshal([]byte(obj), &m)
+	case v1alpha2.ModuleUpdatePolicyGVK.Kind:
+		policy := new(v1alpha2.ModuleUpdatePolicy)
+		err = yaml.Unmarshal(raw, policy)
 		require.NoError(suite.T(), err)
-		res = &m
+		obj = policy
+
+	case v1alpha1.ModuleGVK.Kind:
+		module := new(v1alpha1.Module)
+		err = yaml.Unmarshal(raw, module)
+		require.NoError(suite.T(), err)
+		obj = module
 	}
 
-	return res
+	return obj
+}
+
+func (suite *ControllerTestSuite) SetupSuite() {
+	flag.Parse()
+	suite.T().Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 }
 
 func (suite *ControllerTestSuite) BeforeTest(suiteName, testName string) {
@@ -177,43 +173,45 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 		return
 	}
 
-	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
-	gotB := suite.fetchResults()
+	currentObjects := suite.fetchResults()
 
-	if golden {
-		err := os.WriteFile(goldenFile, gotB, 0666)
+	if generateGolden {
+		err := os.WriteFile(suite.goldenFile, currentObjects, 0666)
 		require.NoError(suite.T(), err)
-	} else {
-		got := singleDocToManifests(gotB)
-		expB, err := os.ReadFile(goldenFile)
-		require.NoError(suite.T(), err)
-		exp := singleDocToManifests(expB)
-		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
-		for i := range got {
-			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
-		}
+		return
+	}
+
+	raw, err := os.ReadFile(suite.goldenFile)
+	require.NoError(suite.T(), err)
+
+	exp := splitManifests(raw)
+	got := splitManifests(currentObjects)
+
+	assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
+	for i := range got {
+		assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
 	}
 }
 
 func (suite *ControllerTestSuite) fetchResults() []byte {
 	result := bytes.NewBuffer(nil)
 
-	var mslist v1alpha1.ModuleSourceList
-	err := suite.kubeClient.List(context.TODO(), &mslist)
+	sources := new(v1alpha1.ModuleSourceList)
+	err := suite.client.List(context.TODO(), sources)
 	require.NoError(suite.T(), err)
 
-	for _, item := range mslist.Items {
-		got, _ := yaml.Marshal(item)
+	for _, source := range sources.Items {
+		got, _ := yaml.Marshal(source)
 		result.WriteString("---\n")
 		result.Write(got)
 	}
 
-	var mrlist v1alpha1.ModuleReleaseList
-	err = suite.kubeClient.List(context.TODO(), &mrlist)
+	releases := new(v1alpha1.ModuleReleaseList)
+	err = suite.client.List(context.TODO(), releases)
 	require.NoError(suite.T(), err)
 
-	for _, item := range mrlist.Items {
-		got, _ := yaml.Marshal(item)
+	for _, release := range releases.Items {
+		got, _ := yaml.Marshal(release)
 		result.WriteString("---\n")
 		result.Write(got)
 	}
@@ -221,12 +219,12 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-func singleDocToManifests(doc []byte) (result []string) {
-	split := mDelimiter.Split(string(doc), -1)
+func splitManifests(doc []byte) (result []string) {
+	splits := manifestsDelimiter.Split(string(doc), -1)
 
-	for i := range split {
-		if split[i] != "" {
-			result = append(result, split[i])
+	for i := range splits {
+		if splits[i] != "" {
+			result = append(result, splits[i])
 		}
 	}
 	return
@@ -235,16 +233,15 @@ func singleDocToManifests(doc []byte) (result []string) {
 func (suite *ControllerTestSuite) TestCreateReconcile() {
 	suite.Run("empty source", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"foo", "bar"}, nil)
-		suite.setupTestController(string(suite.parseTestData("empty.yaml")))
-		ms := suite.getModuleSource(suite.testMSName)
-		_, err := suite.ctr.handleModuleSource(context.TODO(), ms)
+		suite.setupTestController(string(suite.parseTestdata("empty.yaml")))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("source with modules", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule"}, nil)
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-			ManifestStub: ManifestStub,
+			ManifestStub: manifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
 			},
@@ -253,9 +250,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			},
 		}, nil)
 
-		suite.setupTestController(string(suite.parseTestData("withmodules.yaml")))
-		ms := suite.getModuleSource(suite.testMSName)
-		_, err := suite.ctr.handleModuleSource(context.TODO(), ms)
+		suite.setupTestController(string(suite.parseTestdata("withmodules.yaml")))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
 
@@ -267,7 +263,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}
 
 			return &crfake.FakeImage{
-				ManifestStub: ManifestStub,
+				ManifestStub: manifestStub,
 				LayersStub: func() ([]v1.Layer, error) {
 					return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
 				},
@@ -277,19 +273,18 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}, nil
 		})
 
-		suite.setupTestController(string(suite.parseTestData("withmodulepullerror.yaml")))
-		ms := suite.getModuleSource(suite.testMSName)
-		_, err := suite.ctr.handleModuleSource(context.TODO(), ms)
+		suite.setupTestController(string(suite.parseTestdata("withmodulepullerror.yaml")))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
 }
 
-func (suite *ControllerTestSuite) parseTestData(filename string) []byte {
+func (suite *ControllerTestSuite) parseTestdata(filename string) []byte {
 	dir := "./testdata"
 	data, err := os.ReadFile(filepath.Join(dir, filename))
 	require.NoError(suite.T(), err)
 
-	suite.testDataFileName = filename
+	suite.goldenFile = filepath.Join("./testdata", "golden", filename)
 
 	return data
 }
@@ -311,16 +306,13 @@ spec:
 `
 		suite.setupTestController(m)
 
-		ms := suite.getModuleSource("test-source")
-
-		result, err := suite.ctr.deleteModuleSource(context.TODO(), ms)
+		result, err := suite.r.deleteModuleSource(context.TODO(), suite.moduleSource("test-source"))
 		require.NoError(suite.T(), err)
 		assert.False(suite.T(), result.Requeue)
 		assert.Empty(suite.T(), result.RequeueAfter)
 
-		ms = suite.getModuleSource("test-source")
 		require.NoError(suite.T(), err)
-		assert.Len(suite.T(), ms.Finalizers, 0)
+		assert.Len(suite.T(), suite.moduleSource("test-source").Finalizers, 0)
 	})
 
 	suite.Run("source with finalizer and release", func() {
@@ -363,16 +355,15 @@ status:
 `
 		suite.setupTestController(m)
 
-		ms := suite.getModuleSource("test-source-2")
-		result, err := suite.ctr.deleteModuleSource(context.TODO(), ms)
+		result, err := suite.r.deleteModuleSource(context.TODO(), suite.moduleSource("test-source-2"))
 		require.NoError(suite.T(), err)
 		assert.False(suite.T(), result.Requeue)
 		assert.Equal(suite.T(), 5*time.Second, result.RequeueAfter)
 
-		ms = suite.getModuleSource("test-source-2")
+		source := suite.moduleSource("test-source-2")
 		require.NoError(suite.T(), err)
-		assert.Len(suite.T(), ms.Finalizers, 1)
-		assert.Equal(suite.T(), ms.Status.Message, "The source contains at least 1 deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue")
+		assert.Len(suite.T(), source.Finalizers, 1)
+		assert.Equal(suite.T(), source.Status.Message, "The source contains at least 1 deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue")
 	})
 
 	suite.Run("source with finalizer, annotation and release", func() {
@@ -415,18 +406,14 @@ status:
   message: ""
   phase: Deployed
 `
-
 		suite.setupTestController(m)
 
-		ms := suite.getModuleSource("test-source-3")
-
-		result, err := suite.ctr.deleteModuleSource(context.TODO(), ms)
+		result, err := suite.r.deleteModuleSource(context.TODO(), suite.moduleSource("test-source-3"))
 		require.NoError(suite.T(), err)
 		assert.False(suite.T(), result.Requeue)
 		assert.Empty(suite.T(), result.RequeueAfter)
 
-		ms = suite.getModuleSource("test-source-3")
-		assert.Len(suite.T(), ms.Finalizers, 0)
+		assert.Len(suite.T(), suite.moduleSource("test-source-3").Finalizers, 0)
 	})
 }
 
@@ -443,22 +430,19 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 `
-
 	suite.setupTestController(invalidSource)
 
-	ms := suite.getModuleSource("test-source")
-
-	_, err := suite.ctr.handleModuleSource(context.Background(), ms)
+	_, err := suite.r.handleModuleSource(context.Background(), suite.moduleSource("test-source"))
 	require.NoError(suite.T(), err)
 
-	ms = suite.getModuleSource(ms.Name)
-	assert.Contains(suite.T(), ms.Status.Message, "credentials not found in the dockerCfg")
-	assert.Len(suite.T(), ms.Status.AvailableModules, 0)
+	source := suite.moduleSource("test-source")
+	assert.Contains(suite.T(), source.Status.Message, "credentials not found in the dockerCfg")
+	assert.Len(suite.T(), source.Status.AvailableModules, 0)
 }
 
-func (suite *ControllerTestSuite) getModuleSource(name string) *v1alpha1.ModuleSource {
+func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSource {
 	source := new(v1alpha1.ModuleSource)
-	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, source)
+	err := suite.client.Get(context.TODO(), types.NamespacedName{Name: name}, source)
 	require.NoError(suite.T(), err)
 
 	return source
