@@ -3,7 +3,7 @@
   - alert: UnsupportedContainerRuntimeVersion
     expr: |
       sum by (container_runtime_version, job, kernel_version, kubelet_version, kubeproxy_version, node, os_image) (
-        kube_node_info{kubelet_version=~"v1.(1[6-9]|2[0-9]).+", container_runtime_version!~"containerd://1\\.[4-7]\\..*"}
+        kube_node_info{kubelet_version=~"v1.(1[6-9]|2[0-9]).+", container_runtime_version!~"containerd://(2..*|1\\.[4-7]\\..*)"}
         * on (node) group_left(label_node_deckhouse_io_group) kube_node_labels
         * on (label_node_deckhouse_io_group) group_left(cri_type)
         label_replace(
@@ -26,5 +26,6 @@
         * Containerd 1.5.*
         * Containerd 1.6.*
         * Containerd 1.7.*
+        * Containerd 2.*
       summary: >
         Unsupported version of CRI {{`{{$labels.container_runtime_version}}`}} installed for Kubernetes version: {{`{{$labels.kubelet_version}}`}}

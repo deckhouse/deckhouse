@@ -22,7 +22,7 @@ if type -p getenforce &>/dev/null && [[ $(getenforce) != Disabled ]]; then
   enable_selinux=true
 fi
 
-mkdir -p /etc/containerd
+mkdir -p /etc/containerd/certs.d
 
 cat << EOF > /etc/containerd/config.toml
 version = 2
