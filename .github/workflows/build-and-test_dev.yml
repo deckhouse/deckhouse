@@ -35,7 +35,7 @@ env:
   # </template: werf_envs>
 
   # <template: git_source_envs>
-  # source repo should contain creds for repo for ex https://user:password@my-repo.com/group
+  # source repo git@my-repo.com:group
   SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
   # cloud providers source repo should contain creds for repo for ex https://user:password@my-repo.com/group
   CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
@@ -635,6 +635,10 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{secrets.SOURCE_REPO_SSH_KEY}}
 
       - name: Build and push deckhouse images
         id: build
