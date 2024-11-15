@@ -17,7 +17,7 @@
   "sds-replicated-volume": {
     "repo_folder_name": "",
     "path": "",
-    "edition": "ee"
+    "edition": "se"
   },
   "sds-local-volume": {
     "repo_folder_name": "",
@@ -47,7 +47,7 @@
   "commander": {
     "repo_folder_name": "",
     "path": "",
-    "edition": "se-plus"
+    "edition": "ee"
   },
   "stronghold": {
     "repo_folder_name": "",
