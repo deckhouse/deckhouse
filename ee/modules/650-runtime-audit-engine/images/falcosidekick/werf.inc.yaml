@@ -16,7 +16,7 @@ mount:
 shell:
   beforeInstall:
   - mkdir /src
-  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -c advice.detachedHead=false --branch 2.29.0 --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falcosidekick.git /src
   install:
   - cd /src

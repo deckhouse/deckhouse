@@ -12,7 +12,7 @@ shell:
     - apk add --no-cache git
     - mkdir -p /src
     - cd /src
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 {{ $.SOURCE_REPO }}/kubernetes/autoscaler.git .
     - find /patches -name '*.patch' -exec git apply {} \;
     - export GO_VERSION=${GOLANG_VERSION}

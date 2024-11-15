@@ -6,7 +6,7 @@ shell:
   install:
     - mkdir /src
     - cd /src
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch {{ $version }} {{ $.SOURCE_REPO }}/chrony/chrony.git .
     - echo "{{ $version }}" > version.txt
     - CFLAGS="-static" LDFLAGS="-static" ./configure --prefix=/opt/chrony-static

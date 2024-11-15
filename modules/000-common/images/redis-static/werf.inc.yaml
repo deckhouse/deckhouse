@@ -4,7 +4,7 @@ from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
   install:
   - mkdir /build && cd /build
-  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --branch 7.0.9 --depth 1 {{ $.SOURCE_REPO }}/redis/redis.git .
 
   # disable Redis protected mode [1] as it is unnecessary in context of Docker

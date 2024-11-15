@@ -49,7 +49,7 @@ git:
 shell:
   setup:
     - export GOPROXY={{ $.GOPROXY }}
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ $cni_version }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git
     - cd /plugins
     - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'

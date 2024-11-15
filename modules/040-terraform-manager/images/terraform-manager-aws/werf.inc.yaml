@@ -20,7 +20,7 @@ shell:
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.aws.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-aws.git /src
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion={{ .TF.aws.version }}"

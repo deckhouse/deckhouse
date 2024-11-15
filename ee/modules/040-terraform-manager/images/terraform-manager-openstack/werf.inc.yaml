@@ -26,7 +26,7 @@ shell:
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.openstack.version }} {{ $.SOURCE_REPO }}/terraform-provider-openstack/terraform-provider-openstack.git /src
     - cd /src
     - git apply /patches/*.patch --verbose

@@ -31,7 +31,7 @@ shell:
   setup:
     - apt-get update
     - apt-get install libinih-dev libblkid-dev gettext liburcu-dev libtool -y
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/xfs/xfsprogs-dev.git src
     - cd /src
     - libtoolize -c -i -f

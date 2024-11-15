@@ -20,7 +20,7 @@ shell:
   install:
     - mkdir -p /src
     - cd /src
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --branch v2.0.1 --depth 1 {{ $.SOURCE_REPO }}/cloudnativelabs/kube-router.git .
     - GIT_COMMIT=$(git describe --tags --dirty)
     - BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)

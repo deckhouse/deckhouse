@@ -6,7 +6,7 @@ shell:
     - apk add --no-cache git
     - mkdir -p /src
     - cd /src
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 -b v1.0.42 {{ $.SOURCE_REPO }}/stakater/Reloader.git .
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}

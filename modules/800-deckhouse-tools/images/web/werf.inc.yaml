@@ -37,7 +37,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - apt-get install -y libbtrfs-dev jq
     - go install github.com/go-task/task/v3/cmd/task@latest
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
     - cd /deckhouse-cli
     - task build:dist:all

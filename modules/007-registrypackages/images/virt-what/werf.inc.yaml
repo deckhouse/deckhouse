@@ -29,7 +29,7 @@ git:
       - '**/*'
 shell:
   setup:
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/virt-what.git src
     - cd /src
     - autoreconf -fi

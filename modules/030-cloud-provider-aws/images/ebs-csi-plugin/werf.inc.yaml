@@ -33,7 +33,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
-  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch {{ $value.csi.aws }} {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
   - cd /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
   - make default

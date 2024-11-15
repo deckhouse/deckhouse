@@ -14,7 +14,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.1.1 {{ .SOURCE_REPO }}/falcosecurity/k8s-metacollector.git /src
   install:
   - cd /src

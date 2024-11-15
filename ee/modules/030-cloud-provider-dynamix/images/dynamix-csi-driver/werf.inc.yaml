@@ -36,7 +36,7 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - export VERSION="v0.1.0"
   - export VERSION_COMMON="v0.2.0"
-  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-csi-driver.git /dynamix/dynamix-csi-driver/src
   - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix/dynamix-common
   - cd /dynamix/dynamix-csi-driver/src

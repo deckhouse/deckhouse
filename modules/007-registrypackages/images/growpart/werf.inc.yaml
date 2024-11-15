@@ -31,7 +31,7 @@ shell:
   install:
     - apk update && apk add gettext-dev
   setup:
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b v2.40.1 --depth 1 {{ $.SOURCE_REPO }}/util-linux/util-linux.git  /src
     - cd /src
     - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s" 
@@ -51,7 +51,7 @@ git:
       - '**/*'
 shell:
   setup:
-    - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b {{ $version }} --depth 1 {{ $.SOURCE_REPO }}/canonical/cloud-utils.git /src
     - mv /src/bin/growpart /growpart
     - chmod +x /growpart /install /uninstall
