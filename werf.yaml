@@ -344,7 +344,7 @@ shell:
         minor=${version_parts[1]}
         new_minor=$((minor + 1))
         new_patch=0
-        prerelease={{env "CI_COMMIT_REF_SLUG" "main" }}
+        prerelease={{- env "CI_COMMIT_REF_SLUG" "main" }}
 
         new_version="${major}.${new_minor}.${new_patch}-${prerelease}+${WERF_COMMIT_HASH::7}"
         export CI_COMMIT_TAG=${new_version}
