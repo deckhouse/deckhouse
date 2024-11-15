@@ -140,7 +140,7 @@ spec:
                   apiVersion: v1
                   fieldPath: status.hostIP
             - name: KUBERNETES_SERVICE_PORT
-              value: "6443"
+              value: "6445"
 {{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
@@ -213,7 +213,6 @@ spec:
               value: /tmp/.bash_history
             - name: DEBUG_HTTP_SERVER_ADDR
               value: "127.0.0.1:9652"
-            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
           ports:
             - containerPort: 4222
               name: self

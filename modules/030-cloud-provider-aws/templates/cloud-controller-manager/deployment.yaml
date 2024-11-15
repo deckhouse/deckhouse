@@ -96,7 +96,7 @@ spec:
                 apiVersion: v1
                 fieldPath: status.hostIP
           - name: KUBERNETES_SERVICE_PORT
-            value: "6443"
+            value: "6445"
       {{- end }}
           - name: HOST_IP
             valueFrom:

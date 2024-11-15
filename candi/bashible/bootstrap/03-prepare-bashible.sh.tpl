@@ -52,20 +52,6 @@ chmod 0700 $BOOTSTRAP_DIR
 BUNDLE="$(detect_bundle)"
 
 # set proxy env variables
-{{- if .proxy }}
-  {{- if .proxy.httpProxy }}
-export HTTP_PROXY={{ .proxy.httpProxy | quote }}
-export http_proxy=${HTTP_PROXY}
-  {{- end }}
-  {{- if .proxy.httpsProxy }}
-export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
-export https_proxy=${HTTPS_PROXY}
-  {{- end }}
-  {{- if .proxy.noProxy }}
-export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
-export no_proxy=${NO_PROXY}
-  {{- end }}
-{{- else }}
 unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- end }}
 {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}

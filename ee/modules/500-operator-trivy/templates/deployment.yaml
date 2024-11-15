@@ -63,7 +63,6 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "operator") }}
         env:
-          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           - name: OPERATOR_NAMESPACE
             value: d8-operator-trivy
           {{- $enabledNamespaces := .Values.operatorTrivy | dig "internal" "enabledNamespaces" (list) }}
