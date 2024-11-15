@@ -15,10 +15,13 @@ properties:
     type: string
     default: null
     description: |-
-      The name of the StorageClass that will be annotated as default in the cluster.
+      The name of the StorageClass that DKP will define as the default StorageClass used in the cluster.
+
+      DKP prohibits manually adding or modifying the default annotation (`storageclass.kubernetes.io/is-default-class='true'`) for StorageClass. Use the parameter to define the StorageClass that is used as the default in the cluster.
+
       If the parameter is omitted, the default StorageClass is either:
 
-       * an arbitrary StorageClass present in the cluster that has the default annotation;
+       * A StorageClass in the cluster that has the default annotation (`storageclass.kubernetes.io/is-default-class='true'`);
        * The first (alphabetically) StorageClass created by the cloud provider module (if any cloud provider module is used).
 
       Use this parameter to change the default StorageClass in the cluster, as manually adding the default annotation to a StorageClass is not allowed. 
