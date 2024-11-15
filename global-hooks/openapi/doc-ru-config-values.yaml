@@ -13,7 +13,7 @@ properties:
     description: |-
       Имя StorageClass, который DKP определит как StorageClass, используемый в кластере по умолчанию.
       
-      DKP запрещает вручную добавлять или изменять default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`) у StorageClass. Используйте параметр, чтобы определять StorageClass, используемый в кластере по умолчанию.
+      DKP запрещает вручную добавлять или изменять default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`) у StorageClass. Используйте параметр, чтобы определять или изменять StorageClass, используемый в кластере по умолчанию.
 
       Если значение не указано, фактический StorageClass по умолчанию будет определяться в следующем порядке:
 
