@@ -201,7 +201,7 @@ func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UI
 			mrList := new(v1alpha1.ModuleReleaseList)
 			err = r.client.List(ctx, mrList, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName}, client.Limit(1))
 			if err != nil {
-				return fmt.Errorf("failed to fetch ModuleRelease list: %w",err)
+				return fmt.Errorf("failed to fetch ModuleRelease list: %w", err)
 			}
 			if len(mrList.Items) == 0 {
 				// no any other releases

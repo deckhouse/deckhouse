@@ -345,7 +345,7 @@ shell:
         new_minor=$((minor + 1))
         new_patch=0
 
-        new_version="${major}.${new_minor}.${new_patch}-${CI_COMMIT_REF_SLUG:-main}+${WERF_COMMIT_HASH::7}"
+        new_version="${major}.${new_minor}.${new_patch}-{{ env "CI_COMMIT_REF_SLUG" | default "main" }}+${WERF_COMMIT_HASH::7}"
         export CI_COMMIT_TAG=${new_version}
     fi
   - cd /deckhouse
