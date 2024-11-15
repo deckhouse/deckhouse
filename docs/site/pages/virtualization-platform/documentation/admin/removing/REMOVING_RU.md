@@ -36,7 +36,7 @@ lang: ru
 
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
-   - `<DECKHOUSE_REVISION>` — [редакция](../editions.html) платформы (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+   - `<DECKHOUSE_REVISION>` — [редакция платформы](../editions.html), например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д;
    - `<RELEASE_CHANNEL>` — [канал обновлений](../update_channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yml`:
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;

@@ -1,6 +1,7 @@
 ---
 why: Утащено из 040-node-manager/docs/README_RU.md сюда, чтобы не забыть когда будем готовить этот раздел.
 ---
+
 ## Мониторинг
 
 Для групп узлов (ресурс `NodeGroup`) DKP экспортирует метрики доступности группы.
@@ -17,5 +18,5 @@ why: Утащено из 040-node-manager/docs/README_RU.md сюда, чтобы
 - `d8_node_group_min` — минимальное количество инстансов в группе;
 - `d8_node_group_max` — максимальное количество инстансов в группе;
 - `d8_node_group_up_to_date` — количество узлов в группе в состоянии up-to-date;
-- `d8_node_group_standby` — количество резервных узлов (см. параметр [standby](cr.html#nodegroup-v1-spec-cloudinstances-standby)) в группе;
+- `d8_node_group_standby` — количество резервных узлов (см. параметр [standby](../../../reference/cr.html#nodegroup-v1-spec-cloudinstances-standby) в группе;
 - `d8_node_group_has_errors` — единица, если в группе узлов есть какие-либо ошибки.

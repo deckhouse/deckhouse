@@ -40,7 +40,7 @@ spec:
 EOF
 ```
 
-![](/images/virtualization-platform/lb-nodeport.ru.png)
+![](../../../../../../../../docs/site/images/virtualization-platform/lb-nodeport.ru.png)
 
 В данном примере будет создан сервис с типом `NodePort`, который открывает внешний порт 31880 на всех узлах вашего кластера. Этот порт будет направлять входящий трафик на внутренний порт 80 виртуальной машины, где запущено приложение Nginx.
 

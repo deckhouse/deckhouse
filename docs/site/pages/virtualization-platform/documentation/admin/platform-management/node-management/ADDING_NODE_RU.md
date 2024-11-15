@@ -14,7 +14,7 @@ lang: ru
 
 Чтобы добавить bare-metal сервер в кластер как статический узел, выполните следующие шаги:
 
-1. Используйте существующий или создайте новый custom resource [NodeGroup](cr.html#nodegroup) ([пример](#статические-узлы) `NodeGroup` с именем `worker`). Параметр [nodeType](cr.html#nodegroup-v1-spec-nodetype) в custom resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
+1. Используйте существующий или создайте новый custom resource [NodeGroup](../../../reference/cr.html#nodegroup) ([пример](#статические-узлы) `NodeGroup` с именем `worker`). Параметр [nodeType](../../../reference/cr.html#nodegroup-v1-spec-nodetype) в custom resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
@@ -79,7 +79,7 @@ lang: ru
      pdpl-user -i 63 caps
      ```
 
-1. Создайте в кластере ресурс [SSHCredentials](cr.html#sshcredentials).
+1. Создайте в кластере ресурс [SSHCredentials](../../../reference/cr.html#sshcredentials).
 
    В директории с ключами пользователя **на сервере** выполните следующую команду для получения закрытого ключа в формате Base64:
 
@@ -107,7 +107,7 @@ lang: ru
    EOF
    ```
 
-1. Создайте в кластере ресурс [StaticInstance](cr.html#staticinstance), указав IP-адрес сервера статического узла:
+1. Создайте в кластере ресурс [StaticInstance](../../../reference/cr.html#staticinstance), указав IP-адрес сервера статического узла:
 
    ```shell
    kubectl create -f - <<EOF
@@ -124,7 +124,7 @@ lang: ru
    EOF
    ```
 
-1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup):
+1. Создайте в кластере ресурс [NodeGroup](../../../reference/cr.html#nodegroup):
 
    ```shell
    kubectl create -f - <<EOF
@@ -143,11 +143,11 @@ TODO не хватает какой-то команды, чтобы провер
 
 ### С помощью Cluster API Provider Static и фильтрами в label selector
 
-Пример использования фильтров в [label selector](cr.html#nodegroup-v1-spec-staticinstances-labelselector) StaticInstance, для группировки статических узлов и использования их в разных NodeGroup. В примере используются две группы узлов (`front` и `worker`), предназначенные для разных задач, которые должны содержать разные по характеристикам узлы — два сервера для группы `front` и один для группы `worker`.
+Пример использования фильтров в [label selector](../../../reference/cr.html#nodegroup-v1-spec-staticinstances-labelselector) StaticInstance, для группировки статических узлов и использования их в разных NodeGroup. В примере используются две группы узлов (`front` и `worker`), предназначенные для разных задач, которые должны содержать разные по характеристикам узлы — два сервера для группы `front` и один для группы `worker`.
 
 1. Подготовьте необходимые ресурсы (3 сервера или виртуальные машины) и создайте ресурс `SSHCredentials`, аналогично п.1 и п.2 [примера](#с-помощью-cluster-api-provider-static).
 
-1. Создайте в кластере два ресурса [NodeGroup](cr.html#nodegroup) (здесь и далее используйте `kubectl`, настроенный на управление кластером):
+1. Создайте в кластере два ресурса [NodeGroup](../../../reference/cr.html#nodegroup) (здесь и далее используйте `kubectl`, настроенный на управление кластером):
 
    ```shell
    kubectl create -f - <<EOF
@@ -177,7 +177,7 @@ TODO не хватает какой-то команды, чтобы провер
    EOF
    ```
 
-1. Создайте в кластере ресурсы [StaticInstance](cr.html#staticinstance), указав актуальные IP-адреса серверов:
+1. Создайте в кластере ресурсы [StaticInstance](../../../reference/cr.html#staticinstance), указав актуальные IP-адреса серверов:
 
    ```shell
    kubectl create -f - <<EOF

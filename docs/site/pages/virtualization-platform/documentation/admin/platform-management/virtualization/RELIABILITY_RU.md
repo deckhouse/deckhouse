@@ -97,4 +97,4 @@ ColdStandby обеспечивает механизм восстановлени
 - Контроллер удаляет узел `workerA` из кластер.
 - Виртуальная машина `linux-vm` запускается на другом подходящем узле (workerB).
 
-![](/images/virtualization-platform/coldstandby.ru.png)
+![](../../../../../../../../docs/site/images/virtualization-platform/coldstandby.ru.png)

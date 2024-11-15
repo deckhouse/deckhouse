@@ -4,9 +4,9 @@ permalink: ru/virtualization-platform/documentation/admin/update/update.html
 lang: ru
 ---
 
-Обновление платформы конфигурируется в ресурсе ModuleConfig [`deckhouse`](todo).
+Обновление платформы конфигурируется в ресурсе ModuleConfig [`deckhouse`](../../reference/configuration-module.html). Todo.
 
-Посмотреть текущую конфигурацию обновления можно с помощью следующей команды:
+Посмотреть текущую конфигурацию обновления можно с помощью команды:
 
 ```shell
 d8 k get mc deckhouse -oyaml
@@ -32,7 +32,7 @@ spec:
 
 Платформа поддерживает три режима обновления:
 
-- **Автоматический + окна обновлений не заданы.** Кластер обновится сразу после появления новой версии на соответствующем [канале обновлений](./update-channels.html).
+- **Автоматический + окна обновлений не заданы.** Кластер обновится сразу после появления новой версии на соответствующем [канале обновлений](../update-channels.html).
 - **Автоматический + заданы окна обновлений.** Кластер обновится в ближайшее доступное окно после появления новой версии на канале обновлений.
 - **Ручной режим.** Для применения обновления требуются [ручные действия](./manual-update-mode.html).
 
@@ -98,7 +98,9 @@ d8 k get deckhouserelease
 d8 k get modulereleases
 ```
 {% offtopic title="Схема использования параметра releaseChannel при установке и в процессе работы Deckhouse" %}
-![Схема использования параметра releaseChannel при установке и в процессе работы Deckhouse](images/common/deckhouse-update-process.png)
+
+![Схема использования параметра releaseChannel при установке и в процессе работы Deckhouse](../../../../../../../docs/documentation/images/common/deckhouse-update-process.png)
+
 {% endofftopic %}
 
 Для отключения механизма обновления Deckhouse, удалите в конфигурации модуля `deckhouse` параметр `.spec.settings.releaseChannel`. В этом случае Deckhouse не проверяет обновления и даже обновление на patch-релизы не выполняется.
@@ -109,7 +111,7 @@ d8 k get modulereleases
 
 ## Немедленное применение обновлений
 
-Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](../../../../../cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](../../../../../#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
 
 {% alert level="info" %}
 **Обратите внимание!** В этом случае будут проигнорированы окна обновления, настройки [canary-release](../../../../../cr.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](../../../../../modules/002-deckhouse/configuration.html#parameters-update-disruptionapprovalmode). Обновление применится сразу после установки аннотации.

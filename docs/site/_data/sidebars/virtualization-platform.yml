@@ -216,7 +216,15 @@ entries:
         - title:
             en: Platform update
             ru: Обновление платформы
-          url: /virtualization-platform/documentation/admin/update/update.html
+          folders:
+            - title:
+                en: Platform update
+                ru: НОбновление платформы
+              url: /virtualization-platform/documentation/admin/update/update.html
+            - title:
+                en: Manual update mode
+                ru: Ручной режим обновления
+              url: /virtualization-platform/documentation/admin/update/manual-mode-update.html
         - title:
             en: Removing the platform
             ru: Удаление платформы

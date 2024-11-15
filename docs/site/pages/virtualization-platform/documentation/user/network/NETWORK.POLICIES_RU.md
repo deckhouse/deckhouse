@@ -3,6 +3,7 @@ title: "Сетевые политики"
 permalink: ru/virtualization-platform/documentation/user/network/network-policies.html
 lang: ru
 ---
+
 ## Основные положения
 Для управления входящим и исходящим трафиком виртуальных машин на уровне 3 или 4 модели OSI используются стандартные сетевые политики Kubernetes. Более подробно об этом можно прочитать в официальной документации [Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/).  
 
