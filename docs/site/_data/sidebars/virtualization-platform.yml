@@ -62,8 +62,8 @@ entries:
                 ru: Управление узлами
               folders:
                 - title:
-                    en: NodeGroup description
-                    ru: Описание NodeGroup
+                    en: NodeGroup
+                    ru: Группы узлов
                   url: /virtualization-platform/documentation/admin/platform-management/node-management/node-group.html
                 - title:
                     en: Adding a node
@@ -72,15 +72,19 @@ entries:
                 - title:
                     en: Node сonfiguration
                     ru: Настройка узлов
-                  url: /virtualization-platform/documentation/admin/platform-management/node-management/configuration.html
-                - title:
-                    en: OS configuration
-                    ru: Настройка OS
-                  url: /virtualization-platform/documentation/admin/platform-management/node-management/configure-os.html
-                - title:
-                    en: Containerd configuration
-                    ru: Настройка containerd
-                  url: /virtualization-platform/documentation/admin/platform-management/node-management/configure-containerd.html
+                  folders:
+                    - title:
+                        en: NodeGroupConfiguration
+                        ru: Конфигурация групп узлов
+                      url: /virtualization-platform/documentation/admin/platform-management/node-management/configuration.html
+                    - title:
+                        en: OS configuration
+                        ru: Настройка OS
+                      url: /virtualization-platform/documentation/admin/platform-management/node-management/os.html
+                    - title:
+                        en: Containerd configuration
+                        ru: Настройка containerd
+                      url: /virtualization-platform/documentation/admin/platform-management/node-management/containerd.html
             - title:
                 en: Control plane settings
                 ru: Настройка управляющего слоя

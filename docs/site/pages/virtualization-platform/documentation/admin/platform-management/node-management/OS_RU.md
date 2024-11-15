@@ -1,6 +1,6 @@
 ---
 title: "Настройка OS"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/node-management/configure-os.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/node-management/os.html
 lang: ru
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: "Настройка containerd"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/node-management/configure-containerd.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/node-management/containerd.html
 lang: ru
 ---
 
