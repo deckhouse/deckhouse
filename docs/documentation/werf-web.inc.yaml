@@ -46,7 +46,10 @@ shell:
 {{ if ne .ModuleName "docs" }}
         export MODULES_DIR=/comparison
 {{ end }}
-        ./modules_list.sh 1>_data/modules.yaml
+        ./modules_list.sh 1>_data/modules/internal.yaml
+        # Creating list of ALL the modules...
+        cat _data/modules/internal.yaml |yq eval -j | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
+
         cat modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
 
         echo '[] Edition - {{ .Edition }}. Merging modules of different editions...'

@@ -32,8 +32,6 @@ if [[ -z ${MODULES_DIR} ]]; then
   MODULES_DIR=/src
 fi
 
-echo "modules:"
-
 for module_edition_path in $(find ${MODULES_DIR} -regex '.*/docs/README.md' -print | sed -E "s#^${MODULES_DIR}/modules/#${MODULES_DIR}/ce/modules/#" | sed -E "s#^${MODULES_DIR}/(ce/|be/|se/|ee/|fe/)?modules/([^/]+)/.*\$#\1\2#" | sort -t/ -k 2.4 ); do
   module_repo_folder_name=$(echo $module_edition_path | sed -E 's#ce/|be/|se/|ee/|fe/##')
   module_name=$(echo $module_repo_folder_name | sed -E 's#^[0-9]+-##')
@@ -44,9 +42,9 @@ for module_edition_path in $(find ${MODULES_DIR} -regex '.*/docs/README.md' -pri
   fi
 
   cat << YAML
-  $module_name:
-    repo_folder_name: modules/${module_repo_folder_name}/
-    path: modules/${module_name}/
-    edition: $(echo $module_edition_path | cut -d/ -f1)
+$module_name:
+  repo_folder_name: modules/${module_repo_folder_name}/
+  path: modules/${module_name}/
+  edition: $(echo $module_edition_path | cut -d/ -f1)
 YAML
 done

@@ -1,0 +1,58 @@
+{
+  "console": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "se"
+  },
+  "sds-node-configurator": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "ce"
+  },
+  "sds-drbd": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "ee"
+  },
+  "sds-replicated-volume": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "ee"
+  },
+  "sds-local-volume": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "ce"
+  },
+  "virtualization": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "ee"
+  },
+  "secrets-store-integration": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "be"
+  },
+  "csi-ceph": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "ce"
+  },
+  "csi-nfs": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "ce"
+  },
+  "commander": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "se-plus"
+  },
+  "stronghold": {
+    "repo_folder_name": "",
+    "path": "",
+    "edition": "se-plus"
+  }
+}
+
