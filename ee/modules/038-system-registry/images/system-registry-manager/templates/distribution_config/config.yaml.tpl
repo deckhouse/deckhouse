@@ -30,7 +30,9 @@ proxy:
   password: {{ quote .Registry.UpstreamRegistry.Password }}
   remotepathonly: {{ quote .Registry.UpstreamRegistry.Path }}
   localpathalias: "/system/deckhouse"
-  ttl: 72h
+  {{- if .Registry.UpstreamRegistry.TTL }}
+  ttl: {{ quote .Registry.UpstreamRegistry.TTL }}
+  {{- end }}
 {{- end }}
 auth:
   token:

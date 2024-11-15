@@ -88,6 +88,7 @@ func (r *RegistryReconciler) prepareUpstreamRegistry() staticpod.UpstreamRegistr
 		CA:       r.embeddedRegistry.mc.Settings.Proxy.CA,
 		User:     r.embeddedRegistry.mc.Settings.Proxy.User,
 		Password: r.embeddedRegistry.mc.Settings.Proxy.Password,
+		TTL:      r.embeddedRegistry.mc.Settings.Proxy.TTL.StringPointer(),
 	}
 }
 

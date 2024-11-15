@@ -74,6 +74,7 @@ type UpstreamRegistry struct {
 	CA       string
 	User     string
 	Password string
+	TTL      *string
 }
 
 type Images struct {

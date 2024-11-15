@@ -28,6 +28,7 @@ import (
 	staticpod "embeded-registry-manager/internal/static-pod"
 	httpclient "embeded-registry-manager/internal/utils/http_client"
 	"embeded-registry-manager/internal/utils/k8s"
+	util_time "embeded-registry-manager/internal/utils/time"
 )
 
 type ModuleConfig struct {
@@ -48,13 +49,14 @@ type DetachedConfig struct {
 }
 
 type ProxyConfig struct {
-	Host        string      `json:"host"`
-	Scheme      string      `json:"scheme"`
-	CA          string      `json:"ca"`
-	Path        string      `json:"path"`
-	User        string      `json:"user"`
-	Password    string      `json:"password"`
-	StorageMode StorageMode `json:"storageMode"` // enum: S3, Fs
+	Host        string              `json:"host"`
+	Scheme      string              `json:"scheme"`
+	CA          string              `json:"ca"`
+	Path        string              `json:"path"`
+	User        string              `json:"user"`
+	Password    string              `json:"password"`
+	StorageMode StorageMode         `json:"storageMode"` // enum: S3, Fs
+	TTL         *util_time.Duration `json:"ttl"`
 }
 
 type embeddedRegistry struct {
