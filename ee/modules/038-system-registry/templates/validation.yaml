@@ -22,7 +22,13 @@ spec:
   matchConditions:
     - name: 'system-registry-mc'
       expression: 'object.metadata.name == "system-registry"'
+    - name: 'settings-field-exist'
+      expression: |
+        has(oldObject.spec.settings) && oldObject.spec.settings != {}
   validations:
+    - expression: 'has(object.spec.settings) && object.spec.settings != {}'
+      reason: Forbidden
+      message: "Deletion the 'settings' field in 'ModuleConfig/system-registry' is not allowed when the registry is in use."
     - expression: 'object.spec.settings.mode == oldObject.spec.settings.mode'
       reason: Forbidden
       message: "Changing the 'settings.mode' field in 'ModuleConfig/system-registry' is not allowed when the registry is in use."
@@ -33,6 +39,8 @@ spec:
   validations:
     - expression: |
         !(object.metadata.name == "system-registry" &&
+          has(oldObject.spec.settings) && oldObject.spec.settings != {} &&
+          !(has(object.spec.settings) && object.spec.settings != {}) &&
           !(object.spec.settings.mode == oldObject.spec.settings.mode) && 
           !(object.spec.enabled == oldObject.spec.enabled || object.spec.enabled == true))
       reason: Forbidden
