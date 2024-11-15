@@ -79,6 +79,9 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 }
 
 func prepareModuleConfig(mc *config.ModuleConfig, res *ManifestsResult) {
+	// we need apply some settings after bootstrap and with creating resources
+	// but not apply when we are creating module configs into cluster
+	// see description for functions
 	switch mc.GetName() {
 	case "deckhouse":
 		prepareDeckhouseMC(mc, res)
@@ -111,6 +114,10 @@ func setSettingToModuleConfig(kubeCl *client.KubernetesClient, mcName string, va
 }
 
 func prepareDeckhouseMC(mc *config.ModuleConfig, res *ManifestsResult) {
+	// we should apply releaseChannel setting after bootstrap cluster
+	// for preventing an updating deckhouse during bootstrap process
+	// for example, we are installing v1.66 tag but in release channel we have v1.67 tag
+
 	log.DebugLn("Found deckhouse mc. Try to prepare...")
 
 	releaseChannel := ""
@@ -138,6 +145,12 @@ func prepareDeckhouseMC(mc *config.ModuleConfig, res *ManifestsResult) {
 }
 
 func prepareGlobalMC(mc *config.ModuleConfig, res *ManifestsResult) {
+	// we should apply setting only after bootstrap cloud permanent node
+	// imagine, we have https custom certificate setting
+	// if we apply with this, we will have deckhouse in error state because secret will be created in resource
+	// and deckhouse cannot found this secret and cloud permanent nodes will not bootstrap
+	// because deckhouse stuck in error and it cannot create manual-for-bootstrap secrets
+
 	log.DebugLn("Found global mc. Try to prepare...")
 
 	var httpsSettings map[string]interface{}
