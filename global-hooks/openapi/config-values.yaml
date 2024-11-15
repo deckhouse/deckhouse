@@ -17,7 +17,7 @@ properties:
     description: |-
       The name of the StorageClass that DKP will define as the default StorageClass used in the cluster.
 
-      DKP prohibits manually adding or modifying the default annotation (`storageclass.kubernetes.io/is-default-class='true'`) for StorageClass. Use the parameter to define the StorageClass that is used as the default in the cluster.
+      DKP prohibits manually adding or modifying the default annotation (`storageclass.kubernetes.io/is-default-class='true'`) for StorageClass. Use the parameter to define or change the StorageClass that is used as the default in the cluster.
 
       If the parameter is omitted, the default StorageClass is either:
 
