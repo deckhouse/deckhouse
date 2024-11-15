@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/
 lang: ru
 ---
 
-Вы находитесь на главной странице документации Deckhouse Virtualization Platform.
+Deckhouse Virtualization Platform позволяет декларативно создавать, запускать и управлять виртуальными машинами и их ресурсами.
 
 Deckhouse Virtualization Platform (далее платформа) предназначена для запуска, управления и оркестрации виртуальных машин и связанных с ними ресурсами.
 

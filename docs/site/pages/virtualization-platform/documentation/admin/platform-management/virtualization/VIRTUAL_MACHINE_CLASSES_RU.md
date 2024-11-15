@@ -40,7 +40,7 @@ spec:
 
 ### Пример конфигурации VirtualMachineClass
 
-![](../../../../../../../../docs/site/images/virtualization-platform/vmclass-examples.ru.png)
+![](/images/virtualization-platform/vmclass-examples.ru.png)
 
 Представим, что у нас есть кластер из четырех узлов. Два из этих узлов с лейблом `group=blue` оснащены процессором "CPU X" с тремя наборами инструкций, а остальные два узла с лейблом `group=green` имеют более новый процессор "CPU Y" с четырьмя наборами инструкций.
 
