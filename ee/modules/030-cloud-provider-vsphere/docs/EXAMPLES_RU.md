@@ -51,6 +51,6 @@ spec:
   memory: 2048
   rootDiskSize: 20
   template: dev/golden_image
-  network: k8s-msk-178
+  mainNetwork: k8s-msk-178
   datastore: lun-1201
 ```
