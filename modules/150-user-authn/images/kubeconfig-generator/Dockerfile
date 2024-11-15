@@ -14,7 +14,7 @@ WORKDIR /src
 
 ADD already_logged.patch /
 
-RUN echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone ${SOURCE_REPO}/mintel/dex-k8s-authenticator.git . && \
   git checkout 378a39dd93bed9f56a5a1b1a799a208c61ead83f && \
   git apply --whitespace=fix /already_logged.patch && \

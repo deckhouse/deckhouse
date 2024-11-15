@@ -7,7 +7,7 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 WORKDIR /dex
 COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch patches/bytes-and-string-certificates.patch patches/fix-offline-session-updates.patch /
-RUN echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --branch v2.41.1 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
   && git apply /client-groups.patch \
   && git apply /gitlab-refresh-context.patch \

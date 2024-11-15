@@ -11,7 +11,7 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 # Build KSM from sources in case of future patching
-RUN echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN mkdir -p /src/kube-state-metrics && \
   git clone --depth 1 --branch v2.13.0 ${SOURCE_REPO}/kubernetes/kube-state-metrics/ /src/kube-state-metrics
 WORKDIR /src/kube-state-metrics
