@@ -62,7 +62,8 @@ steps:
 
   - uses: {!{ index (ds "actions") "ssh-agent" }!}
     with:
-      ssh-private-key: ${{secrets.SOURCE_REPO_SSH_KEY}}
+      ssh-private-key: |
+        ${{secrets.SOURCE_REPO_SSH_KEY}}
 
   - name: Build and push deckhouse images
     id: build

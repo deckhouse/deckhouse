@@ -474,7 +474,8 @@ jobs:
 
       - uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{secrets.SOURCE_REPO_SSH_KEY}}
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
 
       - name: Build and push deckhouse images
         id: build
@@ -799,7 +800,8 @@ jobs:
 
       - uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{secrets.SOURCE_REPO_SSH_KEY}}
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
 
       - name: Build and push deckhouse images
         id: build
@@ -1124,7 +1126,8 @@ jobs:
 
       - uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{secrets.SOURCE_REPO_SSH_KEY}}
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
 
       - name: Build and push deckhouse images
         id: build
@@ -1449,7 +1452,8 @@ jobs:
 
       - uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{secrets.SOURCE_REPO_SSH_KEY}}
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
 
       - name: Build and push deckhouse images
         id: build
@@ -1774,7 +1778,8 @@ jobs:
 
       - uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{secrets.SOURCE_REPO_SSH_KEY}}
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
 
       - name: Build and push deckhouse images
         id: build
