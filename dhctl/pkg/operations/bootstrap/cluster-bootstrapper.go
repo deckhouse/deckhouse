@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -411,7 +410,9 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	if err != nil {
 		return err
 	}
-	if err := InstallDeckhouse(kubeCl, deckhouseInstallConfig); err != nil {
+
+	installDeckhouseResult, err := InstallDeckhouse(kubeCl, deckhouseInstallConfig)
+	if err != nil {
 		return err
 	}
 
@@ -447,7 +448,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 
-	err = createResources(kubeCl, resourcesToCreate, metaConfig)
+	err = createResources(kubeCl, resourcesToCreate, metaConfig, installDeckhouseResult)
 	if err != nil {
 		return err
 	}
@@ -474,7 +475,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := deckhouse.ConfigureReleaseChannel(kubeCl, deckhouseInstallConfig); err != nil {
+	if err := RunPostInstallTasks(kubeCl, installDeckhouseResult); err != nil {
 		return err
 	}
 
@@ -578,7 +579,7 @@ func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, me
 	})
 }
 
-func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig) error {
+func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult) error {
 	log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
 
 	if resourcesToCreate == nil {
@@ -591,7 +592,7 @@ func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers)
+		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers, result.ManifestResult.WithResourcesMCTasks)
 	})
 }
 

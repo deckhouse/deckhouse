@@ -1,0 +1,188 @@
+package deckhouse
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+)
+
+func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
+	mcUnstructMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(mc)
+	if err != nil {
+		panic(err)
+	}
+	mcUnstruct := &unstructured.Unstructured{Object: mcUnstructMap}
+	return actions.ManifestTask{
+		Name: fmt.Sprintf(`ModuleConfig "%s"`, mc.GetName()),
+		Manifest: func() interface{} {
+			return mcUnstruct
+		},
+		CreateFunc: func(manifest interface{}) error {
+			if createMsg != "" {
+				log.InfoLn(createMsg)
+			}
+			// fake client does not support cache
+			if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
+				// need for invalidate cache
+				_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
+				if err != nil {
+					log.DebugF("Error getting mc api resource: %v\n", err)
+				}
+			}
+
+			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+				Create(context.TODO(), manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
+			if err != nil {
+				log.DebugF("Do not create mc: %v\n", err)
+			}
+
+			return err
+		},
+		UpdateFunc: func(manifest interface{}) error {
+			// fake client does not support cache
+			if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
+				// need for invalidate cache
+				_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
+				if err != nil {
+					log.DebugF("Error getting mc api resource: %v\n", err)
+				}
+			}
+
+			newManifest := manifest.(*unstructured.Unstructured)
+
+			oldManifest, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), newManifest.GetName(), metav1.GetOptions{})
+			if err != nil && !apierrors.IsNotFound(err) {
+				log.DebugF("Error getting mc: %v\n", err)
+			} else {
+				newManifest.SetResourceVersion(oldManifest.GetResourceVersion())
+			}
+
+			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
+				Update(context.TODO(), newManifest, metav1.UpdateOptions{})
+			if err != nil {
+				log.InfoF("Do not updating mc: %v\n", err)
+			}
+
+			return err
+		},
+	}
+}
+
+func prepareModuleConfig(mc *config.ModuleConfig, res *ManifestsResult) {
+	switch mc.GetName() {
+	case "deckhouse":
+		prepareDeckhouseMC(mc, res)
+	case "global":
+		prepareGlobalMC(mc, res)
+	}
+}
+
+func setSettingToModuleConfig(kubeCl *client.KubernetesClient, mcName string, value interface{}, field []string) error {
+	log.DebugF("setSettingToModuleConfig for mc %s, field %v, value %v", mcName, field, value)
+
+	cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), mcName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	fieldPath := append([]string{"spec", "settings"}, field...)
+
+	err = unstructured.SetNestedField(cm.Object, value, fieldPath...)
+	if err != nil {
+		return err
+	}
+
+	_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Update(context.TODO(), cm, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func prepareDeckhouseMC(mc *config.ModuleConfig, res *ManifestsResult) {
+	log.DebugLn("Found deckhouse mc. Try to prepare...")
+
+	releaseChannel := ""
+	releaseChannelRaw, hasReleaseChannelKey := mc.Spec.Settings["releaseChannel"]
+	if rc, ok := releaseChannelRaw.(string); hasReleaseChannelKey && ok {
+		log.DebugLn("Found releaseChannel in mc deckhouse. Remove it from mc")
+		// we need set releaseChannel after bootstrapping process done
+		// to prevent update during bootstrap
+		delete(mc.Spec.Settings, "releaseChannel")
+		releaseChannel = rc
+	}
+
+	if releaseChannel == "" {
+		log.DebugLn("Not found releaseChannel in mc deckhouse. Finish preparing")
+		return
+	}
+
+	res.PostBootstrapMCTasks = append(res.PostBootstrapMCTasks, actions.ModuleConfigTask{
+		Title: "Set release channel to deckhouse module config",
+		Do: func(kubeCl *client.KubernetesClient) error {
+			return setSettingToModuleConfig(kubeCl, "deckhouse", releaseChannel, []string{"releaseChannel"})
+		},
+		Name: "deckhouse",
+	})
+}
+
+func prepareGlobalMC(mc *config.ModuleConfig, res *ManifestsResult) {
+	log.DebugLn("Found global mc. Try to prepare...")
+
+	var httpsSettings map[string]interface{}
+
+	modulesRaw, hasModules := mc.Spec.Settings["modules"]
+	if !hasModules {
+		log.DebugLn("Not found modules in global mc. Finish preparing")
+		return
+	}
+
+	modules, ok := modulesRaw.(map[string]interface{})
+	if !ok {
+		log.ErrorLn("modules is not map in global mc. Finish preparing")
+		return
+	}
+
+	httpsRaw, hasHttps := modules["https"]
+	if !hasHttps {
+		log.DebugLn("Not found https in global mc. Finish preparing")
+		return
+	}
+
+	httpsSettings, ok = httpsRaw.(map[string]interface{})
+	if !ok {
+		log.ErrorLn("https is not map in global mc. Finish preparing")
+		return
+	}
+
+	if httpsSettings == nil {
+		log.DebugLn("Not found httpsSettings in mc deckhouse. Finish preparing")
+		return
+	}
+
+	log.DebugLn("Found https in global mc deckhouse. Remove it from mc")
+	delete(modules, "https")
+	if len(modules) == 0 {
+		log.DebugLn("modules in global mc is empty. Remove it from mc")
+		delete(mc.Spec.Settings, "modules")
+	}
+
+	res.WithResourcesMCTasks = append(res.WithResourcesMCTasks, actions.ModuleConfigTask{
+		Title: "Set https setting to global module config",
+		Do: func(kubeCl *client.KubernetesClient) error {
+			return setSettingToModuleConfig(kubeCl, "global", httpsSettings, []string{"modules", "https"})
+		},
+		Name: "global",
+	})
+}

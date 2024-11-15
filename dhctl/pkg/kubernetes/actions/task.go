@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -96,4 +98,11 @@ func (task *ManifestTask) PatchOrCreate() error {
 		return fmt.Errorf("Create '%s': %v", task.Name, err)
 	}
 	return nil
+}
+
+type ModuleConfigTask struct {
+	// task without attempts inside, client must retry all tasks by itself
+	Do    func(kubeCl *client.KubernetesClient) error
+	Title string
+	Name  string
 }
