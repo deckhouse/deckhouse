@@ -60,6 +60,10 @@ steps:
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
 
+  - uses: {!{ index (ds "actions") "ssh-agent" }!}
+    with:
+      ssh-private-key: ${{secrets.SOURCE_REPO_SSH_KEY}}
+
   - name: Build and push deckhouse images
     id: build
     env:
