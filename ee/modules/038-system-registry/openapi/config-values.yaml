@@ -112,12 +112,15 @@ properties:
           - "123456"
       ttl:
         type: string
+        pattern: '(^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?(?:(\d+)ms)?(?:(\d+)(µs|us))?(?:(\d+)ns)?$)|(^(0)$)'
         description: |
           TTL specifies the expiration time for cached content, after which it will be automatically cleaned up.
           Default: If not set, the TTL defaults to 7 days (168 hours).
           Persistent Cache: If set to 0, the cache will never expire.
         x-example:
           - "168h"
+          - "168h10m"
+          - "168h10m5s"
         default: 168h
       storageMode:
         <<: *storageMode
