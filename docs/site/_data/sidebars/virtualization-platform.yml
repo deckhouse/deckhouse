@@ -83,15 +83,35 @@ entries:
                   url: /virtualization-platform/documentation/admin/platform-management/node-management/configure-containerd.html
             - title:
                 en: Control plane settings
-                ru: Настройки плоскости управления
+                ru: Настройка управляющего слоя
               folders:
                 - title:
-                    en: Description
-                    ru: Описание
-                  url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/about.html
+                    en: Components
+                    ru: Компоненты
+                  folders:
+                    - title:
+                        en: Description
+                        ru: Описание
+                      url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/control-plane-components.html
+                    - title:
+                        en: Etcd operations
+                        ru: Работа с etcd
+                      url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html
+                    - title:
+                        en: Scheduler
+                        ru: Планировщик
+                      url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/scheduler.html
+                    - title:
+                        en: Auditing
+                        ru: Аудит
+                      url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/audit.html
                 - title:
-                    en: Placement management
-                    ru: Управление размещением
+                    en: Master nodes operations
+                    ru: Работа с master-узлами
+                  url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html
+                - title:
+                    en: Components placement
+                    ru: Размещение компонентов
                   url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/placement-management.html
             - title:
                 en: Traffic control
