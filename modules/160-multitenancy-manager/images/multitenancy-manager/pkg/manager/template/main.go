@@ -51,34 +51,27 @@ func New(client client.Client, log logr.Logger) *Manager {
 }
 
 func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, defaultPath string) error {
-	defer init.Done()
-
 	m.log.Info("waiting for webhook server starting")
 	check := func(ctx context.Context) (bool, error) {
 		if err := checker(nil); err != nil {
 			m.log.Info("webhook server not startup yet")
 			return false, nil
 		}
-		m.log.Info("webhook server started")
 		return true, nil
 	}
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, check); err != nil {
-		m.log.Error(err, "webhook server failed to start")
-		return fmt.Errorf("webhook server failed to start: %w", err)
-	}
-	// to make sure that the server is started, without working server reconcile is failed
-	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, false, check); err != nil {
-		m.log.Error(err, "webhook server failed to start")
 		return fmt.Errorf("webhook server failed to start: %w", err)
 	}
 	m.log.Info("webhook server started")
 
 	m.log.Info("ensuring default project templates")
 	if err := m.ensureDefaultProjectTemplates(ctx, defaultPath); err != nil {
-		m.log.Error(err, "failed to ensure default project templates")
-		return err
+		return fmt.Errorf("failed to ensure default project templates: %w", err)
 	}
+
 	m.log.Info("ensured default project templates")
+	init.Done()
+
 	return nil
 }
 
@@ -103,8 +96,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 		for _, project := range projects {
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				if err = m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
-					m.log.Error(err, "failed to get the project", "project", project.Name)
-					return err
+					return fmt.Errorf("failed to get the '%s' project: %w", project.Name, err)
 				}
 				m.log.Info("trigger the project to update", "template", template.Name, "project", project.Name)
 				if project.Annotations == nil {

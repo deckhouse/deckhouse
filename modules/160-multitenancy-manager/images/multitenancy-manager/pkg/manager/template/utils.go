@@ -18,6 +18,7 @@ package template
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,8 +39,7 @@ import (
 func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPath string) error {
 	dir, err := os.ReadDir(templatesPath)
 	if err != nil {
-		m.log.Error(err, "unable to read directory", "directory", templatesPath)
-		return err
+		return fmt.Errorf("unable to read the '%s' directory: %w", templatesPath, err)
 	}
 	for _, file := range dir {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".yaml") {
@@ -49,18 +49,15 @@ func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPa
 		m.log.Info("reading file with project template", "file", file.Name())
 		projectTemplateBytes, err := os.ReadFile(filepath.Join(templatesPath, file.Name()))
 		if err != nil {
-			m.log.Error(err, "failed to read project template", "file", file.Name())
-			return err
+			return fmt.Errorf("failed to read the '%s' project template file: %w", file.Name(), err)
 		}
 		projectTemplate := new(v1alpha1.ProjectTemplate)
 		if err = yaml.Unmarshal(projectTemplateBytes, projectTemplate); err != nil {
-			m.log.Error(err, "failed to unmarshal project", "file", file.Name())
-			return err
+			return fmt.Errorf("failed to unmarshal the '%s' project template file: %w", file.Name(), err)
 		}
 		m.log.Info("validating project template", "file", file.Name())
 		if err = validate.ProjectTemplate(projectTemplate); err != nil {
-			m.log.Error(err, "invalid project template", "file", file.Name())
-			return err
+			return fmt.Errorf("'%s' invalid project template file: %w", file.Name(), err)
 		}
 		if err = m.ensureProjectTemplate(ctx, projectTemplate); err != nil {
 			return err
@@ -76,8 +73,7 @@ func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				existingProjectTemplate := new(v1alpha1.ProjectTemplate)
 				if err = m.client.Get(ctx, types.NamespacedName{Name: projectTemplate.Name}, existingProjectTemplate); err != nil {
-					m.log.Error(err, "failed to fetch project template", "projectTemplate", projectTemplate.Name)
-					return err
+					return fmt.Errorf("failed to fetch the '%s' project template: %w", projectTemplate.Name, err)
 				}
 
 				existingProjectTemplate.Spec = projectTemplate.Spec
@@ -88,12 +84,10 @@ func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1
 				return m.client.Update(ctx, existingProjectTemplate)
 			})
 			if err != nil {
-				m.log.Error(err, "failed to update project template", "projectTemplate", projectTemplate.Name)
-				return err
+				return fmt.Errorf("failed to update the '%s' project template: %w", projectTemplate.Name, err)
 			}
 		} else {
-			m.log.Error(err, "failed to create project template", "projectTemplate", projectTemplate.Name)
-			return err
+			return fmt.Errorf("failed to create the '%s' project template: %w", projectTemplate.Name, err)
 		}
 	}
 	m.log.Info("successfully ensured project template", "projectTemplate", projectTemplate.Name)

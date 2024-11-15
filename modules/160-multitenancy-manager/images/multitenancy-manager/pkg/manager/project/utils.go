@@ -18,6 +18,7 @@ package project
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -95,8 +96,7 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) 
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				existingProject := new(v1alpha2.Project)
 				if err = m.client.Get(ctx, types.NamespacedName{Name: project.Name}, existingProject); err != nil {
-					m.log.Error(err, "failed to fetch the project")
-					return err
+					return fmt.Errorf("failed to fetch the project: %w", err)
 				}
 
 				existingProject.Spec = project.Spec
@@ -106,12 +106,10 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) 
 				return m.client.Update(ctx, existingProject)
 			})
 			if err != nil {
-				m.log.Error(err, "failed to update the project")
-				return err
+				return fmt.Errorf("failed to update the project: %w", err)
 			}
 		} else {
-			m.log.Error(err, "failed to create the project", "project", project.Name)
-			return err
+			return fmt.Errorf("failed to create the '%s' project: %w", project.Name, err)
 		}
 	}
 	m.log.Info("successfully ensured the project", "project", project.Name)
