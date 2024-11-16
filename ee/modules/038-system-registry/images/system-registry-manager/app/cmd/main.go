@@ -11,8 +11,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -64,12 +62,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create context with cancel function for graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Handle OS signals for graceful shutdown
-	go handleShutdown(cancel)
+	ctx := ctrl.SetupSignalHandler()
+	context.AfterFunc(ctx, func() {
+		ctrl.Log.Info("Received shutdown signal")
+	})
 
 	// Start static pod manager
 	go startStaticPodManager(ctx, kubeClient, status)
@@ -156,15 +152,6 @@ func loadKubeConfig() (*rest.Config, error) {
 	// Try to load in-cluster configuration
 	cfg, err := rest.InClusterConfig()
 	return cfg, err
-}
-
-// handleShutdown listens for system termination signals and cancels the context for graceful shutdown
-func handleShutdown(cancel context.CancelFunc) {
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	<-sigCh
-	ctrl.Log.Info("Received shutdown signal")
-	cancel()
 }
 
 // startStaticPodManager starts the static pod manager and monitors its status
