@@ -1,6 +1,6 @@
 {
-  "cse-light": {
-    "name": "CSE Light",
+  "cse-lite": {
+    "name": "CSE Lite",
     "languages": ["ru"],
     "excludeModules": [
       "external-module-manager",
@@ -111,7 +111,9 @@
     "languages": ["ru"],
     "name": "SE+",
     "excludeModules": [
-      "dashboard"
+      "dashboard",
+      "cloud-provider-openstack",
+      "cloud-provider-vcd"
     ],
     "includeModules": [
       "cloud-provider-vsphere",
