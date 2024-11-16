@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"sync"
 
-	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -31,42 +30,39 @@ const (
 	staticPodConfiguration    = "staticPodConfiguration"
 )
 
-type Server struct {
-	KubeClient   *kubernetes.Clientset
+type apiServer struct {
 	requestMutex sync.Mutex
 }
 
-func NewServer(kubeClient *kubernetes.Clientset) *Server {
-	return &Server{
-		KubeClient: kubeClient,
-	}
-}
+func Run(ctx context.Context) error {
+	log := ctrl.Log.WithValues("component", "static pod manager")
 
-func Run(ctx context.Context, kubeClient *kubernetes.Clientset) error {
-	ctrl.Log.Info("Starting static pod manager", "component", "static pod manager")
+	log.Info("Starting static pod manager")
 
-	apiServer := NewServer(kubeClient)
-	http.HandleFunc("/staticpod/create", apiServer.CreateStaticPodHandler)
-	http.HandleFunc("/staticpod/delete", apiServer.DeleteStaticPodHandler)
-	server := &http.Server{Addr: "127.0.0.1:4576"}
+	var api apiServer
 
-	go func() {
-		<-ctx.Done()
-		ctrl.Log.Info("Shutting down API server", "component,", "static pod manager")
-		if err := server.Shutdown(ctx); err != nil {
-			ctrl.Log.Error(err, "Error shutting down API server")
+	http.HandleFunc("/staticpod/create", api.CreateStaticPodHandler)
+	http.HandleFunc("/staticpod/delete", api.DeleteStaticPodHandler)
+
+	httpServer := &http.Server{Addr: "127.0.0.1:4576"}
+
+	context.AfterFunc(ctx, func() {
+		log.Info("Shutting down API server")
+
+		if err := httpServer.Shutdown(ctx); err != nil {
+			log.Error(err, "Error shutting down API server")
 		}
-	}()
+	})
 
-	ctrl.Log.Info("Starting API server on :4576", "component", "static pod manager")
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	log.Info("Starting API server on %v", httpServer.Addr)
+	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("failed to start API server: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) {
+func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctrl.Log.Info("Received request to create/update static pod and configuration", "Client address:", r.RemoteAddr, "component", "static pod manager")
 
@@ -153,7 +149,7 @@ func (s *Server) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (s *Server) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) {
+func (s *apiServer) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctrl.Log.Info("Received request to delete static pod and configuration", "Client address:", r.RemoteAddr, "component", "static pod manager")
 

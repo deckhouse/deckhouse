@@ -68,7 +68,7 @@ func main() {
 	})
 
 	// Start static pod manager
-	go startStaticPodManager(ctx, kubeClient, status)
+	go startStaticPodManager(ctx, status)
 
 	// Start health server for readiness and liveness probes
 	go startHealthServer(status)
@@ -155,11 +155,14 @@ func loadKubeConfig() (*rest.Config, error) {
 }
 
 // startStaticPodManager starts the static pod manager and monitors its status
-func startStaticPodManager(ctx context.Context, kubeClient *kubernetes.Clientset, status *managerStatus) {
+func startStaticPodManager(ctx context.Context, status *managerStatus) {
 	status.staticPodManagerRunning = true
-	if err := staticpodmanager.Run(ctx, kubeClient); err != nil {
-		ctrl.Log.Error(err, "Failed to run static pod manager", "component", "main")
+	defer func() {
 		status.staticPodManagerRunning = false
+	}()
+
+	if err := staticpodmanager.Run(ctx); err != nil {
+		ctrl.Log.Error(err, "Failed to run static pod manager", "component", "main")
 		os.Exit(1) // #TODO
 	}
 }
