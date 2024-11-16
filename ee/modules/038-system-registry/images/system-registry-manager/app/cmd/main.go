@@ -120,16 +120,12 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 		return fmt.Errorf("unable to create controller: %w", err)
 	}
 
-	/*
-		TODO: this function currently will run regardles of leader status,
-		to run only on leader it should implement LeaderElectionRunnableInterface
-
-		So it works incorrect
-	*/
 	// Add leader status update runnable
-	err = mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
-		// When this manager becomes the leader
+	err = mgr.Add(leaderRunnableFunc(func(ctx context.Context) error {
 		status.isLeader = true
+		defer func() {
+			status.isLeader = false
+		}()
 
 		// Call SecretsStartupCheckCreate with the existing reconciler instance
 		if err := reconciler.SecretsStartupCheckCreate(ctx); err != nil {
@@ -138,15 +134,16 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 
 		// Wait until the context is done to handle graceful shutdown
 		<-ctx.Done()
-		status.isLeader = false
 		return nil
 	}))
+
 	if err != nil {
 		return fmt.Errorf("unable to add leader runnable: %w", err)
 	}
 
 	// Start the manager
 	ctrl.Log.Info("Starting manager", "component", "main")
+
 	if err := mgr.Start(ctx); err != nil {
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
