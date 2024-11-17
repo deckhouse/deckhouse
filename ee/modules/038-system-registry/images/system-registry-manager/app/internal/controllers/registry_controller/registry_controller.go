@@ -199,6 +199,7 @@ func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Cont
 				}),
 			),
 		).
+		//WatchesRawSource(oneshotSource("registry-pki", "d8-system")).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
 		}).
