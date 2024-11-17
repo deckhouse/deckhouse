@@ -92,7 +92,6 @@ func GetRegistryNodeSecret(ctx context.Context, kc client.Client, nodeName strin
 
 // GetAllRegistryNodeSecrets returns all registry node secrets in the cluster
 func GetAllRegistryNodeSecrets(ctx context.Context, kc client.Client) ([]corev1.Secret, error) {
-
 	labelSelector := labels.SelectorFromSet(map[string]string{
 		labelModuleKey: labelModuleValue,
 		labelTypeKey:   labelNodeSecretTypeValue,
@@ -104,6 +103,7 @@ func GetAllRegistryNodeSecrets(ctx context.Context, kc client.Client) ([]corev1.
 		Namespace:     RegistryNamespace,
 		LabelSelector: labelSelector,
 	})
+
 	if err != nil {
 		return nil, err
 	}

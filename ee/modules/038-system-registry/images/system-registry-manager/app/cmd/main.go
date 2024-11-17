@@ -7,10 +7,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"k8s.io/client-go/kubernetes"
@@ -18,7 +17,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"embeded-registry-manager/internal/controllers/registry_controller"
@@ -26,67 +24,88 @@ import (
 	httpclient "embeded-registry-manager/internal/utils/http_client"
 )
 
-type managerStatus struct {
-	isLeader                bool
-	staticPodManagerRunning bool
-}
-
 const (
 	metricsBindAddressPort = "127.0.0.1:8081"
-	healthPort             = ":8097"
+	healthListenAddr       = ":8097"
 )
 
 func main() {
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-	status := &managerStatus{}
-	ctrl.Log.Info("Starting embedded registry manager", "component", "main")
+	log := ctrl.Log.WithValues("component", "main")
+
+	log.Info("Starting embedded registry manager")
 
 	// Load Kubernetes configuration
 	cfg, err := loadKubeConfig()
 	if err != nil {
-		ctrl.Log.Error(err, "Unable to get kubeconfig", "component", "main")
+		log.Error(err, "Unable to get kubeconfig")
 		os.Exit(1)
 	}
 
 	// Create Kubernetes client
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		ctrl.Log.Error(err, "Unable to create Kubernetes client", "component", "main")
+		log.Error(err, "Unable to create Kubernetes client")
 		os.Exit(1)
 	}
 
 	// Create custom HTTP client
-	HttpClient, err := httpclient.NewDefaultHttpClient()
+	httpClient, err := httpclient.NewDefaultHttpClient()
 	if err != nil {
-		ctrl.Log.Error(err, "Unable to create HTTP client", "component", "main")
+		ctrl.Log.Error(err, "Unable to create HTTP client")
 		os.Exit(1)
 	}
 
 	ctx := ctrl.SetupSignalHandler()
+
 	context.AfterFunc(ctx, func() {
 		ctrl.Log.Info("Received shutdown signal")
 	})
 
-	// Start static pod manager
-	go startStaticPodManager(ctx, status)
+	ctx, ctxCancel := context.WithCancel(ctx)
+	var wg sync.WaitGroup
 
-	// Start health server for readiness and liveness probes
-	go startHealthServer(status)
+	// Start static pod manager
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer ctxCancel()
+		defer log.Info("Static pod manager done")
+
+		log.Info("Starting static pod manager")
+
+		if err := startStaticPodManager(ctx); err != nil {
+			log.Error(err, "Static pod manager error")
+		}
+	}()
 
 	// Set up and start manager
-	if err := setupAndStartManager(ctx, cfg, kubeClient, HttpClient, status); err != nil {
-		ctrl.Log.Error(err, "Failed to start the embedded registry manager", "component", "main")
-		os.Exit(1) // #TODO
+	err = setupAndStartManager(ctx, cfg, kubeClient, httpClient)
+
+	if err != nil {
+		ctrl.Log.Error(err, "Failed to start the embedded registry manager")
+	}
+
+	log.Info("Waiting for background operations")
+
+	ctxCancel()
+	wg.Wait()
+
+	log.Info("Bye!")
+
+	if err != nil {
+		os.Exit(1)
 	}
 }
 
 // setupAndStartManager sets up the manager, adds components, and starts the manager
-func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kubernetes.Clientset, httpClient *httpclient.Client, status *managerStatus) error {
+func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kubernetes.Clientset, httpClient *httpclient.Client) error {
 	// Set up the manager with leader election and other options
-	mgr, err := ctrl.NewManager(cfg, manager.Options{
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Metrics: metricsserver.Options{
 			BindAddress: metricsBindAddressPort,
 		},
+		HealthProbeBindAddress:  healthListenAddr,
 		LeaderElection:          true,
 		LeaderElectionID:        "embedded-registry-manager-leader",
 		LeaderElectionNamespace: "d8-system",
@@ -97,6 +116,7 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 			},
 		},
 	})
+
 	if err != nil {
 		return fmt.Errorf("unable to set up manager: %w", err)
 	}
@@ -118,11 +138,6 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 
 	// Add leader status update runnable
 	err = mgr.Add(leaderRunnableFunc(func(ctx context.Context) error {
-		status.isLeader = true
-		defer func() {
-			status.isLeader = false
-		}()
-
 		// Call SecretsStartupCheckCreate with the existing reconciler instance
 		if err := reconciler.SecretsStartupCheckCreate(ctx); err != nil {
 			return fmt.Errorf("failed to initialize secrets: %w", err)
@@ -138,8 +153,12 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 	}
 
 	// Start the manager
-	ctrl.Log.Info("Starting manager", "component", "main")
+	ctrl.Log.Info("Starting manager")
 
+	/*
+		We use leader election, so program must be terminated after exit from this function^
+		otherwise some tasks, which must be runned on leader only will continue work
+	*/
 	if err := mgr.Start(ctx); err != nil {
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
@@ -155,49 +174,10 @@ func loadKubeConfig() (*rest.Config, error) {
 }
 
 // startStaticPodManager starts the static pod manager and monitors its status
-func startStaticPodManager(ctx context.Context, status *managerStatus) {
-	status.staticPodManagerRunning = true
-	defer func() {
-		status.staticPodManagerRunning = false
-	}()
-
+func startStaticPodManager(ctx context.Context) error {
 	if err := staticpodmanager.Run(ctx); err != nil {
-		ctrl.Log.Error(err, "Failed to run static pod manager", "component", "main")
-		os.Exit(1) // #TODO
-	}
-}
-
-// startHealthServer starts a health server that provides readiness and liveness probes
-func startHealthServer(status *managerStatus) {
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		healthHandler(w, status)
-	})
-	http.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
-		healthHandler(w, status)
-	})
-
-	if err := http.ListenAndServe(healthPort, nil); err != nil {
-		ctrl.Log.Error(err, "Failed to start health server", "component", "main")
-		os.Exit(1)
-	}
-}
-
-// healthHandler handles health and readiness probe requests
-func healthHandler(w http.ResponseWriter, status *managerStatus) {
-	response := struct {
-		IsLeader                bool `json:"isLeader"`
-		StaticPodManagerRunning bool `json:"staticPodManagerRunning"`
-	}{
-		IsLeader:                status.isLeader,
-		StaticPodManagerRunning: status.staticPodManagerRunning,
+		return fmt.Errorf("failed to run static pod manager: %w", err)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if status.staticPodManagerRunning {
-		w.WriteHeader(http.StatusOK)
-	} else {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-
-	_ = json.NewEncoder(w).Encode(response)
+	return nil
 }

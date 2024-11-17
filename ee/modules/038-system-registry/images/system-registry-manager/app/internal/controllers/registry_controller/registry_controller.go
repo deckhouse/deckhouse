@@ -24,6 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	staticpod "embeded-registry-manager/internal/static-pod"
 	httpclient "embeded-registry-manager/internal/utils/http_client"
@@ -173,14 +174,32 @@ func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Cont
 		return fmt.Errorf("unable to add event handler for Node: %w", err)
 	}
 
-	bldr := ctrl.NewControllerManagedBy(mgr)
-	bldr.Named("embedded-registry-controller")
+	secretsToWatch := []string{
+		"registry-user-ro",
+		"registry-user-rw",
+		"registry-pki",
+	}
 
 	// Watch for changes in Secrets
-	err = bldr.Watches(&corev1.Secret{}, r.secretEventHandler()).
+	err = ctrl.NewControllerManagedBy(mgr).
+		Named("embedded-registry-controller").
+		For(&corev1.Secret{}).
+		WithEventFilter(predicate.NewPredicateFuncs(func(object client.Object) bool {
+			objectName := object.GetName()
+
+			for _, name := range secretsToWatch {
+				if name == objectName {
+					return true
+				}
+			}
+
+			return false
+		})).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 1,
-		}).Complete(r)
+		}).
+		Complete(r)
+
 	if err != nil {
 		return fmt.Errorf("unable to complete controller: %w", err)
 	}
@@ -253,6 +272,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		} else {
 			response, reconcileErr = r.syncRegistryStaticPods(ctx, node)
 		}
+
 		if reconcileErr != nil {
 			logger.Info("Failed to reconcile registry", "node", node.Name, "error", reconcileErr)
 		} else {
@@ -300,7 +320,7 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 	r.embeddedRegistry.images.DockerAuth = fmt.Sprintf("%s%s@%s", registryAddress, registryPath, imageDockerAuth)
 	r.embeddedRegistry.images.DockerDistribution = fmt.Sprintf("%s%s@%s", registryAddress, registryPath, imageDockerDistribution)
 
-	// Ensure	 CA certificate exists and create if not
+	// Ensure CA certificate exists and create if not
 	isGenerated, caCertStruct, err := k8s.EnsureCASecret(ctx, r.Client)
 	if err != nil {
 		return err
@@ -384,26 +404,33 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 	registryUserRwSecret, err = k8s.GetRegistryUser(ctx, r.Client, "registry-user-rw")
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			registryUserRwSecret, err = k8s.CreateRegistryUser(ctx, r.Client, "registry-user-rw")
+			if registryUserRwSecret, err = k8s.CreateRegistryUser(ctx, r.Client, "registry-user-rw"); err != nil {
+				return fmt.Errorf("cannot create registry rw user secret: %w", err)
+			}
+
 			logger.Info("Created registry rw user secret", "component", "registry-controller")
 		} else {
-			return err
+			return fmt.Errorf("cannot get regstry rw user: %w", err)
 		}
 	}
 
 	registryUserRoSecret, err = k8s.GetRegistryUser(ctx, r.Client, "registry-user-ro")
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			registryUserRoSecret, err = k8s.CreateRegistryUser(ctx, r.Client, "registry-user-ro")
+			if registryUserRoSecret, err = k8s.CreateRegistryUser(ctx, r.Client, "registry-user-ro"); err != nil {
+				return fmt.Errorf("cannot create registry ro user secret: %w", err)
+			}
+
 			logger.Info("Created registry ro user secret", "component", "registry-controller")
 		} else {
-			return err
+			return fmt.Errorf("cannot get regstry ro user: %w", err)
 		}
 	}
 
 	// Fill the embedded registry struct with the registry user secrets
 	r.embeddedRegistry.registryRwUser = *registryUserRwSecret
 	r.embeddedRegistry.registryRoUser = *registryUserRoSecret
+
 	logger.Info("Embedded registry startup initialization complete", "component", "registry-controller")
 	return nil
 
@@ -427,23 +454,6 @@ func (r *RegistryReconciler) extractModuleConfigFieldsFromObject(cr *unstructure
 func hasMasterLabel(node *corev1.Node) bool {
 	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
 	return isMaster
-}
-
-func (r *RegistryReconciler) getWithFallback(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	logger := ctrl.LoggerFrom(ctx)
-	err := r.Client.Get(ctx, key, obj, opts...)
-	// Object found in cache, return
-	if err == nil {
-		return nil
-	}
-
-	// Error other than not found, return err
-	if !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	logger.Info("Object not found in cache, trying to Get directly")
-	return r.APIReader.Get(ctx, key, obj, opts...)
 }
 
 func (r *RegistryReconciler) listWithFallback(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {

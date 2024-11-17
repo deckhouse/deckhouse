@@ -9,13 +9,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"embeded-registry-manager/internal/utils/k8s"
@@ -74,42 +72,6 @@ func (r *RegistryReconciler) handleNodeDelete(ctx context.Context, mgr ctrl.Mana
 	default:
 		logger.Info("Not the leader, skipping Reconcile")
 	}
-}
-
-func (r *RegistryReconciler) secretEventHandler() handler.EventHandler {
-	secretsToWatch := []string{
-		"registry-user-ro",
-		"registry-user-rw",
-		"registry-pki",
-	}
-
-	return handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		secretName := obj.GetName()
-
-		// Helper function to enqueue reconcile request
-		enqueue := func(name, namespace string) []reconcile.Request {
-			return []reconcile.Request{
-				{NamespacedName: client.ObjectKey{
-					Name:      name,
-					Namespace: namespace,
-				}},
-			}
-		}
-
-		// Check if the secret name matches the list
-		for _, currentSecretName := range secretsToWatch {
-			if secretName == currentSecretName {
-				return enqueue(obj.GetName(), obj.GetNamespace())
-			}
-		}
-
-		// Check for the "registry-node-*-pki" pattern
-		if strings.HasPrefix(secretName, "registry-node-") && strings.HasSuffix(secretName, "-pki") {
-			return enqueue(obj.GetName(), obj.GetNamespace())
-		}
-
-		return nil
-	})
 }
 
 func (r *RegistryReconciler) handleModuleConfigChange(ctx context.Context, mgr ctrl.Manager, obj interface{}) {

@@ -36,6 +36,7 @@ func (r *RegistryReconciler) handleRegistryUser(ctx context.Context, req ctrl.Re
 		if err != nil {
 			return false, fmt.Errorf("failed to create new registry user secret: %w", err)
 		}
+
 		logger.Info("Created registry user secret with new credentials", "secretName", secretName)
 		return true, nil
 	}
