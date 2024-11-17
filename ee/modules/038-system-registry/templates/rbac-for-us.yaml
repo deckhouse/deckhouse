@@ -24,7 +24,7 @@ rules:
   verbs: ["get", "watch", "list", "delete", "update", "create"]
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
-  verbs: ["watch", "list"]
+  verbs: ["watch", "list", "create"]
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["get", "list", "update", "create"]
