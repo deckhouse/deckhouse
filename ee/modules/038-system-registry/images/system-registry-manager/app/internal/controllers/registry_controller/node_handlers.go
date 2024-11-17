@@ -143,27 +143,6 @@ func (r *RegistryReconciler) getPodIPForNode(ctx context.Context, nodeName strin
 	return pods.Items[0].Status.PodIP, nil
 }
 
-func (r *embeddedRegistry) getMasterNodeFromEmbeddedRegistryStruct(nodeName string) (k8s.MasterNode, bool) {
-	for i, node := range r.masterNodes {
-		if node.Name == nodeName {
-			return r.masterNodes[i], true
-		}
-	}
-	return k8s.MasterNode{}, false
-}
-
-func (r *embeddedRegistry) updateMasterNode(masterNode k8s.MasterNode) {
-	// Update the node in the embedded registry struct if it exists
-	for i, node := range r.masterNodes {
-		if node.Name == masterNode.Name {
-			r.masterNodes[i] = masterNode
-			return
-		}
-	}
-	// Add the node to the embedded registry struct if it doesn't exist
-	r.masterNodes[masterNode.Name] = masterNode
-}
-
 func (r *RegistryReconciler) deleteNodeRegistry(ctx context.Context, nodeName string) ([]byte, error) {
 	// Get the pod IP for the node
 	podIP, err := r.getPodIPForNode(ctx, nodeName)
@@ -185,7 +164,7 @@ func (r *RegistryReconciler) createNodeRegistry(ctx context.Context, nodeName st
 func (r *RegistryReconciler) ensureNodePKISecret(ctx context.Context, secret *corev1.Secret, nodeName string) (*k8s.MasterNode, error) {
 	logger := ctrl.LoggerFrom(ctx)
 
-	masterNode, found := r.embeddedRegistry.getMasterNodeFromEmbeddedRegistryStruct(nodeName)
+	masterNode, found := r.embeddedRegistry.masterNodes[nodeName]
 	if !found {
 		return nil, ErrNodeNotFound
 	}
@@ -215,7 +194,7 @@ func (r *RegistryReconciler) ensureNodePKISecret(ctx context.Context, secret *co
 		//
 		masterNode.DistributionCertificate = k8s.Certificate{Cert: dc, Key: dk}
 		masterNode.AuthCertificate = k8s.Certificate{Cert: ac, Key: ak}
-		r.embeddedRegistry.updateMasterNode(masterNode)
+		r.embeddedRegistry.masterNodes[masterNode.Name] = masterNode
 
 		logger.Info("Node PKI Secret recreated", "nodeName", masterNode.Name)
 		return &masterNode, nil
@@ -240,8 +219,7 @@ func (r *RegistryReconciler) ensureNodePKISecret(ctx context.Context, secret *co
 		Key:  secret.Data[k8s.DistributionKey],
 	}
 
-	//
-	r.embeddedRegistry.updateMasterNode(masterNode)
+	r.embeddedRegistry.masterNodes[masterNode.Name] = masterNode
 
 	logger.Info("Node PKI Secret updated", "nodeName", masterNode.Name)
 	return &masterNode, nil
