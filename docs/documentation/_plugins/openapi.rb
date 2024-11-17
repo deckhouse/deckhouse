@@ -20,20 +20,20 @@ module Jekyll
         item['linkAnchor'] = linkAnchor
         item['resourceType'] = resourceType
         item['title'] = %Q(#{if resourceType == 'crd' and  resourceName then resourceName + ":&nbsp;" end}#{parameterName})
-        if get_hash_value(@context.registers[:site].data['modules'], 'internal', moduleName, %Q(parameters-#{revision})) == nil then
-          @context.registers[:site].data['modules']['internal'][moduleName][%Q(parameters-#{revision})] = Hash.new
+        if get_hash_value(@context.registers[:site].data['modules'], 'all', moduleName, %Q(parameters-#{revision})) == nil then
+          @context.registers[:site].data['modules']['all'][moduleName][%Q(parameters-#{revision})] = Hash.new
         end
-        if get_hash_value(@context.registers[:site].data['modules'], 'internal', moduleName, %Q(parameters-#{revision}),
+        if get_hash_value(@context.registers[:site].data['modules'], 'all', moduleName, %Q(parameters-#{revision}),
            %Q(#{if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
                 end
                }#{parameterName})) == nil then
-          @context.registers[:site].data['modules']['internal'][moduleName][%Q(parameters-#{revision})][%Q(#{
+          @context.registers[:site].data['modules']['all'][moduleName][%Q(parameters-#{revision})][%Q(#{
             if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
             end
             }#{parameterName})] = Hash.new
-          @context.registers[:site].data['modules']['internal'][moduleName][%Q(parameters-#{revision})][%Q(#{
+          @context.registers[:site].data['modules']['all'][moduleName][%Q(parameters-#{revision})][%Q(#{
             if resourceType != 'moduleConfig' then
                    if resourceName then resourceName + "." end
             end

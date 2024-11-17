@@ -1,4 +1,9 @@
 {
+  "istio": {
+    "path": "modules/istio/",
+    "edition": "ce",
+    "editionRestrictions": ["ce", "be"]
+  },
   "registrypackages": {
     "path": "",
     "edition": "ce"
@@ -21,7 +26,8 @@
   "sds-replicated-volume": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/",
-    "edition": "se"
+    "edition": "se",
+    "editionRestrictions": ["ce"]
   },
   "sds-local-volume": {
     "external": "true",
@@ -31,7 +37,8 @@
   "virtualization": {
     "external": "true",
     "path": "/products/kubernetes-platform/modules/virtualization/stable/",
-    "edition": "ee"
+    "edition": "ee",
+    "editionRestrictions": ["ce"]
   },
   "secrets-store-integration": {
     "external": "true",
