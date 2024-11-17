@@ -41,6 +41,7 @@
       "delivery",
       "namespace-configurator",
       "secret-copier",
+      "static-routing-manager",
       "documentation",
       "console",
       "sds-node-configurator",
@@ -93,6 +94,7 @@
       "delivery",
       "namespace-configurator",
       "secret-copier",
+      "static-routing-manager",
       "console",
       "sds-node-configurator",
       "sds-drbd",
@@ -114,7 +116,13 @@
       "dashboard",
       "cloud-provider-openstack",
       "cloud-provider-vcd",
-      "cloud-provider-dynamix"
+      "cloud-provider-dynamix",
+      "keepalived",
+      "network-gateway",
+      "operator-trivy",
+      "runtime-audit-engine",
+      "static-routing-manager",
+      "virtualization"
     ],
     "includeModules": [
       "cloud-provider-vsphere",

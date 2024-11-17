@@ -1,4 +1,14 @@
 {
+  "monitoring-deckhouse": {
+    "repo_folder_name": "modules/340-monitoring-deckhouse",
+    "path": "",
+    "edition": "ce"
+  },
+  "registrypackages": {
+    "repo_folder_name": "modules/007-registrypackages",
+    "path": "",
+    "edition": "ce"
+  },
   "console": {
     "repo_folder_name": "",
     "path": "",
@@ -48,11 +58,6 @@
     "repo_folder_name": "",
     "path": "",
     "edition": "ee"
-  },
-  "stronghold": {
-    "repo_folder_name": "",
-    "path": "",
-    "edition": "se-plus"
   }
 }
 
