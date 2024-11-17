@@ -37,14 +37,19 @@ type apiServer struct {
 func Run(ctx context.Context) error {
 	log := ctrl.Log.WithValues("component", "static pod manager")
 
-	log.Info("Starting static pod manager")
+	log.Info("Starting")
+	defer log.Info("Stopped")
 
 	var api apiServer
 
-	http.HandleFunc("/staticpod/create", api.CreateStaticPodHandler)
-	http.HandleFunc("/staticpod/delete", api.DeleteStaticPodHandler)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/staticpod/create", api.CreateStaticPodHandler)
+	mux.HandleFunc("/staticpod/delete", api.DeleteStaticPodHandler)
 
-	httpServer := &http.Server{Addr: "127.0.0.1:4576"}
+	httpServer := &http.Server{
+		Addr:    "127.0.0.1:4576",
+		Handler: mux,
+	}
 
 	context.AfterFunc(ctx, func() {
 		log.Info("Shutting down API server")
@@ -56,6 +61,7 @@ func Run(ctx context.Context) error {
 
 	log.Info("Starting API server on %v", httpServer.Addr)
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Error(err, "API server error")
 		return fmt.Errorf("failed to start API server: %w", err)
 	}
 
