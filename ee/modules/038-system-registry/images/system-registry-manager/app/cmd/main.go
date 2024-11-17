@@ -36,7 +36,7 @@ func main() {
 	log.Info("Starting embedded registry manager")
 
 	// Load Kubernetes configuration
-	cfg, err := loadKubeConfig()
+	cfg, err := rest.InClusterConfig()
 	if err != nil {
 		log.Error(err, "Unable to get kubeconfig")
 		os.Exit(1)
@@ -74,7 +74,7 @@ func main() {
 
 		log.Info("Starting static pod manager")
 
-		if err := startStaticPodManager(ctx); err != nil {
+		if err := staticpodmanager.Run(ctx); err != nil {
 			log.Error(err, "Static pod manager error")
 		}
 	}()
@@ -161,22 +161,6 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 	*/
 	if err := mgr.Start(ctx); err != nil {
 		return fmt.Errorf("unable to start manager: %w", err)
-	}
-
-	return nil
-}
-
-// loadKubeConfig tries to load the in-cluster config. If not available, it loads kubeconfig from home directory
-func loadKubeConfig() (*rest.Config, error) {
-	// Try to load in-cluster configuration
-	cfg, err := rest.InClusterConfig()
-	return cfg, err
-}
-
-// startStaticPodManager starts the static pod manager and monitors its status
-func startStaticPodManager(ctx context.Context) error {
-	if err := staticpodmanager.Run(ctx); err != nil {
-		return fmt.Errorf("failed to run static pod manager: %w", err)
 	}
 
 	return nil
