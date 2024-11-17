@@ -113,12 +113,12 @@
     "excludeModules": [
       "dashboard",
       "cloud-provider-openstack",
-      "cloud-provider-vcd"
+      "cloud-provider-vcd",
+      "cloud-provider-dynamix"
     ],
     "includeModules": [
       "cloud-provider-vsphere",
-      "cloud-provider-zvirt",
-      "cloud-provider-dynamix"
+      "cloud-provider-zvirt"
     ]
   }
 }
