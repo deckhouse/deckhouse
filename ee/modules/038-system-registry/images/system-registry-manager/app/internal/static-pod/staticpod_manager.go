@@ -59,7 +59,7 @@ func Run(ctx context.Context) error {
 		}
 	})
 
-	log.Info("Starting API server on %v", httpServer.Addr)
+	log.Info("Starting API server", "addr", httpServer.Addr)
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Error(err, "API server error")
 		return fmt.Errorf("failed to start API server: %w", err)
