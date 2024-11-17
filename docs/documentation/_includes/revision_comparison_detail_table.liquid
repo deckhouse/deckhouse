@@ -32,35 +32,46 @@
   {%- for module in modules %}
     {%- assign moduleName = module[0] %}
     {%- assign moduleEdition = module[1].edition %}
-    {%- assign moduleIsExternal = false %}
+    {%- assign moduleDoesntBelongToEdition = false %}
 
     {%- if siteD8Edition == 'ce' and module[1].edition != 'ce' %}
-      {%- assign moduleIsExternal = true %}
+      {%- assign moduleDoesntBelongToEdition = true %}
     {%- endif %}
 
     {%- if siteD8Edition == 'ee' and module[1].edition == 'fe' %}
-      {%- assign moduleIsExternal = true %}
+      {%- assign moduleDoesntBelongToEdition = true %}
     {%- endif %}
 
     {%- if editionsWeight[moduleEdition] <= editionsWeight[siteD8Edition] %}
        {%- if site.data.editions[siteD8Edition].excludeModules contains moduleName %}
-         {%- assign moduleIsExternal = true %}
+         {%- assign moduleDoesntBelongToEdition = true %}
        {%- endif %}
     {%- else %}
-      {%- assign moduleIsExternal = true %}
+      {%- assign moduleDoesntBelongToEdition = true %}
     {%- endif %}
 
-    {%- if moduleIsExternal %}
-      {%- assign modulePath = module[1].path | prepend: '/products/kubernetes-platform/documentation/v1/' | prepend: site.urls[page.lang] %}
-    {%- else %}
-      {%- assign modulePath = module[1].path %}
+    {%- assign modulePath = "" %}
+    {%- if module[1].path.size > 0 %}
+      {%- if module[1].external == "true"  %}
+        {%- assign modulePath = module[1].path | prepend: site.urls[page.lang] %}
+      {%- elsif moduleDoesntBelongToEdition %}
+        {%- assign modulePath = module[1].path | prepend: '/products/kubernetes-platform/documentation/v1/' | prepend: site.urls[page.lang] %}
+      {%- else %}
+        {%- assign modulePath = module[1].path %}
+      {%- endif %}
     {%- endif %}
 
     <tr>
       <td style="text-align: left">
+      {%- if module[1].path.size > 0 %}
         <a href="{{ modulePath }}"
           {%- if site.data["modulesFeatureStatus"][moduleName] != '' %} class="comparison-table__module comparison-table__module-{{ site.data["modulesFeatureStatus"][moduleName] }}" {% endif -%}
         >{{ moduleName }}</a>
+      {%- else %}
+        <span
+          {%- if site.data["modulesFeatureStatus"][moduleName] != '' %} class="comparison-table__module comparison-table__module-{{ site.data["modulesFeatureStatus"][moduleName] }}" {% endif -%}
+        >{{ moduleName }}</span>
+      {%- endif %}
       </td>
       {%- for edition in editionsWeight %}
         {%- assign skip = false %}

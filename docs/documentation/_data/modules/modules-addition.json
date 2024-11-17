@@ -1,62 +1,56 @@
 {
-  "monitoring-deckhouse": {
-    "repo_folder_name": "modules/340-monitoring-deckhouse",
-    "path": "",
-    "edition": "ce"
-  },
   "registrypackages": {
-    "repo_folder_name": "modules/007-registrypackages",
     "path": "",
     "edition": "ce"
   },
   "console": {
-    "repo_folder_name": "",
-    "path": "",
+    "path": "/products/kubernetes-platform/modules/console/stable/",
+    "external": "true",
     "edition": "se"
   },
   "sds-node-configurator": {
-    "repo_folder_name": "",
-    "path": "",
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/",
     "edition": "ce"
   },
   "sds-drbd": {
-    "repo_folder_name": "",
-    "path": "",
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-drbd/stable/",
     "edition": "ee"
   },
   "sds-replicated-volume": {
-    "repo_folder_name": "",
-    "path": "",
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/",
     "edition": "se"
   },
   "sds-local-volume": {
-    "repo_folder_name": "",
-    "path": "",
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sds-local-volume/stable/",
     "edition": "ce"
   },
   "virtualization": {
-    "repo_folder_name": "",
-    "path": "",
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/virtualization/stable/",
     "edition": "ee"
   },
   "secrets-store-integration": {
-    "repo_folder_name": "",
-    "path": "",
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/",
     "edition": "be"
   },
   "csi-ceph": {
-    "repo_folder_name": "",
-    "path": "",
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-ceph/stable/",
     "edition": "ce"
   },
   "csi-nfs": {
-    "repo_folder_name": "",
-    "path": "",
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-nfs/stable/",
     "edition": "ce"
   },
   "commander": {
-    "repo_folder_name": "",
-    "path": "",
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/commander/stable/",
     "edition": "ee"
   }
 }
