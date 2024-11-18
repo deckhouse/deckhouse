@@ -65,8 +65,6 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "systemRegistryManager") }}
         {{- end }}
         volumeMounts:
-        - mountPath: /etc/kubernetes
-          name: etc-kubernetes
         - mountPath: /tmp
           name: tmp
         env:
@@ -110,9 +108,5 @@ spec:
 {{- end }}
       priorityClassName: system-cluster-critical
       volumes:
-      - name: etc-kubernetes
-        hostPath:
-          path: /etc/kubernetes/
-          type: DirectoryOrCreate
       - name: tmp
         emptyDir: {}

@@ -86,6 +86,8 @@ spec:
         {{- end }}
         command: ["/staticpod"]
         volumeMounts:
+        - mountPath: /etc/kubernetes
+          name: etc-kubernetes
         - mountPath: /tmp
           name: tmp
         env:
