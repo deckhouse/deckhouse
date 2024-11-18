@@ -31,9 +31,15 @@ COPY $GO_LIB_PATH_FROM/ $GO_LIB_PATH_TO/
 ARG TARGETOS TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \
     cd $MANAGER_PATH_TO && \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -gcflags "all=-N -l" -o /manager ./cmd && \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -gcflags "all=-N -l" -o /manager ./cmd/manager && \
     chown 64535:64535 /manager && \
     chmod 0755 /manager
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    cd $MANAGER_PATH_TO && \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -gcflags "all=-N -l" -o /staticpod ./cmd/staticpod && \
+    chown 64535:64535 /staticpod && \
+    chmod 0755 /staticpod
 
 ## Install delve
 #RUN GOARCH=amd64 go install github.com/go-delve/delve/cmd/dlv@latest
@@ -47,6 +53,8 @@ ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-ma
 COPY $MANAGER_PATH_FROM/templates /templates
 COPY --from=builder /tmp-tmp /tmp
 COPY --from=builder /manager /manager
+COPY --from=builder /staticpod /staticpod
+
 #COPY --from=builder /go/bin/linux_amd64/dlv /dlv
 #ENV XDG_CONFIG_HOME=/tmp/dlv
 

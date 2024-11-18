@@ -13,6 +13,10 @@ import:
     add: "/manager"
     to: /manager
     before: setup
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: "/staticpod"
+    to: /staticpod
+    before: setup
 git:
   - add: /{{ $managerTemplatesRelPath }}
     to: /templates
@@ -33,9 +37,12 @@ shell:
     - go mod download
   setup:
     - cd {{ $managerAbsPath }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /manager ./cmd
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /manager ./cmd/manager
     - chown 64535:64535 /manager
     - chmod 0755 /manager
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /staticpod ./cmd/staticpod
+    - chown 64535:64535 /staticpod
+    - chmod 0755 /staticpod
 git:
   - add: /{{ $managerRelPath }}
     to:  {{ $managerAbsPath }}
