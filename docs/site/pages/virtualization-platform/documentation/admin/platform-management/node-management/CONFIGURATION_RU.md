@@ -11,18 +11,18 @@ lang: ru
 - Установка и настройки дополнительных пакетов ОС.
 
   Примеры:
-  - [установка kubectl-плагина](./configuration-containerd.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
+  - [установка kubectl-плагина](./configuration-containerd.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах).
 
 - Обновление ядра ОС на конкретную версию.
 
   Примеры:
-  - [обновление ядра Debian](./configuration-os.html#для-дистрибутивов-основанных-на-debian);
+  - [обновление ядра Debian](./configuration-os.html#для-дистрибутивов-основанных-на-debian).
   - [обновление ядра CentOS](./configuration-os.html#для-дистрибутивов-основанных-на-centos).
 
 - Изменение параметров ОС.
 
   Примеры:
-  - [настройка параметра sysctl](./configuration-os.html#задание-параметра-sysctl);
+  - [настройка параметра sysctl](./configuration-os.html#задание-параметра-sysctl).
   - [добавление корневого сертификата](./configuration-os.html#добавление-registry-с-авторизацией).
 
 - Сбор информации на узле и выполнение других подобных действий.
@@ -30,8 +30,8 @@ lang: ru
 - Настройка containerd.
 
   Примеры:
-  - [настройка метрик](./configure-containerd.html#дополнительные-настройки-containerd);
-  - [добавление приватного registry](./configure-containerd.html#добавление-дополнительного-registry);
+  - [настройка метрик](./configure-containerd.html#дополнительные-настройки-containerd).
+  - [добавление приватного registry](./configure-containerd.html#добавление-дополнительного-registry).
 
 
 ## Настройки NodeGroupConfiguration
@@ -42,37 +42,7 @@ lang: ru
 
 Переменные, которые доступны для использования в шаблонизаторе:
 <ul>
-<li><code>.cloudProvider</code> (для групп узлов с nodeType <code>CloudEphemeral</code> или <code>CloudPermanent</code>) — массив данных облачного провайдера.
-{% offtopic title="Пример данных..." %}
-```yaml
-cloudProvider:
-  instanceClassKind: OpenStackInstanceClass
-  machineClassKind: OpenStackMachineClass
-  openstack:
-    connection:
-      authURL: https://cloud.provider.com/v3/
-      domainName: Default
-      password: p@ssw0rd
-      region: region2
-      tenantName: mytenantname
-      username: mytenantusername
-    externalNetworkNames:
-    - public
-    instances:
-      imageName: ubuntu-22-04-cloud-amd64
-      mainNetwork: kube
-      securityGroups:
-      - kube
-      sshKeyPairName: kube
-    internalNetworkNames:
-    - kube
-    podNetworkMode: DirectRoutingWithPortSecurityEnabled
-  region: region2
-  type: openstack
-  zones:
-  - nova
-```
-{% endofftopic %}</li>
+<li><code>.cloudProvider</code> — массив данных облачного провайдера, в документации DVP не рассматривается.</li>
 <li><code>.cri</code> — используемый CRI (с версии Deckhouse 1.49 используется только <code>Containerd</code>).</li>
 <li><code>.kubernetesVersion</code> — используемая версия Kubernetes.</li>
 <li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="cr.html#nodeuser">NodeUser</a>.
@@ -171,3 +141,15 @@ rm /var/lib/bashible/configuration_checksum
 
 1. Скрипты в deckhouse выполняются раз в 4 часа или на основании внешних триггеров. Поэтому важно писать скрипты таким образом, чтобы они производили проверку необходимости своих изменений в системе перед выполнением действий, а не производили изменения каждый раз при запуске.
 2. При выборе [приоритета](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) пользовательских скриптов важно учитывать [встроенные скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/node-group) которые производят различные действия в т.ч. установку и настройку сервисов. Например, если в скрипте планируется произвести перезапуск сервиса, а сервис устанавливается встроенным скриптом с приоритетом N, то приоритет пользовательского скрипта должен быть как минимум N+1, иначе, при развертывании нового узла пользовательский скрипт выйдет с ошибкой.
+
+Далее в примерах разбираются такие особенности, если они имеют значение:
+
+- [Установка kubectl-плагина](./configuration-containerd.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах).
+- [Обновление ядра Debian](./configuration-os.html#для-дистрибутивов-основанных-на-debian).
+- [Обновление ядра CentOS](./configuration-os.html#для-дистрибутивов-основанных-на-centos).
+- [Настройка параметра sysctl](./configuration-os.html#задание-параметра-sysctl).
+- [Добавление корневого сертификата](./configuration-os.html#добавление-registry-с-авторизацией).
+- [Настройка метрик](./configure-containerd.html#дополнительные-настройки-containerd).
+- [Добавление приватного registry](./configure-containerd.html#добавление-дополнительного-registry).
+
+
