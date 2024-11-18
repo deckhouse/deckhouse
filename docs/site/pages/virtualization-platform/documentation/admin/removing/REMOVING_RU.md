@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/removing/removing.html
 lang: ru
 ---
 
-Для удаления кластера нужно выполнить несколько шагов:
+Для удаления платформы нужно выполнить несколько шагов:
 
 1. Удалите из кластера все дополнительные узлы:
 
