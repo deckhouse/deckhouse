@@ -90,13 +90,13 @@ apiVersions:
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
             x-unsafe-rules: [updateReplicas]
-          instanceClass: &instanceClassProperties
+          instanceClass:
             description: |
               Partial contents of the fields of the [HuaweiCloudInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass).
             type: object
             required: [flavorName, imageName]
             additionalProperties: false
-            properties:
+            properties: &instanceClassProperties
               flavorName: &instanceClassFlavorName
                 type: string
                 description: |
