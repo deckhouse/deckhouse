@@ -96,7 +96,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 			return false, fmt.Errorf("Not found external ip for node %s", nodeName)
 		}
 
-		sshClient.Settings.SetAvailableHosts([]string{ip})
+		sshClient.Settings.SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
 	}
 
 	var err error
