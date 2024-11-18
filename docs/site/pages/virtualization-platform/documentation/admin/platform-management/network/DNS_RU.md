@@ -1,6 +1,6 @@
 ---
 title: "Управление DNS"
-permalink: en/virtualization-platform/documentation/admin/platform-management/network/dns.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/network/dns.html
 ---
 
 Для устанавливки компонентов CoreDNS и управления DNS можно использовать возможности модуля kube-dns.
