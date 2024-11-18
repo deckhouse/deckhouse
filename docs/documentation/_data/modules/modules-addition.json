@@ -2,7 +2,13 @@
   "istio": {
     "path": "modules/istio/",
     "edition": "ce",
-    "editionRestrictions": ["ce", "be"]
+    "editionRestrictions": ["ce", "be"],
+    "editionFullyAvailable": ["se", "se-plus"]
+  },
+  "cni-cilium": {
+    "path": "modules/cni-cilium/",
+    "edition": "ce",
+    "editionFullyAvailable": ["se", "se-plus"]
   },
   "registrypackages": {
     "path": "",
