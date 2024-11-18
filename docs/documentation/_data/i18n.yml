@@ -254,8 +254,11 @@ common:
 
 comparison:
   except_parameters:
-    en: "Except for the following parameters:<br />"
-    ru: "Кроме следующих параметров:<br />"
+    en: "Except for the following parameters:<br />"
+    ru: "Кроме следующих параметров:<br />"
+  module_has_restions:
+    en: "There are limitations to functionality"
+    ru: "Есть ограничения  функциональности"
 
 features:
   experimental:
