@@ -71,11 +71,13 @@ spec:
                   type: string
                   description: The module phase.
                   enum:
-                    - NotInstalled
+                    - Available
                     - Downloading
-                    - Enqueued
-                    - WaitSync
-                    - Pending
+                    - Reconciling
+                    - Installing
+                    - HooksDisabled
+                    - WaitSyncTasks
+                    - Downloaded
                     - Conflict
                     - Ready
                     - Error
