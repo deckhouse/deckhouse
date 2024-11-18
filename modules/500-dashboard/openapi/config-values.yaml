@@ -54,12 +54,6 @@ properties:
           - [ "1.1.1.1/32" ]
         description: |
           The CIDR range for which authentication to access the dashboard is allowed.
-      allowScale:
-        type: boolean
-        description: |
-          Activate ability to scale Deployment and StatefulSet from the web interface.
-
-          This parameter has no effect if the `externalAuthentication` is enabled.
   https:
     type: object
     x-examples:
