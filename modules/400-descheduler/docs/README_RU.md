@@ -1,43 +1,57 @@
 ---
-title: "The descheduler module"
+title: "Модуль descheduler"
+description: "Descheduler в Deckhouse Kubernetes Platform"
 ---
 
-The module runs a [descheduler](https://github.com/kubernetes-sigs/descheduler) with [strategies](#strategies) defined in a `Descheduler` custom resource.
+Модуль запускает в кластере [descheduler](https://github.com/kubernetes-sigs/descheduler) с набором [стратегий](#strategies), заданных в Custom Resources.
 
-descheduler every 15 minutes evicts Pods that satisfy strategies enabled in the `Descheduler` custom resource. This leads to forced run the scheduling process for evicted Pods.
+Модуль каждые 15 минут вытесняет поды, которые удовлетворяют включенным в Custom Resources стратегиям. Это приводит к принудительному запуску процесса шедулинга в отношении вытесненных подов.
 
-## Nuances of descheduler operation
+## Особенности работы descheduler
 
-* descheduler do not take into account pods in `d8-*` and `kube-system` namespaces;
-* Pods with local storage enabled are never evicts;
-* Pods that are associated with a DaemonSet are never evicts;
-* Pods with [priorityClassName](../001-priority-class/) set to `system-cluster-critical` or `system-node-critical` (*critical* Pods) are never evicts;
-* descheduler takes into account the priority class when evicting Pods from a high-loaded node (check out the [priority-class](../001-priority-class/) module);
-* The Best effort Pods are evicted before Burstable and Guaranteed ones;
-* descheduler takes into account the [Pod Disruption Budget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/): the Pod will not be evicted if descheduling violates the PDB;
-* descheduler takes into account node fitting. If no nodes available to start evicted pod, pod is not evicted.
+* Descheduler не учитывает поды в пространствах имен `d8-*` и `kube-system`;
+* Поды с включенным локальным хранилищем никогда не вытесняются;
+* Поды, связанные с DaemonSet, никогда не вытесняются;
+* Поды с установленным [priorityClassName](../001-priority-class/) значением `system-cluster-critical` или `system-node-critical` (*критические* поды) никогда не вытесняются;
+* Descheduler учитывает класс приоритета при вытеснении подов с узла с высокой загрузкой (см. модуль [priority-class](../001-priority-class/));
+* Поды с классом приоритета **Best effort** вытесняются раньше, чем поды с классами **Burstable** и **Guaranteed**;
+* Descheduler учитывает [Pod Disruption Budget (PDB)](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/): под не будет вытесняться, если descheduling нарушает PDB;
+* Descheduler учитывает совместимость с узлом (node fitting). Если нет доступных узлов для запуска вытесненного пода, под не будет вытеснен.
 
-To limit pods set by labels, `podlabelSelector` parameter is used. `podlabelSelector` has the same syntax as kubernetes labelSelector.
-To limit pods set by namespace, `namespaceLabelSelector` parameter is used. `namespaceLabelSelector` has the same syntax as kubernetes labelSelector.
-To set up node fit list, `nodeLabelSelector` parameter is used. `nodeLabelSelector` has the same syntax as kubernetes labelSelector.
+Для ограничения подов по меткам используется параметр `podLabelSelector`. Параметр имеет такой же синтаксис, как и `labelSelector` в Kubernetes.
 
-## Strategies
+Для ограничения подов по пространствам имен используется параметр `namespaceLabelSelector`. Параметр имеет такой же синтаксис, как и `labelSelector` в Kubernetes.
+
+Для настройки списка узлов, соответствующих условиям размещения, используется параметр `nodeLabelSelector`.
+Параметр имеет такой же синтаксис, как и `labelSelector` в Kubernetes.
+
+## Стратегии
 
 ### HighNodeUtilization
 
-This strategy finds nodes that are under utilized and evicts pods from the nodes in the hope that these pods will be scheduled compactly into fewer nodes. Used in conjunction with node auto-scaling, this strategy is intended to help trigger down scaling of under utilized nodes. This strategy must be used with the scheduler scoring strategy `MostAllocated`.
-The under utilization of nodes is determined by a configurable threshold `thresholds`. The threshold `thresholds` can be configured for cpu, memory, number of pods, and extended resources in terms of percentage. The percentage is calculated as the current resources requested on the node vs total allocatable. For pods, this means the number of pods on the node as a fraction of the pod capacity set for that node.
-If a node's usage is below threshold for all (cpu, memory, number of pods and extended resources), the node is considered underutilized. Currently, pods request resource requirements are considered for computing node resource utilization. Any node above `thresholds` is considered appropriately utilized and is not considered for eviction.
-The `thresholds` parameter could be tuned as per your cluster requirements. Note that this strategy evicts pods from underutilized nodes (those with usage below `thresholds`) so that they can be recreated in appropriately utilized nodes. The strategy will abort if any number of underutilized nodes or appropriately utilized nodes is zero.
-`
-NOTE: Node resource consumption is determined by the requests and limits of pods, not actual usage. This approach is chosen in order to maintain consistency with the kube-scheduler, which follows the same design for scheduling pods onto nodes. This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated consumption, due to these components reporting actual usage metrics.
+Эта стратегия находит недоиспользуемые узлы и высвобождает поды с этих узлов в надежде, что эти поды будут компактно размещены на меньшем количестве узлов. Используемая совместно с авто-масштабированием узлов, эта стратегия предназначена для помощи в уменьшении масштаба недоиспользуемых узлов. Она должна использоваться с стратегией оценки планировщика `MostAllocated`.
+
+Недоиспользование узлов определяется с помощью настраиваемого порогового значения, называемого `thresholds`. Значения можно настроить для CPU, памяти, количества подов и расширенных ресурсов в процентах. Процент рассчитывается как соотношение текущих запрашиваемых ресурсов на узле к общему количеству доступных для выделения ресурсов. Для подов это означает количество подов на узле как долю от емкости подов, установленной для этого узла.
+
+Если использование узла ниже порогового значения по всем параметрам (CPU, память, количество подов и расширенные ресурсы), узел считается недоиспользуемым. В настоящее время для вычисления использования ресурсов узла учитываются запрашиваемые ресурсы подов. Любой узел, использование которого выше порогового значения, считается правильно использованным и не подлежит вытеснению.
+
+* Параметр `thresholds` можно настроить в соответствии с требованиями вашего кластера.
+* Эта стратегия вытесняет поды с недоиспользуемых узлов (с использованием ниже порогового значения), чтобы они могли быть пересозданы на правильно использованных узлах.
+* Стратегия будет прервана, если количество недоиспользуемых или правильно использованных узлов равно нулю.
+
+> **Внимание.** Потребление ресурсов узла определяется запросами и лимитами подов, а не фактическим использованием. Этот подход выбран для поддержания согласованности с kube-scheduler, который использует ту же концепцию для размещения подов на узлах. Это означает, что использование ресурсов, отображаемое Kubelet (или командами вроде `kubectl top`), может отличаться от рассчитанного потребления, поскольку эти компоненты показывают фактические метрики использования.
 
 ### LowNodeUtilization
 
-This strategy finds nodes that are under utilized and evicts pods, if possible, from other nodes in the hope that recreation of evicted pods will be scheduled on these underutilized nodes.
-The under utilization of nodes is determined by a configurable threshold `thresholds`. The threshold `thresholds` can be configured for cpu, memory, number of pods, and extended resources in terms of percentage (the percentage is calculated as the current resources requested on the node vs total allocatable. For pods, this means the number of pods on the node as a fraction of the pod capacity set for that node).
-If a node's usage is below threshold for all (cpu, memory, number of pods and extended resources), the node is considered underutilized. Currently, pods request resource requirements are considered for computing node resource utilization.
-There is another configurable threshold, `targetThresholds`, that is used to compute those potential nodes from where pods could be evicted. If a node's usage is above `targetThresholds` for any (cpu, memory, number of pods, or extended resources), the node is considered over utilized. Any node between the thresholds, `thresholds` and `targetThresholds` is considered appropriately utilized and is not considered for eviction. The threshold, `targetThresholds`, can be configured for cpu, memory, and number of pods too in terms of percentage.
-These thresholds, `thresholds` and `targetThresholds`, could be tuned as per your cluster requirements. Note that this strategy evicts pods from overutilized nodes (those with usage above `targetThresholds`) to underutilized nodes (those with usage below `thresholds`), it will abort if any number of underutilized nodes or overutilized nodes is zero.
+Эта стратегия находит узлы с перегрузкой и вытесняет поды с этих узлов предполагая, что пересоздание этих подов будет запланировано на недоиспользуемых узлах.
 
-NOTE: Node resource consumption is determined by the requests and limits of pods, not actual usage. This approach is chosen in order to maintain consistency with the kube-scheduler, which follows the same design for scheduling pods onto nodes. This means that resource usage as reported by Kubelet (or commands like kubectl top) may differ from the calculated consumption, due to these components reporting actual usage metrics.
+Перегрузка узлов определяется с помощью настраиваемого порогового значения, называемого `thresholds`. Значения можно настроить для CPU, памяти, количества подов и расширенных ресурсов в процентах. Процент рассчитывается как соотношение текущих запрашиваемых ресурсов на узле к общему количеству доступных для выделения ресурсов. Для подов это означает количество подов на узле как долю от ёмкости подов, установленной для этого узла.
+
+Если использование узла выше порога по любому из параметров (CPU, память, количество подов или расширенные ресурсы), узел считается перегруженным. Узлы с использованием значений `thresholds` и `targetThresholds` считаются правильно использованными и не подлежат вытеснению.
+
+* Параметр `thresholds` можно настроить в соответствии с требованиями вашего кластера.
+* Существуют также параметры `targetThresholds`, которые используются для вычисления узлов, с которых поды могут быть вытеснены.
+* Эта стратегия вытесняет поды с перегруженных узлов (с использованием порогового значения ниже `targetThresholds`) на недоиспользуемые узлы (с использованием порогового значения ниже`thresholds`).
+* Стратегия будет прервана, если количество перегруженных или недоиспользуемых узлов равно нулю.
+
+> **Внимание.** Потребление ресурсов узла определяется запросами и ограничениями подов, а не фактическим использованием. Этот подход выбран для поддержания согласованности с kube-scheduler, который использует тот же подход для планирования подов на узлы. Это означает, что использование ресурсов, отображаемое Kubelet (или командами вроде `kubectl top`), может отличаться от рассчитанного потребления, поскольку эти компоненты отображают фактические метрики использования.
