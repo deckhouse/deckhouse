@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -52,14 +53,14 @@ func main() {
 	// Create custom HTTP client
 	httpClient, err := httpclient.NewDefaultHttpClient()
 	if err != nil {
-		ctrl.Log.Error(err, "Unable to create HTTP client")
+		log.Error(err, "Unable to create HTTP client")
 		os.Exit(1)
 	}
 
 	ctx := ctrl.SetupSignalHandler()
 
 	context.AfterFunc(ctx, func() {
-		ctrl.Log.Info("Received shutdown signal")
+		log.Info("Received shutdown signal")
 	})
 
 	ctx, ctxCancel := context.WithCancel(ctx)
@@ -119,6 +120,13 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 
 	if err != nil {
 		return fmt.Errorf("unable to set up manager: %w", err)
+	}
+
+	if err = mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		return fmt.Errorf("unable to set up health check: %w", err)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
 	// Create a new instance of RegistryReconciler
