@@ -29,6 +29,8 @@ import (
 func (svc *Service) Build() error {
 	err := svc.buildHugo()
 	if err != nil {
+		svc.isReady.Store(false)
+
 		return fmt.Errorf("hugo build: %w", err)
 	}
 
