@@ -8,5 +8,4 @@ title: "The multitenancy-manager module: configuration"
 
 The module does not have any mandatory parameters.
 
-
 <!-- SCHEMA -->
