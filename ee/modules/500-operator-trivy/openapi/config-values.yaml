@@ -96,6 +96,16 @@ properties:
       The same as `spec.nodeSelector` for the Kubernetes pod.
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+  disableSBOMGeneration:
+    type: boolean
+    default: false
+    description: |
+      Disables SBOM reports generation.
+
+      **Warning.** When this options is set to true, all current SBOM reports are deleted from the cluster (the cleanup is executed only once).
+
+    x-doc-default: false
+    x-examples: [true, false]
   reportResourceLabels:
     type: array
     description: |
