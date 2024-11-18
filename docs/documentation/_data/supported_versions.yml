@@ -49,8 +49,8 @@ osDistributions:
 
 k8s_statuses:
   end-of-life:
-    en: Version with limited support, which is unavailable for new installations.
-    ru: Версия с ограниченной поддержкой, недоступная для новых установок.
+    en: The version is not recommended for use. It is planned for removal in future releases.
+    ru: Версия не рекомендуется для использования. Запланирована для удаления в будущих релизах.
   intermediate:
     en: An intermediate version that is only available to perform rolling Kubernetes updates.
     ru: Промежуточная версия, доступная только для плавных обновлений Kubernetes.

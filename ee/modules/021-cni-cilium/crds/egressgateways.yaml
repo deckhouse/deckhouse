@@ -76,6 +76,13 @@ spec:
                           x-doc-d8Revision: ee
                           description: The _virtual_ source IP address to be assigned to outgoing requests through the egress gateway.
                           type: string
+                        interfaces:
+                          x-doc-d8Revision: ee
+                          description: The list of network interfaces to which the _virtual_ IP will be simulated.
+                          type: array
+                          default: []
+                          items:
+                            type: string
                       type: object
                     primaryIPFromEgressGatewayNodeInterface:
                       properties:

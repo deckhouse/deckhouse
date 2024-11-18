@@ -1,0 +1,15 @@
+deckhouse-controller:
+  features:
+    - summary: >-
+        Added support for Auto Patch mode for Modules Release (configurable in the module update
+        policy object)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10466
+ingress-nginx:
+  fixes:
+    - summary: Add check for existing label.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10449
+istio:
+  fixes:
+    - summary: SA token path in api-proxy container fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10454
+

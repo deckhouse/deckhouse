@@ -17,10 +17,10 @@ package backend
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 
-	logger "github.com/docker/distribution/context"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -32,18 +32,19 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions"
 	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type ModuleConfigBackend struct {
 	mcKubeClient     *versioned.Clientset
 	deckhouseConfigC chan<- utils.Values
 	moduleEventC     chan events.ModuleEvent
-	logger           logger.Logger
+	logger           *log.Logger
 }
 
 // New returns native(Deckhouse) implementation for addon-operator's KubeConfigManager which works directly with
 // deckhouse.io/ModuleConfig, avoiding moving configs to the ConfigMap
-func New(config *rest.Config, deckhouseConfigC chan<- utils.Values, logger logger.Logger) *ModuleConfigBackend {
+func New(config *rest.Config, deckhouseConfigC chan<- utils.Values, logger *log.Logger) *ModuleConfigBackend {
 	mcClient, err := versioned.NewForConfig(config)
 	if err != nil {
 		panic(err)
@@ -166,13 +167,13 @@ func (mc ModuleConfigBackend) LoadConfig(ctx context.Context, _ ...string) (*con
 
 	list, err := mc.mcKubeClient.DeckhouseV1alpha1().ModuleConfigs().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list module configs: %w", err)
 	}
 
 	for _, item := range list.Items {
 		values, err := mc.fetchValuesFromModuleConfig(&item)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fetch values from module config '%s': %w", item.Name, err)
 		}
 
 		if item.Name == "global" {
@@ -210,7 +211,7 @@ func (mc ModuleConfigBackend) fetchValuesFromModuleConfig(item *v1alpha1.ModuleC
 
 	newVersion, newSettings, err := converter.ConvertToLatest(item.Spec.Version, item.Spec.Settings)
 	if err != nil {
-		return utils.Values{}, err
+		return utils.Values{}, fmt.Errorf("convert: %w", err)
 	}
 
 	item.Spec.Version = newVersion

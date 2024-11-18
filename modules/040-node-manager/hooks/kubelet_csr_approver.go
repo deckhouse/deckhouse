@@ -26,6 +26,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 
@@ -129,7 +130,7 @@ func csrHandler(input *go_hook.HookInput, dc dependency.Container) error {
 
 		csrInfo := s.(*CsrInfo)
 		if !csrInfo.Valid {
-			input.LogEntry.Warning(csrInfo.Name, csrInfo.ErrMsg)
+			input.Logger.Warn("csr info not valid", slog.String(csrInfo.Name, csrInfo.ErrMsg))
 			continue
 		}
 

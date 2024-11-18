@@ -134,6 +134,87 @@ var _ = Describe("Module :: operator-trivy :: helm template :: custom-certificat
 		})
 	})
 
+	Context("Operator trivy with additional vulnerability report fields set", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("operatorTrivy", `
+additionalVulnerabilityReportFields:
+- Class
+- Target`)
+
+			f.HelmRender()
+		})
+
+		It("Everything must render properly for cluster", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		})
+
+		It("Operator trivy has proper additionalVulnerabilityReportFields set", func() {
+			cm := f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field(`data`).Map()["trivy.additionalVulnerabilityReportFields"].String()).To(Equal("Class,Target"))
+		})
+	})
+
+	Context("Operator trivy with insecure registry set", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("operatorTrivy", `
+insecureRegistries:
+- example.com
+- test.example.com:8080`)
+
+			f.HelmRender()
+		})
+
+		It("Everything must render properly for cluster", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		})
+
+		It("Operator trivy has proper insecureRegistry.[id] set", func() {
+			cm := f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field(`data`).Map()["trivy.insecureRegistry.0"].String()).To(Equal("example.com"))
+			Expect(cm.Field(`data`).Map()["trivy.insecureRegistry.1"].String()).To(Equal("test.example.com:8080"))
+			Expect(cm.Field(`data`).Map()["trivy.nonSslRegistry.0"].String()).To(Equal("example.com"))
+			Expect(cm.Field(`data`).Map()["trivy.nonSslRegistry.1"].String()).To(Equal("test.example.com:8080"))
+		})
+	})
+
+	Context("Operator trivy with insecure database registry set", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("operatorTrivy", `
+insecureDbRegistry: true`)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly for cluster", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		})
+
+		It("Operator trivy has proper TRIVY_INSECURE and dbRepositoryInsecure set", func() {
+			cm := f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field(`data`).Map()["trivy.dbRepositoryInsecure"].String()).To(Equal("true"))
+			Expect(cm.Field(`data`).Map()["TRIVY_INSECURE"].String()).To(Equal("true"))
+		})
+	})
+
+	Context("Operator trivy without insecure database registry set", func() {
+		BeforeEach(func() {
+			f.HelmRender()
+		})
+
+		It("Everything must render properly for cluster", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		})
+
+		It("Operator trivy has proper TRIVY_INSECURE and dbRepositoryInsecure set", func() {
+			cm := f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field(`data`).Map()["trivy.dbRepositoryInsecure"].String()).To(Equal("false"))
+			Expect(cm.Field(`data`).Map()["TRIVY_INSECURE"].String()).To(Equal("false"))
+		})
+	})
+
 	Context("Operator trivy with no value in enabledNamespaces", func() {
 		BeforeEach(func() {
 			f.HelmRender()

@@ -18,3 +18,9 @@ This problem is not solved in upstream, and our patch will not be accepted.
 Refresh can be called only one. By propagating a context of the user request, refresh can accidentally canceled.
 
 To avoid this, this patch makes refresh requests to declare and utilize their own contexts.
+
+### Fix offline session creation
+
+Offline session is not created if the skip approval option is toggled. In this case Dex looses connector data and cannot refresh tokens.
+
+Upstream PR: https://github.com/dexidp/dex/pull/3828

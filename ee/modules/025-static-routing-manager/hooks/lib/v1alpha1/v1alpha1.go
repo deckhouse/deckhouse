@@ -41,7 +41,8 @@ const (
 
 type Route struct {
 	Destination string `json:"destination"`
-	Gateway     string `json:"gateway"`
+	Gateway     string `json:"gateway,omitempty"`
+	Dev         string `json:"dev,omitempty"`
 }
 
 type Routes struct {

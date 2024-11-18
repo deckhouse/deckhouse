@@ -69,11 +69,15 @@ properties:
           type: string
   storageClass:
     type: string
-    description: |
+    description: |-
       The name of the StorageClass to use for storing the DHCP lease.
 
-      If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+      If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
 
-      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
+      The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
+
+      *Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+
+      If `false` is specified, emptyDir will be forced to be used.
 
       Dnsmasq (underlies our DHCP server) has its own mechanisms for protecting against the duplication of IP addresses if the lease database is lost (but it is better not to lose it).

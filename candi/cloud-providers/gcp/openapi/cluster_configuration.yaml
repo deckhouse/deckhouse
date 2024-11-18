@@ -98,7 +98,6 @@ apiVersions:
           Parameters of the master's NodeGroup.
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
-        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             type: integer
@@ -107,7 +106,6 @@ apiVersions:
               The number of master nodes to create.
 
               It is important to have an odd number of masters to ensure a quorum.
-            x-unsafe-rules: [updateReplicas]
           additionalNetworkTags:
             description: |
               The list of additional tags.

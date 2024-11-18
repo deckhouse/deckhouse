@@ -20,10 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -58,7 +59,7 @@ type Updater[R v1alpha1.Release] struct {
 	settings       *Settings
 	enabledModules set.Set
 
-	logger            logger.Logger
+	logger            *log.Logger
 	kubeAPI           KubeAPI[R]
 	metricsUpdater    MetricsUpdater[R]
 	webhookDataSource WebhookDataSource[R]
@@ -76,7 +77,7 @@ type Updater[R v1alpha1.Release] struct {
 	releaseData              DeckhouseReleaseData
 }
 
-func NewUpdater[R v1alpha1.Release](dc dependency.Container, logger logger.Logger, settings *Settings,
+func NewUpdater[R v1alpha1.Release](dc dependency.Container, logger *log.Logger, settings *Settings,
 	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater[R],
 	webhookDataSource WebhookDataSource[R], enabledModules []string,
 ) *Updater[R] {
@@ -399,7 +400,7 @@ func (u *Updater[R]) checkReleaseDisruptions(rl R) bool {
 				msg := fmt.Sprintf("Release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.GetName(), reason)
 				err := u.updateStatus(rl, msg, PhasePending)
 				if err != nil {
-					u.logger.Error(err)
+					u.logger.Error("update status", slog.String("error", err.Error()))
 				}
 				return false
 			}
@@ -554,7 +555,7 @@ func (u *Updater[R]) ApplyForcedRelease(ctx context.Context) error {
 		if i < u.forcedReleaseIndex {
 			err := u.updateStatus(release, "", PhaseSuperseded)
 			if err != nil {
-				u.logger.Error(err)
+				u.logger.Error("update status", slog.String("error", err.Error()))
 			}
 		}
 	}
@@ -635,7 +636,7 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 		if err := extenders.CheckModuleReleaseRequirements(rl.GetName(), rl.GetRequirements()); err != nil {
 			err = u.updateStatus(rl, err.Error(), PhasePending)
 			if err != nil {
-				u.logger.Error(err)
+				u.logger.Error("update status", slog.String("error", err.Error()))
 			}
 			return false
 		}
@@ -650,12 +651,12 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 			if !passed {
 				msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, rl.GetVersion(), err)
 				if errors.Is(err, requirements.ErrNotRegistered) {
-					u.logger.Error(err)
+					u.logger.Error("check requirements", slog.String("error", err.Error()))
 					msg = fmt.Sprintf("%q requirement is not registered", key)
 				}
 				err := u.updateStatus(rl, msg, PhasePending)
 				if err != nil {
-					u.logger.Error(err)
+					u.logger.Error("update status", slog.String("error", err.Error()))
 				}
 				return false
 			}

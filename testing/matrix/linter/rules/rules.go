@@ -199,7 +199,8 @@ func containerImageDigestCheck(object storage.StoreObject, containers []v1.Conta
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"Cannot parse repository from image: "+c.Image,
+				"Cannot parse repository from image: %s",
+				c.Image,
 			)
 		}
 
@@ -207,7 +208,9 @@ func containerImageDigestCheck(object storage.StoreObject, containers []v1.Conta
 			return errors.NewLintRuleError("CONTAINER003",
 				object.Identity()+"; container = "+c.Name,
 				nil,
-				"All images must be deployed from the same default registry: "+defaultRegistry+" current:"+repo.RepositoryStr(),
+				"All images must be deployed from the same default registry: %s current: %s",
+				defaultRegistry,
+				repo.RepositoryStr(),
 			)
 		}
 	}
@@ -506,7 +509,8 @@ func objectSecurityContext(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("GetPodSecurityContext failed: %v", err),
+			"GetPodSecurityContext failed: %v",
+			err,
 		)
 	}
 
@@ -648,7 +652,8 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("IsHostNetwork failed: %v", err),
+			"IsHostNetwork failed: %v",
+			err,
 		)
 	}
 
@@ -658,7 +663,8 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("GetContainers failed: %v", err),
+			"GetContainers failed: %v",
+			err,
 		)
 	}
 	initContainers, err := object.GetInitContainers()
@@ -667,7 +673,8 @@ func objectHostNetworkPorts(object storage.StoreObject) errors.LintRuleError {
 			"MANIFEST003",
 			object.Identity(),
 			nil,
-			fmt.Sprintf("GetInitContainers failed: %v", err),
+			"GetInitContainers failed: %v",
+			err,
 		)
 	}
 	containers = append(containers, initContainers...)

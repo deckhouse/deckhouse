@@ -89,7 +89,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderAttach(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.commanderAttachSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
 					sendCh <- &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}}
 				}()
 
@@ -118,6 +118,21 @@ connectionProcessor:
 			}
 		}
 	}
+}
+
+func (s *Service) commanderAttachSafe(
+	ctx context.Context,
+	request *pb.CommanderAttachStart,
+	switchPhase phases.OnPhaseFunc[attach.PhaseData],
+	logWriter io.Writer,
+) (result *pb.CommanderAttachResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.CommanderAttachResult{Err: panicMessage(ctx, r)}
+		}
+	}()
+
+	return s.commanderAttach(ctx, request, switchPhase, logWriter)
 }
 
 func (s *Service) commanderAttach(

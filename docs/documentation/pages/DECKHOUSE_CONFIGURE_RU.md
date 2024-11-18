@@ -146,10 +146,8 @@ user-authn   false     1         12h
 <td>
 <ul style="columns: 3">
 {%- for moduleName in site.data.bundles.bundleModules[bundle] %}
-{%- assign isExcluded = site.data.exclude.module_names | where: "name", moduleName %}
-{%- if isExcluded.size > 0 %}{% continue %}{% endif %}
-<li>
-{{ moduleName }}</li>
+{%- if site.data.excludedModules contains moduleName %}{% continue %}{% endif %}
+<li>{{ moduleName }}</li>
 {%- endfor %}
 </ul>
 </td>
@@ -158,7 +156,22 @@ user-authn   false     1         12h
 </tbody>
 </table>
 
-> **Обратите внимание,** что в наборе модулей `Minimal` не включен ряд базовых модулей (например, модуль работы с CNI). Deckhouse с набором модулей `Minimal` без включения базовых модулей сможет работать только в уже развернутом кластере.
+### Особенности работы с набором модулей Minimal на bare metal
+
+{% alert level="warning" %}
+**Обратите внимание,** что в наборе модулей `Minimal` не включен ряд базовых модулей (например, модуль работы с CNI).
+
+Deckhouse с набором модулей `Minimal` без включения базовых модулей сможет работать только в уже развернутом кластере.
+{% endalert %}
+
+Для установки Deckhouse с набором модулей `Minimal` на bare metal нужно обязательно включить следующие модули, указав их в конфигурационном файле установщика:
+
+* registry-packages-proxy;
+* cloud-data-crd;
+* node-manager;
+* cni-cilium (или другой модуль управления CNI при необходимости);
+* kube-dns;
+* control-plane-manager.
 
 ## Управление размещением компонентов Deckhouse
 
