@@ -19,7 +19,7 @@ ssh <USER_NAME>@<MASTER_IP>
 Verify that platform resources are accessible by listing the cluster nodes:
 
 ```bash
-sudo d8 k get nodes
+d8 k get nodes
 ```
 
 ## Remote Connection to the Platform

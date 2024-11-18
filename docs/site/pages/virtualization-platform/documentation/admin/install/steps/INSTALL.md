@@ -240,7 +240,7 @@ where:
   - SSH access keys;
   - configuration file;
   - resources file, etc.
-- `<RELEASE_CHANNEL>` — [update channel](../update_channels.html) of the platform in kebab-case. It should match the one set in `config.yml`:
+- `<RELEASE_CHANNEL>` — [update channel](../update_channels.html) of the platform in kebab-case. It should match the one set in `config.yaml`:
   - `alpha` — for the *Alpha* update channel;
   - `beta` — for the *Beta* update channel;
   - `early-access` — for the *Early Access* update channel;
@@ -251,7 +251,7 @@ Example of running the installer container for the CE edition:
 ```shell
 docker run -it --pull=always \
   -v "$PWD/config.yaml:/config.yaml" \
-  -v "$PWD/resources.yml:/resources.yml" \
+  -v "$PWD/resources.yaml:/resources.yaml" \
   -v "$PWD/dhctl-tmp:/tmp/dhctl" \
   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
@@ -267,13 +267,13 @@ Example of starting a platform installation with cluster deployment in the cloud
 ```shell
 dhctl bootstrap \
   --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml --config=/resources.yml
+  --config=/config.yaml --config=/resources.yaml
 ```
 
 where:
 
-- `/config.yml` — installation configuration file;
-- `/resources.yml` — resource manifests file;
+- `/config.yaml` — installation configuration file;
+- `/resources.yaml` — resource manifests file;
 - `<SSH_USER>` — user on the server for SSH connection;
 - `--ssh-agent-private-keys` — file containing the private SSH key for the connection.
 
@@ -284,14 +284,14 @@ ssh <USER_NAME>@<MASTER_IP>
 
 Starting the Ingress controller after the platform installation may take some time. Ensure the Ingress controller is running before proceeding:
 ```bash
-sudo d8 k -n d8-ingress-nginx get po
+d8 k -n d8-ingress-nginx get po
 ```
 
 Wait until the Pods reach the status `Ready`.
 
 Also, wait for the load balancer's readiness:
 ```bash
-sudo d8 k -n d8-ingress-nginx get svc nginx-load-balancer
+d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 ```
 
 The `EXTERNAL-IP` should be populated with a public IP address or DNS name.
@@ -309,10 +309,10 @@ To simplify the setup, the `sslip.io` service will be used.
 
 On the master node, execute the following command to obtain the load balancer’s IP address and configure the DNS name template for platform services to use `sslip.io`:
 ```bash
-BALANCER_IP=$(sudo d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
-echo "Balancer IP is '${BALANCER_IP}'." && sudo d8 k patch mc global --type merge \
+BALANCER_IP=$(d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
+echo "Balancer IP is '${BALANCER_IP}'." && d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
-echo "Domain template is '$(sudo d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
+echo "Domain template is '$(d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 
 The command will also display the installed DNS name template. Example output:

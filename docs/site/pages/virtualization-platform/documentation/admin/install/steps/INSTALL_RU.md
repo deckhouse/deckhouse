@@ -6,7 +6,7 @@ lang: ru
 
 ## Подготовка конфигурации
 
-Для установки платформы нужно подготовить YAML-файл конфигурации установки и, при необходимости, YAML-файл ресурсов, которые нужно создать после успешной установки платформы.
+Для установки платформы нужно подготовить YAML-файл конфигурации установки и, при необходимости, YAML-файл ресурсов, которые будут созданы после успешной установки платформы.
 
 ### Файл конфигурации установки
 
@@ -21,7 +21,7 @@ YAML-файл конфигурации установки содержит па�
 
   > Использовать ресурс `ClusterConfiguration` в конфигурации необходимо, только если при установке платформы нужно предварительно развернуть кластер Kubernetes. То есть `ClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
-- [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal или на виртуальных машинах в неподдерживаемых облаках.
+- [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
 
   > Как и в случае с ресурсом `ClusterConfiguration`, ресурс`StaticClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
@@ -204,7 +204,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
   - SSH-ключи доступа;
   - файл конфигурации;
   - файл ресурсов и т. д.
-- `<RELEASE_CHANNEL>` — [канал обновлений](../update_channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yml`:
+- `<RELEASE_CHANNEL>` — [канал обновлений](../update_channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`:
   - `alpha` — для канала обновлений *Alpha*;
   - `beta` — для канала обновлений *Beta*;
   - `early-access` — для канала обновлений *Early Access*;
@@ -216,7 +216,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 ```shell
 docker run -it --pull=always \
   -v "$PWD/config.yaml:/config.yaml" \
-  -v "$PWD/resources.yml:/resources.yml" \
+  -v "$PWD/resources.yaml:/resources.yaml" \
   -v "$PWD/dhctl-tmp:/tmp/dhctl" \
   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
@@ -227,17 +227,17 @@ docker run -it --pull=always \
 
 > Для получения справки по параметрам выполните `dhctl bootstrap -h`.
 
-Пример запуска установки платформы с развертыванием кластера в облаке:
+Пример запуска установки платформы:
 
 ```shell
 dhctl bootstrap \
   --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml --config=/resources.yml
+  --config=/config.yaml --config=/resources.yaml
 ```
 
 где:
-- `/config.yml` — файл конфигурации установки;
-- `/resources.yml` — файл манифестов ресурсов;
+- `/config.yaml` — файл конфигурации установки;
+- `/resources.yaml` — файл манифестов ресурсов;
 - `<SSH_USER>` — пользователь на сервере для подключения по SSH;
 - `--ssh-agent-private-keys` — файл приватного SSH-ключа для подключения по SSH.
 
@@ -250,7 +250,7 @@ ssh <USER_NAME>@<MASTER_IP>
 Запуск Ingress-контроллера после завершения установки платформы может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился:
 
 ```bash
-sudo d8 k -n d8-ingress-nginx get po
+d8 k -n d8-ingress-nginx get po
 ```
 
 Дождитесь перехода Pod’ов в статус `Ready`.
@@ -258,7 +258,7 @@ sudo d8 k -n d8-ingress-nginx get po
 Также дождитесь готовности балансировщика:
 
 ```bash
-sudo d8 k -n d8-ingress-nginx get svc nginx-load-balancer
+d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 ```
 
 Значение `EXTERNAL-IP` должно быть заполнено публичным IP-адресом или DNS-именем.
@@ -277,10 +277,10 @@ sudo d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 На master-узле выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить шаблон DNS-имен сервисов платформы на использование `sslip.io`:
 
 ```bash
-BALANCER_IP=$(sudo d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
-echo "Balancer IP is '${BALANCER_IP}'." && sudo d8 k patch mc global --type merge \
+BALANCER_IP=$(d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
+echo "Balancer IP is '${BALANCER_IP}'." && d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
-echo "Domain template is '$(sudo d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
+echo "Domain template is '$(d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 
 Команда также выведет установленный шаблон DNS-имен. Пример вывода:
