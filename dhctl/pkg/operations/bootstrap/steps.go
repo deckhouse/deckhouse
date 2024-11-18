@@ -53,6 +53,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -1128,18 +1129,18 @@ func SaveMasterHostsToCache(hosts map[string]string) {
 	}
 }
 
-func GetMasterHostsIPs() ([]string, error) {
+func GetMasterHostsIPs() ([]session.Host, error) {
 	var hosts map[string]string
 	err := cache.Global().LoadStruct(MasterHostsCacheKey, &hosts)
 	if err != nil {
 		return nil, err
 	}
-	mastersIPs := make([]string, 0, len(hosts))
-	for _, ip := range hosts {
-		mastersIPs = append(mastersIPs, ip)
+	mastersIPs := make([]session.Host, 0, len(hosts))
+	for name, ip := range hosts {
+		mastersIPs = append(mastersIPs, session.Host{Host: ip, Name: name})
 	}
 
-	sort.Strings(mastersIPs)
+	sort.Sort(session.SortByName(mastersIPs))
 
 	return mastersIPs, nil
 }
