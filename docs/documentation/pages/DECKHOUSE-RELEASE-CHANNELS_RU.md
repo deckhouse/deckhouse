@@ -9,9 +9,9 @@ lang: ru
 <link rel="stylesheet" type="text/css" href='{{ assets["releases.css"].digest_path }}' />
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 
-<div class="docs__information warning active">
+{% alert %}
 Информацию о том, какие версии Deckhouse находятся в настоящий момент на каких каналах обновлений, а также о планируемой дате смены версии на канале обновлений смотрите на сайте <a href="https://releases.deckhouse.ru" target="_blank">releases.deckhouse.ru</a>.
-</div>  
+{% endalert %}
 
 К кластерам как элементам инфраструктуры обычно предъявляются различные требования.
 
