@@ -1,0 +1,21 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: parca
+  name: parca-1.25.1
+  resourceVersion: "1000"
+spec:
+  moduleName: parca
+  version: 1.25.1
+  weight: 900
+status:
+  approved: false
+  message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"

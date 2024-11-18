@@ -315,6 +315,29 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
+
+		suite.Run("First Release", func() {
+			flags.Golden = true
+			suite.Run("Single", func() {
+				testData := suite.fetchTestFileData("single-first-release.yaml")
+				suite.setupReleaseController(testData)
+
+				mr := suite.getModuleRelease("parca-1.25.1")
+				_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+				require.NoError(suite.T(), err)
+			})
+
+			suite.Run("With manual mode", func() {
+				mup := embeddedMUP.DeepCopy()
+				mup.Update.Mode = updater.ModeManual.String()
+
+				testData := suite.fetchTestFileData("first-release-with-manual-mode.yaml")
+				suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+				dr := suite.getModuleRelease("parca-1.25.1")
+				_, err = suite.ctr.createOrUpdateReconcile(ctx, dr)
+				require.NoError(suite.T(), err)
+			})
+		})
 	})
 }
 
