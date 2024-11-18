@@ -9,18 +9,7 @@ The module does not have any mandatory parameters.
 ## Authentication
 
 [user-authn](/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
-If these options are disabled, the module will use basic auth with the auto-generated password.
-
-Use kubectl to see password:
-
-```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values dashboard -o json | jq '.dashboard.internal.auth.password'
-```
-
-Delete the Secret to re-generate password:
-
-```shell
-kubectl -n d8-dashboard delete secret/basic-auth
-```
+If these options are disabled, the module will disabled.
 
 > **Note!** The `auth.password` parameter is deprecated.
+> **Note!** The `accessLevel` parameter is deprecated.

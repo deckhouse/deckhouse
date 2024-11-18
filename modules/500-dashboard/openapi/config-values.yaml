@@ -1,4 +1,4 @@
-x-config-version: 2
+x-config-version: 3
 type: object
 properties:
   ingressClass:
@@ -85,7 +85,7 @@ properties:
           The HTTPS usage mode:
           * `CertManager` — the dashboard will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
           * `CustomCertificate` — the dashboard will use the certificate from the `d8-system` namespace for HTTPS.
-          * `Disabled` — in this mode, the dashboard works over HTTP only.
+          * `Disabled` — dashboard will not work in this mode.
           * `OnlyInURI` — the dashboard will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). All the links in the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
       certManager:
         type: object
@@ -141,12 +141,10 @@ properties:
         value:
           type: string
   accessLevel:
+    deprecated: true
+    x-doc-deprecated: true
     type: string
     enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
     default: 'User'
     description: |
-      The level of access to the dashboard if the `user-authn` module is disabled and no `externalAuthentication` is configured. See supported values in the [user-authz](../../modules/140-user-authz/) documentation.
-
-      By default, `User` level is used.
-
-      Use `user-authz` module settings to configure access if the `user-authn` module is enabled or `externalAuthentication` is configured.
+      Doesn't affect the module.

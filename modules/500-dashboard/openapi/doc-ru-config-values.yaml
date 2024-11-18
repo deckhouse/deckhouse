@@ -45,7 +45,7 @@ properties:
           Режим работы HTTPS:
           * `CertManager` — dashboard будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           * `CustomCertificate` — dashboard будет работать по HTTPS, используя сертификат из пространства имен `d8-system`;
-          * `Disabled` — в данном режиме dashboard будет работать только по HTTP;
+          * `Disabled` — в данном режиме dashboard не будет работать;
           * `OnlyInURI` — dashboard будет работать по HTTP (подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS) и се ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
@@ -78,8 +78,4 @@ properties:
 
   accessLevel:
     description: |
-      Уровень доступа в dashboard, если отключен модуль `user-authn` и не включена внешняя аутентификация (`externalAuthentication`). Возможные значения описаны [в user-authz](../../modules/140-user-authz/).
-
-      По умолчанию используется уровень `User`.
-
-      В случае использования модуля `user-authn` или другой внешней аутентификации (`externalAuthentication`) права доступа необходимо настраивать с помощью модуля `user-authz`.
+      Не влияет на модуль.
