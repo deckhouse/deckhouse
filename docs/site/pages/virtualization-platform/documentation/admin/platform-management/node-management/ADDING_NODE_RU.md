@@ -141,7 +141,7 @@ lang: ru
 
 TODO не хватает какой-то команды, чтобы проверить, что всё ок.
 
-### С помощью Cluster API Provider Static и фильтрами в label selector
+### С помощью Cluster API Provider Static и фильтров в label selector
 
 Пример использования фильтров в [label selector](../../../reference/cr.html#nodegroup-v1-spec-staticinstances-labelselector) StaticInstance, для группировки статических узлов и использования их в разных NodeGroup. В примере используются две группы узлов (`front` и `worker`), предназначенные для разных задач, которые должны содержать разные по характеристикам узлы — два сервера для группы `front` и один для группы `worker`.
 
