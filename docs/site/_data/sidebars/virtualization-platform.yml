@@ -223,7 +223,7 @@ entries:
           folders:
             - title:
                 en: Platform update
-                ru: НОбновление платформы
+                ru: Обновление платформы
               url: /virtualization-platform/documentation/admin/update/update.html
             - title:
                 en: Manual update mode

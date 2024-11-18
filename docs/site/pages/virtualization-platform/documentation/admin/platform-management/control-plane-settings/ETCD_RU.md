@@ -107,7 +107,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
    ```
 
-### Восстановление кластерa multi-master
+### Восстановление кластера multi-master
 
 Для корректного восстановления кластера multi-master выполните следующие шаги:
 

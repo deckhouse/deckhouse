@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/update/update.html
 lang: ru
 ---
 
-Обновление платформы конфигурируется в ресурсе ModuleConfig [`deckhouse`](../../reference/configuration-module.html). Todo.
+Обновление платформы конфигурируется в ресурсе ModuleConfig [`deckhouse`](todo).
 
 Посмотреть текущую конфигурацию обновления можно с помощью команды:
 
