@@ -1,14 +1,16 @@
 {
   "istio": {
     "path": "modules/istio/",
-    "edition": "ce",
-    "editionRestrictions": ["ce", "be"],
-    "editionFullyAvailable": ["se", "se-plus"]
+    "edition": "ce"
   },
   "cni-cilium": {
     "path": "modules/cni-cilium/",
-    "edition": "ce",
-    "editionFullyAvailable": ["se", "se-plus"]
+    "edition": "ce"
+  },
+  "user-authz": {
+    "path": "modules/user-authz/",
+    "editionFullyAvailable": ["be", "se", "se-plus"],
+    "edition": "ce"
   },
   "registrypackages": {
     "path": "",
