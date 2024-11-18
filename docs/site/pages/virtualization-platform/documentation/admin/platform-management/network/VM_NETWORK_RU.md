@@ -4,9 +4,9 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-Каждой виртуальной машине выделяется адрес из диапазонов заданных в настройках ModuleConfig [virtualization](../../../reference/configuration.module.html#virtualization) в блоке `.spec.settings.virtualMachineCIDRs`
+Каждой виртуальной машине выделяется адрес из диапазонов, заданных в настройках ModuleConfig [virtualization](../../../reference/configuration.module.html#virtualization) в блоке `.spec.settings.virtualMachineCIDRs`.
 
-Для просмотра текущей конфигурации - выполните команду:
+Для просмотра текущей конфигурации выполните команду:
 
 ```bash
 d8 k get mc virtualization -oyaml
@@ -35,14 +35,14 @@ spec:
   version: 1
 ```
 
-Для редактирования списка подсетей используйте следующую команду:
+Для редактирования списка подсетей используйте команду:
 
 ```bash
 d8 k edit mc virtualization
 ```
 
-Адреса назначаются последовательно из каждого указанного диапазона, исключаются только первый (адрес сети) и последний (широковещательны адрес).
+Адреса назначаются последовательно из каждого указанного диапазона, исключаются только первый (адрес сети) и последний (широковещательный адрес).
 
-При выделении IP-адреса виртуальной машине, создаётся соответствующий кластерный ресурс [VirtualMachineIPAddressLease](../../../../reference/cr.html#virtualmachineipaddresslease), который связывается с проектным ресурсом [VirtualMachineIPAddress](../../../../reference/cr.html#virtualmachineipaddress), который в свою очередь связан с виртуальной машиной.
+При назначении IP-адреса виртуальной машине создается соответствующий кластерный ресурс [VirtualMachineIPAddressLease](../../../../reference/cr.html#virtualmachineipaddresslease), который связывается с проектным ресурсом [VirtualMachineIPAddress](../../../../reference/cr.html#virtualmachineipaddress), а тот, в свою очередь, — с виртуальной машиной.
 
-После удаления [VirtualMachineIPAddress](../../../../reference/cr.html#virtualmachineipaddress), адрес отвязывается и в течении 10 минут остаётся зарезервирован за проектом, в проектом в котором он использовался ранее.
+После удаления ресурса [VirtualMachineIPAddress](../../../../reference/cr.html#virtualmachineipaddress), IP-адрес отвязывается, но остается зарезервированным за проектом в течение 10 минут после его удаления.
