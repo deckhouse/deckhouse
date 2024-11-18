@@ -11,3 +11,4 @@ lang: ru
     {{ crd[1] | format_crd: "" }}
 </div>
   {%- endfor %}
+

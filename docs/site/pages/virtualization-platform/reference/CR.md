@@ -10,3 +10,4 @@ permalink: en/virtualization-platform/reference/cr.html
     {{ crd[1] | format_crd: "" }}
 </div>
   {%- endfor %}
+
