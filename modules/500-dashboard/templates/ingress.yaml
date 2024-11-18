@@ -18,26 +18,6 @@ metadata:
     {{- if .Values.dashboard.auth.externalAuthentication.useBearerTokens }}
     nginx.ingress.kubernetes.io/auth-response-headers: "authorization"
     {{- end }}
-  {{- else }}
-    nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: basic-auth
-    nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
-  {{- end }}
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
-      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
-      proxy_ssl_protocols TLSv1.2;
-      proxy_ssl_session_reuse on;
-  # With dex disabled, sa dashboard with permissions from .Values.dashboard.accessLevel is used for authorization.
-  # For authorization via sa, proxy_set_header is used to covertly add an authorization header to the user's requests.
-  {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
-    {{- if and $secret (hasKey $secret "data") (hasKey $secret.data "token") (index $secret.data "token") }}
-      proxy_set_header Authorization "Bearer {{ index $secret.data "token" | b64dec }}";
-    nginx.ingress.kubernetes.io/server-snippet: |
-      location /dex-authenticator/userinfo {
-        return 404;
-      }
-    {{- end }}
   {{- end }}
   {{- if .Values.dashboard.auth.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.dashboard.auth.whitelistSourceRanges | join "," }}
