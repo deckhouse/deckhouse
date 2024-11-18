@@ -39,14 +39,9 @@ type moduleManager interface {
 }
 
 // RegisterAdmissionHandlers registers validation webhook handlers for admission server built-in in addon-operator
-func RegisterAdmissionHandlers(
-	registerer registerer,
-	client client.Client,
-	mm moduleManager,
-	configValidator *configtools.Validator,
-	storage moduleStorage,
-	metricStorage *metricstorage.MetricStorage) {
-	registerer.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(client, storage, metricStorage, configValidator))
-	registerer.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
-	registerer.RegisterHandler("/validate/v1/configuration-secret", kubernetesVersionHandler(mm))
+func RegisterAdmissionHandlers(reg registerer, cli client.Client, mm moduleManager, validator *configtools.Validator, storage moduleStorage, metricStorage *metricstorage.MetricStorage) {
+	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, validator))
+	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
+	reg.RegisterHandler("/validate/v1/configuration-secret", kubernetesVersionHandler(mm))
+	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
 }
