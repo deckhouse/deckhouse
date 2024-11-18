@@ -102,7 +102,7 @@ d8 k describe cvi ubuntu-22.04
 
 Образ, хранящийся в container registry имеет определенный формат. Рассмотрим это на примере:
 
-1. Загрузите образ локально:
+Загрузите образ локально:
 
 ```bash
 curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
