@@ -1,15 +1,40 @@
 ---
 title: "Управление входящим трафиком"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/traffic-control/ingress.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/network/ingress.html
 lang: ru
 ---
 
-Для обеспечения настроек доступа к виртуальным машинам извне, можно использовать возможности модуля ingress-nginx, который
-устанавливает и управляет `Ingress` контроллерами, использующими NGINX в качестве обратного прокси-сервера и балансировщика нагрузки.
-Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме.
+Для обеспечения доступа к виртуальным машинам извне, например, для публикации каких-либо сервисов или удалённого администрирования
+можно использовать ресурсы Ingress, управление которыми выполняется модулем ingress-nginx. Созданные ресурсы Ingress будут использовать
+NGINX в качестве обратного прокси-сервера и балансировщика нагрузки. Если узлов для размещения Ingress-контроллера больше одного, он 
+устанавливается в отказоустойчивом режиме.
 
-Поддерживает запуск и раздельное конфигурирование одновременно нескольких NGINX Ingress контроллеров — 
+Поддерживается также запуск и раздельное конфигурирование одновременно нескольких NGINX Ingress контроллеров — 
 один основной и сколько угодно дополнительных. Например, это позволяет отделять внешние и intranet Ingress-ресурсы приложений.
+
+## Создание контроллера
+
+Чтобы создать NGINX Ingress контроллер, примените следующий ресурс `IngressNginxController`:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: HostWithFailover
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  tolerations:
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: frontend
+EOF
+```
+
+Подробности о возможностях конфигурации ресурса `IngressNginxController` описаны по [ссылке](todo,mc).
 
 ### Терминация HTTPS
 
@@ -74,89 +99,3 @@ lang: ru
   * `*_lowres_upstream_response_seconds` — то же самое, что аналогичная метрика для overall и detail;
   * `*_responses_total` — counter количества ответов (дополнительный лейбл — `status_class`, а не просто `status`);
   * `*_upstream_bytes_received_sum` — counter суммы размеров ответов бэкенда.
-
-## Создание контроллера
-
-Чтобы создать NGINX Ingress контроллер на bare metal, примените следующий ресурс `IngressNginxController`:
-
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: main
-spec:
-  ingressClass: nginx
-  inlet: HostWithFailover
-  nodeSelector:
-    node-role.deckhouse.io/frontend: ""
-  tolerations:
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      value: frontend
-EOF
-```
-
-### Внешний балансировщик
-
-Альтернативно, при ипользовании внешнего балансировщика (например, Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp и др.) на bare metal
-можно создать NGINX Ingress контроллер следующим образом:
-
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: main
-spec:
-  ingressClass: nginx
-  inlet: HostPort
-  hostPort:
-    httpPort: 80
-    httpsPort: 443
-    behindL7Proxy: true
-EOF
-```
-
-### Балансировщик MetalLB в режиме BGP
-
-{% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
-
-Для создания контроллера на bare metal с балансировщиком MetalLB в режиме BGP:
-
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: main
-spec:
-  ingressClass: nginx
-  inlet: LoadBalancer
-  nodeSelector:
-    node-role.deckhouse.io/frontend: ""
-  tolerations:
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      value: frontend
-EOF
-```
-
-В случае использования MetalLB его speaker-поды должны быть запущены на тех же узлах, что и поды Ingress–контроллера.
-
-Контроллер должен получать реальные IP-адреса клиентов — поэтому его Service создается
-с параметром `externalTrafficPolicy: Local` (запрещая межузловой SNAT), и для удовлетворения данного параметра
-MetalLB speaker анонсирует этот Service только с тех узлов, где запущены целевые поды.
-
-Таким образом, для данного примера конфигурация модуля metallb должна быть такой:
-
-```yaml
-metallb:
-  speaker:
-    nodeSelector:
-      node-role.deckhouse.io/frontend: ""
-    tolerations:
-      - effect: NoExecute
-        key: dedicated.deckhouse.io
-        value: frontend
-```

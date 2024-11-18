@@ -1,6 +1,6 @@
 ---
 title: "Сеть виртуальных машин"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/traffic-control/vm-network.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/network/vm-network.html
 lang: ru
 ---
 
@@ -9,7 +9,7 @@ lang: ru
 Для просмотра текущей конфигурации - выполните команду:
 
 ```bash
-d8 k get mc virtualization
+d8 k get mc virtualization -oyaml
 ```
 
 Пример вывода:

@@ -118,33 +118,33 @@ entries:
                     ru: Размещение компонентов
                   url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/placement-management.html
             - title:
-                en: Traffic control
-                ru: Управление трафиком
+                en: Network management
+                ru: Управление сетью
               folders:
                 - title:
                     en: VM Networks
                     ru: Сети виртуальных машин
-                  url: /virtualization-platform/documentation/admin/platform-management/traffic-control/vm-network.html
+                  url: /virtualization-platform/documentation/admin/platform-management/network/vm-network.html
                 - title:
                     en: Ingress
                     ru: Управление входящим трафиком
-                  url: /virtualization-platform/documentation/admin/platform-management/traffic-control/ingress.html
+                  url: /virtualization-platform/documentation/admin/platform-management/network/ingress.html
                 - title:
                     en: Egress
                     ru: Управление исходящим трафиком
-                  url: /virtualization-platform/documentation/admin/platform-management/traffic-control/egress.html
+                  url: /virtualization-platform/documentation/admin/platform-management/network/egress.html
                 - title:
                     en: Routing
                     ru: Настройка маршрутизации
-                  url: /virtualization-platform/documentation/admin/platform-management/traffic-control/routing.html
+                  url: /virtualization-platform/documentation/admin/platform-management/network/routing.html
                 - title:
                     en: DNS settings
                     ru: Настройка DNS
-                  url: /virtualization-platform/documentation/admin/platform-management/traffic-control/dns.html
+                  url: /virtualization-platform/documentation/admin/platform-management/network/dns.html
                 - title:
                     en: NTP settings
                     ru: Настройка NTP
-                  url: /virtualization-platform/documentation/admin/platform-management/traffic-control/ntp.html
+                  url: /virtualization-platform/documentation/admin/platform-management/network/ntp.html
             - title:
                 en: Storage management
                 ru: Управление хранилищами

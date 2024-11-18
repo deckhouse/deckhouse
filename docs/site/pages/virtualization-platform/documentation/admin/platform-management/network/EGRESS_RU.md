@@ -1,6 +1,6 @@
 ---
 title: "Управление исходящим трафиком"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/traffic-control/egress.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/network/egress.html
 lang: ru
 ---
 

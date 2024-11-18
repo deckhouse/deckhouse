@@ -1,16 +1,12 @@
 ---
 title: "Управление маршрутизацией"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/traffic-control/routing.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/network/routing.html
 lang: ru
 ---
 
 {% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
 
-## Мотивация
-
-Для управления статичными маршрутами и правилами ip rule на узлах кластера можно включить модуль static-routing-manager.
-
-Модуль не включен по умолчанию в каком-либо наборе модулей.
+Для управления статичными маршрутами и правилами ip rule на узлах кластера можно использовать возможности модуля static-routing-manager.
 
 Чтобы включить модуль static-routing-manager с настрйоками по умолчанию, примените следующий ресурс `ModuleConfig`:
 

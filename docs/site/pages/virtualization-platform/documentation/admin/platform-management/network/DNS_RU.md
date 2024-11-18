@@ -1,15 +1,13 @@
 ---
 title: "Управление DNS"
-permalink: en/virtualization-platform/documentation/admin/platform-management/traffic-control/dns.html
+permalink: en/virtualization-platform/documentation/admin/platform-management/network/dns.html
 ---
 
-! TODO: Переформулировать
-Модуль устанавливает компоненты CoreDNS для управления DNS в кластере Kubernetes.
-
+Для устанавливки компонентов CoreDNS и управления DNS можно использовать возможности модуля kube-dns.
 
 Внимание! Модуль удаляет ранее установленные kubeadm’ом Deployment, ConfigMap и RBAC для CoreDNS.
 
-Чтобы включить модуль static-routing-manager с настрйоками по умолчанию, примените следующий ресурс `ModuleConfig`:
+Чтобы включить модуль kube-dns с настройками по умолчанию, примените следующий ресурс `ModuleConfig`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -22,7 +20,11 @@ spec:
 EOF
 ```
 
-Пример конфигурации модуля с помощью ресурса `ModuleConfig`:
+Подробности о возможностях настроек модуля описаны по [ссылке](todo,mc).
+
+## Пример конфигурации DNS
+
+Пример конфигурации модуля kube-dns с помощью ресурса `ModuleConfig`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -57,11 +59,15 @@ spec:
 EOF
 ```
 
+Подробности о возможностях конфигурации модуля kube-dns описаны по [ссылке](todo,mc).
+
 ## Изменение домена кластера
 
 Чтобы поменять домен кластера с минимальным простоем, добавьте новый домен и сохраните предыдущий. 
 
-1. Для этого измените конфигурацию параметров в настроках модуля control-plane-manager:
+1. Для этого измените параметры в настроках модуля control-plane-manager, который определяет конфигурацию Deckhouse.
+
+Внесите изменения в секции по шаблону ниже:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -73,13 +79,16 @@ spec:
   enabled: true
   settings:
     apiserver:
+      # Список опций сертификата SANs, с которыми будет сгенерирован сертификат API-сервера.
       certSANs:
        - kubernetes.default.svc.<старый clusterDomain>
        - kubernetes.default.svc.<новый clusterDomain>
       serviceAccount:
+        # Список API audience’ов, которые следует добавить при создании токенов ServiceAccount.
         additionalAPIAudiences:
         - https://kubernetes.default.svc.<старый clusterDomain>
         - https://kubernetes.default.svc.<новый clusterDomain>
+        # Список дополнительных издателей API токенов ServiceAccount, которые нужно включить при их создании.
         additionalAPIIssuers:
         - https://kubernetes.default.svc.<старый clusterDomain>
         - https://kubernetes.default.svc.<новый clusterDomain>
@@ -103,9 +112,3 @@ spec:
 
 3. Дождитесь перезапуска `kube-apiserver`.
 4. Поменяйте `clusterDomain` на новый в `dhctl config edit cluster-configuration`.
-
-TODO: Проверить! Актуальна ли информация 1.27
-
-**Важно!** Если версия вашего Kubernetes 1.20 и выше, контроллеры для работы с API-server гарантированно используют [расширенные токены для ServiceAccount'ов](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection). Это означает, что каждый такой токен содержит дополнительные поля `iss:` и `aud:`, которые включают в себя старый `clusterDomain` (например, `"iss": "https://kubernetes.default.svc.cluster.local"`).
-При смене `clusterDomain` API-server начнет выдавать токены с новым `service-account-issuer`, но благодаря произведенной конфигурации `additionalAPIAudiences` и `additionalAPIIssuers` по-прежнему будет принимать старые токены. По истечении 48 минут (80% от 3607 секунд) Kubernetes начнет обновлять выпущенные токены, при обновлении будет использован новый `service-account-issuer`. Через 90 минут (3607 секунд и немного больше) после перезагрузки kube-apiserver можете удалить конфигурацию `serviceAccount` из конфигурации `control-plane-manager`.
-
