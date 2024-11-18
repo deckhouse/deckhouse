@@ -140,11 +140,3 @@ properties:
           format: int64
         value:
           type: string
-  accessLevel:
-    deprecated: true
-    x-doc-deprecated: true
-    type: string
-    enum: [User,PrivilegedUser,Editor,Admin,ClusterEditor,ClusterAdmin,SuperAdmin]
-    default: 'User'
-    description: |
-      Doesn't affect the module.
