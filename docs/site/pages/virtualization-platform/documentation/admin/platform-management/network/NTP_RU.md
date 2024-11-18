@@ -1,6 +1,7 @@
 ---
 title: "Управление NTP"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/network/ntp.html
+lang: ru
 ---
 
 Для обеспечения возможности синхронизации времени на узлах можно использовать возможности модуля chrony.
