@@ -128,19 +128,6 @@ spec:
 		require.Len(t, iCfg.ModuleConfigs, 1)
 	})
 
-	t.Run("Use bundle and logLevel from module config", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
-			"logLevel": "Debug",
-			"bundle":   "Minimal",
-		})
-
-		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.NoError(t, err)
-
-		require.Equal(t, iCfg.LogLevel, "Debug")
-		require.Equal(t, iCfg.Bundle, "Minimal")
-	})
-
 	t.Run("Forbid to use configOverrides", func(t *testing.T) {
 		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
 			"configOverrides": `

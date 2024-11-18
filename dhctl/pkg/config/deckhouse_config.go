@@ -119,6 +119,11 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	if metaConfig == nil {
 		return nil, fmt.Errorf("Internal error. Metaconfig is nil")
 	}
+
+	if len(metaConfig.DeckhouseConfig.ConfigOverrides) > 0 {
+		return nil, fmt.Errorf("Support for 'configOverrides' was removed. Please use ModuleConfig's instead.")
+	}
+
 	clusterConfig, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
 		return nil, fmt.Errorf("Marshal cluster config failed: %v", err)
