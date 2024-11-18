@@ -141,7 +141,7 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 
 	moduleReleases := new(v1alpha1.ModuleReleaseList)
 	if err := r.client.List(ctx, moduleReleases, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName, v1alpha1.ModuleReleaseLabelReleaseChecksum: checksum}); err != nil {
-		return false, fmt.Errorf("list module releases: %v", err)
+		return false, fmt.Errorf("list module releases: %w", err)
 	}
 	if len(moduleReleases.Items) == 0 {
 		r.log.Debugf("no module release with '%s' checksum for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
@@ -241,7 +241,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil, err
+			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
 		r.log.Debugf("the '%s' module not installed", moduleName)
 		module = &v1alpha1.Module{
@@ -258,7 +258,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		}
 		r.log.Debugf("the '%s' module not found, create it", moduleName)
 		if err = r.client.Create(ctx, module); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create the '%s' module: %w", moduleName, err)
 		}
 	}
 
@@ -274,7 +274,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		return false
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("update the '%s' module status: %w", moduleName, err)
 	}
 
 	err = utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
@@ -285,7 +285,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 		return false
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("update the '%s' module: %w", moduleName, err)
 	}
 
 	if module.Properties.Source != sourceName {

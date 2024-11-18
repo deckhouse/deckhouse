@@ -64,14 +64,15 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 			moduleConfig := new(v1alpha1.ModuleConfig)
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
+					r.log.Debugf("the module '%s' config not found", configName)
 					return nil
 				}
-				return err
+				return fmt.Errorf("refresh the '%s' module config: %w", configName, err)
 			}
 
 			r.refreshModuleConfigStatus(moduleConfig)
 			if err := r.client.Status().Update(ctx, moduleConfig); err != nil {
-				return err
+				return fmt.Errorf("refresh the %s module config status: %w", moduleConfig.Name, err)
 			}
 
 			// update metrics
