@@ -46,7 +46,6 @@ internal:
   auth: {}
 # defaults from config-values.yaml
 auth: {}
-accessLevel: User
 `
 	f := SetupHelmConfig(``)
 

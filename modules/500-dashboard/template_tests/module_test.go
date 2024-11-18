@@ -83,7 +83,6 @@ discovery:
 `
 
 const dashboard = `
-accessLevel: User
 internal:
   auth: {}
 auth: {}
