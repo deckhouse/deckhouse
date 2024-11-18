@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	listenAddr = "127.0.0.1:4576"
+
 	authTemplatePath         = "/templates/auth_config/config.yaml.tpl"
 	distributionTemplatePath = "/templates/distribution_config/config.yaml.tpl"
 	staticPodTemplatePath    = "/templates/static_pods/system-registry.yaml.tpl"
@@ -50,7 +52,7 @@ func Run(ctx context.Context) error {
 	mux.HandleFunc("/staticpod/delete", api.DeleteStaticPodHandler)
 
 	httpServer := &http.Server{
-		Addr:    "127.0.0.1:4576",
+		Addr:    listenAddr,
 		Handler: mux,
 	}
 

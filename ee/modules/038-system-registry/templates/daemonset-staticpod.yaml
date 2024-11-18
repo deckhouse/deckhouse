@@ -96,6 +96,23 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
+        ports:
+        - name: http-healthz
+          protocol: TCP
+          containerPort: 8097
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8097
+            scheme: HTTP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            scheme: HTTP
+            port: 8097
+          initialDelaySeconds: 10
+          periodSeconds: 3
+          timeoutSeconds: 8
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}

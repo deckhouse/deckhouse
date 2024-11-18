@@ -12,6 +12,10 @@ spec:
     protocol: TCP
     targetPort: http-healthz
     port: 8097
+  - name: metrics
+    protocol: TCP
+    targetPort: metrics
+    port: 8081
   selector:
     app: system-registry-manager
 
@@ -30,6 +34,10 @@ spec:
     protocol: TCP
     targetPort: https-api
     port: 4577
+  - name: http-healthz
+    protocol: TCP
+    targetPort: http-healthz
+    port: 8097
   selector:
     app: system-registry-staticpod-manager
 
