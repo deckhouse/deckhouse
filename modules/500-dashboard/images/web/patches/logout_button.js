@@ -26,6 +26,7 @@ function setupLogoutButton() {
             node.innerHTML += fgroup
           }
         }
+
         flag = true;
       };
       r.send(null);
