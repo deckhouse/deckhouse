@@ -45,7 +45,7 @@ locals {
   server_group          = lookup(local.ng, "serverGroup", {})
   server_group_policy   = lookup(local.server_group, "policy", "")
   security_group_names  = local.network_security ? concat([local.prefix], lookup(local.instance_class, "additionalSecurityGroups", [])) : []
-  volume_type_map       = local.instance_class["volumeTypeMap"]
+  volume_type_map       = local.ng["volumeTypeMap"]
   actual_zones          = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.huaweicloud_availability_zones.zones.names, var.providerClusterConfiguration.zones)) : data.huaweicloud_availability_zones.zones.names
   zone                  = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
   volume_type           = local.volume_type_map[local.zone]
