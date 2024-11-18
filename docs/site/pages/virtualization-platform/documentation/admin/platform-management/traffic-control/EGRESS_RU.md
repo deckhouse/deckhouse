@@ -29,9 +29,6 @@ d8 k label node <имя узла> node-role.deckhouse.io/egress=
 <div data-presentation="../../presentations/021-cni-cilium/egressgateway_base_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/12l4w9ZS3Hpax1B7eOptm2dQX55VVAFzRTtyihw4Ie0c/ --->
 
-<div data-presentation="../../../../../../../documentation/presentations/021-cni-cilium/egressgateway_base_ru.pdf"></div>
-<!--- Source: https://docs.google.com/presentation/d/12l4w9ZS3Hpax1B7eOptm2dQX55VVAFzRTtyihw4Ie0c/ --->
-
 Чтобы создать Egress-шлюз примените следующий ресурс `EgressGateway`:
 
 ```yaml
