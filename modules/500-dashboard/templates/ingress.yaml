@@ -11,7 +11,7 @@ metadata:
     nginx.ingress.kubernetes.io/affinity-mode: persistent
     nginx.ingress.kubernetes.io/session-cookie-name: d8-dashboard-affinity
     nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
-  {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
+  {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication.authSignInURL .Values.dashboard.auth.externalAuthentication.authURL }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.dashboard.auth.externalAuthentication.authSignInURL | quote }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.dashboard.auth.externalAuthentication.authURL | quote }}
     {{- if .Values.dashboard.auth.externalAuthentication.useBearerTokens }}
