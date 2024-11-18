@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"sync"
 
-	ctrl "sigs.k8s.io/controller-runtime"
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -32,15 +32,18 @@ const (
 
 type apiServer struct {
 	requestMutex sync.Mutex
+	log          *dlog.Logger
 }
 
 func Run(ctx context.Context) error {
-	log := ctrl.Log.WithValues("component", "static pod manager")
+	log := dlog.Default().With("component", "static pod manager")
 
 	log.Info("Starting")
 	defer log.Info("Stopped")
 
-	var api apiServer
+	api := &apiServer{
+		log: log,
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/staticpod/create", api.CreateStaticPodHandler)
@@ -55,13 +58,13 @@ func Run(ctx context.Context) error {
 		log.Info("Shutting down API server")
 
 		if err := httpServer.Shutdown(ctx); err != nil {
-			log.Error(err, "Error shutting down API server")
+			log.Error("Error shutting down API server", "error", err)
 		}
 	})
 
 	log.Info("Starting API server", "addr", httpServer.Addr)
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Error(err, "API server error")
+		log.Error("API server error", err)
 		return fmt.Errorf("failed to start API server: %w", err)
 	}
 
@@ -69,11 +72,12 @@ func Run(ctx context.Context) error {
 }
 
 func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) {
+	log := s.log.With("handler", "create")
 
-	ctrl.Log.Info("Received request to create/update static pod and configuration", "Client address:", r.RemoteAddr, "component", "static pod manager")
+	log.Info("Received request to create/update static pod and configuration", "Client address:", r.RemoteAddr)
 
 	if r.Method != http.MethodPost {
-		ctrl.Log.Info("method not allowed", "component", "static pod manager", "endpoint", r.RequestURI, "method", r.Method)
+		log.Warn("Method not allowed", "endpoint", r.RequestURI, "method", r.Method)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -85,7 +89,7 @@ func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Reques
 	var data EmbeddedRegistryConfig
 	// Decode request body to struct EmbeddedRegistryConfig and return error if decoding fails
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		ctrl.Log.Info("Error decoding request body", "error", err, "component", "static pod manager")
+		log.Warn("Error decoding request body", "error", err)
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -93,7 +97,7 @@ func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Reques
 	// Fill the host IP address from the HOST_IP environment variable
 	hostIpAddress, err := data.fillHostIpAddress()
 	if err != nil {
-		ctrl.Log.Error(err, "Error getting IP address")
+		log.Error("Error getting IP address", "error", err)
 		http.Error(w, "Internal server error: fillHostIpAddress", http.StatusInternalServerError)
 		return
 	}
@@ -101,7 +105,7 @@ func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Reques
 
 	// Validate the request data
 	if err := data.validate(); err != nil {
-		ctrl.Log.Info("Request validation error", "error", err, "component", "static pod manager")
+		log.Warn("Request validation error", "error", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -111,7 +115,7 @@ func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Reques
 	// Save the PKI files
 	changes[pkiFiles], err = data.Pki.savePkiFiles(pkiConfigDirectoryPath, &data.ConfigHashes)
 	if err != nil {
-		ctrl.Log.Error(err, "Error saving PKI files", "component", "static pod manager")
+		log.Error("Error saving PKI files", "error", err)
 		http.Error(w, "Error saving PKI files", http.StatusInternalServerError)
 		return
 	}
@@ -120,29 +124,29 @@ func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Reques
 
 	changes[authConfiguration], err = data.processTemplate(authTemplatePath, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
 	if err != nil {
-		ctrl.Log.Error(err, "Error processing auth template", "component", "static pod manager")
+		log.Error("Error processing auth template", "error", err)
 		http.Error(w, "Error processing auth template", http.StatusInternalServerError)
 		return
 	}
 
 	changes[distributionConfiguration], err = data.processTemplate(distributionTemplatePath, distributionConfigPath, &data.ConfigHashes.DistributionTemplateHash)
 	if err != nil {
-		ctrl.Log.Error(err, "Error processing distribution template", "component", "static pod manager")
+		log.Error("Error processing distribution template", "error", err)
 		http.Error(w, "Error processing distribution template", http.StatusInternalServerError)
 		return
 	}
 
 	changes[staticPodConfiguration], err = data.processTemplate(staticPodTemplatePath, staticPodConfigPath, nil)
 	if err != nil {
-		ctrl.Log.Error(err, "Error processing static pod template", "component", "static pod manager")
+		log.Error("Error processing static pod template", "error", err)
 		http.Error(w, "Error processing static pod template", http.StatusInternalServerError)
 		return
 	}
 
 	if hasChanges(changes) {
-		ctrl.Log.Info("Static pod and configuration created/updated successfully", "component", "static pod manager")
+		log.Info("Static pod and configuration created/updated successfully")
 	} else {
-		ctrl.Log.Info("No changes in static pod and configuration", "component", "static pod manager")
+		log.Info("No changes in static pod and configuration")
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -150,17 +154,18 @@ func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Reques
 		"changes": changes,
 	})
 	if err != nil {
-		ctrl.Log.Error(err, "Error encoding response", "component", "static pod manager")
+		log.Error("Error encoding response", "error", err)
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}
 }
 
 func (s *apiServer) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) {
+	log := s.log.With("handler", "delete")
 
-	ctrl.Log.Info("Received request to delete static pod and configuration", "Client address:", r.RemoteAddr, "component", "static pod manager")
+	log.Info("Received request to delete static pod and configuration", "Client address:", r.RemoteAddr)
 
 	if r.Method != http.MethodDelete {
-		ctrl.Log.Info("method not allowed", "component", "static pod manager", "endpoint", r.RequestURI, "method", r.Method)
+		log.Warn("method not allowed", "endpoint", r.RequestURI, "method", r.Method)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -175,7 +180,7 @@ func (s *apiServer) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Reques
 	// Delete the static pod file
 	changes[staticPodConfiguration], err = deleteFile(staticPodConfigPath)
 	if err != nil {
-		ctrl.Log.Error(err, "Error deleting static pod file", "component", "static pod manager")
+		log.Error("Error deleting static pod file", "error", err)
 		http.Error(w, "Error deleting static pod file", http.StatusInternalServerError)
 		return
 	}
@@ -183,7 +188,7 @@ func (s *apiServer) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Reques
 	// Delete the auth config file
 	changes[authConfiguration], err = deleteFile(authConfigPath)
 	if err != nil {
-		ctrl.Log.Error(err, "Error deleting auth config file", "component", "static pod manager")
+		log.Error("Error deleting auth config file", "error", err)
 		http.Error(w, "Error deleting auth config file", http.StatusInternalServerError)
 		return
 	}
@@ -191,22 +196,22 @@ func (s *apiServer) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Reques
 	// Delete the distribution config file
 	changes[distributionConfiguration], err = deleteFile(distributionConfigPath)
 	if err != nil {
-		ctrl.Log.Error(err, "Error deleting distribution config file", "component", "static pod manager")
+		log.Error("Error deleting distribution config file", "error", err)
 		http.Error(w, "Error deleting distribution config file", http.StatusInternalServerError)
 		return
 	}
 
 	changes[pkiFiles], err = deleteDirectory(pkiConfigDirectoryPath)
 	if err != nil {
-		ctrl.Log.Error(err, "Error deleting registry pki directory", "component", "static pod manager")
+		log.Error("Error deleting registry pki directory", "error", err)
 		http.Error(w, "Error deleting registry pki directory", http.StatusInternalServerError)
 		return
 	}
 
 	if hasChanges(changes) {
-		ctrl.Log.Info("Static pod and configuration deleted successfully", "component", "static pod manager")
+		log.Info("Static pod and configuration deleted successfully")
 	} else {
-		ctrl.Log.Info("No static pod and configuration to delete", "component", "static pod manager")
+		log.Info("No static pod and configuration to delete")
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -214,7 +219,7 @@ func (s *apiServer) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Reques
 		"changes": changes,
 	})
 	if err != nil {
-		ctrl.Log.Error(err, "Error encoding response", "component", "static pod manager")
+		log.Error("Error encoding response", "error", err)
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}
 }

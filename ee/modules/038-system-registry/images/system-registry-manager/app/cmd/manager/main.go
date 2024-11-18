@@ -9,19 +9,19 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
 	"embeded-registry-manager/internal/controllers/registry_controller"
-	staticpodmanager "embeded-registry-manager/internal/static-pod"
 	httpclient "embeded-registry-manager/internal/utils/http_client"
 )
 
@@ -31,7 +31,8 @@ const (
 )
 
 func main() {
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	ctrl.SetLogger(logr.FromSlogHandler(dlog.Default().Handler()))
+
 	log := ctrl.Log.WithValues("component", "main")
 
 	log.Info("Starting embedded registry manager")
@@ -63,34 +64,11 @@ func main() {
 		log.Info("Received shutdown signal")
 	})
 
-	ctx, ctxCancel := context.WithCancel(ctx)
-	var wg sync.WaitGroup
-
-	// Start static pod manager
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		defer ctxCancel()
-		defer log.Info("Static pod manager done")
-
-		log.Info("Starting static pod manager")
-
-		if err := staticpodmanager.Run(ctx); err != nil {
-			log.Error(err, "Static pod manager error")
-		}
-	}()
-
 	// Set up and start manager
 	err = setupAndStartManager(ctx, cfg, kubeClient, httpClient)
-
 	if err != nil {
 		ctrl.Log.Error(err, "Failed to start the embedded registry manager")
 	}
-
-	log.Info("Waiting for background operations")
-
-	ctxCancel()
-	wg.Wait()
 
 	log.Info("Bye!")
 

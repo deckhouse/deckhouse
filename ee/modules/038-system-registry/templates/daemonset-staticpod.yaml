@@ -126,7 +126,7 @@ spec:
                   apiVersion: v1
                   resource: daemonset
                   subresource: api
-                  name: system-registry-manager
+                  name: system-registry-staticpod-manager
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

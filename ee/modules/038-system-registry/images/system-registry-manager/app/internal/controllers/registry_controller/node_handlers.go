@@ -126,7 +126,7 @@ func (r *RegistryReconciler) prepareEmbeddedRegistryConfig(node k8s.MasterNode, 
 func (r *RegistryReconciler) getPodIPForNode(ctx context.Context, nodeName string) (string, error) {
 	var pods corev1.PodList
 	err := r.listWithFallback(ctx, &pods, client.MatchingLabels{
-		"app": "system-registry-manager",
+		"app": "system-registry-staticpod-manager",
 	}, client.MatchingFields{
 		"spec.nodeName": nodeName,
 	})
@@ -134,10 +134,10 @@ func (r *RegistryReconciler) getPodIPForNode(ctx context.Context, nodeName strin
 		return "", err
 	}
 	if len(pods.Items) == 0 {
-		return "", fmt.Errorf("system-registry-manager pod not found for node %s", nodeName)
+		return "", fmt.Errorf("system-registry-staticpod-manager pod not found for node %s", nodeName)
 	}
 	if pods.Items[0].Status.PodIP == "" {
-		return "", fmt.Errorf("system-registry-manager pod IP is empty for node %s", nodeName)
+		return "", fmt.Errorf("system-registry-staticpod-manager pod IP is empty for node %s", nodeName)
 	}
 
 	return pods.Items[0].Status.PodIP, nil

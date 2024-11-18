@@ -7,10 +7,13 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
+	staticpodmanager "embeded-registry-manager/internal/static-pod"
 )
 
 var (
@@ -18,19 +21,22 @@ var (
 )
 
 func main() {
-	log := slog.Default().With("component", "main")
+	log := dlog.Default().With("component", "main")
 
-	log.Info("Starting")
+	log.Info("Starting static pod manager")
 	defer log.Info("Stopped")
 
 	log.Info("Setup signal handler")
-	ctx := waitForExit()
+	ctx := setupSignalHandler()
 
-	log.Info("Waiting for signal to exit")
-	<-ctx.Done()
+	log.Info("Starting manager")
+	err := staticpodmanager.Run(ctx)
+	if err != nil {
+		log.Error("Manager run error", "error", err)
+	}
 }
 
-func waitForExit() context.Context {
+func setupSignalHandler() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	c := make(chan os.Signal, 2)
