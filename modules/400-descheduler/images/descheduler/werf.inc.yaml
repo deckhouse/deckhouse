@@ -13,6 +13,7 @@ shell:
   install:
   - git clone {{ $.SOURCE_REPO }}/kubernetes-sigs/descheduler.git /src
   - cd /src
+  - rm -rf .git
   - git checkout {{ $version }}
   - git apply /patches/*.patch --verbose
 ---
