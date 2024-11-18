@@ -130,20 +130,25 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
 
 		case modules.Startup:
-			module.Status.Phase = v1alpha1.ModulePhaseEnqueued
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonEnqueued, v1alpha1.ModuleMessageEnqueued)
+			if module.Status.Phase == v1alpha1.ModulePhaseDownloading {
+				module.Status.Phase = v1alpha1.ModulePhaseInstalling
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonInstalling, v1alpha1.ModuleMessageInstalling)
+			} else {
+				module.Status.Phase = v1alpha1.ModulePhaseReconciling
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonReconciling, v1alpha1.ModuleMessageReconciling)
+			}
 
 		case modules.OnStartupDone:
-			module.Status.Phase = v1alpha1.ModulePhaseEnqueued
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonEnqueued, v1alpha1.ModuleMessageOnStartupHook)
+			module.Status.Phase = v1alpha1.ModulePhaseReconciling
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonReconciling, v1alpha1.ModuleMessageOnStartupHook)
 
 		case modules.WaitForSynchronization:
-			module.Status.Phase = v1alpha1.ModulePhaseWaitSync
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonWaitSync, v1alpha1.ModuleMessageWaitSync)
+			module.Status.Phase = v1alpha1.ModulePhaseWaitSyncTasks
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonWaitSyncTasks, v1alpha1.ModuleMessageWaitSyncTasks)
 
 		case modules.HooksDisabled:
-			module.Status.Phase = v1alpha1.ModulePhasePending
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonPending, v1alpha1.ModuleMessageHooksDisabled)
+			module.Status.Phase = v1alpha1.ModulePhaseHooksDisabled
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonHooksDisabled, v1alpha1.ModuleMessageHooksDisabled)
 		}
 
 		return
@@ -205,9 +210,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
 	}
 
-	if module.Status.Phase != v1alpha1.ModulePhaseNotInstalled {
-		module.Status.Phase = v1alpha1.ModulePhasePending
-	}
+	module.Status.Phase = v1alpha1.ModulePhaseDownloaded
 	module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, reason, message)
 	module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, reason, message)
 }

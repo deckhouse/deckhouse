@@ -87,9 +87,7 @@ type moduleReleaseReconciler struct {
 }
 
 const (
-	RegistrySpecChangedAnnotation = "modules.deckhouse.io/registry-spec-changed"
-	UpdatePolicyLabel             = "modules.deckhouse.io/update-policy"
-	deckhouseNodeNameAnnotation   = "modules.deckhouse.io/deployed-on"
+	deckhouseNodeNameAnnotation = "modules.deckhouse.io/deployed-on"
 
 	defaultCheckInterval   = 15 * time.Second
 	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
@@ -192,7 +190,7 @@ func (r *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 		return result, fmt.Errorf("remove all in %s: %w", modulePath, err)
 	}
 
-	if mr.Status.Phase == v1alpha1.PhaseDeployed {
+	if mr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
 		extenders.DeleteConstraints(mr.GetModuleName())
 		symlinkPath := filepath.Join(r.downloadedModulesDir, "modules", fmt.Sprintf("%d-%s", mr.Spec.Weight, mr.Spec.ModuleName))
 		err := os.RemoveAll(symlinkPath)
@@ -225,7 +223,7 @@ func (r *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 
 	switch mr.Status.Phase {
 	case "":
-		mr.Status.Phase = v1alpha1.PhasePending
+		mr.Status.Phase = v1alpha1.ModuleReleasePhasePending
 		mr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		if err := r.client.Status().Update(ctx, mr); err != nil {
 			return result, fmt.Errorf("update status: %w", err)
@@ -233,7 +231,7 @@ func (r *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
-	case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseSkipped:
+	case v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseSkipped:
 		if mr.Labels["status"] != strings.ToLower(mr.Status.Phase) {
 			// update labels
 			addLabels(mr, map[string]string{"status": strings.ToLower(mr.Status.Phase)})
@@ -244,7 +242,7 @@ func (r *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, m
 
 		return result, nil
 
-	case v1alpha1.PhaseDeployed:
+	case v1alpha1.ModuleReleasePhaseDeployed:
 		return r.reconcileDeployedRelease(ctx, mr)
 	}
 
@@ -268,7 +266,7 @@ func (r *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 	var metaUpdateRequired bool
 
 	// check if RegistrySpecChangedAnnotation annotation is set and processes it
-	if _, set := mr.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
+	if _, set := mr.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
 		// if module is enabled - push runModule task in the main queue
 		r.logger.Infof("Applying new registry settings to the %s module", mr.Spec.ModuleName)
 		err := r.moduleManager.RunModuleWithNewOpenAPISchema(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(r.downloadedModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
@@ -276,7 +274,7 @@ func (r *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 			return result, fmt.Errorf("run module with new OpenAPI schema: %w", err)
 		}
 		// delete annotation and requeue
-		delete(mr.ObjectMeta.Annotations, RegistrySpecChangedAnnotation)
+		delete(mr.ObjectMeta.Annotations, v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged)
 		metaUpdateRequired = true
 	}
 
@@ -286,8 +284,8 @@ func (r *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, 
 		metaUpdateRequired = true
 	}
 
-	if mr.Labels["status"] != strings.ToLower(v1alpha1.PhaseDeployed) {
-		addLabels(mr, map[string]string{"status": strings.ToLower(v1alpha1.PhaseDeployed)})
+	if mr.Labels["status"] != strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed) {
+		addLabels(mr, map[string]string{"status": strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)})
 		metaUpdateRequired = true
 	}
 
@@ -384,7 +382,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 
 	policy := new(v1alpha2.ModuleUpdatePolicy)
 	// if release has associated update policy
-	if policyName, found := mr.GetObjectMeta().GetLabels()[UpdatePolicyLabel]; found {
+	if policyName, found := mr.GetObjectMeta().GetLabels()[v1alpha1.ModuleReleaseLabelUpdatePolicy]; found {
 		if policyName == "" {
 			policy = &v1alpha2.ModuleUpdatePolicy{
 				TypeMeta: metav1.TypeMeta{
@@ -430,7 +428,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		patch, _ := json.Marshal(map[string]any{
 			"metadata": map[string]any{
 				"labels": map[string]any{
-					UpdatePolicyLabel: policy.Name,
+					v1alpha1.ModuleReleaseLabelUpdatePolicy: policy.Name,
 				},
 			},
 			"status": map[string]string{
@@ -1132,7 +1130,7 @@ func (r *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr 
 
 	// get all outdated releases by module names
 	for _, rl := range moduleReleasesFromSource.Items {
-		if rl.Status.Phase == v1alpha1.PhaseSuperseded || rl.Status.Phase == v1alpha1.PhaseSuspended || rl.Status.Phase == v1alpha1.PhaseSkipped {
+		if rl.Status.Phase == v1alpha1.ModuleReleasePhaseSuperseded || rl.Status.Phase == v1alpha1.ModuleReleasePhaseSuspended || rl.Status.Phase == v1alpha1.ModuleReleasePhaseSkipped {
 			outdatedReleases[rl.Spec.ModuleName] = append(outdatedReleases[rl.Spec.ModuleName], outdatedRelease{
 				name:    rl.Name,
 				version: rl.Spec.Version,

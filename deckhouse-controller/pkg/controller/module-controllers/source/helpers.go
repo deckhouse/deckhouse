@@ -33,7 +33,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 )
 
@@ -107,23 +106,23 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 		return fmt.Errorf("list module releases to update registry settings: %w", err)
 	}
 
-	for _, moduleRelease := range moduleReleases.Items {
-		if moduleRelease.Status.Phase == v1alpha1.PhaseDeployed {
-			for _, ref := range moduleRelease.GetOwnerReferences() {
+	for _, release := range moduleReleases.Items {
+		if release.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
+			for _, ref := range release.GetOwnerReferences() {
 				if ref.UID == source.UID && ref.Name == source.Name && ref.Kind == v1alpha1.ModuleSourceGVK.Kind {
 					// update the values.yaml file in downloaded-modules/<module_name>/v<module_version/openapi path
-					modulePath := filepath.Join(r.downloadedModulesDir, moduleRelease.Spec.ModuleName, fmt.Sprintf("v%s", moduleRelease.Spec.Version))
+					modulePath := filepath.Join(r.downloadedModulesDir, release.Spec.ModuleName, fmt.Sprintf("v%s", release.Spec.Version))
 					if err = downloader.InjectRegistryToModuleValues(modulePath, source); err != nil {
-						return fmt.Errorf("update the '%s' module release registry settings: %w", moduleRelease.Name, err)
+						return fmt.Errorf("update the '%s' module release registry settings: %w", release.Name, err)
 					}
 
-					if len(moduleRelease.ObjectMeta.Annotations) == 0 {
-						moduleRelease.ObjectMeta.Annotations = make(map[string]string)
+					if len(release.ObjectMeta.Annotations) == 0 {
+						release.ObjectMeta.Annotations = make(map[string]string)
 					}
 
-					moduleRelease.ObjectMeta.Annotations[release.RegistrySpecChangedAnnotation] = r.dependencyContainer.GetClock().Now().UTC().Format(time.RFC3339)
-					if err = r.client.Update(ctx, &moduleRelease); err != nil {
-						return fmt.Errorf("set RegistrySpecChangedAnnotation to the '%s' module release: %w", moduleRelease.Name, err)
+					release.ObjectMeta.Annotations[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged] = r.dependencyContainer.GetClock().Now().UTC().Format(time.RFC3339)
+					if err = r.client.Update(ctx, &release); err != nil {
+						return fmt.Errorf("set RegistrySpecChanged annotation to the '%s' module release: %w", release.Name, err)
 					}
 					break
 				}
@@ -154,12 +153,12 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 }
 
 func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UID, sourceName, moduleName, policy string, meta downloader.ModuleDownloadResult) error {
-	moduleRelease := new(v1alpha1.ModuleRelease)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("%s-%s", moduleName, meta.ModuleVersion)}, moduleRelease); err != nil {
+	release := new(v1alpha1.ModuleRelease)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("%s-%s", moduleName, meta.ModuleVersion)}, release); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get module release: %w", err)
+			return fmt.Errorf("get the module release: %w", err)
 		}
-		moduleRelease = &v1alpha1.ModuleRelease{
+		release = &v1alpha1.ModuleRelease{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       v1alpha1.ModuleReleaseGVK.Kind,
 				APIVersion: "deckhouse.io/v1alpha1",
@@ -171,7 +170,7 @@ func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UI
 					v1alpha1.ModuleReleaseLabelSource: sourceName,
 					// image digest has 64 symbols, while label can have maximum 63 symbols, so make md5 sum here
 					v1alpha1.ModuleReleaseLabelReleaseChecksum: fmt.Sprintf("%x", md5.Sum([]byte(meta.Checksum))),
-					release.UpdatePolicyLabel:                  policy,
+					v1alpha1.ModuleReleaseLabelUpdatePolicy:    policy,
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					{
@@ -191,46 +190,47 @@ func (r *reconciler) ensureModuleRelease(ctx context.Context, sourceUID types.UI
 			},
 		}
 		if meta.ModuleDefinition != nil {
-			moduleRelease.Spec.Requirements = meta.ModuleDefinition.Requirements
+			release.Spec.Requirements = meta.ModuleDefinition.Requirements
 		}
 
 		// if it's a first release for a Module, we have to install it immediately
 		// without any update Windows and update.mode manual approval
 		// the easiest way is to check the count or ModuleReleases for this module
 		{
-			mrList := new(v1alpha1.ModuleReleaseList)
-			err = r.client.List(ctx, mrList, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName}, client.Limit(1))
-			if err != nil {
-				return fmt.Errorf("failed to fetch ModuleRelease list: %w", err)
+			labelSelector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName}
+
+			releases := new(v1alpha1.ModuleReleaseList)
+			if err = r.client.List(ctx, releases, labelSelector, client.Limit(1)); err != nil {
+				return fmt.Errorf("list the '%s' module releases: %w", moduleName, err)
 			}
-			if len(mrList.Items) == 0 {
-				// no any other releases
-				if len(moduleRelease.Annotations) == 0 {
-					moduleRelease.Annotations = make(map[string]string, 1)
+			if len(releases.Items) == 0 {
+				// no other releases
+				if len(release.Annotations) == 0 {
+					release.Annotations = make(map[string]string, 1)
 				}
-				moduleRelease.Annotations["release.deckhouse.io/apply-now"] = "true"
+				release.Annotations[v1alpha1.ModuleReleaseAnnotationApplyNow] = "true"
 			}
 		}
 
-		if err = r.client.Create(ctx, moduleRelease); err != nil {
+		if err = r.client.Create(ctx, release); err != nil {
 			return fmt.Errorf("create module release: %w", err)
 		}
 		return nil
 	}
 
 	// seems weird to update already deployed/suspended release
-	if moduleRelease.Status.Phase != v1alpha1.PhasePending {
+	if release.Status.Phase != v1alpha1.ModuleReleasePhasePending {
 		return nil
 	}
 
-	moduleRelease.Spec = v1alpha1.ModuleReleaseSpec{
+	release.Spec = v1alpha1.ModuleReleaseSpec{
 		ModuleName: moduleName,
 		Version:    semver.MustParse(meta.ModuleVersion),
 		Weight:     meta.ModuleWeight,
 		Changelog:  meta.Changelog,
 	}
 
-	if err := r.client.Update(ctx, moduleRelease); err != nil {
+	if err := r.client.Update(ctx, release); err != nil {
 		return fmt.Errorf("update module release: %w", err)
 	}
 
@@ -265,7 +265,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		// init just created downloaded modules
 		if len(module.Status.Conditions) == 0 {
-			module.Status.Phase = v1alpha1.ModulePhaseNotInstalled
+			module.Status.Phase = v1alpha1.ModulePhaseAvailable
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)

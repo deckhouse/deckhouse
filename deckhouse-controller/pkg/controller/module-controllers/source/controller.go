@@ -328,7 +328,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exist) {
 			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				if module.Status.Phase == v1alpha1.ModulePhaseNotInstalled {
+				if module.Status.Phase == v1alpha1.ModulePhaseAvailable {
 					module.Status.Phase = v1alpha1.ModulePhaseDownloading
 					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
 					return true

@@ -178,7 +178,7 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	}
 	err = validateModule(def, values, k.logger)
 	if err != nil {
-		release.Status.Phase = v1alpha1.PhaseSuspended
+		release.Status.Phase = v1alpha1.ModuleReleasePhaseSuspended
 		_ = k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase)
 		return fmt.Errorf("module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 	}
