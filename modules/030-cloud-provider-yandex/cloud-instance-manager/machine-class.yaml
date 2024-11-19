@@ -55,7 +55,7 @@ spec:
     {{ $k | trunc 63 }}: {{ $v | trunc 63 }}
 {{- end }}
   metadata:
-    ssh-keys: "user:{{ .Values.nodeManager.internal.cloudProvider.yandex.sshKey }}"
+    ssh-keys: 'user:{{ .Values.nodeManager.internal.cloudProvider.yandex.sshKey }}'
     node-network-cidr: "{{ .Values.nodeManager.internal.cloudProvider.yandex.nodeNetworkCIDR }}"
   secretRef:
     namespace: d8-cloud-instance-manager
