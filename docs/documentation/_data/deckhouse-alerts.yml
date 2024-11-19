@@ -3672,9 +3672,9 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module {{ $labels.moduleName }} at Conflict, it has several available sources. Please select source by the module config.
+        Conflicting sources for the {{ $labels.moduleName }} module. Please specify the proper source in the module configuration.
       summary: |
-        Module {{ $labels.moduleName }} at Conflict.
+        Conflict detected for module {{ $labels.moduleName }}.
       severity: "4"
       markupFormat: markdown
     - name: ModuleConfigDeprecated
