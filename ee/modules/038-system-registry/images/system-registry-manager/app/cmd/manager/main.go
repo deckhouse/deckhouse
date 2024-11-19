@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	metricsBindAddressPort = ":8081"
+	metricsBindAddressPort = "127.0.0.1:8081"
 	healthListenAddr       = ":8097"
 )
 

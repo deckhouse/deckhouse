@@ -12,10 +12,6 @@ spec:
     protocol: TCP
     targetPort: http-healthz
     port: 8097
-  - name: metrics
-    protocol: TCP
-    targetPort: metrics
-    port: 8081
   selector:
     app: system-registry-manager
 
