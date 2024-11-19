@@ -140,3 +140,14 @@
         Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disable-` to stop this alert.
       summary: |
         ModuleConfig annotation for allow to disable is setted.
+  - alert: ModuleAtConflict
+    expr: max by (moduleName) (d8_module_at_conflict) >= 1
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        Module {{ $labels.moduleName }} at Conflict, it has several available sources. Please select source by the module config.
+      summary: |
+        Module {{ $labels.moduleName }} at Conflict.
