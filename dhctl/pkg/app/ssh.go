@@ -160,7 +160,6 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 		if SSHUser == "root" {
 			AskBecomePass = false
 		}
-
 		return nil
 	})
 }
