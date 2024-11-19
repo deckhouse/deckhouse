@@ -10,7 +10,7 @@ lang: ru
 
 Процесс создания образа включает следующие шаги:
 
-- Пользователь создаёт ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage).
+- Пользователь создаёт ресурс ClusterVirtualImage.
 - После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
 - По завершении загрузки ресурс становится доступным для создания дисков.
 
@@ -31,13 +31,13 @@ lang: ru
 
 Образы могут быть созданы на основе других образов и дисков виртуальных машин.
 
-С полным описанием параметров конфигурации ресурса `ClusterVirtualImage` можно ознакомиться [в документации](../../../../reference/cr.html#clustervirtualimage).
+С полным описанием параметров конфигурации ресурса ClusterVirtualImage можно ознакомиться [в документации](../../../../reference/cr.html#clustervirtualimage).
 
 ### Создание образа с HTTP-сервера
 
 Рассмотрим вариант создания кластерного образа.
 
-Выполните следующую команду для создания [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage):
+Выполните следующую команду для создания ClusterVirtualImage:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -54,7 +54,7 @@ spec:
 EOF
 ```
 
-Проверьте результат создания [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage):
+Проверьте результат создания ClusterVirtualImage:
 
 ```bash
 d8 k get clustervirtualimage ubuntu-22.04
@@ -65,7 +65,7 @@ d8 k get cvi ubuntu-22.04
 # ubuntu-22.04   Ready   false   100%       23h
 ```
 
-После создания ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage) может находиться в следующих состояниях (фазах):
+После создания ресурс ClusterVirtualImage может находиться в следующих состояниях (фазах):
 
 - `Pending` — ожидание готовности всех зависимых ресурсов, требующихся для создания образа.
 - `WaitForUserUpload` — ожидание загрузки образа пользователем (фаза присутствует только для `type=Upload`).
@@ -92,7 +92,7 @@ d8 k get cvi ubuntu-22.04 -w
 # ubuntu-22.04   Ready          false   100%       18s
 ```
 
-В описание ресурса [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage) можно получить дополнительную информацию о скачанном образе:
+В описание ресурса ClusterVirtualImage можно получить дополнительную информацию о скачанном образе:
 
 ```bash
 d8 k describe cvi ubuntu-22.04
@@ -147,7 +147,7 @@ EOF
 
 ### Загрузка образа из командной строки
 
-Чтобы загрузить образ из командной строки, предварительно создайте следующий ресурс, как показано ниже на примере [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage):
+Чтобы загрузить образ из командной строки, предварительно создайте следующий ресурс, как показано ниже на примере ClusterVirtualImage:
 
 ```yaml
 d8 k apply -f - <<EOF

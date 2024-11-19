@@ -108,7 +108,7 @@ spec:
 Для этого выполните следующие шаги:
 * перейдите в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
 
-Полученные `Client ID` и `Client Secret` укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
+Полученные `Client ID` и `Client Secret` укажите в Custom Resource DexProvider.
 
 Если организация GitHub находится под управлением клиента, перейдите в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и нажмите `Send Request` для подтверждения. Попросите клиента подтвердить запрос, который придет к нему на email.
 
@@ -140,7 +140,7 @@ spec:
 * **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
 * (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` при создании приложения.
 
-Полученные `Application ID` и `Secret` укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
+Полученные `Application ID` и `Secret` укажите в Custom Resource DexProvider.
 
 ### Atlassian Crowd
 
@@ -169,7 +169,7 @@ spec:
 Для этого выполните следующие шаги:
 * перейдите в `Applications` -> `Add application`.
 
-Полученные `Application Name` и `Password` укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
+Полученные `Application Name` и `Password` укажите в Custom Resource DexProvider.
 
 Группы CROWD укажите в lowercase-формате для Custom Resource `DexProvider`.
 
@@ -199,7 +199,7 @@ spec:
 Для этого выполните следующие шаги:
 * перейдите в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешите доступ для `Account: Read` и `Workspace membership: Read`.
 
-Полученные `Key` и `Secret` укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
+Полученные `Key` и `Secret` укажите в Custom Resource DexProvider.
 
 ### LDAP
 
@@ -241,7 +241,7 @@ spec:
 
 Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
 
-Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
+Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource DexProvider.
 1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
 2. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
 
@@ -250,7 +250,7 @@ spec:
 
 Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration) или [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
 
-Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
+Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в Custom Resource DexProvider.
 
 Ниже можно ознакомиться с некоторыми примерами.
 
@@ -311,7 +311,7 @@ spec:
 
 Для обеспечения гранулированного доступа пользователя к приложениям необходимо:
 
-* добавить параметр `allowedUserGroups` в `ModuleConfig` нужного приложения;
+* добавить параметр `allowedUserGroups` в ModuleConfig нужного приложения;
 * добавить группы к пользователю (наименования групп должны совпадать как на стороне Blitz, так и на стороне Deckhouse).
 
 Пример для Prometheus:

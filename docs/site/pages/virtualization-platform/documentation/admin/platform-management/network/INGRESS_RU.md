@@ -14,7 +14,7 @@ NGINX в качестве обратного прокси-сервера и ба
 
 ## Создание контроллера
 
-Чтобы создать NGINX Ingress контроллер, примените следующий ресурс `IngressNginxController`:
+Чтобы создать NGINX Ingress контроллер, примените следующий ресурс IngressNginxController:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -34,7 +34,7 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса `IngressNginxController` описаны по [ссылке](todo,mc).
+Подробности о возможностях конфигурации ресурса IngressNginxController описаны по [ссылке](todo,mc).
 
 ### Терминация HTTPS
 

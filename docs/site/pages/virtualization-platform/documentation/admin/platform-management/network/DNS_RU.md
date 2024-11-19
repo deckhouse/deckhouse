@@ -8,7 +8,7 @@ lang: ru
 
 Внимание! Модуль удаляет ранее установленные kubeadm’ом Deployment, ConfigMap и RBAC для CoreDNS.
 
-Чтобы включить модуль kube-dns с настройками по умолчанию, примените следующий ресурс `ModuleConfig`:
+Чтобы включить модуль kube-dns с настройками по умолчанию, примените следующий ресурс ModuleConfig:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -25,7 +25,7 @@ EOF
 
 ## Пример конфигурации DNS
 
-Пример конфигурации модуля kube-dns с помощью ресурса `ModuleConfig`:
+Пример конфигурации модуля kube-dns с помощью ресурса ModuleConfig:
 
 ```yaml
 d8 k apply -f - <<EOF

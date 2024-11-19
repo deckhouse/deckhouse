@@ -5,7 +5,7 @@ lang: ru
 ---
 
 Для управления томами на основе системы хранения данных TATLIN.UNIFIED можно использовать модуль csi-yadro,
-позволяющий создавать ресурсы `StorageClass` через создание пользовательских ресурсов `YadroStorageClass`.
+позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов YadroStorageClass.
 
 ## Включение модуля
 
@@ -35,7 +35,7 @@ d8 k get module csi-yadro -w
 ## Подключение к системе хранения данных TATLIN.UNIFIED
 
 Чтобы создать подключение к системе хранения данных TATLIN.UNIFIED и иметь возможность настраивать StorageClass’ы, 
-примените следующий ресурс `YadroStorageConnection`:
+примените следующий ресурс YadroStorageConnection:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -59,8 +59,8 @@ EOF
 
 ## Создание StorageClass’а
 
-Для создания `StorageClass` необходимо использовать ресурс `YadroStorageClass`.
-Ручное создание ресурса `StorageClass` без `YadroStorageClass` может привести к нежелательным эффектам.
+Для создания StorageClass необходимо использовать ресурс YadroStorageClass.
+Ручное создание ресурса StorageClass без YadroStorageClass может привести к нежелательным эффектам.
 Пример команды для создания класса хранения на основе системы хранения данных TATLIN.UNIFIED:
 
 ```yaml

@@ -5,7 +5,7 @@ lang: ru
 ---
 
 Для управления томами на основе протокола NFS (Network File System) можно использовать модуль csi-nfs,
-позводяющий создавать `StorageClass` через создание пользовательских ресурсов `NFSStorageClass`.
+позводяющий создавать StorageClass через создание пользовательских ресурсов NFSStorageClass.
 
 ## Включение модуля
 
@@ -34,8 +34,8 @@ d8 k get module csi-nfs -w
 
 ## Создание StorageClass’а
 
-Для создания `StorageClass` необходимо использовать ресурс `NFSStorageClass`. 
-Ручное создание ресурса `StorageClass` без `NFSStorageClass` может привести к нежелательным эффектам. 
+Для создания StorageClass необходимо использовать ресурс NFSStorageClass. 
+Ручное создание ресурса StorageClass без NFSStorageClass может привести к нежелательным эффектам. 
 Пример команды для создания класса хранения на базе NFS:
 
 ```yaml
@@ -65,7 +65,7 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс `NFSStorageClass` перешел в состояние `Created` и соответствующий `StorageClass` создался:
+Проверьте, что созданный ресурс NFSStorageClass перешел в состояние `Created` и соответствующий StorageClass создался:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
@@ -79,10 +79,10 @@ d8 k get sc nfs-storage-class
 # nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
-Если `StorageClass` с именем nfs-storage-class появился, значит настройка модуля csi-nfs завершена.
-Теперь пользователи могут создавать `PersistentVolume`, указывая `StorageClass` с именем nfs-storage-class.
+Если StorageClass с именем nfs-storage-class появился, значит настройка модуля csi-nfs завершена.
+Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем nfs-storage-class.
 
-Для каждого ресурса `PersistentVolume` будет создаваться каталог <директория из share>/<имя PersistentVolume>.
+Для каждого ресурса PersistentVolume будет создаваться каталог <директория из share>/<имя PersistentVolume>.
 
 ## Проверка работоспособности модуля
 

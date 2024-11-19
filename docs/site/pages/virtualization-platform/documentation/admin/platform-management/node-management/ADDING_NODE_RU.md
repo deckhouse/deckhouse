@@ -14,7 +14,7 @@ lang: ru
 
 Чтобы добавить bare-metal сервер в кластер как статический узел, выполните следующие шаги:
 
-1. Используйте существующий или создайте новый custom resource [NodeGroup](../../../reference/cr.html#nodegroup) ([пример](#статические-узлы) `NodeGroup` с именем `worker`). Параметр [nodeType](../../../reference/cr.html#nodegroup-v1-spec-nodetype) в custom resource NodeGroup для статических узлов должен быть `Static`.
+1. Используйте существующий или создайте новый custom resource NodeGroup ([пример](#статические-узлы) NodeGroup с именем `worker`). Параметр [nodeType](../../../reference/cr.html#nodegroup-v1-spec-nodetype) в custom resource NodeGroup для статических узлов должен быть `Static`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
@@ -79,7 +79,7 @@ lang: ru
     pdpl-user -i 63 caps
     ```
 
-1. Создайте в кластере ресурс [SSHCredentials](../../../reference/cr.html#sshcredentials).
+1. Создайте в кластере ресурс SSHCredentials.
 
    * Для доступа к добавляемому серверу компоненту CAPS необходим приватный ключ сервисного пользователя `caps`. Ключ в формате base64 добавляется в ресурс SSHCredentials.
 
@@ -95,7 +95,7 @@ lang: ru
       CAPS_PRIVATE_KEY_BASE64=<ЗАКРЫТЫЙ_КЛЮЧ_В_BASE64>
      ```
 
-   * Создайте ресурс `SSHCredentials` с именем сервисного пользователя и его приватным ключом:
+   * Создайте ресурс SSHCredentials с именем сервисного пользователя и его приватным ключом:
 
      ```shell
      d8 k create -f - <<EOF
@@ -109,7 +109,7 @@ lang: ru
      EOF
      ```
 
-1. Создайте в кластере ресурс [StaticInstance](../../../reference/cr.html#staticinstance)
+1. Создайте в кластере ресурс StaticInstance
 
   Ресурс StaticInstance определяет IP-адрес сервера статического узла и данные для доступа к серверу:
 
@@ -128,7 +128,7 @@ lang: ru
    EOF
    ```
 
-1. Создайте в кластере ресурс [NodeGroup](../../../reference/cr.html#nodegroup):
+1. Создайте в кластере ресурс NodeGroup:
 
    ```shell
    d8 k create -f - <<EOF
@@ -160,9 +160,9 @@ lang: ru
 
 Для примера разберём задачу распределения 3 статических узлов по 2 NodeGroup: 1 узел добавим в группу worker и 2 узла в группу front.
 
-1. Подготовьте необходимые ресурсы (3 сервера) и создайте для них ресурсы `SSHCredentials`, аналогично п.1 и п.2 [предыдущего примера](#с-помощью-cluster-api-provider-static).
+1. Подготовьте необходимые ресурсы (3 сервера) и создайте для них ресурсы SSHCredentials, аналогично п.1 и п.2 [предыдущего примера](#с-помощью-cluster-api-provider-static).
 
-1. Создайте в кластере два ресурса [NodeGroup](../../../reference/cr.html#nodegroup):
+1. Создайте в кластере два ресурса NodeGroup:
 
    Укажите labelSelector, чтобы в NodeGroup подключались только сервера, совпадающие с ним.
 
@@ -194,7 +194,7 @@ lang: ru
    EOF
    ```
 
-1. Создайте в кластере ресурсы [StaticInstance](../../../reference/cr.html#staticinstance)
+1. Создайте в кластере ресурсы StaticInstance
 
   Укажите актуальные IP-адреса серверов и задайте лейбл role в метаданных:
 
@@ -282,7 +282,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 ### Как зачистить узел для последующего ввода в кластер?
 
-Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить `NodeGroup`, следуйте [этой инструкции](#как-изменить-nodegroup-у-статического-узла).
+Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить NodeGroup, следуйте [этой инструкции](#как-изменить-nodegroup-у-статического-узла).
 
 > **Внимание!** Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то следуйте [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-выгнать-ресурсы-с-узла) модуля `sds-replicated-volume`, чтобы выгнать ресурсы с узла и удалить узел LINSTOR/DRBD.
 
@@ -305,18 +305,18 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 ### Можно ли удалить StaticInstance?
 
-`StaticInstance`, находящийся в состоянии `Pending`, можно удалять без каких-либо проблем.
+StaticInstance, находящийся в состоянии `Pending`, можно удалять без каких-либо проблем.
 
-Чтобы удалить `StaticInstance` находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstraping`):
-1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в `StaticInstance`.
-1. Дождитесь, пока `StaticInstance` перейдет в статус `Pending`.
-1. Удалите `StaticInstance`.
+Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstraping`):
+1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в StaticInstance.
+1. Дождитесь, пока StaticInstance перейдет в статус `Pending`.
+1. Удалите StaticInstance.
 1. Уменьшите значение параметра `NodeGroup.spec.staticInstances.count` на 1.
 1. Дождитесь `Ready` состояния NodeGroup.
 
 ### Как изменить IP-адрес StaticInstance?
 
-Изменить IP-адрес в ресурсе `StaticInstance` нельзя. Если в `StaticInstance` указан ошибочный адрес, то нужно [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
+Изменить IP-адрес в ресурсе StaticInstance нельзя. Если в StaticInstance указан ошибочный адрес, то нужно [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
 
 ###  Как мигрировать статический узел, настроенный вручную, под управление CAPS?
 
@@ -326,9 +326,9 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 <span id='как-изменить-nodegroup-у-статичного-узла'><span>
 
-Если узел находится под управлением [CAPS](./#cluster-api-provider-static), то изменить принадлежность к `NodeGroup` у такого узла **нельзя**. Единственный вариант — [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
+Если узел находится под управлением [CAPS](./#cluster-api-provider-static), то изменить принадлежность к NodeGroup у такого узла **нельзя**. Единственный вариант — [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
 
-Чтобы перенести существующий статический узел созданный [вручную](./#работа-со-статическими-узлами) из одной `NodeGroup` в другую, необходимо изменить у узла лейбл группы:
+Чтобы перенести существующий статический узел созданный [вручную](./#работа-со-статическими-узлами) из одной NodeGroup в другую, необходимо изменить у узла лейбл группы:
 
 ```shell
 d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
