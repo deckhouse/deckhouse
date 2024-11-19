@@ -47,7 +47,7 @@ func updatePolicyHandler(cli client.Client) http.Handler {
 
 		for _, config := range configs.Items {
 			if config.Spec.UpdatePolicy == policy.Name {
-				return rejectResult(fmt.Sprintf("the '%s' update policy used in the '%s' module config", policy.Name, config.Name))
+				return rejectResult(fmt.Sprintf("the '%s' update policy is used by the '%s' module config", policy.Name, config.Name))
 			}
 		}
 
