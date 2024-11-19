@@ -87,18 +87,12 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			return nil
 		}
 
-		var defaultSCName string
-
 		storageClassesSnapshots := input.Snapshots["storage_classes"]
 
 		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
 
 		for _, storageClassSnapshot := range storageClassesSnapshots {
 			sc := storageClassSnapshot.(*storage.StorageClass)
-
-			if sc.Annotations["storageclass.kubernetes.io/is-default-class"] == "true" {
-				defaultSCName = sc.Name
-			}
 
 			allowVolumeExpansion := true
 			if sc.AllowVolumeExpansion != nil {
@@ -113,7 +107,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			})
 		}
 
-		setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+		setStorageClassesValues(input, storageClasses)
 
 		return nil
 	}
@@ -144,17 +138,12 @@ func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
 	volumeTypes []cloudDataV1.DynamixStorageEndpoint,
 ) {
-	var defaultSCName string
 
 	volumeTypesMap := make(map[string]storageClass, len(volumeTypes))
 
 	for _, volumeType := range volumeTypes {
 		if !volumeType.IsEnabled {
 			continue
-		}
-
-		if volumeType.IsDefault {
-			defaultSCName = getStorageClassName(volumeType.Name)
 		}
 
 		if len(volumeType.Pools) == 0 {
@@ -196,7 +185,7 @@ func handleDiscoveryDataVolumeTypes(
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	setStorageClassesValues(input.Values, storageClasses, defaultSCName)
+	setStorageClassesValues(input, storageClasses)
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
@@ -220,24 +209,8 @@ func getStorageClassName(value string) string {
 	return strings.Trim(value, "-.")
 }
 
-func setStorageClassesValues(
-	values *go_hook.PatchableValues,
-	storageClasses []storageClass,
-	defaultSCName string,
-) {
-	values.Set("cloudProviderDynamix.internal.storageClasses", storageClasses)
-
-	def, ok := values.GetOk("cloudProviderDynamix.storageClass.default")
-	if ok {
-		values.Set("cloudProviderDynamix.internal.defaultStorageClass", def.String())
-		return
-	}
-
-	if defaultSCName != "" {
-		values.Set("cloudProviderDynamix.internal.defaultStorageClass", defaultSCName)
-		return
-	}
-	values.Remove("cloudProviderDynamix.internal.defaultStorageClass")
+func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
+	input.Values.Set("cloudProviderDynamix.internal.storageClasses", storageClasses)
 }
 
 type storageClass struct {
