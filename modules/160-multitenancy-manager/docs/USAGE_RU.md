@@ -7,22 +7,27 @@ title: "Модуль multitenancy-manager: примеры использован
 
 Deckhouse Kubernetes Platform включает следующий набор шаблонов для создания проектов:
 - `empty` — пустой шаблон без предопределенных ресурсов;
-
 - `default` — шаблон для базовых сценариев использования проектов:
   * ограничение ресурсов;
   * сетевая изоляция;
   * автоматические алерты и сбор логов;
   * выбор профиля безопасности;
   * настройка администраторов проекта.
+  
+  Описание шаблона [в Github](https://github.com/deckhouse/deckhouse/blob/fb24949054e85c1aad0b63a2d0790eb1112f3334/ee/modules/160-multitenancy-manager/images/multitenancy-manager/default/default.yaml#L2).
 
 - `secure` — включает все возможности шаблона `default`, а также дополнительные функции:
-  * настройку допустимых для проекта UID/GID;
+  * настройка допустимых для проекта UID/GID;
   * правила аудита обращения Linux-пользователей проекта к ядру;
   * сканирование запускаемых образов контейнеров на наличие известных уязвимостей (CVE).
+
+  Описание шаблона [в Github](https://github.com/deckhouse/deckhouse/blob/fb24949054e85c1aad0b63a2d0790eb1112f3334/ee/modules/160-multitenancy-manager/images/multitenancy-manager/default/secure.yaml).
 
 - `secure-with-dedicated-nodes` — включает все возможности шаблона `secure`, а также дополнительные функции:
   * определение селектора узла для всех подов в проекте: если под создан, селектор узла пода будет автоматически **заменён** на селектор узла проекта;
   * определение стандартных tolerations для всех подов в проекте: если под создан, стандартные значения tolerations **добавляются** к нему автоматически.
+  
+  Описание шаблона [в Github](https://github.com/deckhouse/deckhouse/blob/fb24949054e85c1aad0b63a2d0790eb1112f3334/ee/modules/160-multitenancy-manager/images/multitenancy-manager/default/secure-with-dedicated-nodes.yaml).
 
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 
