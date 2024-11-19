@@ -175,7 +175,7 @@ internal:
     type: azure
     machineClassKind: AzureMachineClass
     azure:
-      sshPublicKey: sshPublicKey
+      sshPublicKey: cert-authority,principals="test" ssh-rsa AAAAB...==
       clientId: clientId
       clientSecret: clientSecret
       subscriptionId: subscriptionId
@@ -259,7 +259,7 @@ internal:
     machineClassKind: GCPMachineClass
     gcp:
       region: region
-      sshKey: privatekey
+      sshKey: cert-authority,principals="test" ssh-rsa AAAAB...==
       networkName: mynetwork
       subnetworkName: mysubnetwork
       disableExternalIP: true
@@ -460,7 +460,7 @@ internal:
       regionTagCategory: myregtagcat #
       zoneTagCategory: myzonetagcateg #
       region: myreg
-      sshKeys: [key1, key2] #
+      sshKeys: ['cert-authority,principals="test" ssh-rsa AAAAB...==', key2] #
       vmFolderPath: dev/test
   nodeGroups:
   - name: worker
@@ -542,7 +542,7 @@ internal:
       serviceAccountJSON: '{"my":"svcacc"}'
       region: myreg
       folderID: myfolder
-      sshKey: mysshkey
+      sshKey: cert-authority,principals="test" ssh-rsa AAAAB...==
       sshUser: mysshuser
       nameservers: ["4.2.2.2"]
       dns:
@@ -1781,7 +1781,7 @@ internal:
     capiMachineTemplateKind: "VCDMachineTemplate"
     capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
     vcd:
-      sshPublicKey: ssh-rsa AAAAA
+      sshPublicKey: cert-authority,principals="test" ssh-rsa AAAAB...==
       organization: org
       virtualDataCenter: dc
       virtualApplicationName: app
