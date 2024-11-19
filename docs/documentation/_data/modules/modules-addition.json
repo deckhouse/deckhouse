@@ -9,6 +9,7 @@
   },
   "cni-cilium": {
     "path": "modules/cni-cilium/",
+    "editionFullyAvailable": ["se-plus"],
     "edition": "ce"
   },
   "user-authz": {
