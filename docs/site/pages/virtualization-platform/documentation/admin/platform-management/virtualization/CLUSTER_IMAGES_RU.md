@@ -6,13 +6,13 @@ lang: ru
 
 ## Образы
 
-Ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage) используется для загрузки образов виртуальных машин в внутрикластерное хранилище, что позволяет создавать диски виртуальных машин. Этот ресурс доступен во всех пространствах имен и проектах кластера.
+Ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage) используется для загрузки образов виртуальных машин в внутрикластерное хранилище, что позволяет создавать диски для виртуальных машин. Этот ресурс доступен в любом пространстве имен или проекте кластера.
 
 Процесс создания образа включает следующие шаги:
 
-- Пользователь создаёт ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage).
-- После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
-- По завершении загрузки ресурс становится доступным для создания дисков.
+1. Пользователь создаёт ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage).
+1. После создания, образ автоматически загружается из указанного источника в спецификации в хранилище (DVCR).
+1. По завершении загрузки ресурс становится доступным для создания дисков.
 
 Существуют различные типы образов:
 
@@ -21,9 +21,9 @@ lang: ru
 
 Примеры ресурсов для получения образов виртуальной машины:
 
-- **Ubuntu**: https://cloud-images.ubuntu.com
-- **Alt Linux**: https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64
-- **Astra Linux**: https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit
+- [Ubuntu](https://cloud-images.ubuntu.com);
+- [Alt Linux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64);
+- [Astra Linux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit).
 
 После создания ресурса тип и размер образа определяются автоматически, и эта информация отражается в статусе ресурса.
 
