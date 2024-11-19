@@ -6,7 +6,7 @@ lang: ru
 
 ## Подготовка конфигурации
 
-Для установки платформы нужно подготовить YAML-файл конфигурации установки и, при необходимости, YAML-файл ресурсов, которые будут созданы после успешной установки платформы.
+Для установки платформы нужно подготовить YAML-файл конфигурации установки. При необходимости, добавьте YAML-файл ресурсов, которые будут созданы после успешной установки платформы.
 
 ### Файл конфигурации установки
 
@@ -77,7 +77,7 @@ spec:
 
 **Внимание!** В файле ресурсов установки нельзя использовать [ModuleConfig](../) для **встроенных** модулей. Для конфигурирования встроенных модулей используйте [файл конфигурации](#файл-конфигурации-установки).
 
-{% offtopic title="Пример файла ресурсов..." %}
+{% offtopic title="Пример файла ресурсов (resources.yaml)..." %}
 
 ```yaml
 # Создать группу из двух рабочих узлов
@@ -217,7 +217,6 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 docker run -it --pull=always \
   -v "$PWD/config.yaml:/config.yaml" \
   -v "$PWD/resources.yaml:/resources.yaml" \
-  -v "$PWD/dhctl-tmp:/tmp/dhctl" \
   -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
 ```
 
@@ -302,10 +301,55 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 Описание перечня поддерживаемых систем хранения описано в разделе ["Настройка хранилищ"](../../platform-management/storage/supported_storage.html)
 
 
-## Установка модуля цилиума
+## Установка модуля Сilium
 
-TODO:
+Для получения полной справочной информации по установке и настройке модуля, пожалуйста, обратитесь к разделу "[Настройки Cilium](todo)".
 
-## Установка модуля виртуализации 
 
-TODO:
+## Установка модуля Virtualization 
+
+Создайте на master-узле файл `virtualization_module.yaml` содержащий описание компонентов модуля `Virtualization`:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+ name: virtualization
+spec:
+ enabled: true
+ settings:
+   dvcr:
+     storage:
+       persistentVolumeClaim:
+         size: 50G
+         storageClassName: linstor-thin-r2
+       type: PersistentVolumeClaim
+   virtualMachineCIDRs:
+     - 10.66.10.0/24
+     - 10.66.20.0/24
+     - 10.66.30.0/24
+ version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePullOverride
+metadata:
+ name: virtualization
+spec:
+ imageTag: main
+ scanInterval: 15s
+ source: deckhouse
+```
+
+Примените созданный файл на master-узле выполнив команду:
+
+```bash
+d8 k apply -f virtualization_module.yaml
+```
+
+После включения модуля должен появится namespase `d8-virtualization`  
+Команда для получения списка namespases:
+
+```bash
+d8 k get ns
+```

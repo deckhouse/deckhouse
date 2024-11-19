@@ -48,8 +48,7 @@ lang: ru
 
    ```shell
    docker run -it --pull=always \
-     -v "$PWD/dhctl-tmp:/tmp/dhctl" \
-     -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
+     -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
    ```
 
 4. Выполните команду удаления кластера:
