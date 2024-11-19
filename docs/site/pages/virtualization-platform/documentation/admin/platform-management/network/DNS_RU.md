@@ -6,7 +6,9 @@ lang: ru
 
 Для устанавливки компонентов CoreDNS и управления DNS можно использовать возможности модуля kube-dns.
 
-Внимание! Модуль удаляет ранее установленные kubeadm’ом Deployment, ConfigMap и RBAC для CoreDNS.
+{% alert level="warning" %}
+Модуль kube-dns удаляет ранее установленные kubeadm’ом Deployment, ConfigMap и RBAC для CoreDNS.
+{% endalert %}
 
 Чтобы включить модуль kube-dns с настройками по умолчанию, примените следующий ресурс ModuleConfig:
 

@@ -10,7 +10,7 @@ lang: ru
 
 Для управления статичными маршрутами и правилами ip rule на узлах кластера можно использовать возможности модуля static-routing-manager.
 
-Чтобы включить модуль static-routing-manager с настрйоками по умолчанию, примените следующий ресурс ModuleConfig:
+Чтобы включить модуль static-routing-manager с настройками по умолчанию, примените следующий ресурс ModuleConfig:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -37,11 +37,11 @@ kind: RoutingTable
 metadata:
 name: myrt-main
 spec:
-ipRoutingTableID: 254 # main routing table id is 254
-routes:
+  ipRoutingTableID: 254 # main routing table id is 254
+  routes:
   - destination: 10.0.0.0/8
     gateway: 192.168.0.1
-    nodeSelector:
+  nodeSelector:
     node-role.deckhouse.io: load-balancer
 EOF
 ```
@@ -66,13 +66,13 @@ kind: RoutingTable
 metadata:
 name: myrt-extra
 spec:
-routes:
-  - destination: 0.0.0.0/0
-    gateway: 192.168.0.1
-    nodeSelector:
+  routes:
+    - destination: 0.0.0.0/0
+      gateway: 192.168.0.1
+  nodeSelector:
     node-role.deckhouse.io: load-balancer
-    status:
-    ipRoutingTableID: 10000 # если spec.ipRoutingTableID не указан, он будет сгенерирован автоматически и размещён в status
+status:
+  ipRoutingTableID: 10000 # если spec.ipRoutingTableID не указан, он будет сгенерирован автоматически и размещён в status
     ...
 EOF
 ```
