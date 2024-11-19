@@ -86,8 +86,8 @@ entries:
                         ru: Настройка containerd
                       url: /virtualization-platform/documentation/admin/platform-management/node-management/containerd.html
             - title:
-                en: Control plane settings
-                ru: Настройка управляющего слоя
+                en: Control plane
+                ru: Управляющий слой
               folders:
                 - title:
                     en: Components
@@ -110,8 +110,8 @@ entries:
                         ru: Аудит
                       url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/audit.html
                 - title:
-                    en: Master nodes operations
-                    ru: Работа с master-узлами
+                    en: Master nodes
+                    ru: Мастер узлы
                   url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html
                 - title:
                     en: Components placement

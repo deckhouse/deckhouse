@@ -1,6 +1,6 @@
 ---
 title: "Работа с etcd"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/contoler-plane-settings/etcd.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html
 lang: "ru"
 ---
 
@@ -18,13 +18,18 @@ Deckhouse создаёт CronJob `kube-system/d8-etcd-backup-*`, который 
 d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
 ```
 
-TODO что в файле etcd.db? В варианте с etcdctl поясняется что за файл создаётся, а тут нет.
-TODO где это запускать, на каждом master-узле или нет?
+В текущей директории будет создан файл `etcd.db` со снимком базы etcd.
+Из полученного снимка можно будет восстановить состояние кластера etcd.
+
+Также рекомендуется сделать бэкап директории `/etc/kubernetes`, в которой находятся:
+- манифесты и конфигурация компонентов [control-plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components);
+- [PKI кластера Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/).
+
 
 ### Вручную с помощью etcdctl
 
 {% alert level="warning" %}
-Не рекомендуется на версиях 1.65 и выше.
+Не рекомендуется на версиях Deckhouse 1.65 и выше.
 {% endalert %}
 
 В кластерах Deckhouse версии v1.64 и ниже запустите следующий скрипт на любом master-узле от пользователя `root`:
@@ -44,14 +49,10 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 В текущей директории будет создан файл `kube-backup.tar.gz` со снимком базы etcd одного из членов etcd-кластера.
 Из полученного снимка можно будет восстановить состояние кластера etcd.
 
-Также рекомендуется сделать бэкап директории `/etc/kubernetes`, в которой находятся:
-- манифесты и конфигурация компонентов [control-plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components);
-- [PKI кластера Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/).
+### Шифрование
 
 Мы рекомендуем хранить резервные копии снимков состояния кластера etcd, а также бэкап директории `/etc/kubernetes/` в зашифрованном виде вне кластера Deckhouse.
 Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т. д.
-
-Далее будут рассмотрены процедуры полного и частичного восстановления данных из резервной копии.
 
 ## Полное восстановление состояния кластера из резервной копии etcd
 
@@ -71,10 +72,12 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    Посмотреть версию etcd в кластере можно выполнив следующую команду:
 
    ```shell
-   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
    ```
 
 1. Остановите etcd.
+
+   Etcd запущен в виде статического пода, поэтому достаточно переместить файл манифеста:
 
    ```shell
    mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
@@ -120,7 +123,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Когда работа etcd будет восстановлена, удалите из кластера информацию об уже удаленных в п.1 master-узлах, воспользовавшись следующей командой (укажите название узла):
 
    ```shell
-   kubectl delete node <MASTER_NODE_I>
+   d8 k delete node <MASTER_NODE_I>
    ```
 
 1. Перезапустите все узлы кластера.
@@ -128,7 +131,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
 1. Переведите кластер обратно в режим multi-master в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
@@ -182,14 +185,14 @@ rm -r ./kubernetes ./etcd-backup.snapshot
   - 
   - Установите актуальное имя образа etcd:
     ```shell
-    IMG=`kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.containers[*].image}"`
+    IMG=`d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.containers[*].image}"`
     sed -i -e "s#IMAGE#$IMG#" etcd.pod.yaml
     ```
 
   - Создайте под:
 
     ```shell
-    kubectl create -f etcd.pod.yaml
+    d8 k create -f etcd.pod.yaml
     ```
 
 2. Скопируйте `etcdhelper` и снимок etcd в контейнер пода.
@@ -199,30 +202,30 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    Пример:
 
    ```shell
-   kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
-   kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
+   d8 k cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
+   d8 k cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
    ```
 
 3. В контейнере установите права на запуск `etcdhelper`, восстановите данные из резервной копии и запустите etcd.
 
    Пример:
 
-   ```console
-   ~ # kubectl -n default exec -it etcdrestore -- sh
-   / # chmod +x /usr/bin/etcdhelper
-   / # etcdctl snapshot restore /tmp/etcd-snapshot.bin
-   / # etcd &
+   ```shell
+   d8 k -n default exec -it etcdrestore -- sh
+   chmod +x /usr/bin/etcdhelper
+   etcdctl snapshot restore /tmp/etcd-snapshot.bin
+   etcd &
    ```
 
 4. Получите описания нужных объектов кластера, отфильтровав их с помощью `grep`.
 
    Пример:
 
-   ```console
-   ~ # kubectl -n default exec -it etcdrestore -- sh
-   / # mkdir /tmp/restored_yaml
-   / # cd /tmp/restored_yaml
-   /tmp/restored_yaml # for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done
+   ```shell
+   d8 k -n default exec -it etcdrestore -- sh
+   mkdir /tmp/restored_yaml
+   cd /tmp/restored_yaml
+   for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done
    ```
 
    Замена символов с помощью `sed` в примере позволяет сохранить описания объектов в файлы, именованные подобно структуре реестра etcd. Например: `/registry/deployments/infra-production/supercronic.yaml` → `deployments_infra-production_supercronic.yaml`.
@@ -230,19 +233,19 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 5. Скопируйте полученные описания объектов из пода на master-узел:
 
    ```shell
-   kubectl cp default/etcdrestore:/tmp/restored_yaml restored_yaml
+   d8 k cp default/etcdrestore:/tmp/restored_yaml restored_yaml
    ```
 
 6. Удалите из полученных описаний объектов информацию о времени создания, UID, status и прочие оперативные данные, после чего восстановите объекты:
 
    ```shell
-   kubectl create -f restored_yaml/deployments_infra-production_supercronic.yaml
+   d8 k create -f restored_yaml/deployments_infra-production_supercronic.yaml
    ```
 
 7. Под с временным экземпляром etcd можно удалить:
 
    ```shell
-   kubectl delete -f etcd.pod.yaml
+   d8 k delete -f etcd.pod.yaml
    ```
 
 ## Получить список членов кластера etcd
@@ -252,7 +255,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 Пример:
 
 ```shell
-kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ member list -w table
@@ -269,7 +272,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 Пример скрипта, который автоматически передает все адреса узлов control-plane:
 
 ```shell
-MASTER_NODE_IPS=($(kubectl get nodes -l \
+MASTER_NODE_IPS=($(d8 k get nodes -l \
 node-role.kubernetes.io/control-plane="" \
 -o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
 --no-headers))
@@ -277,7 +280,7 @@ unset ENDPOINTS_STRING
 for master_node_ip in ${MASTER_NODE_IPS[@]}
 do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
 done
-kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod \
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod \
 -l component=etcd,tier=control-plane -o name | head -n1) \
 -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
 --key /etc/kubernetes/pki/etcd/ca.key \
@@ -320,13 +323,13 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
    mv /var/lib/etcdtest /var/lib/etcd
    ```
 
-1. Найдите контейнеры `etcd` и `api-server`:
+1. Найдите контейнеры `etcd` и `kube-apiserver`:
 
    ```shell
-   crictl ps -a | egrep "etcd|apiserver"
+   crictl ps -a --name "^etcd|^kube-apiserver"
    ```
 
-1. Удалите найденные контейнеры `etcd` и `api-server`:
+1. Удалите найденные контейнеры `etcd` и `kube-apiserver`:
 
    ```shell
    crictl rm <CONTAINER-ID>

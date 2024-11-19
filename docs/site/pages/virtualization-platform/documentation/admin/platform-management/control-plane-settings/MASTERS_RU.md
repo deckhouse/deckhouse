@@ -1,6 +1,6 @@
 ---
-title: "Работа с master-узлами"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/contoler-plane-settings/masters.html
+title: "Мастер узлы"
+permalink: ru/virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html
 lang: "ru"
 ---
 
