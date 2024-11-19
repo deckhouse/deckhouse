@@ -74,9 +74,9 @@ spec:
                 fieldRef:
                   fieldPath: status.hostIP
             - name: METALLB_POD_NAME
-                valueFrom:
-                  fieldRef:
-                    fieldPath: metadata.name
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: METALLB_ML_BIND_ADDR
               valueFrom:
                 fieldRef:
