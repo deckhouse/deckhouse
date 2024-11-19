@@ -970,7 +970,7 @@ func (suite *ControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer
 		dc.GetFakeClock().Advance(result.RequeueAfter)
 
 		dr := suite.getDeckhouseRelease(releaseName)
-		if dr.Status.Phase == v1alpha1.PhaseDeployed {
+		if dr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
 			suite.T().Log("Deployed")
 			return
 		}

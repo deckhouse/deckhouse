@@ -141,7 +141,7 @@ func (api *KubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.Deckhou
 				if r.GetName() == release.GetName() {
 					continue
 				}
-				if r.Status.Phase != v1alpha1.PhasePending {
+				if r.Status.Phase != v1alpha1.ModuleReleasePhasePending {
 					continue
 				}
 				// patch releases to trigger their requeue

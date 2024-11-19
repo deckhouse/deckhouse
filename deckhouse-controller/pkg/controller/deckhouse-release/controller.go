@@ -192,7 +192,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 	// thees phases should be ignored by predicate, but let's check it
 	case "":
 		// initial state
-		dr.Status.Phase = v1alpha1.PhasePending
+		dr.Status.Phase = v1alpha1.ModuleReleasePhasePending
 		dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		if e := r.client.Status().Update(ctx, dr); e != nil {
 			return ctrl.Result{Requeue: true}, e
@@ -200,11 +200,11 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
+	case v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended:
 		r.logger.Debugf("release phase: %s", dr.Status.Phase)
 		return result, nil
 
-	case v1alpha1.PhaseDeployed:
+	case v1alpha1.ModuleReleasePhaseDeployed:
 		// don't think we have to do anything with Deployed release
 		// probably, we have to move the Deployment's image update logic here
 		return r.reconcileDeployedRelease(ctx, dr)
@@ -371,7 +371,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	skipped := deckhouseUpdater.GetSkippedPatchReleases()
 	if len(skipped) > 0 {
 		for _, sk := range skipped {
-			sk.Status.Phase = v1alpha1.PhaseSkipped
+			sk.Status.Phase = v1alpha1.ModuleReleasePhaseSkipped
 			sk.Status.Message = ""
 			sk.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 			if e := r.client.Status().Update(ctx, sk); e != nil {
