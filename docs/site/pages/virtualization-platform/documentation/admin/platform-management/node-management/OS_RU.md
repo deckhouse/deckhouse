@@ -6,26 +6,38 @@ lang: ru
 
 ## Установка плагина cert-manager для kubectl на master-узлах
 
+NodeGroupConfiguration можно использовать для установки нужных утилит на мастер-узлы.
+
+Например, можно установить утилиту cmctl от проекта cert-manager. Эту команду также можно использовать как kubectl plugin.
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: add-cert-manager-plugin.sh
+  name: kubectl-plugin-cert-manager.sh
 spec:
   weight: 100
   bundles:
-  - "*"
+    - "*"
   nodeGroups:
-  - "master"
+    - "master"
   content: |
+    # See https://github.com/cert-manager/cmctl/releases/tag/v2.1.0
+    version=v2.1.1
+
     if [ -x /usr/local/bin/kubectl-cert_manager ]; then
       exit 0
     fi
-    curl -L https://github.com/cert-manager/cert-manager/releases/download/v1.7.1/kubectl-cert_manager-linux-amd64.tar.gz -o - | tar -zxvf - kubectl-cert_manager
-    mv kubectl-cert_manager /usr/local/bin
+    curl -L https://github.com/cert-manager/cmctl/releases/download/${version}/cmctl_linux_amd64.tar.gz -o - | tar zxf - cmctl
+    mv cmctl /usr/local/bin
+    ln -s /usr/local/bin/cmctl /usr/local/bin/kubectl-cert_manager
 ```
 
 ## Задание параметра sysctl
+
+Для некоторых задач на узлах нужно изменять параметры sysctl.
+
+Например, приложения, использующие mmapfs, могут потребовать увеличения разрешённого процессу количества отображений в память. Это количество устанавливается параметром `vm.max_map_count` и может быть задано через NodeGroupConfiguration:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -37,16 +49,30 @@ spec:
   bundles:
   - "*"
   nodeGroups:
-  - "*"
+  - "worker"
   content: |
     sysctl -w vm.max_map_count=262144
 ```
 
 ## Установка нужной версии ядра
 
+Узлы могут требовать определённой версии ядра Linux и NodeGroupConfiguration может помочь в этом случае. Для упрощения скрипта лучше использовать конструкции [bashbooster](http://www.bashbooster.net/).
+
+Разные ОС требуют разных операций при смене версии ядра, поэтому далее приведены примеры для Debian и CentOS.
+
+В обоих примерах используется конструкция `bb-deckhouse-get-disruptive-update-approval` — расширение набора команд bashbooster от Deckhouse. Эта конструкция предотвращает перезагрузку узла, если требуется подтверждение перезагрузки путём добавления аннотации на узел.
+
+Помимо этого, используются следующие конструкции bashbooster:
+
+- [bb-apt-install](http://www.bashbooster.net/#apt) для установки apt пакета и отправки события "bb-package-installed", если пакет был установлен;
+- [bb-yum-install](http://www.bashbooster.net/#yum) для установки apt пакета и отправки события "bb-package-installed", если пакет был установлен;
+- [bb-event-on](http://www.bashbooster.net/#event) для сигнализации, что нужна перезагрузка узла, если отправлено событие "bb-package-installed";
+- [bb-log-info](http://www.bashbooster.net/#log) для логирования;
+- [bb-flag-set](http://www.bashbooster.net/#flag) для сигнализации, что нужен перезапуск узла.
+
 ### Для дистрибутивов, основанных на Debian
 
-Создайте ресурс NodeGroupConfiguration, указав в переменной `desired_version` shell-скрипта (параметр `spec.content` ресурса) желаемую версию ядра:
+Создайте ресурс NodeGroupConfiguration, указав в переменной `desired_version` желаемую версию ядра:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -81,7 +107,7 @@ spec:
 
 ### Для дистрибутивов, основанных на CentOS
 
-Создайте ресурс NodeGroupConfiguration, указав в переменной `desired_version` shell-скрипта (параметр `spec.content` ресурса) желаемую версию ядра:
+Создайте ресурс NodeGroupConfiguration, указав в переменной `desired_version` желаемую версию ядра:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -117,12 +143,20 @@ spec:
 
 <span id="добавление-ca-сертификата"></span>
 
+В некоторых случаях может потребоваться дополнительный корневой сертификат, например, для доступа к внутренним ресурсам организации. Добавление корневых сертификатов можно оформить в виде NodeGroupConfiguration.
+
 {% alert level="warning" %}
 Данный пример приведен для ОС Ubuntu.  
 Способ обновления хранилища сертификатов может отличаться в зависимости от ОС.
 
 При адаптации скрипта под другую ОС измените параметр [bundles](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
 {% endalert %}
+
+Скрипт использует конструкции bashbooster:
+
+- [bb-sync-file](http://www.bashbooster.net/#sync) для синхронизации содержимого файла и отправки события "ca-file-updated, если файл изменился;
+- [bb-event-on](http://www.bashbooster.net/#event) для запуска обновления сертификатов, если отправлено событие "ca-file-updated";
+- [bb-tmp-file](http://www.bashbooster.net/#tmp) для создания временных файлов и их удаления после выполнения скрипта.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -162,24 +196,14 @@ spec:
     EOF
     )
 
-    # bb-event           - Creating subscription for event function. More information: http://www.bashbooster.net/#event
-    ## ca-file-updated   - Event name
-    ## update-certs      - The function name that the event will call
-    
     bb-event-on "ca-file-updated" "update-certs"
     
     update-certs() {          # Function with commands for adding a certificate to the store
       update-ca-certificates
     }
 
-    # bb-tmp-file - Creating temp file function. More information: http://www.bashbooster.net/#tmp
     CERT_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
-    
-    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
-    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
-    ##  ${CERT_TMP_FILE}                          - Source file
-    ##  ca-file-updated                           - Name of event that will be called if the file changes.
 
     bb-sync-file \
       "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
@@ -187,6 +211,4 @@ spec:
       ca-file-updated   
 ```
 
-TODO можно разобрать детально что тут происходит. Не в комментариях, а прям словами отдельно.
-
-Аналогично настраивается containerd, пример приведён в разделе [Добавление сертификата для дополнительного registry](./configure-containerd.html#ca-сертификат-для-дополнительного-registry).
+Аналогично настраивается корневой сертификат для containerd, пример приведён в разделе [настроек containerd](containerd.html#ca-сертификат-для-дополнительного-registry).
