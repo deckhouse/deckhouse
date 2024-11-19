@@ -16,7 +16,6 @@
       "cloud-provider-vsphere",
       "cloud-provider-yandex",
       "cloud-provider-zvirt",
-      "cni-cilium",
       "cni-simple-bridge",
       "commander",
       "commander-agent",
