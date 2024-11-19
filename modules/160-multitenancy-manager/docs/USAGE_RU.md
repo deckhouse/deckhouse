@@ -14,7 +14,7 @@ Deckhouse Kubernetes Platform включает следующий набор ш�
   * выбор профиля безопасности;
   * настройка администраторов проекта.
   
-  Описание шаблона [в Github](https://github.com/deckhouse/deckhouse/blob/fb24949054e85c1aad0b63a2d0790eb1112f3334/ee/modules/160-multitenancy-manager/images/multitenancy-manager/default/default.yaml#L2).
+  Описание шаблона [в GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/default/default.yaml#L2).
 
 - `secure` — включает все возможности шаблона `default`, а также дополнительные функции:
   * настройка допустимых для проекта UID/GID;
