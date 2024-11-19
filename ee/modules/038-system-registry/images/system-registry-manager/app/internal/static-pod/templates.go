@@ -13,9 +13,9 @@ var templatesFS embed.FS
 type templateName string
 
 const (
-	authTemplateName         templateName = "templates/auth_config/config.yaml.tpl"
-	distributionTemplateName templateName = "templates/distribution_config/config.yaml.tpl"
-	staticPodTemplateName    templateName = "templates/static_pods/system-registry.yaml.tpl"
+	authConfigTemplateName         templateName = "templates/auth/config.yaml.tpl"
+	distributionConfigTemplateName templateName = "templates/distribution/config.yaml.tpl"
+	registryStaticPodTemplateName  templateName = "templates/static_pods/system-registry.yaml.tpl"
 )
 
 func getTemplateContent(name templateName) ([]byte, error) {

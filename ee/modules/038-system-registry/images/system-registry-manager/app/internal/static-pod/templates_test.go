@@ -30,3 +30,27 @@ func Test_TemplatesExists(t *testing.T) {
 		t.Errorf("no templates found")
 	}
 }
+
+func Test_TemplatesLoading(t *testing.T) {
+	matrix := map[string]templateName{
+		"auth config":         authConfigTemplateName,
+		"distribution config": distributionConfigTemplateName,
+		"registry static pod": registryStaticPodTemplateName,
+	}
+
+	for k, tpl := range matrix {
+		buf, err := getTemplateContent(tpl)
+
+		if err != nil {
+			t.Errorf("Cannot load %v template: %v", k, err)
+		}
+
+		size := len(buf)
+
+		if size == 0 {
+			t.Errorf("Template %v content is empty!", k)
+		}
+
+		t.Logf("- %v template: { path: %v, size: %v }", k, tpl, size)
+	}
+}

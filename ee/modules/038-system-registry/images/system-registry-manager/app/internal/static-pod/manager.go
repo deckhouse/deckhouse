@@ -18,10 +18,10 @@ import (
 const (
 	listenAddr = "127.0.0.1:4576"
 
-	authConfigPath         = "/etc/kubernetes/system-registry/auth_config/config.yaml"
-	distributionConfigPath = "/etc/kubernetes/system-registry/distribution_config/config.yaml"
-	staticPodConfigPath    = "/etc/kubernetes/manifests/system-registry.yaml"
-	pkiConfigDirectoryPath = "/etc/kubernetes/system-registry/pki"
+	authConfigPath              = "/etc/kubernetes/system-registry/auth_config/config.yaml"
+	distributionConfigPath      = "/etc/kubernetes/system-registry/distribution_config/config.yaml"
+	registryStaticPodConfigPath = "/etc/kubernetes/manifests/system-registry.yaml"
+	pkiConfigDirectoryPath      = "/etc/kubernetes/system-registry/pki"
 
 	distributionConfiguration = "distributionConfiguration"
 	authConfiguration         = "authConfiguration"
@@ -121,21 +121,21 @@ func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Reques
 
 	// Process the templates with the given data and create the static pod and configuration files
 
-	changes[authConfiguration], err = data.processTemplate(authTemplateName, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
+	changes[authConfiguration], err = data.processTemplate(authConfigTemplateName, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
 	if err != nil {
 		log.Error("Error processing auth template", "error", err)
 		http.Error(w, "Error processing auth template", http.StatusInternalServerError)
 		return
 	}
 
-	changes[distributionConfiguration], err = data.processTemplate(distributionTemplateName, distributionConfigPath, &data.ConfigHashes.DistributionTemplateHash)
+	changes[distributionConfiguration], err = data.processTemplate(distributionConfigTemplateName, distributionConfigPath, &data.ConfigHashes.DistributionTemplateHash)
 	if err != nil {
 		log.Error("Error processing distribution template", "error", err)
 		http.Error(w, "Error processing distribution template", http.StatusInternalServerError)
 		return
 	}
 
-	changes[staticPodConfiguration], err = data.processTemplate(staticPodTemplateName, staticPodConfigPath, nil)
+	changes[staticPodConfiguration], err = data.processTemplate(registryStaticPodTemplateName, registryStaticPodConfigPath, nil)
 	if err != nil {
 		log.Error("Error processing static pod template", "error", err)
 		http.Error(w, "Error processing static pod template", http.StatusInternalServerError)
@@ -177,7 +177,7 @@ func (s *apiServer) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Reques
 	changes := make(map[string]bool)
 
 	// Delete the static pod file
-	changes[staticPodConfiguration], err = deleteFile(staticPodConfigPath)
+	changes[staticPodConfiguration], err = deleteFile(registryStaticPodConfigPath)
 	if err != nil {
 		log.Error("Error deleting static pod file", "error", err)
 		http.Error(w, "Error deleting static pod file", http.StatusInternalServerError)
