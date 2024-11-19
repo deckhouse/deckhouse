@@ -33,7 +33,6 @@
       "istio",
       "keepalived",
       "l2-load-balancer",
-      "metallb",
       "metallb-crd",
       "monitoring-custom",
       "monitoring-custom",
