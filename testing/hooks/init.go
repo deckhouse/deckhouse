@@ -561,8 +561,25 @@ func (hec *HookExecutionConfig) KubeStateSet(newKubeState string) hookcontext.Ge
 				// defaulting reactor (an entity of fake k8s client, that resembles kind of middleware that is invoked for each defined action) is prepended for each custom resource defined
 				if fc, ok := hec.fakeCluster.Client.Dynamic().(*k8sdynamicfake.FakeDynamicClient); ok {
 					// prepending is required so that the defaulting reactor is executed before the default one
-					fc.PrependReactor("create", hec.fakeCluster.MustFindGVR(fmt.Sprintf("%s/%s", crd.Group, crd.Version), crd.Kind).Resource, func(action testing.Action) (bool, k8sruntime.Object, error) {
+					resourcePlural := hec.fakeCluster.MustFindGVR(fmt.Sprintf("%s/%s", crd.Group, crd.Version), crd.Kind).Resource
+					fc.PrependReactor("create", resourcePlural, func(action testing.Action) (bool, k8sruntime.Object, error) {
 						obj := action.(testing.CreateAction).GetObject()
+						if versions, ok := hec.CRDSchemas[obj.GetObjectKind().GroupVersionKind().Kind]; ok {
+							if sc, ok := versions[obj.GetObjectKind().GroupVersionKind().Version]; ok {
+								unstructuredObj, err := k8sruntime.DefaultUnstructuredConverter.ToUnstructured(obj)
+								if err != nil {
+									panic(err)
+								}
+								// object defaulting
+								validation.ApplyDefaults(unstructuredObj, sc)
+							}
+						}
+						// returns false so as not to stop the ReactionChain (by default, the ReactionChain for each action contains a reactor that implements create/update/patch/etc actions
+						return false, nil, nil
+					})
+
+					fc.PrependReactor("update", resourcePlural, func(action testing.Action) (bool, k8sruntime.Object, error) {
+						obj := action.(testing.UpdateAction).GetObject()
 						if versions, ok := hec.CRDSchemas[obj.GetObjectKind().GroupVersionKind().Kind]; ok {
 							if sc, ok := versions[obj.GetObjectKind().GroupVersionKind().Version]; ok {
 								unstructuredObj, err := k8sruntime.DefaultUnstructuredConverter.ToUnstructured(obj)
