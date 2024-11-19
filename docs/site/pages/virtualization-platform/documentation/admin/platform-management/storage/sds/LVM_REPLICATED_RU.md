@@ -135,7 +135,7 @@ EOF
 
 Подробности о возможностях конфигурации ресурса LVMVolumeGroup описаны по [ссылке](todo,mc).
 
-Дождитесь, когда созданный ресурс LVMVolumeGroup перейдет в состояние `Operational`.
+Дождитесь, когда созданный ресурс LVMVolumeGroup перейдет в состояние `Ready`.
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
@@ -144,7 +144,7 @@ d8 k get lvg vg-on-worker-0 -w
 # vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
-Если ресурс перешел в состояние Operational, то это значит, что на узле worker-0
+Если ресурс перешел в состояние `Ready`, то это значит, что на узле worker-0
 из блочных устройств /dev/nvme1n1 и /dev/nvme0n1p6 была создана группа томов LVM с именем vg.
 
 Далее необходимо повторить создание ресурсов LVMVolumeGroup для оставшихся узлов (worker-1 и worker-2),
