@@ -272,6 +272,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 				r.log.Errorf("failed to set conlflict to the '%s' module: %v", module.Name, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
+			// fire alert at Conflict
 			r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_at_conflict", 1.0, map[string]string{
 				"moduleName": module.Name,
 			})
