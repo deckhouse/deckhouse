@@ -66,21 +66,6 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
-  initContainers:
-  - command:
-    - sh
-    - -c
-    - chown -vfR 64535:64535 /prometheus-db/
-    image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
-    imagePullPolicy: IfNotPresent
-    name: fix-permissions
-    securityContext:
-      runAsNonRoot: false
-      runAsUser: 0
-    volumeMounts:
-    - mountPath: /prometheus-db
-      name: prometheus-pp-db
-      subPath: prometheus-db
   containers:
   - name: prometheus
     startupProbe:
@@ -88,6 +73,13 @@ spec:
     envFrom:
       - configMapRef:
           name: prometheus-pp-envs
+    env:
+    - name: PROMETHEUS_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: prometheus-token
+          key: token
+          optional: false
   - name: kube-rbac-proxy
     {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
     image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -146,11 +138,6 @@ spec:
           topologyKey: kubernetes.io/hostname
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
-  externalLabels:
-{{- with .Values.prometheus.externalLabels }}
-    {{- . | toYaml | nindent 4 }}
-{{- end }}
-    prometheus: deckhouse
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""
   serviceAccountName: prometheus

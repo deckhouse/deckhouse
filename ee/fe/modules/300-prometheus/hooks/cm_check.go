@@ -40,11 +40,7 @@ func filterPrometheusConfigMap(obj *unstructured.Unstructured) (go_hook.FilterRe
 func handleConfigMaps(input *go_hook.HookInput) error {
 	prometheusConfigMapSnapshots := input.Snapshots["prometheus_config_map"]
 
-	if len(prometheusConfigMapSnapshots) == 0 {
-		input.Values.Set("prometheus.internal.prometheusPlusPlus.enabled", false)
-	} else {
-		input.Values.Set("prometheus.internal.prometheusPlusPlus.enabled", true)
-	}
+	input.Values.Set("prometheus.internal.prometheusPlusPlus.enabled", len(prometheusConfigMapSnapshots) > 0)
 
 	return nil
 }

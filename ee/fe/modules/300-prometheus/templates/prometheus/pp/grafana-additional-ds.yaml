@@ -12,7 +12,7 @@ spec:
     tlsSkipVerify: true
     timeInterval: 30s
   secureJsonData:
-    httpHeaderValue1: Bearer {{ .Values.prometheus.internal.prometheusPlusPlus.prometheusToken }} 
+    httpHeaderValue1: 'Bearer $PROMETHEUS_TOKEN' 
   type: prometheus
   url: https://prometheus-pp.d8-monitoring.svc.cluster.local:9090
 {{- end }}
