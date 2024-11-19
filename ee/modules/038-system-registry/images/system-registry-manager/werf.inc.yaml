@@ -1,4 +1,3 @@
-{{ $managerTemplatesRelPath := printf "%s/modules/038-%s/images/%s/templates" $.ModulePath $.ModuleName $.ImageName }}
 {{ $managerRelPath := printf "%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
 {{ $managerAbsPath := printf "/deckhouse/ee/modules/038-%s/images/%s/app" $.ModuleName $.ImageName }}
 ---
@@ -17,12 +16,7 @@ import:
     add: "/staticpod"
     to: /staticpod
     before: setup
-git:
-  - add: /{{ $managerTemplatesRelPath }}
-    to: /templates
-    stageDependencies:
-      install:
-        - '**/*'
+
 docker:
   ENTRYPOINT: ["/manager"]
 ---

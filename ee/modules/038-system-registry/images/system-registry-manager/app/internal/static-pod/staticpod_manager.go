@@ -18,13 +18,10 @@ import (
 const (
 	listenAddr = "127.0.0.1:4576"
 
-	authTemplatePath         = "/templates/auth_config/config.yaml.tpl"
-	distributionTemplatePath = "/templates/distribution_config/config.yaml.tpl"
-	staticPodTemplatePath    = "/templates/static_pods/system-registry.yaml.tpl"
-	authConfigPath           = "/etc/kubernetes/system-registry/auth_config/config.yaml"
-	distributionConfigPath   = "/etc/kubernetes/system-registry/distribution_config/config.yaml"
-	staticPodConfigPath      = "/etc/kubernetes/manifests/system-registry.yaml"
-	pkiConfigDirectoryPath   = "/etc/kubernetes/system-registry/pki"
+	authConfigPath         = "/etc/kubernetes/system-registry/auth_config/config.yaml"
+	distributionConfigPath = "/etc/kubernetes/system-registry/distribution_config/config.yaml"
+	staticPodConfigPath    = "/etc/kubernetes/manifests/system-registry.yaml"
+	pkiConfigDirectoryPath = "/etc/kubernetes/system-registry/pki"
 
 	distributionConfiguration = "distributionConfiguration"
 	authConfiguration         = "authConfiguration"
@@ -124,21 +121,21 @@ func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Reques
 
 	// Process the templates with the given data and create the static pod and configuration files
 
-	changes[authConfiguration], err = data.processTemplate(authTemplatePath, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
+	changes[authConfiguration], err = data.processTemplate(authTemplateName, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
 	if err != nil {
 		log.Error("Error processing auth template", "error", err)
 		http.Error(w, "Error processing auth template", http.StatusInternalServerError)
 		return
 	}
 
-	changes[distributionConfiguration], err = data.processTemplate(distributionTemplatePath, distributionConfigPath, &data.ConfigHashes.DistributionTemplateHash)
+	changes[distributionConfiguration], err = data.processTemplate(distributionTemplateName, distributionConfigPath, &data.ConfigHashes.DistributionTemplateHash)
 	if err != nil {
 		log.Error("Error processing distribution template", "error", err)
 		http.Error(w, "Error processing distribution template", http.StatusInternalServerError)
 		return
 	}
 
-	changes[staticPodConfiguration], err = data.processTemplate(staticPodTemplatePath, staticPodConfigPath, nil)
+	changes[staticPodConfiguration], err = data.processTemplate(staticPodTemplateName, staticPodConfigPath, nil)
 	if err != nil {
 		log.Error("Error processing static pod template", "error", err)
 		http.Error(w, "Error processing static pod template", http.StatusInternalServerError)

@@ -45,12 +45,11 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 #RUN GOARCH=amd64 go install github.com/go-delve/delve/cmd/dlv@latest
 #RUN mkdir -p /tmp-tmp/dlv && chmod -R 777 /tmp-tmp/dlv
 
-# Copy binary, templates and dlv into new container
+# Copy binary and dlv into new container
 #FROM --platform=linux/amd64 scratch
 FROM --platform=linux/amd64 ubuntu:22.04
 RUN apt-get -y update && apt-get -y install iproute2 curl vim
 ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager
-COPY $MANAGER_PATH_FROM/templates /templates
 COPY --from=builder /tmp-tmp /tmp
 COPY --from=builder /manager /manager
 COPY --from=builder /staticpod /staticpod

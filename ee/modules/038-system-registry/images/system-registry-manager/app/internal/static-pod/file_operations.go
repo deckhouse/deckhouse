@@ -89,17 +89,17 @@ type Proxy struct {
 }
 
 // processTemplate processes the given template file and saves the rendered result to the specified path
-func (config *EmbeddedRegistryConfig) processTemplate(templatePath, outputPath string, hashField *string) (bool, error) {
+func (config *EmbeddedRegistryConfig) processTemplate(name templateName, outputPath string, hashField *string) (bool, error) {
 	// Read the template file content
-	templateContent, err := readTemplate(templatePath)
+	templateBytes, err := getTemplateContent(name)
 	if err != nil {
-		return false, fmt.Errorf("failed to read template file %s: %v", templatePath, err)
+		return false, fmt.Errorf("failed to read template %s: %v", name, err)
 	}
 
 	// Render the template with the given configuration
-	renderedContent, err := renderTemplate(templateContent, config)
+	renderedContent, err := renderTemplate(string(templateBytes), config)
 	if err != nil {
-		return false, fmt.Errorf("failed to render template %s: %v", templatePath, err)
+		return false, fmt.Errorf("failed to render template %s: %v", name, err)
 	}
 
 	// Compute the hash of the rendered content
@@ -111,13 +111,9 @@ func (config *EmbeddedRegistryConfig) processTemplate(templatePath, outputPath s
 	}
 
 	// Compare the existing file's content with the new rendered content
-	isSame, err := compareFileHash(outputPath, renderedContent)
-	if err != nil {
+	if isSame, err := compareFileHash(outputPath, renderedContent); err != nil {
 		return false, fmt.Errorf("failed to compare file hash for %s: %v", outputPath, err)
-	}
-
-	// If the content is the same, no need to overwrite the file
-	if isSame {
+	} else if isSame {
 		return false, nil
 	}
 
@@ -129,42 +125,33 @@ func (config *EmbeddedRegistryConfig) processTemplate(templatePath, outputPath s
 	return true, nil
 }
 
-// ReadTemplate reads the template content from the given file path
-func readTemplate(path string) (string, error) {
-	contentBytes, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return string(contentBytes), nil
-}
-
 // RenderTemplate renders the provided template content with the given data
-func renderTemplate(templateContent string, data interface{}) (string, error) {
+func renderTemplate(templateContent string, data interface{}) ([]byte, error) {
 	funcMap := template.FuncMap{
 		"quote": func(s string) string { return strconv.Quote(s) },
 	}
 
 	tmpl, err := template.New("template").Funcs(funcMap).Parse(templateContent)
 	if err != nil {
-		return "", fmt.Errorf("error parsing template: %v", err)
+		return nil, fmt.Errorf("error parsing template: %v", err)
 	}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("error executing template: %v", err)
+		return nil, fmt.Errorf("error executing template: %v", err)
 	}
 
-	return buf.String(), nil
+	return buf.Bytes(), nil
 }
 
 // SaveToFile saves the rendered content to the specified file path
-func saveToFile(content string, path string) error {
+func saveToFile(content []byte, path string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("error creating directory %s: %v", dir, err)
 	}
 
-	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+	if err := os.WriteFile(path, content, 0600); err != nil {
 		return fmt.Errorf("error writing to file %s: %v", path, err)
 	}
 
@@ -310,13 +297,13 @@ func (config *EmbeddedRegistryConfig) fillHostIpAddress() (string, error) {
 }
 
 // computeHash computes the SHA-256 hash of the given content.
-func computeHash(content string) string {
-	hash := sha256.Sum256([]byte(content))
+func computeHash(content []byte) string {
+	hash := sha256.Sum256(content)
 	return hex.EncodeToString(hash[:])
 }
 
 // compareFileHash reads the file at the given path and compares its hash with the provided new content.
-func compareFileHash(path, newContent string) (bool, error) {
+func compareFileHash(path string, newContent []byte) (bool, error) {
 	currentContent, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		// File doesn't exist, so consider it different
@@ -326,7 +313,7 @@ func compareFileHash(path, newContent string) (bool, error) {
 	}
 
 	// Compute hashes for both the current file content and new content
-	currentHash := computeHash(string(currentContent))
+	currentHash := computeHash(currentContent)
 	newHash := computeHash(newContent)
 
 	// Return whether the hashes match
@@ -356,7 +343,7 @@ func (pki *Pki) savePkiFiles(basePath string, configHashes *ConfigHashes) (bool,
 		path := filepath.Join(basePath, filename)
 
 		// Process each template and check if it has changed
-		changed, err := processTemplateForFile(path, fileData.content, fileData.hashField)
+		changed, err := processTemplateForFile(path, []byte(fileData.content), fileData.hashField)
 		if err != nil {
 			return false, fmt.Errorf("failed to process PKI file %s: %v", path, err)
 		}
@@ -368,7 +355,7 @@ func (pki *Pki) savePkiFiles(basePath string, configHashes *ConfigHashes) (bool,
 }
 
 // processTemplateForFile processes the content, compares it with the existing file, and updates the hash field
-func processTemplateForFile(outputPath, content string, hashField *string) (bool, error) {
+func processTemplateForFile(outputPath string, content []byte, hashField *string) (bool, error) {
 	// Compute the hash of the new content
 	hash := computeHash(content)
 
