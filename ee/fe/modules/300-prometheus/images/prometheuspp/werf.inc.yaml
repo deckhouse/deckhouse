@@ -27,7 +27,7 @@ git:
 shell:
   install:
   - apk update && apk add --no-cache gcc g++ nodejs npm
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 PROMETHEUS_DEPS_VERSION=v2.53.2 PROMETHEUS_VERSION=v2.53.2-0.0.1
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 PROMETHEUS_DEPS_VERSION=v2.53.2 PROMETHEUS_VERSION=v2.53.2-0.0.2
   - git clone -b "${PROMETHEUS_DEPS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus-deps
   - mkdir /prometheus && cd /prometheus
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.OBSERVABILITY_SOURCE_REPO }}/prometheus-plus-plus prometheus
