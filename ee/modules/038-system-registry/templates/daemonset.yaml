@@ -134,7 +134,7 @@ spec:
                   apiVersion: v1
                   resource: daemonset
                   subresource: prometheus-metrics
-                  name: system-registry-manager-metrics
+                  name: system-registry-manager
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
