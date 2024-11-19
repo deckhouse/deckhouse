@@ -1,0 +1,12 @@
+positive:
+  configValues:
+  - {}
+  values:
+    keepalived:
+      internal:
+        instances: {}
+negative:
+  configValues:
+  - {somethingInConfig: yes}
+  values:
+  - {somethingInConfig: yes}
