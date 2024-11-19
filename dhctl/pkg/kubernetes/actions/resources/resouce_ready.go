@@ -41,7 +41,7 @@ type resourceReadinessChecker struct {
 // kind should be in lower case!
 var kindsToAttempts = map[string]int{
 	// in some cases deckhouse controller doesn't have time for set status field, and we have Ready nodegroup whe it is not Ready
-	"nodegroup": 3,
+	"nodegroup": 5,
 }
 
 func (c *resourceReadinessChecker) IsReady() (bool, error) {
