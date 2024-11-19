@@ -6,7 +6,7 @@ lang: ru
 
 Для удаления платформы нужно выполнить несколько шагов:
 
-1. Удалите из кластера все дополнительные узлы:
+1. Удалите из кластера все узлы кроме master-узлов:
 
     1.1. Удалите узел из кластера Kubernetes:
 
@@ -27,17 +27,17 @@ lang: ru
    d8 k get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
    ```
 
-3. Запустите инсталлятор Deckhouse:
+3. Запустите инсталлятор платформы:
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
-     registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+     registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL> bash
    ```
 
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
-   - `<DECKHOUSE_REVISION>` — [редакция платформы](../editions.html), например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д;
-   - `<RELEASE_CHANNEL>` — [канал обновлений](../update_channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`:
+   - `<REVISION>` — [редакция платформы](../editions.html), например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д;
+   - `<RELEASE_CHANNEL>` — [канал обновлений](../update_channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`, указанным при [установке платформы](../install/steps/install.html):
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
      - `early-access` — для канала обновлений *Early Access*;
@@ -65,4 +65,4 @@ lang: ru
    - `<USER>` — пользователь удалённой машины, из-под которого производилась установка;
    - `<MASTER_IP>` — IP-адрес master-узла кластера.
 
-Инсталлятор подключится к master-узлу и удалит на нём все компоненты Deckhouse и кластера Kubernetes.
+Инсталлятор подключится к master-узлу и удалит на нём все компоненты платформы и кластера Kubernetes.
