@@ -1,0 +1,8 @@
+{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+  {{- if or (eq $ng.nodeType "CloudEphemeral") (eq $ng.nodeType "Cloud") }}
+  {{- else }}
+    {{- if hasKey $ng "staticInstances" }}
+      {{- include "node_group_static_or_hybrid_machine_template" (list $ $ng) }}
+    {{- end }}
+  {{- end }}
+{{- end }}
