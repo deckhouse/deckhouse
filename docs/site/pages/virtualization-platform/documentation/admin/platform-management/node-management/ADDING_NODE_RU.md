@@ -156,6 +156,8 @@ lang: ru
 
 ### С помощью Cluster API Provider Static и label selector
 
+<span id="caps-with-label-selector"></span>
+
 Чтобы подключить разные StaticInstance в разные NodeGroup можно использовать label selector, указываемый в NodeGroup и в метаданных StaticInstance.
 
 Для примера разберём задачу распределения 3 статических узлов по 2 NodeGroup: 1 узел добавим в группу worker и 2 узла в группу front.
