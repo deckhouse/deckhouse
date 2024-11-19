@@ -1,10 +1,8 @@
 ---
-title: "Обновление платформы"
+title: "Ручное подтверждение обновлений"
 permalink: ru/virtualization-platform/documentation/admin/update/manual-update-mode.html
 lang: ru
 ---
-
-### Ручное подтверждение обновлений
 
 При необходимости возможно включить ручное подтверждение обновлений. Сделать это можно следующим образом:
 
@@ -26,7 +24,7 @@ spec:
 Пример подтверждения обновления на версию `v1.43.2`:
 
 ```shell
-kubectl patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
+d8 k patch DeckhouseRelease v1.43.2 --type=merge -p='{"approved": true}'
 ```
 
 ### Ручное подтверждение потенциально опасных (disruptive) обновлений
@@ -51,5 +49,5 @@ spec:
 Пример подтверждения минорного потенциально опасного обновления платформы `v1.36.4`:
 
 ```shell
-kubectl annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
+d8 k annotate DeckhouseRelease v1.36.4 release.deckhouse.io/disruption-approved=true
 ```

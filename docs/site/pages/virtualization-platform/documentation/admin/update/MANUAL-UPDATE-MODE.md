@@ -1,5 +1,5 @@
 ---
-title: "Platform update"
+title: "Manual update mode"
 permalink: en/virtualization-platform/documentation/admin/update/manual-update-mode.html
 ---
 
