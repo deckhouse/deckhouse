@@ -7,6 +7,12 @@
     "path": "modules/istio/",
     "edition": "ce"
   },
+  "metallb": {
+    "path": "modules/metallb/",
+    "editionRestrictions": ["se", "se-plus", "cse-lite"],
+    "editionRestrictionsComment": {"all": {"ru": "Ограничение на работу с BGP", "en": "Restriction on working with BGP"}},
+    "edition": "ee"
+  },
   "cni-cilium": {
     "path": "modules/cni-cilium/",
     "editionFullyAvailable": ["se-plus"],

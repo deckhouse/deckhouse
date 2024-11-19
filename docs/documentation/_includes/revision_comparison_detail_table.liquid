@@ -108,8 +108,15 @@
                {%- if module[1].editionFullyAvailable contains currentEdition %}
                   <img src="{{ supported_img_url }}">
                {%- elsif module[1].editionRestrictions contains currentEdition %}
+                  {%- assign restrictionComment = site.data.i18n.comparison['module_has_restions'][page.lang] %}
+                  {%- if module[1].editionRestrictionsComment["all"] %}
+                     {%- assign restrictionComment = module[1].editionRestrictionsComment["all"][page.lang] %}
+                  {%- endif %}
+                  {%- if module[1].editionRestrictionsComment[currentEdition] %}
+                     {%- assign restrictionComment = module[1].editionRestrictionsComment[currentEdition][page.lang] %}
+                  {%- endif %}
                   <span class="table__asterisk"><img src="{{ partially_supported_img_url }}"
-                                                    data-tippy-content="{{ site.data.i18n.comparison['module_has_restions'][page.lang] }}"></span>
+                                                    data-tippy-content="{{ restrictionComment }}"></span>
                {%- elsif module[1].parameters-ee and (effectiveParametersWeight < editionsWeight['ee']) %}
                  {%- assign parametersList = '' %}
                  {%- for parameter in module[1].parameters-ee %}
