@@ -1,4 +1,8 @@
 {
+  "commander-agent": {
+    "path": "",
+    "edition": "ce"
+  },
   "istio": {
     "path": "modules/istio/",
     "edition": "ce"
