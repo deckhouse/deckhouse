@@ -144,13 +144,6 @@ func (c *Creator) createAll() error {
 		}
 	}
 
-	for _, task := range c.mcTasks {
-		err = c.runSingleMCTask(task)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -228,6 +221,20 @@ func (c *Creator) TryToCreate() error {
 			gvks[key] = struct{}{}
 			resourcesToCreate = append(resourcesToCreate, key)
 		}
+	}
+
+	for _, task := range c.mcTasks {
+		err := c.runSingleMCTask(task)
+		if err != nil {
+			return err
+		}
+	}
+
+	// we do not want to support same creation logic for module config tasks as for resources
+	// if task was failed we return error.
+	// thus, all tasks were done here, just remove tasks for prevent multiple applying
+	if len(c.mcTasks) > 0 {
+		c.mcTasks = make([]actions.ModuleConfigTask, 0)
 	}
 
 	if len(c.resources) > 0 {
