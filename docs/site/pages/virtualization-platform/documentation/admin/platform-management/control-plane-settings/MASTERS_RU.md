@@ -13,7 +13,7 @@ lang: "ru"
 Перед добавлением следующего узла дождитесь статуса `Ready` для всех master-узлов:
 
 ```shell
-kubectl get no -l node-role.kubernetes.io/control-plane=
+d8 k get no -l node-role.kubernetes.io/control-plane=
 NAME       STATUS   ROLES                  AGE    VERSION
 master-0   Ready    control-plane,master   276d   v1.28.15
 master-1   Ready    control-plane,master   247d   v1.28.15
@@ -31,7 +31,7 @@ master-2   Ready    control-plane,master   247d   v1.28.15
 1. Убедитесь, что узел пропал из списка членов кластера etcd:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -48,3 +48,13 @@ master-2   Ready    control-plane,master   247d   v1.28.15
    rm -rf /etc/kubernetes/pki/{ca.key,apiserver*,etcd/,front-proxy*,sa.*}
    rm -rf /var/lib/etcd/member/
    ```
+
+1. Убедитесь, что число узлов в NodeGroup `master` уменьшилось
+
+Если было 3 узла, то должно стать 2:
+
+```shell
+d8 k get ng master
+NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE    SYNCED
+master   Static   2       2       2                                                               280d   True
+```

@@ -243,7 +243,7 @@ lang: ru
 1. Результат
 
   ```shell
-  kubectl get ng
+  d8 k get ng
   NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE    SYNCED
   master   Static   1       1       1                                                               1h     True
   front    Static   2       2       2                                                               1h     True

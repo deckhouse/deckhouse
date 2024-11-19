@@ -109,7 +109,7 @@ crictl stopp $(crictl pods --name=kube-apiserver -q)
 После перезапуска будет достаточно времени, чтобы удалить ошибочный Secret:
 
 ```bash
-kubectl -n kube-system delete secret audit-policy
+d8 k -n kube-system delete secret audit-policy
 ```
 
 
@@ -157,7 +157,7 @@ d8 k patch mc control-plane-manager --type=strategic -p '{"settings":{"apiserver
 После рестарта kube-apiserver, в его логе можно увидеть события аудита:
 
 ```shell
-kubectl -n kube-system logs $(kubectl -n kube-system get po -l component=kube-apiserver -oname | head -n1)
+d8 k -n kube-system logs $(d8 k -n kube-system get po -l component=kube-apiserver -oname | head -n1)
 
 {"kind":"Event","apiVersion":"audit.k8s.io/v1","level":"Metadata","auditID":"38a26239-7f3e-402f-8c56-2fb57a3fe49d","stage":"ResponseComplete","requestURI": ...
 ```
