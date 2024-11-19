@@ -36,7 +36,7 @@ lang: ru
 
 ## Настройки NodeGroupConfiguration
 
-Ресурс `NodeGroupConfiguration` позволяет указывать [приоритет](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+Ресурс NodeGroupConfiguration позволяет указывать [приоритет](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
 
 Код скрипта указывается в параметре [content](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-content) ресурса. При создании скрипта на узле содержимое параметра `content` проходит через шаблонизатор [Go Template](https://pkg.go.dev/text/template), который позволят встроить дополнительный уровень логики при генерации скрипта. При прохождении через шаблонизатор становится доступным контекст с набором динамических переменных.
 

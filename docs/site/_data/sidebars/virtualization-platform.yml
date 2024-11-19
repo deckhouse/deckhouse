@@ -236,7 +236,7 @@ entries:
             - title:
                 en: Manual update mode
                 ru: Ручной режим обновления
-              url: /virtualization-platform/documentation/admin/update/manual-mode-update.html
+              url: /virtualization-platform/documentation/admin/update/manual-update-mode.html
         - title:
             en: Removing the platform
             ru: Удаление платформы

@@ -1,6 +1,6 @@
 ---
 title: "Аудит"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/control-plane-settings/auditing.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/control-plane-settings/audit.html
 lang: "ru"
 ---
 

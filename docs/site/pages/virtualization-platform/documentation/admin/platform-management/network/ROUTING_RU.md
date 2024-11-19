@@ -4,7 +4,9 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-{% alert level="warning" %} Функция доступна только в Enterprise Edition {% endalert %}
+{% alert level="warning" %}
+Функция недоступна в Community Edition
+{% endalert %}
 
 Для управления статичными маршрутами и правилами ip rule на узлах кластера можно использовать возможности модуля static-routing-manager.
 

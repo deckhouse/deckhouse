@@ -10,7 +10,7 @@ lang: ru
 
 За настройки containerd отвечает встроенный скрипт [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/node-group/032_configure_containerd.sh.tpl) - он производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также **перезапуск** сервиса.
 
-При разработке `NodeGroupConfiguration` следует учитывать следующее:
+При разработке NodeGroupConfiguration следует учитывать следующее:
 1. Директория `/etc/containerd/conf.d/` не создается автоматически
 2. Создавать файлы в ней следует до запуска `032_configure_containerd.sh`, т.е. с приоритетом менее `32`.
 
@@ -91,7 +91,7 @@ spec:
 Помимо containerd сертификат можно [одновременно добавить](examples.html#добавление-сертификата-в-ос-и-containerd) и в ОС.
 {% endalert %}
 
-Пример `NodeGroupConfiguration` для настройки сертификата для дополнительного registry:
+Пример NodeGroupConfiguration для настройки сертификата для дополнительного registry:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
