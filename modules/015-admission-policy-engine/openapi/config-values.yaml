@@ -94,3 +94,10 @@ properties:
               type: string
             namespace:
               type: string
+      insecureDbRegistry:
+        type: boolean
+        default: false
+        description: |
+          Allows Trivy provider to download vulnerability databases using insecure HTTPS connections (not passed TLS certificate verification) or HTTP connections.
+        x-doc-default: false
+        x-examples: [true, false]
