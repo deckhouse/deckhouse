@@ -1,5 +1,7 @@
 FROM --platform=$BUILDPLATFORM golang:1.22-bookworm AS builder
 
+ARG BUILD_TAGS=log_plain
+
 ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager/app \
     MANAGER_PATH_TO=/deckhouse/ee/modules/038-system-registry/images/system-registry-manager/app \
     GO_LIB_PATH_FROM=./go_lib/system-registry-manager \
@@ -31,13 +33,13 @@ COPY $GO_LIB_PATH_FROM/ $GO_LIB_PATH_TO/
 ARG TARGETOS TARGETARCH
 RUN --mount=type=cache,target=/root/.cache/go-build \
     cd $MANAGER_PATH_TO && \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -gcflags "all=-N -l" -o /manager ./cmd/manager && \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -gcflags "all=-N -l" -tags "${BUILD_TAGS}" -o /manager ./cmd/manager && \
     chown 64535:64535 /manager && \
     chmod 0755 /manager
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
     cd $MANAGER_PATH_TO && \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -gcflags "all=-N -l" -o /staticpod ./cmd/staticpod && \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -gcflags "all=-N -l" -tags "${BUILD_TAGS}" -o /staticpod ./cmd/staticpod && \
     chown 64535:64535 /staticpod && \
     chmod 0755 /staticpod
 

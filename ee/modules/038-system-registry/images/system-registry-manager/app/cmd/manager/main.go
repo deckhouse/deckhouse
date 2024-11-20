@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -23,16 +24,19 @@ import (
 
 	"embeded-registry-manager/internal/controllers/registry_controller"
 	httpclient "embeded-registry-manager/internal/utils/http_client"
+	"embeded-registry-manager/internal/utils/k8s"
 )
 
 const (
 	metricsBindAddressPort = "127.0.0.1:8081"
 	healthListenAddr       = ":8097"
+	namespace              = k8s.RegistryNamespace
 )
 
-func main() {
-	ctrl.SetLogger(logr.FromSlogHandler(dlog.Default().Handler()))
+var logHandler slog.Handler = dlog.Default().Handler()
 
+func main() {
+	ctrl.SetLogger(logr.FromSlogHandler(logHandler))
 	log := ctrl.Log.WithValues("component", "main")
 
 	log.Info("Starting embedded registry manager")
@@ -122,7 +126,14 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 		return fmt.Errorf("unable to create controller: %w", err)
 	}
 
-	nodeRecociler := registry_controller.NodeReconciler{}
+	nodeRecociler := registry_controller.NodeReconciler{
+		Client: mgr.GetClient(),
+		Log: mgr.GetLogger().
+			WithName("NodeReconciler").
+			WithValues("component", "NodeReconciler"),
+		Namespace: namespace,
+	}
+
 	if err := nodeRecociler.SetupWithManager(ctx, mgr); err != nil {
 		return fmt.Errorf("unable to create node reconciler: %w", err)
 	}

@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,13 +21,18 @@ import (
 	staticpodmanager "embeded-registry-manager/internal/static-pod"
 )
 
-var (
-	shutdownSignals  = []os.Signal{os.Interrupt, syscall.SIGTERM}
+const (
 	healthListenAddr = ":8097"
 )
 
+var (
+	shutdownSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
+
+	logHandler slog.Handler = dlog.Default().Handler()
+)
+
 func main() {
-	log := dlog.Default().With("component", "main")
+	log := slog.New(logHandler).With("component", "main")
 
 	log.Info("Starting static pod manager")
 	defer log.Info("Stopped")
