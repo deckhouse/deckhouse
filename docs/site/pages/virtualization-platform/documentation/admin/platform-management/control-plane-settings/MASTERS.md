@@ -1,4 +1,4 @@
 ---
-title: "Master nodes operations"
-permalink: en/virtualization-platform/documentation/admin/platform-management/contoler-plane-settings/masters.html
+title: "Master nodes"
+permalink: en/virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html
 ---

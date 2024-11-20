@@ -124,7 +124,7 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса `LVMVolumeGroup` описаны по [ссылке](todo,mc).
+Подробности о возможностях конфигурации ресурса LVMVolumeGroup описаны по [ссылке](todo,mc).
 
 Дождитесь, когда созданный ресурс `LVMVolumeGroup` перейдет в состояние Operational.
 
@@ -174,9 +174,9 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса `ReplicatedStoragePool` описаны по [ссылке](todo,mc).
+Подробности о возможностях конфигурации ресурса ReplicatedStoragePool описаны по [ссылке](todo,mc).
 
-Дождитесь, когда созданный ресурс `ReplicatedStoragePool` перейдет в состояние Completed:
+Дождитесь, когда созданный ресурс ReplicatedStoragePool перейдет в состояние Completed:
 
 ```shell
 d8 k get rsp data -w
@@ -227,9 +227,9 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса `ReplicatedStoragePool` описаны по [ссылке](todo,mc).
+Подробности о возможностях конфигурации ресурса ReplicatedStoragePool описаны по [ссылке](todo,mc).
 
-Дождитесь, когда созданный ресурс `ReplicatedStoragePool` перейдет в состояние Completed:
+Дождитесь, когда созданный ресурс ReplicatedStoragePool перейдет в состояние Completed:
 
 ```shell
 d8 k get rsp data -w
@@ -265,7 +265,7 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса `ReplicatedStorageClass` описаны по [ссылке](todo,mc).
+Подробности о возможностях конфигурации ресурса ReplicatedStorageClass описаны по [ссылке](todo,mc).
 
 Проверьте, что созданный ресурс `ReplicatedStorageClass` перешел в состояние `Created` и соответствующий StorageClass создался:
 

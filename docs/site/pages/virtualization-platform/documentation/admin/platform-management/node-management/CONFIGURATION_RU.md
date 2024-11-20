@@ -16,13 +16,13 @@ lang: ru
 - Обновление ядра ОС на конкретную версию.
 
   Примеры:
-  - [обновление ядра Debian](./configuration-os.html#для-дистрибутивов-основанных-на-debian);
+  - [обновление ядра Debian](./configuration-os.html#для-дистрибутивов-основанных-на-debian).
   - [обновление ядра CentOS](./configuration-os.html#для-дистрибутивов-основанных-на-centos).
 
 - Изменение параметров ОС.
 
   Примеры:
-  - [настройка параметра sysctl](./configuration-os.html#задание-параметра-sysctl);
+  - [настройка параметра sysctl](./configuration-os.html#задание-параметра-sysctl).
   - [добавление корневого сертификата](./configuration-os.html#добавление-registry-с-авторизацией).
 
 - Сбор информации на узле и выполнение других подобных действий.
@@ -30,12 +30,12 @@ lang: ru
 - Настройка containerd.
 
   Примеры:
-  - [настройка метрик](./configure-containerd.html#дополнительные-настройки-containerd);
-  - [добавление приватного registry](./configure-containerd.html#добавление-дополнительного-registry);
+  - [настройка метрик](./configure-containerd.html#дополнительные-настройки-containerd).
+  - [добавление приватного registry](./configure-containerd.html#добавление-дополнительного-registry).
 
 ## Настройки NodeGroupConfiguration
 
-Ресурс `NodeGroupConfiguration` позволяет указывать [приоритет](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+Ресурс NodeGroupConfiguration позволяет указывать [приоритет](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
 
 Код скрипта указывается в параметре [content](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-content) ресурса. При создании скрипта на узле содержимое параметра `content` проходит через шаблонизатор [Go Template](https://pkg.go.dev/text/template), который позволят встроить дополнительный уровень логики при генерации скрипта. При прохождении через шаблонизатор становится доступным контекст с набором динамических переменных.
 
@@ -160,9 +160,10 @@ journalctl -u bashible.service
 Проверить контрольную сумму можно следующей командой:
 
 ```bash
-kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
+d8 k -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
 ```  
 
+Сравнение контрольных сумм сервис совершает каждую минуту.
 Сравнение контрольных сумм сервис совершает каждую минуту.
 
 Контрольная сумма в кластере изменяется раз в 4 часа, тем самым повторно запуская скрипты на всех узлах.  

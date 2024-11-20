@@ -1,6 +1,7 @@
 ---
 title: "Custom Resources"
 permalink: en/virtualization-platform/reference/cr.html
+anchors_disabled: true
 ---
 
 {%- assign CRDs = site.data.schemas.virtualization-platform.crds | sort  %}

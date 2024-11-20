@@ -6,7 +6,7 @@ lang: ru
 
 ## Общие сведения
 
-Дополнительная настройка containerd возможна через создание конфигурационных файлов с помощью ресурса `NodeGroupConfiguration`.
+Дополнительная настройка containerd возможна через создание конфигурационных файлов с помощью ресурса NodeGroupConfiguration.
 
 За настройки containerd отвечает встроенный скрипт [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/node-group/032_configure_containerd.sh.tpl) — он производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также перезапуск сервиса.
 
@@ -21,24 +21,33 @@ lang: ru
 Добавление кастомных настроек вызывает перезапуск сервиса `containerd`.
 {% endalert %}
 
-Bashible на узлах объединяет конфигурацию containerd для Deckhouse с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
-
 {% alert level="warning" %}
 Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`, но при этом ответственность за их корректную работу ляжет на вас. Рекомендуется избегать внесения изменений, которые могут повлиять на master-узлы.
 {% endalert %}
+
+## Включение метрик для containerd
+
+Простейший пример добавления настроек `containerd` — включение метрик.
+
+Обратите внимание:
+1. Скрипт создаёт директорию с конфигурационными файлами.
+2. Скрипт создаёт файл в директории `/etc/containerd/conf.d`.
+3. Скрипт имеет приоритет 31 (`weight: 31`).
+4. Конфигурация на мастер-узлах не изменяется, только на узлах группы `worker`.
+5. Сбор метрик нужно будет конфигурировать отдельно, это только их включение.
+6. Скрипт использует конструкцию bashbooster [bb-sync-file](http://www.bashbooster.net/#sync) для синхронизации содержимого файла.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: containerd-option-config.sh
+  name: containerd-enable-metrics.sh
 spec:
   bundles:
     - '*'
   content: |
     mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/additional_option.toml - << EOF
-    oom_score = 500
+    bb-sync-file /etc/containerd/conf.d/metrics_settings.toml - << EOF
     [metrics]
     address = "127.0.0.1"
     grpc_histogram = true
@@ -48,9 +57,18 @@ spec:
   weight: 31
 ```
 
-## Добавление registry с авторизацией
+## Добавление приватного registry с авторизацией
 
-Приватный registry с авторизацией добавляется в раздел `plugins."io.containerd.grpc.v1.cri".registry]`:
+Для запуска собственных приложений может потребоваться приватный registry, доступ к которому может быть закрыт авторизацией. `containerd` позволяет задать настройки registry через  параметр `plugins."io.containerd.grpc.v1.cri".registry`.
+
+Данные для авторизации указываются в параметре `auth` в формате docker registry auth виде base64 строки. Строку можно получить такой командой:
+
+```shell
+d8 k create secret docker-registry my-secret --dry-run=client --docker-username=User --docker-password=password --docker-server=private.registry.example -o jsonpath="{ .data['\.dockerconfigjson'] }"
+eyJhdXRocyI6eyJwcml2YXRlLnJlZ2lzdHJ5LmV4YW1wbGUiOnsidXNlcm5hbWUiOiJVc2VyIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsImF1dGgiOiJWWE5sY2pwd1lYTnpkMjl5WkE9PSJ9fX0=
+```
+
+Ресурс NodeGroupConfiguration выглядит так:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -68,15 +86,10 @@ spec:
     bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
     [plugins]
       [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".registry]
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-              endpoint = ["https://registry-1.docker.io"]
-            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
-              endpoint = ["https://${REGISTRY_URL}"]
-          [plugins."io.containerd.grpc.v1.cri".registry.configs]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
-              auth = "AAAABBBCCCDDD=="
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
+          endpoint = ["https://${REGISTRY_URL}"]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
+          auth = "eyJhdXRocyI6eyJwcml2YXRlLnJlZ2lzdHJ5LmV4YW1wbGUiOnsidXNlcm5hbWUiOiJVc2VyIiwicGFzc3dvcmQiOiJwYXNzd29yZCIsImF1dGgiOiJWWE5sY2pwd1lYTnpkMjl5WkE9PSJ9fX0="
     EOF
   nodeGroups:
     - "*"
@@ -87,11 +100,18 @@ spec:
 
 <span id="ca-сертификат-для-дополнительного-registry"></span>
 
-{% alert level="info" %}
-Помимо containerd сертификат можно [одновременно добавить](examples.html#добавление-сертификата-в-ос-и-containerd) и в ОС.
-{% endalert %}
+Приватный registry может требовать корневого сертификата, его нужно добавить в директорию `/var/lib/containerd/certs` и указать в параметре tls в настройках containerd.
 
-Пример `NodeGroupConfiguration` для настройки сертификата для дополнительного registry:
+За основу такого скрипта можно взять рецепт по [добавлению корневого сертификата в ОС](os.hmtl#добавление-ca-сертификата). Обратите внимание на отличия:
+
+1. Значение приоритета 31;
+2. Корневой сертификат добавляется в директорию `/var/lib/containerd/certs`;
+3. Путь к сертификату добавляется в секцию настроек `plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls`.
+
+Скрипт использует конструкции bashbooster:
+
+- [bb-sync-file](http://www.bashbooster.net/#sync) для синхронизации содержимого файла.
+- [bb-tmp-file](http://www.bashbooster.net/#tmp) для создания временных файлов и их удаления после выполнения скрипта.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -142,17 +162,12 @@ spec:
     mkdir -p ${CERTS_FOLDER}
     mkdir -p /etc/containerd/conf.d
 
-    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
 
     CERT_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
     
     CONFIG_TMP_FILE="$( bb-tmp-file )"
     echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
-
-    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
-    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
-    ##  ${CERT_TMP_FILE}                          - Source file
 
     # Ensure CA certificate file in the CERTS_FOLDER.
     bb-sync-file \
@@ -162,14 +177,6 @@ spec:
     # Ensure additional containerd configuration file.
     bb-sync-file \
       "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
-      ${CONFIG_TMP_FILE} 
-
-    # No explicit restart required for the containerd service.
-    # 032_configure_containerd.sh will do it automatically later.
+      ${CONFIG_TMP_FILE}
 ```
 
-CA сертификат можно добавить одновременно в ОС и в containerd. Для этого нужно изменить CERTS_FOLDER на хранилище сертификатов в ОС и добавить обработчик события аналогично скрипту в разделе [Добавление корневого сертификата](./configure-os.html#добавление-ca-сертификата).
-
-TODO добавить про bb-tmp-file - оно само очищает директорию?
-
-TODO Можно добавить разбор, что это за сложный скрипт мы добавляем и как он устроен.

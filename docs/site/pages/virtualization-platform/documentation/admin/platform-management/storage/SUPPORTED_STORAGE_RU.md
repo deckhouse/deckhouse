@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-Для создания StorageClass'ов необходимо подключить одно или несколько хранилищ, которые обеспечат управление PersistentVolume.
+Для создания ресурсов StorageClass необходимо подключить одно или несколько хранилищ, которые обеспечат управление ресурсами PersistentVolume.
 
 Все поддерживаемые системы можно разделить на две группы:
 

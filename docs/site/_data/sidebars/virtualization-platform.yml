@@ -80,15 +80,15 @@ entries:
                       url: /virtualization-platform/documentation/admin/platform-management/node-management/configuration.html
                     - title:
                         en: OS configuration
-                        ru: Настройка OS
+                        ru: Настройка ОС
                       url: /virtualization-platform/documentation/admin/platform-management/node-management/os.html
                     - title:
                         en: Containerd configuration
                         ru: Настройка containerd
                       url: /virtualization-platform/documentation/admin/platform-management/node-management/containerd.html
             - title:
-                en: Control plane settings
-                ru: Настройка управляющего слоя
+                en: Control plane
+                ru: Управляющий слой
               folders:
                 - title:
                     en: Components
@@ -111,8 +111,8 @@ entries:
                         ru: Аудит
                       url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/audit.html
                 - title:
-                    en: Master nodes operations
-                    ru: Работа с master-узлами
+                    en: Master nodes
+                    ru: Мастер узлы
                   url: /virtualization-platform/documentation/admin/platform-management/control-plane-settings/masters.html
                 - title:
                     en: Components placement
@@ -207,10 +207,6 @@ entries:
                 ru: Разграничение доступа
               folders:
                 - title:
-                    en: User management
-                    ru: Управление пользователями
-                  url: /virtualization-platform/documentation/admin/platform-management/access-control/user-management.html
-                - title:
                     en: Role model
                     ru: Ролевая модель
                   url: /virtualization-platform/documentation/admin/platform-management/access-control/role-model.html
@@ -218,10 +214,6 @@ entries:
                     en: User management
                     ru: Управление пользователями
                   url: /virtualization-platform/documentation/admin/platform-management/access-control/user-management.html
-                - title:
-                    en: Role model
-                    ru: Ролевая модель
-                  url: /virtualization-platform/documentation/admin/platform-management/access-control/role-model.html
                 - title:
                     en: Projects
                     ru: Проекты
@@ -237,7 +229,7 @@ entries:
             - title:
                 en: Manual update mode
                 ru: Ручной режим обновления
-              url: /virtualization-platform/documentation/admin/update/manual-mode-update.html
+              url: /virtualization-platform/documentation/admin/update/manual-update-mode.html
         - title:
             en: Removing the platform
             ru: Удаление платформы

@@ -1,6 +1,6 @@
 ---
 title: "Работа с etcd"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/contoler-plane-settings/etcd.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html
 lang: "ru"
 ---
 
@@ -34,7 +34,7 @@ TODO где это запускать, на каждом master-узле или 
 set -e
 
 pod=etcd-`hostname`
-kubectl -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
+d8 k -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
 mv /var/lib/etcd/"${pod##*/}.snapshot" etcd-backup.snapshot && \
 cp -r /etc/kubernetes/ ./ && \
 tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
@@ -70,10 +70,12 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    Проверить версию etcd в кластере можно выполнив следующую команду:
 
    ```shell
-   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
    ```
 
 1. Остановите etcd.
+
+   Etcd запущен в виде статического пода, поэтому достаточно переместить файл манифеста:
 
    ```shell
    mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
@@ -119,7 +121,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Когда работа etcd будет восстановлена, удалите из кластера информацию об уже удаленных в п.1 master-узлах, воспользовавшись следующей командой (укажите название узла):
 
    ```shell
-   kubectl delete node <MASTER_NODE_I>
+   d8 k delete node <MASTER_NODE_I>
    ```
 
 1. Перезапустите все узлы кластера.
@@ -127,7 +129,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
 1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
@@ -230,19 +232,19 @@ kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 1. Скопируйте полученные описания объектов из пода на master-узел командой:
 
    ```shell
-   kubectl cp default/etcdrestore:/tmp/restored_yaml restored_yaml
+   d8 k cp default/etcdrestore:/tmp/restored_yaml restored_yaml
    ```
 
 1. Удалите из полученных описаний объектов информацию о времени создания, UID, status и прочие оперативные данные, после чего восстановите объекты командой:
 
    ```shell
-   kubectl create -f restored_yaml/deployments_infra-production_supercronic.yaml
+   d8 k create -f restored_yaml/deployments_infra-production_supercronic.yaml
    ```
 
 1. Под с временным экземпляром etcd можно удалить командой:
 
    ```shell
-   kubectl delete -f etcd.pod.yaml
+   d8 k delete -f etcd.pod.yaml
    ```
 
 ## Как получить список узлов кластера etcd
@@ -252,7 +254,7 @@ kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 Пример:
 
 ```shell
-kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ member list -w table
@@ -269,7 +271,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 Пример скрипта, который автоматически передает все адреса узлов control-plane:
 
 ```shell
-MASTER_NODE_IPS=($(kubectl get nodes -l \
+MASTER_NODE_IPS=($(d8 k get nodes -l \
 node-role.kubernetes.io/control-plane="" \
 -o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
 --no-headers))
@@ -277,7 +279,7 @@ unset ENDPOINTS_STRING
 for master_node_ip in ${MASTER_NODE_IPS[@]}
 do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
 done
-kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod \
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod \
 -l component=etcd,tier=control-plane -o name | head -n1) \
 -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
 --key /etc/kubernetes/pki/etcd/ca.key \
@@ -323,13 +325,13 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
    mv /var/lib/etcdtest /var/lib/etcd
    ```
 
-1. Найдите контейнеры `etcd` и `api-server`:
+1. Найдите контейнеры `etcd` и `kube-apiserver`:
 
    ```shell
-   crictl ps -a | egrep "etcd|apiserver"
+   crictl ps -a --name "^etcd|^kube-apiserver"
    ```
 
-1. Удалите найденные контейнеры `etcd` и `api-server`:
+1. Удалите найденные контейнеры `etcd` и `kube-apiserver`:
 
    ```shell
    crictl rm <CONTAINER-ID>

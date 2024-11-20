@@ -8,7 +8,7 @@ lang: ru
 
 ## Включение модуля
 
-Чтобы включить модуль csi-ceph, примените следующий ресурс `ModuleConfig`:
+Чтобы включить модуль csi-ceph, примените следующий ресурс ModuleConfig:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -127,4 +127,5 @@ d8 k get sc
 ```
 
 Если StorageClass'ы появились, значит настройка модуля csi-ceph завершена.
+Теперь пользователи могут создавать PersistentVolume, указывая созданные StorageClass`ы.
 Теперь пользователи могут создавать PersistentVolume, указывая созданные StorageClass`ы.

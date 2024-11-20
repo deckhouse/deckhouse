@@ -2,7 +2,6 @@
 title: Управление control plane
 permalink: ru/virtualization-platform/documentation/admin/platform-management/control-plane-settings/about.html
 lang: ru
-description: Deckhouse управляет компонентами control plane Kubernetes — сертификатами, манифестами, версиями. Управляет конфигурацией etcd-кластера и следит за актуальностью конфигурации для kubectl.
 ---
 
 Управление компонентами control plane кластера осуществляется с помощью модуля `control-plane-manager`, который запускается на всех master-узлах кластера (узлы с меткой `node-role.kubernetes.io/control-plane: ""`).
@@ -75,7 +74,7 @@ description: Deckhouse управляет компонентами control plane
 Если указанная для обновления версия (параметр [kubernetesVersion](../../installing/configuration.html#clusterconfiguration-kubernetesversion)) не соответствует текущей версии control plane в кластере, запускается умная стратегия изменения версий компонентов:
 
 - Общие замечания:
-  - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NogeGroup узлы обновляются последовательно, по одному.
+  - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NodeGroup узлы обновляются последовательно, по одному.
 - При upgrade:
   - Обновление происходит **последовательными этапами**, по одной минорной версии: 1.26 -> 1.27, 1.27 -> 1.28, 1.28 -> 1.29.
   - На каждом этапе сначала обновляется версия control plane, затем происходит обновление kubelet на узлах кластера.

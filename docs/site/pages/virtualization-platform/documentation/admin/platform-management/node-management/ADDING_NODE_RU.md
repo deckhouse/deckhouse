@@ -21,7 +21,7 @@ lang: ru
 
    ```shell
    NODE_GROUP=worker
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
 1. Выполните предварительную настройку нового узла в соответствии с особенностями вашего окружения:
@@ -40,78 +40,82 @@ lang: ru
 
 Пример добавления статического узла в кластер с помощью [Cluster API Provider Static (CAPS)](./#cluster-api-provider-static):
 
-1. Подготовьте необходимые ресурсы.
+1. Выделите сервер с установленной ОС, настройте сетевую связанность и т. п., при необходимости установите специфические пакеты ОС и добавьте точки монтирования, которые потребуются на узле.
 
 * Выделите сервер (или виртуальную машину), настройте сетевую связанность, при необходимости установите специфические пакеты ОС и добавьте точки монтирования которые потребуются на узле.
 * Создайте пользователя (в примере — `caps`) с возможностью выполнять `sudo`, выполнив на сервере следующую команду:
 
-  ```shell
-  useradd -m -s /bin/bash caps 
-  usermod -aG sudo caps
-  ```
+    ```shell
+    useradd -m -s /bin/bash caps 
+    usermod -aG sudo caps
+    ```
 
 * Разрешите пользователю выполнять команды через `sudo` без пароля. Для этого на сервере внесите следующую строку в конфигурацию `sudo` (отредактировав файл `/etc/sudoers`, выполнив команду `sudo visudo` или другим способом):
 
-  ```text
-  caps ALL=(ALL) NOPASSWD: ALL
-  ```
+    ```text
+    caps ALL=(ALL) NOPASSWD: ALL
+    ```
 
 * Сгенерируйте на сервере пару SSH-ключей с пустой парольной фразой:
 
-  ```shell
-  ssh-keygen -t rsa -f caps-id -C "" -N ""
-  ```
+    ```shell
+    ssh-keygen -t rsa -f caps-id -C "" -N ""
+    ```
 
   Публичный и приватный ключи пользователя `caps` будут сохранены в файлах `caps-id.pub` и `caps-id` в текущей директории на сервере.
 
 * Добавьте полученный публичный ключ в файл `/home/caps/.ssh/authorized_keys` пользователя `caps`, выполнив в директории с ключами на сервере следующие команды:
 
-  ```shell
-  mkdir -p /home/caps/.ssh 
-  cat caps-id.pub >> /home/caps/.ssh/authorized_keys 
-  chmod 700 /home/caps/.ssh 
-  chmod 600 /home/caps/.ssh/authorized_keys
-  chown -R caps:caps /home/caps/
-  ```
+    ```shell
+    mkdir -p /home/caps/.ssh 
+    cat caps-id.pub >> /home/caps/.ssh/authorized_keys 
+    chmod 700 /home/caps/.ssh 
+    chmod 600 /home/caps/.ssh/authorized_keys
+    chown -R caps:caps /home/caps/
+    ```
 
-В операционных системах семейства Astra Linux, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
+  * В операционных системах семейства Astra Linux, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
 
 ```shell
 pdpl-user -i 63 caps
 ```
 
-1. Создайте в кластере ресурс [SSHCredentials](../../../reference/cr.html#sshcredentials).
+1. Создайте в кластере ресурс SSHCredentials.
+
+   * Для доступа к добавляемому серверу компоненту CAPS необходим приватный ключ сервисного пользователя `caps`. Ключ в формате base64 добавляется в ресурс SSHCredentials.
 
    В директории с ключами пользователя на сервере выполните следующую команду для получения закрытого ключа в формате Base64:
 
+      ```shell
+      base64 -w0 caps-id
+      ```
+
+   * На любом компьютере, настроенным на управление кластером, создайте переменную окружения с приватным ключом в формате Base64, полученным на предыдущем шаге (в начале команды добавьте пробел, чтобы ключ не сохранился в истории команд):
+
+     ```shell
+      CAPS_PRIVATE_KEY_BASE64=<ЗАКРЫТЫЙ_КЛЮЧ_В_BASE64>
+     ```
+
+   * Создайте ресурс SSHCredentials с именем сервисного пользователя и его приватным ключом:
+
+     ```shell
+     d8 k create -f - <<EOF
+     apiVersion: deckhouse.io/v1alpha1
+     kind: SSHCredentials
+     metadata:
+        name: static-0-access
+     spec:
+       user: caps
+       privateSSHKey: "${CAPS_PRIVATE_KEY_BASE64}"
+     EOF
+     ```
+
+1. Создайте в кластере ресурс StaticInstance
+
+  Ресурс StaticInstance определяет IP-адрес сервера статического узла и данные для доступа к серверу:
+
    ```shell
-   base64 -w0 caps-id
-   ```
-
-   На любом компьютере с `kubectl`, настроенным на управление кластером, создайте переменную окружения со значением закрытого ключа созданного пользователя в Base64, полученным на предыдущем шаге:
-
-   ```shell
-    CAPS_PRIVATE_KEY_BASE64=<ЗАКРЫТЫЙ_КЛЮЧ_В_BASE64>
-   ```
-
-   Выполните следующую команду, для создания в кластере ресурса `SSHCredentials` (здесь и далее также используйте `kubectl`, настроенный на управление кластером):
-
-   ```shell
-   kubectl create -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: SSHCredentials
-   metadata:
-     name: credentials
-   spec:
-     user: caps
-     privateSSHKey: "${CAPS_PRIVATE_KEY_BASE64}"
-   EOF
-   ```
-
-1. Создайте в кластере ресурс [StaticInstance](../../../reference/cr.html#staticinstance), указав IP-адрес сервера статического узла:
-
-   ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
    metadata:
@@ -121,14 +125,14 @@ pdpl-user -i 63 caps
      address: "<SERVER-IP>"
      credentialsRef:
        kind: SSHCredentials
-       name: credentials
+       name: static-0-access
    EOF
    ```
 
-1. Создайте в кластере ресурс [NodeGroup](../../../reference/cr.html#nodegroup):
+1. Создайте в кластере ресурс NodeGroup:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
@@ -140,18 +144,33 @@ pdpl-user -i 63 caps
    EOF
    ```
 
-TODO не хватает какой-то команды, чтобы проверить, что всё ок.
+1. Дождитесь Ready состояния
+
+В статусе NodeGroup в колонке Ready должен появиться 1 узел:
+
+   ```shell
+   d8 k get ng worker
+   NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE    SYNCED
+   worker   Static   1       1       1                                                                 15m   True
+   ```
+
 
 ### Добавление статического узла с помощью Cluster API Provider Static и фильтров в label selector
 
-Пример использования фильтров в [label selector](../../../reference/cr.html#nodegroup-v1-spec-staticinstances-labelselector) StaticInstance, для группировки статических узлов и использования их в разных NodeGroup. В примере используются две группы узлов (`front` и `worker`), предназначенные для разных задач, которые должны содержать разные по характеристикам узлы — два сервера для группы `front` и один для группы `worker`.
+<span id="caps-with-label-selector"></span>
 
-1. Подготовьте необходимые ресурсы (3 сервера или виртуальные машины) и создайте ресурс `SSHCredentials`, аналогично п.1 и п.2 [примера](#с-помощью-cluster-api-provider-static).
+Чтобы подключить разные StaticInstance в разные NodeGroup можно использовать label selector, указываемый в NodeGroup и в метаданных StaticInstance.
 
-1. Создайте в кластере два ресурса [NodeGroup](../../../reference/cr.html#nodegroup) (здесь и далее используйте `kubectl`, настроенный на управление кластером):
+Для примера разберём задачу распределения 3 статических узлов по 2 NodeGroup: 1 узел добавим в группу worker и 2 узла в группу front.
+
+1. Подготовьте необходимые ресурсы (3 сервера) и создайте для них ресурсы SSHCredentials, аналогично п.1 и п.2 [предыдущего примера](#с-помощью-cluster-api-provider-static).
+
+1. Создайте в кластере два ресурса NodeGroup:
+
+   Укажите labelSelector, чтобы в NodeGroup подключались только сервера, совпадающие с ним.
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
@@ -178,10 +197,12 @@ TODO не хватает какой-то команды, чтобы провер
    EOF
    ```
 
-1. Создайте в кластере ресурсы [StaticInstance](../../../reference/cr.html#staticinstance), указав актуальные IP-адреса серверов:
+1. Создайте в кластере ресурсы StaticInstance
+
+  Укажите актуальные IP-адреса серверов и задайте лейбл role в метаданных:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
    metadata:
@@ -192,7 +213,7 @@ TODO не хватает какой-то команды, чтобы провер
      address: "<SERVER-FRONT-IP1>"
      credentialsRef:
        kind: SSHCredentials
-       name: credentials
+       name: front-1-credentials
    ---
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
@@ -204,7 +225,7 @@ TODO не хватает какой-то команды, чтобы провер
      address: "<SERVER-FRONT-IP2>"
      credentialsRef:
        kind: SSHCredentials
-       name: credentials
+       name: front-2-credentials
    ---
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
@@ -216,22 +237,23 @@ TODO не хватает какой-то команды, чтобы провер
      address: "<SERVER-WORKER-IP>"
      credentialsRef:
        kind: SSHCredentials
-       name: credentials
+       name: worker-1-credentials
    EOF
    ```
 
+1. Результат
 
-
-
-
-
-{% raw %}
-
+  ```shell
+  d8 k get ng
+  NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE    SYNCED
+  master   Static   1       1       1                                                               1h     True
+  front    Static   2       2       2                                                               1h     True
+  ```
 
 
 ## Как понять, что что-то пошло не так?
 
-Если узел в NodeGroup не обновляется (значение `UPTODATE` при выполнении команды `kubectl get nodegroup` меньше значения `NODES`) или вы предполагаете какие-то другие проблемы, которые могут быть связаны с модулем `node-manager`, нужно посмотреть логи сервиса `bashible`. Сервис `bashible` запускается на каждом узле, управляемом модулем `node-manager`.
+Если узел в NodeGroup не обновляется (значение `UPTODATE` при выполнении команды `d8 k get nodegroup` меньше значения `NODES`) или вы предполагаете какие-то другие проблемы, которые могут быть связаны с модулем `node-manager`, нужно посмотреть логи сервиса `bashible`. Сервис `bashible` запускается на каждом узле, управляемом модулем `node-manager`.
 
 Чтобы посмотреть логи сервиса `bashible`, выполните на узле следующую команду:
 
@@ -263,15 +285,15 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 ### Как зачистить узел для последующего ввода в кластер?
 
-Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить `NodeGroup`, следуйте [этой инструкции](#как-изменить-nodegroup-у-статического-узла).
+Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить NodeGroup, следуйте [этой инструкции](#как-изменить-nodegroup-у-статического-узла).
 
-> **Внимание!** Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то предварительно выгоните ресурсы с узла и удалите узел LINSTOR/DRBD, следуя [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-выгнать-ресурсы-с-узла).
+> **Внимание!** Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то следуйте [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-выгнать-ресурсы-с-узла) модуля `sds-replicated-volume`, чтобы выгнать ресурсы с узла и удалить узел LINSTOR/DRBD.
 
 1. Удалите узел из кластера Kubernetes:
 
    ```shell
-   kubectl drain <node> --ignore-daemonsets --delete-local-data
-   kubectl delete node <node>
+   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k delete node <node>
    ```
 
 1. Запустите на узле скрипт очистки:
@@ -280,40 +302,40 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
    bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
    ```
 
-1. После перезагрузки узла [запустите](#как-добавить-статический-узел-в-кластер) скрипт `bootstrap.sh`.
-TODO зачем это тут? Это уже про добавление в новый кластер?
+1. После перезагрузки узел можно добавить в другой кластер.
 
 ## FAQ
 
 ### Можно ли удалить StaticInstance?
 
-`StaticInstance`, находящийся в состоянии `Pending` можно удалять без каких-либо проблем.
+StaticInstance, находящийся в состоянии `Pending`, можно удалять без каких-либо проблем.
 
-Чтобы удалить `StaticInstance` находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstraping`):
-1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в `StaticInstance`.
-1. Дождитесь, пока `StaticInstance` перейдет в статус `Pending`.
-1. Удалите `StaticInstance`.
+Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstraping`):
+1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в StaticInstance.
+1. Дождитесь, пока StaticInstance перейдет в статус `Pending`.
+1. Удалите StaticInstance.
 1. Уменьшите значение параметра `NodeGroup.spec.staticInstances.count` на 1.
+1. Дождитесь `Ready` состояния NodeGroup.
 
 ### Как изменить IP-адрес StaticInstance?
 
-Изменить IP-адрес в ресурсе `StaticInstance` нельзя. Если в `StaticInstance` указан ошибочный адрес, то нужно [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
+Изменить IP-адрес в ресурсе StaticInstance нельзя. Если в StaticInstance указан ошибочный адрес, то нужно [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
 
-### Как мигрировать статический узел настроенный вручную под управление CAPS?
+###  Как мигрировать статический узел, настроенный вручную, под управление CAPS?
 
 Необходимо выполнить [очистку узла](#как-вручную-очистить-статический-узел), затем [добавить](#как-добавить-статический-узел-в-кластер-cluster-api-provider-static) узел под управление CAPS.
 
 ### Как изменить NodeGroup у статического узла?
 
-<span id='как-изменить-nodegroup-у-статичного-узла'><span>
+<span id='как-изменить-nodegroup-у-статического-узла'><span>
 
-Если узел находится под управлением [CAPS](./#cluster-api-provider-static), то изменить принадлежность к `NodeGroup` у такого узла **нельзя**. Единственный вариант — [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
+Если узел находится под управлением [CAPS](./#cluster-api-provider-static), то изменить принадлежность к NodeGroup у такого узла **нельзя**. Единственный вариант — [удалить StaticInstance](#можно-ли-удалить-staticinstance) и создать новый.
 
-Чтобы перенести существующий статический узел созданный [вручную](./#работа-со-статическими-узлами) из одной `NodeGroup` в другую, необходимо изменить у узла лейбл группы:
+Если статический узел был добавлен в кластер [вручную](./#работа-со-статическими-узлами), то для перемещения его в другую NodeGroup необходимо изменить лейбл с именем группы и удалить лейбл с ролью:
 
 ```shell
-kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
-kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
+d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
 Применение изменений потребует некоторого времени.
@@ -321,57 +343,34 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 ### Как посмотреть, что в данный момент выполняется на узле при его создании?
 
-Если необходимо узнать, что происходит на узле (к примеру, он долго создается), можно посмотреть логи `cloud-init`. Для этого выполните следующие шаги:
+Если необходимо узнать, что происходит на узле (к примеру, он долго создается, "завис в Pending"), можно посмотреть логи `cloud-init`. Для этого выполните следующие шаги:
 1. Найдите узел, который сейчас бутстрапится:
 
    ```shell
-   kubectl get instances | grep Pending
-   ```
+   d8 k get instances | grep Pending
 
-   Пример:
-
-   ```shell
-   $ kubectl get instances | grep Pending
-   dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
+   # dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
    ```
 
 1. Получите информацию о параметрах подключения для просмотра логов:
 
    ```shell
-   kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+
+   # bootstrapStatus:
+   #   description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
+   #   logsEndpoint: 192.168.199.178:8000
    ```
 
-   Пример:
-
-   ```shell
-   $ kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
-   bootstrapStatus:
-     description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
-     logsEndpoint: 192.168.199.178:8000
-   ```
-
-1. Выполните полученную команду (в примере выше — `nc 192.168.199.178 8000`), чтобы увидеть логи `cloud-init` и на чем зависла настройка узла.
+1. Выполните полученную команду (в примере выше — `nc 192.168.199.178 8000`), чтобы получить логи `cloud-init` для последующей диагностики.
 
 Логи первоначальной настройки узла находятся в `/var/log/cloud-init-output.log`.
 
 
-### Что такое ресурс Instance?
-
-Ресурс Instance содержит описание объекта эфемерной машины, без учета ее конкретной реализации. Например, машины созданные MachineControllerManager или Cluster API Provider Static будут иметь соответcтвующий ресурс Instance.
-
-Объект не содержит спецификации. Статус содержит:
-1. Ссылку на InstanceClass, если он существует для данной реализации.
-1. Ссылку на объект Node Kubernetes.
-1. Текущий статус машины.
-1. Информацию о том, как посмотреть [логи создания машины](#как-посмотреть-что-в-данный-момент-выполняется-на-узле-при-его-создании) (появляется на этапе создания машины).
-
-При создании/удалении машины создается/удаляется соответствующий объект Instance.
-Самостоятельно ресурс Instance создать нельзя, но можно удалить. В таком случае машина будет удалена из кластера (процесс удаления зависит от деталей реализации).
-
-{% endraw %}
-
 ### Когда требуется перезагрузка узлов?
 
-Некоторые операции по изменению конфигурации узлов могут потребовать перезагрузки.
+В процессе настройки узла некоторые операции по изменению конфигурации могут потребовать перезагрузки.
 
-Перезагрузка узла может потребоваться при изменении некоторых настроек sysctl, например, при изменении параметра `kernel.yama.ptrace_scope` (изменяется при использовании команды `astra-ptrace-lock enable/disable` в Astra Linux).
+Например, перезагрузка узла требуется в Astra Linux при изменении параметра sysctl: `kernel.yama.ptrace_scope` (результат работы команды `astra-ptrace-lock enable/disable`).
+
+Режим перезагрузки определяется полем disruptions в секции параметров [disruptions](../../../reference/cr.html#nodegroup-v1-spec-disruptions) ресурса NodeGroup.

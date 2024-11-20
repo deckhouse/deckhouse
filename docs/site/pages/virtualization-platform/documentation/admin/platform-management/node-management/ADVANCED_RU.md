@@ -4,17 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/no
 lang: ru
 ---
 
-## Как выключить machine-controller-manager в случае выполнения потенциально деструктивных изменений в кластере?
-
-> **Внимание!** Использовать эту настройку допустимо только тогда, когда вы четко понимаете, зачем это необходимо.
-
-Установить параметр:
-
-```yaml
-mcmEmergencyBrake: true
-```
-
-## Как восстановить master-узел, если kubelet не может загрузить компоненты control plane?
+## Восстановление master-узла, если kubelet не может загрузить компоненты control plane
 
 Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы
 компонентов control plane (например, удалена директория `/var/lib/containerd`). В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
@@ -26,7 +16,7 @@ mcmEmergencyBrake: true
 Для восстановления работоспособности master-узла нужно в любом рабочем кластере под управлением Deckhouse выполнить команду:
 
 ```shell
-kubectl -n d8-system get secrets deckhouse-registry -o json |
+d8 k -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
 jq -r '.auths."registry.deckhouse.io".auth'
 ```
@@ -42,7 +32,7 @@ done
 
 После загрузки образов необходимо перезапустить kubelet.
 
-## Как изменить CRI для NodeGroup?
+## Изменение CRI для NodeGroup
 
 > **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](../../../reference/cr.html#nodegroup-v1-spec-cri-type)).
 
@@ -66,40 +56,40 @@ spec:
 * Для `Containerd`:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
 * Для `NotManaged`:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
+  d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
-> **Внимание!** При смене `cri.type` для NodeGroup, созданных с помощью `dhctl`, нужно менять ее в `dhctl config edit provider-cluster-configuration` и настройках объекта `NodeGroup`.
+> **Внимание!** При смене `cri.type` для NodeGroup, созданных с помощью `dhctl`, нужно менять ее в `dhctl config edit provider-cluster-configuration` и настройках объекта NodeGroup.
 
 После настройки нового CRI для NodeGroup модуль `node-manager` по одному drain'ит узлы и устанавливает на них новый CRI. Обновление узла
 сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup модуль `node-manager` либо автоматически разрешает обновление
 узлов, либо требует ручного подтверждения.
 
-## Как изменить CRI для всего кластера?
+## Изменение CRI для всего кластера
 
 > **Внимание!** Возможен переход только с `Containerd` на `NotManaged` и обратно (параметр [cri.type](../../../reference/cr.html#nodegroup-v1-spec-cri-type)).
 
 Необходимо с помощью утилиты `dhctl` отредактировать параметр `defaultCRI` в конфиге `cluster-configuration`.
 
-Также возможно выполнить эту операцию с помощью `kubectl patch`. Пример:
+Также возможно выполнить эту операцию с помощью патча. Пример:
 * Для `Containerd`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
-  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
+  d8 k -n kube-system patch secret d8-cluster-configuration -p '{"data":{"cluster-configuration.yaml":"'${data}'"}}'
   ```
 
 * Для `NotManaged`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
-  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
+  d8 k -n kube-system patch secret d8-cluster-configuration -p '{"data":{"cluster-configuration.yaml":"'${data}'"}}'
   ```
 
 Если необходимо какую-то NodeGroup оставить на другом CRI, перед изменением `defaultCRI` необходимо установить CRI для этой NodeGroup,
@@ -114,13 +104,13 @@ spec:
 1. Deckhouse обновляет узлы в master NodeGroup по одному, поэтому необходимо определить, какой узел на данный момент обновляется:
 
    ```shell
-   kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+   d8 k get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
    ```
 
 1. Подтвердить disruption для master-узла, полученного на предыдущем шаге:
 
    ```shell
-   kubectl annotate node <имя master-узла> update.node.deckhouse.io/disruption-approved=
+   d8 k annotate node <имя master-узла> update.node.deckhouse.io/disruption-approved=
    ```
 
 1. Дождаться перехода обновленного master-узла в `Ready`. Выполнить итерацию для следующего master'а.
@@ -296,7 +286,7 @@ spec:
 И посмотрите логи:
 
 ```shell
-$ kubectl logs job/nvidia-cuda-test
+$ d8 k logs job/nvidia-cuda-test
 Tue Jan 24 11:36:18 2023
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.60.13    Driver Version: 525.60.13    CUDA Version: 12.0     |
@@ -343,7 +333,7 @@ spec:
 И посмотрите логи:
 
 ```shell
-$ kubectl logs job/gpu-operator-test
+$ d8 k logs job/gpu-operator-test
 [Vector addition of 50000 elements]
 Copy input data from the host memory to the CUDA device
 CUDA kernel launch with 196 blocks of 256 threads
@@ -354,20 +344,20 @@ Done
 
 ## Как добавить несколько статических узлов в кластер вручную?
 
-Используйте существующий или создайте новый custom resource [NodeGroup](../../../reference/cr.html#nodegroup) ([пример](examples.html#пример-описания-статической-nodegroup) `NodeGroup` с именем `worker`).
+Используйте существующий или создайте новый custom resource [NodeGroup](../../../reference/cr.html#nodegroup) ([пример](examples.html#пример-описания-статической-nodegroup) NodeGroup с именем `worker`).
 
 Автоматизировать процесс добавления узлов можно с помощью любой платформы автоматизации. Далее приведен пример для Ansible.
 
 1. Получите один из адресов Kubernetes API-сервера. Обратите внимание, что IP-адрес должен быть доступен с узлов, которые добавляются в кластер:
 
    ```shell
-   kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
+   d8 k -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
    Проверьте версию K8s. Если версия >= 1.25, создайте токен `node-group`:
 
    ```shell
-   kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
+   d8 k create token node-group --namespace d8-cloud-instance-manager --duration 1h
    ```
 
    Сохраните полученный токен, и добавьте в поле `token:` playbook'а Ansible на дальнейших шагах.
@@ -375,7 +365,7 @@ Done
 1. Если версия Kubernetes меньше 1.25, получите Kubernetes API-токен для специального ServiceAccount'а, которым управляет Deckhouse:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
+   d8 k -n d8-cloud-instance-manager get $(d8 k -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
      -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
 
@@ -417,7 +407,7 @@ Done
          when: bootstrapped.stat.exists == False
    ```
 
-1. Определите дополнительную переменную `node_group`. Значение переменной должно совпадать с именем `NodeGroup`, которой будет принадлежать узел. Переменную можно передать различными способами, например с использованием inventory-файла:
+1. Определите дополнительную переменную `node_group`. Значение переменной должно совпадать с именем NodeGroup, которой будет принадлежать узел. Переменную можно передать различными способами, например с использованием inventory-файла:
 
    ```text
    [system]
@@ -442,7 +432,7 @@ Done
 
 [werf](https://ru.werf.io) проверяет состояние ```Ready``` у ресурсов и в случае его наличия дожидается, пока значение станет ```True```.
 
-Создание (обновление) ресурса [NodeGroup](../../../reference/cr.html#nodegroup) в кластере может потребовать значительного времени на развертывание необходимого количества узлов. При развертывании такого ресурса в кластере с помощью werf (например, в рамках процесса CI/CD) развертывание может завершиться по превышении времени ожидания готовности ресурса. Чтобы заставить werf игнорировать состояние `nodeGroup`, необходимо добавить к `nodeGroup` следующие аннотации:
+Создание (обновление) ресурса NodeGroup в кластере может потребовать значительного времени на развертывание необходимого количества узлов. При развертывании такого ресурса в кластере с помощью werf (например, в рамках процесса CI/CD) развертывание может завершиться по превышении времени ожидания готовности ресурса. Чтобы заставить werf игнорировать состояние `nodeGroup`, необходимо добавить к `nodeGroup` следующие аннотации:
 
 ```yaml
 metadata:

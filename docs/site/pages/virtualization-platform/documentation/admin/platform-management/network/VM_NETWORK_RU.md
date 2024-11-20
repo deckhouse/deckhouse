@@ -45,4 +45,4 @@ d8 k edit mc virtualization
 
 При назначении IP-адреса виртуальной машине создается соответствующий кластерный ресурс [VirtualMachineIPAddressLease](../../../../reference/cr.html#virtualmachineipaddresslease), который связывается с проектным ресурсом [VirtualMachineIPAddress](../../../../reference/cr.html#virtualmachineipaddress), а тот, в свою очередь, — с виртуальной машиной.
 
-После удаления ресурса [VirtualMachineIPAddress](../../../../reference/cr.html#virtualmachineipaddress), IP-адрес отвязывается, но остается зарезервированным за проектом в течение 10 минут после его удаления.
+После удаления ресурса VirtualMachineIPAddress, IP-адрес отвязывается, но остается зарезервированным за проектом в течение 10 минут после его удаления.

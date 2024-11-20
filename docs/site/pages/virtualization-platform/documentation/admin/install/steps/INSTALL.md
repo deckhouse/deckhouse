@@ -22,7 +22,7 @@ The YAML installation configuration file includes parameters for several resourc
 - [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — parameters for a Kubernetes cluster deployed on bare metal servers or virtual machines in unsupported clouds.
   > Similar to `ClusterConfiguration`, `StaticClusterConfiguration` is not needed if the platform is installed in an existing Kubernetes cluster.
 
-- `ModuleConfig` — a set of resources containing configuration parameters for [built-in platform modules](../).
+- ModuleConfig — a set of resources containing configuration parameters for [built-in platform modules](../).
   If the cluster is initially created with nodes designated for specific types of workloads (system nodes, monitoring nodes, etc.), it is recommended to explicitly specify the corresponding nodeSelector in the module configuration for modules using persistent storage volumes (e.g., for the `prometheus` module, this would be the [nodeSelector](../modules/300-prometheus/configuration.html#parameters-nodeselector) parameter).
 
 TODO: поправить манифесты

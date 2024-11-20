@@ -43,7 +43,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 1. Чтобы создать проект, создайте ресурс [Project](../../../reference/cr.html#project), указав имя шаблона проекта в поле `.spec.projectTemplateName`.
 1. В параметре `.spec.parameters` ресурса [Project](../../../reference/cr.html#project) укажите значения для параметров из секции `.spec.parametersSchema.openAPIV3Schema` ресурса [ProjectTemplate](../../../reference/cr.html#projecttemplate).
 
-   Пример создания проекта с помощью ресурса [Project](../../../reference/cr.html#project) из `default` [ProjectTemplate](../../../reference/cr.html#projecttemplate) представлен ниже:
+   Пример создания проекта с помощью ресурса Project из `default` ProjectTemplate представлен ниже:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2

@@ -26,9 +26,9 @@ EOF
 
 ### Таблица маршрутизации
 
-Ресурс `RoutingTable` описывает желаемую таблицу маршрутизации и содержащиеся в ней маршруты.
+Ресурс RoutingTable описывает желаемую таблицу маршрутизации и содержащиеся в ней маршруты.
 
-Чтобы создать маршрут в основной таблице маршрутизации main, примените следующий ресурс `RoutingTable`:
+Чтобы создать маршрут в основной таблице маршрутизации main, примените следующий ресурс RoutingTable:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -37,11 +37,11 @@ kind: RoutingTable
 metadata:
 name: myrt-main
 spec:
-ipRoutingTableID: 254 # main routing table id is 254
-routes:
+  ipRoutingTableID: 254 # main routing table id is 254
+  routes:
   - destination: 10.0.0.0/8
     gateway: 192.168.0.1
-    nodeSelector:
+  nodeSelector:
     node-role.deckhouse.io: load-balancer
 EOF
 ```
@@ -57,7 +57,7 @@ ip -4 route ls
 # Инструкция realm 216 в маршруте используется как маркер для идентификации маршрута под управлением модуля (d8 hex = 216 dec).
 ```
 
-Чтобы создать маршрут в дополнительной таблице, примените ресурс `RoutingTable`:
+Чтобы создать маршрут в дополнительной таблице, примените ресурс RoutingTable:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -66,13 +66,13 @@ kind: RoutingTable
 metadata:
 name: myrt-extra
 spec:
-routes:
-  - destination: 0.0.0.0/0
-    gateway: 192.168.0.1
-    nodeSelector:
+  routes:
+    - destination: 0.0.0.0/0
+      gateway: 192.168.0.1
+  nodeSelector:
     node-role.deckhouse.io: load-balancer
-    status:
-    ipRoutingTableID: 10000 # если spec.ipRoutingTableID не указан, он будет сгенерирован автоматически и размещён в status
+status:
+  ipRoutingTableID: 10000 # если spec.ipRoutingTableID не указан, он будет сгенерирован автоматически и размещён в status
     ...
 EOF
 ```
@@ -89,7 +89,7 @@ ip -4 route ls table 10000
 
 Ресурс `IPRuleSet` описывает набор правил (IP-rule), которые будут созданы на узлах с соответствующими метками.
 
-Чтобы создать правило, создайте следующий ресурс `IPRuleSet`:
+Чтобы создать правило, создайте следующий ресурс IPRuleSet:
 
 ```yaml
 d8 k apply -f - <<EOF
