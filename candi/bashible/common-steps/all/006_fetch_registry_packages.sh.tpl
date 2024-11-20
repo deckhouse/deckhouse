@@ -15,4 +15,21 @@
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesCniVersion := "1.4.0" | replace "." "" }}
 
+{{- if .proxy }}
+  {{- if .proxy.httpProxy }}
+  export HTTP_PROXY={{ .proxy.httpProxy | quote }}
+  export http_proxy=${HTTP_PROXY}
+  {{- end }}
+  {{- if .proxy.httpsProxy }}
+  export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+  export https_proxy=${HTTPS_PROXY}
+  {{- end }}
+  {{- if .proxy.noProxy }}
+  export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
+  export no_proxy=${NO_PROXY}
+  {{- end }}
+{{- end }}
+
 bb-package-fetch "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}" "kubectl:{{ index .images.registrypackages (printf "kubectl%s" $kubernetesVersion) | toString }}" "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}" "containerd:{{- index $.images.registrypackages "containerd1720" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}" "d8:{{ .images.registrypackages.d8 }}"
+
+unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
