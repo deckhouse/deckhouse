@@ -39,14 +39,6 @@ Environment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_PROXY=$
 EOF
   {{- end }}
 
-bb-sync-file /etc/profile.d/d8-system-proxy.sh - << EOF
-export HTTP_PROXY=${HTTP_PROXY}
-export http_proxy=${HTTP_PROXY}
-export HTTPS_PROXY=${HTTPS_PROXY}
-export https_proxy=${HTTPS_PROXY}
-export NO_PROXY=${NO_PROXY}
-export no_proxy=${NO_PROXY}
-EOF
 {{- else }}
 if [ -f /etc/systemd/system.conf.d/proxy-default-environment.conf ]; then
   rm -f /etc/systemd/system.conf.d/proxy-default-environment.conf

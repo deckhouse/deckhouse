@@ -23,7 +23,11 @@ bb-set-proxy() {
   export https_proxy=${HTTPS_PROXY}
   {{- end }}
   {{- if .proxy.noProxy }}
-  export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
+    {{- $noProxy := list "127.0.0.1" "169.254.169.254" .Values.global.clusterConfiguration.clusterDomain .Values.global.clusterConfiguration.podSubnetCIDR .Values.global.clusterConfiguration.serviceSubnetCIDR }}
+    {{- if .Values.global.clusterConfiguration.proxy.noProxy }}
+      {{- $noProxy = concat $noProxy .Values.global.clusterConfiguration.proxy.noProxy }}
+    {{- end }}
+  export NO_PROXY={{ $noProxy | join "," | quote }}
   export no_proxy=${NO_PROXY}
   {{- end }}
 {{- else }}
