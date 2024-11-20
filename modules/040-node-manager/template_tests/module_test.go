@@ -175,7 +175,7 @@ internal:
     type: azure
     machineClassKind: AzureMachineClass
     azure:
-      sshPublicKey: cert-authority,principals="test" ssh-rsa AAAAB...==
+      sshPublicKey: ssh-rsa AAAAB...==
       clientId: clientId
       clientSecret: clientSecret
       subscriptionId: subscriptionId
