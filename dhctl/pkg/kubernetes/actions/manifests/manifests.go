@@ -155,7 +155,7 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 			deckhouseContainerEnv = append(deckhouseContainerEnv,
 				apiv1.EnvVar{
 					Name:  deployServicePortEnvVarName,
-					Value: "6445",
+					Value: "6443",
 				},
 			)
 		}

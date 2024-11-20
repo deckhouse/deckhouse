@@ -51,9 +51,6 @@ chmod 0700 $BOOTSTRAP_DIR
 # Detect bundle
 BUNDLE="$(detect_bundle)"
 
-# set proxy env variables
-unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
-{{- end }}
 {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
 export D8_NODE_HOSTNAME=$(hostname -s)
 {{- else }}
