@@ -15,9 +15,6 @@ apiVersions:
       layout:
         type: string
         enum: [Standard]
-      podNetworkMode:
-        type: string
-        enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
       zones:
         type: array
         items:

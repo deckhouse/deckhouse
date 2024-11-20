@@ -335,9 +335,6 @@ properties:
           layout:
             type: string
             enum: [Standard]
-          podNetworkMode:
-            type: string
-            enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
           zones:
             type: array
             items:
@@ -372,5 +369,3 @@ properties:
               type: string
             allowVolumeExpansion:
               type: boolean
-      defaultStorageClass:
-        type: string
