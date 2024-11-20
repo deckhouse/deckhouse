@@ -18,9 +18,11 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -48,6 +50,14 @@ func main() {
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if len(os.Args) > 1 && os.Args[1] == "remove" {
+		if err := removeIptablesRules(iptablesMgr); err != nil {
+			log.Fatal(err)
+		}
+
+		return
 	}
 
 	migrationRemoveOldRules(iptablesMgr)
@@ -235,4 +245,20 @@ func migrationRemoveOldRules(iptablesMgr *iptables.IPTables) {
 			log.Printf("migrationRemoveOldRules error: %v", err)
 		}
 	}
+}
+
+var (
+	natTable = "nat"
+)
+
+func removeIptablesRules(ipt *iptables.IPTables) (err error) {
+	err = ipt.DeleteIfExists(natTable, "PREROUTING", jumpRule...)
+	if err != nil {
+		return fmt.Errorf("cannot delete jump rule: %w", err)
+	}
+	if err = ipt.ClearAndDeleteChain(natTable, chainName); err != nil {
+		return fmt.Errorf("cannot clear and delete chain %s: %w", chainName, err)
+	}
+
+	return nil
 }
