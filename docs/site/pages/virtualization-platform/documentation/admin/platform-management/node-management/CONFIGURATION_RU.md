@@ -43,7 +43,6 @@ lang: ru
 <ul>
 <li><code>.cloudProvider</code> (для групп узлов с nodeType <code>CloudEphemeral</code> или <code>CloudPermanent</code>) — массив данных облачного провайдера.
 {% offtopic title="Пример данных..." %}
-
 ```yaml
 cloudProvider:
   instanceClassKind: OpenStackInstanceClass
@@ -72,13 +71,11 @@ cloudProvider:
   zones:
   - nova
 ```
-
 {% endofftopic %}</li>
 <li><code>.cri</code> — используемый CRI (с версии Deckhouse 1.49 используется только <code>Containerd</code>).</li>
 <li><code>.kubernetesVersion</code> — используемая версия Kubernetes.</li>
 <li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="cr.html#nodeuser">NodeUser</a>.
 {% offtopic title="Пример данных..." %}
-
 ```yaml
 nodeUsers:
 - name: user1
@@ -90,12 +87,10 @@ nodeUsers:
     sshPublicKey: SSH_PUBLIC_KEY
     uid: 1050
 ```
-
 {% endofftopic %}
 </li>
 <li><code>.nodeGroup</code> — массив данных группы узлов.
 {% offtopic title="Пример данных..." %}
-
 ```yaml
 nodeGroup:
   cri:
@@ -120,12 +115,9 @@ nodeGroup:
   nodeType: CloudPermanent
   updateEpoch: "1699879470"
 ```
-
 {% endofftopic %}</li>
 </ul>
-
 {% raw %}
-
 Пример использования переменных в шаблонизаторе:
 
 ```shell
@@ -144,7 +136,6 @@ post-install() {
   bb-flag-set reboot
 }
 ```
-
 {% endraw %}
 
 Ход выполнения скриптов можно увидеть на узле в журнале сервиса bashible c помощью команды:
