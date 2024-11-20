@@ -15,3 +15,4 @@
 {{- if or $isDetachedS3 $isProxyS3 }}
 {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list . "monitoring/grafana-dashboards/" "monitoring/grafana-dashboards/s3-storage-mode") }}
 {{- end }}
+{{- end }}
