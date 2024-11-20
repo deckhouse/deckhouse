@@ -352,22 +352,6 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 	var result ctrl.Result
 	moduleName := mr.Spec.ModuleName
 
-	r.logger.Debugf("checking requirements of '%s' for module '%s' by extenders", mr.GetName(), mr.GetModuleName())
-	if err := extenders.CheckModuleReleaseRequirements(mr.GetName(), mr.Spec.Requirements); err != nil {
-		if err = r.updateModuleReleaseStatusMessage(ctx, mr, err.Error()); err != nil {
-			return ctrl.Result{Requeue: true}, err
-		}
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
-
-	// search symlink for module by regexp
-	// module weight for a new version of the module may be different from the old one,
-	// we need to find a symlink that contains the module name without looking at the weight prefix.
-	currentModuleSymlink, err := findExistingModuleSymlink(r.symlinksDir, moduleName)
-	if err != nil {
-		currentModuleSymlink = "900-" + moduleName // fallback
-	}
-
 	var modulesChangedReason string
 	defer func() {
 		if modulesChangedReason != "" {
@@ -454,7 +438,7 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		Mode:               updater.ParseUpdateMode(policy.Spec.Update.Mode),
 		Windows:            policy.Spec.Update.Windows,
 	}
-	releaseUpdater := newModuleUpdater(r.dc, r.logger, settings, k8, r.moduleManager.GetEnabledModuleNames(), r.metricStorage)
+	releaseUpdater := newModuleUpdater(ctx, r.dc, r.logger, settings, k8, r.moduleManager.GetEnabledModuleNames(), r.metricStorage)
 	{
 		otherReleases := new(v1alpha1.ModuleReleaseList)
 		err = r.client.List(ctx, otherReleases, client.MatchingLabels{"module": moduleName})
@@ -472,31 +456,28 @@ func (r *moduleReleaseReconciler) reconcilePendingRelease(ctx context.Context, m
 		return result, nil
 	}
 
-	releaseUpdater.PredictNextRelease()
+	releaseUpdater.PredictNextRelease(mr)
 
 	if releaseUpdater.LastReleaseDeployed() {
-		// latest release deployed
-		deployedRelease := *releaseUpdater.DeployedRelease()
-
-		// check symlink exists on FS, relative symlink
-		modulePath := generateModulePath(moduleName, deployedRelease.Spec.Version.String())
-		if !isModuleExistsOnFS(r.symlinksDir, currentModuleSymlink, modulePath) {
-			newModuleSymlink := path.Join(r.symlinksDir, fmt.Sprintf("%d-%s", deployedRelease.Spec.Weight, moduleName))
-			r.logger.Warnf("Module %q doesn't exist on the filesystem. Restoring", moduleName)
-			err = enableModule(r.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, modulePath)
-			if err != nil {
-				r.logger.Errorf("Module restore for module %q and release %q failed: %v", moduleName, deployedRelease.Spec.Version.String(), err)
-
-				return ctrl.Result{Requeue: true}, err
-			}
-			// defer restart
-			modulesChangedReason = "one of modules is not enabled"
-		}
-
+		r.logger.Debug("latest release is deployed")
 		return result, nil
 	}
 
-	if releaseUpdater.GetPredictedReleaseIndex() == -1 {
+	if rel := releaseUpdater.GetPredictedRelease(); rel != nil {
+		if rel.GetName() != mr.GetName() {
+			// requeue release
+			r.logger.Debugf("processing wrong release (current: %s, predicted: %s)", mr.Name, rel.Name)
+			return ctrl.Result{Requeue: true}, nil
+		}
+	}
+
+	if releaseUpdater.PredictedReleaseIsPatch() {
+		// patch release does not respect update windows or ManualMode
+		if err = releaseUpdater.ApplyPredictedRelease(); err != nil {
+			return r.wrapApplyReleaseError(err)
+		}
+
+		modulesChangedReason = "a new module release found"
 		return result, nil
 	}
 

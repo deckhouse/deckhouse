@@ -72,7 +72,10 @@ var embeddedMUP = &v1alpha1.ModuleUpdatePolicySpec{
 var initValues = `{
 	"global": {
 		"clusterIsBootstrapped": true,
-       "modulesImages": {
+		"clusterConfiguration": {
+			"kubernetesVersion": "1.28"
+		},
+		"modulesImages": {
 			"registry": {
 				"base": "my.registry.com/deckhouse"
 			}
