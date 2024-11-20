@@ -19,6 +19,14 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -27,6 +35,25 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 )
+
+const (
+	cniConfigurationSettledKey = "cniConfigurationSettled"
+)
+
+type FlannelConfig struct {
+	PodNetworkMode string `json:"podNetworkMode"`
+}
+
+type CiliumConfigStruct struct {
+	Mode           string `json:"mode,omitempty"`
+	MasqueradeMode string `json:"masqueradeMode,omitempty"`
+}
+
+type cniSecretStruct struct {
+	cni     string
+	flannel FlannelConfig
+	cilium  CiliumConfigStruct
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
@@ -59,22 +86,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, checkCni)
 
-type FlannelConfig struct {
-	PodNetworkMode string `json:"podNetworkMode"`
-}
-
-type CiliumConfigStruct struct {
-	Mode           string `json:"mode,omitempty"`
-	MasqueradeMode string `json:"masqueradeMode,omitempty"`
-}
-
-type cniSecretStruct struct {
-	cni     string
-	flannel FlannelConfig
-	cilium  CiliumConfigStruct
-}
-
 func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	// Return nil if
+	// error occurred while json parse
+	// or d8-cni-configuration secret does not contain key "cni"
+	// or value of key "cni" not in [cni-cilium, cni-flannel, cni-simple-bridge]
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
@@ -83,7 +99,8 @@ func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.
 	cniSecret := cniSecretStruct{}
 	cniBytes, ok := secret.Data["cni"]
 	if !ok {
-		return nil, fmt.Errorf("d8-cni-configuration secret does not contain \"cni\" field")
+		// d8-cni-configuration secret does not contain "cni" field
+		return nil, nil
 	}
 	cniSecret.cni = string(cniBytes)
 	switch cniSecret.cni {
@@ -108,23 +125,127 @@ func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.
 		}
 		return cniSecret, nil
 	default:
-		return nil, fmt.Errorf("unknown cni name: %s", cniSecret.cni)
+		// unknown cni name
+		return nil, nil
 	}
 }
 
 func applyCNIMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	v, _, err := unstructured.NestedBool(obj.UnstructuredContent(), "spec", "enabled")
+	mc := &v1alpha1.ModuleConfig{}
+	err := sdk.FromUnstructured(obj, mc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot convert object to moduleconfig: %v", err)
 	}
-
-	if !v {
+	if mc.Spec.Enabled == nil || !*mc.Spec.Enabled {
 		return nil, nil
 	}
-	return obj.GetName(), nil
+
+	return mc, nil
 }
 func checkCni(input *go_hook.HookInput) error {
-	cniConfigurationsFromSecrets, ok := input.Snapshots["cni_configuration_secret"]
-	cniConfigurationsFromMCs, ok := input.Snapshots["deckhouse_cni_mc"]
+	// Clear a metrics and reqKey
+	input.MetricsCollector.Expire("enabledCNI")
+	input.MetricsCollector.Expire("CNIMisconfigured")
+	// requirements.SaveValue(cniConfigurationSettledKey, "false")
+	requirements.RemoveValue(cniConfigurationSettledKey)
+
+	// Secret d8-cni-configuration does not exist
+	// or exist but key cni does not exist
+	//	or value is empty
+	//		or not in [cni-cilium, cni-flannel, cni-simple-bridge].
+	//cniSecret := cniSecretStruct{}
+	// get cniSecret
+	cniSecret := cniSecretStruct{}
+	if len(input.Snapshots["cni_configuration_secret"]) == 1 {
+		if input.Snapshots["cni_configuration_secret"][0] != nil {
+			cniSecret = input.Snapshots["cni_configuration_secret"][0].(cniSecretStruct)
+		}
+	}
+	// Secret d8-cni-configuration exist,
+	// key cni exist
+	//	and value in [cni-cilium, cni-flannel, cni-simple-bridge].
+	// get cniMCs
+	cniMCs := make([]v1alpha1.ModuleConfig, 0)
+	cniNamesFromMCs := make([]string, 0)
+	var cniCount = 0
+	for _, cniConfigurationFromMCRaw := range input.Snapshots["deckhouse_cni_mc"] {
+		cniConfigurationsFromMCs := cniConfigurationFromMCRaw.(v1alpha1.ModuleConfig)
+		cniMCs = append(cniMCs, cniConfigurationsFromMCs)
+		cniNamesFromMCs = append(cniNamesFromMCs, cniConfigurationsFromMCs.Name)
+		cniCount++
+	}
+
+	var ururu int
+	switch ururu {
+	case 11:
+		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		input.MetricsCollector.Set("enabledCNI", 0,
+			map[string]string{
+				"secret": "",
+				"mc":     "",
+			}, metrics.WithGroup("D8CheckCNI"))
+	case 12:
+		requirements.SaveValue(cniConfigurationSettledKey, "true")
+		input.MetricsCollector.Set("enabledCNI", 1,
+			map[string]string{
+				"secret": "",
+				"mc":     cniMCs[0].Name,
+			}, metrics.WithGroup("D8CheckCNI"))
+	case 13:
+		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		input.MetricsCollector.Set("enabledCNI", float64(cniCount),
+			map[string]string{
+				"secret": "",
+				"mc":     strings.Join(cniNamesFromMCs, ","),
+			}, metrics.WithGroup("D8CheckCNI"))
+	case 21:
+		requirements.SaveValue(cniConfigurationSettledKey, "true")
+		input.MetricsCollector.Set("enabledCNI", 1,
+			map[string]string{
+				"secret": cniSecret.cni,
+				"mc":     "",
+			}, metrics.WithGroup("D8CheckCNI"))
+	case 22:
+		requirements.SaveValue(cniConfigurationSettledKey, "true")
+		input.MetricsCollector.Set("enabledCNI", 1,
+			map[string]string{
+				"secret": cniSecret.cni,
+				"mc":     cniMCs[0].Name,
+			}, metrics.WithGroup("D8CheckCNI"))
+	case 23:
+		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		input.MetricsCollector.Set("enabledCNI", 1,
+			map[string]string{
+				"secret":        cniSecret.cni,
+				"mc":            cniMCs[0].Name,
+				"misconfigured": "true",
+			}, metrics.WithGroup("D8CheckCNI"))
+		//
+		// !!! ololo generiruem desaired MC and kladem ego v kuda to
+		//
+
+	case 24:
+		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		if !slices.Contains(cniNamesFromMCs, cniSecret.cni) {
+			cniCount++
+		}
+		input.MetricsCollector.Set("enabledCNI", 2,
+			map[string]string{
+				"secret":        "cniSecret.cni",
+				"mc":            cniMCs[0].Name,
+				"misconfigured": "true",
+			}, metrics.WithGroup("D8CheckCNI"))
+	case 25:
+		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		if !slices.Contains(cniNamesFromMCs, cniSecret.cni) {
+			cniCount++
+		}
+		input.MetricsCollector.Set("enabledCNI", float64(cniCount),
+			map[string]string{
+				"secret": "cniSecret.cni",
+				"mc":     strings.Join(cniNamesFromMCs, ","),
+			}, metrics.WithGroup("D8CheckCNI"))
+
+	}
 	return nil
 }

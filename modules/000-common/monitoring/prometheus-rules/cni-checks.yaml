@@ -1,0 +1,68 @@
+- name: d8.cni
+  rules:
+    - alert: D8CNIDoesNotExplicitlyEnabled
+      expr: enabledCNI == 0
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_cni_check: D8CNIDoesNotExplicitlyEnabled,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_cni_check: D8CNIDoesNotExplicitlyEnabled,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        description: |
+          For the cluster to work correctly, CNI must be explicitly enabled. In its moduleConfig, `enabled: true` should be specified.
+        summary: No CNI is explicitly enabled in the cluster.
+
+    - alert: D8CNIEnabledMoreThanOne
+      expr: enabledCNI > 1
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_cni_check: D8CNIEnabledMoreThanOne,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_cni_check: D8CNIEnabledMoreThanOne,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        description: |
+          Several CNIs are enabled in the cluster:
+          - from secret d8-cni-configuratuin: {{ $labels.secret }}
+          - from moduleConfigs: {{ $labels.mc }}
+          For the cluster to work correctly, only one CNI must be enabled.
+        summary: More than one CNI is enabled in the cluster.
+
+    - alert: D8CNIEnablingMismatch
+      expr: enabledCNI{secret!="",mc!="",misconfigured="true"} == 2
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_cni_check: D8CNIEnablingMismatch,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_cni_check: D8CNIEnablingMismatch,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        description: |
+          Several CNIs are enabled in the cluster:
+          - from secret d8-cni-configuratuin: {{ $labels.secret }}
+          - from moduleConfigs: {{ $labels.mc }}
+          For the cluster to work correctly, only one CNI must be enabled.
+        summary: The CNI enabled in the secret `d8-cni-configuratuin` does not match the one enabled in the moduleConfig.
+
+    - alert: D8CNIMisconfigured
+      expr: enabledCNI{misconfigured=true} == 1
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_cni_check: D8CNIMisconfigured,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_cni_check: D8CNIMisconfigured,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        description: |
+          It is necessary to correct the settings in the CNI {{ $labels.secret }} moduleConfig.
+          You can find the desired settings in the `d8-system/desiredCNIMC` configmap.
+        summary: The settings from the secret `d8-cni-configuratuin` and the moduleConfig contradict each other.
