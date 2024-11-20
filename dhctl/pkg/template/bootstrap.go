@@ -52,6 +52,11 @@ func PrepareBootstrap(templateController *Controller, nodeIP, bundleName string,
 			to:   bootstrapDir,
 			data: bashibleData,
 		},
+		{
+			from: filepath.Join(candiBashibleDir, "bashbooster"),
+			to:   bootstrapDir,
+			data: bashibleData,
+		},
 	}
 
 	return log.Process("default", "Render bootstrap templates", func() error {
