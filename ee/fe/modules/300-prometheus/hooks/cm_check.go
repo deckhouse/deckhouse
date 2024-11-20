@@ -34,7 +34,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleConfigMaps)
 
 func filterPrometheusConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj.Object, nil
+	return obj.GetName(), nil
 }
 
 func handleConfigMaps(input *go_hook.HookInput) error {
