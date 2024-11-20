@@ -28,14 +28,16 @@ kind: StorageClass
 metadata:
   name: default
   labels:
+    app.kubernetes.io/managed-by: Helm
+    heritage: deckhouse
     module: cloud-provider-dynamix
   annotations:
     meta.helm.sh/release-name: cloud-provider-Dynamix
     meta.helm.sh/release-namespace: d8-system
 provisioner: dynamix.deckhouse.io
 parameters:
-  storageEndpoint: defEndpoint
-  pool: defPool
+  storageEndpoint: defaultEndpoint
+  pool: defaultPool
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
@@ -70,8 +72,8 @@ metadata:
     meta.helm.sh/release-namespace: d8-system
 provisioner: dynamix.deckhouse.io
 parameters:
-  storageEndpoint: defEndpoint
-  pool: defPool
+  storageEndpoint: hddEndpoint
+  pool: hddPool
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
@@ -111,14 +113,17 @@ volumeBindingMode: WaitForFirstConsumer
   "storageEndpoints": [
     {
       "name": "D1",
+      "pools": ["poolD1"],
       "isEnabled": true
  	},
     {
       "name": "D2",
+      "pools": ["poolD2"],
       "isEnabled": false
  	},
     {
       "name": "D3",
+      "pools": ["poolD3"],
       "isEnabled": true
  	},
   ]
@@ -160,11 +165,15 @@ data:
 [
          {
             "name": "default",
-            "storageEndpoint": "SAS"
+            "storageEndpoint": "defaultEndpoint",
+			"pool": "defaultPool",
+			"allowVolumeExpansion": false
           },
           {
             "name": "hdd",
-            "storageEndpoint": "HDD"
+            "storageEndpoint": "hddEndpoint",
+			"pool": "hddPool",
+			"allowVolumeExpansion": false
           }
 ]
 `))
@@ -195,13 +204,17 @@ data:
 			Expect(d).To(ExecuteSuccessfully())
 			Expect(d.ValuesGet("cloudProviderDynamix.internal.storageClasses").String()).To(MatchJSON(`
 [
-          {
+         {
             "name": "default",
-            "storageEndpoint": "SAS"
+            "storageEndpoint": "defaultEndpoint",
+			"pool": "defaultPool",
+			"allowVolumeExpansion": false
           },
           {
             "name": "hdd",
-            "storageEndpoint": "HDD"
+            "storageEndpoint": "hddEndpoint",
+			"pool": "hddPool",
+			"allowVolumeExpansion": false
           }
 ]
 `))
@@ -221,11 +234,15 @@ data:
 [
           {
             "name": "d1",
-            "storageEndpoint": "D1"
+            "storageEndpoint": "D1",
+            "pool": "poolD1",
+            "allowVolumeExpansion": true
           },
           {
             "name": "d3",
-            "storageEndpoint": "D3"
+            "storageEndpoint": "D3",
+            "pool": "poolD3",
+            "allowVolumeExpansion": true
           }
 ]
 `))
