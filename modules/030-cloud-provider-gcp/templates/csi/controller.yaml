@@ -61,6 +61,7 @@
 {{- define "csi_node_envs" }}
 - name: GOOGLE_APPLICATION_CREDENTIALS
   value: "/etc/credentials.json"
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_node_volumes" }}

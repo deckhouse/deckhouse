@@ -73,6 +73,7 @@
     fieldRef:
       apiVersion: v1
       fieldPath: spec.nodeName
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_node_volume_mounts" }}

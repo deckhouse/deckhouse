@@ -98,6 +98,7 @@
   valueFrom:
     fieldRef:
       fieldPath: metadata.namespace
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_node_volumes" }}

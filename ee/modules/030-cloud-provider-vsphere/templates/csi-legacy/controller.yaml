@@ -55,7 +55,12 @@
 {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
 {{- $_ := set $csiNodeConfig "driverFQDN" "vsphere.csi.vmware.com" }}
 {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_legacy_envs" . | fromYamlArray) }}
+{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
 
 {{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "none" }}
 {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+{{- end }}
+
+{{- define "csi_node_envs" }}
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}

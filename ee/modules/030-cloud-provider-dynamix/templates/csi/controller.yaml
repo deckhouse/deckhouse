@@ -76,6 +76,7 @@
     secretKeyRef:
       name: dynamix-credentials
       key: insecure
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_node_volumes" }}

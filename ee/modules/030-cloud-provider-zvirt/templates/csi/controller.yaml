@@ -54,6 +54,7 @@
       fieldPath: spec.nodeName
 - name: OVIRT_CONFIG
   value: /etc/cloud/cloud-config
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_node_volumes" }}
