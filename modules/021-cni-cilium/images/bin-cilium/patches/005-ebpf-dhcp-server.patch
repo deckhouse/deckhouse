@@ -1,19 +1,5 @@
-From a16962752ba60e7d9fe184723a68ce22efd92a4d Mon Sep 17 00:00:00 2001
-From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
-Date: Wed, 13 Nov 2024 16:30:54 +0300
-Subject: [PATCH] add: dhcp server for pods(kubevirt replacement)
-
----
- bpf/bpf_lxc.c                       |   9 +
- bpf/lib/dhcp.h                      | 394 ++++++++++++++++++++++++++++
- pkg/datapath/linux/config/config.go |  45 ++++
- pkg/defaults/defaults.go            |   4 +
- pkg/option/config.go                |  12 +
- 5 files changed, 464 insertions(+)
- create mode 100644 bpf/lib/dhcp.h
-
 diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
-index e5653ec9f9..cd72247c4b 100644
+index e5653ec9f9..5ecc4c68f4 100644
 --- a/bpf/bpf_lxc.c
 +++ b/bpf/bpf_lxc.c
 @@ -38,6 +38,10 @@
@@ -27,15 +13,7 @@ index e5653ec9f9..cd72247c4b 100644
  /* Override LB_SELECTION initially defined in node_config.h to force bpf_lxc to use the random backend selection
   * algorithm for in-cluster traffic. Otherwise, it will fail with the Maglev hash algorithm because Cilium doesn't provision
   * the Maglev table for ClusterIP unless bpf.lbExternalClusterIP is set to true.
-@@ -58,6 +62,7 @@
- #include "lib/nodeport.h"
- #include "lib/policy_log.h"
- 
-+
- /* Per-packet LB is needed if all LB cases can not be handled in bpf_sock.
-  * Most services with L7 LB flag can not be redirected to their proxy port
-  * in bpf_sock, so we must check for those via per packet LB as well.
-@@ -1396,6 +1401,10 @@ int cil_from_container(struct __ctx_buff *ctx)
+@@ -1396,6 +1400,10 @@ int cil_from_container(struct __ctx_buff *ctx)
  #endif /* ENABLE_IPV6 */
  #ifdef ENABLE_IPV4
  	case bpf_htons(ETH_P_IP):
@@ -48,7 +26,7 @@ index e5653ec9f9..cd72247c4b 100644
  		ret = DROP_MISSED_TAIL_CALL;
 diff --git a/bpf/lib/dhcp.h b/bpf/lib/dhcp.h
 new file mode 100644
-index 0000000000..387d215056
+index 0000000000..682fc7e4c6
 --- /dev/null
 +++ b/bpf/lib/dhcp.h
 @@ -0,0 +1,394 @@
@@ -68,7 +46,7 @@ index 0000000000..387d215056
 +limitations under the License.
 +*/
 +
-+/* - this module used as replacement for kubevirt embedded dhcp server
++/* - this module is a replacement for kubevirt embedded dhcp server
 + * https://github.com/kubevirt/kubevirt/blob/main/pkg/network/dhcp/server/server.go
 + * - server implement very restricted part of dhcp protocol,
 + * only offer/ack responses on discover/request
