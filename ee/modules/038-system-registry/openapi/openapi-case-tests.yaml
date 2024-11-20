@@ -13,7 +13,7 @@ positive:
         user: "user"
     - mode: Detached
       detached:
-        storageMode: S3
+        storageMode: Fs
 negative:
   values:
     - somethingInConfig: yes

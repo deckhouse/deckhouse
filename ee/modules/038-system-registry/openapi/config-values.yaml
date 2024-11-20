@@ -11,7 +11,7 @@ x-examples:
       user: "user"
   - mode: Detached
     detached:
-      storageMode: S3
+      storageMode: Fs
 properties:
   imagesOverride:
     type: object
@@ -40,17 +40,16 @@ properties:
   detached:
     type: object
     x-example:
-      - storageMode: S3
       - storageMode: Fs
     description: |
       Detached mode properties.
     properties:
       storageMode: &storageMode
-        enum: [S3, Fs]
+        enum: [Fs]
+        # enum: [S3, Fs]
         description: |
           The type of data storage for the system registry module.
         x-example:
-          - S3
           - Fs
         x-doc-default: Fs
         default: Fs
