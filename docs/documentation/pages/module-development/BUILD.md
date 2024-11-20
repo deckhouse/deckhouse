@@ -34,7 +34,7 @@ You can also modify the workflow, use your own container registry, and design a 
 When developing **multiple modules** and publishing them to GitHub Packages, you should use a [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic) from the account.
 
 **Do not use** `GITHUB_TOKEN` in GitHub Workflows to avoid access rights issues when uploading images. This happens because the final release images are stored at `ghcr.io/<OWNER>/modules/`, belonging to the first created repository.
-{% endalert %}
+
 Example of adapting a [module template](https://github.com/deckhouse/modules-template/) for using a PAT:
 - On the _Settings -> Secrets and variables -> Actions_ page create a Secret named `TOKEN` containing a PAL.
 - Replace the `GITHUB_TOKEN` variable with `TOKEN` at `.github/workflows/`:
@@ -43,6 +43,7 @@ Example of adapting a [module template](https://github.com/deckhouse/modules-tem
     cd <REPO>
     sed -i -e 's/GITHUB_TOKEN/TOKEN/g' $(find .github/workflows/ -type f)
     ```
+{% endalert %}
 
 {% alert level="info" %}
 You can build module artifacts locally using [werf](https://werf.io/) (this may come in handy, for example, [when debugging](../development/)).
