@@ -289,16 +289,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mc := &config.ModuleConfig{}
-			mc.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   config.ModuleConfigGroup,
-				Version: config.ModuleConfigVersion,
-				Kind:    config.ModuleConfigKind,
-			})
-			mc.SetName("deckhouse")
-			mc.Spec.Enabled = ptr.To(true)
-			mc.Spec.Version = 1
-			mc.Spec.Settings = config.SettingsValues(map[string]interface{}{
+			mc := createMC("deckhouse", map[string]interface{}{
 				"bundle":         "Minimal",
 				"logLevel":       "Debug",
 				"releaseChannel": "Alpha",
@@ -329,16 +320,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mcGlobal := &config.ModuleConfig{}
-			mcGlobal.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   config.ModuleConfigGroup,
-				Version: config.ModuleConfigVersion,
-				Kind:    config.ModuleConfigKind,
-			})
-			mcGlobal.SetName("global")
-			mcGlobal.Spec.Enabled = ptr.To(true)
-			mcGlobal.Spec.Version = 1
-			mcGlobal.Spec.Settings = config.SettingsValues(map[string]interface{}{
+			mc := createMC("global", map[string]interface{}{
 				"highAvailability": true,
 				"modules": map[string]interface{}{
 					"https": map[string]interface{}{
@@ -352,7 +334,7 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 
 			res, err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
 				DevBranch:     "pr1111",
-				ModuleConfigs: []*config.ModuleConfig{mcGlobal},
+				ModuleConfigs: []*config.ModuleConfig{mc},
 			})
 			require.NoError(t, err)
 
@@ -375,22 +357,13 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mcGlobal := &config.ModuleConfig{}
-			mcGlobal.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   config.ModuleConfigGroup,
-				Version: config.ModuleConfigVersion,
-				Kind:    config.ModuleConfigKind,
-			})
-			mcGlobal.SetName("prometheus")
-			mcGlobal.Spec.Enabled = ptr.To(true)
-			mcGlobal.Spec.Version = 1
-			mcGlobal.Spec.Settings = config.SettingsValues(map[string]interface{}{
+			mc := createMC("prometheus", map[string]interface{}{
 				"highAvailability": true,
 			})
 
 			res, err := CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
 				DevBranch:     "pr1111",
-				ModuleConfigs: []*config.ModuleConfig{mcGlobal},
+				ModuleConfigs: []*config.ModuleConfig{mc},
 			})
 			require.NoError(t, err)
 
@@ -410,31 +383,13 @@ func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 				config.ModuleConfigGVR: "ModuleConfigList",
 			})
 
-			mcDeckhouse := &config.ModuleConfig{}
-			mcDeckhouse.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   config.ModuleConfigGroup,
-				Version: config.ModuleConfigVersion,
-				Kind:    config.ModuleConfigKind,
-			})
-			mcDeckhouse.SetName("deckhouse")
-			mcDeckhouse.Spec.Enabled = ptr.To(true)
-			mcDeckhouse.Spec.Version = 1
-			mcDeckhouse.Spec.Settings = config.SettingsValues(map[string]interface{}{
+			mcDeckhouse := createMC("deckhouse", map[string]interface{}{
 				"bundle":         "Minimal",
 				"logLevel":       "Debug",
 				"releaseChannel": "Alpha",
 			})
 
-			mcGlobal := &config.ModuleConfig{}
-			mcGlobal.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   config.ModuleConfigGroup,
-				Version: config.ModuleConfigVersion,
-				Kind:    config.ModuleConfigKind,
-			})
-			mcGlobal.SetName("global")
-			mcGlobal.Spec.Enabled = ptr.To(true)
-			mcGlobal.Spec.Version = 1
-			mcGlobal.Spec.Settings = config.SettingsValues(map[string]interface{}{
+			mcGlobal := createMC("global", map[string]interface{}{
 				"highAvailability": true,
 				"modules": map[string]interface{}{
 					"https": map[string]interface{}{
