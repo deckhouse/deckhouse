@@ -1,3 +1,17 @@
+From a16962752ba60e7d9fe184723a68ce22efd92a4d Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Wed, 13 Nov 2024 16:30:54 +0300
+Subject: [PATCH] add: dhcp server for pods(kubevirt replacement)
+
+---
+ bpf/bpf_lxc.c                       |   9 +
+ bpf/lib/dhcp.h                      | 394 ++++++++++++++++++++++++++++
+ pkg/datapath/linux/config/config.go |  45 ++++
+ pkg/defaults/defaults.go            |   4 +
+ pkg/option/config.go                |  12 +
+ 5 files changed, 464 insertions(+)
+ create mode 100644 bpf/lib/dhcp.h
+
 diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
 index e5653ec9f9..cd72247c4b 100644
 --- a/bpf/bpf_lxc.c
@@ -34,10 +48,10 @@ index e5653ec9f9..cd72247c4b 100644
  		ret = DROP_MISSED_TAIL_CALL;
 diff --git a/bpf/lib/dhcp.h b/bpf/lib/dhcp.h
 new file mode 100644
-index 0000000000..83b64e78e2
+index 0000000000..387d215056
 --- /dev/null
 +++ b/bpf/lib/dhcp.h
-@@ -0,0 +1,392 @@
+@@ -0,0 +1,394 @@
 +/*
 +Copyright 2024 Flant JSC
 +
@@ -177,7 +191,8 @@ index 0000000000..83b64e78e2
 +#define DHCP_LEASE_TIME              0x7FFFFFFE
 +
 +#ifndef IPV4_DNS_SERVER
-+	#define IPV4_DNS_SERVER          0x0ADE0001
++	/* default DNS address in cluster: 10.222.0.10 */
++	#define IPV4_DNS_SERVER          0x0ADE000a
 +#endif
 +
 +#define COPY_DATA_IF_SAFE(data_dst, data_src, data_end)   \
@@ -213,6 +228,7 @@ index 0000000000..83b64e78e2
 +};
 +
 +#ifndef DOMAIN_SEARCH_LIST_VALUE
++	/* default domain in cluster: cluster.local */
 +	#define DOMAIN_SEARCH_LIST_VALUE { 119, 15, 7, 'c', 'l', 'u', 's', 't', 'e', 'r', 5, 'l', 'o', 'c', 'a', 'l', 0 }
 +#endif
 +/* DHCP Option 119 */
@@ -431,14 +447,14 @@ index 0000000000..83b64e78e2
 +
 +#endif /* __LIB_DHCP__ */
 diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
-index 333076b2ff..a195e611ef 100644
+index 333076b2ff..11b6dc35e5 100644
 --- a/pkg/datapath/linux/config/config.go
 +++ b/pkg/datapath/linux/config/config.go
 @@ -80,6 +80,41 @@ func writeIncludes(w io.Writer) (int, error) {
  	return fmt.Fprintf(w, "#include \"lib/utils.h\"\n\n")
  }
  
-+func IPv4ToHex(ipString string) (string, error) {
++func ipv4ToHex(ipString string) (string, error) {
 +	ip := net.ParseIP(ipString)
 +	if ip == nil {
 +		return "", fmt.Errorf("invalid IPv4 address: %s", ipString)
@@ -453,11 +469,11 @@ index 333076b2ff..a195e611ef 100644
 +	return hexString, nil
 +}
 +
-+// now implemented only single domain
-+func GenerateDomainSearchList(domain string) string {
++// implemented only single domain
++func generateDomainSearchList(domain string) string {
 +	labels := strings.Split(domain, ".")
 +	var result []string
-+	result = append(result, "119") // Option code
++	result = append(result, "119") // option code
 +	result = append(result, "0") // total length
 +	totalLength := 1
 +	for _, label := range labels {
@@ -483,18 +499,18 @@ index 333076b2ff..a195e611ef 100644
 +
 +		if option.Config.DhcpdEnabled {
 +			cDefinesMap["ENABLE_DHCPD"] = "1"
-+			ipv4Dns, err := IPv4ToHex(option.Config.DhcpdClusterDns)
++			ipv4DNS, err := ipv4ToHex(option.Config.DhcpdClusterDNS)
 +			if err != nil {
 +				return err
 +			}
-+			cDefinesMap["IPV4_DNS_SERVER"] = ipv4Dns
-+			cDefinesMap["DOMAIN_SEARCH_LIST_VALUE"] = GenerateDomainSearchList(option.Config.DhcpdClusterDomain)
++			cDefinesMap["IPV4_DNS_SERVER"] = ipv4DNS
++			cDefinesMap["DOMAIN_SEARCH_LIST_VALUE"] = generateDomainSearchList(option.Config.DhcpdClusterDomain)
 +		}
  	}
  
  	if option.Config.EnableIPv6 {
 diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
-index c9f89257a5..927b680afa 100644
+index c9f89257a5..72b3cc610f 100644
 --- a/pkg/defaults/defaults.go
 +++ b/pkg/defaults/defaults.go
 @@ -559,6 +559,10 @@ const (
@@ -503,13 +519,13 @@ index c9f89257a5..927b680afa 100644
  	EnableEnvoyConfig = false
 +
 +	DhcpdEnabled = false
-+	DhcpdClusterDns = ""
++	DhcpdClusterDNS = ""
 +	DhcpdClusterDomain = ""
  )
  
  var (
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index e891a60a3d..280d5e2930 100644
+index e891a60a3d..fc581d083a 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
 @@ -379,6 +379,11 @@ const (
@@ -518,7 +534,7 @@ index e891a60a3d..280d5e2930 100644
  
 +	// DdhcpdEnabled enables BPF dhcp server
 +	DhcpdEnabled = "dhcpd-enabled"
-+	DhcpdClusterDns = "dhcpd-cluster-dns"
++	DhcpdClusterDNS = "dhcpd-cluster-dns"
 +	DhcpdClusterDomain = "dhcpd-cluster-domain"
 +
  	// EnableIPv4EgressGateway enables the IPv4 egress gateway
@@ -529,7 +545,7 @@ index e891a60a3d..280d5e2930 100644
  	EnableBPFClockProbe        bool
  	EnableIPMasqAgent          bool
 +	DhcpdEnabled               bool
-+	DhcpdClusterDns            string
++	DhcpdClusterDNS            string
 +	DhcpdClusterDomain         string
  	EnableIPv4EgressGateway    bool
  	EnableEnvoyConfig          bool
@@ -547,7 +563,7 @@ index e891a60a3d..280d5e2930 100644
  	c.EnableBPFClockProbe = vp.GetBool(EnableBPFClockProbe)
  	c.EnableIPMasqAgent = vp.GetBool(EnableIPMasqAgent)
 +	c.DhcpdEnabled = vp.GetBool(DhcpdEnabled)
-+	c.DhcpdClusterDns = vp.GetString(DhcpdClusterDns)
++	c.DhcpdClusterDNS = vp.GetString(DhcpdClusterDNS)
 +	c.DhcpdClusterDomain = vp.GetString(DhcpdClusterDomain)
  	c.EnableIPv4EgressGateway = vp.GetBool(EnableIPv4EgressGateway)
  	c.EnableEnvoyConfig = vp.GetBool(EnableEnvoyConfig)
