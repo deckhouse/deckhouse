@@ -88,6 +88,4 @@ spec:
             {{- if (include "isSystemRegistryEnabled" $) }}
             - upstream: http://127.0.0.1:5002/metrics
               path: /distribution/metrics
-            - upstream: http://127.0.0.1:9324/metrics
-              path: /seaweedfs/metrics
             {{- end }}

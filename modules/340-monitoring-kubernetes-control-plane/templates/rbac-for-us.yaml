@@ -12,7 +12,6 @@ rules:
   - /etcd/metrics
   {{- if (include "isSystemRegistryEnabled" $) }}
   - /distribution/metrics
-  - /seaweedfs/metrics
   {{- end }}
   verbs:
   - get
