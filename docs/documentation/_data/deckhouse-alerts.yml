@@ -4626,6 +4626,36 @@ alerts:
         Target is down
       severity: "7"
       markupFormat: default
+    - name: TargetDown
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/st-pod-target-down.yaml
+      moduleUrl: 038-system-registry
+      module: system-registry
+      edition: ee
+      description: '{{ $labels.job }} target is down.'
+      summary: |
+        Target is down
+      severity: "5"
+      markupFormat: default
+    - name: TargetDown
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/st-pod-target-down.yaml
+      moduleUrl: 038-system-registry
+      module: system-registry
+      edition: ee
+      description: '{{ $labels.job }} target is down.'
+      summary: |
+        Target is down
+      severity: "6"
+      markupFormat: default
+    - name: TargetDown
+      sourceFile: ee/modules/038-system-registry/monitoring/prometheus-rules/st-pod-target-down.yaml
+      moduleUrl: 038-system-registry
+      module: system-registry
+      edition: ee
+      description: '{{ $labels.job }} target is down.'
+      summary: |
+        Target is down
+      severity: "7"
+      markupFormat: default
     - name: TargetSampleLimitExceeded
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
       moduleUrl: 300-prometheus
@@ -4693,6 +4723,7 @@ modules-having-alerts:
     - runtime-audit-engine
     - secret-copier
     - snapshot-controller
+    - system-registry
     - terraform-manager
     - upmeter
     - user-authn
