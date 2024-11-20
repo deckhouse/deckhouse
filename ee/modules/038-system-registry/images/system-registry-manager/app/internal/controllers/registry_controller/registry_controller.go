@@ -83,7 +83,7 @@ type RegistryReconciler struct {
 	deletedSecrets   sync.Map
 }
 
-var nodePKISecretRegex = regexp.MustCompile(`^registry-node-.*-pki$`)
+var nodePKISecretRegex = regexp.MustCompile(`^registry-node-(.*)-pki$`)
 
 // SetupWithManager sets up the controller with the Manager to watch for changes in both Pods and Secrets.
 func (r *RegistryReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Context) error {
