@@ -481,16 +481,15 @@ jobs:
         env:
           HOST_RAW: 
         run: |
-          set -x
-          HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-            if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-            fi
-          done <<< "$HOST_KEYS"
+          # HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
+          # mkdir -p ~/.ssh
+          # touch ~/.ssh/known_hosts
+          # HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          # while IFS= read -r KEY_LINE; do
+          #   if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
+          #     echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          #   fi
+          # done <<< "$HOST_KEYS"
 
       - name: Build and push deckhouse images
         id: build
@@ -501,7 +500,6 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
-          set -x
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
           if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
@@ -823,16 +821,15 @@ jobs:
         env:
           HOST_RAW: 
         run: |
-          set -x
-          HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-            if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-            fi
-          done <<< "$HOST_KEYS"
+          # HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
+          # mkdir -p ~/.ssh
+          # touch ~/.ssh/known_hosts
+          # HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          # while IFS= read -r KEY_LINE; do
+          #   if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
+          #     echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          #   fi
+          # done <<< "$HOST_KEYS"
 
       - name: Build and push deckhouse images
         id: build
@@ -843,7 +840,6 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
-          set -x
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
           if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
@@ -1165,16 +1161,15 @@ jobs:
         env:
           HOST_RAW: 
         run: |
-          set -x
-          HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-            if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-            fi
-          done <<< "$HOST_KEYS"
+          # HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
+          # mkdir -p ~/.ssh
+          # touch ~/.ssh/known_hosts
+          # HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          # while IFS= read -r KEY_LINE; do
+          #   if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
+          #     echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          #   fi
+          # done <<< "$HOST_KEYS"
 
       - name: Build and push deckhouse images
         id: build
@@ -1185,7 +1180,6 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
-          set -x
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
           if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
@@ -1507,16 +1501,15 @@ jobs:
         env:
           HOST_RAW: 
         run: |
-          set -x
-          HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-            if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-            fi
-          done <<< "$HOST_KEYS"
+          # HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
+          # mkdir -p ~/.ssh
+          # touch ~/.ssh/known_hosts
+          # HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          # while IFS= read -r KEY_LINE; do
+          #   if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
+          #     echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          #   fi
+          # done <<< "$HOST_KEYS"
 
       - name: Build and push deckhouse images
         id: build
@@ -1527,7 +1520,6 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
-          set -x
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
           if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
@@ -1849,16 +1841,15 @@ jobs:
         env:
           HOST_RAW: 
         run: |
-          set -x
-          HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-            if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-            fi
-          done <<< "$HOST_KEYS"
+          # HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
+          # mkdir -p ~/.ssh
+          # touch ~/.ssh/known_hosts
+          # HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          # while IFS= read -r KEY_LINE; do
+          #   if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
+          #     echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          #   fi
+          # done <<< "$HOST_KEYS"
 
       - name: Build and push deckhouse images
         id: build
@@ -1869,7 +1860,6 @@ jobs:
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
-          set -x
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
           if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
