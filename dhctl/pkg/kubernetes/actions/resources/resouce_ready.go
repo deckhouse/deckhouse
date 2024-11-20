@@ -17,6 +17,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +38,12 @@ type resourceReadinessChecker struct {
 	attempt int
 }
 
+// kind should be in lower case!
+var kindsToAttempts = map[string]int{
+	// in some cases deckhouse controller doesn't have time for set status field, and we have Ready nodegroup whe it is not Ready
+	"nodegroup": 5,
+}
+
 func (c *resourceReadinessChecker) IsReady() (bool, error) {
 	defer func() {
 		c.attempt++
@@ -52,8 +59,15 @@ func (c *resourceReadinessChecker) IsReady() (bool, error) {
 
 	c.logger.LogInfoF("Checking if resource %s is ready...\n", name)
 
+	expectedAttempts := 1
+	kind := strings.ToLower(c.resource.GVK.Kind)
+	if attempts, ok := kindsToAttempts[kind]; ok {
+		log.DebugF("Found custom attempts %d for kind\n", attempts, c.resource.GVK.Kind)
+		expectedAttempts = attempts
+	}
+
 	// wait some attempts for set statuses in the resources
-	if c.attempt < 1 {
+	if c.attempt < expectedAttempts {
 		logNotReadyYet()
 		c.logger.LogDebugF("Skip resource % readiness checking for waiting set status\n", name)
 		return false, nil

@@ -27,6 +27,7 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
@@ -336,7 +337,7 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 		dc.GetFakeClock().Advance(result.RequeueAfter)
 
 		dr := suite.getModuleRelease(releaseName)
-		if dr.Status.Phase == v1alpha1.PhaseDeployed {
+		if dr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
 			return
 		}
 
@@ -421,15 +422,17 @@ type: Opaque
 
 	err := suite.Suite.SetupNoLock(initObjects)
 	require.NoError(suite.T(), err)
+	logger := log.NewNop()
 
 	rec := &moduleReleaseReconciler{
 		client:               suite.Suite.Client(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
-		logger:               log.NewNop(),
+		logger:               logger,
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		moduleManager:        stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
+		metricStorage:        metric_storage.NewMetricStorage(context.Background(), "", true, logger),
 
 		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 	}

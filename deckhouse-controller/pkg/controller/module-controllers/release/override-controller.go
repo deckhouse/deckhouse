@@ -165,8 +165,8 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	var result ctrl.Result
 	var metaUpdateRequired bool
 
-	// check if RegistrySpecChangedAnnotation annotation is set and process it
-	if _, set := mo.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
+	// check if RegistrySpecChanged annotation is set and process it
+	if _, set := mo.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
 		// if module is enabled - push runModule task in the main queue
 		c.logger.Infof("Applying new registry settings to the %s module", mo.Name)
 		err := c.moduleManager.RunModuleWithNewOpenAPISchema(mo.Name, mo.ObjectMeta.Labels["source"], filepath.Join(c.downloadedModulesDir, mo.Name, downloader.DefaultDevVersion))
@@ -174,7 +174,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 			return ctrl.Result{Requeue: true}, err
 		}
 		// delete annotation and requeue
-		delete(mo.ObjectMeta.Annotations, RegistrySpecChangedAnnotation)
+		delete(mo.ObjectMeta.Annotations, v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged)
 		metaUpdateRequired = true
 	}
 
