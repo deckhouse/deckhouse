@@ -365,7 +365,7 @@ jobs:
           HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
           while IFS= read -r KEY_LINE; do
             if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts"
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
             fi
           done <<< "$HOST_KEYS"
 
