@@ -193,7 +193,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-**Внимание!** Для работы необходимо включить параметр [`svcSourceRangeCheck`](../cni-cilium/configuration.html#parameters-svcsourcerangecheck) в модуле cni-cilium.
+Для работы необходимо включить параметр [`svcSourceRangeCheck`](../cni-cilium/configuration.html#parameters-svcsourcerangecheck) в модуле cni-cilium.
 {% endalert %}
 
 ## Как добавить дополнительные поля для логирования в nginx-controller?
