@@ -46,7 +46,7 @@ git:
 shell:
   install:
   - cd /src
-  - git clone {{ .SOURCE_REPO }}/flant/ovpn-admin.git .
+  - git clone {{ .SOURCE_REPO }}/palark/ovpn-admin.git .
   - git checkout {{ $gitCommit }}
   - git apply /patches/*.patch --verbose
   - echo {{ $gitCommit }} > version
