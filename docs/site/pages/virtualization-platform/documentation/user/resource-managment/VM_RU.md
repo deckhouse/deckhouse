@@ -640,6 +640,7 @@ spec:
 
 ```bash
 d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
+
 # linux-vm-7prpx
 ```
 

@@ -4,8 +4,6 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/vi
 lang: ru
 ---
 
-## Образы
-
 Ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage) используется для загрузки образов виртуальных машин в внутрикластерное хранилище, что позволяет создавать диски виртуальных машин. Этот ресурс доступен во всех пространствах имен и проектах кластера.
 
 Процесс создания образа включает следующие шаги:

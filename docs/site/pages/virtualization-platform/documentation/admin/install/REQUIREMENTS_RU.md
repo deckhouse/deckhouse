@@ -22,5 +22,4 @@ lang: ru
 | Astra Linux Special Edition | 1.7.2, 1.7.3, 1.7.4, 1.7.5, 1.8 |
 | CentOS                      | 7, 8, 9                         |
 | Debian                      | 10, 11, 12                      |
-| Rocky                       | Linux 8, 9                      |
 | Ubuntu                      | 18.04, 20.04, 22.04, 24.04      |

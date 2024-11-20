@@ -30,7 +30,7 @@ lang: ru
 echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
-Также можно воспользоваться [онлайн-сервисом Bcrypt](https://bcrypt-generator.com/)..
+Также можно воспользоваться [онлайн-сервисом Bcrypt](https://bcrypt-generator.com/).
 
 Пример манифеста для создания пользователя:
 
@@ -314,7 +314,7 @@ spec:
 * добавить параметр `allowedUserGroups` в ModuleConfig нужного приложения;
 * добавить группы к пользователю (наименования групп должны совпадать как на стороне Blitz, так и на стороне Deckhouse).
 
-Пример для Prometheus:
+Пример добавления групп для модуля Prometheus:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
