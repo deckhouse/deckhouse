@@ -122,6 +122,15 @@ spec:
             cpu: "10m"
             memory: "1Mi"
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-
-
-
+      {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
+      - name: pause-handle-vxlan-offload
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "vxlanOffloadingFixer") }}
+        command:
+        - /pause
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "1Mi"
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      {{- end }}
