@@ -85,7 +85,7 @@ EOF
 ```bash
 d8 k get vm linux-vm
 
-# NAME        PHASE     NODE           IPADDRESS     AGE
+# NAME       PHASE     NODE           IPADDRESS     AGE
 # linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
 
@@ -105,9 +105,9 @@ d8 k get vm linux-vm
 d8 v console linux-vm
 
 # Successfully connected to linux-vm console. The escape sequence is ^]
-
-linux-vm login: cloud
-Password: cloud
+#
+# linux-vm login: cloud
+# Password: cloud
 ```
 
 Нажмите `Ctrl+]` для завершения работы с серийной консолью.
