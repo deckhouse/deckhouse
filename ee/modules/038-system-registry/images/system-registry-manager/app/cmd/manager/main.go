@@ -122,6 +122,11 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 		return fmt.Errorf("unable to create controller: %w", err)
 	}
 
+	nodeRecociler := registry_controller.NodeReconciler{}
+	if err := nodeRecociler.SetupWithManager(ctx, mgr); err != nil {
+		return fmt.Errorf("unable to create node reconciler: %w", err)
+	}
+
 	// Add leader status update runnable
 	err = mgr.Add(leaderRunnableFunc(func(ctx context.Context) error {
 		// Call SecretsStartupCheckCreate with the existing reconciler instance
