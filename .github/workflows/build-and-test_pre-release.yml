@@ -354,11 +354,24 @@ jobs:
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
+      - name: Add ssh_known_hosts
+        env:
+          HOST_RAW: 
+        run: |
+          set -x
+          HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts"
+            fi
+          done <<< "$HOST_KEYS"
 
       - name: Build and push deckhouse images
         id: build
         env:
-          SSH_KNOWN_HOSTS: ~/.ssh/known_hosts
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
