@@ -1,8 +1,8 @@
 ---
 title: Аппаратные требования к узлам кластера на bare metal
-permalink: ru/guides/hardware-requirements.html
+permalink: en/guides/hardware-requirements.html
 description: Аппаратные требования к узлам кластера под управлением Deckhouse Kubernetes Platform.
-lang: ru
+lang: en
 ---
 
 Перед развертыванием кластера под управлением Deckhouse Kubernetes Platform необходимо определиться с конфигурацией будущего кластера и выбрать параметры для будущих узлов кластера, такие как количество RAM, CPU и так далее.
