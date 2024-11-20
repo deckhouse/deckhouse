@@ -154,7 +154,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 1. Запустите под с временным экземпляром etcd.
 
-Желательно, чтобы версия запускаемого экземпляра etcd совпадала с версией etcd, из которой создавалась резервная копия. Для простоты экземпляр запускается не локально, а в кластере, т.к. там заведомо есть образ etcd.
+  Желательно, чтобы версия запускаемого экземпляра etcd совпадала с версией etcd, из которой создавалась резервная копия. Для простоты экземпляр запускается не локально, а в кластере, т.к. там заведомо есть образ etcd.
 
   - Подготовьте файл `etcd.pod.yaml` с манифестом пода:
 
@@ -182,7 +182,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
         emptyDir: {}
     EOF
     ```
-  - 
+    
   - Установите актуальное имя образа etcd:
     ```shell
     IMG=`d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.containers[*].image}"`
@@ -261,7 +261,10 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 
-Внимание! Последний параметр в таблице вывода показывает, что член кластера etcd находится в состоянии [**learner**](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии *leader*.
+{% alert level="warning" %}
+Последний параметр в таблице вывода показывает, что член кластера etcd находится в состоянии [**learner**](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии *leader*.
+{% endalert %}
+
 
 ## Получить список членов кластера etcd (Вариант 2)
 
