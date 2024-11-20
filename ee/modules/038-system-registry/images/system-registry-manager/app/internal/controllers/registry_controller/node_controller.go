@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -30,17 +30,28 @@ const (
 	labelHeritageValue       = "deckhouse"
 )
 
-type NodeReconciler = nodeReconciler
+type NodeController = nodeController
 
-var _ reconcile.Reconciler = &nodeReconciler{}
+var _ reconcile.Reconciler = &nodeController{}
 
-type nodeReconciler struct {
+type nodeController struct {
 	Client    client.Client
-	Log       logr.Logger
 	Namespace string
+	State     *moduleState
+
+	reprocessCh chan event.TypedGenericEvent[reconcile.Request]
 }
 
-func (r *nodeReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+var nodeReprocessAllRequest = reconcile.Request{
+	NamespacedName: types.NamespacedName{
+		Namespace: "--reprocess-all-nodes--",
+		Name:      "--reprocess-all-nodes--",
+	},
+}
+
+func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	r.reprocessCh = make(chan event.TypedGenericEvent[reconcile.Request])
+
 	nodeWatchPredicate := predicate.Funcs{
 		CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
 			// Only process master nodes
@@ -69,6 +80,7 @@ func (r *nodeReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 			handler.EnqueueRequestsFromMapFunc(nodePkiSecretMapFunc),
 			builder.WithPredicates(secretsWatchPredicate),
 		).
+		WatchesRawSource(r.reprocessChannelSource()).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 10,
 		}).
@@ -81,18 +93,15 @@ func (r *nodeReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 	return nil
 }
 
-func (r *nodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Log.Info("Reconcile Start",
-		"name", req.Name,
-		"namespace", req.Namespace,
-	)
-	defer r.Log.Info("Reconcile Done",
-		"name", req.Name,
-		"namespace", req.Namespace,
-	)
+func (r *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	if req == nodeReprocessAllRequest {
+		return r.handleReprocessAll(ctx)
+	}
 
 	if req.Namespace != "" {
-		r.Log.Info("Fired by supplementary object", "namespace", req.Namespace)
+		log.Info("Fired by supplementary object", "namespace", req.Namespace)
 		req.Namespace = ""
 	}
 
@@ -113,22 +122,70 @@ func (r *nodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 }
 
-func (r *nodeReconciler) handleMasterNode(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
-	r.Log.Info("Handle master node", "node", node.Name)
+func (r *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
 
-	return ctrl.Result{}, nil
-}
+	log.Info("ReprocessAll: Start")
+	defer log.Info("ReprocessAll: Done")
 
-func (r *nodeReconciler) handleNodeNotMaster(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
-	// Delete node secret if exists
-	if err := r.deleteNodePKI(ctx, node.Name); err != nil {
-		return ctrl.Result{}, err
+	// Will trigger reprocess for all master nodes
+	opts := client.MatchingLabels{
+		"node-role.kubernetes.io/master": "",
+	}
+
+	nodes := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodes, &opts); err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot list nodes: %w", err)
+	}
+
+	for _, node := range nodes.Items {
+		req := reconcile.Request{}
+		req.Name = node.Name
+		req.Namespace = node.Namespace
+
+		if err := r.scheduleReconcileForNode(ctx, req); err != nil {
+			// It currently only when ctx done
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *nodeReconciler) handleNodeDelete(ctx context.Context, name string) (ctrl.Result, error) {
+func (r *nodeController) scheduleReconcileForNode(ctx context.Context, req reconcile.Request) error {
+	evt := event.TypedGenericEvent[reconcile.Request]{Object: req}
+
+	select {
+	case r.reprocessCh <- evt:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (r *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx)
+
+	log.Info("Handle master node", "node", node.Name)
+
+	return ctrl.Result{}, nil
+}
+
+func (r *nodeController) handleNodeNotMaster(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
+	// Delete node secret if exists
+	if err := r.deleteNodePKI(ctx, node.Name); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	/*
+		Here we may stop static pods, but it will be a race with k8s scheduler
+		So NOOP
+	*/
+
+	return ctrl.Result{}, nil
+}
+
+func (r *nodeController) handleNodeDelete(ctx context.Context, name string) (ctrl.Result, error) {
 	// Delete node secret if exists
 	if err := r.deleteNodePKI(ctx, name); err != nil {
 		return ctrl.Result{}, err
@@ -137,7 +194,9 @@ func (r *nodeReconciler) handleNodeDelete(ctx context.Context, name string) (ctr
 	return ctrl.Result{}, nil
 }
 
-func (r *nodeReconciler) deleteNodePKI(ctx context.Context, nodeName string) error {
+func (r *nodeController) deleteNodePKI(ctx context.Context, nodeName string) error {
+	log := ctrl.LoggerFrom(ctx)
+
 	secretName := fmt.Sprintf("registry-node-%s-pki", nodeName)
 	secret := &corev1.Secret{}
 
@@ -153,12 +212,32 @@ func (r *nodeReconciler) deleteNodePKI(ctx context.Context, nodeName string) err
 	}
 
 	err = r.Client.Delete(ctx, secret)
-
 	if client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("delete node PKI secret error: %w", err)
+	} else {
+		log.Info("Deleted node PKI", "node", nodeName, "name", secret.Name, "namespace", secret.Namespace)
 	}
 
 	return nil
+}
+
+func (r *nodeController) reprocessChannelSource() source.Source {
+	return source.Channel(r.reprocessCh, handler.TypedEnqueueRequestsFromMapFunc(
+		func(ctx context.Context, req reconcile.Request) []reconcile.Request {
+			return []reconcile.Request{req}
+		},
+	))
+}
+
+func (r *nodeController) ReprocessAllNodes(ctx context.Context) error {
+	evt := event.TypedGenericEvent[reconcile.Request]{Object: nodeReprocessAllRequest}
+
+	select {
+	case r.reprocessCh <- evt:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func nodePkiSecretMapFunc(ctx context.Context, o client.Object) []reconcile.Request {

@@ -285,6 +285,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 	}
 	// #TODO
+
 	return ctrl.Result{}, nil
 }
 

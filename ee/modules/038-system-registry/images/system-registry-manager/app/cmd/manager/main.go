@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -126,17 +127,33 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 		return fmt.Errorf("unable to create controller: %w", err)
 	}
 
-	nodeRecociler := registry_controller.NodeReconciler{
-		Client: mgr.GetClient(),
-		Log: mgr.GetLogger().
-			WithName("NodeReconciler").
-			WithValues("component", "NodeReconciler"),
+	nodeController := registry_controller.NodeController{
+		Client:    mgr.GetClient(),
 		Namespace: namespace,
 	}
 
-	if err := nodeRecociler.SetupWithManager(ctx, mgr); err != nil {
+	if err := nodeController.SetupWithManager(ctx, mgr); err != nil {
 		return fmt.Errorf("unable to create node reconciler: %w", err)
 	}
+
+	// TODO: for testing purposes
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			case <-time.After(30 * time.Second):
+				_ = nodeController.ReprocessAllNodes(ctx)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	// TODO: for testing purposes
 
 	// Add leader status update runnable
 	err = mgr.Add(leaderRunnableFunc(func(ctx context.Context) error {
