@@ -54,7 +54,7 @@ function nodeuser_patch() {
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     local patch_pending=true
     while [ "$patch_pending" = true ] ; do
-      server="127.0.0.1:6445"
+      for server in {{ .normal.apiserverEndpoints | join " " }} ; do
         local server_addr=$(echo $server | cut -f1 -d":")
         until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
           bb-log-info "The network is not ready for connecting to apiserver yet, waiting..."
@@ -88,6 +88,7 @@ function nodeuser_patch() {
           sleep 10
           continue
         fi
+      done
     done
   else
     bb-log-error "failed to patch NodeUser can't find kubelet.conf or bootstrap-token"

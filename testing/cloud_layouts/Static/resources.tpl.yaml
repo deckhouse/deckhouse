@@ -189,6 +189,8 @@ spec:
   nodeGroups:
   - "system"
   content: |
+    bb-set-proxy
+
     export DEBIAN_FRONTEND=noninteractive
     bb-flag? apt-rpm-updated && return 0
     bb-log-info 'Updating apt cache'
@@ -206,6 +208,7 @@ spec:
     if [ $EXIT_CODE -eq 0 ]; then
         bb-flag-set apt-rpm-updated
     fi
+    bb-unset-proxy
     return $EXIT_CODE
 ---
 # testing creating multiple resources for one non exists resource
