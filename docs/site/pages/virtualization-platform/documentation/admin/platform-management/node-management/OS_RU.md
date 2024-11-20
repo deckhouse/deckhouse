@@ -1,5 +1,5 @@
 ---
-title: "Настройка OS"
+title: "Настройка ОС"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/node-management/os.html
 lang: ru
 ---

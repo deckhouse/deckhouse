@@ -79,7 +79,7 @@ entries:
                       url: /virtualization-platform/documentation/admin/platform-management/node-management/configuration.html
                     - title:
                         en: OS configuration
-                        ru: Настройка OS
+                        ru: Настройка ОС
                       url: /virtualization-platform/documentation/admin/platform-management/node-management/os.html
                     - title:
                         en: Containerd configuration
