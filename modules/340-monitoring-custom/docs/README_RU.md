@@ -35,7 +35,7 @@ search: prometheus
       prometheus.deckhouse.io/tls: "true"  # Если метрики отдаются по HTTP, эту аннотацию указывать не нужно.
     ```
 
-- При использовании service mesh [Istio](../110-istio/) в режиме STRICT mTLS указать для сбора метрик следующую аннотацию у Service: `prometheus.deckhouse.io/istio-mtls: "true"`. Важно, что метрики приложения должны экспортироваться по протоколу HTTP без TLS.
+- При использовании service mesh [Istio](../110-istio/) в режиме STRICT mTLS указать для сбора метрик следующую аннотацию у Service или Pod: `prometheus.deckhouse.io/istio-mtls: "true"`. Важно, что метрики приложения должны экспортироваться по протоколу HTTP без TLS.
 
 - *(Не обязательно)* Указать дополнительные аннотации для более тонкой настройки:
 

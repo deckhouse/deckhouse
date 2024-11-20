@@ -71,14 +71,20 @@ spec:
                   type: string
                   description: The module phase.
                   enum:
-                    - NotInstalled
+                    - Available
                     - Downloading
-                    - Enqueued
-                    - WaitSync
-                    - Pending
+                    - Reconciling
+                    - Installing
+                    - HooksDisabled
+                    - WaitSyncTasks
+                    - Downloaded
                     - Conflict
                     - Ready
                     - Error
+                    #TODO(ipaqsa): delete it
+                    - Pending
+                    - Enqueued
+                    - NotInstalled
                 hooksState:
                   type: string
                   description: The hooks status report.
