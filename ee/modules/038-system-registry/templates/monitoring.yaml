@@ -6,13 +6,12 @@
 
 # Dashboards for S3 storage mode:
 # - seaweedfs;
-{{- if or (and (hasKey $.Values.systemRegistry "detached")
-  (hasKey $.Values.systemRegistry.detached "storageMode")
-  (eq $.Values.systemRegistry.detached.storageMode "S3"))
-  
-  (and (hasKey $.Values.systemRegistry "proxy")
-  (hasKey $.Values.systemRegistry.proxy "storageMode")
-  (eq $.Values.systemRegistry.proxy.storageMode "S3"))
-}}
+{{- $isDetachedS3 := and (hasKey $.Values.systemRegistry "detached") 
+                          (hasKey $.Values.systemRegistry.detached "storageMode") 
+                          (eq $.Values.systemRegistry.detached.storageMode "S3") }}
+{{- $isProxyS3 := and (hasKey $.Values.systemRegistry "proxy") 
+                      (hasKey $.Values.systemRegistry.proxy "storageMode") 
+                      (eq $.Values.systemRegistry.proxy.storageMode "S3") }}
+{{- if or $isDetachedS3 $isProxyS3 }}
 {{- include "helm_lib_grafana_dashboard_definitions_recursion" (list . "monitoring/grafana-dashboards/" "monitoring/grafana-dashboards/s3-storage-mode") }}
 {{- end }}
