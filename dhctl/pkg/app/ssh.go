@@ -97,6 +97,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		}
 		return nil
 	})
+
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if len(sshHostsRaw) > 0 {
 			for i, host := range sshHostsRaw {
@@ -154,6 +155,13 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("ASK_BECOME_PASS")).
 		Short('K').
 		BoolVar(&AskBecomePass)
+
+	cmd.PreAction(func(c *kingpin.ParseContext) error {
+		if SSHUser == "root" {
+			AskBecomePass = false
+		}
+		return nil
+	})
 }
 
 func processConnectionConfigFile(sshFlagSetByUser bool, parser connectionConfigParser) error {
