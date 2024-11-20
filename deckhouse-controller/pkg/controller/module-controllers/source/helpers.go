@@ -41,7 +41,10 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			module := new(v1alpha1.Module)
 			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
-				return err
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return fmt.Errorf("get the '%s' module: %w", moduleName, err)
 			}
 
 			// delete modules without sources, it seems impossible, but just in case
