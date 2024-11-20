@@ -1,5 +1,5 @@
 ---
-title: "Настройка OS"
+title: "Настройка ОС"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/node-management/os.html
 lang: ru
 ---
@@ -77,7 +77,6 @@ spec:
     bb-deckhouse-get-disruptive-update-approval
     bb-apt-install "linux-image-${desired_version}"
 ```
-
 
 ### Для дистрибутивов, основанных на CentOS
 

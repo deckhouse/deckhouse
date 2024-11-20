@@ -10,7 +10,7 @@ lang: ru
 
 - Установка и настройки дополнительных пакетов ОС.
 
-  Примеры:
+  Пример:
   - [установка kubectl-плагина](./configuration-containerd.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
 
 - Обновление ядра ОС на конкретную версию.
@@ -33,7 +33,6 @@ lang: ru
   - [настройка метрик](./configure-containerd.html#дополнительные-настройки-containerd);
   - [добавление приватного registry](./configure-containerd.html#добавление-дополнительного-registry);
 
-
 ## Настройки NodeGroupConfiguration
 
 Ресурс `NodeGroupConfiguration` позволяет указывать [приоритет](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
@@ -44,6 +43,7 @@ lang: ru
 <ul>
 <li><code>.cloudProvider</code> (для групп узлов с nodeType <code>CloudEphemeral</code> или <code>CloudPermanent</code>) — массив данных облачного провайдера.
 {% offtopic title="Пример данных..." %}
+
 ```yaml
 cloudProvider:
   instanceClassKind: OpenStackInstanceClass
@@ -72,11 +72,13 @@ cloudProvider:
   zones:
   - nova
 ```
+
 {% endofftopic %}</li>
 <li><code>.cri</code> — используемый CRI (с версии Deckhouse 1.49 используется только <code>Containerd</code>).</li>
 <li><code>.kubernetesVersion</code> — используемая версия Kubernetes.</li>
 <li><code>.nodeUsers</code> — массив данных о пользователях узла, добавленных через ресурс <a href="cr.html#nodeuser">NodeUser</a>.
 {% offtopic title="Пример данных..." %}
+
 ```yaml
 nodeUsers:
 - name: user1
@@ -88,10 +90,12 @@ nodeUsers:
     sshPublicKey: SSH_PUBLIC_KEY
     uid: 1050
 ```
+
 {% endofftopic %}
 </li>
 <li><code>.nodeGroup</code> — массив данных группы узлов.
 {% offtopic title="Пример данных..." %}
+
 ```yaml
 nodeGroup:
   cri:
@@ -116,10 +120,12 @@ nodeGroup:
   nodeType: CloudPermanent
   updateEpoch: "1699879470"
 ```
+
 {% endofftopic %}</li>
 </ul>
 
 {% raw %}
+
 Пример использования переменных в шаблонизаторе:
 
 ```shell
@@ -149,14 +155,15 @@ journalctl -u bashible.service
 
 Сами скрипты находятся на узле в директории `/var/lib/bashible/bundle_steps/`.
 
-Сервис принимает решение о повторном запуске скриптов путем сравнения единой контрольной суммы всех файлов, расположенной по пути `/var/lib/bashible/configuration_checksum` с контрольной суммой размещенной в кластере `kubernetes` в секрете `configuration-checksums` namespace `d8-cloud-instance-manager`.
+Сервис принимает решение о повторном запуске скриптов путем сравнения единой контрольной суммы всех файлов, расположенной по пути `/var/lib/bashible/configuration_checksum` с контрольной суммой размещенной в кластере Kubernetes в секрете `configuration-checksums` пространства имен `d8-cloud-instance-manager`.
+
 Проверить контрольную сумму можно следующей командой:
 
 ```bash
 kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
 ```  
 
-Сравнение контрольных суммы сервис совершает каждую минуту.
+Сравнение контрольных сумм сервис совершает каждую минуту.
 
 Контрольная сумма в кластере изменяется раз в 4 часа, тем самым повторно запуская скрипты на всех узлах.  
 Принудительный вызов исполнения bashible на узле можно произвести путем удаления файла с контрольной суммой скриптов с помощью следующей команды:
@@ -170,4 +177,4 @@ rm /var/lib/bashible/configuration_checksum
 При написании скриптов важно учитывать следующие особенности их использования в Deckhouse:
 
 1. Скрипты в deckhouse выполняются раз в 4 часа или на основании внешних триггеров. Поэтому важно писать скрипты таким образом, чтобы они производили проверку необходимости своих изменений в системе перед выполнением действий, а не производили изменения каждый раз при запуске.
-2. При выборе [приоритета](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) пользовательских скриптов важно учитывать [встроенные скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/node-group) которые производят различные действия в т.ч. установку и настройку сервисов. Например, если в скрипте планируется произвести перезапуск сервиса, а сервис устанавливается встроенным скриптом с приоритетом N, то приоритет пользовательского скрипта должен быть как минимум N+1, иначе, при развертывании нового узла пользовательский скрипт выйдет с ошибкой.
+1. При выборе [приоритета](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) пользовательских скриптов важно учитывать [встроенные скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/node-group) которые производят различные действия в т.ч. установку и настройку сервисов. Например, если в скрипте планируется произвести перезапуск сервиса, а сервис устанавливается встроенным скриптом с приоритетом N, то приоритет пользовательского скрипта должен быть как минимум N+1, иначе, при развертывании нового узла пользовательский скрипт выйдет с ошибкой.

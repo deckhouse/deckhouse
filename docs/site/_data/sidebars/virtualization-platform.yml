@@ -28,6 +28,7 @@ entries:
         - title:
             en: Install
             ru: Установка платформы
+          url: /virtualization-platform/documentation/admin/install/steps/install.html  
           folders:
             - title:
                 en: Requirements

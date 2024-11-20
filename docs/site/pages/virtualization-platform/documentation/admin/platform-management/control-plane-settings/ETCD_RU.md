@@ -6,11 +6,11 @@ lang: "ru"
 
 ## Резервное копирование etcd
 
-### Автоматическое
+### Автоматическое резервное копирование
 
-Deckhouse создаёт CronJob `kube-system/d8-etcd-backup-*`, который срабатывает в 00:00 по UTC+0. Резервная копию данных ectd сохраняется в файл `/var/lib/etcd/etcd-backup.tar.gz` на всех master-узлах.
+Deckhouse создаёт CronJob `kube-system/d8-etcd-backup-*`, который срабатывает в 00:00 по UTC+0. Резервная копия данных etcd сохраняется в архив `/var/lib/etcd/etcd-backup.tar.gz` на всех master-узлах.
 
-### Вручную с помощью Deckhouse CLI
+### Резервное копирование вручную с помощью Deckhouse CLI
 
 В кластерах Deckhouse v1.65 и выше резервную копию данных etcd можно создать одной командой `d8 backup etcd`:
 
@@ -21,10 +21,10 @@ d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
 TODO что в файле etcd.db? В варианте с etcdctl поясняется что за файл создаётся, а тут нет.
 TODO где это запускать, на каждом master-узле или нет?
 
-### Вручную с помощью etcdctl
+### Резервное копирование вручную с помощью etcdctl
 
 {% alert level="warning" %}
-Не рекомендуется на версиях 1.65 и выше.
+Не рекомендуется использовать в версиях Deckhouse 1.65 и выше.
 {% endalert %}
 
 В кластерах Deckhouse версии v1.64 и ниже запустите следующий скрипт на любом master-узле от пользователя `root`:
@@ -41,25 +41,24 @@ tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
 rm -r ./kubernetes ./etcd-backup.snapshot
 ```
 
-В текущей директории будет создан файл `kube-backup.tar.gz` со снимком базы etcd одного из членов etcd-кластера.
+В текущей директории будет создан файл `kube-backup.tar.gz` со снимком базы etcd одного из узлов etcd-кластера.
 Из полученного снимка можно будет восстановить состояние кластера etcd.
 
 Также рекомендуется сделать бэкап директории `/etc/kubernetes`, в которой находятся:
+
 - манифесты и конфигурация компонентов [control-plane](https://kubernetes.io/docs/concepts/overview/components/#control-plane-components);
 - [PKI кластера Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/).
 
 Мы рекомендуем хранить резервные копии снимков состояния кластера etcd, а также бэкап директории `/etc/kubernetes/` в зашифрованном виде вне кластера Deckhouse.
-Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т. д.
-
-Далее будут рассмотрены процедуры полного и частичного восстановления данных из резервной копии.
+Для этого вы можете использовать сторонние инструменты резервного копирования файлов, например [Restic](https://restic.net/), [Borg](https://borgbackup.readthedocs.io/en/stable/), [Duplicity](https://duplicity.gitlab.io/) и т.д.
 
 ## Полное восстановление состояния кластера из резервной копии etcd
 
 Далее будут описаны шаги по восстановлению кластера до предыдущего состояния из резервной копии при полной потере данных.
 
-### Восстановление кластера single-master
+### Восстановление кластера с одним master-узлом
 
-Для корректного восстановления кластера single-master выполните следующие шаги:
+Для корректного восстановления кластера с одним master-узлом выполните следующие шаги:
 
 1. Загрузите утилиту [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно чтобы её версия была такая же, как и версия etcd в кластере).
 
@@ -68,7 +67,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
    ```
 
-   Посмотреть версию etcd в кластере можно выполнив следующую команду:
+   Проверить версию etcd в кластере можно выполнив следующую команду:
 
    ```shell
    kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
@@ -92,7 +91,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    rm -rf /var/lib/etcd/member/
    ```
 
-1. Положите резервную копию etcd в файл `~/etcd-backup.snapshot`.
+1. Поместите резервную копию etcd в файл `~/etcd-backup.snapshot`.
 
 1. Восстановите базу данных etcd.
 
@@ -107,15 +106,15 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
    ```
 
-### Восстановление кластера multi-master
+### Восстановление мультимастерного кластера
 
-Для корректного восстановления кластера multi-master выполните следующие шаги:
+Для корректного восстановления мультимастерного кластера выполните следующие шаги:
 
-1. Явно включите режим High Availability (HA) с помощью глобального параметра [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме single-master HA отключен по умолчанию.
+1. Явно включите режим High Availability (HA) с помощью глобального параметра [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability). Это нужно, например, чтобы не потерять одну реплику Prometheus и её PVC, поскольку в режиме кластера с одним master-узлом HA отключен по умолчанию.
 
-1. Переведите кластер в режим single-master, в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
+1. Переведите кластер в режим с одним master-узлом, в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master) для облачных кластеров или самостоятельно выведите статические master-узлы из кластера.
 
-1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-single-master) для single-master.
+1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-single-master) для кластера с одним master-узлом.
 
 1. Когда работа etcd будет восстановлена, удалите из кластера информацию об уже удаленных в п.1 master-узлах, воспользовавшись следующей командой (укажите название узла):
 
@@ -131,29 +130,29 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
    ```
 
-1. Переведите кластер обратно в режим multi-master в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
+1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
 
 ## Восстановление объекта Kubernetes из резервной копии etcd
 
 Краткий сценарий восстановления отдельных объектов из резервной копии etcd:
 
-1. Получить резервную копию данных.
-2. Запустить временный экземпляр etcd.
-3. Наполнить его данными из резервной копии.
-4. Получить описания нужных объектов с помощью утилиты `etcdhelper`.
+1. Получите резервную копию данных.
+1. Запустите временный экземпляр etcd.
+1. Наполните его данными из резервной копии.
+1. Получите описания нужных объектов с помощью утилиты `etcdhelper`.
 
+### Шаги по восстановлению объектов из резервной копии etcd
 
-### Пример шагов по восстановлению объектов из резервной копии etcd
+В примере:
 
-В примере предполагается:
-- `etcd-snapshot.bin` — файл с [резервной копией](#как-сделать-бэкап-etcd-вручную) данных etcd (snapshot)
-- `infra-production` — namespace, в котором нужно восстановить объекты.
+- `etcd-snapshot.bin` — файл с [резервной копией](#как-сделать-бэкап-etcd-вручную) данных etcd (snapshot);
+- `infra-production` — пространство имен, в котором нужно восстановить объекты.
 
 1. Запустите под с временным экземпляром etcd.
 
-Желательно, чтобы версия запускаемого экземпляра etcd совпадала с версией etcd, из которой создавалась резервная копия. Для простоты экземпляр запускается не локально, а в кластере, т.к. там заведомо есть образ etcd.
+Желательно, чтобы версия запускаемого экземпляра etcd совпадала с версией etcd, из которой создавалась резервная копия. Для простоты экземпляр запускается не локально, а в кластере, так как в кластере заведомо есть образ etcd.
 
-  - Подготовьте файл `etcd.pod.yaml` с манифестом пода:
+- Подготовьте файл `etcd.pod.yaml` с манифестом пода:
 
     ```shell
     cat <<EOF >etcd.pod.yaml 
@@ -179,73 +178,74 @@ rm -r ./kubernetes ./etcd-backup.snapshot
         emptyDir: {}
     EOF
     ```
-  - 
-  - Установите актуальное имя образа etcd:
-    ```shell
-    IMG=`kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.containers[*].image}"`
-    sed -i -e "s#IMAGE#$IMG#" etcd.pod.yaml
-    ```
 
-  - Создайте под:
+- Установите актуальное имя образа etcd:
 
-    ```shell
-    kubectl create -f etcd.pod.yaml
-    ```
+  ```shell
+  IMG=`kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.    containers[*].image}"`
+  sed -i -e "s#IMAGE#$IMG#" etcd.pod.yaml
+  ```
 
-2. Скопируйте `etcdhelper` и снимок etcd в контейнер пода.
+- Создайте под:
 
-   `etcdhelper` можно собрать из [исходного кода](https://github.com/openshift/origin/tree/master/tools/etcdhelper) или скопировать из готового образа (например, из [образа `etcdhelper` на Docker Hub](https://hub.docker.com/r/webner/etcdhelper/tags)).
+  ```shell
+  kubectl create -f etcd.pod.yaml
+  ```
 
-   Пример:
+1. Скопируйте `etcdhelper` и снимок etcd в контейнер пода.
 
-   ```shell
-   kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
-   kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
-   ```
+`etcdhelper` можно собрать из [исходного кода](https://github.com/openshift/origin/tree/master/tools/etcdhelper) или скопировать из готового образа (например, из [образа `etcdhelper` на Docker Hub](https://hub.docker.com/r/webner/etcdhelper/tags)).
 
-3. В контейнере установите права на запуск `etcdhelper`, восстановите данные из резервной копии и запустите etcd.
+Пример:
 
-   Пример:
+```shell
+kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
+kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
+```
 
-   ```console
-   ~ # kubectl -n default exec -it etcdrestore -- sh
-   / # chmod +x /usr/bin/etcdhelper
-   / # etcdctl snapshot restore /tmp/etcd-snapshot.bin
-   / # etcd &
-   ```
+1. В контейнере установите права на запуск `etcdhelper`, восстановите данные из резервной копии и запустите etcd.
 
-4. Получите описания нужных объектов кластера, отфильтровав их с помощью `grep`.
+Пример:
 
-   Пример:
+```console
+~ # kubectl -n default exec -it etcdrestore -- sh
+/ # chmod +x /usr/bin/etcdhelper
+/ # etcdctl snapshot restore /tmp/etcd-snapshot.bin
+/ # etcd &
+```
 
-   ```console
-   ~ # kubectl -n default exec -it etcdrestore -- sh
-   / # mkdir /tmp/restored_yaml
-   / # cd /tmp/restored_yaml
-   /tmp/restored_yaml # for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done
-   ```
+1. Получите описания нужных объектов кластера, отфильтровав их с помощью `grep`.
 
-   Замена символов с помощью `sed` в примере позволяет сохранить описания объектов в файлы, именованные подобно структуре реестра etcd. Например: `/registry/deployments/infra-production/supercronic.yaml` → `deployments_infra-production_supercronic.yaml`.
+Пример:
 
-5. Скопируйте полученные описания объектов из пода на master-узел:
+```console
+~ # kubectl -n default exec -it etcdrestore -- sh
+/ # mkdir /tmp/restored_yaml
+/ # cd /tmp/restored_yaml
+/tmp/restored_yaml # for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done
+```
+
+Замена символов с помощью `sed` в примере позволяет сохранить описания объектов в файлы, именованные подобно структуре реестра etcd. Например: `/registry/deployments/infra-production/supercronic.yaml` → `deployments_infra-production_supercronic.yaml`.
+
+1. Скопируйте полученные описания объектов из пода на master-узел командой:
 
    ```shell
    kubectl cp default/etcdrestore:/tmp/restored_yaml restored_yaml
    ```
 
-6. Удалите из полученных описаний объектов информацию о времени создания, UID, status и прочие оперативные данные, после чего восстановите объекты:
+1. Удалите из полученных описаний объектов информацию о времени создания, UID, status и прочие оперативные данные, после чего восстановите объекты командой:
 
    ```shell
    kubectl create -f restored_yaml/deployments_infra-production_supercronic.yaml
    ```
 
-7. Под с временным экземпляром etcd можно удалить:
+1. Под с временным экземпляром etcd можно удалить командой:
 
    ```shell
    kubectl delete -f etcd.pod.yaml
    ```
 
-## Получить список членов кластера etcd
+## Как получить список узлов кластера etcd
 
 Используйте команду `etcdctl member list`.
 
@@ -258,9 +258,9 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 
-Внимание! Последний параметр в таблице вывода показывает, что член кластера etcd находится в состоянии [**learner**](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии *leader*.
+**Внимание.!** Последний параметр в таблице вывода показывает, что узел кластера etcd находится в состоянии [learner](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии leader.
 
-## Получить список членов кластера etcd (Вариант 2)
+## Как получить список узлов кластера etcd (вариант 2)
 
 Используйте команду `etcdctl endpoint status`. Для этой команды, после флага `--endpoints` нужно подставить адрес каждого узла control-plane.
 
@@ -286,18 +286,20 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 
 ## Пересборка кластера etcd
 
-Пересборка может потребоваться в случае, если etcd-кластер развалился, либо при миграции из multi-master конфигурации в single-master.
+Пересборка может потребоваться в случае, если etcd-кластер развалился, либо при миграции из мультимастерного кластера в кластер с одним master-узлом.
 
-1. Выберите узел, с которого начнётся восстановление кластера etcd. В случае миграции в single-master это узел, на котором должен остаться etcd.
-2. Остановите etcd на всех остальных узлах. Для этого удалите файл `/etc/kubernetes/manifests/etcd.yaml`.
-3. На оставшемся узле в манифесте `/etc/kubernetes/manifests/etcd.yaml` добавьте аргумент `--force-new-cluster` в поле `spec.containers.command`.
-4. После успешного запуска кластера удалите параметр `--force-new-cluster`.
+1. Выберите узел, с которого начнётся восстановление кластера etcd. В случае миграции в кластер с одним master-узлом это узел, на котором должен остаться etcd.
+1. Остановите etcd на всех остальных узлах. Для этого удалите файл `/etc/kubernetes/manifests/etcd.yaml`.
+1. На оставшемся узле в манифесте `/etc/kubernetes/manifests/etcd.yaml` добавьте аргумент `--force-new-cluster` в поле `spec.containers.command`.
+1. После успешного запуска кластера удалите параметр `--force-new-cluster`.
 
-> **Внимание!** Операция деструктивна, она полностью уничтожает консенсус и запускает etcd-кластер с состояния, которое сохранилось на выбранном узле. Любые pending-записи пропадут.
+{% alert level="danger" %}
+Операция деструктивна, она полностью уничтожает консенсус и запускает etcd-кластер с состояния, которое сохранилось на выбранном узле. Любые pending-записи пропадут.
+{% endalert %}
 
 ## Устранение бесконечного рестарта
 
-Данный вариант может понадобиться, если запуск с аргументом `--force-new-cluster` не восстанавливает работу etcd. Такое может случиться при неудачном converge master-узлов, когда новый master-узел был создан со старым диском etcd, поменял свой адрес из локальной сети, и другие master-узлы отсутствуют. Симптомы, при которых стоит использовать данный способ: контейнер etcd в бесконечном рестарте, в его логе ошибка: `panic: unexpected removal of unknown remote peer`.
+Данный вариант может понадобиться, если запуск с аргументом `--force-new-cluster` не восстанавливает работу etcd. Такое может случиться при неудачном converge master-узлов, когда новый master-узел был создан со старым диском etcd, поменял свой адрес из локальной сети, и другие master-узлы отсутствуют. Стоит использовать данный способ, если контейнер etcd в бесконечном рестарте, а в его логе ошибка: `panic: unexpected removal of unknown remote peer`.
 
 1. Установите утилиту [etcdutl](https://github.com/etcd-io/etcd/releases).
 1. С текущего локального снапшота базы etcd (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота:
@@ -308,11 +310,12 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
    --skip-hash-check=true --data-dir /var/lib/etcdtest
    ```
 
-   , где:
+   где:
+
 - `<HOSTNAME>` — название master-узла;
 - `<ADDRESS>` — адрес master-узла.
 
-1. Выполните команды, для использования нового снапшота:
+1. Выполните команды для использования нового снапшота:
 
    ```shell
    cp -r /var/lib/etcd /tmp/etcd-backup

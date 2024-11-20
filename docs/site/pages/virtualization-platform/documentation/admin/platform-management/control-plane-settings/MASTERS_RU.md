@@ -20,15 +20,14 @@ master-1   Ready    control-plane,master   247d   v1.28.15
 master-2   Ready    control-plane,master   247d   v1.28.15
 ```
 
-
 ## Удаление роли master-узла с сохранением узла в кластере
 
-1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
+1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../300-prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
-1. Снимите с узла лейблы `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.
-1. Убедитесь, что узел пропал из списка членов кластера etcd:
+1. Снимите с узла метки `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.
+1. Убедитесь, что узел пропал из списка узлов кластера etcd:
 
    ```bash
    kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \

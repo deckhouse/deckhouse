@@ -4,9 +4,8 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-Для устанавливки компонентов CoreDNS и управления DNS можно использовать возможности модуля kube-dns.
-
-Внимание! Модуль удаляет ранее установленные kubeadm’ом Deployment, ConfigMap и RBAC для CoreDNS.
+Для установки компонентов CoreDNS и управления DNS можно воспользоваться функциональностью модуля kube-dns.
+**Внимание.**  Модуль удаляет ранее созданные с помощью kubeadm ресурсы: Deployment, ConfigMap и RBAC для CoreDNS.
 
 Чтобы включить модуль kube-dns с настройками по умолчанию, примените следующий ресурс `ModuleConfig`:
 
@@ -64,9 +63,9 @@ EOF
 
 ## Изменение домена кластера
 
-Чтобы поменять домен кластера с минимальным простоем, добавьте новый домен и сохраните предыдущий. 
+Чтобы изменить домен кластера с минимальным простоем, выполните следующие шаги:
 
-1. Для этого измените параметры в настроках модуля control-plane-manager, который определяет конфигурацию Deckhouse.
+1. Отредактируйте настройки модуля control-plane manager, который отвечает за конфигурацию Deckhouse.
 
 Внесите изменения в секции по шаблону ниже:
 
@@ -95,7 +94,7 @@ spec:
         - https://kubernetes.default.svc.<новый clusterDomain>
 ```
 
-2. Затем укажите список альтернативных доменов кластера в настройках модуля kube-dns:
+1. Укажите список альтернативных доменов кластера в настройках модуля kube-dns:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -111,5 +110,5 @@ spec:
          - <новый clusterDomain>
    ```
 
-3. Дождитесь перезапуска `kube-apiserver`.
-4. Поменяйте `clusterDomain` на новый в `dhctl config edit cluster-configuration`.
+1. Дождитесь перезапуска `kube-apiserver`.
+1. Поменяйте `clusterDomain` на новый домен в `dhctl config edit cluster-configuration`.

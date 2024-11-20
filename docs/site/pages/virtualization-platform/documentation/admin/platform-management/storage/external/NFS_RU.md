@@ -4,8 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-Для управления томами на основе протокола NFS (Network File System) можно использовать модуль csi-nfs,
-позводяющий создавать `StorageClass` через создание пользовательских ресурсов `NFSStorageClass`.
+Для управления томами на основе протокола NFS (Network File System) можно использовать модуль csi-nfs, позводяющий создавать StorageClass через создание пользовательских ресурсов `NFSStorageClass`.
 
 ## Включение модуля
 
@@ -32,10 +31,11 @@ d8 k get module csi-nfs -w
 # csi-nfs   910      Enabled   Embedded           Ready
 ```
 
-## Создание StorageClass’а
+## Создание StorageClass
 
-Для создания `StorageClass` необходимо использовать ресурс `NFSStorageClass`. 
-Ручное создание ресурса `StorageClass` без `NFSStorageClass` может привести к нежелательным эффектам. 
+Для создания StorageClass необходимо использовать ресурс `NFSStorageClass`.
+Ручное создание ресурса StorageClass без `NFSStorageClass` может привести к нежелательным последствиям.
+
 Пример команды для создания класса хранения на базе NFS:
 
 ```yaml
@@ -65,7 +65,7 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс `NFSStorageClass` перешел в состояние `Created` и соответствующий `StorageClass` создался:
+Проверьте, что созданный ресурс `NFSStorageClass` перешел в состояние Created и соответствующий StorageClass создался:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
@@ -79,16 +79,17 @@ d8 k get sc nfs-storage-class
 # nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
-Если `StorageClass` с именем nfs-storage-class появился, значит настройка модуля csi-nfs завершена.
-Теперь пользователи могут создавать `PersistentVolume`, указывая `StorageClass` с именем nfs-storage-class.
+Если StorageClass с именем `nfs-storage-class` появился, значит настройка модуля csi-nfs завершена.
+Теперь пользователи могут создавать PersistentVolume, указывая StorageClass с именем `nfs-storage-class`.
 
-Для каждого ресурса `PersistentVolume` будет создаваться каталог <директория из share>/<имя PersistentVolume>.
+Для каждого ресурса PersistentVolume будет создаваться каталог `<директория из share>/<имя PersistentVolume>`.
 
 ## Проверка работоспособности модуля
 
-Для того, чтобы проверить работоспособность модуля csi-nfs, необходимо проверить состояние подов в namespace d8-csi-nfs. 
+Для того, чтобы проверить работоспособность модуля csi-nfs, необходимо проверить состояние подов в пространстве имен d8-csi-nfs.
 Все поды должны быть в состоянии Running или Completed, поды csi-nfs должны быть запущены на всех узлах.
-Сделать это можно с помощью команды:
+
+Проверить работоспособность модуля можно с помощью команды:
 
 ```shell
 d8 k -n d8-csi-nfs get pod -owide -w

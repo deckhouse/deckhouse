@@ -1,12 +1,13 @@
 ---
-title: "Управление пользователями"
+title: "Интеграция с внешними системами аутентификации"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/access-control/user-management.html
 lang: ru
 ---
 
 ## Описание
 
-Платформа позволяет управлять внутренними пользователями и группами платформы, либо использовать внешние провайдеры/протоколы аутентификации:
+Платформа поддерживает управление как внутренними пользователями и группами, так и интеграцию с внешними провайдерами аутентификации и протоколами, такими как:
+
 - [GitHub](#github);
 - [GitLab](#gitlab);
 - [Crowd](#atlassian-crowd);
@@ -14,23 +15,23 @@ lang: ru
 - [LDAP](#ldap);
 - [OIDC](#oidc-openid-connect).
 
-Одновременно можно подключить более одного внешнего провайдера аутентификации.
+Можно подключить несколько внешних провайдеров аутентификации одновременно.
 
-Пользователи платформы имеют возможность подключаться к веб-интерфейсам платформы (`Grafana`, `Console`, ...), а также взаимодействовать с использованием утилит командной строки (`d8`, `kubectl`) с API платформы для просмотра и управления ресурсами в рамках назначенных прав доступа.
+Пользователи могут получать доступ к веб-интерфейсам платформы (например, Grafana, Console), а также использовать командные утилиты (`d8`, `kubectl`) для взаимодействия с API платформы с учетом назначенных прав доступа.
 
-Назначение прав созданным пользователям и группам пользователей описано в документе ["Ролевая модель"](./role-model.html)
+Информация о назначении прав пользователям и группам представлена в [документации](./role-model.html).
 
 ## Создание пользователя
 
 Для создания статичного пользователя используется ресурс [User](../../../reference/cr.html#user).
 
-Предварительно необходимо сгенерировать хеш пароля с использованием команды:
+Перед этим необходимо сгенерировать хеш пароля с помощью следующей команды:
 
 ```shell
 echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
-Также можно воспользоваться [онлайн-сервисом Bcrypt](https://bcrypt-generator.com/)..
+Также можно воспользоваться [онлайн-сервисом Bcrypt](https://bcrypt-generator.com/).
 
 Пример манифеста для создания пользователя:
 
@@ -66,12 +67,12 @@ spec:
 
 ## Создание конфигурационного файла для удаленного доступа
 
-Чтобы удалённо управлять кластером с помощью утилит командной строки (`d8` или `kubectl`) нужно создать конфигурационный файл:
+Для того чтобы удалённо управлять кластером с помощью утилит командной строки (`d8` или `kubectl`), необходимо создать конфигурационный файл:
 
-1. Опубликуйте API платформы, установив параметр `.spec.settings.publishAPI.enabled` в значении true в ресурсе ModuleConfig `user-authn`.
-2. Далее, с помощью веб-интерфейса `kubeconfigurator`, сгенерируйте `kubeconfig` файл для удалённого доступа к кластеру. Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра `publicDomainTemplate`.
+1. Включите доступ к API платформы, установив параметр `.spec.settings.publishAPI.enabled` в значении `true` в ресурсе ModuleConfig модуля`user-authn`.
+1. Через веб-интерфейс kubeconfigurator, сгенерируйте `kubeconfig` файл для удалённого доступа к кластеру. Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра `publicDomainTemplate`.
 
-Посмотреть адрес, на котором опубликован сервис можно с использованием следующей команды:
+Чтобы узнать адрес, по которому доступен сервис, выполните следующую команду:
 
 ```bash
 d8 k get ingress -n d8-user-authn
@@ -80,7 +81,8 @@ d8 k get ingress -n d8-user-authn
 # kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
 # ...
 ```
-3. Перейдите по этому адресу и в качестве учетных данных введите e-mail и пароль, которые задавались на этапе создания пользователя.
+
+1. Перейдите по предоставленному адресу и используйте в качестве учетных данных e-mail и пароль, которые вы указали при создании пользователя.
 
 ## Настройка внешних провайдеров
 
@@ -88,7 +90,7 @@ d8 k get ingress -n d8-user-authn
 
 ### GitHub
 
-В примере представлены настройки провайдера для интеграции с GitHub.
+В примере представлены настройки провайдера для интеграции с GitHub:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -103,14 +105,24 @@ spec:
     clientSecret: plainstring
 ```
 
-В организации GitHub необходимо создать новое приложение.
+Чтобы создать приложение в организации GitHub, выполните следующие шаги:
 
-Для этого выполните следующие шаги:
-* перейдите в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
+1. Перейдите в раздел «Settings» на GitHub, затем в «Developer settings» и выберите «OAuth Apps».
+1. Нажмите на кнопку «Register a new OAuth application».
+1. Введите необходимые данные для приложения:
+   - В поле «Authorization callback URL» укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`. Это URL будет использоваться для обратного вызова после авторизации пользователя.
+1. После регистрации приложения GitHub предоставит вам два ключевых параметра:
+   - Client ID — уникальный идентификатор клиента.
+   - Client Secret — секретный ключ клиента.
+1. Полученные значения Client ID и Client Secret необходимо указать в вашем Custom Resource для DexProvider. Это обеспечит интеграцию вашего GitHub приложения с системой аутентификации.
 
-Полученные `Client ID` и `Client Secret` укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
+Если организация GitHub находится под управлением клиента, выполните следующие шаги:
 
-Если организация GitHub находится под управлением клиента, перейдите в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и нажмите `Send Request` для подтверждения. Попросите клиента подтвердить запрос, который придет к нему на email.
+1. Перейдите в «Settings» -> «Applications» -> «Authorized OAuth Apps».
+1. Найдите созданное приложение по имени и нажмите «Send Request» для подтверждения.
+1. Попросите клиента подтвердить запрос, который будет отправлен ему на email.
+
+После выполнения этих шагов ваше приложение будет готово для использования в качестве провайдера аутентификации через GitHub.
 
 ### GitLab
 
@@ -133,14 +145,32 @@ spec:
     - users
 ```
 
-В GitLab проекта необходимо создать новое приложение.
+Для того чтобы создать приложение в GitLab, выполните следующие шаги:
 
-Для этого выполните следующие шаги:
-* **self-hosted**: перейдите в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
-* **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
-* (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` при создании приложения.
+Для GitLab, размещённого на собственном сервере:
 
-Полученные `Application ID` и `Secret` укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
+1. Перейдите в «Admin area» → «Application» → «New application».
+1. В поле «Redirect URI (Callback URL)» укажите адрес:  
+   `https://dex.<modules.publicDomainTemplate>/callback`.
+1. Выберите следующие scopes:
+   - `read_user`
+   - `openid`
+
+Для GitLab, размещённого в облаке:
+
+1. Под главной учетной записью проекта перейдите в «User Settings» → «Applications» → «New application».
+1. В поле «Redirect URI (Callback URL)» укажите адрес:  
+   `https://dex.<modules.publicDomainTemplate>/callback`.
+1. Выберите следующие scopes:
+   - `read_user`
+   - `openid`
+
+Для GitLab версии 16 и выше:
+
+ Включите опцию «Trusted»:  
+`Trusted applications are automatically authorized on GitLab OAuth flow` при создании приложения.
+
+После создания приложения получите Application ID и секрет (Secret) и укажите их в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
 
 ### Atlassian Crowd
 
@@ -164,14 +194,12 @@ spec:
     - users
 ```
 
-В соответствующем проекте Atlassian Crowd необходимо создать новое `Generic`-приложение.
+Для того чтобы создать Generic-приложение в Atlassian Crowd, выполните следующие шаги:
 
-Для этого выполните следующие шаги:
-* перейдите в `Applications` -> `Add application`.
+1. Перейдите в раздел «Applications» → «Add application».
+1. Полученные «Application Name» и «Password» укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
 
-Полученные `Application Name` и `Password` укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
-
-Группы CROWD укажите в lowercase-формате для Custom Resource `DexProvider`.
+> **Внимание.** Группы CROWD следует указывать в lowercase-формате в Custom Resource DexProvider.
 
 ### Bitbucket Cloud
 
@@ -194,12 +222,13 @@ spec:
     - users
 ```
 
-Для настройки аутентификации необходимо в Bitbucket в меню команды создать нового OAuth consumer.
+Для настройки аутентификации в Bitbucket выполните следующие шаги:
 
-Для этого выполните следующие шаги:
-* перейдите в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешите доступ для `Account: Read` и `Workspace membership: Read`.
+1. В меню команды создайте новый OAuth consumer.
+1. Перейдите в «Settings» → «OAuth consumers» → «New application» и в качестве «Callback URL» укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
+1. Разрешите доступ для `Account: Read` и `Workspace membership: Read`.
 
-Полученные `Key` и `Secret` укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
+Полученные «Key» и секрет (Secret) укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
 
 ### LDAP
 
@@ -239,12 +268,11 @@ spec:
       nameAttr: cn
 ```
 
-Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
+Для настройки аутентификации в LDAP read-only-пользователя (service account) выполните следующие шаги:
 
-Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
-1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
-2. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
-
+1. Создайте в LDAP read-only-пользователя (service account).
+1. Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource [DexProvider](../../../reference/cr.html#dexprovider). Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
+1. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
 
 ### OIDC (OpenID Connect)
 
@@ -252,7 +280,7 @@ spec:
 
 Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
 
-Ниже можно ознакомиться с некоторыми примерами.
+Далее можно ознакомиться с некоторыми примерами.
 
 #### Okta
 
@@ -307,9 +335,9 @@ spec:
   type: OIDC
 ```
 
-Чтобы корректно отрабатывал выход из приложений (происходил отзыв токена и требовалась повторная авторизация), нужно установить `login` в значении параметра `promptType`.
+Чтобы корректно работал выход из приложений (происходил отзыв токена и требовалась повторная авторизация), нужно установить `login` в значении параметра `promptType`.
 
-Для обеспечения гранулированного доступа пользователя к приложениям необходимо:
+Для обеспечения детализированного доступа пользователя к приложениям необходимо:
 
 * добавить параметр `allowedUserGroups` в `ModuleConfig` нужного приложения;
 * добавить группы к пользователю (наименования групп должны совпадать как на стороне Blitz, так и на стороне Deckhouse).

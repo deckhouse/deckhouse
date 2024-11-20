@@ -1,11 +1,10 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Хранилище YADRO"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/hardware/yadro.html
 lang: ru
 ---
 
-Для управления томами на основе системы хранения данных TATLIN.UNIFIED можно использовать модуль csi-yadro,
-позволяющий создавать ресурсы `StorageClass` через создание пользовательских ресурсов `YadroStorageClass`.
+Для управления томами на основе системы хранения данных [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) можно использовать модуль csi-yadro, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов `YadroStorageClass`.
 
 ## Включение модуля
 
@@ -34,8 +33,7 @@ d8 k get module csi-yadro -w
 
 ## Подключение к системе хранения данных TATLIN.UNIFIED
 
-Чтобы создать подключение к системе хранения данных TATLIN.UNIFIED и иметь возможность настраивать StorageClass’ы, 
-примените следующий ресурс `YadroStorageConnection`:
+Чтобы создать подключение к системе хранения данных TATLIN.UNIFIED и иметь возможность настраивать StorageClass’ы, примените следующий ресурс `YadroStorageConnection`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -57,10 +55,11 @@ spec:
 EOF
 ```
 
-## Создание StorageClass’а
+## Создание StorageClass
 
-Для создания `StorageClass` необходимо использовать ресурс `YadroStorageClass`.
-Ручное создание ресурса `StorageClass` без `YadroStorageClass` может привести к нежелательным эффектам.
+Для создания StorageClass необходимо использовать ресурс `YadroStorageClass`.
+Ручное создание ресурса StorageClass без `YadroStorageClass` может привести к нежелательным последствиям.
+
 Пример команды для создания класса хранения на основе системы хранения данных TATLIN.UNIFIED:
 
 ```yaml
@@ -79,9 +78,9 @@ EOF
 
 ## Проверка работоспособности модуля
 
-Для того, чтобы проверить работоспособность модуля csi-yadro, необходимо проверить состояние подов в namespace d8-csi-yadro.
+Для того, чтобы проверить работоспособность модуля csi-yadro, необходимо проверить состояние подов в пространстве имен `d8-csi-yadro`.
 Все поды должны быть в состоянии Running или Completed, поды csi-yadro должны быть запущены на всех узлах.
-Сделать это можно с помощью команды:
+Проверить работоспособность модуля можно с помощью команды:
 
 ```shell
 kubectl -n d8-csi-yadro get pod -owide -w

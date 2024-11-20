@@ -8,12 +8,12 @@ lang: ru
 
 Дополнительная настройка containerd возможна через создание конфигурационных файлов с помощью ресурса `NodeGroupConfiguration`.
 
-За настройки containerd отвечает встроенный скрипт [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/node-group/032_configure_containerd.sh.tpl) - он производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также **перезапуск** сервиса.
+За настройки containerd отвечает встроенный скрипт [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/node-group/032_configure_containerd.sh.tpl) — он производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также перезапуск сервиса.
 
 При разработке `NodeGroupConfiguration` следует учитывать следующее:
-1. Директория `/etc/containerd/conf.d/` не создается автоматически
-2. Создавать файлы в ней следует до запуска `032_configure_containerd.sh`, т.е. с приоритетом менее `32`.
 
+1. Директория `/etc/containerd/conf.d/` не создается автоматически;
+1. Создавать файлы в данной директории следует до запуска `032_configure_containerd.sh`, т.е. с приоритетом менее `32`.
 
 ## Дополнительные настройки containerd
 
@@ -24,7 +24,7 @@ lang: ru
 Bashible на узлах объединяет конфигурацию containerd для Deckhouse с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
 
 {% alert level="warning" %}
-Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`, но их работу придётся обеспечивать самостоятельно. Также, лучше изменением конфигурации не затрагивать master-узлы (nodeGroup `master`).
+Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`, но при этом ответственность за их корректную работу ляжет на вас. Рекомендуется избегать внесения изменений, которые могут повлиять на master-узлы.
 {% endalert %}
 
 ```yaml
