@@ -36,7 +36,7 @@ When developing **multiple modules** and publishing them to GitHub Packages, you
 **Do not use** `GITHUB_TOKEN` in GitHub Workflows to avoid access rights issues when uploading images. This happens because the final release images are stored at `ghcr.io/<OWNER>/modules/`, belonging to the first created repository.
 {% endalert %}
 Example of adapting a [module template](https://github.com/deckhouse/modules-template/) for using a PAT:
-- In the forked or cloned repository on the _Settings -> Secrets and variables -> Actions_ page create a Secret named `TOKEN` containing a PAL.
+- On the _Settings -> Secrets and variables -> Actions_ page create a Secret named `TOKEN` containing a PAL.
 - Replace the `GITHUB_TOKEN` variable with `TOKEN` at `.github/workflows/`:
 
     ```shell
