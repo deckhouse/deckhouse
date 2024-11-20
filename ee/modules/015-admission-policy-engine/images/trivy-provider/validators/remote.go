@@ -10,28 +10,47 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/aquasecurity/trivy/pkg/types"
 	"github.com/go-logr/logr"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/open-policy-agent/frameworks/constraint/pkg/externaldata"
 )
 
+const insecureRegistryKey = "trivy.insecureRegistry."
+
 type remoteValidator struct {
-	remoteURL string
-	logger    logr.Logger
-	scanOpts  types.ScanOptions
+	remoteURL          string
+	logger             logr.Logger
+	scanOpts           types.ScanOptions
+	insecureRegistries map[string]struct{}
 }
 
-func NewRemoteValidator(remoteURL string, logger logr.Logger) *remoteValidator {
+func NewRemoteValidator(remoteURL string, logger logr.Logger, envs []string) *remoteValidator {
+	insecureRegistries := make(map[string]struct{}, 0)
+	for _, keyValue := range envs {
+		key, value, found := strings.Cut(keyValue, "=")
+		if !found {
+			continue
+		}
+
+		if strings.HasPrefix(key, insecureRegistryKey) {
+			logger.Info("insecure registry added", "registry", value)
+			insecureRegistries[value] = struct{}{}
+		}
+	}
+
 	return &remoteValidator{
 		remoteURL: remoteURL,
 		logger:    logger,
 		scanOpts: types.ScanOptions{
-			VulnType:            types.VulnTypes,
+			PkgTypes:            types.PkgTypes,
 			Scanners:            types.AllScanners,
 			ImageConfigScanners: types.AllImageConfigScanners,
 			ScanRemovedPackages: true,
 		},
+		insecureRegistries: insecureRegistries,
 	}
 }
 
@@ -59,7 +78,16 @@ func (v *remoteValidator) validate(ctx context.Context, data []byte) ([]external
 
 func (v *remoteValidator) scanImageReport(ctx context.Context, img string) externaldata.Item {
 	v.logger.Info("validate", "image", img, "remote", v.remoteURL)
-	scanReport, err := scanArtifact(ctx, img, v.remoteURL, http.Header{}, v.scanOpts)
+	insecure := false
+	ref, err := name.ParseReference(img, name.StrictValidation)
+	if err == nil {
+		if _, found := v.insecureRegistries[ref.Context().RegistryStr()]; found {
+			v.logger.Info("insecure registry scan", "image", img)
+			insecure = true
+		}
+	}
+
+	scanReport, err := scanArtifact(ctx, img, v.remoteURL, http.Header{}, v.scanOpts, insecure)
 	if err != nil {
 		return externaldata.Item{
 			Key:   img,
