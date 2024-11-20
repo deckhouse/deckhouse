@@ -27,9 +27,9 @@ spec:
   version: v1.26.0
 status:
   approved: false
-  message: Waiting for Deckhouse pod to be ready
+  message: Awaiting for Deckhouse pod to be ready
   phase: Pending
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null
 ---
 apiVersion: v1
 kind: Pod
