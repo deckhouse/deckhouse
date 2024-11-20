@@ -6,7 +6,7 @@
 shopt -s extglob
 
 function netplan_configure(){
-  primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml || test $? = 1;)"
+  primary_mac="$(grep -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml | sed 's/"//g' || test $? = 1;)"
 
   if [ -z "$primary_mac" ]; then
     primary_ifname=$(grep -Po '(ens|eth|eno|enp)[0-9]+(?=:)' /etc/netplan/50-cloud-init.yaml | head -n1)

@@ -34,7 +34,7 @@ func newTaskManager() *taskManager {
 }
 
 // spawn spawns a new task if it doesn't exist yet.
-func (m *taskManager) spawn(taskID taskID, task func() bool) bool {
+func (m *taskManager) spawn(taskID taskID, task func() bool) *bool {
 	m.tasksMutex.Lock()
 	defer m.tasksMutex.Unlock()
 
@@ -42,12 +42,12 @@ func (m *taskManager) spawn(taskID taskID, task func() bool) bool {
 	done, ok := m.tasks[taskID]
 	if ok {
 		if done == nil {
-			return false
+			return nil
 		}
 
 		delete(m.tasks, taskID)
 
-		return *done
+		return done
 	}
 
 	m.tasks[taskID] = nil
@@ -65,5 +65,5 @@ func (m *taskManager) spawn(taskID taskID, task func() bool) bool {
 		done = task()
 	}()
 
-	return false
+	return nil
 }

@@ -18,13 +18,12 @@ package drain
 
 import (
 	"io"
-	"io/ioutil" // nolint: staticcheck
 	"time"
 
 	"k8s.io/client-go/kubernetes"
 )
 
-func NewDrainer(kubeClient kubernetes.Interface, errOut io.Writer) *Helper {
+func NewDrainer(kubeClient kubernetes.Interface) *Helper {
 	drainer := &Helper{
 		Client:              kubeClient,
 		Force:               true,
@@ -33,8 +32,8 @@ func NewDrainer(kubeClient kubernetes.Interface, errOut io.Writer) *Helper {
 		GracePeriodSeconds:  -1,
 		// If a pod is not evicted in 5 minutes, delete pod
 		Timeout: 5 * time.Minute,
-		Out:     ioutil.Discard,
-		ErrOut:  errOut,
+		Out:     io.Discard,
+		ErrOut:  io.Discard,
 	}
 
 	return drainer

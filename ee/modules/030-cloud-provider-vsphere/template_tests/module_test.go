@@ -32,7 +32,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-vsphere"]
+  enabledModules: ["vertical-pod-autoscaler", "cloud-provider-vsphere"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -420,7 +420,7 @@ labels:
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
-			f.ValuesSetFromYaml("cloudProviderVsphere.internal.defaultStorageClass", `mydsname2`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `mydsname2`)
 			f.HelmRender()
 		})
 

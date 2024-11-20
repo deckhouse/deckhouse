@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
@@ -48,8 +48,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-cni-cilium"},
 				},
 			},
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   filterCASecret,
 		},
 	},
@@ -81,7 +81,7 @@ func generateHubbleCACert(input *go_hook.HookInput) error {
 	}
 
 	const cn = "d8.hubble-ca.cilium.io"
-	ca, err := certificate.GenerateCA(input.LogEntry, cn,
+	ca, err := certificate.GenerateCA(input.Logger, cn,
 		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",
 			S: 2048,

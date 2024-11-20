@@ -149,6 +149,9 @@ common:
   status:
     en: status
     ru: статус
+  products:
+    en: Products
+    ru: Продукты
   or:
     en: or
     ru: или
@@ -176,6 +179,9 @@ common:
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
+  gs_description:
+    en: Getting Started. <TITLE>. <STEP>
+    ru: Быстрый старт. <TITLE>. <STEP>
 
 comparison:
   except_parameters:

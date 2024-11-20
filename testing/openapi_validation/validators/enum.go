@@ -66,11 +66,11 @@ var (
 			// http and https
 			"properties.modulesImages.properties.registry.properties.scheme",
 		},
-		"modules/010-user-authn-crd/crds/dex-provider.yaml": {
+		"modules/150-user-authn/crds/dex-provider.yaml": {
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.github.properties.teamNameField",
 		},
-		"modules/010-prometheus-crd/crds/grafanaadditionaldatasources.yaml": {
+		"modules/300-prometheus/crds/grafanaadditionaldatasources.yaml": {
 			// v1alpha1 migrated to v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.access",
 		},
@@ -140,6 +140,11 @@ var (
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 		},
 		"modules/030-cloud-provider-zvirt/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+		},
+		"modules/030-cloud-provider-dynamix/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",

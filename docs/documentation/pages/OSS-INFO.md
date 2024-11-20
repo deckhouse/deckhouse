@@ -1,5 +1,6 @@
 ---
 title: Information about used software
+description: Information about the software used in the Deckhouse Kubernetes Platform.
 permalink: en/oss_info.html
 ---
 
@@ -22,7 +23,7 @@ permalink: en/oss_info.html
                     {{ item.description }}
                 </div>
                 <div class="oss__item-license">
-                    {{ item.licence }}
+                    {{ item.license }}
                 </div>
             </div>
         {% endfor %}

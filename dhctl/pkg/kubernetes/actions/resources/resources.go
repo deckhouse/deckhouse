@@ -98,21 +98,34 @@ func (c *Creator) createAll() error {
 
 		for i, resource := range c.resources {
 			if _, ok := addedResourcesIndexes[i]; !ok {
+				log.DebugF("Remain resource %s\n", resource.String())
 				remainResources = append(remainResources, resource)
 			}
 		}
 
 		c.resources = remainResources
+		log.DebugF("Remain resources: %d\n", len(c.resources))
 	}()
 
-	if err := c.ensureRequiredNamespacesExist(); err != nil {
+	log.DebugLn("start ensureRequiredNamespacesExist")
+
+	// resourcesToSkipInCurrentIteration connect with c.resources via resource slice index
+	resourcesToSkipInCurrentIteration, err := c.ensureRequiredNamespacesExist()
+	if err != nil {
 		return err
 	}
 
+	log.DebugLn("start single resource creation loop")
+
 	for indx, resource := range c.resources {
+		if _, shouldSkip := resourcesToSkipInCurrentIteration[indx]; shouldSkip {
+			log.DebugF("Resource %s with index % should skip to create in current iteration because namespace is not existed\n", resource.String())
+			continue
+		}
+
 		resourcesList, err := apiResourceGetter.Get(&resource.GVK)
 		if err != nil {
-			log.DebugF("apiResourceGetter returns error: %w", err)
+			log.DebugF("apiResourceGetter returns error: %w\n", err)
 			continue
 		}
 
@@ -132,14 +145,38 @@ func (c *Creator) createAll() error {
 	return nil
 }
 
-func (c *Creator) ensureRequiredNamespacesExist() error {
-	knownNamespaces := make(map[string]struct{})
+func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
+	// true means known existing namespace
+	// false means known namespace that is not yet created (used to skip checking for that namespace for multiple times)
+	knownNamespaces := make(map[string]bool)
+	// we need to skip all resources without existing namespace
+	// because namespace can possibly be created in current iteration
+	// or after state is set to "cluster is bootstrapped" (some namespaces will be created by the deckhouse after that)
+	resourcesToSkipInCurrentIteration := make(map[int]struct{})
 
-	return retry.NewLoop(fmt.Sprintln("Ensure that required namespaces exist"), 10, 10*time.Second).Run(func() error {
-		for _, res := range c.resources {
+	err := retry.NewSilentLoop("Ensure that required namespaces exist", 10, 10*time.Second).Run(func() error {
+		for i, res := range c.resources {
 			nsName := res.Object.GetNamespace()
-			if _, nsWasSeenBefore := knownNamespaces[nsName]; nsName == "" || nsWasSeenBefore {
-				continue // If this resource is not namespaces, or we saw this namespace already, there is no need to check
+
+			if nsName == "" {
+				// we can receive empty name space when user want to deploy in 'default' ns
+				// we keep it in our minds and skip verify therese resources because we think that
+				// default namespace always exist
+				log.DebugF("Namespace is empty for resource %s. Skip ns checking\n", res.String())
+				continue
+			}
+
+			namespaceExists, nsWasSeenBefore := knownNamespaces[nsName]
+			if nsWasSeenBefore {
+				if !namespaceExists {
+					// we have two cases; first - we check namespace and namespace is existed and not
+					// if ns is existed then we will skip only
+					// if ns is not exists we should skip resource on current iteration and try to create on next iteration
+					resourcesToSkipInCurrentIteration[i] = struct{}{}
+					log.DebugF("Namespace not found but processed for resource %s. Adding skip to create resource in current iteration\n", res.String())
+				}
+				log.DebugF("Namespace was processed for resource %s. Skip ns checking\n", res.String())
+				continue
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -150,19 +187,23 @@ func (c *Creator) ensureRequiredNamespacesExist() error {
 					return fmt.Errorf("can't get namespace %q: %w", nsName, err)
 				}
 
-				return fmt.Errorf(
-					"%w: waiting for namespace %q is to create %q (%s)",
-					ErrNotAllResourcesCreated,
-					nsName,
-					res.Object.GetName(),
-					res.GVK.String(),
-				)
+				resourcesToSkipInCurrentIteration[i] = struct{}{}
+				knownNamespaces[nsName] = false
+				log.DebugF("Namespace was not found for resource %s\n", res.String())
+				continue
 			}
 			cancel()
-			knownNamespaces[nsName] = struct{}{}
+			knownNamespaces[nsName] = true
+			log.DebugF("Namespace found for resource %s\n", res.String())
 		}
 		return nil
 	})
+
+	if err != nil {
+		return make(map[int]struct{}), err
+	}
+
+	return resourcesToSkipInCurrentIteration, nil
 }
 
 func (c *Creator) TryToCreate() error {
@@ -221,10 +262,10 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 	// Wait up to 10 minutes
 	return retry.NewLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).Run(func() error {
 		gvr, docCopy, err := resourceToGVR(c.kubeCl, resource)
-		namespace := docCopy.GetNamespace()
 		if err != nil {
 			return err
 		}
+		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
 			Manifest: func() interface{} { return nil },

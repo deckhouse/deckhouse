@@ -49,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -269,7 +270,7 @@ func SetupSSHTunnelToRegistryPackagesProxy(sshCl *ssh.Client) (*frontend.Reverse
 	checker := ssh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
 	killer := ssh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
 
-	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
+	tun := sshCl.ReverseTunnel(fmt.Sprintf("%s:%s:%s:%s", listenAddress, port, listenAddress, port))
 	err = tun.Up()
 	if err != nil {
 		return nil, err
@@ -744,18 +745,18 @@ func SaveMasterHostsToCache(hosts map[string]string) {
 	}
 }
 
-func GetMasterHostsIPs() ([]string, error) {
+func GetMasterHostsIPs() ([]session.Host, error) {
 	var hosts map[string]string
 	err := cache.Global().LoadStruct(MasterHostsCacheKey, &hosts)
 	if err != nil {
 		return nil, err
 	}
-	mastersIPs := make([]string, 0, len(hosts))
-	for _, ip := range hosts {
-		mastersIPs = append(mastersIPs, ip)
+	mastersIPs := make([]session.Host, 0, len(hosts))
+	for name, ip := range hosts {
+		mastersIPs = append(mastersIPs, session.Host{Host: ip, Name: name})
 	}
 
-	sort.Strings(mastersIPs)
+	sort.Sort(session.SortByName(mastersIPs))
 
 	return mastersIPs, nil
 }

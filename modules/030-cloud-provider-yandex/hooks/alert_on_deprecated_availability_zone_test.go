@@ -20,7 +20,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -77,7 +77,7 @@ spec:
 
 	expectedMetric := operation.MetricOperation{
 		Name:   "d8_node_group_node_with_deprecated_availability_zone",
-		Value:  pointer.Float64(1.0),
+		Value:  ptr.To(1.0),
 		Labels: map[string]string{"node_group": "system-c"},
 		Action: "set",
 	}

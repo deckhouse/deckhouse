@@ -1,6 +1,7 @@
 ---
 title: "Global configuration"
 permalink: en/deckhouse-configure-global.html
+description: "Deckhouse Kubernetes Platform global settings."
 ---
 
 The global Deckhouse settings are stored in the `ModuleConfig/global` resource (see [Deckhouse configuration](./#deckhouse-configuration)).
@@ -23,6 +24,7 @@ metadata:
 spec:
   version: 2
   settings: # <-- Module parameters from the "Parameters" section below.
+    defaultClusterStorageClass: 'default-fast'
     modules:
       publicDomainTemplate: '%s.kube.company.my'
       resourcesRequests:

@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -31,7 +30,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+type clusterConfig struct {
+	KubernetesVersion string `json:"kubernetesVersion"`
+}
 
 func kubernetesVersionHandler(mm moduleManager) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
@@ -40,28 +44,34 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 			log.Debugf("unexpected type, expected %T, got %T", v1.Secret{}, obj)
 			return nil, fmt.Errorf("expect Secret as unstructured, got %T", obj)
 		}
+
 		clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
 		if !ok {
 			log.Debugf("no cluster-configuration found in secret %s/%s", obj.GetNamespace(), obj.GetName())
 			return nil, fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
 		}
-		var clusterConf struct {
-			KubernetesVersion string `json:"kubernetesVersion"`
-		}
-		if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
+
+		clusterConf := new(clusterConfig)
+		if err := yaml.Unmarshal(clusterConfigurationRaw, clusterConf); err != nil {
 			log.Debugf("failed to unmarshal cluster configuration: %v", err)
 			return nil, err
 		}
+
 		if clusterConf.KubernetesVersion == "Automatic" {
 			clusterConf.KubernetesVersion = config.DefaultKubernetesVersion
 		}
+
 		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(clusterConf.KubernetesVersion); err != nil {
 			log.Debugf("failed to validate base version: %v", err)
+			if moduleName == "" {
+				return rejectResult(err.Error())
+			}
 			if mm.IsModuleEnabled(moduleName) {
 				log.Debugf("module %s has unsatisfied requierements", moduleName)
 				return rejectResult(err.Error())
 			}
 		}
+
 		return allowResult("")
 	})
 
@@ -74,8 +84,4 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
-}
-
-type moduleManager interface {
-	IsModuleEnabled(moduleName string) bool
 }

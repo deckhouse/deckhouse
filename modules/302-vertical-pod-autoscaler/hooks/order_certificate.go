@@ -111,12 +111,12 @@ func vpaCertHandler(input *go_hook.HookInput) error {
 	}
 
 	if shouldGenerateNewCert {
-		selfSignedCA, err := certificate.GenerateCA(input.LogEntry, "vpa_webhook")
+		selfSignedCA, err := certificate.GenerateCA(input.Logger, "vpa_webhook")
 		if err != nil {
 			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
 		}
 
-		cert, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+		cert, err := certificate.GenerateSelfSignedCert(input.Logger,
 			"vpa-webhook",
 			selfSignedCA,
 			certificate.WithSANs("vpa-webhook.kube-system", "vpa-webhook.kube-system.svc"),

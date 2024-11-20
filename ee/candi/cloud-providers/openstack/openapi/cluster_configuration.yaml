@@ -106,7 +106,6 @@ apiVersions:
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         x-doc-required: true
-        x-unsafe-rules: [updateMasterImage]
         additionalProperties: false
         required: [replicas, instanceClass, volumeTypeMap]
         properties:
@@ -115,7 +114,6 @@ apiVersions:
             minimum: 1
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
-            x-unsafe-rules: [updateReplicas]
           instanceClass:
             description: |
               Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).
@@ -359,6 +357,8 @@ apiVersions:
                 Format of dictionary elements: `<AVAILABILITY ZONE>: <VOLUME TYPE>` (see the example).
 
                 If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then worker-0, worker-2, worker-4 will have the `fast-eu-1a` disk type, while worker-1, worker-3 will have the `fast-eu-1b` disk type.
+
+                > **Caution!** Limits by availability zones works only when using the `zones` parameter (`nodeGroups.zones`). If `zones` parameter is not specified, all availability zones will be used.
 
                 Useful commands:
                 - `openstack availability zone list` — get list of availability zones.

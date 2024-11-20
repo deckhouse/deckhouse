@@ -48,7 +48,7 @@ kind: DaemonSet
 metadata:
   annotations:
     ingress-nginx-controller.deckhouse.io/checksum: 93820e98a168de07c96e120909bc812ebf9655a8f81be88ef5b8799a9ee02445
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.6"
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
     ingress-nginx-controller.deckhouse.io/inlet: HostWithFailover
   labels:
     app: controller
@@ -307,7 +307,7 @@ kind: DaemonSet
 metadata:
   annotations:
     ingress-nginx-controller.deckhouse.io/checksum: 93820e98a168de07c96e120909bc812ebf9655a8f81be88ef5b8799a9ee02445
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.6"
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
     ingress-nginx-controller.deckhouse.io/inlet: HostWithFailover
   labels:
     app: controller

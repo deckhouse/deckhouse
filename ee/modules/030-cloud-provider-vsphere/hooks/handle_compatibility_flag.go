@@ -80,12 +80,12 @@ func handleStorageClasses(input *go_hook.HookInput) error {
 			if sc.Provisioner != modernProvisioner {
 				continue
 			}
-			input.LogEntry.Infof("Deleting storageclass/%s because legacy one will be rolled out", sc.Name)
+			input.Logger.Infof("Deleting storageclass/%s because legacy one will be rolled out", sc.Name)
 		default:
 			if sc.Provisioner != legacyProvisioner {
 				continue
 			}
-			input.LogEntry.Infof("Deleting storageclass/%s because modern one will be rolled out", sc.Name)
+			input.Logger.Infof("Deleting storageclass/%s because modern one will be rolled out", sc.Name)
 		}
 		input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", sc.Name)
 	}

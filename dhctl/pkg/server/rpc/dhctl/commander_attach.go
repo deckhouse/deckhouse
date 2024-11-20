@@ -33,7 +33,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
@@ -86,7 +89,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderAttach(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.commanderAttachSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
 					sendCh <- &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}}
 				}()
 
@@ -117,6 +120,21 @@ connectionProcessor:
 	}
 }
 
+func (s *Service) commanderAttachSafe(
+	ctx context.Context,
+	request *pb.CommanderAttachStart,
+	switchPhase phases.OnPhaseFunc[attach.PhaseData],
+	logWriter io.Writer,
+) (result *pb.CommanderAttachResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.CommanderAttachResult{Err: panicMessage(ctx, r)}
+		}
+	}()
+
+	return s.commanderAttach(ctx, request, switchPhase, logWriter)
+}
+
 func (s *Service) commanderAttach(
 	ctx context.Context,
 	request *pb.CommanderAttachStart,
@@ -124,6 +142,9 @@ func (s *Service) commanderAttach(
 	logWriter io.Writer,
 ) *pb.CommanderAttachResult {
 	var err error
+
+	cleanuper := callback.NewCallback()
+	defer cleanuper.Call()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -134,6 +155,7 @@ func (s *Service) commanderAttach(
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
+	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
@@ -153,7 +175,9 @@ func (s *Service) commanderAttach(
 			return fmt.Errorf("parsing connection config: %w", err)
 		}
 
-		sshClient, err = prepareSSHClient(connectionConfig)
+		var cleanup func() error
+		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
@@ -162,7 +186,6 @@ func (s *Service) commanderAttach(
 	if err != nil {
 		return &pb.CommanderAttachResult{Err: err.Error()}
 	}
-	defer sshClient.Stop()
 
 	var commanderUUID uuid.UUID
 	if request.Options.CommanderUuid != "" {
@@ -192,7 +215,7 @@ func (s *Service) commanderAttach(
 	resultString, marshalResultErr := json.Marshal(result)
 	err = errors.Join(attacherr, marshalStateErr, marshalResultErr)
 
-	return &pb.CommanderAttachResult{State: string(stateData), Result: string(resultString), Err: errToString(err)}
+	return &pb.CommanderAttachResult{State: string(stateData), Result: string(resultString), Err: util.ErrToString(err)}
 }
 
 func (s *Service) commanderAttachServerTransitions() []fsm.Transition {

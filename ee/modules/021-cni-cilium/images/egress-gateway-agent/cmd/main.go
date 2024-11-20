@@ -10,6 +10,9 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"regexp"
+
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -25,6 +28,10 @@ import (
 	networkv1alpha1 "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 
 	internalv1alpha1 "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
+)
+
+const (
+	excludeInterfacesPrefixes = "^(cilium_|lxc)"
 )
 
 var (
@@ -73,6 +80,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         false,
+		Metrics:                metricsserver.Options{BindAddress: ":0"},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -86,7 +94,12 @@ func main() {
 	}
 
 	anounceLogger := EmptyLogger{}
-	virtualIPAnnounces, err := layer2.New(anounceLogger, nil)
+	excludeRegex, err := regexp.Compile(excludeInterfacesPrefixes)
+	if err != nil {
+		setupLog.Error(err, "unable to compile exclude regex")
+		os.Exit(1)
+	}
+	virtualIPAnnounces, err := layer2.New(anounceLogger, excludeRegex)
 	if err != nil {
 		setupLog.Error(err, "unable to create virtual IP announcement")
 		os.Exit(1)

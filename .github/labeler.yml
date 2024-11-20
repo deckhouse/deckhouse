@@ -6,7 +6,6 @@ area/api-change:
   - '**/crds/**'
 
 area/auth:
-  - modules/010-user-authn-crd/**
   - modules/150-user-authn/**
   - modules/140-user-authz/**
   - ee/modules/140-user-authz/**
@@ -50,9 +49,6 @@ type/dependencies:
   - '**/go.mod'
   - '**/go.sum'
 
-area/delivery:
-  - ee/modules/502-delivery/**
-
 area/docs:
   - '**/docs/**'
   - docs/**
@@ -73,8 +69,6 @@ area/logs:
   - modules/462-loki/**
 
 area/monitoring:
-  - modules/010-operator-prometheus-crd/**
-  - modules/010-prometheus-crd/**
   - modules/200-operator-prometheus/**
   - modules/300-prometheus/**
   - modules/301-prometheus-metrics-adapter/**
@@ -99,7 +93,6 @@ area/network:
   - ee/modules/450-network-gateway/**
 
 area/scaling:
-  - modules/010-vertical-pod-autoscaler-crd/**
   - modules/302-vertical-pod-autoscaler/**
   - modules/400-descheduler/**
 

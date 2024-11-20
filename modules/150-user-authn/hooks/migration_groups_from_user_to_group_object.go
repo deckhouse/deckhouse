@@ -29,7 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -48,8 +48,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "User",
 			FilterFunc:                   applyDexUserFilter,
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 		{
 			Name:       "migrated",
@@ -63,8 +63,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"d8-system"},
 				},
 			},
-			ExecuteHookOnSynchronization: pointer.Bool(false),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 				return obj.GetName(), nil
 			},
@@ -105,7 +105,7 @@ func migrationGroups(input *go_hook.HookInput) error {
 			},
 		}
 
-		input.LogEntry.Printf("Create Group %s with members %s", dexGroup.Spec.Name, dexGroup.Spec.Members)
+		input.Logger.Infof("Create Group %s with members %s", dexGroup.Spec.Name, dexGroup.Spec.Members)
 		input.PatchCollector.Create(dexGroup, object_patch.IgnoreIfExists())
 	}
 

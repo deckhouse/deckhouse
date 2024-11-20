@@ -1,5 +1,11 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- range $idx, $app := $crd.spec.applications }}
+  {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
+  {{- $nameSuffix := "" }}
+  {{- if ne $idx 0 }}
+    {{- $nameSuffix = printf "-%s" $hashedDomain }}
+  {{- end }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -9,16 +15,16 @@ metadata:
   {{- if $crd.spec.sendAuthorizationHeader }}
     nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
   {{- end }}
-  {{- if $crd.spec.whitelistSourceRanges }}
-    nginx.ingress.kubernetes.io/whitelist-source-range: {{ $crd.spec.whitelistSourceRanges | join "," }}
+  {{- if $app.whitelistSourceRanges }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ $app.whitelistSourceRanges | join "," }}
   {{- end }}
-  name: {{ $crd.name }}-dex-authenticator
+  name: {{ $crd.name }}{{ $nameSuffix }}-dex-authenticator
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
-  ingressClassName: {{ $crd.spec.applicationIngressClassName }}
+  ingressClassName: {{ $app.ingressClassName }}
   rules:
-  - host: {{ $crd.spec.applicationDomain }}
+  - host: {{ $app.domain }}
     http:
       paths:
       - backend:
@@ -29,15 +35,15 @@ spec:
         path: /dex-authenticator
         pathType: ImplementationSpecific
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context ) }}
-    {{- if $crd.spec.applicationIngressCertificateSecretName }}
+    {{- if $app.ingressSecretName }}
   tls:
   - hosts:
-    - {{ $crd.spec.applicationDomain }}
-    secretName: {{ $crd.spec.applicationIngressCertificateSecretName }}
+    - {{ $app.domain }}
+    secretName: {{ $app.ingressSecretName }}
     {{- end }}
   {{- end }}
 
-  {{- if $crd.spec.signOutURL }}
+  {{- if $app.signOutURL }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -45,13 +51,13 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
     nginx.ingress.kubernetes.io/rewrite-target: /dex-authenticator/sign_out
-  name: {{ $crd.name }}-dex-authenticator-sign-out
+  name: {{ $crd.name }}{{ $nameSuffix }}-dex-authenticator-sign-out
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
-  ingressClassName: {{ $crd.spec.applicationIngressClassName }}
+  ingressClassName: {{ $app.ingressClassName }}
   rules:
-  - host: {{ $crd.spec.applicationDomain }}
+  - host: {{ $app.domain }}
     http:
       paths:
       - backend:
@@ -59,15 +65,16 @@ spec:
             name: {{ $crd.name }}-dex-authenticator
             port:
               number: 443
-        path: {{ $crd.spec.signOutURL }}
+        path: {{ $app.signOutURL }}
         pathType: ImplementationSpecific
     {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context ) }}
-      {{- if $crd.spec.applicationIngressCertificateSecretName }}
+      {{- if $app.ingressSecretName }}
   tls:
   - hosts:
-    - {{ $crd.spec.applicationDomain }}
-    secretName: {{ $crd.spec.applicationIngressCertificateSecretName }}
+    - {{ $app.domain }}
+    secretName: {{ $app.ingressSecretName }}
       {{- end }}
     {{- end }}
+  {{- end }}
   {{- end }}
 {{- end }}

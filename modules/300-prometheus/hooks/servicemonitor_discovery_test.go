@@ -19,7 +19,7 @@ package hooks
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -57,7 +57,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
 			Expect(f.MetricsCollector.CollectedMetrics()[1].Name).To(Equal("d8_prometheus_deprecated_servicemonitor"))
-			Expect(f.MetricsCollector.CollectedMetrics()[1].Value).To(Equal(pointer.Float64(1)))
+			Expect(f.MetricsCollector.CollectedMetrics()[1].Value).To(Equal(ptr.To(1.0)))
 			Expect(f.MetricsCollector.CollectedMetrics()[1].Labels).To(Equal(map[string]string{"name": "test1", "namespace": "d8-monitoring"}))
 		})
 	})
@@ -88,7 +88,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
 			Expect(f.MetricsCollector.CollectedMetrics()[1].Name).To(Equal("d8_prometheus_deprecated_servicemonitor"))
-			Expect(f.MetricsCollector.CollectedMetrics()[1].Value).To(Equal(pointer.Float64(1)))
+			Expect(f.MetricsCollector.CollectedMetrics()[1].Value).To(Equal(ptr.To(1.0)))
 			Expect(f.MetricsCollector.CollectedMetrics()[1].Labels).To(Equal(map[string]string{"name": "test2", "namespace": "testns"}))
 		})
 	})

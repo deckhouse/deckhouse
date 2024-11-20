@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 /*
@@ -45,8 +45,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "cpm_pods",
 			ApiVersion:                   "v1",
 			Kind:                         "Pod",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -64,8 +64,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "cpm_ds",
 			ApiVersion:                   "apps/v1",
 			Kind:                         "DaemonSet",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -124,7 +124,7 @@ func lockQueueFilterDS(unstructured *unstructured.Unstructured) (go_hook.FilterR
 
 func handleLockMainQueue(input *go_hook.HookInput) error {
 	if !input.Values.Get("global.clusterIsBootstrapped").Bool() {
-		input.LogEntry.Info("Cluster is not yet bootstrapped, not locking main queue after control-plane-manager update")
+		input.Logger.Info("Cluster is not yet bootstrapped, not locking main queue after control-plane-manager update")
 		return nil
 	}
 

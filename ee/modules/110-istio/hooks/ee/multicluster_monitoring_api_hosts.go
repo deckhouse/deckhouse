@@ -58,12 +58,12 @@ func monitoringAPIHosts(input *go_hook.HookInput, dc dependency.Container) error
 
 		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(), fmt.Sprintf("https://%s/api", apiHost), apiJWT)
 		if err != nil {
-			input.LogEntry.Warnf("cannot fetch api host %s for IstioMulticluster %s, error: %s", apiHost, name, err.Error())
+			input.Logger.Warnf("cannot fetch api host %s for IstioMulticluster %s, error: %s", apiHost, name, err.Error())
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
 			continue
 		}
 		if statusCode != http.StatusOK {
-			input.LogEntry.Warnf("cannot fetch api host %s for IstioMulticluster %s (HTTP code %d)", apiHost, name, statusCode)
+			input.Logger.Warnf("cannot fetch api host %s for IstioMulticluster %s (HTTP code %d)", apiHost, name, statusCode)
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
 			continue
 		}
@@ -71,13 +71,13 @@ func monitoringAPIHosts(input *go_hook.HookInput, dc dependency.Container) error
 		var response apiResponse
 		err = json.Unmarshal(bodyBytes, &response)
 		if err != nil {
-			input.LogEntry.Warnf("cannot unmarshal api host %s response for IstioMulticluster %s, error: %s", apiHost, name, err.Error())
+			input.Logger.Warnf("cannot unmarshal api host %s response for IstioMulticluster %s, error: %s", apiHost, name, err.Error())
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
 			continue
 		}
 
 		if response.Kind != "APIVersions" {
-			input.LogEntry.Warnf("got wrong response format from api host %s for IstioMulticluster %s", apiHost, name)
+			input.Logger.Warnf("got wrong response format from api host %s for IstioMulticluster %s", apiHost, name)
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
 			continue
 		}

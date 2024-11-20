@@ -1,7 +1,0 @@
-type: object
-properties:
-  allowNamespacesWithoutProjects:
-    type: boolean
-    default: true
-    description: |
-      If this option is disabled - prohibit to create a namespace which is not a part of a Project.

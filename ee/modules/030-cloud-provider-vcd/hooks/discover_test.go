@@ -77,63 +77,6 @@ allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
 `
 
-	storageClassesWithDefault := `
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: default
-  labels:
-    app.kubernetes.io/managed-by: Helm
-    heritage: deckhouse
-    module: cloud-provider-vcd
-  annotations:
-    meta.helm.sh/release-name: cloud-provider-Vcd
-    meta.helm.sh/release-namespace: d8-system
-    storageclass.kubernetes.io/is-default-class: 'true'
-provisioner: named-disk.csi.cloud-director.vmware.com
-parameters:
-  storageProfile: "SAS"
-reclaimPolicy: Delete
-allowVolumeExpansion: false
-volumeBindingMode: WaitForFirstConsumer
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  annotations:
-    meta.helm.sh/release-name: local-path-provisioner
-    meta.helm.sh/release-namespace: d8-system
-  creationTimestamp: "2022-11-24T16:33:07Z"
-  labels:
-    app: local-path-provisioner
-    app.kubernetes.io/managed-by: Helm
-    heritage: deckhouse
-    module: local-path-provisioner
-  name: localpath-system
-provisioner: deckhouse.io/localpath-system
-reclaimPolicy: Retain
-volumeBindingMode: WaitForFirstConsumer
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: hdd
-  labels:
-    app.kubernetes.io/managed-by: Helm
-    heritage: deckhouse
-    module: cloud-provider-vcd
-  annotations:
-    meta.helm.sh/release-name: cloud-provider-Vcd
-    meta.helm.sh/release-namespace: d8-system
-provisioner: named-disk.csi.cloud-director.vmware.com
-parameters:
-  storageProfile: "HDD"
-reclaimPolicy: Delete
-allowVolumeExpansion: false
-volumeBindingMode: WaitForFirstConsumer
-`
-
 	manualStorageClasses := `---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -211,7 +154,7 @@ data:
 			b.RunHook()
 		})
 
-		It("Should discover all volumeTypes only for storage classes where deployed by cloud-provider-Vcd module and no default", func() {
+		It("Should discover all volumeTypes only for storage classes where deployed by cloud-provider-Vcd module", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.ValuesGet("cloudProviderVcd.internal.storageClasses").String()).To(MatchJSON(`
 [
@@ -225,31 +168,6 @@ data:
           }
 ]
 `))
-			Expect(b.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("Cluster has only storage classes wit default", func() {
-		BeforeEach(func() {
-			b.BindingContexts.Set(b.KubeStateSet(storageClassesWithDefault))
-			b.RunHook()
-		})
-
-		It("Should discover all volumeTypes only for storage classes where deployed by cloud-provider-Vcd module and no default", func() {
-			Expect(b).To(ExecuteSuccessfully())
-			Expect(b.ValuesGet("cloudProviderVcd.internal.storageClasses").String()).To(MatchJSON(`
-[
-         {
-            "name": "default",
-            "storageProfile": "SAS"
-          },
-          {
-            "name": "hdd",
-            "storageProfile": "HDD"
-          }
-]
-`))
-			Expect(b.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").String()).Should(Equal("default"))
 		})
 	})
 
@@ -287,7 +205,6 @@ data:
           }
 ]
 `))
-			Expect(d.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 
@@ -312,42 +229,6 @@ data:
           }
 ]
 `))
-			Expect(e.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").Exists()).To(BeFalse())
-		})
-	})
-
-	initValues = `
-cloudProviderVcd:
-  internal: {}
-  storageClass:
-    exclude:
-    - d3*
-    - bar
-    default: d1
-`
-
-	f := HookExecutionConfigInit(initValues, `{}`)
-	Context("Provider data is successfully discovered", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(state))
-			f.RunHook()
-		})
-
-		It("All values should be gathered from discovered data", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-
-		It("Should discover volumeTypes without excluded and default set", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cloudProviderVcd.internal.storageClasses").String()).To(MatchJSON(`
-[
-          {
-            "name": "d1",
-            "storageProfile": "D1"
-          }
-]
-`))
-			Expect(f.ValuesGet("cloudProviderVcd.internal.defaultStorageClass").String()).To(Equal(`d1`))
 		})
 	})
 })

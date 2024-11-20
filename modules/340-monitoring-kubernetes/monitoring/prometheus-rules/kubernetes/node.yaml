@@ -118,3 +118,21 @@
         If cgroupDriver is set to systemd then reboot is required to roll back to cgroupfs driver. Please, drain and reboot the node.
 
         You can check this [issue](https://github.com/deckhouse/deckhouse/issues/2152) for extra information.
+
+  - alert: NodeTCPMemoryExhaust
+    expr: max by (node) (node_sockstat_TCP_mem_bytes > node_sysctl_net_ipv4_tcp_mem{index="2"} * 4096 * 0.90)
+    for: 1m
+    labels:
+      severity_level: "6"
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__cluster_has_node_alerts: "ClusterHasNodeAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The {{ $labels.node }} node has high TCP stack memory usage.
+      description: |-
+        The TCP stack on the {{ $labels.node }} node is experiencing high memory pressure.
+        This could be caused by applications with intensive TCP networking functionality.
+        Investigate the relevant applications and consider adjusting the system's TCP memory configuration
+        or addressing the source of increased network traffic.

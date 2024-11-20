@@ -24,7 +24,7 @@ webhooks:
       values:
         - deckhouse
   objectSelector: {}
-  reinvocationPolicy: Never
+  reinvocationPolicy: IfNeeded
   rules:
   {{- range $trackResource := .Values.admissionPolicyEngine.internal.trackedMutateResources }}
   - apiGroups:

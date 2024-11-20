@@ -1,16 +1,17 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_SCRATCH }}
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ .Images.BASE_SCRATCH }}
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /relocate
     to: /
     before: setup
-shell:
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_ALPINE_DEV }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_ALPINE }}
 shell:
+  beforeInstall:
+  - apk add --no-cache ca-certificates tzdata
   install:
   - mkdir -p /relocate/bin /relocate/sbin /relocate/etc /relocate/etc/ssl /relocate/usr/bin /relocate/usr/sbin /relocate/usr/share
   - cp -pr /tmp /relocate

@@ -2,25 +2,27 @@ properties:
   retentionDays:
     description: Сколько дней хранить данные.
   storageClass:
-    description: |
-      Имя StorageClass'а, который предполагается использовать.
+    description: |-
+      Имя StorageClass, который будет использоваться по умолчанию в кластере.
 
-      Если не указано, используется StorageClass существующей PVC Prometheus, а если PVC пока нет, используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в `emptyDir`.
+      Если не указано, используется StorageClass существующей PVC Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
 
-      `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
+      Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 
-      `false` — принудительное использование `emptyDir`. Удалить старый PVC и рестартануть под придется вручную.
+      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск Prometheus будет перезаказан, а все данные удалены. 
 
-      **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Prometheus будет перезаказан, а все данные удалены.
+      **Внимание.** При переносе Prometheus с локальным хранилищем на другие узлы, поды зависнут в состоянии Pending. В этом случае будет необходимо сохранить базу данных Prometheus, удалить старые PVC и перезапустить под вручную.  Под локальным хранилищем подразумевается StorageClass, связанный не с сетевым хранилищем, а с локальным томом на узле (например, StorageClass, создаваемый модулем local-path-provisioner).
+
+      Если указать `false`, будет принудительно использоваться `emptyDir`.
   longtermStorageClass:
-    description: |
-      Имя StorageClass'а, который предполагается использовать для Longterm Prometheus.
+    description: |-
+      Имя StorageClass, который будет использован для Longterm Prometheus.
 
-      Если не указано, используется StorageClass существующей PVC Longterm Prometheus, а если PVC пока нет, используется или [глобальный StorageClass](../../deckhouse-configure-global.html#parameters-storageclass), или `global.discovery.defaultStorageClass`, а если и их нет, данные сохраняются в `emptyDir`.
+      Если значение не указано, используется StorageClass существующей PVC Longterm Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
 
-      `global.discovery.defaultStorageClass` применяется только при включении модуля, смена StorageClass по умолчанию в кластере не приведет к перезаказу диска.
-
-      **ОСТОРОЖНО!** При указании этой опции в значение, отличное от текущего (из существующей PVC), диск Longterm Prometheus будет перезаказан, а все данные удалены.
+      Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
+    
+      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
   longtermRetentionDays:
     description: |
       Сколько дней хранить данные в Longterm Prometheus.
@@ -46,7 +48,7 @@ properties:
 
           **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/cr.html#dexprovider) DexProvider.
       whitelistSourceRanges:
-        description: Массив адресов в формате CIDR, которым разрешено проходить авторизацию в Grafana и Prometheus.
+        description: Список адресов в формате CIDR, которым разрешено проходить авторизацию в Grafana и Prometheus.
       satisfyAny:
         description: |
           Разрешает пройти только одну из аутентификаций.
@@ -163,24 +165,30 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   longtermNodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  longtermPodAntiAffinity:
+    type: string
+    description: |
+      Устанавливает конфигурацию podAntiAffinity для Prometheus longterm по отношению к Prometheus main.
+      - `Preferred` — позволяет размещать Prometheus longterm на одном узле с Prometheus main, если нет возможности их разместить на разных узлах.
+      - `Required` — не позволяет размещать Prometheus longterm на одном узле с Prometheus main ни при каких условиях.
   tolerations:
     type: array
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   longtermTolerations:
     type: array
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   mainMaxDiskSizeGigabytes:
     description: |
       Устарел и будет удален. Ни на что не влияет.

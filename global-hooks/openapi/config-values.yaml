@@ -7,21 +7,29 @@ properties:
     type: string
     default: null
     deprecated: true
+    x-doc-deprecated: true
     description: |
       > **DEPRECATED**. Moved to [global.modules.storageClass](#parameters-modules-storageclass).
 
-      The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
-        * If not defined, components use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
+      The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
+
+        * * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
-    x-doc-deprecated: true
   defaultClusterStorageClass:
     type: string
     default: null
-    description: |
-      The storage class to use as default for entire cluster.
-        * If defined, all newly created PVCs will use this storage class.
-        * This parameter is applied during module activation.
+    description: |-
+      The name of the StorageClass that DKP will define as the default StorageClass used in the cluster.
+
+      DKP prohibits manually adding or modifying the default annotation (`storageclass.kubernetes.io/is-default-class='true'`) for StorageClass. Use the parameter to define or change the StorageClass that is used as the default in the cluster.
+
+      If the parameter is omitted, the default StorageClass is either:
+
+       * A StorageClass in the cluster that has the default annotation (`storageclass.kubernetes.io/is-default-class='true'`);
+       * The first (alphabetically) StorageClass created by the cloud provider module (if any cloud provider module is used).
+
+      Use this parameter to change the default StorageClass in the cluster, as manually adding the default annotation to a StorageClass is not allowed.
   highAvailability:
     type: boolean
     description: |
@@ -225,7 +233,7 @@ properties:
         type: string
         default: null
         description: |
-          The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
+          The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
             * If not defined, components use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
             * Use this parameter only in exceptional circumstances.
             * This parameter is applied during module activation.

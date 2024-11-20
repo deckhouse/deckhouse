@@ -25,7 +25,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
@@ -39,9 +39,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "kube_scheduler_extenders",
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "KubeSchedulerWebhookConfiguration",
-			WaitForSynchronization:       pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(true),
+			WaitForSynchronization:       ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(true),
 			FilterFunc:                   extendersFilter,
 		},
 	},
@@ -70,7 +70,7 @@ func handleExtenders(input *go_hook.HookInput) error {
 		for _, config := range snapshot.([]KubeSchedulerWebhook) {
 			err := verifyCAChain(config.ClientConfig.CABundle)
 			if err != nil {
-				input.LogEntry.Warnf("failed to verify CA chain: %v, use default kubernetes CA", err)
+				input.Logger.Warnf("failed to verify CA chain: %v, use default kubernetes CA", err)
 				config.ClientConfig.CABundle = kubernetesCABase64
 			}
 

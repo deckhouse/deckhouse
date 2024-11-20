@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/jonboulle/clockwork"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -41,9 +40,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var golden bool
@@ -103,10 +103,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/v1.0.0":
+			case "/api/v1/doc/testmodule/v1.0.0":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -126,10 +126,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/v1.0.0":
+			case "/api/v1/doc/testmodule/v1.0.0":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -153,10 +153,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			}
 
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/v1.0.0":
+			case "/api/v1/doc/testmodule/v1.0.0":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -166,8 +166,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		md := suite.getModuleDocumentation("testmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
-		assert.True(suite.T(), res.Requeue)
-		assert.Equal(suite.T(), res.RequeueAfter, 10*time.Second)
+		assert.Equal(suite.T(), res.RequeueAfter, defaultDocumentationCheckInterval)
 		require.NoError(suite.T(), err)
 	})
 
@@ -177,10 +176,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/v1.1.1":
+			case "/api/v1/doc/testmodule/v1.1.1":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -200,10 +199,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/v1.1.1":
+			case "/api/v1/doc/testmodule/v1.1.1":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -223,10 +222,10 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
 			switch req.URL.Path {
-			case "/loadDocArchive/testmodule/mpo-tag":
+			case "/api/v1/doc/testmodule/mpo-tag":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
 
-			case "/build":
+			case "/api/v1/build":
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}, nil
 			}
 			return &http.Response{StatusCode: http.StatusBadRequest}, nil
@@ -258,7 +257,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 		md := suite.getModuleDocumentation("absentmodule")
 		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
-		assert.True(suite.T(), res.Requeue)
+		assert.Equal(suite.T(), res.RequeueAfter, defaultDocumentationCheckInterval)
 		require.NoError(suite.T(), err)
 	})
 }
@@ -282,7 +281,7 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 	rec := &moduleDocumentationReconciler{
 		client:               cl,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		logger:               log.New(),
+		logger:               log.NewNop(),
 		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
 		dc:                   dc,
 	}

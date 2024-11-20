@@ -17,9 +17,10 @@ package bootstrap
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"reflect"
 	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	"github.com/google/uuid"
 
@@ -38,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -327,7 +329,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 					sshClient.Settings.BastionHost = baseOutputs.BastionHost
 					SaveBastionHostToCache(baseOutputs.BastionHost)
 				}
-				sshClient.Settings.SetAvailableHosts([]string{masterOutputs.MasterIPForSSH})
+				sshClient.Settings.SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
 			}
 
 			nodeIP = masterOutputs.NodeInternalIP
@@ -422,11 +424,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			return nil
 		}
 
-		localBootstraper := func(f func() error) error {
+		localBootstraper := func(action func() error) error {
 			if b.CommanderMode {
-				return f()
+				return action()
 			}
-			return converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run()
+			return converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(action)
 		}
 
 		err := localBootstraper(func() error {
@@ -498,7 +500,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			wrapper := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
 			for nodeName, address := range masterAddressesForSSH {
 				fakeSession := wrapper.Client().Settings.Copy()
-				fakeSession.SetAvailableHosts([]string{address})
+				fakeSession.SetAvailableHosts([]session.Host{{Host: address, Name: nodeName}})
 				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
 			}
 

@@ -25,7 +25,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -34,7 +34,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -88,7 +91,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abort(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
 					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
 				}()
 
@@ -119,6 +122,21 @@ connectionProcessor:
 	}
 }
 
+func (s *Service) abortSafe(
+	ctx context.Context,
+	request *pb.AbortStart,
+	switchPhase phases.DefaultOnPhaseFunc,
+	logWriter io.Writer,
+) (result *pb.AbortResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.AbortResult{Err: panicMessage(ctx, r)}
+		}
+	}()
+
+	return s.abort(ctx, request, switchPhase, logWriter)
+}
+
 func (s *Service) abort(
 	_ context.Context,
 	request *pb.AbortStart,
@@ -126,6 +144,9 @@ func (s *Service) abort(
 	logWriter io.Writer,
 ) *pb.AbortResult {
 	var err error
+
+	cleanuper := callback.NewCallback()
+	defer cleanuper.Call()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -136,6 +157,7 @@ func (s *Service) abort(
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
+	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
@@ -145,18 +167,21 @@ func (s *Service) abort(
 	var (
 		configPath    string
 		resourcesPath string
+		cleanup       func() error
 	)
 	err = log.Process("default", "Preparing configuration", func() error {
-		configPath, err = writeTempFile([]byte(input.CombineYAMLs(
+		configPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
 			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
 		)))
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("failed to write init configuration: %w", err)
 		}
 
-		resourcesPath, err = writeTempFile([]byte(input.CombineYAMLs(
+		resourcesPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
 			request.InitResources, request.Resources,
 		)))
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("failed to write resources: %w", err)
 		}
@@ -194,7 +219,8 @@ func (s *Service) abort(
 			return fmt.Errorf("parsing connection config: %w", err)
 		}
 
-		sshClient, err = prepareSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
@@ -203,7 +229,6 @@ func (s *Service) abort(
 	if err != nil {
 		return &pb.AbortResult{Err: err.Error()}
 	}
-	defer sshClient.Stop()
 
 	var commanderUUID uuid.UUID
 	if request.Options.CommanderUuid != "" {
@@ -218,8 +243,8 @@ func (s *Service) abort(
 		ResourcesPath:    resourcesPath,
 		InitialState:     initialState,
 		NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-		UseTfCache:       pointer.Bool(true),
-		AutoApprove:      pointer.Bool(true),
+		UseTfCache:       ptr.To(true),
+		AutoApprove:      ptr.To(true),
 		ResourcesTimeout: request.Options.ResourcesTimeout.AsDuration(),
 		DeckhouseTimeout: request.Options.DeckhouseTimeout.AsDuration(),
 
@@ -235,7 +260,7 @@ func (s *Service) abort(
 	stateData, marshalErr := json.Marshal(state)
 	err = errors.Join(abortErr, marshalErr)
 
-	return &pb.AbortResult{State: string(stateData), Err: errToString(err)}
+	return &pb.AbortResult{State: string(stateData), Err: util.ErrToString(err)}
 }
 
 func (s *Service) abortServerTransitions() []fsm.Transition {

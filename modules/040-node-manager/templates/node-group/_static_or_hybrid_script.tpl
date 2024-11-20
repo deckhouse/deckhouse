@@ -12,7 +12,7 @@ fi
 checkBashible=$(systemctl is-active bashible.timer)
 if [[ "$checkBashible" == "active" ]]; then
   echo "The node already exists in the cluster and under bashible."
-  exit 1
+  exit 2
 fi
 
 mkdir -p /var/lib/bashible

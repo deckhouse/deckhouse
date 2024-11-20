@@ -44,6 +44,7 @@
 ## Fixes
 
 
+ - **[candi]** fix resize partition step [#9960](https://github.com/deckhouse/deckhouse/pull/9960)
  - **[candi]** Add PVC disks to ignore_changes lifecycle for CloudPermanent nodes at VMware Cloud Director. [#9781](https://github.com/deckhouse/deckhouse/pull/9781)
  - **[candi]** Fix for bootstrap or upgrade an existing cluster installed in AWS using the "Standard" layout. [#9545](https://github.com/deckhouse/deckhouse/pull/9545)
  - **[candi]** Fix catch exit codes in cloud-providers bootstrap-network scripts. [#9448](https://github.com/deckhouse/deckhouse/pull/9448)
@@ -66,6 +67,7 @@
  - **[deckhouse]** Use tmpfs for hooks execution dir. [#9646](https://github.com/deckhouse/deckhouse/pull/9646)
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9398](https://github.com/deckhouse/deckhouse/pull/9398)
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9362](https://github.com/deckhouse/deckhouse/pull/9362)
+ - **[deckhouse-controller]** Fixed a bug related to the fact that the state of the release object was not updated. [#10410](https://github.com/deckhouse/deckhouse/pull/10410)
  - **[deckhouse-controller]** Fixed panic when processing terminating deckhouse pod. [#9621](https://github.com/deckhouse/deckhouse/pull/9621)
  - **[deckhouse-controller]** Fix panic on invalid module image [#9231](https://github.com/deckhouse/deckhouse/pull/9231)
  - **[deckhouse-controller]** Deckhouse update metrics restored. [#9147](https://github.com/deckhouse/deckhouse/pull/9147)

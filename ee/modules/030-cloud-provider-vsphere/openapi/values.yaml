@@ -6,10 +6,6 @@ properties:
     type: object
     default: {}
     properties:
-      defaultStorageClass:
-        type: string
-        x-examples:
-        - fast-lun102-7d0bf578
       compatibilityFlag:
         type: string
         x-examples:

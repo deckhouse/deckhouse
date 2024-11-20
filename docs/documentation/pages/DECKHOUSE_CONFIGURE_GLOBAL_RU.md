@@ -1,6 +1,7 @@
 ---
 title: "Глобальные настройки"
 permalink: ru/deckhouse-configure-global.html
+description: "Описание глобальных настроек Deckhouse Kubernetes Platform"
 lang: ru
 ---
 
@@ -24,6 +25,7 @@ metadata:
 spec:
   version: 2
   settings: # <-- Параметры модуля из раздела "Параметры" ниже.
+    defaultClusterStorageClass: 'default-fast'
     modules:
       publicDomainTemplate: '%s.kube.company.my'
       resourcesRequests:

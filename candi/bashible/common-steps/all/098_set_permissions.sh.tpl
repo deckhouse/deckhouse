@@ -15,5 +15,8 @@
 find /etc/kubernetes -type d -exec chmod 700 {} \;
 find /etc/kubernetes -type f -exec chmod 600 {} \;
 
-find /var/lib/kubelet -type d -name pods -prune -o -type d -exec chmod 700 {} \;
-find /var/lib/kubelet -type d -name pods -prune -o -type f -exec chmod 600 {} \;
+chmod 700 /var/lib/kubelet/
+
+if [[ -d /etc/containerd ]]; then
+    chmod 700 /etc/containerd
+fi

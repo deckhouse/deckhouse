@@ -15,10 +15,11 @@
 package cache
 
 import (
-	"registry-modules-watcher/internal/backends"
 	"sort"
 	"strings"
 	"sync"
+
+	"registry-modules-watcher/internal/backends"
 )
 
 type (
@@ -50,6 +51,7 @@ func New() *Cache {
 	}
 }
 
+// ResetRange sets stateSnap to State
 func (c *Cache) ResetRange() {
 	state := c.GetState()
 	c.m.Lock()
@@ -59,14 +61,22 @@ func (c *Cache) ResetRange() {
 	copy(c.stateSnap, state)
 }
 
-func (c *Cache) GetRange() []backends.Version {
+// GetRange returns a list of module versions from the current State
+func (c *Cache) GetRange() (versions []backends.Version) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
-	var versions = []backends.Version{}
+	state := c.GetState()
+	for _, version := range c.stateSnap {
+		if !contain(state, version) {
+			version.ToDelete = true
+			versions = append(versions, version)
+		}
+	}
 
-	for _, version := range c.GetState() {
+	for _, version := range state {
 		if !contain(c.stateSnap, version) {
+			version.ToDelete = false
 			versions = append(versions, version)
 		}
 	}
@@ -74,11 +84,9 @@ func (c *Cache) GetRange() []backends.Version {
 	return versions
 }
 
-func (c *Cache) GetState() []backends.Version {
+func (c *Cache) GetState() (versions []backends.Version) {
 	c.m.RLock()
 	defer c.m.RUnlock()
-
-	var versions = []backends.Version{}
 
 	for registry, modules := range c.val {
 		for module, moduleData := range modules {

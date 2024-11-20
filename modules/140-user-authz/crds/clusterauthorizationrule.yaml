@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -17,6 +18,7 @@ spec:
     - name: v1alpha1
       served: true
       storage: false
+      deprecated: true
       schema:
         openAPIV3Schema:
           type: object

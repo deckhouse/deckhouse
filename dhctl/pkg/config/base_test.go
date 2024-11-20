@@ -44,7 +44,6 @@ deckhouse:
    devBranch: test
    # {"auths": { "test": {}}}
    registryDockerCfg: eyJhdXRocyI6IHsgInRlc3QiOiB7fX19
-   configOverrides: {}
 `
 	staticConfig := `
 ---

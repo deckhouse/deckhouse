@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("ingress-nginx :: hooks :: get_ingress_controllers ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.6", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.9", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 
 	Context("Fresh cluster", func() {
@@ -48,7 +48,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  controllerVersion: "1.6"
+  controllerVersion: "1.9"
   acceptRequestsFrom:
   - 127.0.0.1/32
   - 192.168.0.0/24
@@ -63,13 +63,28 @@ spec:
 				Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").String()).To(MatchJSON(`[{
 "name": "test",
 "spec": {
+  "acceptRequestsFrom": [
+    "127.0.0.1/32",
+    "192.168.0.0/24"
+  ],
+  "annotationValidationEnabled": false,
+  "chaosMonkey": false,
   "config": {},
+  "controllerVersion": "1.9",
+  "disableHTTP2": false,
+  "enableHTTP3": false,
+  "geoIP2": {},
+  "hostPort": {},
+  "hostPortWithProxyProtocol": {},
+  "hostWithFailover": {},
+  "hsts": false,
+  "hstsOptions": {},
   "ingressClass": "nginx",
-  "controllerVersion": "1.6",
   "inlet": "LoadBalancer",
   "loadBalancer": {},
-  "hstsOptions": {},
-  "geoIP2": {},
+  "loadBalancerWithProxyProtocol": {},
+  "maxReplicas": 1,
+  "minReplicas": 1,
   "resourcesRequests": {
     "mode": "VPA",
     "static": {},
@@ -78,14 +93,8 @@ spec:
       "memory": {}
     }
   },
-  "hostPortWithProxyProtocol": {},
-  "hostPort": {},
-  "hostWithFailover": {},
-  "loadBalancerWithProxyProtocol": {},
-  "acceptRequestsFrom": [
-    "127.0.0.1/32",
-    "192.168.0.0/24"
-  ]
+  "underscoresInHeaders": false,
+  "validationEnabled": true
 }
 }]`))
 			})
@@ -166,59 +175,105 @@ spec:
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.name").String()).To(Equal("test"))
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec").String()).To(MatchJSON(`{
+"annotationValidationEnabled": false,
+"chaosMonkey": false,
 "config": {},
+"disableHTTP2": false,
+"enableHTTP3": false,
+"geoIP2": {},
+"hostPort": {},
+"hostPortWithProxyProtocol": {},
+"hostWithFailover": {},
+"hsts": false,
+"hstsOptions": {},
 "ingressClass": "nginx",
 "inlet": "LoadBalancer",
-"hstsOptions": {},
-"geoIP2": {},
+"loadBalancer": {},
+"loadBalancerWithProxyProtocol": {},
+"maxReplicas": 1,
+"minReplicas": 1,
 "resourcesRequests": {
   "mode": "Static",
   "static": {},
-  "vpa": {"cpu": {}, "memory": {}}
+  "vpa": {
+    "cpu": {},
+    "memory": {}
+  }
 },
-"loadBalancer": {},
-"loadBalancerWithProxyProtocol": {},
-"hostPortWithProxyProtocol": {},
-"hostWithFailover": {},
-"hostPort": {}
+"underscoresInHeaders": false,
+"validationEnabled": true
 }`))
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.name").String()).To(Equal("test-2"))
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.spec").String()).To(MatchJSON(`{
+"annotationValidationEnabled": false,
+"chaosMonkey": false,
 "config": {},
+"disableHTTP2": false,
+"enableHTTP3": false,
+"geoIP2": {},
+"hostPort": {},
+"hostPortWithProxyProtocol": {
+  "httpPort": 80,
+  "httpsPort": 443
+},
+"hostWithFailover": {},
+"hsts": false,
+"hstsOptions": {},
 "ingressClass": "test",
 "inlet": "HostPortWithProxyProtocol",
-"hstsOptions": {},
-"geoIP2": {},
+"loadBalancer": {},
+"loadBalancerWithProxyProtocol": {},
+"maxReplicas": 1,
+"minReplicas": 1,
 "resourcesRequests": {
   "mode": "VPA",
   "static": {},
-  "vpa": {"cpu": {"max": "100m"}, "memory": {"max": "200Mi"}, "mode": "Auto"}
+  "vpa": {
+    "cpu": {
+      "max": "100m",
+      "min": "10m"
+    },
+    "memory": {
+      "max": "200Mi",
+      "min": "50Mi"
+    },
+    "mode": "Auto"
+  }
 },
-"loadBalancer": {},
-"loadBalancerWithProxyProtocol": {},
-"hostPortWithProxyProtocol": {"httpPort": 80, "httpsPort": 443},
-"hostWithFailover": {},
-"hostPort": {}
+"underscoresInHeaders": false,
+"validationEnabled": true
 }`))
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.2.name").String()).To(Equal("test-3"))
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.2.spec").String()).To(MatchJSON(`{
+"annotationValidationEnabled": false,
+"chaosMonkey": false,
 "config": {},
+"disableHTTP2": false,
+"enableHTTP3": false,
+"geoIP2": {},
+"hostPort": {},
+"hostPortWithProxyProtocol": {},
+"hostWithFailover": {},
+"hsts": false,
+"hstsOptions": {},
 "ingressClass": "test",
 "inlet": "LoadBalancerWithProxyProtocol",
-"hstsOptions": {},
-"geoIP2": {},
+"loadBalancer": {},
+"loadBalancerWithProxyProtocol": {},
+"maxReplicas": 1,
+"minReplicas": 1,
 "resourcesRequests": {
   "mode": "VPA",
   "static": {},
-  "vpa": {"cpu": {}, "memory": {}}
+  "vpa": {
+    "cpu": {},
+    "memory": {}
+  }
 },
-"loadBalancer": {},
-"loadBalancerWithProxyProtocol": {},
-"hostPortWithProxyProtocol": {},
-"hostWithFailover": {},
-"hostPort": {}
+"underscoresInHeaders": false,
+"validationEnabled": true
 }`))
 		})
 	})

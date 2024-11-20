@@ -1,0 +1,79 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+          tls.key:
+            type: string
+          ca.crt:
+            type: string
+      dvcr:
+        type: object
+        properties:
+          cert:
+            type: object
+            properties:
+              ca:
+                type: string
+              crt:
+                type: string
+              key:
+                type: string
+          passwordRW:
+            type: string
+          htpasswd:
+            type: string
+          salt:
+            type: string
+          serviceIP:
+            type: string
+      controller:
+        type: object
+        properties:
+          cert:
+            type: object
+            properties:
+              ca:
+                type: string
+              crt:
+                type: string
+              key:
+                type: string
+      apiserver:
+        type: object
+        properties:
+          cert:
+            type: object
+            properties:
+              ca:
+                type: string
+              crt:
+                type: string
+              key:
+                type: string
+          proxyCert:
+            type: object
+            properties:
+              ca:
+                type: string
+              crt:
+                type: string
+              key:
+                type: string
+      rootCA:
+        type: object
+        properties:
+          ca:
+            type: string
+          crt:
+            type: string
+          key:
+            type: string

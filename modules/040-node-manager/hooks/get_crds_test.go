@@ -401,6 +401,14 @@ metadata:
 				      "zones": []
 				    },
                     "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -422,6 +430,14 @@ metadata:
 				      ]
 				    },
                     "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -471,6 +487,14 @@ metadata:
                       "type": "Containerd"
                     },
 					"manualRolloutID": "",
+		   "kubelet": {
+			"containerLogMaxSize": "50Mi",
+			"containerLogMaxFiles": 4,
+			"resourceReservation": {
+				"mode": "Auto"
+			},
+			"topologyManager": {}
+		    },
                     "name": "cp1",
                     "nodeType": "CloudPermanent",
                     "updateEpoch": "` + calculateEpoch("cp1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
@@ -489,6 +513,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -510,6 +542,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -524,6 +564,14 @@ metadata:
                       "type": "Containerd"
                     },
                     "manualRolloutID": "",
+		   "kubelet": {
+			"containerLogMaxSize": "50Mi",
+			"containerLogMaxFiles": 4,
+			"resourceReservation": {
+				"mode": "Auto"
+			},
+			"topologyManager": {}
+		    },
                     "name": "static1",
                     "nodeType": "Static",
                     "updateEpoch": "` + calculateEpoch("static1", f.ValuesGet("global.discovery.clusterUUID").String()) + `",
@@ -561,6 +609,14 @@ metadata:
 					"cri": {
                       "type": "Containerd"
                     },
+		    "kubelet": {
+			"containerLogMaxSize": "50Mi",
+			"containerLogMaxFiles": 4,
+			"resourceReservation": {
+				"mode": "Auto"
+			},
+			"topologyManager": {}
+		    },
                     "manualRolloutID": "",
                     "name": "cp1",
                     "nodeType": "CloudPermanent",
@@ -580,6 +636,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -601,6 +665,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -614,6 +686,14 @@ metadata:
 					"cri": {
                       "type": "Containerd"
                     },
+		    "kubelet": {
+			"containerLogMaxSize": "50Mi",
+			"containerLogMaxFiles": 4,
+			"resourceReservation": {
+				"mode": "Auto"
+			},
+			"topologyManager": {}
+		    },
                     "manualRolloutID": "",
                     "name": "static1",
                     "nodeType": "Static",
@@ -659,6 +739,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -680,6 +768,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -732,6 +828,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -753,13 +857,21 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.LogrusOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."))
+			Expect(f.LoggerOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass."))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.27"))
@@ -817,6 +929,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -838,13 +958,21 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 				`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.LogrusOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
+			Expect(f.LoggerOutput).Should(gbytes.Say("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.27"))
@@ -887,6 +1015,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -908,13 +1044,21 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.LogrusOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.`))
+			Expect(f.LoggerOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.27"))
@@ -957,6 +1101,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -978,13 +1130,21 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.LogrusOutput).Should(gbytes.Say(`unknown cloudInstances\.zones: \[xxx\]`))
+			Expect(f.LoggerOutput).Should(gbytes.Say(`unknown cloudInstances\.zones: \[xxx\]`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.27"))
@@ -1042,6 +1202,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -1063,13 +1231,21 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
 
-			Expect(f.LogrusOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!`))
+			Expect(f.LoggerOutput).Should(gbytes.Say(`Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!`))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.27"))
@@ -1330,7 +1506,7 @@ spec: {}
 			// nodeGroup should not be rendered at all
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").Array()).To(HaveLen(0))
 			// but we have an error in logs
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("Calculate capacity failed for: D8TestInstanceClass"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Calculate capacity failed for: D8TestInstanceClass"))
 		})
 	})
 

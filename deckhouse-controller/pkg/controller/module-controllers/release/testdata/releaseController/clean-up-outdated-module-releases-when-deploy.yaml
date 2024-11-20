@@ -16,15 +16,11 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ModuleUpdatePolicy
 metadata:
   name: test-alpha
 spec:
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        source: test
   releaseChannel: Alpha
   update:
     mode: Auto

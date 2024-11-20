@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -100,7 +100,7 @@ func TestDeckhouseInstall(t *testing.T) {
 			func() error {
 				conf := config.DeckhouseInstaller{
 					ClusterConfig:         []byte(`test`),
-					ProviderClusterConfig: []byte(`{"Kind": "OpenstackCloudProvider"}`),
+					ProviderClusterConfig: []byte(`test`),
 					TerraformState:        []byte(`test`),
 				}
 				err := CreateDeckhouseManifests(fakeClient, &conf)
@@ -178,7 +178,7 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc1.SetName("global")
-	mc1.Spec.Enabled = pointer.Bool(true)
+	mc1.Spec.Enabled = ptr.To(true)
 	mc1.Spec.Version = 1
 	mc1.Spec.Settings = config.SettingsValues(map[string]interface{}{
 		"ha": true,
@@ -228,7 +228,7 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc1.SetName("global")
-	mc1.Spec.Enabled = pointer.Bool(true)
+	mc1.Spec.Enabled = ptr.To(true)
 	mc1.Spec.Version = 1
 	mc1.Spec.Settings = config.SettingsValues(map[string]interface{}{
 		"ha": true,
@@ -241,7 +241,7 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 		Kind:    config.ModuleConfigKind,
 	})
 	mc2.SetName("deckhouse")
-	mc2.Spec.Enabled = pointer.Bool(true)
+	mc2.Spec.Enabled = ptr.To(true)
 	mc2.Spec.Version = 1
 	mc2.Spec.Settings = config.SettingsValues(map[string]interface{}{
 		"bundle": "Minimal",
@@ -257,9 +257,8 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 	mcs, err := fakeClient.Dynamic().Resource(config.ModuleConfigGVR).List(context.TODO(), metav1.ListOptions{})
 	require.NoError(t, err)
 
-	require.Len(t, mcs.Items, 3)
+	require.Len(t, mcs.Items, 2)
 
-	require.Equal(t, mcs.Items[0].GetName(), "cni-cilium")
 	// should be not found for unlock deckhouse queue
 	_, err = fakeClient.CoreV1().ConfigMaps("d8-system").Get(context.TODO(), "deckhouse-bootstrap-lock", metav1.GetOptions{})
 	require.True(t, errors.IsNotFound(err))

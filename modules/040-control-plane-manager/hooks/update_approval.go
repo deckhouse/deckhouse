@@ -23,7 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -33,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "nodes",
 			ApiVersion:             "v1",
 			Kind:                   "Node",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
@@ -48,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "control_plane_manager",
 			ApiVersion:             "v1",
 			Kind:                   "Pod",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -162,7 +162,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 
 		node, ok := nodeMap[pod.NodeName]
 		if !ok {
-			input.LogEntry.Warnf("Node %s not found", pod.NodeName)
+			input.Logger.Warnf("Node %s not found", pod.NodeName)
 			continue
 		}
 		if node.IsApproved {

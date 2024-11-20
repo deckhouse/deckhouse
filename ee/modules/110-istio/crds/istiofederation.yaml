@@ -97,8 +97,6 @@ spec:
                                       type: string
                                     port:
                                       type: integer
-                              virtualIP:
-                                type: string
                     privateLastFetchTimestamp:
                       format: date-time
                       type: string

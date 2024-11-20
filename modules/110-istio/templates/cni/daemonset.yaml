@@ -8,7 +8,7 @@ memory: 100Mi
 {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
 {{- $imageSuffix := get $versionInfo "imageSuffix" }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler

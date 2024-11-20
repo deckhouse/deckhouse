@@ -21,9 +21,9 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
-	"github.com/flant/addon-operator/pkg/utils/logger"
-	log "github.com/sirupsen/logrus"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -40,13 +40,14 @@ var _ extenders.Extender = &Extender{}
 
 type Extender struct {
 	modules map[string]bool
-	logger  logger.Logger
+	logger  *log.Logger
 }
 
+// TODO: refactor
 func Instance() *Extender {
 	once.Do(func() {
 		instance = &Extender{
-			logger:  log.WithField("extender", Name),
+			logger:  log.Default().With("extender", Name),
 			modules: make(map[string]bool),
 		}
 	})
@@ -92,10 +93,10 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		}
 		if bootstrapped {
 			e.logger.Debugf("requirements of the '%s' module are satisfied", name)
-			return pointer.Bool(true), nil
+			return ptr.To(true), nil
 		}
 		e.logger.Errorf("requirements of the '%s' module are not satisfied: module requires the cluster to be bootstrapped", name)
-		return pointer.Bool(false), fmt.Errorf("requirements are not satisfied: module requires the cluster to be bootstrapped")
+		return ptr.To(false), fmt.Errorf("requirements are not satisfied: module requires the cluster to be bootstrapped")
 	}
 	return nil, nil
 }

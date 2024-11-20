@@ -6,6 +6,7 @@ metadata:
     heritage: deckhouse
     app.kubernetes.io/name: deckhouse
     app.kubernetes.io/part-of: deckhouse
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -55,6 +56,15 @@ spec:
                   description: |
                     Module settings.
                   x-kubernetes-preserve-unknown-fields: true
+                updatePolicy:
+                  type: string
+                  description: |
+                    Module update policy.
+                  x-doc-examples: ['test-alpha']
+                source:
+                  type: string
+                  description: |
+                    The source of the module it provided by one (otherwise empty).
             status:
               type: object
               properties:
@@ -71,6 +81,16 @@ spec:
           type: boolean
           description: "Module enabled state"
           jsonPath: .spec.enabled
+        - name: UpdatePolicy
+          description: The update policy of the module.
+          jsonPath: .spec.updatePolicy
+          type: string
+          priority: 1
+        - name: Source
+          description: The source of the module.
+          type: string
+          jsonPath: .spec.source
+          priority: 1
         - name: Version
           type: string
           description: "Version of settings schema in use"

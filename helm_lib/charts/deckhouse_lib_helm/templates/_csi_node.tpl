@@ -22,8 +22,10 @@ memory: 25Mi
   {{- $additionalNodeVolumes := $config.additionalNodeVolumes }}
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
   {{- $additionalNodeLivenessProbesCmd := $config.additionalNodeLivenessProbesCmd }}
+  {{- $additionalNodeSelectorTerms := $config.additionalNodeSelectorTerms }}
   {{- $initContainerCommand := $config.initContainerCommand }}
   {{- $initContainerImage := $config.initContainerImage }}
+  {{- $initContainerVolumeMounts := $config.initContainerVolumeMounts }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
@@ -92,6 +94,9 @@ spec:
                 {{- if or (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") (eq $fullname "csi-nfs") (eq $fullname "csi-yadro") }}
                 - Static
                 {{- end }}
+              {{- if $additionalNodeSelectorTerms }}
+              {{- $additionalNodeSelectorTerms | toYaml | nindent 14 }}
+              {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
@@ -170,6 +175,10 @@ spec:
         image: {{ $initContainerImage }}
         imagePullPolicy: IfNotPresent
         name: csi-node-init-container
+        {{- if $initContainerVolumeMounts }}
+        volumeMounts:
+        {{- $initContainerVolumeMounts | toYaml | nindent 8 }}
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

@@ -62,7 +62,7 @@ const globalValues = `
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
-  enabledModules: ["vertical-pod-autoscaler-crd"]
+  enabledModules: ["vertical-pod-autoscaler"]
   modules:
     placement: {}
   discovery:
@@ -257,7 +257,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
-			f.ValuesSetFromYaml("cloudProviderGcp.internal.defaultStorageClass", `pd-ssd-replicated`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `pd-ssd-replicated`)
 			f.HelmRender()
 		})
 
@@ -347,11 +347,11 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(project).To(Equal("my-proj"))
 		})
 
-		Context("vertical-pod-autoscaler-crd module enabled", func() {
+		Context("vertical-pod-autoscaler module enabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
 				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd"]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
 				f.ValuesSetFromYaml("cloudProviderGcp", moduleValues)
 				f.HelmRender()
 			})
@@ -364,7 +364,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			})
 		})
 
-		Context("vertical-pod-autoscaler-crd module disabled", func() {
+		Context("vertical-pod-autoscaler module disabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
 				f.ValuesSet("global.modulesImages", GetModulesImages())

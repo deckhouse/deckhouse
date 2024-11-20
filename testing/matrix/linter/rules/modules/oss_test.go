@@ -39,7 +39,7 @@ func Test_assertProject(t *testing.T) {
 				Description: "A Federated OpenID Connect Provider with pluggable connectors",
 				Link:        "https://github.com/dexidp/dex",
 				Logo:        "https://dexidp.io/img/logos/dex-horizontal-color.png",
-				Licence:     "Apache License 2.0",
+				License:     "Apache License 2.0",
 			},
 		},
 		{
@@ -49,7 +49,7 @@ func Test_assertProject(t *testing.T) {
 				Name:    "Dex",
 				Link:    "https://github.com/dexidp/dex",
 				Logo:    "https://dexidp.io/img/logos/dex-horizontal-color.png",
-				Licence: "Apache License 2.0",
+				License: "Apache License 2.0",
 			},
 		},
 		{
@@ -59,7 +59,7 @@ func Test_assertProject(t *testing.T) {
 				Name:        "Dex",
 				Description: "A Federated OpenID Connect Provider with pluggable connectors",
 				Logo:        "https://dexidp.io/img/logos/dex-horizontal-color.png",
-				Licence:     "Apache License 2.0",
+				License:     "Apache License 2.0",
 			},
 		},
 		{
@@ -69,11 +69,11 @@ func Test_assertProject(t *testing.T) {
 				Name:        "Dex",
 				Description: "A Federated OpenID Connect Provider with pluggable connectors",
 				Link:        "https://github.com/dexidp/dex",
-				Licence:     "Apache License 2.0",
+				License:     "Apache License 2.0",
 			},
 		},
 		{
-			name:    "empty licence leads to error",
+			name:    "empty license leads to error",
 			wantErr: true,
 			project: ossProject{
 				Name:        "Dex",
@@ -90,7 +90,7 @@ func Test_assertProject(t *testing.T) {
 				Description: "A Federated OpenID Connect Provider with pluggable connectors",
 				Link:        "zazaz",
 				Logo:        "https://dexidp.io/img/logos/dex-horizontal-color.png",
-				Licence:     "Apache License 2.0",
+				License:     "Apache License 2.0",
 			},
 		},
 		{
@@ -101,7 +101,7 @@ func Test_assertProject(t *testing.T) {
 				Description: "A Federated OpenID Connect Provider with pluggable connectors",
 				Link:        "https://github.com/dexidp/dex",
 				Logo:        "xoxoxo",
-				Licence:     "Apache License 2.0",
+				License:     "Apache License 2.0",
 			},
 		},
 	}
@@ -140,7 +140,7 @@ func Test_projectList(t *testing.T) {
 - name: a
   description: a
   link: https://example.com
-  licence: Opachke 2.0
+  license: Opachke 2.0
 `,
 		},
 		{
@@ -150,11 +150,11 @@ func Test_projectList(t *testing.T) {
 - name: a
   description: a
   link: https://example.com
-  licence: Opachke 2.0
+  license: Opachke 2.0
 - name: b
   description: b
   link: https://example.com
-  licence: Opachke 2.0
+  license: Opachke 2.0
 `,
 		},
 	}

@@ -4,7 +4,7 @@ metadata:
   name: test-next
 spec:
   ingressClass: test
-  controllerVersion: "1.6"
+  controllerVersion: "1.9"
   inlet: "HostPortWithProxyProtocol"
   geoIP2:
     maxmindLicenseKey: abc12345

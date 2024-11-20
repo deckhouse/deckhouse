@@ -34,9 +34,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -86,7 +88,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.check(ctx, message.Start, logWriter)
+					result := s.checkSafe(ctx, message.Start, logWriter)
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
 
@@ -99,12 +101,29 @@ connectionProcessor:
 	}
 }
 
+func (s *Service) checkSafe(
+	ctx context.Context,
+	request *pb.CheckStart,
+	logWriter io.Writer,
+) (result *pb.CheckResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.CheckResult{Err: panicMessage(ctx, r)}
+		}
+	}()
+
+	return s.check(ctx, request, logWriter)
+}
+
 func (s *Service) check(
 	ctx context.Context,
 	request *pb.CheckStart,
 	logWriter io.Writer,
 ) *pb.CheckResult {
 	var err error
+
+	cleanuper := callback.NewCallback()
+	defer cleanuper.Call()
 
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream: logWriter,
@@ -115,6 +134,7 @@ func (s *Service) check(
 	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
 	app.CacheDir = s.cacheDir
+	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() {
@@ -160,30 +180,6 @@ func (s *Service) check(
 		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
-	err = log.Process("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
-			s.schemaStore,
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
-		sshClient, err = prepareSSHClient(connectionConfig)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
-		return nil
-	})
-	if err != nil {
-		return &pb.CheckResult{Err: err.Error()}
-	}
-	defer sshClient.Stop()
-
 	var commanderUUID uuid.UUID
 	if request.Options.CommanderUuid != "" {
 		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
@@ -192,8 +188,7 @@ func (s *Service) check(
 		}
 	}
 
-	checker := check.NewChecker(&check.Params{
-		SSHClient:     sshClient,
+	checkParams := &check.Params{
 		StateCache:    cache.Global(),
 		CommanderMode: request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
@@ -202,7 +197,28 @@ func (s *Service) check(
 			[]byte(request.ProviderSpecificClusterConfig),
 		),
 		TerraformContext: terraform.NewTerraformContext(),
+	}
+
+	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(helper.ClusterConnectionsOptions{
+		CommanderMode: request.Options.CommanderMode,
+		ApiServerUrl:  request.Options.ApiServerUrl,
+		ApiServerOptions: helper.ApiServerOptions{
+			Token:                    request.Options.ApiServerToken,
+			InsecureSkipTLSVerify:    request.Options.ApiServerInsecureSkipTlsVerify,
+			CertificateAuthorityData: util.StringToBytes(request.Options.ApiServerCertificateAuthorityData),
+		},
+		SchemaStore:         s.schemaStore,
+		SSHConnectionConfig: request.ConnectionConfig,
 	})
+	cleanuper.Add(cleanup)
+	if err != nil {
+		return &pb.CheckResult{Err: err.Error()}
+	}
+
+	checkParams.KubeClient = kubeClient
+	checkParams.SSHClient = sshClient
+
+	checker := check.NewChecker(checkParams)
 
 	result, checkErr := checker.Check(ctx)
 	resultData, marshalErr := json.Marshal(result)
@@ -218,7 +234,7 @@ func (s *Service) check(
 
 	return &pb.CheckResult{
 		Result: string(resultData),
-		Err:    errToString(err),
+		Err:    util.ErrToString(err),
 		State:  string(stateData),
 	}
 }

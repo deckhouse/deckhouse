@@ -23,16 +23,19 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -40,20 +43,40 @@ const (
 	NotifiedAnnotation   = "release.deckhouse.io/notified"
 )
 
-func NewDeckhouseUpdater(logger logger.Logger, client client.Client, dc dependency.Container,
-	updateSettings *updater.DeckhouseUpdateSettings, releaseData updater.DeckhouseReleaseData, metricStorage *metric_storage.MetricStorage,
-	podIsReady, clusterBootstrapping bool, imagesRegistry string, enabledModules []string) (*updater.Updater[*v1alpha1.DeckhouseRelease], error) {
-	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](logger, updateSettings.NotificationConfig, updateSettings.Mode, releaseData,
-		podIsReady, clusterBootstrapping, NewKubeAPI(client, dc, imagesRegistry),
-		newMetricUpdater(metricStorage), newValueSettings(updateSettings.DisruptionApprovalMode), newWebhookDataSource(logger), enabledModules), nil
+func NewDeckhouseUpdater(
+	ctx context.Context,
+	logger *log.Logger,
+	client client.Client,
+	dc dependency.Container,
+	updateSettings *updater.Settings,
+	releaseData updater.DeckhouseReleaseData,
+	metricStorage *metric_storage.MetricStorage,
+	podIsReady,
+	clusterBootstrapping bool,
+	imagesRegistry string,
+	enabledModules []string,
+) *updater.Updater[*v1alpha1.DeckhouseRelease] {
+	return updater.NewUpdater[*v1alpha1.DeckhouseRelease](
+		ctx,
+		dc,
+		logger,
+		updateSettings,
+		releaseData,
+		podIsReady,
+		clusterBootstrapping,
+		NewKubeAPI(client, dc, imagesRegistry),
+		newMetricsUpdater(metricStorage),
+		newWebhookDataSource(logger),
+		enabledModules,
+	)
 }
 
-func newWebhookDataSource(logger logger.Logger) *webhookDataSource {
+func newWebhookDataSource(logger *log.Logger) *webhookDataSource {
 	return &webhookDataSource{logger: logger}
 }
 
 type webhookDataSource struct {
-	logger logger.Logger
+	logger *log.Logger
 }
 
 func (s *webhookDataSource) Fill(output *updater.WebhookData, _ *v1alpha1.DeckhouseRelease, applyTime time.Time) {
@@ -76,11 +99,13 @@ type KubeAPI struct {
 	imagesRegistry string
 }
 
-func (api *KubeAPI) UpdateReleaseStatus(release *v1alpha1.DeckhouseRelease, msg, phase string) error {
-	ctx := context.Background()
+func (api *KubeAPI) UpdateReleaseStatus(ctx context.Context, release *v1alpha1.DeckhouseRelease, msg, phase string) error {
+	// reset transition time only if phase changes
+	if release.Status.Phase != phase {
+		release.Status.TransitionTime = metav1.NewTime(api.dc.GetClock().Now().UTC())
+	}
 	release.Status.Phase = phase
 	release.Status.Message = msg
-	release.Status.TransitionTime = metav1.NewTime(api.dc.GetClock().Now().UTC())
 
 	return api.client.Status().Update(ctx, release)
 }
@@ -140,7 +165,7 @@ func (api *KubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.Deckhou
 				if r.GetName() == release.GetName() {
 					continue
 				}
-				if r.Status.Phase != v1alpha1.PhasePending {
+				if r.Status.Phase != v1alpha1.ModuleReleasePhasePending {
 					continue
 				}
 				// patch releases to trigger their requeue
@@ -160,14 +185,22 @@ func (api *KubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.Deckh
 	})
 }
 
-func newValueSettings(disruptionApprovalMode string) *ValueSettings {
-	return &ValueSettings{disruptionApprovalMode: disruptionApprovalMode}
-}
+func (api *KubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, error) {
+	key := client.ObjectKey{Namespace: d8config.APINamespaceName, Name: d8config.DeckhouseClusterConfigurationConfigMapName}
+	secret := new(corev1.Secret)
+	if err := api.client.Get(ctx, key, secret); err != nil {
+		return false, fmt.Errorf("check kubernetes version: failed to get secret: %w", err)
+	}
 
-type ValueSettings struct {
-	disruptionApprovalMode string
-}
-
-func (v *ValueSettings) GetDisruptionApprovalMode() (string, bool) {
-	return v.disruptionApprovalMode, true
+	var clusterConf struct {
+		KubernetesVersion string `json:"kubernetesVersion"`
+	}
+	clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
+	if !ok {
+		return false, fmt.Errorf("check kubernetes version: expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
+	}
+	if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
+		return false, fmt.Errorf("check kubernetes version: failed to unmarshal cluster configuration: %w", err)
+	}
+	return clusterConf.KubernetesVersion == d8config.K8sAutomaticVersion, nil
 }

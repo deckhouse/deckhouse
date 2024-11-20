@@ -19,13 +19,14 @@ package smokemini
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/tidwall/gjson"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/scheduler"
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
@@ -53,8 +54,8 @@ var _ = sdk.RegisterFunc(
 				ApiVersion:                   "v1",
 				Kind:                         "Node",
 				FilterFunc:                   snapshot.NewNode,
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				WaitForSynchronization:       ptr.To(false),
 			},
 			{
 				Name:              "statefulsets",
@@ -64,9 +65,9 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewStatefulSet,
 
-				ExecuteHookOnEvents:          pointer.Bool(false),
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnEvents:          ptr.To(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				WaitForSynchronization:       ptr.To(false),
 			},
 			{
 				Name:              "pods",
@@ -76,9 +77,9 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewPod,
 
-				ExecuteHookOnEvents:          pointer.Bool(false),
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnEvents:          ptr.To(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				WaitForSynchronization:       ptr.To(false),
 			},
 			{
 				Name:              "pdb",
@@ -88,17 +89,17 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewDisruption,
 
-				ExecuteHookOnEvents:          pointer.Bool(false),
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnEvents:          ptr.To(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				WaitForSynchronization:       ptr.To(false),
 			},
 			{
 				Name:                         "default_sc",
 				ApiVersion:                   "storage.k8s.io/v1",
 				Kind:                         "StorageClass",
 				FilterFunc:                   snapshot.NewStorageClass,
-				ExecuteHookOnSynchronization: pointer.Bool(false),
-				WaitForSynchronization:       pointer.Bool(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
+				WaitForSynchronization:       ptr.To(false),
 			},
 			{
 				Name:              "pvc",
@@ -108,7 +109,7 @@ var _ = sdk.RegisterFunc(
 				LabelSelector:     labelSelector,
 				FilterFunc:        snapshot.NewPvcTermination,
 
-				ExecuteHookOnSynchronization: pointer.Bool(false),
+				ExecuteHookOnSynchronization: ptr.To(false),
 			},
 		},
 	},
@@ -120,7 +121,7 @@ func reschedule(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	logger := input.LogEntry
+	logger := input.Logger
 	const statePath = "upmeter.internal.smokeMini.sts"
 
 	// Parse the state from values
@@ -156,7 +157,7 @@ func reschedule(input *go_hook.HookInput) error {
 	x, newSts, err := sched.Schedule(state, nodes)
 	if err != nil {
 		if errors.Is(err, scheduler.ErrSkip) {
-			logger.Info(err)
+			logger.Info("scheduler skip", slog.String("error", err.Error()))
 			return nil
 		}
 		return err

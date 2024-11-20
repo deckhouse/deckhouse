@@ -61,10 +61,21 @@ Jekyll::Hooks.register :site, :post_read do |site|
   parse_module_data(site.data["sidebars"]["main"]["entries"], site)
 
   # Exclude custom resource and module setting files from the search index by setting the 'searchable' parameter to false.
+  # Add module name in kebab case and snake case to metadata of module pages.
   # Add module name in kebab case and snake case to search keywords.
+
+  pageSuffixes = [
+    'CONFIGURATION.md', 'CONFIGURATION_RU.md',
+    'CR_RU.md', 'CR.md',
+    'EXAMPLES_RU.md', 'EXAMPLES.md',
+    'USAGE_RU.md', 'USAGE.md',
+    'FAQ_RU.md', 'FAQ.md'
+  ]
+
   site.pages.each do |page|
-    if ( page.url.match?(%r{/modules/[0-9]+-[^/]+/$}) or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') ) then
-      moduleKebabCase = page.url.sub(%r{(.*)?/modules/[0-9]+-([^/]+)/.*$},'\2')
+    if page.url.match?(%r{/modules/([0-9]+-)?[^/]+/$}) || pageSuffixes.any? { |suffix| page.name.end_with?(suffix) }
+    then
+      moduleKebabCase = page.url.sub(%r{(.*)?/modules/([0-9]+-)?([^/]+)/.*$},'\3')
       moduleSnakeCase = moduleKebabCase.gsub(/-[a-z]/,&:upcase).gsub(/-/,'')
       page.data['module-kebab-name'] = moduleKebabCase
       page.data['module-snake-name'] = moduleSnakeCase

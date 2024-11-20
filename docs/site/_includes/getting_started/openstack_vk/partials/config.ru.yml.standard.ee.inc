@@ -120,6 +120,7 @@ layout: Standard
 standard:
   # [<en>] Network name for external communication.
   # [<ru>] Имя сети для внешнего взаимодействия.
+  # [<ru>] В SDN Neutron и Sprut по умолчанию создаются сети ext-net и internet соответственно. Вы можете использовать их, или создать другие и указать их в конфигурации.
   externalNetworkName: *!CHANGE_EXT_NET*
   # [<en>] Addressing for the internal network of the cluster nodes.
   # [<ru>] Адресация для внутренней сети узлов кластера.
@@ -173,7 +174,7 @@ masterNodeGroup:
     # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-flavorname
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    flavorName: Standard-4-8-80
+    flavorName: STD3-4-8
     # [<en>] VM image in use. You can view the list of images using the command 'openstack image list'
     # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-imagename
     # [<ru>] Используемый образ виртуальной машины. Посмотреть список образов можно командой 'openstack image list'
@@ -183,7 +184,7 @@ masterNodeGroup:
     imageName: ubuntu-22-202404160933.gitd6495fe9
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
-    rootDiskSize: 40
+    rootDiskSize: 50
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.

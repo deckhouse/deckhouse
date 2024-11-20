@@ -21,8 +21,10 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
+// fake *-crd modules are required for backward compatibility with lib_helm library
+// TODO: remove fake crd modules
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-vcd"]
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-vcd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -32,7 +34,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.27"
+    kubernetesVersion: "1.29"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -43,7 +45,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.27.1
+    kubernetesVersion: 1.29.1
     clusterUUID: cluster
 `
 

@@ -3,6 +3,8 @@ apiVersion: aquasecurity.github.io/v1alpha1
 kind: ClusterComplianceReport
 metadata:
   name: cis
+  platform: k8s
+  type: cis
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
   cron: 0 */6 * * *
@@ -11,9 +13,11 @@ spec:
     id: cis
     title: CIS Kubernetes Benchmarks v1.23
     description: CIS Kubernetes Benchmarks
+    platform: k8s
+    type: cis
     relatedResources:
       - https://www.cisecurity.org/benchmark/kubernetes
-    version: "1.0"
+    version: "1.23"
     controls:
       - id: 1.1.1
         name: Ensure that the API server pod specification file permissions are set to
@@ -22,6 +26,8 @@ spec:
           of 600 or more restrictive
         checks:
           - id: AVD-KCV-0048
+        commands:
+          - id: CMD-0001
         severity: HIGH
       - id: 1.1.2
         name: Ensure that the API server pod specification file ownership is set to
@@ -30,6 +36,8 @@ spec:
           to root:root
         checks:
           - id: AVD-KCV-0049
+        commands:
+          - id: CMD-0002
         severity: HIGH
       - id: 1.1.3
         name: Ensure that the controller manager pod specification file permissions are
@@ -38,6 +46,8 @@ spec:
           permissions of 600 or more restrictive
         checks:
           - id: AVD-KCV-0050
+        commands:
+          - id: CMD-0003
         severity: HIGH
       - id: 1.1.4
         name: Ensure that the controller manager pod specification file ownership is set
@@ -46,6 +56,8 @@ spec:
           is set to root:root
         checks:
           - id: AVD-KCV-0051
+        commands:
+          - id: CMD-0004
         severity: HIGH
       - id: 1.1.5
         name: Ensure that the scheduler pod specification file permissions are set to
@@ -54,6 +66,8 @@ spec:
           600 or more restrictive
         checks:
           - id: AVD-KCV-0052
+        commands:
+          - id: CMD-0005
         severity: HIGH
       - id: 1.1.6
         name: Ensure that the scheduler pod specification file ownership is set to
@@ -62,6 +76,8 @@ spec:
           to root:root
         checks:
           - id: AVD-KCV-0053
+        commands:
+          - id: CMD-0006
         severity: HIGH
       - id: 1.1.7
         name: Ensure that the etcd pod specification file permissions are set to 600 or
@@ -70,6 +86,8 @@ spec:
           or more restrictive
         checks:
           - id: AVD-KCV-0054
+        commands:
+          - id: CMD-0007
         severity: HIGH
       - id: 1.1.8
         name: Ensure that the etcd pod specification file ownership is set to root:root
@@ -77,6 +95,8 @@ spec:
           root:root.
         checks:
           - id: AVD-KCV-0055
+        commands:
+          - id: CMD-0008
         severity: HIGH
       - id: 1.1.9
         name: Ensure that the Container Network Interface file permissions are set to
@@ -85,6 +105,8 @@ spec:
           of 600 or more restrictive
         checks:
           - id: AVD-KCV-0056
+        commands:
+          - id: CMD-0009
         severity: HIGH
       - id: 1.1.10
         name: Ensure that the Container Network Interface file ownership is set to
@@ -93,6 +115,8 @@ spec:
           set to root:root
         checks:
           - id: AVD-KCV-0057
+        commands:
+          - id: CMD-0010
         severity: HIGH
       - id: 1.1.11
         name: Ensure that the etcd data directory permissions are set to 700 or more
@@ -101,24 +125,32 @@ spec:
           restrictive
         checks:
           - id: AVD-KCV-0058
+        commands:
+          - id: CMD-0011
         severity: HIGH
       - id: 1.1.12
         name: Ensure that the etcd data directory ownership is set to etcd:etcd
         description: Ensure that the etcd data directory ownership is set to etcd:etcd
         checks:
           - id: AVD-KCV-0059
+        commands:
+          - id: CMD-0012
         severity: LOW
       - id: 1.1.13
         name: Ensure that the admin.conf file permissions are set to 600
         description: Ensure that the admin.conf file has permissions of 600
         checks:
           - id: AVD-KCV-0060
+        commands:
+          - id: CMD-0013
         severity: CRITICAL
       - id: 1.1.14
         name: Ensure that the admin.conf file ownership is set to root:root
         description: Ensure that the admin.conf file ownership is set to root:root
         checks:
           - id: AVD-KCV-0061
+        commands:
+          - id: CMD-0014
         severity: CRITICAL
       - id: 1.1.15
         name: Ensure that the scheduler.conf file permissions are set to 600 or more
@@ -127,12 +159,16 @@ spec:
           restrictive
         checks:
           - id: AVD-KCV-0062
+        commands:
+          - id: CMD-0015
         severity: HIGH
       - id: 1.1.16
         name: Ensure that the scheduler.conf file ownership is set to root:root
         description: Ensure that the scheduler.conf file ownership is set to root:root
         checks:
           - id: AVD-KCV-0063
+        commands:
+          - id: CMD-0016
         severity: HIGH
       - id: 1.1.17
         name: Ensure that the controller-manager.conf file permissions are set to 600 or
@@ -141,6 +177,8 @@ spec:
           or more restrictive
         checks:
           - id: AVD-KCV-0064
+        commands:
+          - id: CMD-0017
         severity: HIGH
       - id: 1.1.18
         name: Ensure that the controller-manager.conf file ownership is set to root:root
@@ -148,6 +186,8 @@ spec:
           root:root.
         checks:
           - id: AVD-KCV-0065
+        commands:
+          - id: CMD-0018
         severity: HIGH
       - id: 1.1.19
         name: Ensure that the Kubernetes PKI directory and file ownership is set to
@@ -156,6 +196,8 @@ spec:
           to root:root
         checks:
           - id: AVD-KCV-0066
+        commands:
+          - id: CMD-0019
         severity: CRITICAL
       - id: 1.1.20
         name: Ensure that the Kubernetes PKI certificate file permissions are set to 600
@@ -164,12 +206,16 @@ spec:
           600 or more restrictive
         checks:
           - id: AVD-KCV-0068
+        commands:
+          - id: CMD-0020
         severity: CRITICAL
       - id: 1.1.21
         name: Ensure that the Kubernetes PKI key file permissions are set to 600
         description: Ensure that Kubernetes PKI key files have permissions of 600
         checks:
           - id: AVD-KCV-0067
+        commands:
+          - id: CMD-0021
         severity: CRITICAL
       - id: 1.2.1
         name: Ensure that the --anonymous-auth argument is set to false
@@ -250,8 +296,8 @@ spec:
         name: Ensure that the admission control plugin SecurityContextDeny is set if
           PodSecurityPolicy is not used
         description: The SecurityContextDeny admission controller can be used to deny
-          pods which make use of some SecurityContext fields which could allow
-          for privilege escalation in the cluster. This should be used where
+          pods which make use of some SecurityContext fields which could allow for
+          privilege escalation in the cluster. This should be used where
           PodSecurityPolicy is not in place within the cluster
         checks:
           - id: AVD-KCV-0013
@@ -455,20 +501,23 @@ spec:
       - id: 3.1.1
         name: Client certificate authentication should not be used for users (Manual)
         description: Kubernetes provides the option to use client certificates for user
-          authentication. However as there is no way to revoke these
-          certificates when a user leaves an organization or loses their
-          credential, they are not suitable for this purpose
+          authentication. However as there is no way to revoke these certificates
+          when a user leaves an organization or loses their credential, they are
+          not suitable for this purpose
+        checks: null
         severity: HIGH
       - id: 3.2.1
         name: Ensure that a minimal audit policy is created (Manual)
         description: Kubernetes can audit the details of requests made to the API
-          server. The --audit- policy-file flag must be set for this logging to
-          be enabled.
+          server. The --audit- policy-file flag must be set for this logging to be
+          enabled.
+        checks: null
         severity: HIGH
       - id: 3.2.2
         name: Ensure that the audit policy covers key security concerns (Manual)
         description: Ensure that the audit policy created for the cluster covers key
           security concerns
+        checks: null
         severity: HIGH
       - id: 4.1.1
         name: Ensure that the kubelet service file permissions are set to 600 or more
@@ -477,12 +526,16 @@ spec:
           restrictive.
         checks:
           - id: AVD-KCV-0069
+        commands:
+          - id: CMD-0022
         severity: HIGH
       - id: 4.1.2
         name: Ensure that the kubelet service file ownership is set to root:root
         description: Ensure that the kubelet service file ownership is set to root:root
         checks:
           - id: AVD-KCV-0070
+        commands:
+          - id: CMD-0023
         severity: HIGH
       - id: 4.1.3
         name: If proxy kubeconfig file exists ensure permissions are set to 600 or more
@@ -492,6 +545,8 @@ spec:
           of 600 or more restrictive
         checks:
           - id: AVD-KCV-0071
+        commands:
+          - id: CMD-0024
         severity: HIGH
       - id: 4.1.4
         name: If proxy kubeconfig file exists ensure ownership is set to root:root
@@ -499,6 +554,8 @@ spec:
           kubeconfig file is set to root:root
         checks:
           - id: AVD-KCV-0072
+        commands:
+          - id: CMD-0025
         severity: HIGH
       - id: 4.1.5
         name: Ensure that the --kubeconfig kubelet.conf file permissions are set to 600
@@ -507,6 +564,8 @@ spec:
           restrictive
         checks:
           - id: AVD-KCV-0073
+        commands:
+          - id: CMD-0026
         severity: HIGH
       - id: 4.1.6
         name: Ensure that the --kubeconfig kubelet.conf file ownership is set to
@@ -514,6 +573,8 @@ spec:
         description: Ensure that the kubelet.conf file ownership is set to root:root
         checks:
           - id: AVD-KCV-0074
+        commands:
+          - id: CMD-0027
         severity: HIGH
       - id: 4.1.7
         name: Ensure that the certificate authorities file permissions are set to 600 or
@@ -522,6 +583,8 @@ spec:
           or more restrictive
         checks:
           - id: AVD-KCV-0075
+        commands:
+          - id: CMD-0028
         severity: CRITICAL
       - id: 4.1.8
         name: Ensure that the client certificate authorities file ownership is set to
@@ -530,15 +593,18 @@ spec:
           root:root
         checks:
           - id: AVD-KCV-0076
+        commands:
+          - id: CMD-0029
         severity: CRITICAL
       - id: 4.1.9
         name: If the kubelet config.yaml configuration file is being used validate
           permissions set to 600 or more restrictive
         description: Ensure that if the kubelet refers to a configuration file with the
-          --config argument, that file has permissions of 600 or more
-          restrictive
+          --config argument, that file has permissions of 600 or more restrictive
         checks:
           - id: AVD-KCV-0077
+        commands:
+          - id: CMD-0030
         severity: HIGH
       - id: 4.1.10
         name: If the kubelet config.yaml configuration file is being used validate file
@@ -547,30 +613,40 @@ spec:
           --config argument, that file is owned by root:root
         checks:
           - id: AVD-KCV-0078
+        commands:
+          - id: CMD-0031
         severity: HIGH
       - id: 4.2.1
         name: Ensure that the --anonymous-auth argument is set to false
         description: Disable anonymous requests to the Kubelet server
         checks:
           - id: AVD-KCV-0079
+        commands:
+          - id: CMD-0032
         severity: CRITICAL
       - id: 4.2.2
         name: Ensure that the --authorization-mode argument is not set to AlwaysAllow
         description: Do not allow all requests. Enable explicit authorization
         checks:
           - id: AVD-KCV-0080
+        commands:
+          - id: CMD-0033
         severity: CRITICAL
       - id: 4.2.3
         name: Ensure that the --client-ca-file argument is set as appropriate
         description: Enable Kubelet authentication using certificates
         checks:
           - id: AVD-KCV-0081
+        commands:
+          - id: CMD-0034
         severity: CRITICAL
       - id: 4.2.4
         name: Verify that the --read-only-port argument is set to 0
         description: Disable the read-only port
         checks:
           - id: AVD-KCV-0082
+        commands:
+          - id: CMD-0035
         severity: HIGH
       - id: 4.2.5
         name: Ensure that the --streaming-connection-idle-timeout argument is not set to
@@ -578,6 +654,8 @@ spec:
         description: Do not disable timeouts on streaming connections
         checks:
           - id: AVD-KCV-0085
+        commands:
+          - id: CMD-0036
         severity: HIGH
       - id: 4.2.6
         name: Ensure that the --protect-kernel-defaults argument is set to true
@@ -585,18 +663,24 @@ spec:
           kernel parameter values
         checks:
           - id: AVD-KCV-0083
+        commands:
+          - id: CMD-0037
         severity: HIGH
       - id: 4.2.7
         name: Ensure that the --make-iptables-util-chains argument is set to true
         description: Allow Kubelet to manage iptables
         checks:
           - id: AVD-KCV-0084
+        commands:
+          - id: CMD-0038
         severity: HIGH
       - id: 4.2.8
         name: Ensure that the --hostname-override argument is not set
         description: Do not override node hostnames
         checks:
           - id: AVD-KCV-0086
+        commands:
+          - id: CMD-0039
         severity: HIGH
       - id: 4.2.9
         name: Ensure that the --event-qps argument is set to 0 or a level which ensures
@@ -606,18 +690,35 @@ spec:
           gathered
         checks:
           - id: AVD-KCV-0087
+        commands:
+          - id: CMD-0040
         severity: HIGH
+      - id: 4.2.10
+        name: Ensure that the --tls-cert-file and --tls-private-key-file arguments are
+          set as appropriate
+        description: Setup TLS connection on the Kubelets
+        checks:
+          - id: AVD-KCV-0088
+          - id: AVD-KCV-0089
+        commands:
+          - id: CMD-0041
+          - id: CMD-0042
+        severity: CRITICAL
       - id: 4.2.11
         name: Ensure that the --rotate-certificates argument is not set to false
         description: Enable kubelet client certificate rotation
         checks:
           - id: AVD-KCV-0090
+        commands:
+          - id: CMD-0043
         severity: CRITICAL
       - id: 4.2.12
         name: Verify that the RotateKubeletServerCertificate argument is set to true
         description: Enable kubelet server certificate rotation
         checks:
           - id: AVD-KCV-0091
+        commands:
+          - id: CMD-0044
         severity: CRITICAL
       - id: 4.2.13
         name: Ensure that the Kubelet only makes use of Strong Cryptographic Ciphers
@@ -625,6 +726,8 @@ spec:
           cryptographic ciphers
         checks:
           - id: AVD-KCV-0092
+        commands:
+          - id: CMD-0045
         severity: CRITICAL
       - id: 5.1.1
         name: Ensure that the cluster-admin role is only used where required
@@ -644,9 +747,9 @@ spec:
       - id: 5.1.3
         name: Minimize wildcard use in Roles and ClusterRoles
         description: Kubernetes Roles and ClusterRoles provide access to resources based
-          on sets of objects and actions that can be taken on those objects. It
-          is possible to set either of these to be the wildcard "*" which
-          matches all items
+          on sets of objects and actions that can be taken on those objects. It is
+          possible to set either of these to be the wildcard "*" which matches all
+          items
         checks:
           - id: AVD-KSV-0044
           - id: AVD-KSV-0045
@@ -655,8 +758,8 @@ spec:
       - id: 5.1.6
         name: Ensure that Service Account Tokens are only mounted where necessary
         description: Service accounts tokens should not be mounted in pods except where
-          the workload running in the pod explicitly needs to communicate with
-          the API server
+          the workload running in the pod explicitly needs to communicate with the
+          API server
         checks:
           - id: AVD-KSV-0036
         severity: HIGH
@@ -755,6 +858,7 @@ spec:
         description: There are a variety of CNI plugins available for Kubernetes. If the
           CNI in use does not support Network Policies it may not be possible to
           effectively restrict traffic in the cluster
+        checks: null
         severity: MEDIUM
       - id: 5.3.2
         name: Ensure that all Namespaces have Network Policies defined
@@ -766,24 +870,27 @@ spec:
         name: Prefer using secrets as files over secrets as environment variables
           (Manual)
         description: Kubernetes supports mounting secrets as data volumes or as
-          environment variables. Minimize the use of environment variable
-          secrets
+          environment variables. Minimize the use of environment variable secrets
+        checks: null
         severity: MEDIUM
       - id: 5.4.2
         name: Consider external secret storage (Manual)
         description: Consider the use of an external secrets storage and management
           system, instead of using Kubernetes Secrets directly, if you have more
           complex secret management needs
+        checks: null
         severity: MEDIUM
       - id: 5.5.1
         name: Configure Image Provenance using ImagePolicyWebhook admission controller
           (Manual)
         description: Configure Image Provenance for your deployment
+        checks: null
         severity: MEDIUM
       - id: 5.7.1
         name: Create administrative boundaries between resources using namespaces
           (Manual)
         description: Use namespaces to isolate your Kubernetes objects
+        checks: null
         severity: MEDIUM
       - id: 5.7.2
         name: Ensure that the seccomp profile is set to docker/default in your pod

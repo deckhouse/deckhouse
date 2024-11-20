@@ -18,9 +18,6 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  annotations:
-    release.deckhouse.io/isUpdating: "false"
-    release.deckhouse.io/notified: "true"
   creationTimestamp: null
   name: v1.46.0
   resourceVersion: "1001"
@@ -28,9 +25,9 @@ spec:
   version: v1.46.0
 status:
   approved: false
-  message: Waiting for manual approval
+  message: 'Release is waiting for the ''release.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: "2023-05-20T10:10:10Z"
 ---
 apiVersion: v1
 kind: Pod
