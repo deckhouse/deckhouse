@@ -472,7 +472,8 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - uses: webfactory/ssh-agent@v0.9.0
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
@@ -798,7 +799,8 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - uses: webfactory/ssh-agent@v0.9.0
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
@@ -1124,7 +1126,8 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - uses: webfactory/ssh-agent@v0.9.0
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
@@ -1450,7 +1453,8 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - uses: webfactory/ssh-agent@v0.9.0
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
@@ -1776,7 +1780,8 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
-      - uses: webfactory/ssh-agent@v0.9.0
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
