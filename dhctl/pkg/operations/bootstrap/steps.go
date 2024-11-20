@@ -40,6 +40,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -685,17 +686,24 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 	})
 }
 
-func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) error {
-	return log.Process("bootstrap", "Install Deckhouse", func() error {
+type InstallDeckhouseResult struct {
+	ManifestResult *deckhouse.ManifestsResult
+}
+
+func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) (*InstallDeckhouseResult, error) {
+	res := &InstallDeckhouseResult{}
+	err := log.Process("bootstrap", "Install Deckhouse", func() error {
 		err := CheckPreventBreakAnotherBootstrappedCluster(kubeCl, config)
 		if err != nil {
 			return err
 		}
 
-		err = deckhouse.CreateDeckhouseManifests(kubeCl, config)
+		resManifests, err := deckhouse.CreateDeckhouseManifests(kubeCl, config)
 		if err != nil {
 			return fmt.Errorf("deckhouse create manifests: %v", err)
 		}
+
+		res.ManifestResult = resManifests
 
 		err = cache.Global().Save(ManifestCreatedInClusterCacheKey, []byte("yes"))
 		if err != nil {
@@ -709,6 +717,11 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
@@ -847,4 +860,34 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 		return nil
 	})
 	return nodesFromCache, err
+}
+
+func applyPostBootstrapModuleConfigs(kubeCl *client.KubernetesClient, tasks []actions.ModuleConfigTask) error {
+	for _, task := range tasks {
+		err := retry.NewLoop(task.Title, 15, 5*time.Second).
+			Run(func() error {
+				return task.Do(kubeCl)
+			})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func RunPostInstallTasks(kubeCl *client.KubernetesClient, result *InstallDeckhouseResult) error {
+	if result == nil {
+		log.DebugF("Skip post install tasks because result is nil\n")
+		return nil
+	}
+
+	return log.Process("bootstrap", "Run post bootstrap actions", func() error {
+		err := deckhouse.ConfigureDeckhouseRelease(kubeCl)
+		if err != nil {
+			return err
+		}
+
+		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
+	})
 }
