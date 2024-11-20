@@ -143,7 +143,7 @@ func (r *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, e
 		req.Name = node.Name
 		req.Namespace = node.Namespace
 
-		if err := r.scheduleReconcileForNode(ctx, req); err != nil {
+		if err := r.triggerReconcileForNode(ctx, req); err != nil {
 			// It currently only when ctx done
 			return ctrl.Result{}, err
 		}
@@ -152,7 +152,7 @@ func (r *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, e
 	return ctrl.Result{}, nil
 }
 
-func (r *nodeController) scheduleReconcileForNode(ctx context.Context, req reconcile.Request) error {
+func (r *nodeController) triggerReconcileForNode(ctx context.Context, req reconcile.Request) error {
 	evt := event.TypedGenericEvent[reconcile.Request]{Object: req}
 
 	select {
@@ -161,6 +161,10 @@ func (r *nodeController) scheduleReconcileForNode(ctx context.Context, req recon
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+func (r *nodeController) ReprocessAllNodes(ctx context.Context) error {
+	return r.triggerReconcileForNode(ctx, nodeReprocessAllRequest)
 }
 
 func (r *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
@@ -227,17 +231,6 @@ func (r *nodeController) reprocessChannelSource() source.Source {
 			return []reconcile.Request{req}
 		},
 	))
-}
-
-func (r *nodeController) ReprocessAllNodes(ctx context.Context) error {
-	evt := event.TypedGenericEvent[reconcile.Request]{Object: nodeReprocessAllRequest}
-
-	select {
-	case r.reprocessCh <- evt:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
 }
 
 func nodePkiSecretMapFunc(ctx context.Context, o client.Object) []reconcile.Request {
