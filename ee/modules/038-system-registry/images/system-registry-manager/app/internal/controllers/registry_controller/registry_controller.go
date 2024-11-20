@@ -458,7 +458,7 @@ func (r *RegistryReconciler) extractModuleConfigFieldsFromObject(cr *unstructure
 }
 
 func hasMasterLabel(node *corev1.Node) bool {
-	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
+	_, isMaster := node.Labels[labelNodeIsMasterKey]
 	return isMaster
 }
 

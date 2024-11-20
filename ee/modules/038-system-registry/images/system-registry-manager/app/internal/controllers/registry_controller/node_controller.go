@@ -28,6 +28,7 @@ const (
 	labelNodeSecretTypeValue = "node-secret"
 	labelHeritageKey         = "heritage"
 	labelHeritageValue       = "deckhouse"
+	labelNodeIsMasterKey     = "node-role.kubernetes.io/master"
 )
 
 type NodeController = nodeController
@@ -37,7 +38,6 @@ var _ reconcile.Reconciler = &nodeController{}
 type nodeController struct {
 	Client    client.Client
 	Namespace string
-	State     *moduleState
 
 	reprocessCh chan event.TypedGenericEvent[reconcile.Request]
 }
@@ -130,7 +130,7 @@ func (r *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, e
 
 	// Will trigger reprocess for all master nodes
 	opts := client.MatchingLabels{
-		"node-role.kubernetes.io/master": "",
+		labelNodeIsMasterKey: "",
 	}
 
 	nodes := &corev1.NodeList{}
