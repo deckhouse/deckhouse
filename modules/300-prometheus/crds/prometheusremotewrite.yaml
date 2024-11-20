@@ -58,7 +58,7 @@ spec:
                   description: Custom token sent as a value of the X-Auth-Token header.
                 headers:
                   description: |
-                    Custom HTTP headers to be sent along with each remote write request. Alloewd headers: X-scope-OrgID.
+                    Custom HTTP headers to be sent along with each remote write request. Allowed headers: X-scope-OrgID.
                   type: object
                   patternProperties:
                     "^X-Scope-OrgID$": 
