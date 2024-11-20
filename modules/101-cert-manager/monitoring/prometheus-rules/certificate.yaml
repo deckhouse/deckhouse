@@ -2,7 +2,7 @@
   rules:
   - alert: CertmanagerCertificateExpiredSoon
     expr: |
-     max by (name, exported_namespace)((certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time()) / on(name) group_left clamp_min(certmanager_certificate_ready_status{job="cert-manager", condition="False"} == 0, 1)) < 1209600
+     max by (name, exported_namespace) ((certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 1209600) and certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} != 0)
     for: 1h
     labels:
       severity_level: "4"
