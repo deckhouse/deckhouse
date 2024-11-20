@@ -101,7 +101,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 			storageClasses = append(storageClasses, storageClass{
 				Name:                 sc.Name,
-				StorageEndpoint:      sc.Parameters["sep"],
+				StorageEndpoint:      sc.Parameters["storageEndpoint"],
 				Pool:                 sc.Parameters["pool"],
 				AllowVolumeExpansion: allowVolumeExpansion,
 			})
