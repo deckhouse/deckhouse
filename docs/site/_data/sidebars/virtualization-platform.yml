@@ -206,10 +206,6 @@ entries:
                 ru: Разграничение доступа
               folders:
                 - title:
-                    en: User management
-                    ru: Управление пользователями
-                  url: /virtualization-platform/documentation/admin/platform-management/access-control/user-management.html
-                - title:
                     en: Role model
                     ru: Ролевая модель
                   url: /virtualization-platform/documentation/admin/platform-management/access-control/role-model.html
@@ -217,10 +213,6 @@ entries:
                     en: User management
                     ru: Управление пользователями
                   url: /virtualization-platform/documentation/admin/platform-management/access-control/user-management.html
-                - title:
-                    en: Role model
-                    ru: Ролевая модель
-                  url: /virtualization-platform/documentation/admin/platform-management/access-control/role-model.html
                 - title:
                     en: Projects
                     ru: Проекты
