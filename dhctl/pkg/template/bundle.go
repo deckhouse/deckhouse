@@ -82,7 +82,7 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
 	log.DebugF("From %q to %q\n", bashboosterDir, bashibleDir)
-	return templateController.RenderBashBooster(bashboosterDir, bashibleDir)
+	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
 }
 
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, bundle, devicePath string) error {
