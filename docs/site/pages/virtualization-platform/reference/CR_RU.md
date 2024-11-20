@@ -1,6 +1,7 @@
 ---
 title: "Кастомные ресурсы"
 permalink: ru/virtualization-platform/reference/cr.html
+anchors_disabled: true
 lang: ru
 ---
 

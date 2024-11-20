@@ -1,6 +1,7 @@
 ---
 title: "Modules settings"
 permalink: en/virtualization-platform/reference/mc.html
+anchors_disabled: true
 ---
 
 {%- assign modulesData = site.data.schemas.virtualization-platform.openapi | sort  %}

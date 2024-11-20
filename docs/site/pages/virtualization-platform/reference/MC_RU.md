@@ -1,6 +1,7 @@
 ---
 title: "Настройки модулей"
 permalink: ru/virtualization-platform/reference/mc.html
+anchors_disabled: true
 lang: ru
 ---
 
