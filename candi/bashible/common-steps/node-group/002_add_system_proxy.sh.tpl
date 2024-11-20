@@ -20,6 +20,9 @@ _reload_systemd() {
 }
 
 {{- if .proxy }}
+
+bb-set-proxy
+
 bb-event-on 'bb-sync-file-changed' '_reload_systemd'
 
 mkdir -p /etc/systemd/system.conf.d/
@@ -59,3 +62,5 @@ if [ -f /etc/profile.d/d8-system-proxy.sh ]; then
   rm -f /etc/profile.d/d8-system-proxy.sh
 fi
 {{- end }}
+
+bb-unset-proxy
