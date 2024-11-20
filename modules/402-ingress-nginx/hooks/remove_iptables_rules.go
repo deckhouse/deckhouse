@@ -128,6 +128,16 @@ func generateJob(registry, digest string) *batchv1.Job {
 							},
 						},
 					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "xtables-lock",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/run/xtables.lock",
+								},
+							},
+						},
+					},
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
