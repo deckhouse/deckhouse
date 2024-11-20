@@ -31,12 +31,12 @@ Deckhouse Kubernetes Platform (DKP) использует container registry дл
 Вы также можете модифицировать workflow, предусмотреть использование своего container registry и более сложный процесс сборки и публикации (например, с использованием отдельных container registry для разработки и промышленной эксплуатации).
 
 {% alert level="warning" %}
-При разработке **нескольких модулей** и их публикации в Github Packages необходимо использовать [Personal Access Token (PAL)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic) аккаунта.
+При разработке **нескольких модулей** и их публикации в Github Packages необходимо использовать [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic) аккаунта.
 
 **Не используйте** `GITHUB_TOKEN` в Github Workflows, чтобы избежать проблем с правами доступа при загрузке образов. Это связано с тем, что конечные релизные образы сохраняются по адресу `ghcr.io/<OWNER>/modules/`, принадлежащему первому созданному репозиторию.
 
-Пример адаптации [шаблона модуля](https://github.com/deckhouse/modules-template/) для использования PAL:
-- На странице _Settings -> Secrets and variables -> Actions_ создайте Secret с названием `TOKEN`, содержащий PAL.
+Пример адаптации [шаблона модуля](https://github.com/deckhouse/modules-template/) для использования PAT:
+- На странице _Settings -> Secrets and variables -> Actions_ создайте Secret с названием `TOKEN`, содержащий PAT.
 - Замените переменную `GITHUB_TOKEN` на `TOKEN` в `.github/workflows/`:
 
     ```shell
