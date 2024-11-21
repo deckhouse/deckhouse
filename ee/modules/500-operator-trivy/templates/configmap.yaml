@@ -49,20 +49,31 @@ data:
   {{- $image := (include "helm_lib_module_image" (list . "trivy")) | splitn ":" 2 }}
   trivy.repository: {{ $image._0 }}
   trivy.tag: {{ $image._1 }}
+  {{- if .Values.operatorTrivy.additionalVulnerabilityReportFields }}
+  trivy.additionalVulnerabilityReportFields: {{ .Values.operatorTrivy.additionalVulnerabilityReportFields | join "," | quote }}
+  {{- else }}
   trivy.additionalVulnerabilityReportFields: ""
+  {{- end }}
   {{- if .Values.operatorTrivy.severities }}
-  trivy.severity: {{ .Values.operatorTrivy.severities | join "," }}
+  trivy.severity: {{ .Values.operatorTrivy.severities | join "," | quote }}
   {{- else }}
   trivy.severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
   {{- end }}
   {{- range $idx, $registry := .Values.operatorTrivy.insecureRegistries }}
   trivy.insecureRegistry.{{ $idx }}: {{ $registry | quote }}
+  trivy.nonSslRegistry.{{ $idx }}: {{ $registry | quote }}
   {{- end }}
   trivy.slow: "true"
   trivy.dbRepository: {{ $dbRepository }}
   trivy.javaDbRepository: {{ $javaDbRepository }}
   trivy.command: "image"
+  {{- if .Values.operatorTrivy.insecureDbRegistry }}
+  TRIVY_INSECURE: {{ .Values.operatorTrivy.insecureDbRegistry | quote }}
+  trivy.dbRepositoryInsecure: {{ .Values.operatorTrivy.insecureDbRegistry | quote }}
+  {{- else }}
+  TRIVY_INSECURE: "false"
   trivy.dbRepositoryInsecure: "false"
+  {{- end }}
   trivy.useBuiltinRegoPolicies: "true"
   trivy.supportedConfigAuditKinds: "Workload,Service,Role,ClusterRole,NetworkPolicy,Ingress,LimitRange,ResourceQuota"
   trivy.timeout: "5m0s"

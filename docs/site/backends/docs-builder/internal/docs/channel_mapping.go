@@ -50,6 +50,7 @@ func (m *channelMappingEditor) edit(fn func(channelMapping)) error {
 	if err != nil {
 		return fmt.Errorf("open %q: %w", path, err)
 	}
+	defer f.Close()
 
 	var cm = make(channelMapping)
 

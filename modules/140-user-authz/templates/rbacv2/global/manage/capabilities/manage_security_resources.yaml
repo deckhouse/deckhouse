@@ -6,8 +6,8 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
-    rbac.deckhouse.io/aggregate-to-security-as: admin
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-security-as: manager
 rules:
   - apiGroups:
       - admissionregistration.k8s.io

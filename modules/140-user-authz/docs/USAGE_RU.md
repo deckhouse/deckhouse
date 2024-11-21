@@ -8,7 +8,7 @@ title: "Модуль user-authz: примеры конфигурации"
 Пример использует [новую ролевую модель](./#новая-ролевая-модель).
 {% endalert %}
 
-Для назначения прав администратору кластера используйте роль `d8:manage:all:admin` в `ClusterRoleBinding`.
+Для назначения прав администратору кластера используйте роль `d8:manage:all:manager` в `ClusterRoleBinding`.
 
 Пример назначения прав администратору кластера (User `joe`):
 
@@ -23,7 +23,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:admin
+  name: d8:manage:all:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -46,7 +46,7 @@ roleRef:
 Пример использует [новую ролевую модель](./#новая-ролевая-модель).
 {% endalert %}
 
-Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:manage:networking:admin` в `ClusterRoleBinding`.
+Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:manage:networking:manager` в `ClusterRoleBinding`.
 
 Пример назначения прав сетевому администратору (User `joe`):
 
@@ -61,7 +61,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:networking:admin
+  name: d8:manage:networking:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 

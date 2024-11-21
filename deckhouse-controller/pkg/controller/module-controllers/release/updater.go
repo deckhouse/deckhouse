@@ -17,36 +17,51 @@ package release
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path"
-	"slices"
 	"strconv"
 	"time"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/shell-operator/pkg/metric_storage"
 	cp "github.com/otiai10/copy"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func newModuleUpdater(dc dependency.Container, logger *log.Logger, settings *updater.Settings,
-	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease], enabledModules []string, metricStorage *metric_storage.MetricStorage,
+func newModuleUpdater(
+	ctx context.Context,
+	dc dependency.Container,
+	logger *log.Logger,
+	settings *updater.Settings,
+	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease],
+	enabledModules []string,
+	metricStorage *metric_storage.MetricStorage,
 ) *updater.Updater[*v1alpha1.ModuleRelease] {
-	return updater.NewUpdater[*v1alpha1.ModuleRelease](dc, logger, settings,
-		updater.DeckhouseReleaseData{}, true, false, kubeAPI, newMetricsUpdater(metricStorage, enabledModules),
-		newWebhookDataSource(logger), enabledModules)
+	return updater.NewUpdater[*v1alpha1.ModuleRelease](
+		ctx,
+		dc,
+		logger, settings,
+		updater.DeckhouseReleaseData{},
+		true,
+		false,
+		kubeAPI,
+		newMetricsUpdater(metricStorage),
+		newWebhookDataSource(logger),
+		enabledModules,
+	)
 }
 
 func newWebhookDataSource(logger *log.Logger) *webhookDataSource {
@@ -101,13 +116,15 @@ type kubeAPI struct {
 	clusterUUID          string
 }
 
-func (k *kubeAPI) UpdateReleaseStatus(release *v1alpha1.ModuleRelease, msg, phase string) error {
+func (k *kubeAPI) UpdateReleaseStatus(ctx context.Context, release *v1alpha1.ModuleRelease, msg, phase string) error {
+	// reset transition time only if phase changes
+	if release.Status.Phase != phase {
+		release.Status.TransitionTime = metav1.NewTime(k.dc.GetClock().Now().UTC())
+	}
 	release.Status.Phase = phase
 	release.Status.Message = msg
-	release.Status.TransitionTime = metav1.NewTime(k.dc.GetClock().Now().UTC())
 
-	err := k.client.Status().Update(k.ctx, release)
-	if err != nil {
+	if err := k.client.Status().Update(ctx, release); err != nil {
 		return fmt.Errorf("update release %s status: %w", release.Name, err)
 	}
 
@@ -167,7 +184,7 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	tmpModuleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
 	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
 
-	def := models.DeckhouseModuleDefinition{
+	def := moduleloader.Definition{
 		Name:   moduleName,
 		Weight: release.Spec.Weight,
 		Path:   tmpModuleVersionPath,
@@ -178,8 +195,10 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	}
 	err = validateModule(def, values, k.logger)
 	if err != nil {
-		release.Status.Phase = v1alpha1.PhaseSuspended
-		_ = k.UpdateReleaseStatus(release, "validation failed: "+err.Error(), release.Status.Phase)
+		release.Status.Phase = v1alpha1.ModuleReleasePhaseSuspended
+		if statusErr := k.UpdateReleaseStatus(ctx, release, "validation failed: "+err.Error(), release.Status.Phase); statusErr != nil {
+			k.logger.Errorf("update the '%s' release status: %s", release.Name, statusErr.Error())
+		}
 		return fmt.Errorf("module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
 	}
 
@@ -203,10 +222,7 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	}
 	err = enableModule(k.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
 	if err != nil {
-		k.logger.Errorf("Module deploy failed: %v", err)
-		if e := k.suspendModuleVersionForRelease(release, err); e != nil {
-			return e
-		}
+		return fmt.Errorf("module deploy failed: %w", err)
 	}
 
 	// disable target module hooks so as not to invoke them before restart
@@ -215,15 +231,6 @@ func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRel
 	}
 
 	return nil
-}
-
-func (k *kubeAPI) suspendModuleVersionForRelease(release *v1alpha1.ModuleRelease, err error) error {
-	if os.IsNotExist(err) {
-		err = errors.New("not found")
-	}
-
-	message := fmt.Sprintf("Desired version of the module met problems: %s", err)
-	return k.UpdateReleaseStatus(release, updater.PhaseSuspended, message)
 }
 
 func (k *kubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.ModuleRelease, data updater.DeckhouseReleaseData) error {
@@ -246,33 +253,22 @@ func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, rele
 	return k.client.Status().Update(ctx, release)
 }
 
-type metricsUpdater struct {
-	metricStorage  *metric_storage.MetricStorage
-	enabledModules []string
-}
-
-func newMetricsUpdater(metricStorage *metric_storage.MetricStorage, enabledModules []string) *metricsUpdater {
-	return &metricsUpdater{
-		enabledModules: enabledModules,
-		metricStorage:  metricStorage,
-	}
-}
-
-func (m *metricsUpdater) ReleaseBlocked(_, _ string) {
-}
-
-func (m *metricsUpdater) WaitingManual(release *v1alpha1.ModuleRelease, totalPendingManualReleases float64) {
-	if !slices.Contains(m.enabledModules, release.GetModuleName()) {
-		return
+func (k *kubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, error) {
+	key := client.ObjectKey{Namespace: "kube-system", Name: "d8-cluster-configuration"}
+	secret := new(corev1.Secret)
+	if err := k.client.Get(ctx, key, secret); err != nil {
+		return false, fmt.Errorf("check kubernetes version: failed to get secret: %w", err)
 	}
 
-	m.metricStorage.GaugeSet(
-		"d8_module_release_waiting_manual",
-		totalPendingManualReleases,
-		map[string]string{
-			"name":       release.GetName(),
-			"kind":       "module",
-			"moduleName": release.GetModuleName(),
-			"version":    "v" + release.Spec.Version.String(),
-		})
+	var clusterConf struct {
+		KubernetesVersion string `json:"kubernetesVersion"`
+	}
+	clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
+	if !ok {
+		return false, fmt.Errorf("check kubernetes version: expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
+	}
+	if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
+		return false, fmt.Errorf("check kubernetes version: failed to unmarshal cluster configuration: %w", err)
+	}
+	return clusterConf.KubernetesVersion == "Automatic", nil
 }

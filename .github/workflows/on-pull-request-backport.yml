@@ -135,6 +135,20 @@ jobs:
           labels: auto,backported
           automerge: true
           merge_method: squash
+      - name: Remove backport label
+        if: always()
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ steps.prepare.outputs.pr_number }}
+          labels: "status/backport"
+      - name: Add success label
+        if: steps.cherry_pick_pr.conclusion == 'success'
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ steps.prepare.outputs.pr_number }}
+          labels: "status/backport/success"
       - name: Add successful comment
         if: steps.cherry_pick_pr.conclusion == 'success'
         env:
@@ -147,21 +161,21 @@ jobs:
           issue-number: ${{ steps.prepare.outputs.pr_number }}
           reactions: hooray
           body: "Cherry pick PR [${{ env.cherry_pr_number }}](${{ env.cherry_pr_url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) successful!"
-      - name: Remove backport label
-        if: steps.cherry_pick_pr.conclusion == 'success'
-        uses: actions-ecosystem/action-remove-labels@v1
+      - name: Add error label
+        if: ${{ failure() && (steps.cherry_pick_pr.conclusion == 'failure' || steps.check_target_branch.conclusion == 'failure') }}
+        uses: actions-ecosystem/action-add-labels@v1
         with:
           github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           number: ${{ steps.prepare.outputs.pr_number }}
-          labels: "status/backport"
+          labels: "status/backport/failed"
       - name: Add error comment
         if: ${{ failure() && (steps.cherry_pick_pr.conclusion == 'failure' || steps.check_target_branch.conclusion == 'failure') }}
         uses: peter-evans/create-or-update-comment@v2
         env:
           error_message: ${{ steps.cherry_pick_pr.outputs.error_message }}
-          common_error: 'Backport failed. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details.'
+          common_error: "Backport failed. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details."
         with:
           token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
           issue-number: ${{ steps.prepare.outputs.pr_number }}
-          reactions: 'confused'
+          reactions: "confused"
           body: ${{ env.error_message || env.common_error }}

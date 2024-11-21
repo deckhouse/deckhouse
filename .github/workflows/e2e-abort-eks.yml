@@ -316,6 +316,7 @@ jobs:
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -608,6 +609,7 @@ jobs:
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -900,6 +902,7 @@ jobs:
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -1192,6 +1195,7 @@ jobs:
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -1484,6 +1488,7 @@ jobs:
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -1776,6 +1781,7 @@ jobs:
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -2068,6 +2074,7 @@ jobs:
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+          -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e CRI=${CRI} \
           -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \

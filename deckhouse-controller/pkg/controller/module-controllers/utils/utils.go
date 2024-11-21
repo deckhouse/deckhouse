@@ -18,15 +18,25 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"time"
+
+	"github.com/gofrs/uuid/v5"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	SyncedPollPeriod = 100 * time.Millisecond
+	deckhouseNamespace = "d8-system"
+
+	deckhouseDiscoverySecret = "deckhouse-discovery"
 )
 
 // GenerateRegistryOptionsFromModuleSource fetches settings from ModuleSource and generate registry options from them
@@ -126,4 +136,87 @@ func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySec
 		Scheme:                string(scheme),
 		CA:                    string(ca),
 	}, err
+}
+
+func Update[Object client.Object](ctx context.Context, cli client.Client, object Object, updater func(obj Object) bool) error {
+	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := cli.Get(ctx, client.ObjectKey{Name: object.GetName()}, object); err != nil {
+				return err
+			}
+			if updater(object) {
+				return cli.Update(ctx, object)
+			}
+			return nil
+		})
+	})
+}
+
+func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, object Object, updater func(obj Object) bool) error {
+	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := cli.Get(ctx, client.ObjectKey{Name: object.GetName()}, object); err != nil {
+				return err
+			}
+			if updater(object) {
+				return cli.Status().Update(ctx, object)
+			}
+			return nil
+		})
+	})
+}
+
+// UpdatePolicy return policy for the module
+// if no policy for the module, embeddedPolicy is returned
+func UpdatePolicy(ctx context.Context, cli client.Client, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, moduleName string) (*v1alpha2.ModuleUpdatePolicy, error) {
+	module := new(v1alpha1.Module)
+	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, err
+		}
+	} else {
+		if module.Properties.UpdatePolicy != "" {
+			policy := new(v1alpha2.ModuleUpdatePolicy)
+			if err = cli.Get(ctx, client.ObjectKey{Name: module.Properties.UpdatePolicy}, policy); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return nil, err
+				}
+			} else {
+				return policy, nil
+			}
+		}
+	}
+	return &v1alpha2.ModuleUpdatePolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v1alpha2.ModuleUpdatePolicyGVK.Kind,
+			APIVersion: v1alpha2.ModuleUpdatePolicyGVK.GroupVersion().String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "", // special empty default policy, inherits Deckhouse settings for update mode
+		},
+		Spec: *embeddedPolicy.Get(),
+	}, nil
+}
+
+func ModulePullOverrideExists(ctx context.Context, cli client.Client, sourceName, moduleName string) (bool, error) {
+	mpos := new(v1alpha1.ModulePullOverrideList)
+	if err := cli.List(ctx, mpos, client.MatchingLabels{"source": sourceName, "module": moduleName}, client.Limit(1)); err != nil {
+		return false, err
+	}
+	return len(mpos.Items) > 0, nil
+}
+
+func GetClusterUUID(ctx context.Context, cli client.Client) string {
+	// attempt to read the cluster UUID from a secret
+	secret := new(corev1.Secret)
+	if err := cli.Get(ctx, client.ObjectKey{Namespace: deckhouseNamespace, Name: deckhouseDiscoverySecret}, secret); err != nil {
+		return uuid.Must(uuid.NewV4()).String()
+	}
+
+	if clusterUUID, ok := secret.Data["clusterUUID"]; ok {
+		return string(clusterUUID)
+	}
+
+	// generate a random UUID if the key is missing
+	return uuid.Must(uuid.NewV4()).String()
 }

@@ -23,7 +23,7 @@ permalink: en/oss_info.html
                     {{ item.description }}
                 </div>
                 <div class="oss__item-license">
-                    {{ item.licence }}
+                    {{ item.license }}
                 </div>
             </div>
         {% endfor %}

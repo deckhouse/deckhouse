@@ -6,14 +6,14 @@ properties:
           Список полных имен (или регулярных выражений имен) StorageClass, которые не будут созданы в кластере.
       default:
         description: |-
-          > **УСТАРЕЛ**. Вместо этого параметра используйте [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
-
           Имя StorageClass, который будет использоваться в кластере по умолчанию.
 
           Если значение не указано, фактический StorageClass по умолчанию будет определен следующим образом:
 
           * присутствующий StorageClass в кластере, имеющий default-аннотацию;
           * первый (по алфавиту) StorageClass из тех, что создаются модулем.
+
+          > **Параметр устарел.** Вместо этого параметра используйте глобальный параметр [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
       provision:
         description: |
           Дополнительные StorageClass'ы для Azure ultra disks.

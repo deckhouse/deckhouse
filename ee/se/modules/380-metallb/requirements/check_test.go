@@ -1,6 +1,7 @@
 /*
 Copyright 2024 Flant JSC
-Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license.
+See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
 package requirements
@@ -22,22 +23,8 @@ func TestKubernetesVersionRequirement(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("fail: NSMismatch", func(t *testing.T) {
-		requirements.SaveValue(metallbConfigurationStatusKey, "NSMismatch")
-		ok, err := requirements.CheckRequirement(metallbConfigurationStatusRequirementsKey, "")
-		assert.False(t, ok)
-		require.Error(t, err)
-	})
-
-	t.Run("fail: NodeSelectorsMismatch", func(t *testing.T) {
-		requirements.SaveValue(metallbConfigurationStatusKey, "NodeSelectorsMismatch")
-		ok, err := requirements.CheckRequirement(metallbConfigurationStatusRequirementsKey, "")
-		assert.False(t, ok)
-		require.Error(t, err)
-	})
-
-	t.Run("fail: AddressPoolsMismatch", func(t *testing.T) {
-		requirements.SaveValue(metallbConfigurationStatusKey, "AddressPoolsMismatch")
+	t.Run("fail: Misconfigured", func(t *testing.T) {
+		requirements.SaveValue(metallbConfigurationStatusKey, "Misconfigured")
 		ok, err := requirements.CheckRequirement(metallbConfigurationStatusRequirementsKey, "")
 		assert.False(t, ok)
 		require.Error(t, err)

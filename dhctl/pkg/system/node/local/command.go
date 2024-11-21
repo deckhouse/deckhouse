@@ -66,17 +66,16 @@ func (c *Command) Run() error {
 	wg := &sync.WaitGroup{}
 	stdoutBuf := &bytes.Buffer{}
 	stderrBuf := &bytes.Buffer{}
-
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("stdout pipe failed: %v", err)
 	}
-	go c.scanLines(stdout, stdoutBuf, wg, c.stdoutLineHandler)
-
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("stderr pipe failed: %v", err)
 	}
+	wg.Add(2)
+	go c.scanLines(stdout, stdoutBuf, wg, c.stdoutLineHandler)
 	go c.scanLines(stderr, stderrBuf, wg, c.stderrLineHandler)
 
 	if err = cmd.Start(); err != nil {
@@ -98,7 +97,6 @@ func (c *Command) scanLines(
 	wg *sync.WaitGroup,
 	handler func(string),
 ) {
-	wg.Add(1)
 	defer wg.Done()
 
 	scan := bufio.NewScanner(stream)

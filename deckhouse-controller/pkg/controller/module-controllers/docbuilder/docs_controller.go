@@ -45,7 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
@@ -65,14 +65,12 @@ type moduleDocumentationReconciler struct {
 }
 
 func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Container, logger *log.Logger) error {
-	lg := logger.With("component", "ModuleDocumentation")
-
 	c := &moduleDocumentationReconciler{
 		client:               mgr.GetClient(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
 		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
-		logger:               lg,
+		logger:               logger,
 	}
 
 	ctr, err := controller.New("module-documentation", mgr, controller.Options{

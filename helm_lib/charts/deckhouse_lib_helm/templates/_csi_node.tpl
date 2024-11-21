@@ -22,6 +22,7 @@ memory: 25Mi
   {{- $additionalNodeVolumes := $config.additionalNodeVolumes }}
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
   {{- $additionalNodeLivenessProbesCmd := $config.additionalNodeLivenessProbesCmd }}
+  {{- $additionalNodeSelectorTerms := $config.additionalNodeSelectorTerms }}
   {{- $initContainerCommand := $config.initContainerCommand }}
   {{- $initContainerImage := $config.initContainerImage }}
   {{- $initContainerVolumeMounts := $config.initContainerVolumeMounts }}
@@ -93,6 +94,9 @@ spec:
                 {{- if or (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") (eq $fullname "csi-nfs") (eq $fullname "csi-yadro") }}
                 - Static
                 {{- end }}
+              {{- if $additionalNodeSelectorTerms }}
+              {{- $additionalNodeSelectorTerms | toYaml | nindent 14 }}
+              {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}

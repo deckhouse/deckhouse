@@ -40,7 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -159,6 +159,11 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	moduleName := "echo"
 	moduleDir := filepath.Join(suite.tmpDir, moduleName, downloader.DefaultDevVersion)
 	moduleValues := filepath.Join(moduleDir, "openapi", "values.yaml")
+	ManifestStub := func() (*v1.Manifest, error) {
+		return &v1.Manifest{
+			Layers: []v1.Descriptor{},
+		}, nil
+	}
 
 	suite.Run("Ok", func() {
 		d := moduleDirDescriptor{
@@ -233,9 +238,12 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	})
 
 	suite.Run("No weight", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 915"}}}, nil
-		}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 915"}}}, nil
+			},
+		}, nil)
 
 		d := moduleDirDescriptor{
 			dir:     moduleDir,
@@ -309,9 +317,12 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	})
 
 	suite.Run("Old deployed-on annotation", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
-		}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
 		d := moduleDirDescriptor{
 			dir:     moduleDir,
 			values:  values,
@@ -348,9 +359,12 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	})
 
 	suite.Run("No deployed-on annotation", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
-		}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
 		d := moduleDirDescriptor{
 			dir:     moduleDir,
 			values:  values,
@@ -387,9 +401,12 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	})
 
 	suite.Run("No symlink", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
-		}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
 		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", moduleName))
 		d := moduleDirDescriptor{
 			dir:    moduleDir,
@@ -426,9 +443,12 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	})
 
 	suite.Run("Extra symlinks", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
-		}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
 		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", moduleName))
 		symlink1 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("901-%s", moduleName))
 		symlink2 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("902-%s", moduleName))
@@ -482,9 +502,12 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	})
 
 	suite.Run("No module dir", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
-		}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
 
 		d := moduleDirDescriptor{
 			values:  values,
@@ -520,9 +543,12 @@ func (suite *PullOverrideControllerTestSuite) TestRestoreAbsentModulesFromOverri
 	})
 
 	suite.Run("Wrong symlink", func() {
-		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]v1.Layer, error) {
-			return []v1.Layer{&utils.FakeLayer{}}, nil
-		}}, nil)
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
 
 		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", moduleName))
 		d := moduleDirDescriptor{

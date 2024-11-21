@@ -118,7 +118,7 @@ The `--ssh-user` parameter here refers to the user that generated the SSH key. I
 {%- else %}
 The `--ssh-user` parameter here refers to the default user for the relevant VM image.
 {%- if page.platform_code == "azure" %} It is `azureuser` in case of {{ page.platform_name[page.lang] }} (for the image suggested in this guide).
-{%- elsif page.platform_code == "gcp" %} It is `user` in case of {{ page.platform_name[page.lang] }} (for the image suggested in this guide).
+{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %} It is `user` in case of {{ page.platform_name[page.lang] }} (for the image suggested in this guide).
 {%- else %} It is `ubuntu` for the image suggested in this guide.
 {%- endif %}
 {%- endif %}

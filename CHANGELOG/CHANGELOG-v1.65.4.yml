@@ -1,0 +1,42 @@
+cloud-provider-aws:
+  fixes:
+    - summary: Fix for deploying a cluster in a local zone.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10491
+cni-cilium:
+  fixes:
+    - summary: Fixed `excludedCIDRs` option in EgressGatewayPolicies
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10493
+dhctl:
+  features:
+    - summary: In commander mode connect to controlled clusters via commander agent instead of SSH
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10342
+docs:
+  fixes:
+    - summary: >-
+        Changing information in 'Getting started' due to deprecated 'configOverrides' and adding
+        information to 'If something went wrong'
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10516
+    - summary: Added parameters for the multitenancy-manager module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10510
+    - summary: Updated  text for the EOL version of Kubernetes in DKP.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10494
+node-manager:
+  fixes:
+    - summary: ignore heartbeat annotation on hook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10368
+static-routing-manager:
+  features:
+    - summary: Add the ability to create routes with "via dev" and without specifying a gateway IP.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10277
+      impact: Pods of static-routing-manager will be restarted.
+testing:
+  fixes:
+    - summary: fix for templates test
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10497
+user-authn:
+  fixes:
+    - summary: >-
+        Add a patch to fix the problem with offline sessions that are not created/updated properly,
+        which causes random refresh problems.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10486
+

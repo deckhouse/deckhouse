@@ -70,7 +70,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: falco
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list  "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falco") }}
         args:
         - /usr/bin/falco
@@ -129,7 +129,7 @@ spec:
         - name: rules-data
           mountPath: /etc/falco/rules.d
         - name: containerdsock
-          mountPath: /run/containerd/containerd.sock
+          mountPath: /host/run/containerd/containerd.sock
 
       - name: falcosidekick
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}

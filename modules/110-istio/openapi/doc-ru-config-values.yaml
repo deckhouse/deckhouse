@@ -200,7 +200,7 @@ properties:
     properties:
       nodeSelector:
         description: |
-          Опциональный селектор для компонентa istiod. Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+          Опциональный селектор для компонента istiod. Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
           Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
       tolerations:
@@ -397,7 +397,7 @@ properties:
 
           **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/cr.html#dexprovider) DexProvider.
       whitelistSourceRanges:
-        description: Массив адресов в формате CIDR, которым разрешено проходить авторизацию в публичные веб-интерфейсы модуля.
+        description: Список адресов в формате CIDR, которым разрешено проходить авторизацию в публичные веб-интерфейсы модуля.
       satisfyAny:
         description: |
           Разрешает пройти только одну из аутентификаций.

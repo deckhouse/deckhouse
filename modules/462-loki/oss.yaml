@@ -2,4 +2,4 @@
   link: https://github.com/grafana/loki
   description: 'Loki: like Prometheus, but for logs.'
   logo: https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png
-  licence: GNU Affero General Public License v3.0
+  license: GNU Affero General Public License v3.0

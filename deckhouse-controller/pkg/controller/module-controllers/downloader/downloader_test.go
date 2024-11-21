@@ -96,6 +96,12 @@ func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 	ms := &v1alpha1.ModuleSource{}
 
 	dependency.TestDC.CRClient.ImageMock.When("stable").Then(&fake.FakeImage{
+		ManifestStub: func() (*v1.Manifest, error) {
+			return &v1.Manifest{
+				SchemaVersion: 2,
+				Layers:        []v1.Descriptor{},
+			}, nil
+		},
 		LayersStub: func() ([]v1.Layer, error) {
 			return []v1.Layer{&utils.FakeLayer{}}, nil
 		},

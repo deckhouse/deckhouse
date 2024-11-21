@@ -1,6 +1,7 @@
 /*
 Copyright 2024 Flant JSC
-Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license.
+See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
 package requirements
@@ -23,20 +24,12 @@ func init() {
 			return true, nil
 		}
 
-		switch configurationStatus := configurationStatusRaw.(string); configurationStatus {
-		case "NSMismatch":
-			return false, errors.New(
-				"[metallb] all L2Advertisement must be in the d8-metallb namespace",
-			)
-		case "NodeSelectorsMismatch":
-			return false, errors.New(
-				"[metallb] nodeSelectors in L2Advertisement must contain only " +
-					"one matchLabels (not matchExpressions)",
-			)
-		case "AddressPoolsMismatch":
-			return false, errors.New(
-				"[metallb] there should not be layer2 and bgp pools in the cluster at the same time",
-			)
+		if configurationStatus, ok := configurationStatusRaw.(string); ok {
+			if configurationStatus == "Misconfigured" {
+				return false, errors.New(
+					"[metallb] cluster misconfigured, see ClusterAlerts for details",
+				)
+			}
 		}
 		return true, nil
 	}
