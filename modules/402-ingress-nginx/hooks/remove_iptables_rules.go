@@ -54,8 +54,8 @@ func removeIptablesRules(input *go_hook.HookInput, dc dependency.Container) (err
 		input.Logger.Error("Failed to run job for removing iptables rules", "error", err)
 		return err
 	}
-	input.Logger.Info("Remove iptables remove rules job from cluster...")
-	input.PatchCollector.Delete("batch/v1", "Job", systemNamespace, iptablesRemoveJobName)
+	//input.Logger.Info("Remove iptables remove rules job from cluster...")
+	//input.PatchCollector.Delete("batch/v1", "Job", systemNamespace, iptablesRemoveJobName)
 
 	return nil
 }
