@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -38,28 +37,7 @@ const (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "controller",
-			ApiVersion: "deckhouse.io/v1",
-			Kind:       "IngressNginxController",
-			FilterFunc: objFilter,
-		},
-	},
 }, dependency.WithExternalDependencies(removeIptablesRules))
-
-func objFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	inlet, ok, err := unstructured.NestedString(obj.Object, "spec", "inlet")
-	if err != nil {
-		return nil, fmt.Errorf("couldn't get controllerVersion field from ingress controller %s: %w", obj.GetName(), err)
-	}
-
-	if ok && inlet == "HostWithFailover" {
-		return true, nil
-	}
-
-	return nil, fmt.Errorf("dont have HostWithFailover inlet in %s", obj.GetName())
-}
 
 func removeIptablesRules(input *go_hook.HookInput, dc dependency.Container) (err error) {
 	kubeClient, err := dc.GetK8sClient()
@@ -68,7 +46,7 @@ func removeIptablesRules(input *go_hook.HookInput, dc dependency.Container) (err
 	}
 
 	registry := input.Values.Get("global.modulesImages.registry.base").String()
-	digest := input.Values.Get("global.modulesImages.digests.ingress_nginx.proxy-failover-iptables").String()
+	digest := input.Values.Get("global.modulesImages.digests.ingressNginx.proxyFailoverIptables").String()
 	job := generateJob(registry, digest)
 	_, err = kubeClient.BatchV1().Jobs(systemNamespace).Create(context.Background(), job, v1.CreateOptions{})
 	if err != nil {
