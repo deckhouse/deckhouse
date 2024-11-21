@@ -113,7 +113,7 @@ build-test:
 	CGO_ENABLED=0 GOOS="linux" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl
 
 test:
-	go test ./...
+	go test -p 1 ./...
 
 deps: bin/golangci-lint bin/gofumpt bin/protoc
 	go mod tidy
