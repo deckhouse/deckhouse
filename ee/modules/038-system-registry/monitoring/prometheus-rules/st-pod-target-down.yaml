@@ -11,7 +11,7 @@
       )
       * on (host_ip) group_left (pod, node)
         kube_pod_info{created_by_kind="Node",namespace="d8-system",pod=~"^system-registry-.*$"}
-      == 1 unless on (job) ALERTS{alertname=~".+TargetDown"}
+      == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
     for: 10m
     labels:
       severity_level: "7"
@@ -32,7 +32,7 @@
       )
       * on (host_ip) group_left (pod, node)
         kube_pod_info{created_by_kind="Node",namespace="d8-system",pod=~"^system-registry-.*$"}
-      == 1 unless on (job) ALERTS{alertname=~".+TargetDown"}
+      == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
     for: 30m
     labels:
       severity_level: "6"
@@ -53,7 +53,7 @@
       )
       * on (host_ip) group_left (pod, node)
         kube_pod_info{created_by_kind="Node",namespace="d8-system",pod=~"^system-registry-.*$"}
-      == 1 unless on (job) ALERTS{alertname=~".+TargetDown"}
+      == 0 unless on (job) ALERTS{alertname=~".+TargetDown"}
     for: 60m
     labels:
       severity_level: "5"
