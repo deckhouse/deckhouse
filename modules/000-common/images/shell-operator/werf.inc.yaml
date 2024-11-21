@@ -42,8 +42,8 @@ shell:
   - |
     cat > .gitmodules <<"EOF"
     [submodule "modules/oniguruma"]
-    path = modules/oniguruma
-    url = {{ .SOURCE_REPO }}/flant/oniguruma.git
+        path = modules/oniguruma
+        url = {{ .SOURCE_REPO }}/flant/oniguruma.git
     EOF
   - git submodule update --init
   - rm -r docs
