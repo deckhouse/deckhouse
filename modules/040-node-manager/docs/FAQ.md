@@ -102,6 +102,8 @@ You can automate the bootstrap process with any automation platform you prefer. 
 
 1. Create Ansible playbook with `vars` replaced with values from previous steps:
 
+{% raw %}
+
    ```yaml
    - hosts: all
      become: yes
@@ -137,6 +139,8 @@ You can automate the bootstrap process with any automation platform you prefer. 
            delay: 30
          when: bootstrapped.stat.exists == False
    ```
+
+{% endraw %}
 
 1. Specify one more `node_group` variable. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, for example, by using an inventory file.:
 
