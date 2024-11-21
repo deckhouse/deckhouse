@@ -29,9 +29,9 @@ git:
 shell:
   beforeInstall:
   - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - mkdir -p /src
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.2.1 {{ $.SOURCE_REPO }}/flant/cloud-provider-vsphere.git /src
   - cd /src
   - find /patches -name '*.patch' -exec git apply {} \;
