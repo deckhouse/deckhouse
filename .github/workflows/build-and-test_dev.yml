@@ -642,18 +642,17 @@ jobs:
           ssh-private-key: |
             ${{secrets.SOURCE_REPO_SSH_KEY}}
       - name: Add ssh_known_hosts
-        env:
-          HOST_RAW: 
         run: |
-          # HOST=$(grep -oP '(?<=@)[^:]+' <<< $SOURCE_REPO)
-          # mkdir -p ~/.ssh
-          # touch ~/.ssh/known_hosts
-          # HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          # while IFS= read -r KEY_LINE; do
-          #   if ! grep -Fxq "$KEY_LINE" ~/.ssh/known_hosts; then
-          #     echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          #   fi
-          # done <<< "$HOST_KEYS"
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< $SOURCE_REPO)
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
 
       - name: Build and push deckhouse images
         id: build
