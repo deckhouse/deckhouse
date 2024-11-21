@@ -58,7 +58,7 @@ func main() {
 		_ = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
 		_ = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
 
-		return
+		os.Exit(0)
 	}
 
 	migrationRemoveOldRules(iptablesMgr)
