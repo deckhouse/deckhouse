@@ -1,0 +1,10 @@
+{
+  "excludeModules": [
+    "sds-node-configurator",
+    "sds-replicated-volume",
+    "sds-local-volume",
+    "virtualization",
+    "csi-ceph",
+    "csi-nfs"
+  ]
+}

@@ -1,4 +1,25 @@
 apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  chaosMonkey: false
+  disableHTTP2: false
+  hsts: false
+  ingressClass: nginx
+  inlet: LoadBalancer
+  maxReplicas: 1
+  minReplicas: 1
+  nodeSelector:
+    node-role.deckhouse.io/system: ""
+  tolerations:
+    - key: dedicated.deckhouse.io
+      operator: Equal
+      value: system
+  underscoresInHeaders: false
+  validationEnabled: true
+---
+apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
   name: admin

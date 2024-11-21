@@ -144,6 +144,8 @@ func (r *Runner) RunConverge() error {
 		if err != nil {
 			return fmt.Errorf("failed to start lock runner: %w", err)
 		}
+
+		return nil
 	}
 
 	return r.converge()

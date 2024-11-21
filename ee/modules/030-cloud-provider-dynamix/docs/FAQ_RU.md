@@ -1,4 +1,4 @@
 ---
-title: "Cloud provider — Dynamix: FAQ"
+title: "Cloud provider — Базис.DynamiX: FAQ"
 ---
 

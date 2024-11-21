@@ -23,30 +23,55 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
-	PhasePending         = "Pending"
-	PhasePolicyUndefined = "PolicyUndefined"
-	PhaseDeployed        = "Deployed"
-	PhaseSuperseded      = "Superseded"
-	PhaseSuspended       = "Suspended"
-	PhaseSkipped         = "Skipped"
+	ModuleReleaseResource        = "modulereleases"
+	ModuleReleaseKind            = "ModuleRelease"
+	ModuleReleasePhasePending    = "Pending"
+	ModuleReleasePhaseDeployed   = "Deployed"
+	ModuleReleasePhaseSuperseded = "Superseded"
+	ModuleReleasePhaseSuspended  = "Suspended"
+	ModuleReleasePhaseSkipped    = "Skipped"
+
+	ModuleReleaseAnnotationApplyNow = "release.deckhouse.io/apply-now"
+
+	ModuleReleaseAnnotationRegistrySpecChanged = "modules.deckhouse.io/registry-spec-changed"
+
+	ModuleReleaseLabelUpdatePolicy = "modules.deckhouse.io/update-policy"
+
+	ModuleReleaseLabelSource          = "source"
+	ModuleReleaseLabelModule          = "module"
+	ModuleReleaseLabelReleaseChecksum = "release-checksum"
 )
 
 var (
 	ModuleReleaseGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
-		Resource: "modulereleases",
+		Resource: ModuleReleaseResource,
 	}
 	ModuleReleaseGVK = schema.GroupVersionKind{
 		Group:   SchemeGroupVersion.Group,
 		Version: SchemeGroupVersion.Version,
-		Kind:    "ModuleRelease",
+		Kind:    ModuleReleaseKind,
 	}
 )
+
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModuleReleaseList is a list of ModuleRelease resources
+type ModuleReleaseList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleRelease `json:"items"`
+}
+
+var _ runtime.Object = (*ModuleRelease)(nil)
 
 // +genclient
 // +genclient:nonNamespaced
@@ -111,7 +136,7 @@ func (mr *ModuleRelease) GetForce() bool {
 }
 
 func (mr *ModuleRelease) GetApplyNow() bool {
-	return mr.Annotations["release.deckhouse.io/apply-now"] == "true"
+	return mr.Annotations[ModuleReleaseAnnotationApplyNow] == "true"
 }
 
 func (mr *ModuleRelease) SetApprovedStatus(val bool) {
@@ -207,26 +232,4 @@ type ModuleReleaseStatus struct {
 	Message        string          `json:"message"`
 	Size           uint32          `json:"size"`
 	PullDuration   metav1.Duration `json:"pullDuration"`
-}
-
-type moduleReleaseKind struct{}
-
-func (in *ModuleReleaseStatus) GetObjectKind() schema.ObjectKind {
-	return &moduleReleaseKind{}
-}
-
-func (f *moduleReleaseKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *moduleReleaseKind) GroupVersionKind() schema.GroupVersionKind {
-	return ModuleReleaseGVK
-}
-
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleReleaseList is a list of ModuleRelease resources
-type ModuleReleaseList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleRelease `json:"items"`
 }

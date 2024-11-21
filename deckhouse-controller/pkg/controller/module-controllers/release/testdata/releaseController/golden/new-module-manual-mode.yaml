@@ -14,10 +14,8 @@ spec:
     ca: ""
     dockerCfg: ""
     repo: ""
-  releaseChannel: alpha
 status:
   message: ""
-  moduleErrors: null
   modules: null
   modulesCount: 0
   syncTime: null

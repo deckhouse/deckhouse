@@ -24,15 +24,11 @@ status:
   modulesCount: 2
   syncTime: "2024-05-03T21:05:05Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ModuleUpdatePolicy
 metadata:
   name: foxtrot-alpha-kube-unsuitable
 spec:
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        source: foxtrot-kube-unsuitable
   releaseChannel: Alpha
   update:
     mode: Auto

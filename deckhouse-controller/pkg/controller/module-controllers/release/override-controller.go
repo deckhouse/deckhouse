@@ -31,7 +31,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,8 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -70,12 +68,10 @@ func NewModulePullOverrideController(
 	preflightCountDown *sync.WaitGroup,
 	logger *log.Logger,
 ) error {
-	lg := logger.With("component", "ModulePullOverrideController")
-
 	rc := &modulePullOverrideReconciler{
 		client: mgr.GetClient(),
 		dc:     dc,
-		logger: lg,
+		logger: logger,
 
 		moduleManager:        moduleManager,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
@@ -116,11 +112,11 @@ func (c *modulePullOverrideReconciler) PreflightCheck(ctx context.Context) (err 
 	c.clusterUUID = c.getClusterUUID(ctx)
 
 	// Check if controller's dependencies have been initialized
-	_ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
-		func(context.Context) (bool, error) {
-			// TODO: add modulemanager initialization check c.moduleManager.AreModulesInited() (required for reloading modules without restarting deckhouse)
-			return deckhouseconfig.IsServiceInited(), nil
-		})
+	// _ = wait.PollUntilContextCancel(ctx, utils.SyncedPollPeriod, false,
+	//	func(context.Context) (bool, error) {
+	//		// TODO: add modulemanager initialization check c.moduleManager.AreModulesInited() (required for reloading modules without restarting deckhouse)
+	//		return deckhouseconfig.IsServiceInited(), nil
+	//	})
 
 	err = c.restoreAbsentModulesFromOverrides(ctx)
 	if err != nil {
@@ -169,8 +165,8 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 	var result ctrl.Result
 	var metaUpdateRequired bool
 
-	// check if RegistrySpecChangedAnnotation annotation is set and process it
-	if _, set := mo.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
+	// check if RegistrySpecChanged annotation is set and process it
+	if _, set := mo.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
 		// if module is enabled - push runModule task in the main queue
 		c.logger.Infof("Applying new registry settings to the %s module", mo.Name)
 		err := c.moduleManager.RunModuleWithNewOpenAPISchema(mo.Name, mo.ObjectMeta.Labels["source"], filepath.Join(c.downloadedModulesDir, mo.Name, downloader.DefaultDevVersion))
@@ -178,7 +174,7 @@ func (c *modulePullOverrideReconciler) moduleOverrideReconcile(ctx context.Conte
 			return ctrl.Result{Requeue: true}, err
 		}
 		// delete annotation and requeue
-		delete(mo.ObjectMeta.Annotations, RegistrySpecChangedAnnotation)
+		delete(mo.ObjectMeta.Annotations, v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged)
 		metaUpdateRequired = true
 	}
 

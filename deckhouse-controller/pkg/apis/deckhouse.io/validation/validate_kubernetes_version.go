@@ -37,10 +37,6 @@ type clusterConfig struct {
 	KubernetesVersion string `json:"kubernetesVersion"`
 }
 
-type moduleManager interface {
-	IsModuleEnabled(moduleName string) bool
-}
-
 func kubernetesVersionHandler(mm moduleManager) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		secret, ok := obj.(*v1.Secret)
