@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — OpenStack: настройки"
+title: "Cloud provider — OpenStack: настройки"
 ---
 
 Модуль автоматически включается для всех облачных кластеров, развернутых в OpenStack.
