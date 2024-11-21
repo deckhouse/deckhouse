@@ -194,7 +194,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
   kubectl create -f etcd.pod.yaml
   ```
 
-1. Скопируйте `etcdhelper` и снимок etcd в контейнер пода.
+Скопируйте `etcdhelper` и снимок etcd в контейнер пода.
 
 `etcdhelper` можно собрать из [исходного кода](https://github.com/openshift/origin/tree/master/tools/etcdhelper) или скопировать из готового образа (например, из [образа `etcdhelper` на Docker Hub](https://hub.docker.com/r/webner/etcdhelper/tags)).
 
@@ -205,7 +205,7 @@ kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
 kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 ```
 
-1. В контейнере установите права на запуск `etcdhelper`, восстановите данные из резервной копии и запустите etcd.
+В контейнере установите права на запуск `etcdhelper`, восстановите данные из резервной копии и запустите etcd.
 
 Пример:
 
@@ -216,7 +216,7 @@ kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 / # etcd &
 ```
 
-1. Получите описания нужных объектов кластера, отфильтровав их с помощью `grep`.
+Получите описания нужных объектов кластера, отфильтровав их с помощью `grep`.
 
 Пример:
 
@@ -260,7 +260,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 
-**Внимание.!** Последний параметр в таблице вывода показывает, что узел кластера etcd находится в состоянии [learner](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии leader.
+**Внимание.** Последний параметр в таблице вывода показывает, что узел кластера etcd находится в состоянии [learner](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии leader.
 
 ## Как получить список узлов кластера etcd (вариант 2)
 

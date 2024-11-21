@@ -105,10 +105,11 @@ spec:
     clientSecret: plainstring
 ```
 
-В организации GitHub необходимо создать новое приложение.
+В организации GitHub необходимо создать новое приложение, для этого выполните следующие шаги:
 
-Для этого выполните следующие шаги:
-* перейдите в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
+1. Перейдите в «Settings» → «Developer settings» → «OAuth Aps» → «Register a new OAuth application».
+1. В поле «Authorization callback URL» укажите адрес:
+   `https://dex.<modules.publicDomainTemplate>/callback`.
 
 Полученные `Client ID` и `Client Secret` укажите в Custom Resource DexProvider.
 
@@ -269,9 +270,9 @@ spec:
 Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
 
 Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource DexProvider.
-1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
-2. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
 
+1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
+1. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
 
 ### OIDC (OpenID Connect)
 
