@@ -47,7 +47,7 @@ endif
 
 # Set testing path for tests-modules
 ifeq ($(FOCUS),)
-	TESTS_PATH = ./modules/040-node-manager... ./global-hooks/... 
+	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/...
 else
 	CE_MODULES = $(shell find ./modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(CE_MODULES),)
@@ -133,7 +133,7 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 .PHONY: tests-modules tests-matrix tests-openapi tests-controller
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
-	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH} -v
+	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
