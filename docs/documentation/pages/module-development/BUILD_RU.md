@@ -43,6 +43,7 @@ Deckhouse Kubernetes Platform (DKP) использует container registry дл
     cd <REPO>
     sed -i -e 's/GITHUB_TOKEN/TOKEN/g' $(find .github/workflows/ -type f)
     ```
+
 {% endalert %}
 
 {% alert level="info" %}

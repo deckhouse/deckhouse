@@ -43,6 +43,7 @@ Here is how you can adapt a [module template](https://github.com/deckhouse/modul
     cd <REPO>
     sed -i -e 's/GITHUB_TOKEN/TOKEN/g' $(find .github/workflows/ -type f)
     ```
+
 {% endalert %}
 
 {% alert level="info" %}
