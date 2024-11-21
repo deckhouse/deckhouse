@@ -28,10 +28,13 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+  - apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   setup:
     - apt-get update
-    - apt-get install libinih-dev libblkid-dev gettext liburcu-dev libtool openssh-client -y
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - apt-get install libinih-dev libblkid-dev gettext liburcu-dev libtool -y
     - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/xfs/xfsprogs-dev.git src
     - cd /src
     - libtoolize -c -i -f

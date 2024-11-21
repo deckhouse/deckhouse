@@ -103,8 +103,11 @@ git:
     install:
     - '**/*'
 shell:
-  install:
+  beforeInstall:
+  - apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
   - git clone --depth 1 {{ $.SOURCE_REPO }}/grafana/grafana-plugins.git /grafana-plugins
   - |
     export PATH="/usr/share/grafana/bin:$PATH" \
