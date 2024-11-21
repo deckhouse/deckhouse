@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "v1.5.0"}}
+{{- $shellOperatorVersion := "v1.5.1"}}
 {{- $jqVersion := "b6be13d5"}}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}
