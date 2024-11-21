@@ -4,16 +4,22 @@ kind: ServiceAccount
 metadata:
   name: descheduler
   namespace: d8-descheduler
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: d8:descheduler
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  name: d8:descheduler:descheduler
+  {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
 rules:
+- apiGroups: ["events.k8s.io"]
+  resources: ["events"]
+  verbs: ["create", "update"]
 - apiGroups: [""]
   resources: ["nodes"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: [""]
+  resources: ["namespaces"]
   verbs: ["get", "watch", "list"]
 - apiGroups: [""]
   resources: ["pods"]
@@ -21,26 +27,44 @@ rules:
 - apiGroups: [""]
   resources: ["pods/eviction"]
   verbs: ["create"]
-- apiGroups: [""]
-  resources: ["events"]
-  verbs: ["create", "update"]
-- apiGroups: [""]
-  resources: ["namespaces"]
-  verbs: ["get", "list"]
 - apiGroups: ["scheduling.k8s.io"]
   resources: ["priorityclasses"]
   verbs: ["get", "watch", "list"]
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["create", "update"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  resourceNames: ["descheduler"]
+  verbs: ["get", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: d8:descheduler
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  name: d8:descheduler:descheduler
+  {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: d8:descheduler
+  name: d8:descheduler:descheduler
 subjects:
   - name: descheduler
     kind: ServiceAccount
+    namespace: d8-descheduler
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:descheduler:descheduler:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "descheduler")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+  - kind: ServiceAccount
+    name: descheduler
     namespace: d8-descheduler

@@ -34,21 +34,15 @@ import (
 func TestDeckhouseInstall(t *testing.T) {
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
+	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "1.54.1")
+	require.NoError(t, err)
 	defer func() {
 		os.Unsetenv("DHCTL_TEST")
+		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
 	log.InitLogger("simple")
 	fakeClient := client.NewFakeKubernetesClient()
-
-	err = os.WriteFile("/deckhouse/version", []byte("1.54.1"), 0o666)
-	if err != nil {
-		panic(err)
-	}
-
-	defer func() {
-		os.Remove("/deckhouse/version")
-	}()
 
 	tests := []struct {
 		name    string
@@ -134,20 +128,14 @@ func TestDeckhouseInstall(t *testing.T) {
 func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
+	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
+	require.NoError(t, err)
 	defer func() {
 		os.Unsetenv("DHCTL_TEST")
+		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
 	fakeClient := client.NewFakeKubernetesClient()
-
-	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
-	if err != nil {
-		panic(err)
-	}
-
-	defer func() {
-		os.Remove("/deckhouse/version")
-	}()
 
 	_, err = CreateDeckhouseManifests(fakeClient, &config.DeckhouseInstaller{
 		DevBranch: "pr1111",
@@ -159,17 +147,11 @@ func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
+	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
+	require.NoError(t, err)
 	defer func() {
 		os.Unsetenv("DHCTL_TEST")
-	}()
-
-	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
-	if err != nil {
-		panic(err)
-	}
-
-	defer func() {
-		os.Remove("/deckhouse/version")
+		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
 	fakeClient := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
@@ -209,17 +191,11 @@ func TestDeckhouseInstallWithModuleConfig(t *testing.T) {
 func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
+	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
+	require.NoError(t, err)
 	defer func() {
 		os.Unsetenv("DHCTL_TEST")
-	}()
-
-	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
-	if err != nil {
-		panic(err)
-	}
-
-	defer func() {
-		os.Remove("/deckhouse/version")
+		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
 	fakeClient := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
@@ -272,17 +248,11 @@ func TestDeckhouseInstallWithModuleConfigs(t *testing.T) {
 func TestDeckhouseInstallWithModuleConfigsReturnsResults(t *testing.T) {
 	err := os.Setenv("DHCTL_TEST", "yes")
 	require.NoError(t, err)
+	err = os.Setenv("DHCTL_TEST_VERSION_TAG", "dev")
+	require.NoError(t, err)
 	defer func() {
 		os.Unsetenv("DHCTL_TEST")
-	}()
-
-	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
-	if err != nil {
-		panic(err)
-	}
-
-	defer func() {
-		os.Remove("/deckhouse/version")
+		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
 	t.Run("Only deckhouse mc", func(t *testing.T) {
