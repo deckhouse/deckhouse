@@ -1,153 +1,95 @@
-{{- define "additional_parameters" }}
-  {{- if .nodeFilter }}
-nodeFilter:
-  {{- .nodeFilter | toYaml | nindent 2 }}
-    {{- end }}
-
-    {{- if .priorityFilter }}
-priorityFilter:
-  {{- .priorityFilter | toYaml | nindent 2 }}
-    {{- end }}
-
-    {{- if .namespaceFilter }}
-namespaceFilter:
-  {{- .namespaceFilter | toYaml | nindent 2 }}
-    {{- end }}
-
-    {{- if .nodeFit }}
-nodeFit:
-  {{- .nodeFit | toYaml | nindent 2 }}
-    {{- end }}
-  {{- end }}
-
-  {{- range $d := .Values.descheduler.internal.deschedulers }}
-  {{- $deschedulerSpec := $d.spec }}
-  {{- $globalParameters := $deschedulerSpec.deschedulerPolicy.globalParameters }}
-  {{- $strategies := $deschedulerSpec.deschedulerPolicy.strategies }}
+{{- if len .Values.descheduler.internal.deschedulers }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: descheduler-policy-{{ $d.metadata.name | sha1sum }}
+  name: descheduler-policy
   namespace: d8-descheduler
   {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
 data:
   policy.yaml: |
-    apiVersion: "descheduler/v1alpha1"
+    apiVersion: "descheduler/v1alpha2"
     kind: "DeschedulerPolicy"
-  {{- if $globalParameters }}
-    {{- $globalParameters | toYaml | nindent 4 }}
-  {{- end }}
-    strategies:
-  {{- if dig "removeDuplicates" "enabled" false $strategies }}
-      "RemoveDuplicates":
-        enabled: true
-        params:
-    {{- include "additional_parameters" $strategies.removeDuplicates | nindent 10 }}
-  {{- else }}
-      "RemoveDuplicates":
-        enabled: false
-  {{- end }}
-
-  {{- if dig "removePodsViolatingNodeAffinity" "enabled" false $strategies }}
-      "RemovePodsViolatingNodeAffinity":
-        enabled: true
-        params:
-          nodeAffinityType:
-            - "requiredDuringSchedulingIgnoredDuringExecution"
-    {{- include "additional_parameters" $strategies.removePodsViolatingNodeAffinity | nindent 10 }}
-  {{- else }}
-      "RemovePodsViolatingNodeAffinity":
-        enabled: false
-  {{- end }}
-
-  {{- if dig "removePodsViolatingInterPodAntiAffinity" "enabled" false $strategies }}
-      "RemovePodsViolatingInterPodAntiAffinity":
-        enabled: true
-        params:
-    {{- include "additional_parameters" $strategies.removePodsViolatingInterPodAntiAffinity | nindent 10 }}
-  {{- else }}
-      "RemovePodsViolatingInterPodAntiAffinity":
-        enabled: false
-  {{- end }}
-
-
-  {{- if dig "lowNodeUtilization" "enabled" false $strategies }}
-      "LowNodeUtilization":
-        enabled: true
-        params:
-          nodeResourceUtilizationThresholds:
-            thresholds:
-              "cpu": 40
-              "memory": 50
-              "pods": 40
-            targetThresholds:
-              "cpu": 80
-              "memory": 90
-              "pods": 80
-    {{- include "additional_parameters" $strategies.lowNodeUtilization | nindent 10 }}
-  {{- else }}
-      "LowNodeUtilization":
-        enabled: false
-  {{- end }}
-
-  {{- if dig "highNodeUtilization" "enabled" false $strategies }}
-      "HighNodeUtilization":
-        enabled: true
-        params:
-          nodeResourceUtilizationThresholds:
-            thresholds:
-              "cpu": 50
-              "memory": 50
-    {{- include "additional_parameters" $strategies.highNodeUtilization | nindent 10 }}
-  {{- else }}
-      "HighNodeUtilization":
-        enabled: false
-  {{- end }}
-
-  {{- if dig "removePodsViolatingNodeTaints" "enabled" false $strategies }}
-      "RemovePodsViolatingNodeTaints":
-        enabled: true
-        params:
-    {{- include "additional_parameters" $strategies.removePodsViolatingNodeTaints | nindent 10 }}
-  {{- else }}
-      "RemovePodsViolatingNodeTaints":
-        enabled: false
-  {{- end }}
-
-  {{- if dig "removePodsViolatingTopologySpreadConstraint" "enabled" false $strategies }}
-      "RemovePodsViolatingTopologySpreadConstraint":
-        enabled: true
-        params:
-    {{- include "additional_parameters" $strategies.removePodsViolatingTopologySpreadConstraint | nindent 10 }}
-  {{- else }}
-      "RemovePodsViolatingTopologySpreadConstraint":
-        enabled: false
-  {{- end }}
-
-  {{- if dig "removePodsHavingTooManyRestarts" "enabled" false $strategies }}
-      "RemovePodsHavingTooManyRestarts":
-        enabled: true
-        params:
-          podsHavingTooManyRestarts:
-            podRestartThreshold: 100
-            includingInitContainers: true
-    {{- include "additional_parameters" $strategies.removePodsHavingTooManyRestarts | nindent 10 }}
-  {{- else }}
-      "RemovePodsHavingTooManyRestarts":
-        enabled: false
-  {{- end }}
-
-  {{- if dig "podLifeTime" "enabled" false $strategies }}
-      "PodLifeTime":
-        enabled: true
-        params:
-          podLifeTime:
-            maxPodLifeTimeSeconds: 86400
-            podStatusPhases:
-              - "Pending"
-  {{- else }}
-      "PodLifeTime":
-        enabled: false
-  {{- end }}
+    profiles:
+    {{- range $d := .Values.descheduler.internal.deschedulers }}
+    - name: {{ $d.name }}
+      pluginConfig:
+      - name: "DefaultEvictor"
+        args:
+          {{- if $d.nodeLabelSelector }}
+          nodeSelector: {{ $d.nodeLabelSelector }}
+          {{- end }}
+          evictLocalStoragePods: false
+          evictSystemCriticalPods: false
+          ignorePvcPods: false
+          evictFailedBarePods: true
+          nodeFit: true
+          {{- if $d.podLabelSelector }}
+          labelSelector:
+            {{- $d.podLabelSelector | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if $d.namespaceLabelSelector }}
+          namespaceLabelSelector:
+            {{- $d.namespaceLabelSelector | toYaml | nindent 12 }}
+          {{- end }}
+          {{- if $d.priorityClassThreshold }}
+          priorityThreshold:
+            {{- $d.priorityClassThreshold | toYaml | nindent 12 }}
+          {{- end }}
+      {{- if dig "strategies" "lowNodeUtilization" "enabled" false $d }}
+      - name: "LowNodeUtilization"
+        args:
+          {{- $s := unset ($d.strategies.lowNodeUtilization | deepCopy) "enabled" }}
+          {{- $s | toYaml | nindent 10 }}
+      {{- end }}
+      {{- if dig "strategies" "highNodeUtilization" "enabled" false $d }}
+      - name: "HighNodeUtilization"
+        args:
+          {{- $s := unset ($d.strategies.highNodeUtilization | deepCopy) "enabled" }}
+          {{- $s | toYaml | nindent 10 }}
+      {{- end }}
+      {{- if dig "strategies" "removePodsViolatingNodeAffinity" "enabled" false $d }}
+      - name: "RemovePodsViolatingNodeAffinity"
+        args:
+          {{- $s := unset ($d.strategies.removePodsViolatingNodeAffinity | deepCopy) "enabled" }}
+          {{- $s | toYaml | nindent 10 }}
+      {{- end }}
+      {{- if dig "strategies" "removePodsViolatingInterPodAntiAffinity" "enabled" false $d }}
+      - name: "RemovePodsViolatingInterPodAntiAffinity"
+      {{- end }}
+      {{- if dig "strategies" "removeDuplicates" "enabled" false $d }}
+      - name: "RemoveDuplicates"
+      {{- end }}
+      plugins:
+        # DefaultEvictor is enabled for both `filter` and `preEvictionFilter`
+        filter:
+          enabled:
+          - "DefaultEvictor"
+        preEvictionFilter:
+          enabled:
+          - "DefaultEvictor"
+        {{- if or (dig "strategies" "removePodsViolatingNodeAffinity" "enabled" false $d) (dig "strategies" "removePodsViolatingInterPodAntiAffinity" "enabled" false $d) }}
+        deschedule:
+          enabled:
+          {{- if dig "strategies" "removePodsViolatingNodeAffinity" "enabled" false $d }}
+          - "RemovePodsViolatingNodeAffinity"
+          {{- end }}
+          {{- if dig "strategies" "removePodsViolatingInterPodAntiAffinity" "enabled" false $d }}
+          - "RemovePodsViolatingInterPodAntiAffinity"
+          {{- end }}
+        {{- end }}
+        {{- if or (or (dig "strategies" "highNodeUtilization" "enabled" false $d) (dig "strategies" "lowNodeUtilization" "enabled" false $d)) (dig "strategies" "removeDuplicates" "enabled" false $d) }}
+        balance:
+          enabled:
+          {{- if dig "strategies" "highNodeUtilization" "enabled" false $d }}
+          - "HighNodeUtilization"
+          {{- end }}
+          {{- if dig "strategies" "lowNodeUtilization" "enabled" false $d }}
+          - "LowNodeUtilization"
+          {{- end }}
+          {{- if dig "strategies" "removeDuplicates" "enabled" false $d }}
+          - "RemoveDuplicates"
+          {{- end }}
+        {{- end }}
+    {{- end }}
 {{- end }}

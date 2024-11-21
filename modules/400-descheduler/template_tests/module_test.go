@@ -34,16 +34,10 @@ const globalValues = `
   enabledModules: ["vertical-pod-autoscaler"]
   modules:
     placement: {}
-  modulesImages:
-    registry: registry.deckhouse.io/deckhouse/fe
-    registryDockercfg: Y2ZnCg==
-    digests:
-      descheduler:
-        descheduler: digeststring
   discovery:
-    kubernetesVersion: 1.16.15
+    kubernetesVersion: 1.29.1
     d8SpecificNodeCountByRole:
-      master: 42
+      master: 3
 `
 
 var _ = Describe("Module :: monitoring-kubernetes-control-plane :: helm template ::", func() {
@@ -54,98 +48,196 @@ var _ = Describe("Module :: monitoring-kubernetes-control-plane :: helm template
 			moduleValues := `
 internal:
   deschedulers:
-  - apiVersion: deckhouse.io/v1alpha1
-    kind: Descheduler
-    metadata:
-      name: test
-    spec:
-      deploymentTemplate: {}
-      deschedulerPolicy:
-        globalParameters:
-          evictFailedBarePods: true
-        strategies:
-          highNodeUtilization:
-            enabled: true
-          lowNodeUtilization:
-            enabled: true
-          podLifeTime:
-            enabled: true
-          removeDuplicates:
-            enabled: true
-          removeFailedPods:
-            enabled: true
-          removePodsHavingTooManyRestarts:
-            enabled: true
-          removePodsViolatingInterPodAntiAffinity:
-            enabled: true
-          removePodsViolatingNodeAffinity:
-            enabled: false
-          removePodsViolatingNodeTaints:
-            enabled: true
-          removePodsViolatingTopologySpreadConstraint:
-            enabled: true
+  - name: test1
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 10
+          memory: 20
+          pods: 30
+        targetThresholds:
+          cpu: 40
+          memory: 50
+          pods: 50
+          gpu: "gpuNode"
+  - name: test2
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 10
+          memory: 20
+          pods: 30
+        targetThresholds:
+          cpu: 40
+          memory: 50
+          pods: 50
+          gpu: "gpuNode"
+      highNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 14
+          memory: 23
+          pods: 3
+  - name: test3
+    nodeLabelSelector: node.deckhouse.io/group=test1,node.deckhouse.io/type in (test1,test2)
+    podLabelSelector:
+      matchExpressions:
+      - key: dbType
+        operator: In
+        values:
+        - test1
+        - test2
+      matchLabels:
+        app: test1
+    namespaceLabelSelector:
+      matchExpressions:
+      - key: dbType
+        operator: In
+        values:
+        - test1
+        - test2
+      matchLabels:
+        app: test1
+    priorityClassThreshold:
+      value: 1000
+    strategies:
+      highNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 14
+          memory: 23
+          pods: 3
 `
 			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("descheduler", moduleValues)
 			f.HelmRender()
 		})
 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy-a94a8fe5ccb19ba61c4c0873d391e987982fbbd3")
+			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy")
 			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(`---
-apiVersion: descheduler/v1alpha1
-evictFailedBarePods: true
+apiVersion: descheduler/v1alpha2
 kind: DeschedulerPolicy
-strategies:
-    HighNodeUtilization:
-        enabled: true
-        params:
-            nodeResourceUtilizationThresholds:
-                thresholds:
-                    cpu: 50
-                    memory: 50
-    LowNodeUtilization:
-        enabled: true
-        params:
-            nodeResourceUtilizationThresholds:
-                targetThresholds:
-                    cpu: 80
-                    memory: 90
-                    pods: 80
-                thresholds:
-                    cpu: 40
-                    memory: 50
-                    pods: 40
-    PodLifeTime:
-        enabled: true
-        params:
-            podLifeTime:
-                maxPodLifeTimeSeconds: 86400
-                podStatusPhases:
-                    - Pending
-    RemoveDuplicates:
-        enabled: true
-        params: null
-    RemovePodsHavingTooManyRestarts:
-        enabled: true
-        params:
-            podsHavingTooManyRestarts:
-                includingInitContainers: true
-                podRestartThreshold: 100
-    RemovePodsViolatingInterPodAntiAffinity:
-        enabled: true
-        params: null
-    RemovePodsViolatingNodeAffinity:
-        enabled: false
-    RemovePodsViolatingNodeTaints:
-        enabled: true
-        params: null
-    RemovePodsViolatingTopologySpreadConstraint:
-        enabled: true
-        params: null
+profiles:
+- name: test1
+  pluginConfig:
+  - args:
+      evictFailedBarePods: true
+      evictLocalStoragePods: false
+      evictSystemCriticalPods: false
+      ignorePvcPods: false
+      nodeFit: true
+    name: DefaultEvictor
+  - args:
+      targetThresholds:
+        cpu: 40
+        gpu: gpuNode
+        memory: 50
+        pods: 50
+      thresholds:
+        cpu: 10
+        memory: 20
+        pods: 30
+    name: LowNodeUtilization
+  plugins:
+    balance:
+      enabled:
+      - LowNodeUtilization
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
+- name: test2
+  pluginConfig:
+  - args:
+      evictFailedBarePods: true
+      evictLocalStoragePods: false
+      evictSystemCriticalPods: false
+      ignorePvcPods: false
+      nodeFit: true
+    name: DefaultEvictor
+  - args:
+      targetThresholds:
+        cpu: 40
+        gpu: gpuNode
+        memory: 50
+        pods: 50
+      thresholds:
+        cpu: 10
+        memory: 20
+        pods: 30
+    name: LowNodeUtilization
+  - args:
+      thresholds:
+        cpu: 14
+        memory: 23
+        pods: 3
+    name: HighNodeUtilization
+  plugins:
+    balance:
+      enabled:
+      - HighNodeUtilization
+      - LowNodeUtilization
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
+- name: test3
+  pluginConfig:
+  - args:
+      evictFailedBarePods: true
+      evictLocalStoragePods: false
+      evictSystemCriticalPods: false
+      ignorePvcPods: false
+      labelSelector:
+        matchExpressions:
+        - key: dbType
+          operator: In
+          values:
+          - test1
+          - test2
+        matchLabels:
+          app: test1
+      namespaceLabelSelector:
+        matchExpressions:
+        - key: dbType
+          operator: In
+          values:
+          - test1
+          - test2
+        matchLabels:
+          app: test1
+      nodeFit: true
+      nodeSelector: node.deckhouse.io/group=test1,node.deckhouse.io/type in (test1,test2)
+      priorityThreshold:
+        value: 1000
+    name: DefaultEvictor
+  - args:
+      thresholds:
+        cpu: 14
+        memory: 23
+        pods: 3
+    name: HighNodeUtilization
+  plugins:
+    balance:
+      enabled:
+      - HighNodeUtilization
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
 `))
-			Expect(f.KubernetesResource("Deployment", "d8-descheduler", "descheduler-a94a8fe5ccb19ba61c4c0873d391e987982fbbd3").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-descheduler", "descheduler").Exists()).To(BeTrue())
 		})
 	})
 })
