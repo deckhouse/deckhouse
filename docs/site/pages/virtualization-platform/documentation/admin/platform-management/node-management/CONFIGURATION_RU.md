@@ -11,7 +11,7 @@ lang: ru
 - Установка и настройки дополнительных пакетов ОС.
 
   Пример:
-  - [установка kubectl-плагина](./configuration-containerd.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
+  - [установка kubectl-плагина](./configuration-containerd.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах).
 
 - Обновление ядра ОС на конкретную версию.
 
