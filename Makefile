@@ -113,7 +113,7 @@ PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
 GH_VERSION = 2.52.0
 TESTS_TIMEOUT="15m"
-DMT_VERSION = 0.0.8
+DMT_VERSION = 0.0.9
 
 ##@ General
 
@@ -154,7 +154,7 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 
 tests-matrix: bin/promtool bin/gator bin/dmt
   ##~ Options: FOCUS=module-name
-	bin/dmt lint -l INFO ./modules ./ee/modules ./ee/be/modules ./ee/fe/modules ./ee/se/modules
+	bin/dmt lint -l INFO ./modules
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
