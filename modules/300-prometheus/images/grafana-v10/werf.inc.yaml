@@ -5,6 +5,8 @@
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-files
 from: {{ $.Images.BASE_ALPINE_DEV }}
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - mkdir -p /usr/src/app
   - cd /usr/src/app

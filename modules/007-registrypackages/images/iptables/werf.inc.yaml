@@ -29,6 +29,8 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client
   setup:
     - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config

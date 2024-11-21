@@ -10,6 +10,7 @@ FROM $BASE_ALT as base-alt
 FROM $BASE_ALPINE_DEV as dumb-init-builder
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
+RUN apk add --no-cache openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 
@@ -36,6 +37,7 @@ ARG GOPROXY
 ENV SOURCE_REPO=${SOURCE_REPO} \
     GOPROXY=${GOPROXY}
 WORKDIR /src/
+RUN apk add --no-cache openssh-client
 COPY patches/lua-info.patch /
 COPY patches/makefile.patch /
 COPY patches/healthcheck.patch /

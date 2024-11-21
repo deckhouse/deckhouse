@@ -47,6 +47,8 @@ git:
     setup:
     - '**/*'
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client
   setup:
     - export GOPROXY={{ $.GOPROXY }}
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config

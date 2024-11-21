@@ -11,6 +11,7 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 WORKDIR /src
+RUN apk add --no-cache openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --depth 1 --branch v0.3.1 ${SOURCE_REPO}/aquasecurity/k8s-node-collector.git .
 

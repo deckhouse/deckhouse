@@ -11,6 +11,8 @@ git:
       install:
         - '**/*'
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - export "TARGETOS=linux"
   - export "TARGETARCH=amd64"

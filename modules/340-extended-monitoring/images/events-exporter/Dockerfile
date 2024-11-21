@@ -3,7 +3,7 @@ ARG BASE_GOLANG_19_ALPINE
 
 # Based on https://github.com/nabokihms/events_exporter/blob/main/Dockerfile
 FROM $BASE_GOLANG_19_ALPINE as artifact
-RUN apk add --no-cache --update alpine-sdk bash
+RUN apk add --no-cache --update alpine-sdk bash openssh-client
 
 WORKDIR /usr/local/src/events_exporter
 

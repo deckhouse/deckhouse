@@ -15,7 +15,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache git
+  - apk add --no-cache git openssh-client
   install:
   - mkdir /src
   - cd /src

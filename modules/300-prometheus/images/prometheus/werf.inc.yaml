@@ -5,6 +5,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config

@@ -15,6 +15,7 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src
 
+RUN apk add --no-cache openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --depth 1 --branch v3.13.0 ${SOURCE_REPO}/open-policy-agent/gatekeeper.git .
 RUN go build -mod vendor -ldflags="-s -w" -o gatekeeper

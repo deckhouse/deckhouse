@@ -11,6 +11,7 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 WORKDIR /src
+RUN apk add --no-cache openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --depth 1 --branch v0.22.0 ${SOURCE_REPO}/aquasecurity/trivy-operator.git .
 

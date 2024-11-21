@@ -12,6 +12,7 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64 \
     CGO_ENABLED=0
 
+RUN apk add --no-cache openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --depth 1 --branch v2.9.10 ${SOURCE_REPO}/grafana/loki.git /loki
 WORKDIR /loki/

@@ -8,8 +8,9 @@ git:
       install:
         - '**/*'
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client git
   install:
-    - apk add --no-cache git
     - mkdir -p /src
     - cd /src
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config

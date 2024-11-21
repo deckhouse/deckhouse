@@ -6,6 +6,7 @@ ENV GOPROXY=${GOPROXY}
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 WORKDIR /dex
+RUN apk add --no-cache openssh-client
 COPY patches/client-groups.patch patches/static-user-groups.patch patches/gitlab-refresh-context.patch patches/bytes-and-string-certificates.patch patches/fix-offline-session-updates.patch /
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --branch v2.41.1 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \

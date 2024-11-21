@@ -12,7 +12,7 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
-RUN apk add --no-cache make git
+RUN apk add --no-cache make git openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --depth 1 --branch v0.0.84 ${SOURCE_REPO}/jacksontj/promxy.git /promxy
 WORKDIR /promxy/

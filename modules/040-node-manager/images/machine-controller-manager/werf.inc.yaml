@@ -16,8 +16,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  install:
-  - apk add git
+  beforeInstall:
+  - apk add --no-cache openssh-client git
   setup:
   - mkdir /src && cd /src
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config

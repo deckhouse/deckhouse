@@ -70,6 +70,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config

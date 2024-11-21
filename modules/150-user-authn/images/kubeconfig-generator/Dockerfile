@@ -12,6 +12,8 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src
 
+RUN apk add --no-cache openssh-client
+
 ADD already_logged.patch /
 
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config

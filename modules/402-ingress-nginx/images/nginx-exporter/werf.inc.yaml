@@ -5,6 +5,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - mkdir /src
   - cd /src

@@ -28,6 +28,8 @@ git:
     install:
     - '**/*'
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client
   install:
     - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
     - mkdir /src && cd /src

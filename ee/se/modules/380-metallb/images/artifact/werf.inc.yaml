@@ -2,8 +2,9 @@
 artifact: {{ .ModuleName }}/metallb-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client git
   install:
-    - apk add --no-cache git
     - mkdir -p /src
     - cd /src
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config

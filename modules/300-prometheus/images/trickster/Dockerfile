@@ -13,6 +13,7 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
+RUN apk add --no-cache openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN git clone --depth 1 --branch v1.1.5 ${SOURCE_REPO}/trickstercache/trickster.git /trickster
 WORKDIR /trickster/

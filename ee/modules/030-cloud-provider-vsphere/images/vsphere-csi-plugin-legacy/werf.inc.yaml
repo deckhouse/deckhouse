@@ -27,6 +27,8 @@ git:
   - 001-support-fcd-disk-resize.patch
   - 002-find-by-converted-uuid.patch
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - mkdir -p /src
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
@@ -53,6 +55,8 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
