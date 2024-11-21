@@ -94,6 +94,6 @@ data:
   {{ $.Values.global.modulesImages.registry.CA | nindent 4 }}
   {{- end }}
   {{- if .Values.operatorTrivy.registriesCA }}
-  {{ $.Values.global.modulesImages.registry.CA | nindent 4 }}
+  {{ .Values.operatorTrivy.registriesCA | nindent 4 }}
   {{- end }}
   {{- end }}
