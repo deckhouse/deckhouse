@@ -210,6 +210,10 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         pods: 3
     lowNodeUtilization:
       enabled: false
+      targetThresholds:
+        cpu: 70
+        memory: 70
+        pods: 70
       thresholds:
         cpu: 10
         memory: 20
