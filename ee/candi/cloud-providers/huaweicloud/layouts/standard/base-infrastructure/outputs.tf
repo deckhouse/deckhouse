@@ -3,15 +3,12 @@
 
 output "cloud_discovery_data" {
   value = {
-    "apiVersion"           = "deckhouse.io/v1"
-    "kind"                 = "HuaweiCloudDiscoveryData"
-    "layout"               = var.providerClusterConfiguration.layout
-    "podNetworkMode"       = local.network_security ? "DirectRoutingWithPortSecurityEnabled" : "DirectRouting"
+    "apiVersion" = "deckhouse.io/v1"
+    "kind"       = "HuaweiCloudDiscoveryData"
+    "layout"     = var.providerClusterConfiguration.layout
     "instances" = {
-      "sshKeyPairName" = module.keypair.ssh_name
-      "imageName"      = local.image_name
-      "mainNetwork"    = huaweicloud_vpc.vpc.name
-      "securityGroups" = module.network_security.security_group_names
+      "vpcSubnetId"     = huaweicloud_vpc_subnet.subnet.id
+      "securityGroupId" = module.network_security.security_group_id
     }
     "zones" = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.huaweicloud_availability_zones.zones.names, var.providerClusterConfiguration.zones)) : data.huaweicloud_availability_zones.zones.names
   }

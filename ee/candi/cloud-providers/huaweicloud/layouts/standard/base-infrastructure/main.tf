@@ -42,3 +42,28 @@ resource "huaweicloud_compute_servergroup" "server_group" {
   name     = local.prefix
   policies = ["anti-affinity"]
 }
+
+resource "huaweicloud_nat_gateway" "nat_gateway" {
+  name      = local.prefix
+  spec      = "1"
+  vpc_id    = huaweicloud_vpc.vpc.id
+  subnet_id = huaweicloud_vpc_subnet.subnet.id
+}
+
+resource "huaweicloud_nat_snat_rule" "nat_gateway_snat_rule" {
+  nat_gateway_id = huaweicloud_nat_gateway.nat_gateway.id
+  subnet_id      = huaweicloud_vpc_subnet.subnet.id
+  floating_ip_id = huaweicloud_vpc_eip.nat_gateway_vpc_eip.id
+}
+
+resource "huaweicloud_vpc_eip" "nat_gateway_vpc_eip" {
+  publicip {
+    type = "5_bgp"
+  }
+
+  bandwidth {
+    name       = join("-", [local.prefix, "nat-gateway"])
+    size       = 100
+    share_type = "PER"
+  }
+}

@@ -4,7 +4,7 @@ apiVersions:
   openAPISpec:
     type: object
     additionalProperties: false
-    required: [apiVersion, kind, layout, podNetworkMode, instances, zones]
+    required: [apiVersion, kind, layout, instances, zones]
     properties:
       apiVersion:
         type: string
@@ -15,9 +15,6 @@ apiVersions:
       layout:
         type: string
         enum: [Standard]
-      podNetworkMode:
-        type: string
-        enum: [VXLAN, DirectRouting, DirectRoutingWithPortSecurityEnabled]
       zones:
         type: array
         items:
