@@ -5,6 +5,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - git clone --depth 1 --branch v0.14.0 {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
@@ -25,6 +28,9 @@ git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}
   to: /patches
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - apk update && apk add --no-cache gcc g++ nodejs npm
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 PROMETHEUS_DEPS_VERSION=v2.53.2 PROMETHEUS_VERSION=v2.53.2-0.0.2
