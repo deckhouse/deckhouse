@@ -2,7 +2,7 @@
 {{- $OpenSSLVersion := "3.3.2" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: src-artifact
+fromArtifact: common/src-artifact
 shell:
   install:
   - git clone -b release-{{ $NginxVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/nginx/nginx.git /src
