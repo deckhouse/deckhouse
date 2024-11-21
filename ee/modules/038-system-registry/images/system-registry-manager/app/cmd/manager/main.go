@@ -116,7 +116,6 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 	reconciler := registry_controller.RegistryReconciler{
 		Client:     mgr.GetClient(),
 		APIReader:  mgr.GetAPIReader(),
-		Scheme:     mgr.GetScheme(),
 		KubeClient: kubeClient,
 		Recorder:   mgr.GetEventRecorderFor("embedded-registry-controller"),
 		HttpClient: httpClient,

@@ -17,7 +17,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -75,7 +74,6 @@ type embeddedRegistry struct {
 type RegistryReconciler struct {
 	client.Client
 	APIReader        client.Reader // To use for objects without cache
-	Scheme           *runtime.Scheme
 	KubeClient       *kubernetes.Clientset
 	Recorder         record.EventRecorder
 	HttpClient       *httpclient.Client
