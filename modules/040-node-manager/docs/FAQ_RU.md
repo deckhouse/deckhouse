@@ -3,7 +3,6 @@ title: "Управление узлами: FAQ"
 description: Управление узлами кластера Kubernetes. Добавление, удаление узлов в кластере. Изменение CRI узла.
 search: добавить ноду в кластер, добавить узел в кластер, настроить узел с GPU, эфемерные узлы
 ---
-{% raw %}
 
 ## Как добавить master-узлы в облачном кластере?
 
@@ -210,11 +209,9 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Это необходимо только в том случае, если нужно переместить статический узел из одного кластера в другой. Имейте в виду, что эти операции удаляют данные локального хранилища. Если необходимо просто изменить `NodeGroup`, следуйте [этой инструкции](#как-изменить-nodegroup-у-статического-узла).
 
-{% raw %}
 {% alert level="warning" %}
-Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то предварительно перенесите ресурсы с узла и удалите узел LINSTOR/DRBD, следуя [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-выгнать-ресурсы-с-узла).
+Если на защищаемом узле есть пулы хранения LINSTOR/DRBD, то предварительно перенесите ресурсы с узла и удалите узел LINSTOR/DRBD, следуя [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-выгнать-ресурсы-с-узла).
 {% endalert %}
-{% endraw %}
 
 1. Удалите узел из кластера Kubernetes:
 
@@ -414,24 +411,20 @@ spec:
 
 ## Как выделить узлы под специфические нагрузки?
 
-{% raw %}
 {% alert level="warning" %}
 Запрещено использование домена `deckhouse.io` в ключах `labels` и `taints` у `NodeGroup`. Он зарезервирован для компонентов Deckhouse. Следует отдавать предпочтение в пользу ключей `dedicated` или `dedicated.client.com`.
 {% endalert %}
-{% endraw %}
 
 Для решений данной задачи существуют два механизма:
 
 1. Установка меток в `NodeGroup` `spec.nodeTemplate.labels` для последующего использования их в `Pod` [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) или [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity). Указывает, какие именно узлы будут выбраны планировщиком для запуска целевого приложения.
 1. Установка ограничений в `NodeGroup` `spec.nodeTemplate.taints` с дальнейшим снятием их в `Pod` [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Запрещает исполнение не разрешенных явно приложений на этих узлах.
 
-{% raw %}
 {% alert level="info" %}
 Deckhouse по умолчанию поддерживает использование taint'а с ключом `dedicated`, поэтому рекомендуется применять этот ключ с любым значением для taints на ваших выделенных узлах.
 
 Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в параметр [modules.placement.customTolerationKeys](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys). Это обеспечит разрешение системным компонентам, таким как `cni-flannel`, использовать эти узлы.
 {% endalert %}
-{% endraw %}
 
 Подробности [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
 
@@ -488,11 +481,9 @@ cloudInstances:
 
 ## Как выключить machine-controller-manager в случае выполнения потенциально деструктивных изменений в кластере?
 
-{% raw %}
 {% alert level="danger" %}
 Использовать эту настройку допустимо только тогда, когда вы четко понимаете, зачем это необходимо.
 {% endalert %}
-{% endraw %}
 
 Для того чтобы временно отключить machine-controller-manager (MCM) и предотвратить его автоматические действия, которые могут повлиять на инфраструктуру кластера (например, удаление или пересоздание узлов), установите следующий параметр в конфигурации:
 
@@ -531,11 +522,9 @@ done
 
 ## Как изменить CRI для NodeGroup?
 
-{% raw %}
 {% alert level="warning" %}
 Смена CRI возможна только между `Containerd` на `NotManaged` и обратно (параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type)).
 {% endalert %}
-{% endraw %}
 
 Для изменения CRI для NodeGroup, установите параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type) в `Containerd` или в `NotManaged`.
 
@@ -566,21 +555,17 @@ spec:
   kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
-{% raw %}
 {% alert level="warning" %}
  При изменении `cri.type` для NodeGroup, созданных с помощью `dhctl`, необходимо обновить это значение в `dhctl config edit provider-cluster-configuration` и настройках объекта NodeGroup.
 {% endalert %}
-{% endraw %}
 
 После изменения CRI для NodeGroup модуль `node-manager` будет поочередно перезагружать узлы, применяя новый CRI.  Обновление узла сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup, модуль `node-manager` либо автоматически выполнит обновление узлов, либо потребует подтверждения вручную.
 
 ## Как изменить CRI для всего кластера?
 
-{% raw %}
 {% alert level="warning" %}
 Смена CRI возможна только между `Containerd` на `NotManaged` и обратно (параметр [cri.type](cr.html#nodegroup-v1-spec-cri-type)).
 {% endalert %}
-{% endraw %}
 
 Для изменения CRI для всего кластера, необходимо с помощью утилиты `dhctl` отредактировать параметр `defaultCRI` в конфигурационном файле `cluster-configuration`.
 
@@ -603,13 +588,11 @@ spec:
 Если необходимо, чтобы отдельные NodeGroup использовали другой CRI, перед изменением `defaultCRI` необходимо установить CRI для этой NodeGroup,
 как описано [в документации](#как-изменить-cri-для-nodegroup).
 
-{% raw %}
 {% alert level="danger" %}
 Изменение `defaultCRI` влечет за собой изменение CRI на всех узлах, включая master-узлы.
 Если master-узел один, данная операция является опасной и может привести к полной неработоспособности кластера.
 Рекомендуется использовать multimaster-конфигурацию и менять тип CRI только после этого.
 {% endalert %}
-{% endraw %}
 
 При изменении CRI в кластере для master-узлов необходимо выполнить дополнительные шаги:
 
@@ -858,7 +841,6 @@ Done
 
 ## Как развернуть кастомный конфигурационный файл containerd?
 
-{% endraw %}
 {% alert level="info" %}
 Пример `NodeGroupConfiguration` основан на функциях, заложенных в скрипте [032_configure_containerd.sh](./#особенности-написания-скриптов).
 {% endalert %}
@@ -866,15 +848,12 @@ Done
 {% alert level="danger" %}
 Добавление кастомных настроек вызывает перезапуск сервиса `containerd`.
 {% endalert %}
-{% raw %}
 
 Bashible на узлах объединяет конфигурацию containerd для Deckhouse с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
 
-{% endraw %}
 {% alert level="warning" %}
 Вы можете переопределять значения параметров, которые заданы в файле `/etc/containerd/deckhouse.toml`, но их работу придётся обеспечивать самостоятельно. Также, лучше изменением конфигурации не затрагивать master-узлы (nodeGroup `master`).
 {% endalert %}
-{% raw %}
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -961,11 +940,9 @@ spec:
 
 ### Как настроить сертификат для дополнительного registry?
 
-{% endraw %}
 {% alert level="info" %}
 Помимо containerd, сертификат можно [одновременно добавить](examples.html#добавление-сертификата-в-ос-и-containerd) и в операционной системе.
 {% endalert %}
-{% raw %}
 
 Пример `NodeGroupConfiguration` для настройки сертификата для дополнительного registry:
 
@@ -1219,7 +1196,6 @@ metadata:
 При создании или удалении машины создается или удаляется соответствующий объект Instance.
 Самостоятельно ресурс `Instance` создать нельзя, но можно удалить. В таком случае машина будет удалена из кластера (процесс удаления зависит от деталей реализации).
 
-{% endraw %}
 
 ## Когда требуется перезагрузка узлов?
 
