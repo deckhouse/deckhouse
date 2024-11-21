@@ -45,8 +45,7 @@ properties:
       Detached mode properties.
     properties:
       storageMode: &storageMode
-        enum: [Fs]
-        # enum: [S3, Fs]
+        enum: [S3, Fs]
         description: |
           The type of data storage for the system registry module.
         x-example:
