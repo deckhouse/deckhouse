@@ -30,7 +30,7 @@ git:
 shell:
   setup:
     - apt-get update
-    - apt-get install libinih-dev libblkid-dev gettext liburcu-dev libtool -y
+    - apt-get install libinih-dev libblkid-dev gettext liburcu-dev libtool openssh-client -y
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/xfs/xfsprogs-dev.git src
     - cd /src
