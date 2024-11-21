@@ -18,7 +18,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -44,6 +43,9 @@ var (
 	inputAcceptRule      = strings.Fields("-p tcp -m multiport --dport 1081,1444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT")
 
 	linkName = "ingressfailover"
+
+	natTable        = "nat"
+	preroutingChain = "PREROUTING"
 )
 
 func main() {
@@ -53,9 +55,8 @@ func main() {
 	}
 
 	if len(os.Args) > 1 && os.Args[1] == "remove" {
-		if err := removeIptablesRules(iptablesMgr); err != nil {
-			log.Fatal(err)
-		}
+		_ = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
+		_ = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
 
 		return
 	}
@@ -245,20 +246,4 @@ func migrationRemoveOldRules(iptablesMgr *iptables.IPTables) {
 			log.Printf("migrationRemoveOldRules error: %v", err)
 		}
 	}
-}
-
-var (
-	natTable = "nat"
-)
-
-func removeIptablesRules(ipt *iptables.IPTables) (err error) {
-	err = ipt.DeleteIfExists(natTable, "PREROUTING", jumpRule...)
-	if err != nil {
-		return fmt.Errorf("cannot delete jump rule: %w", err)
-	}
-	if err = ipt.ClearAndDeleteChain(natTable, chainName); err != nil {
-		return fmt.Errorf("cannot clear and delete chain %s: %w", chainName, err)
-	}
-
-	return nil
 }
