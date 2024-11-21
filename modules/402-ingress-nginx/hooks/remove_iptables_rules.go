@@ -40,6 +40,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(removeIptablesRules))
 
 func removeIptablesRules(input *go_hook.HookInput, dc dependency.Container) (err error) {
+	input.Logger.Info("Remove iptables rule for proxy-failover...")
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		return err
@@ -50,8 +51,10 @@ func removeIptablesRules(input *go_hook.HookInput, dc dependency.Container) (err
 	job := generateJob(registry, digest)
 	_, err = kubeClient.BatchV1().Jobs(systemNamespace).Create(context.Background(), job, v1.CreateOptions{})
 	if err != nil {
+		input.Logger.Error("Failed to run job for removing iptables rules", "error", err)
 		return err
 	}
+	input.Logger.Info("Remove iptables remove rules job from cluster...")
 	input.PatchCollector.Delete("batch/v1", "Job", systemNamespace, iptablesRemoveJobName)
 
 	return nil
