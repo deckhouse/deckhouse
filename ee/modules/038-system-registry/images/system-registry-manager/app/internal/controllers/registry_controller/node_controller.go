@@ -52,7 +52,20 @@ var nodeReprocessAllRequest = reconcile.Request{
 func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.reprocessCh = make(chan event.TypedGenericEvent[reconcile.Request])
 
-	nodeWatchPredicate := predicate.Funcs{
+	controllerName := "node-controller"
+
+	// Set up the field indexer to index Pods by spec.nodeName
+	err := mgr.GetFieldIndexer().
+		IndexField(ctx, &corev1.Pod{}, "spec.nodeName", func(obj client.Object) []string {
+			pod := obj.(*corev1.Pod)
+			return []string{pod.Spec.NodeName}
+		})
+
+	if err != nil {
+		return fmt.Errorf("failed to set up index on spec.nodeName: %w", err)
+	}
+
+	nodePredicate := predicate.Funcs{
 		CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
 			// Only process master nodes
 			return nodeObjectIsMaster(e.Object)
@@ -67,18 +80,40 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 		},
 	}
 
-	secretsWatchPredicate := predicate.NewPredicateFuncs(secretObjectIsNodePKI)
+	secretsPredicate := predicate.NewPredicateFuncs(secretObjectIsNodePKI)
 
-	err := ctrl.NewControllerManagedBy(mgr).
-		Named("node-controller").
+	err = ctrl.NewControllerManagedBy(mgr).
+		Named(controllerName).
 		For(
 			&corev1.Node{},
-			builder.WithPredicates(nodeWatchPredicate),
+			builder.WithPredicates(nodePredicate),
 		).
 		Watches(
 			&corev1.Secret{},
-			handler.EnqueueRequestsFromMapFunc(nodePkiSecretMapFunc),
-			builder.WithPredicates(secretsWatchPredicate),
+			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+				name := obj.GetName()
+				sub := nodePKISecretRegex.FindStringSubmatch(name)
+
+				if len(sub) < 2 {
+					return nil
+				}
+
+				var ret reconcile.Request
+				ret.Name = sub[1]
+
+				log := ctrl.LoggerFrom(ctx)
+
+				log.Info(
+					"Node PKI secret was changed, will trigger reconcile for node",
+					"secret", obj.GetName(),
+					"namespace", obj.GetNamespace(),
+					"node", ret.Name,
+					"controller", controllerName,
+				)
+
+				return []reconcile.Request{ret}
+			}),
+			builder.WithPredicates(secretsPredicate),
 		).
 		WatchesRawSource(r.reprocessChannelSource()).
 		WithOptions(controller.Options{
@@ -93,11 +128,11 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 	return nil
 }
 
-func (r *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	if req == nodeReprocessAllRequest {
-		return r.handleReprocessAll(ctx)
+		return nc.handleReprocessAll(ctx)
 	}
 
 	if req.Namespace != "" {
@@ -106,27 +141,26 @@ func (r *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	node := &corev1.Node{}
-	err := r.Client.Get(ctx, req.NamespacedName, node)
+	err := nc.Client.Get(ctx, req.NamespacedName, node)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return r.handleNodeDelete(ctx, req.Name)
+			return nc.handleNodeDelete(ctx, req.Name)
 		}
 
 		return ctrl.Result{}, fmt.Errorf("cannot get node: %w", err)
 	}
 
 	if hasMasterLabel(node) {
-		return r.handleMasterNode(ctx, node)
+		return nc.handleMasterNode(ctx, node)
 	} else {
-		return r.handleNodeNotMaster(ctx, node)
+		return nc.handleNodeNotMaster(ctx, node)
 	}
 }
 
-func (r *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, error) {
+func (nc *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	log.Info("ReprocessAll: Start")
-	defer log.Info("ReprocessAll: Done")
+	log.Info("All nodes will be reprocessed")
 
 	// Will trigger reprocess for all master nodes
 	opts := client.MatchingLabels{
@@ -134,7 +168,7 @@ func (r *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, e
 	}
 
 	nodes := &corev1.NodeList{}
-	if err := r.Client.List(ctx, nodes, &opts); err != nil {
+	if err := nc.Client.List(ctx, nodes, &opts); err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot list nodes: %w", err)
 	}
 
@@ -143,7 +177,7 @@ func (r *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, e
 		req.Name = node.Name
 		req.Namespace = node.Namespace
 
-		if err := r.triggerReconcileForNode(ctx, req); err != nil {
+		if err := nc.triggerReconcileForNode(ctx, req); err != nil {
 			// It currently only when ctx done
 			return ctrl.Result{}, err
 		}
@@ -152,22 +186,22 @@ func (r *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, e
 	return ctrl.Result{}, nil
 }
 
-func (r *nodeController) triggerReconcileForNode(ctx context.Context, req reconcile.Request) error {
+func (nc *nodeController) triggerReconcileForNode(ctx context.Context, req reconcile.Request) error {
 	evt := event.TypedGenericEvent[reconcile.Request]{Object: req}
 
 	select {
-	case r.reprocessCh <- evt:
+	case nc.reprocessCh <- evt:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 }
 
-func (r *nodeController) ReprocessAllNodes(ctx context.Context) error {
-	return r.triggerReconcileForNode(ctx, nodeReprocessAllRequest)
+func (nc *nodeController) ReprocessAllNodes(ctx context.Context) error {
+	return nc.triggerReconcileForNode(ctx, nodeReprocessAllRequest)
 }
 
-func (r *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
+func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Handle master node", "node", node.Name)
@@ -175,9 +209,9 @@ func (r *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node
 	return ctrl.Result{}, nil
 }
 
-func (r *nodeController) handleNodeNotMaster(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
+func (nc *nodeController) handleNodeNotMaster(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
 	// Delete node secret if exists
-	if err := r.deleteNodePKI(ctx, node.Name); err != nil {
+	if err := nc.deleteNodePKI(ctx, node.Name); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -189,22 +223,22 @@ func (r *nodeController) handleNodeNotMaster(ctx context.Context, node *corev1.N
 	return ctrl.Result{}, nil
 }
 
-func (r *nodeController) handleNodeDelete(ctx context.Context, name string) (ctrl.Result, error) {
+func (nc *nodeController) handleNodeDelete(ctx context.Context, name string) (ctrl.Result, error) {
 	// Delete node secret if exists
-	if err := r.deleteNodePKI(ctx, name); err != nil {
+	if err := nc.deleteNodePKI(ctx, name); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *nodeController) deleteNodePKI(ctx context.Context, nodeName string) error {
+func (nc *nodeController) deleteNodePKI(ctx context.Context, nodeName string) error {
 	log := ctrl.LoggerFrom(ctx)
 
 	secretName := fmt.Sprintf("registry-node-%s-pki", nodeName)
 	secret := &corev1.Secret{}
 
-	err := r.Client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: r.Namespace}, secret)
+	err := nc.Client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: nc.Namespace}, secret)
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -215,7 +249,7 @@ func (r *nodeController) deleteNodePKI(ctx context.Context, nodeName string) err
 		return fmt.Errorf("get node PKI secret error: %w", err)
 	}
 
-	err = r.Client.Delete(ctx, secret)
+	err = nc.Client.Delete(ctx, secret)
 	if client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("delete node PKI secret error: %w", err)
 	} else {
@@ -225,31 +259,16 @@ func (r *nodeController) deleteNodePKI(ctx context.Context, nodeName string) err
 	return nil
 }
 
-func (r *nodeController) reprocessChannelSource() source.Source {
-	return source.Channel(r.reprocessCh, handler.TypedEnqueueRequestsFromMapFunc(
-		func(ctx context.Context, req reconcile.Request) []reconcile.Request {
+func (nc *nodeController) reprocessChannelSource() source.Source {
+	return source.Channel(nc.reprocessCh, handler.TypedEnqueueRequestsFromMapFunc(
+		func(_ context.Context, req reconcile.Request) []reconcile.Request {
 			return []reconcile.Request{req}
 		},
 	))
 }
 
-func nodePkiSecretMapFunc(ctx context.Context, o client.Object) []reconcile.Request {
-	var ret reconcile.Request
-
-	name := o.GetName()
-	sub := nodePKISecretRegex.FindStringSubmatch(name)
-
-	if len(sub) < 2 {
-		return nil
-	}
-
-	ret.Name = sub[1]
-
-	return []reconcile.Request{ret}
-}
-
-func secretObjectIsNodePKI(o client.Object) bool {
-	labels := o.GetLabels()
+func secretObjectIsNodePKI(obj client.Object) bool {
+	labels := obj.GetLabels()
 
 	if labels[labelTypeKey] != labelNodeSecretTypeValue {
 		return false
@@ -259,15 +278,15 @@ func secretObjectIsNodePKI(o client.Object) bool {
 		return false
 	}
 
-	return nodePKISecretRegex.MatchString(o.GetName())
+	return nodePKISecretRegex.MatchString(obj.GetName())
 }
 
-func nodeObjectIsMaster(object client.Object) bool {
-	if object == nil {
+func nodeObjectIsMaster(obj client.Object) bool {
+	if obj == nil {
 		return false
 	}
 
-	labels := object.GetLabels()
+	labels := obj.GetLabels()
 	if labels == nil {
 		return false
 	}

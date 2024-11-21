@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -35,6 +34,11 @@ const (
 )
 
 var logHandler slog.Handler = dlog.Default().Handler()
+
+// TODO: Remove before release
+var newCode = false
+
+// TODO: Remove before release
 
 func main() {
 	ctrl.SetLogger(logr.FromSlogHandler(logHandler))
@@ -112,62 +116,56 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
-	// Create a new instance of RegistryReconciler
-	reconciler := registry_controller.RegistryReconciler{
-		Client:     mgr.GetClient(),
-		APIReader:  mgr.GetAPIReader(),
-		KubeClient: kubeClient,
-		Recorder:   mgr.GetEventRecorderFor("embedded-registry-controller"),
-		HttpClient: httpClient,
-	}
+	if newCode {
+		nodeController := registry_controller.NodeController{
+			Client:    mgr.GetClient(),
+			Namespace: namespace,
+		}
 
-	// Set up the controller with the manager
-	if err := reconciler.SetupWithManager(mgr, ctx); err != nil {
-		return fmt.Errorf("unable to create controller: %w", err)
-	}
+		if err := nodeController.SetupWithManager(ctx, mgr); err != nil {
+			return fmt.Errorf("unable to create node controller: %w", err)
+		}
 
-	nodeController := registry_controller.NodeController{
-		Client:    mgr.GetClient(),
-		Namespace: namespace,
-	}
+		stateController := registry_controller.StateController{
+			Client:            mgr.GetClient(),
+			Namespace:         namespace,
+			ReprocessAllNodes: nodeController.ReprocessAllNodes,
+		}
 
-	if err := nodeController.SetupWithManager(ctx, mgr); err != nil {
-		return fmt.Errorf("unable to create node reconciler: %w", err)
-	}
+		if err := stateController.SetupWithManager(ctx, mgr); err != nil {
+			return fmt.Errorf("unable to create state controller: %w", err)
+		}
 
-	// TODO: for testing purposes
-	var wg sync.WaitGroup
-	defer wg.Wait()
+	} else {
+		// Create a new instance of RegistryReconciler
+		reconciler := registry_controller.RegistryReconciler{
+			Client:     mgr.GetClient(),
+			APIReader:  mgr.GetAPIReader(),
+			KubeClient: kubeClient,
+			Recorder:   mgr.GetEventRecorderFor("embedded-registry-controller"),
+			HttpClient: httpClient,
+		}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+		// Set up the controller with the manager
+		if err := reconciler.SetupWithManager(mgr, ctx); err != nil {
+			return fmt.Errorf("unable to create controller: %w", err)
+		}
 
-		for {
-			select {
-			case <-time.After(30 * time.Second):
-				_ = nodeController.ReprocessAllNodes(ctx)
-			case <-ctx.Done():
-				return
+		// Add leader status update runnable
+		err = mgr.Add(leaderRunnableFunc(func(ctx context.Context) error {
+			// Call SecretsStartupCheckCreate with the existing reconciler instance
+			if err := reconciler.SecretsStartupCheckCreate(ctx); err != nil {
+				return fmt.Errorf("failed to initialize secrets: %w", err)
 			}
+
+			// Wait until the context is done to handle graceful shutdown
+			<-ctx.Done()
+			return nil
+		}))
+
+		if err != nil {
+			return fmt.Errorf("unable to add leader runnable: %w", err)
 		}
-	}()
-	// TODO: for testing purposes
-
-	// Add leader status update runnable
-	err = mgr.Add(leaderRunnableFunc(func(ctx context.Context) error {
-		// Call SecretsStartupCheckCreate with the existing reconciler instance
-		if err := reconciler.SecretsStartupCheckCreate(ctx); err != nil {
-			return fmt.Errorf("failed to initialize secrets: %w", err)
-		}
-
-		// Wait until the context is done to handle graceful shutdown
-		<-ctx.Done()
-		return nil
-	}))
-
-	if err != nil {
-		return fmt.Errorf("unable to add leader runnable: %w", err)
 	}
 
 	// Start the manager
