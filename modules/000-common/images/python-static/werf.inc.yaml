@@ -1,34 +1,68 @@
+{{- $PythonVersion := "v3.11.10" }}
 ---
-artifact: {{ .ModuleName }}/build-python-static-artifact
-from: {{ .Images.BASE_UBUNTU_DEV }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/Setup.local
-  to: /build/Setup.local
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/Setup.local
+  to: /Setup.local
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-whl
+  add: /src
+  to: /src/Lib/ensurepip/_bundled
+  before: setup
+shell:
+  install:
+  - git clone -b {{ $PythonVersion }} --single-branch --depth=1 {{ .SOURCE_REPO }}/python/cpython.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - mv /Setup.local Modules/Setup.local
+  - rm ./Lib/ensurepip/_bundled/setuptools-65.5.0-py3-none-any.whl
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-whl
+from: {{ .Images.BASE_ALT_P11 }}
 shell:
   beforeInstall:
-  - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y pip
   install:
-  - export PYTHON_VERSION=3.11.6 BUILD_THREADS=4 PYTHON_PREFIX=/opt/python-static
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone -b v${PYTHON_VERSION} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git /build/src
-  - cp /build/Setup.local /build/src/Modules/Setup.local
-  - cd /build/src
-  - ./configure LDFLAGS="-static" --disable-shared --prefix=${PYTHON_PREFIX} --enable-optimizations --with-ensurepip=install
-  - make LDFLAGS="-static" LINKFORSHARED=" " -j ${BUILD_THREADS}
-  - make install -j ${BUILD_THREADS}
-  - chown -R 64535:64535 ${PYTHON_PREFIX}
-  - chmod 0700 ${PYTHON_PREFIX}/bin/python3
-  - chmod 0700 ${PYTHON_PREFIX}/bin/pip3
+  {{- include "pypi proxy" . | nindent 2 }}
+  - mkdir -p /src
+  - pip download setuptools==75.1.0 -d /src
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_UBUNTU }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "ubuntu packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential gdb lcov pkg-config libbz2-dev libffi-dev libgdbm-dev libgdbm-compat-dev liblzma-dev libncurses5-dev libreadline6-dev libsqlite3-dev libssl-dev lzma lzma-dev tk-dev uuid-dev zlib1g-dev libmpdec-dev
+  install:
+  - cd /src
+  - ./configure LDFLAGS="-static" --disable-shared --prefix=/opt/python-static --enable-optimizations --with-ensurepip=install
+  - make LDFLAGS="-static" LINKFORSHARED=" " -j ${BUILD_THREADS}
+  - make install -j 4
+  - chown -R 64535:64535 /opt/python-static
+  - chmod 0700 /opt/python-static/bin/python3
+  - chmod 0700 /opt/python-static/bin/pip3
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/build-python-static-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /opt/python-static
   to: /opt/python-static
   before: setup
