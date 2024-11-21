@@ -52,3 +52,7 @@ properties:
   insecureRegistries:
     description: |
       Список адресов хранилищ образов контейнеров (container registry), к которым разрешены недоверенные HTTPS-подключения (не прошедшие проверку TLS-сертификата) и подключения по HTTP.
+
+  registriesCA:
+    description: |
+      Список корневых сертификатов (CA) приватных хранилищ образов контейнеров (container registry).
