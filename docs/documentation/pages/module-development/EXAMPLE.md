@@ -23,7 +23,7 @@ This section provides an example of creating a `helloworld` module based on [mod
 
 1. Enter the name of the module in the `module.yaml` file.
 
-   We will use the `helloworld` module name in this example, but you can use any name you like, change 'helloworld' at commands and on your repo name.
+   We will use the `helloworld` module name in this example, but you can use any name you like. For this, replace 'helloworld' in the commands and in your repo's name with the one you prefer.
 
    > Note that the module name may differ depending on the command. In may be written in *kebab-case* as well as *camelCase*. If you use a custom module name, make sure to modify it accordingly.
 
