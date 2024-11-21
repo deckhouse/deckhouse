@@ -30,7 +30,7 @@ lang: ru
 - установите необходимые пакеты (например, `ceph-common`);
 - настройте сетевую связанность между новым узлом и остальными узлами кластера.
 
-1. Подключитесь на новый узел по SSH и выполните следующую команду, вставив полученную в п.2 Base64-строку:
+Подключитесь на новый узел по SSH и выполните следующую команду, вставив полученную в п.2 Base64-строку:
 
    ```shell
    echo <Base64-КОД-СКРИПТА> | base64 -d | bash
@@ -40,7 +40,7 @@ lang: ru
 
 Пример добавления статического узла в кластер с помощью [Cluster API Provider Static (CAPS)](./#cluster-api-provider-static):
 
-1. Выделите сервер с установленной ОС, настройте сетевую связанность и т. п., при необходимости установите специфические пакеты ОС и добавьте точки монтирования, которые потребуются на узле.
+**Выделите сервер с установленной ОС**, настройте сетевую связанность и т. п., при необходимости установите специфические пакеты ОС и добавьте точки монтирования, которые потребуются на узле.
 
 * Выделите сервер (или виртуальную машину), настройте сетевую связанность, при необходимости установите специфические пакеты ОС и добавьте точки монтирования которые потребуются на узле.
 * Создайте пользователя (в примере — `caps`) с возможностью выполнять `sudo`, выполнив на сервере следующую команду:
@@ -80,80 +80,79 @@ lang: ru
 pdpl-user -i 63 caps
 ```
 
-1. Создайте в кластере ресурс SSHCredentials.
+**Создайте в кластере ресурс `SSHCredentials`.**
 
-   * Для доступа к добавляемому серверу компоненту CAPS необходим приватный ключ сервисного пользователя `caps`. Ключ в формате base64 добавляется в ресурс SSHCredentials.
+* Для доступа к добавляемому серверу компоненту CAPS необходим приватный ключ сервисного пользователя `caps`. Ключ в формате base64 добавляется в ресурс SSHCredentials.
 
-   В директории с ключами пользователя на сервере выполните следующую команду для получения закрытого ключа в формате Base64:
+В директории с ключами пользователя на сервере выполните следующую команду для получения закрытого ключа в формате Base64:
 
-      ```shell
-      base64 -w0 caps-id
-      ```
+```shell
+base64 -w0 caps-id
+```
 
-   * На любом компьютере, настроенным на управление кластером, создайте переменную окружения с приватным ключом в формате Base64, полученным на предыдущем шаге (в начале команды добавьте пробел, чтобы ключ не сохранился в истории команд):
+* На любом компьютере, настроенным на управление кластером, создайте переменную окружения с приватным ключом в формате Base64, полученным на предыдущем шаге (в начале команды добавьте пробел, чтобы ключ не сохранился в истории команд):
 
-     ```shell
-      CAPS_PRIVATE_KEY_BASE64=<ЗАКРЫТЫЙ_КЛЮЧ_В_BASE64>
-     ```
+```shell
+CAPS_PRIVATE_KEY_BASE64=<ЗАКРЫТЫЙ_КЛЮЧ_В_BASE64>
+```
 
-   * Создайте ресурс SSHCredentials с именем сервисного пользователя и его приватным ключом:
+* Создайте ресурс SSHCredentials с именем сервисного пользователя и его приватным ключом:
 
-     ```shell
-     d8 k create -f - <<EOF
-     apiVersion: deckhouse.io/v1alpha1
-     kind: SSHCredentials
-     metadata:
-        name: static-0-access
+```shell
+d8 k create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: static-0-access
      spec:
        user: caps
        privateSSHKey: "${CAPS_PRIVATE_KEY_BASE64}"
      EOF
-     ```
+```
 
-1. Создайте в кластере ресурс StaticInstance
+**Создайте в кластере ресурс StaticInstance**:
 
-  Ресурс StaticInstance определяет IP-адрес сервера статического узла и данные для доступа к серверу:
+Ресурс StaticInstance определяет IP-адрес сервера статического узла и данные для доступа к серверу:
 
-   ```shell
-   d8 k create -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: StaticInstance
-   metadata:
-     name: static-0
-   spec:
-     # Укажите IP-адрес сервера статического узла.
-     address: "<SERVER-IP>"
-     credentialsRef:
-       kind: SSHCredentials
-       name: static-0-access
-   EOF
-   ```
+```shell
+d8 k create -f - <<EOF
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static-0
+spec:
+  # Укажите IP-адрес сервера статического узла.
+  address: "<SERVER-IP>"
+  credentialsRef:
+    kind: SSHCredentials
+    name: static-0-access
+EOF
+```
 
-1. Создайте в кластере ресурс NodeGroup:
+**Создайте в кластере ресурс NodeGroup**:
 
-   ```shell
-   d8 k create -f - <<EOF
-   apiVersion: deckhouse.io/v1
-   kind: NodeGroup
-   metadata:
-     name: worker
-   spec:
-     nodeType: Static
-     staticInstances:
-       count: 1
-   EOF
-   ```
+```shell
+d8 k create -f - <<EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+EOF
+```
 
-1. Дождитесь Ready состояния
+**Дождитесь Ready состояния**:
 
 В статусе NodeGroup в колонке Ready должен появиться 1 узел:
 
-   ```shell
-   d8 k get ng worker
-   NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE    SYNCED
-   worker   Static   1       1       1                                                                 15m   True
-   ```
-
+```shell
+d8 k get ng worker
+NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE    SYNCED
+worker   Static   1       1       1                                                                 15m   True
+```
 
 ### Добавление статического узла с помощью Cluster API Provider Static и фильтров в label selector
 
@@ -241,15 +240,14 @@ pdpl-user -i 63 caps
    EOF
    ```
 
-1. Результат
+Результат:
 
-  ```shell
-  d8 k get ng
-  NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE    SYNCED
-  master   Static   1       1       1                                                               1h     True
-  front    Static   2       2       2                                                               1h     True
-  ```
-
+```shell
+d8 k get ng
+NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE    SYNCED
+master   Static   1       1       1                                                               1h     True
+front    Static   2       2       2                                                               1h     True
+```
 
 ## Как понять, что что-то пошло не так?
 
@@ -269,7 +267,6 @@ May 25 04:39:16 kube-master-0 bashible.sh[1976339]: Configuration is in sync, no
 May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 ```
 
-
 ## Удаление узла из кластера
 
 <span id='как-вывести-узел-из-под-управления-node-manager'></span>
@@ -281,7 +278,6 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 ```shell
 bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
 ```
-
 
 ### Как зачистить узел для последующего ввода в кластер?
 
@@ -340,10 +336,10 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Применение изменений потребует некоторого времени.
 
-
 ### Как посмотреть, что в данный момент выполняется на узле при его создании?
 
-Если необходимо узнать, что происходит на узле (к примеру, он долго создается, "завис в Pending"), можно посмотреть логи `cloud-init`. Для этого выполните следующие шаги:
+Если необходимо узнать, что происходит на узле (к примеру, он долго создается, завис в Pending), можно посмотреть логи `cloud-init`. Для этого выполните следующие шаги:
+
 1. Найдите узел, который сейчас бутстрапится:
 
    ```shell
@@ -365,7 +361,6 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 1. Выполните полученную команду (в примере выше — `nc 192.168.199.178 8000`), чтобы получить логи `cloud-init` для последующей диагностики.
 
 Логи первоначальной настройки узла находятся в `/var/log/cloud-init-output.log`.
-
 
 ### Когда требуется перезагрузка узлов?
 
