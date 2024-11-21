@@ -96,7 +96,7 @@ apiVersions:
             type: object
             required: [flavorName, imageName]
             additionalProperties: false
-            properties:
+            properties: &instanceClassProperties
               flavorName: &instanceClassFlavorName
                 type: string
                 description: |
@@ -165,6 +165,73 @@ apiVersions:
                   The policy that determines how instances are distributed among hypervisors.
 
                   - `AntiAffinity` — instances are placed on different hypervisors. This policy is managed by Deckhouse.
+      nodeGroups:
+        type: array
+        description: |
+          An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+        items:
+          type: object
+          required: [name, replicas, instanceClass]
+          properties:
+            name:
+              type: string
+              description: |
+                The name of the NodeGroup to use for generating node names.
+            replicas:
+              type: integer
+              description: |
+                The number of nodes to create.
+            nodeTemplate:
+              description: |
+                Parameters of Node objects in Kubernetes to add after registering the node.
+              properties:
+                labels:
+                  type: object
+                  description: |
+                    A list of labels to attach to cluster resources.
+
+                    The same as the `metadata.labels` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  x-examples:
+                  - environment: production
+                    app: warp-drive-ai
+                  additionalProperties:
+                    type: string
+                annotations:
+                  type: object
+                  description: |
+                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  x-examples:
+                  - ai.fleet.com/discombobulate: "true"
+                  additionalProperties:
+                    type: string
+                taints:
+                  type: array
+                  description: |
+                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
+
+                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                  x-examples:
+                  - - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                        enum: [NoSchedule, PreferNoSchedule, NoExecute]
+                      key:
+                        type: string
+                      value:
+                        type: string
+            instanceClass:
+              type: object
+              additionalProperties: false
+              required: [flavorName, imageName]
+              description: |
+                Partial contents of the fields of the.
+              properties:
+                <<: *instanceClassProperties
       layout:
         description: |
           The way resources are located in the cloud.
