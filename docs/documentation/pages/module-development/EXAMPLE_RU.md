@@ -81,7 +81,7 @@ lang: ru
 
 1. Удалите хуки модуля, CRD и временные файлы.
 
-   Пример не использует хуки и СustomResourceDefinition. Выполните следующие команды, чтобы очистить папки `hooks` и `crds`:
+   Пример не использует хуки и CustomResourceDefinition. Выполните следующие команды, чтобы очистить папки `hooks` и `crds`:
 
    ```shell
    rm -rf hooks/
@@ -175,7 +175,7 @@ lang: ru
 
    В списке должен быть только модуль `hello-world-module`.
 
-1. Создайте ресурc [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), определяющий политику обновления модуля.
+1. Создайте ресурс [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), определяющий политику обновления модуля.
 
    Выполните следующую команду, чтобы создать политику обновления для модуля `hello-world-module` с каналом обновления *Alpha* и режимом обновления *Auto*:
 
