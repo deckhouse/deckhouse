@@ -4,3 +4,7 @@
 output "security_group_names" {
   value = var.enabled ? [huaweicloud_networking_secgroup.kube[0].name] : []
 }
+
+output "security_group_id" {
+  value = var.enabled ? huaweicloud_networking_secgroup.kube[0].id : null
+}
