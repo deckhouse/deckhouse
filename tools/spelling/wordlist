@@ -158,6 +158,7 @@ CLI
 clickhouse
 clientID
 clientSecret
+Cloud
 cloudDNS
 CloudEphemeral
 Cloudflare
@@ -211,6 +212,7 @@ configurator
 configVersion
 conntrack
 Conntrack
+Container
 containerd
 ContainerResourcePolicy
 contraire
@@ -245,6 +247,7 @@ CurrentChannel
 CurrentGroup
 CurrentPageURL
 CurrentPageURLRelative
+custom
 CustomAlertmanager
 CustomAlertManager
 customCertificate
@@ -649,6 +652,7 @@ macOS
 madison
 manifest’s
 Manilla
+master
 masterCA
 masterNodeGroup
 matchExpressions
@@ -784,6 +788,7 @@ offtopic
 OICD
 OIDC
 ok
+OK
 okagent
 okmeter
 Okmeter
@@ -1009,7 +1014,7 @@ ServiceAccounts
 ServiceEntry
 ServiceMonitor
 servicename
-Serviсes
+Services
 SHA
 shapshot
 shouldn
@@ -1358,7 +1363,7 @@ zVirt
 версионированной
 Визуализировать
 виртуализации
-включaл
+включал
 ВМ
 внутренного
 внутрикластерной
@@ -1385,7 +1390,6 @@ zVirt
 гугл
 гуглить
 д
-дeплой
 дашборд
 дашборда
 дашбордов
@@ -1400,6 +1404,7 @@ zVirt
 деплоим
 деплоится
 деплоить
+деплой
 деплой
 деплоймента
 деплою
@@ -1425,7 +1430,6 @@ zVirt
 закажется
 запустившемся
 запушить
-иcпользовать
 иммутабельный
 имплементацию
 Имплементация
@@ -1449,6 +1453,7 @@ zVirt
 интегрировав
 инфраструктурно
 использов
+использовать
 ит
 ится
 иться
@@ -1477,7 +1482,7 @@ zVirt
 коммитом
 коммиту
 коммиты
-компонентa
+компонента
 конвержа
 контеинер
 контеинеризации
@@ -1534,7 +1539,6 @@ zVirt
 логируются
 ложноположительных
 м
-мaster
 майнеров
 майнинг
 масштабироваться
@@ -1544,7 +1548,7 @@ zVirt
 медиафайлы
 межкластерного
 межузловой
-менятьcя
+меняться
 мержит
 Метадата
 метаинформацию
@@ -1599,7 +1603,6 @@ zVirt
 несистемных
 нешифрованные
 нуть
-ОK
 ов
 одностраничных
 ООМ
@@ -1773,9 +1776,6 @@ zVirt
 роутере
 роутеров
 роутинга
-Сloud
-Сontainer
-сustom
 сайдкар
 Сайдкар
 сайдкара
@@ -1829,7 +1829,7 @@ zVirt
 сокетов
 сокету
 соотвествущая
-соответcтвующий
+соответствующий
 Сохраняеем
 спецзаголовки
 стейта
