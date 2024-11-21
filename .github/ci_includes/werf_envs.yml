@@ -13,7 +13,7 @@ GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
 {!{ define "git_source_envs" }!}
 # <template: git_source_envs>
 # source repo git@my-repo.com:group
-SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
+SOURCE_REPO: "${{secrets.SOURCE_REPO_GIT}}"
 # cloud providers source repo should contain creds for repo for ex https://user:password@my-repo.com/group
 CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
 GOPROXY: "${{secrets.GOPROXY}}"

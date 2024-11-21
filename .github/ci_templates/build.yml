@@ -59,24 +59,7 @@ steps:
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
-
-  - name: Start ssh-agent
-    uses: {!{ index (ds "actions") "ssh-agent" }!}
-    with:
-      ssh-private-key: |
-        ${{secrets.SOURCE_REPO_SSH_KEY}}
-  - name: Add ssh_known_hosts
-    run: |
-      HOST=$(grep -oP '(?<=@)[^/:]+' <<< $SOURCE_REPO)
-      mkdir -p ~/.ssh
-      touch ~/.ssh/known_hosts
-      HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-      while IFS= read -r KEY_LINE; do
-        CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-        if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-          echo "$KEY_LINE" >> ~/.ssh/known_hosts
-        fi
-      done <<< "$HOST_KEYS"
+  {!{ tmpl.Exec "login_git_step" $ctx | strings.Indent 2 }!}
 
   - name: Build and push deckhouse images
     id: build
