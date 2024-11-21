@@ -14,7 +14,7 @@ lang: ru
 
 Если возникнут вопросы, вы можете обратиться за помощью в наш [Telegram-канал](https://t.me/deckhouse_ru). Мы обязательно поможем и проконсультируем.
 
-Если вы используете Enterprise-редакцию, можете написать [нам на почту](support@deckhouse.ru), мы также окажем вам поддержку.
+Если вы используете Enterprise-редакцию, можете написать нам на почту&nbsp;<a href="mailto:support@deckhouse.ru">support@deckhouse.ru</a>, мы также окажем вам поддержку.
 
 Хотите улучшить платформу? Можете завести [задачу](https://github.com/deckhouse/virtualization/issues/), предложить свою идею или [решение](https://github.com/deckhouse/virtualization/blob/main/CONTRIBUTING.md) на GitHub.
 

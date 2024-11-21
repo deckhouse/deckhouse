@@ -21,7 +21,7 @@ lang: ru
       bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
       ```
 
-2. Узнайте канал обновления, заданный в кластере. Для этого выполните команду:
+2. Узнайте канал обновления, заданный в кластере:
 
    ```shell
    d8 k get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
@@ -37,7 +37,7 @@ lang: ru
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
    - `<REVISION>` — [редакция платформы](../editions.html), например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д;
-   - `<RELEASE_CHANNEL>` — [канал обновлений](../update_channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`, указанным при [установке платформы](../install/steps/install.html):
+   - `<RELEASE_CHANNEL>` — [канал обновлений](../update-channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`, указанным при [установке платформы](../install/steps/install.html):
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
      - `early-access` — для канала обновлений *Early Access*;
