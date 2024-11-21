@@ -44,8 +44,7 @@ apiServer:
   extraArgs:
 {{- if .apiserver.serviceAccount }}
     {{- $defaultAud := printf "https://kubernetes.default.svc.%s" .clusterConfiguration.clusterDomain }}
-    {{- $uniqueAdditionalAuds := .apiserver.serviceAccount.additionalAPIAudiences | uniq }}
-    # {{- $uniqueAdditionalAuds := (default (list) .apiserver.serviceAccount.additionalAPIAudiences) | uniq }}
+    {{- $uniqueAdditionalAuds := (default (list) .apiserver.serviceAccount.additionalAPIAudiences) | uniq }}
     {{- $filteredAuds := list }}
     {{- range $uniqueAdditionalAuds }}
       {{- if ne . $defaultAud }}
