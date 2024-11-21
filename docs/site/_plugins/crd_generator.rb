@@ -34,6 +34,7 @@ class CRDPage < Jekyll::Page
       'permalink' => "%s/%s" % [ @lang, @path ],
       'layout' => 'page',
       'lang' => @lang,
+      'sidebar' => 'virtualization-platform',
       'sitemap_include' => false
     }
 

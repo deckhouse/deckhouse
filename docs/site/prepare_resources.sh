@@ -20,8 +20,8 @@ done
 
 # Prepare data for ModuleConfigs generation
 for schema_path in $(find $MODULES_RAW_DIR/openapi $MODULES_RAW_DIR/external -regex '^.*/openapi/config-values.yaml$' -print); do
-  module_path=$(echo $schema_path | cut -d\/ -f-5 )
-  module_name=$(echo $schema_path | sed -E 's#(/ee/se|/ee/be|/ee)##' |cut -d\/ -f5 | cut -d- -f2-)
+  module_path=$(echo $schema_path | sed -E 's#(.+/modules/[^/]+/).+#\1#' )
+  module_name=$(echo $schema_path | sed -E 's#.+/modules/([0-9]+-)?([^/]+).*#\2#')
   mkdir -p _data/schemas/${OPENAPI_PATH}/${module_name}
   cp -f $schema_path _data/schemas/${OPENAPI_PATH}/${module_name}/
   if [ -f $module_path/openapi/doc-ru-config-values.yaml ]; then
