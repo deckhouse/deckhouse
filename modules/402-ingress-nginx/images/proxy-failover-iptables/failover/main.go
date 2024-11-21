@@ -55,8 +55,14 @@ func main() {
 	}
 
 	if len(os.Args) > 1 && os.Args[1] == "remove" {
-		_ = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
-		_ = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
+		err = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		os.Exit(0)
 	}
