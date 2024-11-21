@@ -268,12 +268,12 @@
   to: /deckhouse/modules/300-prometheus/openapi/openapi-case-tests.yaml
   stageDependencies:
     setup:
-        - '**/*'
+        - '**/*.go'
 - add: /ee/fe/modules/300-prometheus/openapi/values.yaml
   to: /deckhouse/modules/300-prometheus/openapi/values.yaml
   stageDependencies:
     setup:
-        - '**/*'
+        - '**/*.go'
 - add: /ee/fe/modules/300-prometheus/templates/prometheus/pp
   to: /deckhouse/modules/300-prometheus/templates/prometheus/pp
   stageDependencies:
@@ -288,7 +288,7 @@
   to: /deckhouse/modules/300-prometheus/hooks/cm_check.go
   stageDependencies:
     setup:
-        - '**/*'
+        - '**/*.go'
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   stageDependencies:
