@@ -749,6 +749,34 @@ jobs:
           docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make tests-controller tests-modules
     # </template: tests_before_build_template>
 
+  tests_python_webhooks:
+    name: Tests python webhooks
+    needs:
+      - git_info
+
+    # <template: tests_webhooks_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+      - name: Run python webhook tests
+        run: |
+          make tests-webhooks
+    # </template: tests_webhooks_template>
+
   matrix_tests:
     name: Matrix tests
     needs:
