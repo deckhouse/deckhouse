@@ -12,6 +12,7 @@ metadata:
   name: deckhouse
 spec:
   enabled: true
+  version: 1
   settings:
     bundle: Minimal
     logLevel: Info
