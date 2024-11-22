@@ -13,7 +13,7 @@ properties:
 
       The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
 
-        * * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+        * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
   defaultClusterStorageClass:
@@ -234,7 +234,8 @@ properties:
         default: null
         description: |
           The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
-            * If not defined, components use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
+
+            * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
             * Use this parameter only in exceptional circumstances.
             * This parameter is applied during module activation.
 
