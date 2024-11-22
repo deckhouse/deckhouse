@@ -81,20 +81,20 @@ spec:
             value: "5m"
           {{- if or $.Values.global.modulesImages.registry.CA .Values.operatorTrivy.registriesCA }}
           - name: OPERATOR_SCAN_JOB_REGISTRY_CA
-            value: |
+            value: |-
             {{- if $.Values.global.modulesImages.registry.CA }}
-            {{ $.Values.global.modulesImages.registry.CA | nindent 14 }}
+            {{- $.Values.global.modulesImages.registry.CA | nindent 14 }}
             {{- end }}
             {{- if .Values.operatorTrivy.registriesCA }}
-            {{ .Values.operatorTrivy.registriesCA | nindent 14 }}
+            {{- .Values.operatorTrivy.registriesCA | nindent 14 }}
             {{- end }}
           - name: TRIVY_REGISTRY_CA
             value: |
             {{- if $.Values.global.modulesImages.registry.CA }}
-            {{ $.Values.global.modulesImages.registry.CA | nindent 14 }}
+            {{- $.Values.global.modulesImages.registry.CA | nindent 14 }}
             {{- end }}
             {{- if .Values.operatorTrivy.registriesCA }}
-            {{ .Values.operatorTrivy.registriesCA | nindent 14 }}
+            {{- .Values.operatorTrivy.registriesCA | nindent 14 }}
             {{- end }}
           {{- end }}
           - name: OPERATOR_CONCURRENT_SCAN_JOBS_LIMIT
