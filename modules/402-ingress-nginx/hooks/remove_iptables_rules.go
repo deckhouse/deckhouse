@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -35,9 +34,9 @@ const (
 	systemNamespace       = "d8-system"
 )
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
-}, dependency.WithExternalDependencies(removeIptablesRules))
+//var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+//	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
+//}, dependency.WithExternalDependencies(removeIptablesRules))
 
 func removeIptablesRules(input *go_hook.HookInput, dc dependency.Container) (err error) {
 	input.Logger.Info("Remove iptables rule for proxy-failover...")
@@ -79,8 +78,10 @@ func generateJob(registry, digest string) *batchv1.Job {
 			BackoffLimit: ptr.To(int32(1)),
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
-					ImagePullSecrets: []corev1.LocalObjectReference{{Name: "deckhouse-registry"}},
-					HostNetwork:      true,
+					ImagePullSecrets:              []corev1.LocalObjectReference{{Name: "deckhouse-registry"}},
+					HostNetwork:                   true,
+					DNSPolicy:                     corev1.DNSClusterFirstWithHostNet,
+					TerminationGracePeriodSeconds: ptr.To(int64(300)),
 					Containers: []corev1.Container{
 						{
 							Name:  "iptables-remove-rules",
@@ -117,6 +118,7 @@ func generateJob(registry, digest string) *batchv1.Job {
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
 									Path: "/run/xtables.lock",
+									Type: ptr.To(corev1.HostPathFileOrCreate),
 								},
 							},
 						},
