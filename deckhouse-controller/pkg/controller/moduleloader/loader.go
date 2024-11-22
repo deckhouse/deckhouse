@@ -189,7 +189,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 		l.log.Debugf("parse modules from the '%s' dir", dir)
 		definitions, err := l.parseModulesDir(dir)
 		if err != nil {
-			return fmt.Errorf("parse modules from the '%s' dir: %w", dir, err)
+			return fmt.Errorf("parse modules from the %q dir: %w", dir, err)
 		}
 		l.log.Debugf("%d parsed modules from the '%s' dir", len(definitions), dir)
 		for _, def := range definitions {
