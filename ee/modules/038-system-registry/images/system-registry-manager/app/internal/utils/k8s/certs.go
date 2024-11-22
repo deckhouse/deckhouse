@@ -6,14 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package k8s
 
 import (
-	"time"
-
-	"github.com/cloudflare/cfssl/csr"
-	"github.com/cloudflare/cfssl/helpers"
-	"github.com/cloudflare/cfssl/initca"
-	cfssllog "github.com/cloudflare/cfssl/log"
-	"github.com/cloudflare/cfssl/signer"
-	"github.com/cloudflare/cfssl/signer/local"
+	"embeded-registry-manager/internal/utils/pki"
 )
 
 const (
@@ -25,6 +18,8 @@ const (
 	AuthTokenKey     = "token.key"
 	DistributionCert = "distribution.crt"
 	DistributionKey  = "distribution.key"
+
+	CACommonName = "embedded-registry-ca"
 )
 
 type Certificate struct {
@@ -32,84 +27,38 @@ type Certificate struct {
 	Key  []byte
 }
 
-// set cfssl global log level to fatal
-func init() {
-	cfssllog.Level = cfssllog.LevelFatal
-}
-
 // generateCA generates a new CA certificate and key.
 func generateCA() (caCertPEM []byte, caKeyPEM []byte, err error) {
+	var caPKI pki.Certificate
 
-	caRequest := &csr.CertificateRequest{
-		CN: "embedded-registry-ca",
-		CA: &csr.CAConfig{
-			Expiry: "87600h", // 10 years
-		},
-		KeyRequest: &csr.KeyRequest{
-			A: "rsa",
-			S: 2048,
-		},
+	if caPKI, err = pki.GenerateCACertificate(CACommonName); err != nil {
+		return
 	}
 
-	caCertPEM, _, caKeyPEM, err = initca.New(caRequest)
-	if err != nil {
-		return nil, nil, err
-	}
+	caCertPEM = pki.EncodeCertificate(caPKI.Cert)
+	caKeyPEM, err = pki.EncodePrivateKey(caPKI.Key)
 
-	return caCertPEM, caKeyPEM, nil
-}
-
-func Validator(req *csr.CertificateRequest) error {
-	return nil
+	return
 }
 
 // generateCertificate generates a new certificate and key signed by the provided CA certificate and key.
 func generateCertificate(commonName string, hosts []string, caCertPEM []byte, caKeyPEM []byte) (certPEM, keyPEM []byte, err error) {
+	var caPKI, retPKI pki.Certificate
 
-	req := csr.CertificateRequest{
-		CN: commonName,
-		KeyRequest: &csr.KeyRequest{
-			A: "rsa",
-			S: 2048,
-		},
-		Hosts: hosts,
+	if caPKI.Cert, err = pki.DecodeCertificate(caCertPEM); err != nil {
+		return
 	}
 
-	// generate a CSR and private key
-	g := &csr.Generator{Validator: Validator}
-	csrPEM, keyPEM, err := g.ProcessRequest(&req)
-	if err != nil {
-		return nil, nil, err
+	if caPKI.Key, err = pki.DecodePrivateKey(caKeyPEM); err != nil {
+		return
 	}
 
-	// parse CA certificate and key
-	caCert, err := helpers.ParseCertificatePEM(caCertPEM)
-	if err != nil {
-		return nil, nil, err
+	if retPKI, err = pki.GenerateCertificate(commonName, hosts, caPKI); err != nil {
+		return
 	}
 
-	caKey, err := helpers.ParsePrivateKeyPEM(caKeyPEM)
-	if err != nil {
-		return nil, nil, err
-	}
+	certPEM = pki.EncodeCertificate(retPKI.Cert)
+	keyPEM, err = pki.EncodePrivateKey(retPKI.Key)
 
-	// create a signer
-	s, err := local.NewSigner(caKey, caCert, signer.DefaultSigAlgo(caKey), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// create a sign request
-	signReq := signer.SignRequest{
-		Request:  string(csrPEM),
-		NotAfter: caCert.NotAfter.Add(-1 * time.Hour),
-	}
-
-	// sign the certificate
-	certPEM, err = s.Sign(signReq)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return certPEM, keyPEM, nil
+	return
 }
