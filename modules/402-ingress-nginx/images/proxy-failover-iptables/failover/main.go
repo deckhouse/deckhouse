@@ -54,6 +54,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	migrationRemoveOldRules(iptablesMgr)
+
+	err = addLinkAndAddress()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if len(os.Args) > 1 && os.Args[1] == "remove" {
 		err = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
 		if err != nil {
@@ -63,15 +70,16 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		link, err := netlink.LinkByName(linkName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = netlink.LinkDel(link)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		os.Exit(0)
-	}
-
-	migrationRemoveOldRules(iptablesMgr)
-
-	err = addLinkAndAddress()
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	// during the failover rollout remove failover-jump-rule setting all traffic to primary
