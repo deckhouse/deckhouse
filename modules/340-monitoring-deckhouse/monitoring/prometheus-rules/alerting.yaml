@@ -175,4 +175,4 @@
       description: |
         ModuleConfig {{ $labels.name }} has an obsolete version, update to the latest.
       summary: |
-        ModuleConfig has an obsolete version.
+        ModuleConfig {{ $labels.name }} has an obsolete version.
