@@ -186,6 +186,7 @@
 - name: Add ssh_known_hosts
   run: |
     HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+    echo "::add-mask::$HOST"
     mkdir -p ~/.ssh
     touch ~/.ssh/known_hosts
     HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
