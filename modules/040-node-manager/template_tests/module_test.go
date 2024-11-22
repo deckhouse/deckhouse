@@ -830,8 +830,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
-
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
 			userAuthzClusterRoleClusterEditor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-editor")
 			userAuthzClusterRoleClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-admin")
@@ -869,8 +867,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			roleBindings := map[string]object_store.KubeObject{}
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
-
-			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
@@ -920,8 +916,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
-
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
 			userAuthzClusterRoleClusterEditor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-editor")
 			userAuthzClusterRoleClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-admin")
@@ -959,8 +953,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			roleBindings := map[string]object_store.KubeObject{}
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
-
-			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
@@ -1023,8 +1015,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
-
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
 			userAuthzClusterRoleClusterEditor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-editor")
 			userAuthzClusterRoleClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-admin")
@@ -1065,8 +1055,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			roleBindings := map[string]object_store.KubeObject{}
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
-
-			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
@@ -1150,8 +1138,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
-
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
 			userAuthzClusterRoleClusterEditor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-editor")
 			userAuthzClusterRoleClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-admin")
@@ -1196,8 +1182,6 @@ ccc: ddd
 			roleBindings := map[string]object_store.KubeObject{}
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
-
-			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
@@ -1263,8 +1247,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
-
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
 			userAuthzClusterRoleClusterEditor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-editor")
 			userAuthzClusterRoleClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-admin")
@@ -1302,8 +1284,6 @@ ccc: ddd
 			roleBindings := map[string]object_store.KubeObject{}
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
-
-			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
@@ -1353,8 +1333,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
-
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
 			userAuthzClusterRoleClusterEditor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-editor")
 			userAuthzClusterRoleClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-admin")
@@ -1393,8 +1371,6 @@ ccc: ddd
 			roleBindings := map[string]object_store.KubeObject{}
 			roleBindings["bashible"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible")
 			roleBindings["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("RoleBinding", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")
-
-			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
@@ -1446,8 +1422,6 @@ ccc: ddd
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
-
 			userAuthzClusterRoleUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
 			userAuthzClusterRoleClusterEditor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-editor")
 			userAuthzClusterRoleClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:cluster-admin")
@@ -1489,8 +1463,6 @@ ccc: ddd
 
 			staticMachineTemplate := f.KubernetesResource("StaticMachineTemplate", "d8-cloud-instance-manager", "worker")
 			staticMachineDeployment := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "worker")
-
-			Expect(registrySecret.Exists()).To(BeTrue())
 
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
@@ -1902,9 +1874,6 @@ internal:
 					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
 					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
 				}
-
-				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
-				Expect(registrySecret.Exists()).To(BeTrue())
 
 				assertClusterResources(f, "app")
 

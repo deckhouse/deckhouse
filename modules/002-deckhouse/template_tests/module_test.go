@@ -118,6 +118,8 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(dp.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
   - operator: Exists
 `))
+			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
+			Expect(registrySecret.Exists()).To(BeTrue())
 		})
 	})
 
@@ -143,6 +145,8 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 - key: testkey
   operator: Exists
 `))
+			registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
+			Expect(registrySecret.Exists()).To(BeTrue())
 		})
 	})
 
