@@ -26,7 +26,7 @@ shell:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   - cd /go/src/github.com/cilium/cilium
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - git apply /patches/*.patch --verbose
   - go mod tidy && go mod vendor && go mod verify
   - make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator
   - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator

@@ -28,7 +28,7 @@ shell:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch {{ $hubbleVersion }} {{ $.SOURCE_REPO }}/cilium/hubble.git /go/src/github.com/cilium/hubble
   - cd /go/src/github.com/cilium/hubble
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - git apply /patches/*.patch --verbose
   - go mod tidy && go mod vendor && go mod verify
   - make clean && make hubble
   - cp /go/src/github.com/cilium/hubble/hubble /hubble
