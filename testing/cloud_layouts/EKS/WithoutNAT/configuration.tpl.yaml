@@ -10,6 +10,14 @@ deckhouse:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
+  name: node-manager
+spec:
+  version: 1
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
   name: cert-manager
 spec:
   enabled: true
