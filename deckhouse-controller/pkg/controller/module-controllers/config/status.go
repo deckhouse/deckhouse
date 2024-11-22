@@ -55,7 +55,7 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 
 // refreshModuleConfig refreshes module config in cluster
 func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string) error {
-	r.log.Debugf("refresh the '%s' module config status", configName)
+	r.log.Debugf("refresh the %q module config status", configName)
 
 	// clear metrics
 	metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
