@@ -16,8 +16,8 @@ mount:
 shell:
   beforeInstall:
   - apk add --no-cache openssh-client
-  - mkdir /src
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - mkdir /src
   - git clone -c advice.detachedHead=false --branch 2.29.0 --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falcosidekick.git /src
   install:
   - cd /src

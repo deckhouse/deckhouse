@@ -32,10 +32,10 @@ mount:
 shell:
   beforeInstall:
   - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.2.0 {{ $.SOURCE_REPO }}/gofsutil.git /gofsutil
   - cd /gofsutil && go mod init deckhouse/3p/gofsutil
   - git clone --depth 1 --branch {{ $value.csi.vsphere }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src
