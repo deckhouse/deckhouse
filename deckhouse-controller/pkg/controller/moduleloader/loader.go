@@ -200,7 +200,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			}
 
 			if _, ok := l.modules[def.Name]; ok {
-				l.log.Warnf("the '%s' module already exists, skip it from the '%s'", def.Name, def.Path)
+				l.log.Warnf("the %q module already exists, skip it from the %q", def.Name, def.Path)
 				continue
 			}
 
