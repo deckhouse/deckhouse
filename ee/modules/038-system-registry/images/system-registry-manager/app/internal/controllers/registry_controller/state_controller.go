@@ -12,6 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,9 +33,12 @@ type StateController = stateController
 var _ reconcile.Reconciler = &stateController{}
 
 type stateController struct {
-	Client            client.Client
-	Namespace         string
+	Client    client.Client
+	Namespace string
+
 	ReprocessAllNodes func(ctx context.Context) error
+
+	eventRecorder record.EventRecorder
 }
 
 func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
@@ -43,6 +47,8 @@ func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 	}
 
 	controllerName := "global-state-controller"
+
+	sc.eventRecorder = mgr.GetEventRecorderFor(controllerName)
 
 	moduleConfig := &unstructured.Unstructured{}
 	moduleConfig.SetAPIVersion(k8s.ModuleConfigApiVersion)
