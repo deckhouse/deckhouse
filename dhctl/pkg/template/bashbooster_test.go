@@ -15,7 +15,6 @@
 package template
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -57,8 +56,6 @@ func TestRenderBashBooster(t *testing.T) {
 	if err != nil {
 		t.Errorf("Rendering bash booster error: %v", err)
 	}
-
-	fmt.Println(data)
 
 	expectedString := `export HTTP_PROXY="http://10.130.0.31:8888"`
 	if !strings.Contains(data, expectedString) {
