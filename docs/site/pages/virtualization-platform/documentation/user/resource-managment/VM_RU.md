@@ -485,7 +485,7 @@ EOF
 ```bash
 d8 k get vmbda attach-blank-disk
 
-# NAME              PHASE      VIRTUAL MACHINE NAME   AGE
+# NAME                PHASE      VIRTUAL MACHINE NAME   AGE
 # attach-blank-disk   Attached   linux-vm              3m7s
 ```
 
@@ -525,8 +525,8 @@ d8 k delete vmbda attach-blank-disk
 
 ```bash
 d8 k get vm
-# NAME                                   PHASE     NODE           IPADDRESS     AGE
-# linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
+# NAME       PHASE     NODE           IPADDRESS     AGE
+# linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
 ```
 
 Виртуальная машина запущена на узле `virtlab-pt-1`.
@@ -547,15 +547,15 @@ spec:
 EOF
 ```
 
-Сразу после создания ресурса `vmip`, выполните команду:
+Сразу после создания ресурса `vmop`, выполните команду:
 
 ```bash
 d8 k get vm -w
-# NAME                                  PHASE       NODE           IPADDRESS     AGE
-# linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
-# linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
+# NAME       PHASE       NODE           IPADDRESS     AGE
+# linux-vm   Running     virtlab-pt-1   10.66.10.14   79m
+# linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
+# linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
+# linux-vm   Running     virtlab-pt-2   10.66.10.14   79m
 ```
 
 Также для выполнения миграции можно использовать команду:

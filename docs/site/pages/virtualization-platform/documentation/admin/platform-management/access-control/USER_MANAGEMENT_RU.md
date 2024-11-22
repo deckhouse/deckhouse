@@ -28,7 +28,9 @@ lang: ru
 Перед этим необходимо сгенерировать хеш пароля с помощью следующей команды:
 
 ```shell
-echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+# В начале команды используйте пробел, чтобы пароль не сохранился в истории команд.
+# Замените example_password на свой пароль. 
+ echo example_password | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
 Также можно воспользоваться [онлайн-сервисом Bcrypt](https://bcrypt-generator.com/).
