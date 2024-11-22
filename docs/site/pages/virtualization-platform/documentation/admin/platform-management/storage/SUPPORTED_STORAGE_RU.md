@@ -42,7 +42,7 @@ d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/setting
 
 Для этого отредактируйте ModuleConfig `virtualization`:
 
-```shell        
+```yaml
 spec:
   settings:
     virtualImages:
@@ -63,7 +63,7 @@ spec:
 
 Для этого отредактируйте ModuleConfig `virtualization`:
 
-```shell        
+```yaml
 spec:
   settings:
     virtualDisks:

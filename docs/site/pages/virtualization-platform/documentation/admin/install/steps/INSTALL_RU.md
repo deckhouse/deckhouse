@@ -293,61 +293,63 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 
 Для корректного функционирования платформы необходимо установить одну или несколько систем хранения. Они предоставляют возможности:
 
-- постоянного хранения системных данных платформы (метрики, логи, образы)
-- хранения дисков виртуальных машин
+- постоянного хранения системных данных платформы (метрики, логи, образы);
+- хранения дисков и образов виртуальных машин.
 
-Описание перечня поддерживаемых систем хранения приведено в разделе [Настройка хранилищ](../../platform-management/storage/supported_storage.html)
+Описание поддерживаемых систем хранения и инструкция по их подклчению приведены в разделе [настройка хранилищ](../../platform-management/storage/supported_storage.html)
 
 
 ## Установка модуля Сilium
 
-Для получения информации по установке и настройке модуля, обратитесь к разделу [Настройки Cilium](todo).
+Для получения информации по установке и настройке модуля, обратитесь к разделу [настройки Cilium](todo).
 
 
-## Установка модуля Virtualization 
+## Установка модуля виртуализации 
 
-Создайте на master-узле файл `virtualization_module.yaml` содержащий описание компонентов модуля `Virtualization`:
+Для обеспечения возможностей виртуализации (создание виртуальных машин, образов, дисков и так далее), необходимо включить
+модуль виртуализации. Чтобы сделать это, создайте ресурс ModuleConfig `virtualization`, предварительно указав, какой
+StorageClass следует использовать:
 
-```yaml
----
+```shell
+# Укажите имя своего ресурса StorageClass.
+STORAGE_CLASS_NAME=replicated-storage-class
+
+# Создайте ModuleConfig `virtualization`.
+d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
  name: virtualization
 spec:
- enabled: true
+ enabled: false
  settings:
    dvcr:
      storage:
+       type: PersistentVolumeClaim
        persistentVolumeClaim:
          size: 50G
-         storageClassName: linstor-thin-r2
-       type: PersistentVolumeClaim
+         storageClassName: ${STORAGE_CLASS_NAME}
    virtualMachineCIDRs:
      - 10.66.10.0/24
      - 10.66.20.0/24
      - 10.66.30.0/24
  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModulePullOverride
-metadata:
- name: virtualization
-spec:
- imageTag: main
- scanInterval: 15s
- source: deckhouse
+EOF
 ```
 
-Примените файл, созданный на master-узле, выполнив команду:
+После создания ресурса ModuleConfig `virtualization` дождитесь выполнения заданий из очереди:
 
-```bash
-d8 k apply -f virtualization_module.yaml
+```shell
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+
+# Queue 'main': length 0, status: 'waiting for task 1m1s'
 ```
 
-Если все выполнено правильно, после включения модуля появится namespase `d8-virtualization`.
-Команда для получения списка namespases:
+Если все выполнено правильно, после включения модуля появится Namespase `d8-virtualization`:
 
 ```bash
-d8 k get ns
+d8 k get ns d8-virtualization
+
+# NAME                STATUS   AGE
+# d8-virtualization   Active   1h
 ```
