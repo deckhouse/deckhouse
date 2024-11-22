@@ -124,19 +124,19 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "remove" {
 		err = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("failed to remove prerouting chain", err)
 		}
 		err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("failed to clear and delete chain", err)
 		}
 		link, err := netlink.LinkByName(linkName)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("failed to create link by name", err)
 		}
 		err = netlink.LinkDel(link)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("failed to delete link", err)
 		}
 
 		os.Exit(0)
