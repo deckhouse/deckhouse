@@ -34,6 +34,8 @@ For platform users:
 
 ## Internal Logic
 
+### Creating a project
+
 To create projects, the following [Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) are used:
 * [ProjectTemplate](cr.html#projecttemplate) — a resource that describes the project template. It defines a list of resources to be created in the project and a schema for parameters that can be passed when creating the project;
 * [Project](cr.html#project) — a resource that describes a specific project.
@@ -45,3 +47,13 @@ When creating a [Project](cr.html#project) resource from a specific [ProjectTemp
 1. All resources described in the template are created in sequence.
 
 > **Attention!** When changing the project template, all created projects will be updated according to the new template.
+
+### Isolating a project
+
+The project is based on the `Namespace` mechanism. It is a kind of container where you can group pods, services, secrets, and more, but it does not provide full isolation. To achieve this, you can use additional tools that provide a detailed level of control and security for the project, isolating it from others and ensuring that only the necessary amount of resources is used:
+
+- Access control resources (`AuthorizationRule` / `RoleBinding`) — allow you to manage access to objects within the `Namespace`. You can set rules and assign roles to precisely control who can do what in your project.
+- Resource usage control resources (`ResourceQuota`) — allow you to set limits on the use of resources such as CPU, RAM, and the number of objects within the `Namespace`. This helps prevent excessive load and ensures control over applications within the project.
+- Network connectivity control resources (`NetworkPolicy`) — manage inbound and outbound network traffic within the `Namespace`. This allows you to configure permitted connections between pods, improving the security and manageability of network interactions within the project.
+
+These tools can be combined to configure the project according to the requirements of your application.
