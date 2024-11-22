@@ -138,7 +138,7 @@ d8 v ssh cloud@linux-vm --local-ssh
 - Создание ресурса [VirtualMachineOperation](../../../reference/cr.html#virtualmachineoperation) (`vmop`).
 - Использование утилиты `d8` с соответствующей подкомандой.
 
-Ресурс `VirtualMachineOperation` декларативно определяет действие, которое должно быть выполнено на виртуальной машине. Оно применяется к виртуальной машине сразу после её создания соответствующего `vmop` и применяется один раз.
+Ресурс `VirtualMachineOperation` декларативно определяет действие, которое должно быть выполнено на виртуальной машине.
 
 Пример операции для выполнения перезагрузки виртуальной машины с именем `linux-vm`:
 
@@ -402,7 +402,7 @@ spec:
     virtualMachineAndPodAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
         - weight: 1
-          podAffinityTerm:
+          virtualMachineAndPodAffinityTerm:
             labelSelector:
               matchLabels:
                 server: database
