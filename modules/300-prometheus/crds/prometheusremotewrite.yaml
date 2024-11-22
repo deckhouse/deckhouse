@@ -57,6 +57,14 @@ spec:
                 customAuthToken:
                   type: string
                   description: Custom token sent as a value of the X-Auth-Token header.
+                headers:
+                  description: |
+                    Custom HTTP headers to be sent along with each remote write request. Allowed headers: X-scope-OrgID.
+                  type: object
+                  patternProperties:
+                    "^X-Scope-OrgID$": 
+                      type: string
+                  additionalProperties: false
                 writeRelabelConfigs:
                   description: |
                     The list of remote write relabel configurations.
