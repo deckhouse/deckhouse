@@ -65,6 +65,23 @@ func main() {
 	_ = iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...)
 	// do nothing on error, since ingress-failover chain may not exist yet
 
+	if len(os.Args) > 1 && os.Args[1] == "remove" {
+		err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
+		if err != nil {
+			log.Fatal("failed to clear and delete chain", err)
+		}
+		link, err := netlink.LinkByName(linkName)
+		if err != nil {
+			log.Fatal("failed to create link by name", err)
+		}
+		err = netlink.LinkDel(link)
+		if err != nil {
+			log.Fatal("failed to delete link", err)
+		}
+
+		os.Exit(0)
+	}
+
 	// check 1081/1444 ports accepted
 	err = insertUnique(iptablesMgr, "filter", "INPUT", inputAcceptRule, 1)
 	if err != nil {
@@ -119,27 +136,6 @@ func main() {
 	err = insertUnique(iptablesMgr, "nat", "PREROUTING", jumpRule, 1)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if len(os.Args) > 1 && os.Args[1] == "remove" {
-		err = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
-		if err != nil {
-			log.Fatal("failed to remove prerouting chain", err)
-		}
-		err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
-		if err != nil {
-			log.Fatal("failed to clear and delete chain", err)
-		}
-		link, err := netlink.LinkByName(linkName)
-		if err != nil {
-			log.Fatal("failed to create link by name", err)
-		}
-		err = netlink.LinkDel(link)
-		if err != nil {
-			log.Fatal("failed to delete link", err)
-		}
-
-		os.Exit(0)
 	}
 
 	ticker := time.NewTicker(15 * time.Second)

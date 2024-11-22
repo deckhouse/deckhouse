@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -34,9 +35,9 @@ const (
 	systemNamespace       = "d8-system"
 )
 
-//var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-//	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
-//}, dependency.WithExternalDependencies(removeIptablesRules))
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
+}, dependency.WithExternalDependencies(removeIptablesRules))
 
 func removeIptablesRules(input *go_hook.HookInput, dc dependency.Container) (err error) {
 	input.Logger.Info("Remove iptables rule for proxy-failover...")
@@ -124,6 +125,15 @@ func generateJob(registry, digest string) *batchv1.Job {
 						},
 					},
 					RestartPolicy: corev1.RestartPolicyNever,
+					HostPID:       true,
+					NodeSelector: map[string]string{
+						"node-role.kubernetes.io/loadbalancer": "",
+					},
+					Tolerations: []corev1.Toleration{
+						{
+							Operator: corev1.TolerationOpExists,
+						},
+					},
 				},
 			},
 		},
