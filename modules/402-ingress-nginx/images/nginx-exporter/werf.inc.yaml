@@ -7,10 +7,10 @@ mount:
 shell:
   beforeInstall:
   - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - mkdir /src
   - cd /src
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.8.0 {{ $.SOURCE_REPO }}/nginxinc/nginx-prometheus-exporter.git .
   - go mod edit -go 1.20
   - go get github.com/prometheus/client_golang@v1.17.0
