@@ -157,7 +157,7 @@ func (l *Loader) processModuleDefinition(def *Definition) (*Module, error) {
 
 	// load constrains
 	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
-		return nil, fmt.Errorf("load constraints for the '%s' module: %w", def.Name, err)
+		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
 	return module, nil
