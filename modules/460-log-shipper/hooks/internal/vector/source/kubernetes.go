@@ -129,10 +129,6 @@ func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced boo
 		fields = append(fields, "metadata.namespace!="+ns)
 	}
 
-	if spec.KeepDeletedFilesOpenedFor.Seconds() == 0 {
-		spec.KeepDeletedFilesOpenedFor.Duration = time.Hour + 30*time.Minute // 1.5h
-	}
-
 	return &Kubernetes{
 		commonSource: commonSource{
 			Name: name,
