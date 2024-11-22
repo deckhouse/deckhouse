@@ -1,0 +1,8 @@
+{%- assign crds = site.data.schemas.virtualization-platform.crds | sort %}
+
+{%- for crd in crds %}
+{%- assign crdData = crd[1] %}
+{%- assign crdKind = crd[1]["spec"]["names"]["kind"] %}
+{%- assign crdUrl = crd[1]["spec"]["names"]["kind"] | downcase %}
+- [{{ crdKind }}]({{ crdUrl }}.html)
+{%- endfor %}
