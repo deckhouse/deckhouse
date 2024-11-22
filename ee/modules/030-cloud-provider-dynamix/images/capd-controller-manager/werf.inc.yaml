@@ -17,10 +17,10 @@ mount:
 shell:
   beforeInstall:
   - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - export VERSION=v0.2.0
     - export COMMON_VERSION=v0.2.0
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/capd-controller-manager.git /src
     - git clone --depth 1 --branch ${COMMON_VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix-common
     - cd /src

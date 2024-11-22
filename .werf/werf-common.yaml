@@ -31,9 +31,9 @@ mount:
 shell:
   beforeInstall:
   - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GOPROXY={{ .GOPROXY }}
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ .SOURCE_REPO }}/mikefarah/yq --branch "v4.9.6"
   - cd yq/
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/yq
@@ -47,9 +47,9 @@ mount:
 shell:
   beforeInstall:
   - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GOPROXY={{ .GOPROXY }}
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ .SOURCE_REPO }}/mikefarah/yq --branch v2.4.1
   - cd yq/
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/yq
@@ -60,8 +60,8 @@ from: {{ $.Images.BASE_ALPINE_DEV }}
 shell:
   beforeInstall:
   - apk add --no-cache git openssh-client
-  install:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
   - git clone {{ .SOURCE_REPO }}/fsaintjacques/semver-tool --branch 2.1.0
   - cd /semver-tool/
   - make install
@@ -72,8 +72,8 @@ from: {{ $.Images.BASE_ALPINE_DEV }}
 shell:
   beforeInstall:
   - apk add --no-cache git openssh-client
-  install:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
   - git clone {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0
   - cd /tini/
   - export CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
