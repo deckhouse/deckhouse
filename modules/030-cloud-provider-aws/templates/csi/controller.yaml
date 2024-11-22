@@ -17,6 +17,7 @@
     secretKeyRef:
       name: cloud-controller-manager
       key: aws-secret-access-key
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 ###

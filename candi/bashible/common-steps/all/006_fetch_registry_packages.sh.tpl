@@ -15,8 +15,5 @@
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesCniVersion := "1.4.0" | replace "." "" }}
 
-bb-set-proxy
-
 bb-package-fetch "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}" "kubectl:{{ index .images.registrypackages (printf "kubectl%s" $kubernetesVersion) | toString }}" "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}" "containerd:{{- index $.images.registrypackages "containerd1720" }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}" "d8:{{ .images.registrypackages.d8 }}"
 
-bb-unset-proxy

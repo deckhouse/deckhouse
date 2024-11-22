@@ -22,12 +22,9 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    bb-set-proxy
-
     case $(bb-is-bundle) in
       debian|ubuntu-lts|astra)  bb-apt-install nfs-common ;;
       altlinux)                 bb-apt-rpm-install nfs-utils ;;
       centos|redos|rosa)        bb-yum-install nfs-utils ;;
     esac
 
-    bb-unset-proxy

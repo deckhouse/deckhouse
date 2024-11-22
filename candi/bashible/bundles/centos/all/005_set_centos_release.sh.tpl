@@ -17,6 +17,5 @@ bundleName="${ID}-${VERSION_ID}"
 if ! [[ "$bundleName" =~ "centos-" ]]; then
  exit 0
 fi
-bb-set-proxy
 bb-yum-install "centos-release"
-bb-unset-proxy
+

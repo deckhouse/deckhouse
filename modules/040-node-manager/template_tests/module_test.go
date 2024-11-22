@@ -1058,8 +1058,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			bashibleSecrets := map[string]object_store.KubeObject{}
 			bashibleSecrets["bashible-bashbooster"] = f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster")
 
-			fmt.Println(f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-bashbooster").Field("data"))
-
 			roles := map[string]object_store.KubeObject{}
 			roles["bashible"] = f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible")
 			roles["bashible-mcm-bootstrapped-nodes"] = f.KubernetesResource("Role", "d8-cloud-instance-manager", "bashible-mcm-bootstrapped-nodes")

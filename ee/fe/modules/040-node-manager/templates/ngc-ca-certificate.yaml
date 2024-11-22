@@ -22,13 +22,9 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    bb-set-proxy
-
     case $(bb-is-bundle) in
       debian|ubuntu-lts|astra)  bb-apt-install ca-certificates ;;
       altlinux)                 bb-apt-rpm-install ca-certificates ;;
       centos|redos|rosa)        bb-yum-install ca-certificates ;;
       opensuse)                 bb-zypper-install ca-certificates ;;
     esac
-
-    bb-unset-proxy

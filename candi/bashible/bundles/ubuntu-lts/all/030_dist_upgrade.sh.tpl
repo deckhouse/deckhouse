@@ -13,7 +13,5 @@
 # limitations under the License.
 
 {{- if eq .runType "ImageBuilding" }}
-bb-set-proxy
 bb-apt-dist-upgrade
-bb-unset-proxy
 {{- end }}
