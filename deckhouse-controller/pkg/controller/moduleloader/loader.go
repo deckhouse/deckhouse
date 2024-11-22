@@ -236,7 +236,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *Definition, embedded boo
 			module := new(v1alpha1.Module)
 			if err := l.client.Get(ctx, client.ObjectKey{Name: def.Name}, module); err != nil {
 				if !apierrors.IsNotFound(err) {
-					return fmt.Errorf("get the '%s' module: %w", def.Name, err)
+					return fmt.Errorf("get the %q module: %w", def.Name, err)
 				}
 				if !embedded {
 					l.log.Warnf("the '%s' downloaded module does not exist, skip it", def.Name)
