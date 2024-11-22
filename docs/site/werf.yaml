@@ -167,7 +167,7 @@ git:
   includePaths:
   - "**/*-cni-cilium/openapi/*"
   - "**/*-control-plane-manager/openapi/*"
-  - "**/*-node-manager/openapi/*"
+  #- "**/*-node-manager/openapi/*"
   - "**/*-snapshot-controller/openapi/*"
   - "**/*-cert-manager/openapi/*"
   - "**/*-user-authz/openapi/*"

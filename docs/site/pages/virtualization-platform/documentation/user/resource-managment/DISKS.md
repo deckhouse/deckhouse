@@ -1,4 +1,6 @@
 ---
-title: "Deckhouse Virtualization Platform"
-permalink: en/virtualization-platform/documentation/user/resource-managment/disks.html
+title: "Disks"
+permalink: en/virtualization-platform/documentation/user/resource-management/disks.html
 ---
+
+In development
