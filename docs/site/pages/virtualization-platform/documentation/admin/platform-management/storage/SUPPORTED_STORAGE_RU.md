@@ -34,3 +34,69 @@ lang: ru
 DEFAULT_STORAGE_CLASS=replicated-storage-class
 d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
 ```
+
+### StorageClass по умолчанию для виртуального образа
+
+Альтернативно для виртуальных образов (с типом хранения PersistentVolumeClaim) можно установить отдельный StorageClass по умолчанию, который будет отличным от класса хранения по умолчанию на платформе.
+При этом необходимо явно задать список классов хранения, которые пользователь сможет явно выбирать в конфигурации ресурса VirtualImage.
+
+Для этого отредактируйте ModuleConfig `virtualization`:
+
+```shell        
+spec:
+  settings:
+    virtualImages:
+      # Установить свой класс хранения по умолчанию:
+      defaultStorageClassName: replicated-storage-class-r3
+      # Установите свои классы хранения, разрешенные пользователю для создания виртуальных дисков:
+      allowedStorageClassSelector:
+        matchNames:
+        - replicated-storage-class-r1
+        - replicated-storage-class-r2
+        - replicated-storage-class-r3
+```
+
+### StorageClass по умолчанию для виртуального диска
+
+Альтернативно для виртуальных дисков можно установить отдельный StorageClass по умолчанию, который будет отличным от класса хранения по умолчанию на платформе.
+При этом необходимо явно задать список классов хранения, которые пользователь сможет явно выбирать в конфигурации ресурса VirtualDisk.
+
+Для этого отредактируйте ModuleConfig `virtualization`:
+
+```shell        
+spec:
+  settings:
+    virtualDisks:
+      # Установить свой класс хранения по умолчанию:
+      defaultStorageClassName: replicated-storage-class-r3
+      # Установите свои классы хранения, разрешенные пользователю для создания виртуальных дисков:
+      allowedStorageClassSelector:
+        matchNames:
+        - replicated-storage-class-r1
+        - replicated-storage-class-r2
+        - replicated-storage-class-r3
+```
+
+### StorageClass для реестра контейнеров
+
+{% alert level="warning" %}
+Изменение класса хранения по умолчанию для реестра контейнеров DVCR будет применено,
+только если соответсвтующий PersistentVolumeClaim еще не был создан.
+{% endalert %}
+
+Для образов и дисков используется реестр контейнеров DVCR. Если реестр контейнеров DVCR использует PersistentVolumeClaim для хранения, 
+то можно явно определить используемый StorageClass. 
+
+Для этого измените конфигурацию ModuleConfig `virtualization`:
+
+```yaml
+spec:
+  settings:
+    dvcr:
+      storage:
+        # Использовать PersistentVolumeClaim в качестве хранилища для реестра контейнеров.
+        type: PersistentVolumeClaim
+        persistentVolumeClaim:
+          # Укажите имя своего StorageClass'a.
+          storageClassName: replicated-storage-class-r3
+```
