@@ -54,7 +54,7 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 		clusterConf := new(clusterConfig)
 		if err := yaml.Unmarshal(clusterConfigurationRaw, clusterConf); err != nil {
 			log.Debugf("failed to unmarshal cluster configuration: %v", err)
-			return nil, err
+			return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
 		}
 
 		if clusterConf.KubernetesVersion == "Automatic" {
@@ -67,7 +67,7 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 				return rejectResult(err.Error())
 			}
 			if mm.IsModuleEnabled(moduleName) {
-				log.Debugf("module %s has unsatisfied requierements", moduleName)
+				log.Debugf("the module %q has unsatisfied requirements", moduleName)
 				return rejectResult(err.Error())
 			}
 		}
