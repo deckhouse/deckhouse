@@ -203,7 +203,7 @@ function main() {
     if [ $uid -le 1000 ]; then
       bb-log-error "Uid for user $user_name must be > 1000"
       nodeuser_add_error "${user_name}" "Uid for user $user_name must be > 1000"
-      return
+      continue
     fi
 
     # Check user existence
@@ -213,52 +213,57 @@ function main() {
       if [[ "$(cut -d ":" -f5 <<< "$user_info")" != "$comment" ]]; then
         bb-log-error "User with UID $uid was created before by someone else"
         nodeuser_add_error "${user_name}" "User with UID $uid was created before by someone else"
-        return
+        continue
       fi
       # check username
       if [[ "$(cut -d ":" -f1 <<< "$user_info")" != "$user_name" ]]; then
         bb-log-error "Username of user with UID $uid was changed by someone else"
         nodeuser_add_error "${user_name}" "Username of user with UID $uid was changed by someone else"
-        return
+        continue
       fi
       # check mainGroup
       if [[ "$(cut -d ":" -f4 <<< "$user_info")" != "$main_group" ]]; then
         bb-log-error "User GID of user with UID $uid was changed by someone else"
         nodeuser_add_error "${user_name}" "User GID of user with UID $uid was changed by someone else"
-        return
+        continue
       fi
       # check homeDir
       if [[ "$(cut -d ":" -f6 <<< "$user_info")" != "$home_base_path/$user_name" ]]; then
         bb-log-error "User home dir of user with UID $uid was changed by someone else"
         nodeuser_add_error "${user_name}" "User home dir of user with UID $uid was changed by someone else"
-        return
+        continue
       fi
       # All ok, modify user
       error_message=$(modify_user "$user_name" "$extra_groups" "$password_hash" 2>&1)
       if bb-error?
       then
         nodeuser_add_error "${user_name}" "${error_message}"
-        return
+        continue
       fi
       error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
       if bb-error?
       then
         nodeuser_add_error "${user_name}" "${error_message}"
-        return
+        continue
       fi
+    elif id "$user_name" >/dev/null 2>&1; then
+      existing_uid=$(id -u "$user_name")
+      bb-log-error "User $user_name already exists with UID $existing_uid, expected UID $uid"
+      nodeuser_add_error "${user_name}" "User $user_name already exists with UID $existing_uid, expected UID $uid"
+      continue
     else
       # Adding user
       error_message=$(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name" 2>&1)
       if bb-error?
       then
         nodeuser_add_error "${user_name}" "${error_message}"
-        return
+        continue
       fi
       error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
       if bb-error?
       then
         nodeuser_add_error "${user_name}" "${error_message}"
-        return
+        continue
       fi
     fi
     nodeuser_clear_error "${user_name}"
