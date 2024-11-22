@@ -40,7 +40,7 @@ import (
 
 // refreshModule refreshes module in cluster
 func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
-	r.log.Debugf("refresh the '%s' module status", moduleName)
+	r.log.Debugf("refresh the %q module status", moduleName)
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			module := new(v1alpha1.Module)
