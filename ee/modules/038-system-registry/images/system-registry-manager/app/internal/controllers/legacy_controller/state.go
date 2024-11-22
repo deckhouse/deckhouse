@@ -3,21 +3,11 @@ Copyright 2024 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
-package registry_controller
+package legacy_controller
 
 import (
-	"crypto/x509"
-
 	util_time "embeded-registry-manager/internal/utils/time"
 )
-
-type state struct {
-	ModuleConfig ModuleConfig
-	CAPKI        x509.Certificate
-	AuthTokenPKI x509.Certificate
-	RWUser       RegistryUser
-	ROUser       RegistryUser
-}
 
 type RegistryUser struct {
 	UserName       string
