@@ -15,7 +15,7 @@ shell:
     - cd /src
     - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 {{ $.SOURCE_REPO }}/kubernetes/autoscaler.git .
-    - find /patches -name '*.patch' -exec git apply {} \;
+    - git apply /patches/*.patch --verbose
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd vertical-pod-autoscaler/pkg/admission-controller
