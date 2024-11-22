@@ -15,14 +15,21 @@
 package v1
 
 type HuaweiCloudProviderDiscoveryData struct {
-	APIVersion string               `json:"apiVersion,omitempty"`
-	Kind       string               `json:"kind,omitempty"`
-	Layout     string               `json:"layout,omitempty"`
-	Zones      []string             `json:"zones,omitempty"`
-	Instances  HuaweiCloudInstances `json:"instances,omitempty"`
+	APIVersion  string                  `json:"apiVersion,omitempty"`
+	Kind        string                  `json:"kind,omitempty"`
+	Layout      string                  `json:"layout,omitempty"`
+	Zones       []string                `json:"zones,omitempty"`
+	Instances   HuaweiCloudInstances    `json:"instances,omitempty"`
+	VolumeTypes []HuaweiCloudVolumeType `json:"volumeTypes,omitempty"`
 }
 
 type HuaweiCloudInstances struct {
 	VPCSubnetID     string `json:"vpcSubnetId,omitempty"`
 	SecurityGroupID string `json:"securityGroupId,omitempty"`
+}
+
+type HuaweiCloudVolumeType struct {
+	ID       string `json:"id,omitempty"`
+	Name     string `json:"name,omitempty"`
+	IsPublic bool   `json:"isPublic,omitempty"`
 }
