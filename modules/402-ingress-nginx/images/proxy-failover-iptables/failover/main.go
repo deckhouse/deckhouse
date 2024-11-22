@@ -61,27 +61,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if len(os.Args) > 1 && os.Args[1] == "remove" {
-		err = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
-		if err != nil {
-			log.Fatal(err)
-		}
-		link, err := netlink.LinkByName(linkName)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = netlink.LinkDel(link)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		os.Exit(0)
-	}
-
 	// during the failover rollout remove failover-jump-rule setting all traffic to primary
 	_ = iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...)
 	// do nothing on error, since ingress-failover chain may not exist yet
@@ -140,6 +119,27 @@ func main() {
 	err = insertUnique(iptablesMgr, "nat", "PREROUTING", jumpRule, 1)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if len(os.Args) > 1 && os.Args[1] == "remove" {
+		err = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		link, err := netlink.LinkByName(linkName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = netlink.LinkDel(link)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		os.Exit(0)
 	}
 
 	ticker := time.NewTicker(15 * time.Second)
