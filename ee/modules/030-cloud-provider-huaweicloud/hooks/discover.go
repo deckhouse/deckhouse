@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &meta.LabelSelector{
 				MatchLabels: map[string]string{
 					"heritage": "deckhouse",
-					"module":   "cloud-provider-zvirt",
+					"module":   "cloud-provider-huaweicloud",
 				},
 			},
 		},
@@ -82,7 +82,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
 		if len(input.Snapshots["storage_classes"]) == 0 {
-			input.Logger.Warn("failed to find storage classes for zvirt provisioner")
+			input.Logger.Warn("failed to find storage classes for huaweicloud provisioner")
 
 			return nil
 		}
@@ -100,11 +100,11 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			}
 			storageClasses = append(storageClasses, storageClass{
 				Name:                 sc.Name,
-				StorageDomain:        sc.Parameters["storageDomain"],
+				Type:                 sc.Parameters["type"],
 				AllowVolumeExpansion: allowVolumeExpansion,
 			})
 		}
-		input.Logger.Infof("Found zvirt storage classes using StorageClass snapshots: %v", storageClasses)
+		input.Logger.Infof("Found huaweicloud storage classes using StorageClass snapshots: %v", storageClasses)
 
 		setStorageClassesValues(input, storageClasses)
 
@@ -115,39 +115,39 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err := config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/zvirt/openapi"})
+	_, err := config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/huaweicloud/openapi"})
 	if err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	var discoveryData cloudDataV1.ZvirtCloudProviderDiscoveryData
+	var discoveryData cloudDataV1.HuaweiCloudProviderDiscoveryData
 	err = json.Unmarshal(discoveryDataJSON, &discoveryData)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	input.Values.Set("cloudProviderZvirt.internal.providerDiscoveryData", discoveryData)
+	input.Values.Set("cloudProviderHuaweicloud.internal.providerDiscoveryData", discoveryData)
 
-	handleDiscoveryDataVolumeTypes(input, discoveryData.StorageDomains)
+	handleDiscoveryDataVolumeTypes(input, discoveryData.VolumeTypes)
 
 	return nil
 }
 
 func handleDiscoveryDataVolumeTypes(
 	input *go_hook.HookInput,
-	storageDomains []cloudDataV1.ZvirtStorageDomain,
+	volumeTypes []cloudDataV1.HuaweiCloudVolumeType,
 ) {
-	storageClassStorageDomain := make(map[string]string, len(storageDomains))
+	storageClassStorageDomain := make(map[string]cloudDataV1.HuaweiCloudVolumeType, len(volumeTypes))
 
-	for _, domain := range storageDomains {
-		if !domain.IsEnabled {
+	for _, vt := range volumeTypes {
+		if !vt.IsPublic {
 			continue
 		}
 
-		storageClassStorageDomain[getStorageClassName(domain.Name)] = domain.Name
+		storageClassStorageDomain[getStorageClassName(vt.Name)] = vt
 	}
 
-	classExcludes, ok := input.Values.GetOk("cloudProviderZvirt.storageClass.exclude")
+	classExcludes, ok := input.Values.GetOk("cloudProviderHuaweicloud.storageClass.exclude")
 	if ok {
 		for _, esc := range classExcludes.Array() {
 			rg := regexp.MustCompile("^(" + esc.String() + ")$")
@@ -165,7 +165,7 @@ func handleDiscoveryDataVolumeTypes(
 		storageClassSnapshots[s.Name] = s
 	}
 
-	storageClasses := make([]storageClass, 0, len(storageDomains))
+	storageClasses := make([]storageClass, 0, len(volumeTypes))
 	for name, domain := range storageClassStorageDomain {
 		allowVolumeExpansion := true
 		if s, ok := storageClassSnapshots[name]; ok && s.AllowVolumeExpansion != nil {
@@ -173,7 +173,7 @@ func handleDiscoveryDataVolumeTypes(
 		}
 		sc := storageClass{
 			Name:                 name,
-			StorageDomain:        domain,
+			Type:                 domain.Name,
 			AllowVolumeExpansion: allowVolumeExpansion,
 		}
 		storageClasses = append(storageClasses, sc)
@@ -183,7 +183,7 @@ func handleDiscoveryDataVolumeTypes(
 		return storageClasses[i].Name < storageClasses[j].Name
 	})
 
-	input.Logger.Infof("Found zvirt storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
+	input.Logger.Infof("Found huaweicloud storage classes using StorageClass snapshots, StorageDomain discovery data: %v", storageClasses)
 
 	setStorageClassesValues(input, storageClasses)
 }
@@ -210,11 +210,11 @@ func getStorageClassName(value string) string {
 }
 
 func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
-	input.Values.Set("cloudProviderZvirt.internal.storageClasses", storageClasses)
+	input.Values.Set("cloudProviderHuaweicloud.internal.storageClasses", storageClasses)
 }
 
 type storageClass struct {
 	Name                 string `json:"name"`
-	StorageDomain        string `json:"storageDomain"`
+	Type                 string `json:"storageDomain"`
 	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
 }
