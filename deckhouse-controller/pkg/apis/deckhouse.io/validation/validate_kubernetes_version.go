@@ -67,7 +67,7 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 				return rejectResult(err.Error())
 			}
 			if mm.IsModuleEnabled(moduleName) {
-				log.Debugf("the '%s' module has unsatisfied requierements", moduleName)
+				log.Debugf("the module %q has unsatisfied requirements", moduleName)
 				return rejectResult(err.Error())
 			}
 		}
