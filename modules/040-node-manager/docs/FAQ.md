@@ -32,16 +32,16 @@ To add a static node to a cluster (bare metal server or virtual machine), follow
 
    - Add a new user (in this example, `caps`) with s`udo` privileges:
 
-   ```shell
-   useradd -m -s /bin/bash caps
-   usermod -aG sudo caps
-   ```
+     ```shell
+     useradd -m -s /bin/bash caps
+     usermod -aG sudo caps
+     ```
 
    - Allow the user to run `sudo` commands without having to enter a password. For this, add the following line to the `sudo` configuration on the server (you can either edit the `/etc/sudoers` file, or run the `sudo visudo` command, or use some other method):
 
-   ```shell
-   caps ALL=(ALL) NOPASSWD: ALL
-   ```
+     ```shell
+     caps ALL=(ALL) NOPASSWD: ALL
+     ```
 
 1. Set `UsePAM` to `yes` in `/etc/ssh/sshd_config` on server and restart sshd service:
 
@@ -164,7 +164,9 @@ You can automate the bootstrap process with any automation platform you prefer. 
 
 ### How do I clean up a static node manually?
 
-> This method is valid for both manually configured nodes (using the bootstrap script) and nodes configured using CAPS.
+{% alert level="info" %}
+This method is valid for both manually configured nodes (using the bootstrap script) and nodes configured using CAPS.
+{% endalert %}
 
 To decommission a node from the cluster and clean up the server (VM), run the following command on the node:
 
