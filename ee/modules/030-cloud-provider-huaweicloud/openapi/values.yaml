@@ -344,20 +344,10 @@ properties:
             uniqueItems: true
           instances:
             type: object
-          storageDomains:
+          volumeTypes:
             type: array
             items:
               type: object
-              required: [name]
-              properties:
-                name:
-                  type: string
-                  minLength: 1
-                isEnabled:
-                  type: boolean
-                isDefault:
-                  type: boolean
-            description: List of storage classes.
       storageClasses:
         type: array
         items:
