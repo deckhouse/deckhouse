@@ -18,11 +18,14 @@ package main
 
 import (
 	"errors"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/coreos/go-iptables/iptables"
@@ -45,26 +48,16 @@ var (
 	linkName = "ingressfailover"
 
 	natTable        = "nat"
+	filterTable     = "filter"
+	mangleTable     = "mangle"
 	preroutingChain = "PREROUTING"
+	inputChain      = "INPUT"
 )
 
 func main() {
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if len(os.Args) > 1 && os.Args[1] == "remove" {
-		err = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		os.Exit(0)
 	}
 
 	migrationRemoveOldRules(iptablesMgr)
@@ -75,71 +68,81 @@ func main() {
 	}
 
 	// during the failover rollout remove failover-jump-rule setting all traffic to primary
-	_ = iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...)
+	_ = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
 	// do nothing on error, since ingress-failover chain may not exist yet
 
 	// check 1081/1444 ports accepted
-	err = insertUnique(iptablesMgr, "filter", "INPUT", inputAcceptRule, 1)
+	err = insertUnique(iptablesMgr, filterTable, inputChain, inputAcceptRule, 1)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// restore conn mark
-	err = insertUnique(iptablesMgr, "mangle", "PREROUTING", restoreHttpMarkRule, 1)
+	err = insertUnique(iptablesMgr, mangleTable, preroutingChain, restoreHttpMarkRule, 1)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = insertUnique(iptablesMgr, "mangle", "PREROUTING", restoreHttpsMarkRule, 2)
+	err = insertUnique(iptablesMgr, mangleTable, preroutingChain, restoreHttpsMarkRule, 2)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// fill ingress-failover chain
-	if exists, err := iptablesMgr.ChainExists("nat", chainName); err != nil {
+	if exists, err := iptablesMgr.ChainExists(natTable, chainName); err != nil {
 		log.Fatal(err)
 	} else if !exists {
-		err = iptablesMgr.NewChain("nat", chainName)
+		err = iptablesMgr.NewChain(natTable, chainName)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
-	err = insertUnique(iptablesMgr, "nat", chainName, socketExistsRule, 1)
+	err = insertUnique(iptablesMgr, natTable, chainName, socketExistsRule, 1)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = insertUnique(iptablesMgr, "nat", chainName, markHttpRule, 2)
+	err = insertUnique(iptablesMgr, natTable, chainName, markHttpRule, 2)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = insertUnique(iptablesMgr, "nat", chainName, markHttpsRule, 3)
+	err = insertUnique(iptablesMgr, natTable, chainName, markHttpsRule, 3)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = insertUnique(iptablesMgr, "nat", chainName, saveMarkRule, 4)
+	err = insertUnique(iptablesMgr, natTable, chainName, saveMarkRule, 4)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = insertUnique(iptablesMgr, "nat", chainName, dnatHttpRule, 5)
+	err = insertUnique(iptablesMgr, natTable, chainName, dnatHttpRule, 5)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = insertUnique(iptablesMgr, "nat", chainName, dnatHttpsRule, 6)
+	err = insertUnique(iptablesMgr, natTable, chainName, dnatHttpsRule, 6)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// restore jump rule
-	err = insertUnique(iptablesMgr, "nat", "PREROUTING", jumpRule, 1)
+	err = insertUnique(iptablesMgr, natTable, preroutingChain, jumpRule, 1)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
-	done := make(chan bool)
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		select {
-		case <-done:
+		case <-signals:
+			err = iptablesMgr.DeleteIfExists(natTable, preroutingChain, jumpRule...)
+			if err != nil {
+				log.Fatal(err)
+			}
+			err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
+			if err != nil {
+				log.Fatal(err)
+			}
+
 			return
 		case <-ticker.C:
 			err := loop(iptablesMgr)
@@ -154,17 +157,19 @@ func loop(iptablesMgr *iptables.IPTables) error {
 	resp, err := http.Get("http://127.0.0.1:10254/healthz")
 	if err != nil {
 		log.Println(err)
-		return iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
+		return iptablesMgr.DeleteIfExists(natTable, chainName, socketExistsRule...)
 	}
 
-	defer resp.Body.Close()
+	defer func(body io.ReadCloser) {
+		_ = body.Close()
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Got %d status code", resp.StatusCode)
-		return iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
+		return iptablesMgr.DeleteIfExists(natTable, chainName, socketExistsRule...)
 	}
 
-	return insertUnique(iptablesMgr, "nat", chainName, socketExistsRule, 1)
+	return insertUnique(iptablesMgr, natTable, chainName, socketExistsRule, 1)
 }
 
 func insertUnique(iptablesMgr *iptables.IPTables, table, chain string, rule []string, pos int) error {
@@ -220,18 +225,18 @@ type rulespec struct {
 func migrationRemoveOldRules(iptablesMgr *iptables.IPTables) {
 	rules := []rulespec{
 		{
-			table: "nat",
+			table: natTable,
 			chain: chainName,
 			rule:  strings.Fields("-p tcp --dport 80 -j DNAT --to-destination 169.254.20.11:81"),
 		},
 		{
-			table: "nat",
+			table: natTable,
 			chain: chainName,
 			rule:  strings.Fields("-p tcp --dport 443 -j DNAT --to-destination 169.254.20.11:444"),
 		},
 		{
-			table: "filter",
-			chain: "INPUT",
+			table: filterTable,
+			chain: inputChain,
 			rule:  strings.Fields("-p tcp -m multiport --dport 81,444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT"),
 		},
 	}
