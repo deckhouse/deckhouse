@@ -24,3 +24,7 @@ apiVersions:
         uniqueItems: true
       instances:
         type: object
+      volumeTypes:
+        type: array
+        items:
+          type: object
