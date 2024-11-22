@@ -165,3 +165,14 @@
         Conflicting sources for the {{ $labels.moduleName }} module. Please specify the proper source in the module configuration.
       summary: |
         Conflict detected for module {{ $labels.moduleName }}.
+  - alert: ModuleConfigObsoleteVersion
+    expr: max by (name) (d8_module_config_obsolete_version) >= 1
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        ModuleConfig {{ $labels.name }} has an obsolete version, update to the latest.
+      summary: |
+        ModuleConfig has an obsolete version.
