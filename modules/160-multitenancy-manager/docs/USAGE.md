@@ -6,7 +6,6 @@ title: "The multitenancy-manager module: usage examples"
 ## Default project templates
 
 The following project templates are included in the Deckhouse Kubernetes Platform:
-- `empty` — an empty template without predefined resources;
 
 - `default` — a template that covers basic project use cases:
   * resource limitation;
@@ -15,14 +14,20 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
   * choice of security profile;
   * project administrators setup.
 
+  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/default/default.yaml#L2).
+
 - `secure` — includes all the capabilities of the `default` template and additional features:
   * setting up permissible UID/GID for the project;
   * audit rules for project users' access to the Linux kernel;
   * scanning of launched container images for CVE presence.
 
+  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/default/secure.yaml).
+
 - `secure-with-dedicated-nodes` — includes all the capabilities of the `secure` template and additional features:
   * defining the node selector for all the pods in the project: if a pod is created, the node selector pod will be **substituted** with the project's node selector automatically;
   * defining the default toleration for all the pods in the project: if a pod is created, the default toleration will be **added** to the pod automatically.
+
+  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/default/secure-with-dedicated-nodes.yaml).
 
 To list all available parameters for a project template, execute the command:
 
