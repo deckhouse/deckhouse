@@ -89,11 +89,11 @@ data:
   TRIVY_SKIP_DB_UPDATE: "false"
   TRIVY_DB_REPOSITORY: {{ $dbRepository }}
   {{- if or $.Values.global.modulesImages.registry.CA .Values.operatorTrivy.registriesCA }}
-  TRIVY_REGISTRY_CA: | 
-  {{- if $.Values.global.modulesImages.registry.CA }}
-  {{ $.Values.global.modulesImages.registry.CA | nindent 4 }}
-  {{- end }}
-  {{- if .Values.operatorTrivy.registriesCA }}
-  {{ .Values.operatorTrivy.registriesCA | nindent 4 }}
-  {{- end }}
-  {{- end }}
+  TRIVY_REGISTRY_CA: |
+    {{- if $.Values.global.modulesImages.registry.CA }}
+    {{ $.Values.global.modulesImages.registry.CA | nindent 4 }}
+    {{- end }}
+    {{- if .Values.operatorTrivy.registriesCA }}
+    {{ .Values.operatorTrivy.registriesCA | nindent 4 }}
+    {{- end }}
+    {{- end }}
