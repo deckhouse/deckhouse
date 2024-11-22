@@ -5,6 +5,7 @@
 # Based on https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (builder stage)
 ---
 artifact: {{ $.ModuleName }}/cilium-artifact
+fromCacheVersion: "2024-11-21.0"
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -51,6 +52,8 @@ shell:
   - cd /go/src/github.com/cilium/cilium
   - find /patches -name '*.patch' | xargs git apply --verbose
   - go mod tidy && go mod vendor && go mod verify
+  # git-adding files from patches to force build script take them into account
+  - git add .
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
   - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
