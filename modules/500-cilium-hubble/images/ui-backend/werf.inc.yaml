@@ -16,12 +16,12 @@ mount:
 shell:
   beforeInstall:
   - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - export "GOARCH=amd64"
   - mkdir -p /go/src/github.com/cilium/hubble-ui
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /go/src/github.com/cilium/hubble-ui
   - cd /go/src/github.com/cilium/hubble-ui/backend
   - git apply /patches/*.patch --verbose

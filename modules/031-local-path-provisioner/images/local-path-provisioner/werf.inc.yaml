@@ -24,10 +24,10 @@ mount:
     to: /go/pkg
 shell:
   beforeInstall:
-    - apk add --no-cache openssh-client
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - mkdir /src
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
     - cd /src
     - git apply /patches/*.patch --verbose

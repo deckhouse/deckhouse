@@ -56,12 +56,12 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-    - apk add --no-cache openssh-client
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ $.SOURCE_REPO }}/flant/vsphere-csi-driver.git /src
   - cd /src
   - git checkout 6189afc2522d83a96d3857110c61478710110347

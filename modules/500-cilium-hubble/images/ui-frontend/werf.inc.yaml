@@ -13,11 +13,11 @@ git:
 shell:
   beforeInstall:
   - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export "TARGETOS=linux"
   - export "TARGETARCH=amd64"
   - mkdir -p /app
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} {{ $.SOURCE_REPO }}/cilium/hubble-ui.git /app
   - cd /app
   - git apply /patches/*.patch --verbose
