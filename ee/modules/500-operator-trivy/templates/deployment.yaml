@@ -89,7 +89,7 @@ spec:
             {{- .Values.operatorTrivy.registriesCA | nindent 14 }}
             {{- end }}
           - name: TRIVY_REGISTRY_CA
-            value: |
+            value: |-
             {{- if $.Values.global.modulesImages.registry.CA }}
             {{- $.Values.global.modulesImages.registry.CA | nindent 14 }}
             {{- end }}
