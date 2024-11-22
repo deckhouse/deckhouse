@@ -5,8 +5,6 @@ description: Рекомендации по подготовке Deckhouse Virtua
 lang: ru
 ---
 
-TODO: пофиксить все ссылки
-
 Приведенные ниже рекомендации могут быть неактуальны для тестового кластера или кластера разработки, но важны для production-кластера.
 
 ## Канал и режим обновлений
@@ -15,7 +13,7 @@ TODO: пофиксить все ссылки
 Используйте канал обновлений `Early Access` или `Stable`. Установите [окно автоматических обновлений](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/usage.html#конфигурация-окон-обновлений) или [ручной режим](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/usage.html#ручное-подтверждение-обновлений).
 {% endalert %}
 
-Выберите [канал обновлений](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-release-channels.html) и [режим обновлений](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html#parameters-releasechannel), который соответствует вашим ожиданиям. Чем стабильнее канал обновлений, тем позже до него доходит новая функциональность.
+Выберите [канал обновлений](../admin/update-channels.html) и [режим обновлений](./admin/update/update.html##каналы-обновлений) который соответствует вашим ожиданиям. Чем стабильнее канал обновлений, тем позже до него доходит новая функциональность.
 
 По возможности используйте разные каналы обновлений для кластеров. Для кластера разработки используйте менее стабильный канал обновлений, нежели для тестового или stage-кластера (pre-production-кластер).
 
