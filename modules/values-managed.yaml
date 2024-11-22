@@ -17,6 +17,7 @@ monitoringCustomEnabled: true
 monitoringDeckhouseEnabled: true
 monitoringKubernetesEnabled: true
 monitoringPingEnabled: true
+multitenancyManagerEnabled: true
 namespaceConfiguratorEnabled: true
 operatorPrometheusCrdEnabled: true
 operatorPrometheusEnabled: true
