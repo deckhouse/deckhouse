@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -47,13 +46,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create Kubernetes client
-	kubeClient, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		log.Error(err, "Unable to create Kubernetes client")
-		os.Exit(1)
-	}
-
 	ctx := ctrl.SetupSignalHandler()
 
 	context.AfterFunc(ctx, func() {
@@ -61,7 +53,7 @@ func main() {
 	})
 
 	// Set up and start manager
-	err = setupAndStartManager(ctx, cfg, kubeClient)
+	err = setupAndStartManager(ctx, cfg)
 	if err != nil {
 		ctrl.Log.Error(err, "Failed to start the embedded registry manager")
 	}
@@ -74,7 +66,7 @@ func main() {
 }
 
 // setupAndStartManager sets up the manager, adds components, and starts the manager
-func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kubernetes.Clientset) error {
+func setupAndStartManager(ctx context.Context, cfg *rest.Config) error {
 	// Set up the manager with leader election and other options
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Metrics: metricsserver.Options{
