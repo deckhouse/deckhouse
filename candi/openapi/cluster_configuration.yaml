@@ -70,7 +70,7 @@ apiVersions:
             - "VCD"
             - "Zvirt"
             - "Dynamix"
-            - "HuaweiCloud"
+            - "Huaweicloud"
           prefix:
             type: string
             description: |
