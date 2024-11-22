@@ -96,6 +96,20 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: REGISTRY_ADDRESS
+          value: {{ $.Values.global.modulesImages.registry.address }}
+        - name: REGISTRY_PATH
+          value: {{ $.Values.global.modulesImages.registry.path }}
+        - name: IMAGE_DOCKER_AUTH
+          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}"
+        - name: IMAGE_DOCKER_DISTRIBUTION
+          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
+        - name: IMAGE_SEAWEEDFS
+          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz

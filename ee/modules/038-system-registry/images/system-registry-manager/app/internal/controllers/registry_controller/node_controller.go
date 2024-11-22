@@ -8,6 +8,7 @@ package registry_controller
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,6 +31,8 @@ const (
 	labelHeritageValue       = "deckhouse"
 	labelNodeIsMasterKey     = "node-role.kubernetes.io/master"
 )
+
+var nodePKISecretRegex = regexp.MustCompile(`^registry-node-(.*)-pki$`)
 
 type NodeController = nodeController
 
@@ -294,4 +297,9 @@ func nodeObjectIsMaster(obj client.Object) bool {
 	_, hasMasterLabel := labels["node-role.kubernetes.io/master"]
 
 	return hasMasterLabel
+}
+
+func hasMasterLabel(node *corev1.Node) bool {
+	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
+	return isMaster
 }

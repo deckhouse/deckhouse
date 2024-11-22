@@ -29,10 +29,13 @@ var (
 	shutdownSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
 
 	logHandler slog.Handler = dlog.Default().Handler()
+
+	nodeName = os.Getenv("NODE_NAME")
 )
 
 func main() {
 	log := slog.New(logHandler).With("component", "main")
+	log = log.With("node", nodeName)
 
 	log.Info("Starting static pod manager")
 	defer log.Info("Stopped")

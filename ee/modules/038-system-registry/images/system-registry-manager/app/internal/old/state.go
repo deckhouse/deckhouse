@@ -7,7 +7,6 @@ package registry_controller
 
 import (
 	"crypto/x509"
-	"sync"
 
 	util_time "embeded-registry-manager/internal/utils/time"
 )
@@ -52,15 +51,4 @@ type ProxyConfig struct {
 	Password    string              `json:"password"`
 	StorageMode StorageMode         `json:"storageMode"` // enum: S3, Fs
 	TTL         *util_time.Duration `json:"ttl"`
-}
-
-type stateHolder struct {
-	mu    sync.Mutex
-	state *state
-}
-
-func (sh *stateHolder) GetState() {
-	sh.mu.Lock()
-	defer sh.mu.Unlock()
-
 }

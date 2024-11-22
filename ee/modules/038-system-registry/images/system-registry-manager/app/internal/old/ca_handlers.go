@@ -15,7 +15,7 @@ import (
 	"embeded-registry-manager/internal/utils/k8s"
 )
 
-func (r *RegistryReconciler) handleRegistryCaPKI(ctx context.Context, req ctrl.Request, secret *corev1.Secret) error {
+func (r *RegistryReconciler) handleCAPKI(ctx context.Context, req ctrl.Request, secret *corev1.Secret) error {
 	logger := ctrl.LoggerFrom(ctx)
 	err := r.Get(ctx, req.NamespacedName, secret)
 

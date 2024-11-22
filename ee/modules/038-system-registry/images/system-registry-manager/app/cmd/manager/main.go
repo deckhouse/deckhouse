@@ -23,7 +23,6 @@ import (
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
 
 	"embeded-registry-manager/internal/controllers/registry_controller"
-	httpclient "embeded-registry-manager/internal/utils/http_client"
 	"embeded-registry-manager/internal/utils/k8s"
 )
 
@@ -34,11 +33,6 @@ const (
 )
 
 var logHandler slog.Handler = dlog.Default().Handler()
-
-// TODO: Remove before release
-var newCode = false
-
-// TODO: Remove before release
 
 func main() {
 	ctrl.SetLogger(logr.FromSlogHandler(logHandler))
@@ -60,13 +54,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create custom HTTP client
-	httpClient, err := httpclient.NewDefaultHttpClient()
-	if err != nil {
-		log.Error(err, "Unable to create HTTP client")
-		os.Exit(1)
-	}
-
 	ctx := ctrl.SetupSignalHandler()
 
 	context.AfterFunc(ctx, func() {
@@ -74,7 +61,7 @@ func main() {
 	})
 
 	// Set up and start manager
-	err = setupAndStartManager(ctx, cfg, kubeClient, httpClient)
+	err = setupAndStartManager(ctx, cfg, kubeClient)
 	if err != nil {
 		ctrl.Log.Error(err, "Failed to start the embedded registry manager")
 	}
@@ -87,7 +74,7 @@ func main() {
 }
 
 // setupAndStartManager sets up the manager, adds components, and starts the manager
-func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kubernetes.Clientset, httpClient *httpclient.Client) error {
+func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kubernetes.Clientset) error {
 	// Set up the manager with leader election and other options
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Metrics: metricsserver.Options{
@@ -116,56 +103,23 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, kubeClient *kub
 		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
-	if newCode {
-		nodeController := registry_controller.NodeController{
-			Client:    mgr.GetClient(),
-			Namespace: namespace,
-		}
+	nodeController := registry_controller.NodeController{
+		Client:    mgr.GetClient(),
+		Namespace: namespace,
+	}
 
-		if err := nodeController.SetupWithManager(ctx, mgr); err != nil {
-			return fmt.Errorf("unable to create node controller: %w", err)
-		}
+	if err := nodeController.SetupWithManager(ctx, mgr); err != nil {
+		return fmt.Errorf("unable to create node controller: %w", err)
+	}
 
-		stateController := registry_controller.StateController{
-			Client:            mgr.GetClient(),
-			Namespace:         namespace,
-			ReprocessAllNodes: nodeController.ReprocessAllNodes,
-		}
+	stateController := registry_controller.StateController{
+		Client:            mgr.GetClient(),
+		Namespace:         namespace,
+		ReprocessAllNodes: nodeController.ReprocessAllNodes,
+	}
 
-		if err := stateController.SetupWithManager(ctx, mgr); err != nil {
-			return fmt.Errorf("unable to create state controller: %w", err)
-		}
-
-	} else {
-		// Create a new instance of RegistryReconciler
-		reconciler := registry_controller.RegistryReconciler{
-			Client:     mgr.GetClient(),
-			APIReader:  mgr.GetAPIReader(),
-			KubeClient: kubeClient,
-			Recorder:   mgr.GetEventRecorderFor("embedded-registry-controller"),
-			HttpClient: httpClient,
-		}
-
-		// Set up the controller with the manager
-		if err := reconciler.SetupWithManager(mgr, ctx); err != nil {
-			return fmt.Errorf("unable to create controller: %w", err)
-		}
-
-		// Add leader status update runnable
-		err = mgr.Add(leaderRunnableFunc(func(ctx context.Context) error {
-			// Call SecretsStartupCheckCreate with the existing reconciler instance
-			if err := reconciler.SecretsStartupCheckCreate(ctx); err != nil {
-				return fmt.Errorf("failed to initialize secrets: %w", err)
-			}
-
-			// Wait until the context is done to handle graceful shutdown
-			<-ctx.Done()
-			return nil
-		}))
-
-		if err != nil {
-			return fmt.Errorf("unable to add leader runnable: %w", err)
-		}
+	if err := stateController.SetupWithManager(ctx, mgr); err != nil {
+		return fmt.Errorf("unable to create state controller: %w", err)
 	}
 
 	// Start the manager

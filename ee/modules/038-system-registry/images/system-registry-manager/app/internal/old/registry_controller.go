@@ -196,7 +196,7 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	switch {
 	// Check if the secret is the registry-pki secret
 	case req.NamespacedName.Name == "registry-pki":
-		err := r.handleRegistryCaPKI(ctx, req, secret)
+		err := r.handleCAPKI(ctx, req, secret)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -427,7 +427,7 @@ func (r *RegistryReconciler) extractModuleConfigFieldsFromObject(cr *unstructure
 }
 
 func hasMasterLabel(node *corev1.Node) bool {
-	_, isMaster := node.Labels[labelNodeIsMasterKey]
+	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
 	return isMaster
 }
 
