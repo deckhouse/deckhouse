@@ -293,7 +293,7 @@ function main() {
         done
       else
         bb-log-error "Strange user with UID: $local_user_id, cannot delete it"
-        return
+        continue
       fi
     fi
   done
