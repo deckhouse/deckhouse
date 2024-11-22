@@ -109,7 +109,7 @@ $(document).ready(function() {
       }
   });
 
-  triggerBlockOnItemContent('[license-token]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
+  {% comment %}triggerBlockOnItemContent('[license-token]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});{% endcomment %}
 
   generate_password(true);
   replace_snippet_password();

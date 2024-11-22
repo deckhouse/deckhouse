@@ -49,6 +49,12 @@
           "url": "/products/virtualization-platform/documentation/",
           "target": "",
           "rel": "doc"
+        },
+        {
+          "title": "Быстрый старт",
+          "url": "/products/virtualization-platform/gs/bm/",
+          "target": "",
+          "rel": ""
         }
       ]
     },

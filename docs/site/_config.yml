@@ -82,7 +82,7 @@ defaults:
       sidebar: main
       multilang: true
       comparable: true
-      productCode: kubernetes-platform
+      product_code: kubernetes-platform
       lang: en
   - scope:
       path: "pages/includes"
@@ -104,7 +104,7 @@ defaults:
     values:
       toc_in_sidebar: false
       toc: false
-      productCode: virtualization-platform
+      product_code: virtualization-platform
       sidebar: virtualization-platform
   - scope:
       path: "modules_ru"
