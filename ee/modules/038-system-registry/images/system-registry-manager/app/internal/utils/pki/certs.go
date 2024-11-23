@@ -17,14 +17,14 @@ import (
 	"github.com/cloudflare/cfssl/signer/local"
 )
 
-type Certificate struct {
+type CertKey struct {
 	Cert *x509.Certificate
 	Key  crypto.Signer
 }
 
 // GenerateCA generates a new CA certificate and key.
-func GenerateCACertificate(commonName string) (Certificate, error) {
-	var ret Certificate
+func GenerateCACertificate(commonName string) (CertKey, error) {
+	var ret CertKey
 
 	req := &csr.CertificateRequest{
 		CN: commonName,
@@ -56,8 +56,8 @@ func GenerateCACertificate(commonName string) (Certificate, error) {
 }
 
 // GenerateCertificate generates a new certificate and key signed by the provided CA certificate and key.
-func GenerateCertificate(commonName string, hosts []string, ca Certificate) (Certificate, error) {
-	var ret Certificate
+func GenerateCertificate(commonName string, hosts []string, ca CertKey) (CertKey, error) {
+	var ret CertKey
 
 	req := csr.CertificateRequest{
 		CN: commonName,

@@ -29,7 +29,7 @@ type Certificate struct {
 
 // generateCA generates a new CA certificate and key.
 func generateCA() (caCertPEM []byte, caKeyPEM []byte, err error) {
-	var caPKI pki.Certificate
+	var caPKI pki.CertKey
 
 	if caPKI, err = pki.GenerateCACertificate(CACommonName); err != nil {
 		return
@@ -43,7 +43,7 @@ func generateCA() (caCertPEM []byte, caKeyPEM []byte, err error) {
 
 // generateCertificate generates a new certificate and key signed by the provided CA certificate and key.
 func generateCertificate(commonName string, hosts []string, caCertPEM []byte, caKeyPEM []byte) (certPEM, keyPEM []byte, err error) {
-	var caPKI, retPKI pki.Certificate
+	var caPKI, retPKI pki.CertKey
 
 	if caPKI.Cert, err = pki.DecodeCertificate(caCertPEM); err != nil {
 		return

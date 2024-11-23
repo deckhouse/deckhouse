@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"regexp"
 
+	"embeded-registry-manager/internal/state"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,15 +26,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	labelTypeKey             = "type"
-	labelNodeSecretTypeValue = "node-secret"
-	labelHeritageKey         = "heritage"
-	labelHeritageValue       = "deckhouse"
-	labelNodeIsMasterKey     = "node-role.kubernetes.io/master"
+var (
+	nodePKISecretRegex        = regexp.MustCompile(`^registry-node-(.*)-pki$`)
+	masterNodesMatchingLabels = client.MatchingLabels{
+		state.LabelNodeIsMasterKey: "",
+	}
 )
-
-var nodePKISecretRegex = regexp.MustCompile(`^registry-node-(.*)-pki$`)
 
 type NodeController = nodeController
 
@@ -166,12 +165,8 @@ func (nc *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, 
 	log.Info("All nodes will be reprocessed")
 
 	// Will trigger reprocess for all master nodes
-	opts := client.MatchingLabels{
-		labelNodeIsMasterKey: "",
-	}
-
 	nodes := &corev1.NodeList{}
-	if err := nc.Client.List(ctx, nodes, &opts); err != nil {
+	if err := nc.Client.List(ctx, nodes, &masterNodesMatchingLabels); err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot list nodes: %w", err)
 	}
 
@@ -207,9 +202,29 @@ func (nc *nodeController) ReprocessAllNodes(ctx context.Context) error {
 func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	log.Info("Handle master node", "node", node.Name)
+	log.Info("Processing master node", "node", node.Name)
 
 	return ctrl.Result{}, nil
+}
+
+func (nc *nodeController) isFirstMasterNode(ctx context.Context, node *corev1.Node) (bool, error) {
+	// Will trigger reprocess for all master nodes
+	nodes := &corev1.NodeList{}
+	if err := nc.Client.List(ctx, nodes, &masterNodesMatchingLabels); err != nil {
+		return false, fmt.Errorf("cannot list nodes: %w", err)
+	}
+
+	for _, item := range nodes.Items {
+		if item.Name == node.Name {
+			continue
+		}
+
+		if item.CreationTimestamp.Before(&node.CreationTimestamp) {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (nc *nodeController) handleNodeNotMaster(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
@@ -273,11 +288,11 @@ func (nc *nodeController) reprocessChannelSource() source.Source {
 func secretObjectIsNodePKI(obj client.Object) bool {
 	labels := obj.GetLabels()
 
-	if labels[labelTypeKey] != labelNodeSecretTypeValue {
+	if labels[state.LabelTypeKey] != state.LabelNodeSecretTypeValue {
 		return false
 	}
 
-	if labels[labelHeritageKey] != labelHeritageValue {
+	if labels[state.LabelHeritageKey] != state.LabelHeritageValue {
 		return false
 	}
 
