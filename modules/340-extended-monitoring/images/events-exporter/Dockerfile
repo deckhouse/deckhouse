@@ -22,8 +22,8 @@ ENV GOPROXY=${GOPROXY}
 
 ENV GOARCH=amd64
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-RUN apk add --no-cache make git && \
-    git clone --branch v0.0.4 --depth 1 ${SOURCE_REPO}/nabokihms/events_exporter.git . && \
+RUN apk add --no-cache make git
+RUN --mount=type=ssh git clone --branch v0.0.4 --depth 1 ${SOURCE_REPO}/nabokihms/events_exporter.git . && \
     make build && \
     chown -R 64535:64535 /usr/local/src/ && \
     chmod 0700 /usr/local/src/events_exporter/bin/events_exporter
