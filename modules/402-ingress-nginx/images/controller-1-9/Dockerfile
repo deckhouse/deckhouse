@@ -29,9 +29,9 @@ RUN apt-get update && \
 
 ENV NINJA_STATUS "[%p/%f/%t] "
 
-RUN bash /opt/third_party/build.sh -o v1.11.0-flant
+RUN --mount=type=ssh /opt/third_party/build.sh -o v1.11.0-flant
 RUN cp -r /opt/third_party/install/* /usr/
-RUN bash /opt/third_party/build.sh -n
+RUN --mount=type=ssh /opt/third_party/build.sh -n
 
 # Build luarocks assets
 FROM $BASE_ALT_DEV as luarocks-builder
