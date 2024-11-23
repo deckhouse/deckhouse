@@ -141,6 +141,8 @@ spec:
             value: "10h"
           - name: OPERATOR_MERGE_RBAC_FINDING_WITH_CONFIG_AUDIT
             value: "false"
+          - name: OPERATOR_USE_LOCAL_POLICIES
+            value: "true"
         ports:
           - name: metrics
             containerPort: 8080
