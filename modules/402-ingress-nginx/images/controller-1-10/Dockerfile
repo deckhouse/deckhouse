@@ -40,17 +40,24 @@ ENV SOURCE_REPO=${SOURCE_REPO} \
 WORKDIR /src/
 RUN apk add --no-cache openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-COPY patches/lua-info.patch /patches/
-COPY patches/makefile.patch /patches/
-COPY patches/healthcheck.patch /patches/
-COPY patches/metrics-SetSSLExpireTime.patch /patches/
-COPY patches/util.patch /patches/
-COPY patches/fix-cleanup.patch /patches/
-COPY patches/add-http3.patch /patches/
-COPY patches/new-metrics.patch /patches/
+COPY patches/lua-info.patch /
+COPY patches/makefile.patch /
+COPY patches/healthcheck.patch /
+COPY patches/metrics-SetSSLExpireTime.patch /
+COPY patches/util.patch /
+COPY patches/fix-cleanup.patch /
+COPY patches/add-http3.patch /
+COPY patches/new-metrics.patch /
 ENV GOARCH=amd64
 RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src
-RUN patch apply /patch/*.patch --verbose
+RUN patch -p1 < /lua-info.patch && \
+patch -p1 < /makefile.patch && \
+patch -p1 < /healthcheck.patch && \
+patch -p1 < /metrics-SetSSLExpireTime.patch && \
+patch -p1 < /util.patch && \
+patch -p1 < /fix-cleanup.patch && \
+patch -p1 < /add-http3.patch && \
+patch -p1 < /new-metrics.patch
 RUN make GO111MODULE=on USE_DOCKER=false build
 
 # Build nginx for ingress controller
