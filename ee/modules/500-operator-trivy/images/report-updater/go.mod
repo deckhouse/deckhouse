@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/aquasecurity/trivy-operator v0.15.1
+	github.com/google/go-containerregistry v0.15.2
 	github.com/opencontainers/image-spec v1.1.0-rc4
 	k8s.io/api v0.28.1
 	oras.land/oras-go/v2 v2.3.0
@@ -20,7 +21,6 @@ require (
 	github.com/fatih/color v1.14.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/google/go-containerregistry v0.15.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/masahiro331/go-xfs-filesystem v0.0.0-20230608043311-a335f4599b70 // indirect

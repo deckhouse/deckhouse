@@ -66,8 +66,7 @@ func (h *Handler) createPatch(req *admissionv1.AdmissionReview) ([]patchOperatio
 	var patches []patchOperation
 	var report v1alpha1.VulnerabilityReport
 
-	err := json.Unmarshal(req.Request.Object.Raw, &report)
-	if err != nil {
+	if err := json.Unmarshal(req.Request.Object.Raw, &report); err != nil {
 		return nil, err
 	}
 

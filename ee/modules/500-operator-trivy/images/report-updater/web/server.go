@@ -36,14 +36,14 @@ func buildTLSConfig() (*tls.Config, error) {
 	{ // kube-apiserver requests
 		clientCertBytes, err := os.ReadFile(authClientCA)
 		if err != nil {
-			return nil, fmt.Errorf("reading %s: %v", authClientCA, err)
+			return nil, fmt.Errorf("reading %s: %w", authClientCA, err)
 		}
 		clientCertPool.AppendCertsFromPEM(clientCertBytes)
 	}
 	{ // kubelet liveness probe requests
 		clientCertBytes, err := os.ReadFile(sslListenCert)
 		if err != nil {
-			return nil, fmt.Errorf("reading %s: %v", sslListenCert, err)
+			return nil, fmt.Errorf("reading %s: %w", sslListenCert, err)
 		}
 		clientCertPool.AppendCertsFromPEM(clientCertBytes)
 	}
@@ -119,12 +119,11 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	s.logger.Println("server is starting to listen on ", listenAddr, "...")
+	s.logger.Printf("server is starting to listen on '%s' ...\n", listenAddr)
 
 	go s.handler.StartRenewCacheLoop()
-
 	if err := httpServer.ListenAndServeTLS(sslListenCert, sslListenKey); err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("could not listen on %s: %v", listenAddr, err)
+		return fmt.Errorf("could not listen on %s: %w", listenAddr, err)
 	}
 
 	return nil
