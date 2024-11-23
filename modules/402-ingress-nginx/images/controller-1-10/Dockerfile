@@ -47,7 +47,7 @@ COPY patches/metrics-SetSSLExpireTime.patch /
 COPY patches/util.patch /
 COPY patches/fix-cleanup.patch /
 COPY patches/add-http3.patch /
-COPY patches/new-metrics.patch /
+COPY patches/new-metrics.patch
 ENV GOARCH=amd64
 RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src
 RUN patch -p1 < /lua-info.patch && \
