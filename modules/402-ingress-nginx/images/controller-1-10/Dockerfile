@@ -39,7 +39,14 @@ ENV SOURCE_REPO=${SOURCE_REPO} \
     GOPROXY=${GOPROXY}
 WORKDIR /src/
 RUN apk add --no-cache openssh-client
-COPY patches/*.patch /patches/
+COPY patches/lua-info.patch /patches/
+COPY patches/makefile.patch /patches/
+COPY patches/healthcheck.patch /patches/
+COPY patches/metrics-SetSSLExpireTime.patch /patches/
+COPY patches/util.patch /patches/
+COPY patches/fix-cleanup.patch /patches/
+COPY patches/add-http3.patch /patches/
+COPY patches/new-metrics.patch /patches/
 ENV GOARCH=amd64
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \

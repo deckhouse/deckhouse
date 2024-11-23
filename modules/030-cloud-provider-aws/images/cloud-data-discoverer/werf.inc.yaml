@@ -36,8 +36,8 @@ git:
       - go.sum
     setup:
       - "**/*.go"
-- add: /go_lib/cloud-data/
-  to: /deckhouse/go_lib/cloud-data/
+- add: /go_lib/cloud-data
+  to: /deckhouse/go_lib/cloud-data
   excludePaths:
     - "**/*.md"
     - "**/*.yaml"

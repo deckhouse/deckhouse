@@ -56,13 +56,20 @@ ARG GOPROXY
 ENV SOURCE_REPO=${SOURCE_REPO} \
     GOPROXY=${GOPROXY}
 WORKDIR /src/
-COPY patches/*.patch /patches/
+COPY patches/lua-info.patch /patches/
+COPY patches/makefile.patch /patches/
+COPY patches/healthcheck.patch /patches/
+COPY patches/metrics-SetSSLExpireTime.patch /patches/
+COPY patches/util.patch /patches/
+COPY patches/fix-cleanup.patch /patches/
+COPY patches/geoip.patch /patches/
+COPY patches/new-metrics.patch /patches/
 ENV GOARCH=amd64
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
     # jaegertracing hunter deps
-    git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter && \
-    git apply /patches/*.patch --verbose
+    git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
+RUN git apply /patches/*.patch --verbose
 RUN make GO111MODULE=on USE_DOCKER=false build
 
 # Build nginx for ingress controller
