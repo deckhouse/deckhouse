@@ -649,6 +649,10 @@ jobs:
         run: |
           HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
           echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
           mkdir -p ~/.ssh
           touch ~/.ssh/known_hosts
           HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
