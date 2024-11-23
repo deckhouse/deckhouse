@@ -125,15 +125,6 @@ func generateJob(registry, digest string) *batchv1.Job {
 						},
 					},
 					RestartPolicy: corev1.RestartPolicyNever,
-					HostPID:       true,
-					NodeSelector: map[string]string{
-						"node-role.kubernetes.io/loadbalancer": "",
-					},
-					Tolerations: []corev1.Toleration{
-						{
-							Operator: corev1.TolerationOpExists,
-						},
-					},
 				},
 			},
 		},

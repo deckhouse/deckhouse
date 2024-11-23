@@ -65,6 +65,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-openapi/errors v0.19.7
+	github.com/go-openapi/swag v0.22.5
 	github.com/gofrs/uuid/v5 v5.3.0
 	github.com/itchyny/gojq v0.12.15
 	github.com/jonboulle/clockwork v0.4.0
@@ -79,6 +80,7 @@ require (
 	k8s.io/kubectl v0.29.0
 	sigs.k8s.io/controller-runtime v0.17.0
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd
+	sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3
 )
 
 require (
@@ -134,7 +136,6 @@ require (
 	github.com/go-openapi/loads v0.19.5 // indirect
 	github.com/go-openapi/runtime v0.19.16 // indirect
 	github.com/go-openapi/strfmt v0.19.5 // indirect
-	github.com/go-openapi/swag v0.22.5 // indirect
 	github.com/go-openapi/validate v0.19.12 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
@@ -247,7 +248,6 @@ require (
 	k8s.io/klog v1.0.0 // indirect
 	oras.land/oras-go v1.2.6 // indirect
 	sigs.k8s.io/kustomize/api v0.13.5-0.20230601165947-6ce0bf390ce3 // indirect
-	sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
 

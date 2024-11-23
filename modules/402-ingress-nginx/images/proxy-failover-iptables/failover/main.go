@@ -49,6 +49,7 @@ var (
 )
 
 func main() {
+	log.Default().Print("Start iptables-loop")
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
 		log.Fatal(err)
@@ -56,6 +57,7 @@ func main() {
 
 	migrationRemoveOldRules(iptablesMgr)
 
+	log.Default().Print("Create link")
 	err = addLinkAndAddress()
 	if err != nil {
 		log.Fatal(err)
@@ -66,6 +68,7 @@ func main() {
 	// do nothing on error, since ingress-failover chain may not exist yet
 
 	if len(os.Args) > 1 && os.Args[1] == "remove" {
+		log.Default().Print("Remove iptables rules")
 		err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
 		if err != nil {
 			log.Fatal("failed to clear and delete chain", err)
