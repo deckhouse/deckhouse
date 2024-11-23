@@ -9,7 +9,7 @@ WORKDIR /dex
 RUN apk add --no-cache openssh-client
 COPY patches/*.patch /patches/
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-RUN git clone --branch v2.41.1 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
+RUN --mount=type=ssh git clone --branch v2.41.1 --depth 1 ${SOURCE_REPO}/dexidp/dex.git . \
   && git apply /patches/*.patch --verbose
 
 RUN CGO_ENABLED=1 GOOS=linux go build -ldflags '-s -w' -ldflags "-linkmode external -extldflags -static" -tags netgo ./cmd/dex

@@ -14,7 +14,7 @@ ENV GOPROXY=${GOPROXY} \
 
 RUN apk add --no-cache openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-RUN git clone --depth 1 --branch v2.9.10 ${SOURCE_REPO}/grafana/loki.git /loki
+RUN --mount=type=ssh git clone --depth 1 --branch v2.9.10 ${SOURCE_REPO}/grafana/loki.git /loki
 WORKDIR /loki/
 
 RUN go get golang.org/x/net@v0.17.0 \

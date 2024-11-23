@@ -15,7 +15,7 @@ ENV GOPROXY=${GOPROXY} \
 
 WORKDIR /src
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-RUN git clone --depth 1 --branch ${TRIVY_DB_VERSION} ${SOURCE_REPO}/aquasecurity/trivy-db.git && \
+RUN --mount=type=ssh git clone --depth 1 --branch ${TRIVY_DB_VERSION} ${SOURCE_REPO}/aquasecurity/trivy-db.git && \
     git clone --depth 1 --branch ${TRIVY_VERSION} ${SOURCE_REPO}/aquasecurity/trivy.git && \
     cd trivy && \
     go build -ldflags '-s -w -extldflags "-static"' -o trivy ./cmd/trivy/main.go

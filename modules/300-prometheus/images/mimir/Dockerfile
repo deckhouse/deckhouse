@@ -14,7 +14,7 @@ ENV GOPROXY=${GOPROXY} \
 
 RUN apk add --no-cache make git openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-RUN git clone --depth 1 --branch mimir-2.10.4 ${SOURCE_REPO}/grafana/mimir.git /mimir
+RUN --mount=type=ssh git clone --depth 1 --branch mimir-2.10.4 ${SOURCE_REPO}/grafana/mimir.git /mimir
 WORKDIR /mimir/
 
 RUN go build -o mimir ./cmd/mimir && \

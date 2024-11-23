@@ -12,7 +12,7 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 RUN apk add --no-cache openssh-client
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-RUN git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
+RUN --mount=type=ssh git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 
 # Build opentelemetry assets
 FROM $BASE_ALT_DEV as opentelemetry-artifact
@@ -55,27 +55,13 @@ ARG GOPROXY
 ENV SOURCE_REPO=${SOURCE_REPO} \
     GOPROXY=${GOPROXY}
 WORKDIR /src/
-COPY patches/lua-info.patch /
-COPY patches/makefile.patch /
-COPY patches/healthcheck.patch /
-COPY patches/metrics-SetSSLExpireTime.patch /
-COPY patches/util.patch /
-COPY patches/fix-cleanup.patch /
-COPY patches/geoip.patch /
-COPY patches/new-metrics.patch /
+COPY patches/*.patch /patches/
 ENV GOARCH=amd64
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
+RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
     # jaegertracing hunter deps
     git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter && \
-    patch -p1 < /lua-info.patch && \
-    patch -p1 < /makefile.patch && \
-    patch -p1 < /healthcheck.patch && \
-    patch -p1 < /metrics-SetSSLExpireTime.patch && \
-    patch -p1 < /util.patch && \
-    patch -p1 < /fix-cleanup.patch && \
-    patch -p1 < /geoip.patch && \
-    patch -p1 < /new-metrics.patch && \
+    git apply /patches/*.patch --verbose && \
     make GO111MODULE=on USE_DOCKER=false build
 
 # Build nginx for ingress controller
@@ -88,7 +74,7 @@ COPY --from=controller-builder /src/images/nginx/rootfs/ /
 COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
+RUN --mount=type=ssh git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
     # build pcre library with jit support due to lack of jit support in standard alt pcre library
     cd pcre && \
     ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit && \
