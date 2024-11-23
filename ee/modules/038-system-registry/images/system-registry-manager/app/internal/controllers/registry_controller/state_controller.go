@@ -66,7 +66,7 @@ func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 		log := ctrl.LoggerFrom(ctx)
 
 		log.Info(
-			"Secret was changed, will trigger reconcile",
+			"Secret changed, will trigger reconcile",
 			"secret", obj.GetName(),
 			"namespace", obj.GetNamespace(),
 			"controller", controllerName,
@@ -98,22 +98,20 @@ func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	log.Info("--Reconcile--")
-
 	config, err := state.LoadModuleConfig(ctx, sc.Client)
 	if err != nil {
 		err = fmt.Errorf("cannot load module config: %w", err)
 		return
 	}
 
-	log.Info("Got Module Config", "config", config)
-
 	if !config.Enabled {
 		log.Info("Module disabled will not reconcile other objects")
 		return
 	}
 
-	if err = sc.EnsureUserSecret(
+	var changed, skipReprocess bool
+
+	if changed, err = sc.EnsureUserSecret(
 		ctx,
 		state.UserROSecretName,
 		&sc.UserRO,
@@ -121,8 +119,9 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserROSecretName, err)
 		return
 	}
+	skipReprocess = skipReprocess || changed
 
-	if err = sc.EnsureUserSecret(
+	if changed, err = sc.EnsureUserSecret(
 		ctx,
 		state.UserRWSecretName,
 		&sc.UserRW,
@@ -130,16 +129,19 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserRWSecretName, err)
 		return
 	}
+	skipReprocess = skipReprocess || changed
 
-	err = sc.ReprocessAllNodes(ctx)
-	if err != nil {
-		err = fmt.Errorf("cannot reprocess all nodes: %w", err)
+	if !skipReprocess {
+		err = sc.ReprocessAllNodes(ctx)
+		if err != nil {
+			err = fmt.Errorf("cannot reprocess all nodes: %w", err)
+		}
 	}
 
 	return
 }
 
-func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, user *holder[state.User]) error {
+func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, user *holder[state.User]) (bool, error) {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsureUserSecret", "name", name)
 
@@ -153,7 +155,7 @@ func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, us
 	err := sc.Client.Get(ctx, key, &secret)
 
 	if client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("cannot get secret %v k8s object: %w", name, err)
+		return false, fmt.Errorf("cannot get secret %v k8s object: %w", name, err)
 	}
 
 	var ret state.User
@@ -207,30 +209,33 @@ func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, us
 		"passwordHash": []byte(ret.HashedPassword),
 	}
 
+	changed := false
 	if notFound {
 		secret.Name = key.Name
 		secret.Namespace = key.Namespace
 		secret.Type = state.UserSecretType
 
 		if err = sc.Client.Create(ctx, &secret); err != nil {
-			return fmt.Errorf("cannot create k8s object: %w", err)
+			return changed, fmt.Errorf("cannot create k8s object: %w", err)
 		}
 
+		changed = true
 		log.Info("New secret for user was created")
 	} else {
 		currentVersion := secret.ResourceVersion
 
 		if err = sc.Client.Update(ctx, &secret); err != nil {
-			return fmt.Errorf("cannot update k8s object: %w", err)
+			return changed, fmt.Errorf("cannot update k8s object: %w", err)
 		}
 
 		if currentVersion != secret.ResourceVersion {
 			log.Info("Secret for user was updated")
+			changed = true
 		}
 	}
 
 	// Set actual user value
 	user.Value = &ret
 
-	return nil
+	return changed, nil
 }

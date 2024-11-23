@@ -14,6 +14,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -84,11 +86,31 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 
 	secretsPredicate := predicate.NewPredicateFuncs(secretObjectIsNodePKI)
 
+	moduleConfig := state.GetModuleConfigObject()
+	moduleConfigPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetName() == state.RegistryModuleName
+	})
+
+	globalSecretsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		if obj.GetNamespace() != r.Namespace {
+			return false
+		}
+
+		name := obj.GetName()
+
+		return name == state.RegistryPKISecretName || name == state.UserROSecretName || name == state.UserRWSecretName
+	})
+
+	noopHandler := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+		return nil
+	})
+
 	err = ctrl.NewControllerManagedBy(mgr).
 		Named(controllerName).
 		For(
 			&corev1.Node{},
 			builder.WithPredicates(nodePredicate),
+			builder.OnlyMetadata,
 		).
 		Watches(
 			&corev1.Secret{},
@@ -106,7 +128,7 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 				log := ctrl.LoggerFrom(ctx)
 
 				log.Info(
-					"Node PKI secret was changed, will trigger reconcile for node",
+					"Node PKI secret changed, will trigger reconcile",
 					"secret", obj.GetName(),
 					"namespace", obj.GetNamespace(),
 					"node", ret.Name,
@@ -118,6 +140,9 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 			builder.WithPredicates(secretsPredicate),
 		).
 		WatchesRawSource(r.reprocessChannelSource()).
+		// Cache
+		Watches(&moduleConfig, noopHandler, builder.WithPredicates(moduleConfigPredicate)).
+		Watches(&corev1.Secret{}, noopHandler, builder.WithPredicates(globalSecretsPredicate)).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 10,
 		}).
@@ -131,18 +156,21 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 }
 
 func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
-
 	if req == nodeReprocessAllRequest {
 		return nc.handleReprocessAll(ctx)
 	}
 
 	if req.Namespace != "" {
-		log.Info("Fired by supplementary object", "namespace", req.Namespace)
 		req.Namespace = ""
 	}
 
-	node := &corev1.Node{}
+	node := &metav1.PartialObjectMetadata{}
+	node.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Node",
+	})
+
 	err := nc.Client.Get(ctx, req.NamespacedName, node)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -165,9 +193,9 @@ func (nc *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, 
 	log.Info("All nodes will be reprocessed")
 
 	// Will trigger reprocess for all master nodes
-	nodes := &corev1.NodeList{}
-	if err := nc.Client.List(ctx, nodes, &masterNodesMatchingLabels); err != nil {
-		return ctrl.Result{}, fmt.Errorf("cannot list nodes: %w", err)
+	nodes, err := nc.getAllMasterNodes(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	for _, node := range nodes.Items {
@@ -199,19 +227,33 @@ func (nc *nodeController) ReprocessAllNodes(ctx context.Context) error {
 	return nc.triggerReconcileForNode(ctx, nodeReprocessAllRequest)
 }
 
-func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
+func (nc *nodeController) handleMasterNode(ctx context.Context, node *metav1.PartialObjectMetadata) (result ctrl.Result, err error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	log.Info("Processing master node", "node", node.Name)
+	config, err := state.LoadModuleConfig(ctx, nc.Client)
+	if err != nil {
+		err = fmt.Errorf("cannot load module config: %w", err)
+		return
+	}
 
-	return ctrl.Result{}, nil
+	if !config.Enabled {
+		return
+	}
+
+	isFirst, err := nc.isFirstMasterNode(ctx, node)
+	if err != nil {
+		return
+	}
+
+	log.Info("Processing master node", "node", node.Name, "first", isFirst)
+
+	return
 }
 
-func (nc *nodeController) isFirstMasterNode(ctx context.Context, node *corev1.Node) (bool, error) {
-	// Will trigger reprocess for all master nodes
-	nodes := &corev1.NodeList{}
-	if err := nc.Client.List(ctx, nodes, &masterNodesMatchingLabels); err != nil {
-		return false, fmt.Errorf("cannot list nodes: %w", err)
+func (nc *nodeController) isFirstMasterNode(ctx context.Context, node *metav1.PartialObjectMetadata) (bool, error) {
+	nodes, err := nc.getAllMasterNodes(ctx)
+	if err != nil {
+		return false, err
 	}
 
 	for _, item := range nodes.Items {
@@ -227,7 +269,22 @@ func (nc *nodeController) isFirstMasterNode(ctx context.Context, node *corev1.No
 	return true, nil
 }
 
-func (nc *nodeController) handleNodeNotMaster(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
+func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *metav1.PartialObjectMetadataList, err error) {
+	nodes = &metav1.PartialObjectMetadataList{}
+	nodes.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Node",
+	})
+
+	if err = nc.Client.List(ctx, nodes, &masterNodesMatchingLabels); err != nil {
+		err = fmt.Errorf("cannot list nodes: %w", err)
+	}
+
+	return
+}
+
+func (nc *nodeController) handleNodeNotMaster(ctx context.Context, node *metav1.PartialObjectMetadata) (ctrl.Result, error) {
 	// Delete node secret if exists
 	if err := nc.deleteNodePKI(ctx, node.Name); err != nil {
 		return ctrl.Result{}, err
@@ -254,9 +311,9 @@ func (nc *nodeController) deleteNodePKI(ctx context.Context, nodeName string) er
 	log := ctrl.LoggerFrom(ctx)
 
 	secretName := fmt.Sprintf("registry-node-%s-pki", nodeName)
-	secret := &corev1.Secret{}
+	secret := corev1.Secret{}
 
-	err := nc.Client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: nc.Namespace}, secret)
+	err := nc.Client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: nc.Namespace}, &secret)
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -267,7 +324,7 @@ func (nc *nodeController) deleteNodePKI(ctx context.Context, nodeName string) er
 		return fmt.Errorf("get node PKI secret error: %w", err)
 	}
 
-	err = nc.Client.Delete(ctx, secret)
+	err = nc.Client.Delete(ctx, &secret)
 	if client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("delete node PKI secret error: %w", err)
 	} else {
@@ -314,7 +371,7 @@ func nodeObjectIsMaster(obj client.Object) bool {
 	return hasMasterLabel
 }
 
-func hasMasterLabel(node *corev1.Node) bool {
+func hasMasterLabel(node *metav1.PartialObjectMetadata) bool {
 	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
 	return isMaster
 }
