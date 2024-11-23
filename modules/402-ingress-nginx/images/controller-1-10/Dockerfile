@@ -20,7 +20,7 @@ FROM $BASE_ALT_DEV as luarocks-builder
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-RUN apt-get install -y lua5.1-devel \
+RUN apt-get install -y lua5.1-devel
 RUN --mount=type=ssh git clone --branch 0.5.1 ${SOURCE_REPO}/starwing/lua-protobuf
 RUN cd lua-protobuf/ \
     && luarocks-5.1 make rockspecs/lua-protobuf-scm-1.rockspec
@@ -47,7 +47,7 @@ COPY patches/metrics-SetSSLExpireTime.patch /
 COPY patches/util.patch /
 COPY patches/fix-cleanup.patch /
 COPY patches/add-http3.patch /
-COPY patches/new-metrics.patch
+COPY patches/new-metrics.patch /
 ENV GOARCH=amd64
 RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src
 RUN patch -p1 < /lua-info.patch && \
