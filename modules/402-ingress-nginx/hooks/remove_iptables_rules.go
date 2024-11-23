@@ -32,7 +32,7 @@ const (
 	iptablesRemoveJobName = "failover-iptables-remove-rules-job"
 	moduleName            = "ingress-nginx"
 	heritageDeckhouse     = "deckhouse"
-	systemNamespace       = "d8-system"
+	// systemNamespace       = "d8-system"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -46,14 +46,22 @@ func removeIptablesRules(input *go_hook.HookInput, dc dependency.Container) (err
 		return err
 	}
 
+	kubeClient.CoreV1().Namespaces().Create(context.Background(), &corev1.Namespace{
+		ObjectMeta: v1.ObjectMeta{
+			Name: ingressNamespace,
+		},
+	}, v1.CreateOptions{})
+
 	registry := input.Values.Get("global.modulesImages.registry.base").String()
 	digest := input.Values.Get("global.modulesImages.digests.ingressNginx.proxyFailoverIptables").String()
 	job := generateJob(registry, digest)
-	_, err = kubeClient.BatchV1().Jobs(systemNamespace).Create(context.Background(), job, v1.CreateOptions{})
+	_, err = kubeClient.BatchV1().Jobs(ingressNamespace).Create(context.Background(), job, v1.CreateOptions{})
 	if err != nil {
 		input.Logger.Error("Failed to run job for removing iptables rules", "error", err)
 		return err
 	}
+
+	kubeClient.CoreV1().Namespaces().Delete(context.Background(), ingressNamespace, v1.DeleteOptions{})
 	// input.Logger.Info("Remove iptables remove rules job from cluster...")
 	// input.PatchCollector.Delete("batch/v1", "Job", systemNamespace, iptablesRemoveJobName)
 
@@ -68,7 +76,7 @@ func generateJob(registry, digest string) *batchv1.Job {
 		},
 		ObjectMeta: v1.ObjectMeta{
 			Name:      iptablesRemoveJobName,
-			Namespace: systemNamespace,
+			Namespace: ingressNamespace,
 			Labels: map[string]string{
 				"name":     iptablesRemoveJobName,
 				"heritage": heritageDeckhouse,
