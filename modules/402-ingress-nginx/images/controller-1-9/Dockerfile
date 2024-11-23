@@ -56,14 +56,14 @@ ARG GOPROXY
 ENV SOURCE_REPO=${SOURCE_REPO} \
     GOPROXY=${GOPROXY}
 WORKDIR /src/
-COPY patches/lua-info.patch /patches/
-COPY patches/makefile.patch /patches/
-COPY patches/healthcheck.patch /patches/
-COPY patches/metrics-SetSSLExpireTime.patch /patches/
-COPY patches/util.patch /patches/
-COPY patches/fix-cleanup.patch /patches/
-COPY patches/geoip.patch /patches/
-COPY patches/new-metrics.patch /patches/
+COPY patches/lua-info.patch /
+COPY patches/makefile.patch /
+COPY patches/healthcheck.patch /
+COPY patches/metrics-SetSSLExpireTime.patch /
+COPY patches/util.patch /
+COPY patches/fix-cleanup.patch /
+COPY patches/geoip.patch /
+COPY patches/new-metrics.patch /
 ENV GOARCH=amd64
 RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
