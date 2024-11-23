@@ -189,7 +189,7 @@ COPY --chown=www-data:www-data curl-chroot-wrapper.sh /usr/bin/curl
 COPY --from=dumb-init-builder /dumb-init/dumb-init /usr/bin/dumb-init
 
 RUN  chmod 1777 /tmp \
-  && setcap     cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
+  && setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \
