@@ -33,8 +33,8 @@ type stateController struct {
 
 	eventRecorder record.EventRecorder
 
-	UserRO holder[state.User]
-	UserRW holder[state.User]
+	UserRO *state.User
+	UserRW *state.User
 }
 
 func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
@@ -141,7 +141,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 	return
 }
 
-func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, user *holder[state.User]) (bool, error) {
+func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, user **state.User) (bool, error) {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsureUserSecret", "name", name)
 
@@ -171,14 +171,14 @@ func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, us
 	}
 
 	if notFound || !ret.IsValid() {
-		if user.Value != nil && user.Value.IsValid() {
+		if *user != nil && (*user).IsValid() {
 			if notFound {
 				log.Info("Secret for user not found, will restore from memory")
 			} else {
 				log.Info("Secret for user is invalid, will restore from memory")
 			}
 
-			ret = *user.Value
+			ret = **user
 		} else {
 			log.Info("User is invalid, generating new")
 
@@ -235,7 +235,7 @@ func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, us
 	}
 
 	// Set actual user value
-	user.Value = &ret
+	*user = &ret
 
 	return changed, nil
 }
