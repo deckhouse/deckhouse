@@ -70,13 +70,13 @@ RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_RE
     # jaegertracing hunter deps
     git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
 RUN patch -p1 < /lua-info.patch && \
-patch -p1 < /makefile.patch && \
-patch -p1 < /healthcheck.patch && \
-patch -p1 < /metrics-SetSSLExpireTime.patch && \
-patch -p1 < /util.patch && \
-patch -p1 < /fix-cleanup.patch && \
-patch -p1 < /geoip.patch && \
-patch -p1 < /new-metrics.patch
+    patch -p1 < /makefile.patch && \
+    patch -p1 < /healthcheck.patch && \
+    patch -p1 < /metrics-SetSSLExpireTime.patch && \
+    patch -p1 < /util.patch && \
+    patch -p1 < /fix-cleanup.patch && \
+    patch -p1 < /geoip.patch && \
+    patch -p1 < /new-metrics.patch
 RUN make GO111MODULE=on USE_DOCKER=false build
 
 # Build nginx for ingress controller
