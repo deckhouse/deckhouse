@@ -125,8 +125,10 @@ properties:
       List of registry CA certificates for connecting to private registries.
       
       If there is more than one certificate, they are specified sequentially without additional line breaks.
-    x-examples:
-    - | 
+
+      *Example:*
+      ```yaml
+      registriesCA: |-
         -----BEGIN CERTIFICATE-----
         MIIDfDCCAmSgAwIBAgIUPSUV/R5CLPXseGlF7YVCr9gt4LAwDQYJKoZIhvcNAQEL
         BQAwWDELMAkGA1UEBhMCVVMxDjAMBgNVBAgMBVN0YXRlMQ0wCwYDVQQHDARUb3du
@@ -152,3 +154,4 @@ properties:
         AIyO7AA1TFlJ/m5Pd8SQYhz5WfCSIwFfp/H2rY73cyNUlAgY0oCxrwxjxzFIpdCF
         67hTqj/DMwFWC8qPS3iiGr1TO9phnjPUBV6ch5qed4I=
         -----END CERTIFICATE-----
+      ```
