@@ -71,7 +71,8 @@ COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
 RUN apt-get update && apt-get install -y ninja-build libabseil-cpp-devel build-essential libgrpc-devel  \
     libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
-RUN patch build.sh < nginx-build.patch && /build.sh
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh patch build.sh < nginx-build.patch && /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
 # Based on tag "controller-v1.10.2":
