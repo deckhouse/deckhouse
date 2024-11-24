@@ -20,6 +20,7 @@ FROM $BASE_ALT_DEV as opentelemetry-artifact
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN mkdir -p /opt/third_party/install
 COPY ./opentelemetry/ /opt/third_party/
 
