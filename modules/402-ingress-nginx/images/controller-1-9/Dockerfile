@@ -95,10 +95,10 @@ RUN --mount=type=ssh git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.
 RUN cd pcre && \
     ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit && \
     make && \
-    make install && \
-    cd / && \
-    patch build.sh < nginx-build.patch && \
-    /build.sh
+    make install
+RUN cd / && \
+    patch build.sh < nginx-build.patch
+RUN --mount=type=ssh /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
 # Based on tag "controller-v1.9.5":
