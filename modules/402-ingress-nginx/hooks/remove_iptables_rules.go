@@ -32,7 +32,7 @@ const (
 	iptablesRemoveJobName = "failover-iptables-remove-rules-job"
 	moduleName            = "ingress-nginx"
 	heritageDeckhouse     = "deckhouse"
-	// systemNamespace       = "d8-system"
+	systemNamespace       = "d8-system"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -40,28 +40,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(removeIptablesRules))
 
 func removeIptablesRules(input *go_hook.HookInput, dc dependency.Container) (err error) {
-	input.Logger.Info("Remove iptables rule for proxy-failover...")
+	input.Logger.Info("Remove iptable rules for proxy-failover...")
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		return err
 	}
 
-	kubeClient.CoreV1().Namespaces().Create(context.Background(), &corev1.Namespace{
-		ObjectMeta: v1.ObjectMeta{
-			Name: ingressNamespace,
-		},
-	}, v1.CreateOptions{})
-
 	registry := input.Values.Get("global.modulesImages.registry.base").String()
 	digest := input.Values.Get("global.modulesImages.digests.ingressNginx.proxyFailoverIptables").String()
 	job := generateJob(registry, digest)
-	_, err = kubeClient.BatchV1().Jobs(ingressNamespace).Create(context.Background(), job, v1.CreateOptions{})
+	_, err = kubeClient.BatchV1().Jobs(systemNamespace).Create(context.Background(), job, v1.CreateOptions{})
 	if err != nil {
 		input.Logger.Error("Failed to run job for removing iptables rules", "error", err)
 		return err
 	}
 
-	kubeClient.CoreV1().Namespaces().Delete(context.Background(), ingressNamespace, v1.DeleteOptions{})
 	// input.Logger.Info("Remove iptables remove rules job from cluster...")
 	// input.PatchCollector.Delete("batch/v1", "Job", systemNamespace, iptablesRemoveJobName)
 
@@ -76,7 +69,7 @@ func generateJob(registry, digest string) *batchv1.Job {
 		},
 		ObjectMeta: v1.ObjectMeta{
 			Name:      iptablesRemoveJobName,
-			Namespace: ingressNamespace,
+			Namespace: systemNamespace,
 			Labels: map[string]string{
 				"name":     iptablesRemoveJobName,
 				"heritage": heritageDeckhouse,
@@ -99,13 +92,13 @@ func generateJob(registry, digest string) *batchv1.Job {
 								"/failover",
 								"remove",
 							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "xtables-lock",
-									ReadOnly:  false,
-									MountPath: "/run/xtables.lock",
-								},
-							},
+							// VolumeMounts: []corev1.VolumeMount{
+							// 	{
+							// 		Name:      "xtables-lock",
+							// 		ReadOnly:  false,
+							// 		MountPath: "/run/xtables.lock",
+							// 	},
+							// },
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceMemory:           resource.MustParse("20Mi"),
@@ -121,17 +114,17 @@ func generateJob(registry, digest string) *batchv1.Job {
 							},
 						},
 					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "xtables-lock",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/run/xtables.lock",
-									Type: ptr.To(corev1.HostPathFileOrCreate),
-								},
-							},
-						},
-					},
+					// Volumes: []corev1.Volume{
+					// 	{
+					// 		Name: "xtables-lock",
+					// 		VolumeSource: corev1.VolumeSource{
+					// 			HostPath: &corev1.HostPathVolumeSource{
+					// 				Path: "/run/xtables.lock",
+					// 				Type: ptr.To(corev1.HostPathFileOrCreate),
+					// 			},
+					// 		},
+					// 	},
+					// },
 					RestartPolicy: corev1.RestartPolicyNever,
 				},
 			},
