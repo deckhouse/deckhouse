@@ -6,12 +6,18 @@ webIfaces:
 
 This module installs Kubernetes Dashboard [Web UI](https://github.com/kubernetes/dashboard) that allows you to manage applications running in the cluster. It is integrated with [user-authn](../../modules/150-user-authn/) and [user-authz](../../modules/140-user-authz/) modules (access to the cluster is based on the user ID and credentials).
 
-The module does not work over HTTP, it will be disabled.
+The module does not work over HTTP and will be disabled.
 
-> **Note!** The `user-authz` module is required for the dashboard module to work.
-> **Note!** The `dashboard` module requires the `user-authn` module enabled or the `externalAuthentication` settings set.
+{% alert level="warning" %}
+The `user-authz` module is required for the dashboard module to work.
+{% endalert %}
 
-Kubernetes Dashboard, among other things, allows you to:
-- manage Pods and other high-level resources;
-- exec to containers via the web console for debugging;
-- browse logs of specific containers.
+{% alert level="warning" %}
+The `dashboard` module requires the `user-authn` module enabled or the [`externalAuthentication`](examples.html) settings set.
+{% endalert %}
+
+Kubernetes Dashboard provides the following features:
+
+- Management of pods and other high-level resources;
+- Exec to containers via a web console for debugging purposes;
+- Viewing logs of individual containers.

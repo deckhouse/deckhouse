@@ -8,8 +8,10 @@ The module does not have any mandatory parameters.
 
 ## Authentication
 
-[user-authn](/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
-If these options are disabled, the module will disabled.
+By default, the [user-authn](/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module is used. Alternatively, authentication can be configured using [`externalAuthentication`](examples.html).
 
-> **Note!** The `auth.password` parameter is deprecated.
-> **Note!** The `accessLevel` parameter is deprecated.
+If neither of these methods is enabled, the `dashboard` module will be disabled.
+
+{% alert level="warning" %}
+The parameters `auth.password` and `accessLevel` are no longer supported.
+{% endalert %}
