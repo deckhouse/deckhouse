@@ -70,11 +70,27 @@ func main() {
 	// do nothing on error, since ingress-failover chain may not exist yet
 
 	if len(os.Args) > 1 && os.Args[1] == "remove" {
-		log.Default().Print("Remove iptables rules")
+		log.Default().Print("Remove iptables rules in ingress-failover chain")
+		err = iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Default().Print("Remove iptables rules in INPUT chain")
+		err = iptablesMgr.DeleteIfExists("filter", "INPUT", inputAcceptRule...)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Default().Print("Remove iptables rules in NAT chain")
 		err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
 		if err != nil {
 			log.Fatal("failed to clear and delete chain", err)
 		}
+		log.Default().Print("Remove iptables rules in MANGLE chain")
+		err = iptablesMgr.DeleteIfExists("mangle", "PREROUTING", restoreHttpMarkRule...)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Default().Print("Remove link")
 		link, err := netlink.LinkByName(linkName)
 		if err != nil {
 			log.Fatal("failed to create link by name", err)
@@ -84,7 +100,7 @@ func main() {
 			log.Fatal("failed to delete link", err)
 		}
 
-		os.Exit(0)
+		return
 	}
 
 	// check 1081/1444 ports accepted
