@@ -67,7 +67,7 @@ modules:
           - delete
       use: null
     namespace: d8-admission-policy-engine
-    scopes:
+    subsystems:
     - security
   ceph-csi:
     capabilities:
@@ -117,7 +117,7 @@ modules:
           - delete
       use: null
     namespace: d8-ceph-csi
-    scopes:
+    subsystems:
     - storage
     - infrastructure
   cert-manager:
@@ -194,7 +194,7 @@ modules:
           - delete
           - deletecollection
     namespace: d8-cert-manager
-    scopes:
+    subsystems:
     - security
   chrony:
     capabilities:
@@ -226,7 +226,7 @@ modules:
           - delete
       use: null
     namespace: d8-chrony
-    scopes:
+    subsystems:
     - infrastructure
   cilium-hubble:
     capabilities:
@@ -258,7 +258,7 @@ modules:
           - delete
       use: null
     namespace: d8-cni-cilium
-    scopes:
+    subsystems:
     - networking
   cloud-provider-aws:
     capabilities:
@@ -290,7 +290,7 @@ modules:
           - delete
       use: null
     namespace: d8-cloud-provider-aws
-    scopes:
+    subsystems:
     - infrastructure
   cloud-provider-azure:
     capabilities:
@@ -322,7 +322,7 @@ modules:
           - delete
       use: null
     namespace: d8-cloud-provider-azure
-    scopes:
+    subsystems:
     - infrastructure
   cloud-provider-gcp:
     capabilities:
@@ -354,7 +354,7 @@ modules:
           - delete
       use: null
     namespace: d8-cloud-provider-gcp
-    scopes:
+    subsystems:
     - infrastructure
   cloud-provider-openstack:
     capabilities:
@@ -386,7 +386,7 @@ modules:
           - delete
       use: null
     namespace: d8-cloud-provider-openstack
-    scopes:
+    subsystems:
     - infrastructure
   cloud-provider-vcd:
     capabilities:
@@ -418,7 +418,7 @@ modules:
           - delete
       use: null
     namespace: d8-cloud-provider-vcd
-    scopes:
+    subsystems:
     - infrastructure
   cloud-provider-vsphere:
     capabilities:
@@ -450,7 +450,7 @@ modules:
           - delete
       use: null
     namespace: d8-cloud-provider-vsphere
-    scopes:
+    subsystems:
     - infrastructure
   cloud-provider-yandex:
     capabilities:
@@ -482,7 +482,7 @@ modules:
           - delete
       use: null
     namespace: d8-cloud-provider-yandex
-    scopes:
+    subsystems:
     - infrastructure
   cloud-provider-zvirt:
     capabilities:
@@ -514,7 +514,7 @@ modules:
           - delete
       use: null
     namespace: d8-cloud-provider-zvirt
-    scopes:
+    subsystems:
     - infrastructure
   cni-cilium:
     capabilities:
@@ -546,7 +546,7 @@ modules:
           - delete
       use: null
     namespace: d8-cni-cilium
-    scopes:
+    subsystems:
     - networking
   cni-flannel:
     capabilities:
@@ -578,7 +578,7 @@ modules:
           - delete
       use: null
     namespace: d8-cni-flannel
-    scopes:
+    subsystems:
     - networking
   cni-simple-bridge:
     capabilities:
@@ -610,7 +610,7 @@ modules:
           - delete
       use: null
     namespace: d8-cni-simple-bridge
-    scopes:
+    subsystems:
     - networking
   control-plane-manager:
     capabilities:
@@ -642,7 +642,7 @@ modules:
           - delete
       use: null
     namespace: kube-system
-    scopes:
+    subsystems:
     - kubernetes
   dashboard:
     capabilities:
@@ -674,7 +674,7 @@ modules:
           - delete
       use: null
     namespace: d8-dashboard
-    scopes:
+    subsystems:
     - observability
   deckhouse:
     capabilities:
@@ -717,7 +717,7 @@ modules:
           - deletecollection
       use: null
     namespace: d8-system
-    scopes:
+    subsystems:
     - deckhouse
   descheduler:
     capabilities:
@@ -767,7 +767,7 @@ modules:
           - delete
       use: null
     namespace: d8-descheduler
-    scopes:
+    subsystems:
     - infrastructure
   extended-monitoring:
     capabilities:
@@ -799,7 +799,7 @@ modules:
           - delete
       use: null
     namespace: d8-monitoring
-    scopes:
+    subsystems:
     - observability
   flant-integration:
     capabilities:
@@ -831,7 +831,7 @@ modules:
           - delete
       use: null
     namespace: d8-flant-integration
-    scopes:
+    subsystems:
     - deckhouse
   flow-schema:
     capabilities:
@@ -863,7 +863,7 @@ modules:
           - delete
       use: null
     namespace: none
-    scopes:
+    subsystems:
     - kubernetes
     - networking
   ingress-nginx:
@@ -914,7 +914,7 @@ modules:
           - delete
       use: null
     namespace: d8-ingress-nginx
-    scopes:
+    subsystems:
     - networking
   istio:
     capabilities:
@@ -968,7 +968,7 @@ modules:
           - delete
       use: null
     namespace: d8-istio
-    scopes:
+    subsystems:
     - infrastructure
     - networking
   keepalived:
@@ -1019,7 +1019,7 @@ modules:
           - delete
       use: null
     namespace: d8-keepalived
-    scopes:
+    subsystems:
     - infrastructure
   kube-dns:
     capabilities:
@@ -1051,7 +1051,7 @@ modules:
           - delete
       use: null
     namespace: kube-system
-    scopes:
+    subsystems:
     - kubernetes
     - networking
   kube-proxy:
@@ -1084,7 +1084,7 @@ modules:
           - delete
       use: null
     namespace: kube-system
-    scopes:
+    subsystems:
     - kubernetes
     - networking
   local-path-provisioner:
@@ -1135,7 +1135,7 @@ modules:
           - delete
       use: null
     namespace: d8-local-path-provisioner
-    scopes:
+    subsystems:
     - infrastructure
   log-shipper:
     capabilities:
@@ -1209,7 +1209,7 @@ modules:
           - delete
           - deletecollection
     namespace: d8-log-shipper
-    scopes:
+    subsystems:
     - observability
   loki:
     capabilities:
@@ -1241,7 +1241,7 @@ modules:
           - delete
       use: null
     namespace: d8-monitoring
-    scopes:
+    subsystems:
     - infrastructure
   metallb:
     capabilities:
@@ -1273,7 +1273,7 @@ modules:
           - delete
       use: null
     namespace: d8-metallb
-    scopes:
+    subsystems:
     - networking
   monitoring-applications:
     capabilities:
@@ -1305,7 +1305,7 @@ modules:
           - delete
       use: null
     namespace: d8-monitoring
-    scopes:
+    subsystems:
     - observability
   monitoring-custom:
     capabilities:
@@ -1337,7 +1337,7 @@ modules:
           - delete
       use: null
     namespace: d8-monitoring
-    scopes:
+    subsystems:
     - observability
   monitoring-deckhouse:
     capabilities:
@@ -1369,7 +1369,7 @@ modules:
           - delete
       use: null
     namespace: d8-monitoring
-    scopes:
+    subsystems:
     - observability
   monitoring-kubernetes:
     capabilities:
@@ -1401,7 +1401,7 @@ modules:
           - delete
       use: null
     namespace: d8-monitoring
-    scopes:
+    subsystems:
     - observability
   monitoring-kubernetes-control-plane:
     capabilities:
@@ -1433,7 +1433,7 @@ modules:
           - delete
       use: null
     namespace: d8-monitoring
-    scopes:
+    subsystems:
     - observability
   monitoring-ping:
     capabilities:
@@ -1465,7 +1465,7 @@ modules:
           - delete
       use: null
     namespace: d8-monitoring
-    scopes:
+    subsystems:
     - observability
   multitenancy-manager:
     capabilities:
@@ -1517,7 +1517,7 @@ modules:
           - delete
       use: null
     namespace: d8-multitenancy-manager
-    scopes:
+    subsystems:
     - deckhouse
   network-gateway:
     capabilities:
@@ -1549,7 +1549,7 @@ modules:
           - delete
       use: null
     namespace: d8-network-gateway
-    scopes:
+    subsystems:
     - networking
   network-policy-engine:
     capabilities:
@@ -1581,7 +1581,7 @@ modules:
           - delete
       use: null
     namespace: d8-system
-    scopes:
+    subsystems:
     - networking
   node-local-dns:
     capabilities:
@@ -1613,7 +1613,7 @@ modules:
           - delete
       use: null
     namespace: kube-system
-    scopes:
+    subsystems:
     - networking
   node-manager:
     capabilities:
@@ -1673,7 +1673,7 @@ modules:
           - delete
       use: null
     namespace: d8-cloud-instance-manager
-    scopes:
+    subsystems:
     - infrastructure
   okmeter:
     capabilities:
@@ -1705,7 +1705,7 @@ modules:
           - delete
       use: null
     namespace: d8-okmeter
-    scopes:
+    subsystems:
     - observability
   openvpn:
     capabilities:
@@ -1737,7 +1737,7 @@ modules:
           - delete
       use: null
     namespace: d8-openvpn
-    scopes:
+    subsystems:
     - networking
   operator-prometheus:
     capabilities:
@@ -1769,7 +1769,7 @@ modules:
           - delete
       use: null
     namespace: d8-operator-prometheus
-    scopes:
+    subsystems:
     - observability
   operator-trivy:
     capabilities:
@@ -1857,7 +1857,7 @@ modules:
           - delete
           - deletecollection
     namespace: d8-operator-trivy
-    scopes:
+    subsystems:
     - security
   pod-reloader:
     capabilities:
@@ -1889,7 +1889,7 @@ modules:
           - delete
       use: null
     namespace: d8-pod-reloader
-    scopes:
+    subsystems:
     - infrastructure
   priority-class:
     capabilities:
@@ -1921,7 +1921,7 @@ modules:
           - delete
       use: null
     namespace: none
-    scopes:
+    subsystems:
     - kubernetes
   prometheus:
     capabilities:
@@ -1983,7 +1983,7 @@ modules:
           - delete
       use: null
     namespace: d8-monitoring
-    scopes:
+    subsystems:
     - observability
   prometheus-metrics-adapter:
     capabilities:
@@ -2077,7 +2077,7 @@ modules:
           - delete
           - deletecollection
     namespace: d8-monitoring
-    scopes:
+    subsystems:
     - observability
   prometheus-pushgateway:
     capabilities:
@@ -2109,7 +2109,7 @@ modules:
           - delete
       use: null
     namespace: kube-prometheus-pushgateway
-    scopes:
+    subsystems:
     - observability
   runtime-audit-engine:
     capabilities:
@@ -2159,7 +2159,7 @@ modules:
           - delete
       use: null
     namespace: d8-runtime-audit-engine
-    scopes:
+    subsystems:
     - security
   secret-copier:
     capabilities:
@@ -2191,7 +2191,7 @@ modules:
           - delete
       use: null
     namespace: none
-    scopes:
+    subsystems:
     - security
   snapshot-controller:
     capabilities:
@@ -2223,7 +2223,7 @@ modules:
           - delete
       use: null
     namespace: d8-snapshot-controller
-    scopes:
+    subsystems:
     - storage
     - infrastructure
   static-routing-manager:
@@ -2256,7 +2256,7 @@ modules:
           - delete
       use: null
     namespace: d8-static-routing-manager
-    scopes:
+    subsystems:
     - networking
   terraform-manager:
     capabilities:
@@ -2288,7 +2288,7 @@ modules:
           - delete
       use: null
     namespace: d8-system
-    scopes:
+    subsystems:
     - infrastructure
   upmeter:
     capabilities:
@@ -2342,7 +2342,7 @@ modules:
           - delete
       use: null
     namespace: d8-upmeter
-    scopes:
+    subsystems:
     - observability
   user-authn:
     capabilities:
@@ -2420,7 +2420,7 @@ modules:
           - delete
           - deletecollection
     namespace: d8-user-authn
-    scopes:
+    subsystems:
     - security
   user-authz:
     capabilities:
@@ -2452,7 +2452,7 @@ modules:
           - delete
       use: null
     namespace: none
-    scopes:
+    subsystems:
     - security
   vertical-pod-autoscaler:
     capabilities:
@@ -2484,9 +2484,9 @@ modules:
           - delete
       use: null
     namespace: kube-system
-    scopes:
+    subsystems:
     - infrastructure
-scopes:
+subsystems:
   deckhouse:
     modules:
     - flant-integration

@@ -1,4 +1,4 @@
 module: prometheus-pushgateway
 namespace: kube-prometheus-pushgateway
-scopes:
+subsystems:
   - observability

@@ -1,5 +1,5 @@
 module: multitenancy-manager
-scopes:
+subsystems:
   - deckhouse
 crds:
   - modules/160-multitenancy-manager/crds/*.yaml
