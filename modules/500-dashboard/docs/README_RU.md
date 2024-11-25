@@ -13,7 +13,7 @@ webIfaces:
 {% endalert %}
 
 {% alert level="warning" %}
-Для функционирования модуля `dashboard` требуется либо включенный модуль `user-authn`, либо настроенные параметры `externalAuthentication`.
+Для функционирования модуля `dashboard` требуется либо включенный модуль `user-authn`, либо настроенные параметры [`externalAuthentication`](../cr.html#examples).
 {% endalert %}
 
 Kubernetes Dashboard предоставляет следующие возможности:

@@ -13,7 +13,7 @@ The `user-authz` module is required for the dashboard module to work.
 {% endalert %}
 
 {% alert level="warning" %}
-The `dashboard` module requires the `user-authn` module enabled or the `externalAuthentication` settings set.
+The `dashboard` module requires the `user-authn` module enabled or the [`externalAuthentication`](../cr.html#examples) settings set.
 {% endalert %}
 
 Kubernetes Dashboard provides the following features:
