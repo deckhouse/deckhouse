@@ -215,6 +215,6 @@ func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageC
 
 type storageClass struct {
 	Name                 string `json:"name"`
-	Type                 string `json:"storageDomain"`
+	Type                 string `json:"type"`
 	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
 }

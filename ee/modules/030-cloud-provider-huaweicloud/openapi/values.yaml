@@ -371,7 +371,7 @@ properties:
           properties:
             name:
               type: string
-            storageDomain:
+            type:
               type: string
             allowVolumeExpansion:
               type: boolean
