@@ -26,11 +26,11 @@ spec:
                   description: Пользовательский токен, передаваемый в качестве заголовка `X-Auth-Token`.
                 headers:
                   description: |
-                    HTTP-заголовки, которые будут добавлены к запросу.
+                    HTTP-заголовки, добавляемые к запросу.
                   properties:
                     X-Scope-OrgID:
                       description: |
-                        Допустимые заголовки: X-Scope-OrgID.
+                        Заголовок `X-Scope-OrgID`, указывающий ID тенанта.
                 writeRelabelConfigs:
                   description: |
                     Параметры для relabel'инга данных для отправки.
