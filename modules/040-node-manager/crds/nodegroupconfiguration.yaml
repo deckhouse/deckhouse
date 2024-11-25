@@ -70,6 +70,7 @@ spec:
 
 
                     Example of using proxy parameters from ClusterConfiguration:
+
                     ```shell
                     bb-set-proxy
                     curl -I https://google.com
