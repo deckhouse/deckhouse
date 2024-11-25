@@ -46,7 +46,6 @@
       "type": "row"
     },
     {
-      "cacheTimeout": null,
       "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
@@ -683,6 +682,7 @@
             "mode": "thresholds"
           },
           "custom": {
+            "align": "auto",
             "cellOptions": {
               "type": "auto"
             },
@@ -5824,8 +5824,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5841,7 +5840,7 @@
             "h": 2,
             "w": 3,
             "x": 0,
-            "y": 69
+            "y": 77
           },
           "id": 130,
           "maxDataPoints": 100,
@@ -5901,8 +5900,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5918,7 +5916,7 @@
             "h": 2,
             "w": 3,
             "x": 3,
-            "y": 69
+            "y": 77
           },
           "id": 132,
           "maxDataPoints": 100,
@@ -5978,8 +5976,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5995,7 +5992,7 @@
             "h": 2,
             "w": 3,
             "x": 6,
-            "y": 69
+            "y": 77
           },
           "id": 134,
           "maxDataPoints": 100,
@@ -6055,8 +6052,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6072,7 +6068,7 @@
             "h": 2,
             "w": 3,
             "x": 9,
-            "y": 69
+            "y": 77
           },
           "id": 174,
           "maxDataPoints": 100,
@@ -6132,8 +6128,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6149,7 +6144,7 @@
             "h": 2,
             "w": 3,
             "x": 12,
-            "y": 69
+            "y": 77
           },
           "id": 140,
           "maxDataPoints": 100,
@@ -6209,8 +6204,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6226,7 +6220,7 @@
             "h": 2,
             "w": 3,
             "x": 15,
-            "y": 69
+            "y": 77
           },
           "id": 142,
           "maxDataPoints": 100,
@@ -6286,8 +6280,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6303,7 +6296,7 @@
             "h": 2,
             "w": 3,
             "x": 18,
-            "y": 69
+            "y": 77
           },
           "id": 144,
           "maxDataPoints": 100,
@@ -6363,8 +6356,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6380,7 +6372,7 @@
             "h": 2,
             "w": 3,
             "x": 21,
-            "y": 69
+            "y": 77
           },
           "id": 146,
           "maxDataPoints": 100,
@@ -6464,8 +6456,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6498,7 +6489,7 @@
             "h": 5,
             "w": 12,
             "x": 0,
-            "y": 71
+            "y": 79
           },
           "hideTimeOverride": false,
           "id": 136,
@@ -6608,8 +6599,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6642,7 +6632,7 @@
             "h": 5,
             "w": 12,
             "x": 12,
-            "y": 71
+            "y": 79
           },
           "hideTimeOverride": false,
           "id": 148,
@@ -6768,7 +6758,7 @@
             "h": 21,
             "w": 12,
             "x": 0,
-            "y": 70
+            "y": 78
           },
           "heatmap": {},
           "highlightCards": true,
@@ -6885,7 +6875,7 @@
             "h": 21,
             "w": 12,
             "x": 12,
-            "y": 70
+            "y": 78
           },
           "heatmap": {},
           "highlightCards": true,
@@ -7016,8 +7006,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7033,7 +7022,7 @@
             "h": 2,
             "w": 3,
             "x": 0,
-            "y": 71
+            "y": 79
           },
           "id": 171,
           "maxDataPoints": 100,
@@ -7093,8 +7082,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7110,7 +7098,7 @@
             "h": 2,
             "w": 3,
             "x": 3,
-            "y": 71
+            "y": 79
           },
           "id": 172,
           "maxDataPoints": 100,
@@ -7170,8 +7158,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7187,7 +7174,7 @@
             "h": 2,
             "w": 3,
             "x": 6,
-            "y": 71
+            "y": 79
           },
           "id": 173,
           "maxDataPoints": 100,
@@ -7247,8 +7234,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7264,7 +7250,7 @@
             "h": 2,
             "w": 3,
             "x": 9,
-            "y": 71
+            "y": 79
           },
           "id": 128,
           "maxDataPoints": 100,
@@ -7324,8 +7310,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7341,7 +7326,7 @@
             "h": 2,
             "w": 3,
             "x": 12,
-            "y": 71
+            "y": 79
           },
           "id": 175,
           "maxDataPoints": 100,
@@ -7401,8 +7386,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7418,7 +7402,7 @@
             "h": 2,
             "w": 3,
             "x": 15,
-            "y": 71
+            "y": 79
           },
           "id": 176,
           "maxDataPoints": 100,
@@ -7478,8 +7462,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7495,7 +7478,7 @@
             "h": 2,
             "w": 3,
             "x": 18,
-            "y": 71
+            "y": 79
           },
           "id": 177,
           "maxDataPoints": 100,
@@ -7555,8 +7538,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7572,7 +7554,7 @@
             "h": 2,
             "w": 3,
             "x": 21,
-            "y": 71
+            "y": 79
           },
           "id": 178,
           "maxDataPoints": 100,
@@ -7656,8 +7638,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7690,7 +7671,7 @@
             "h": 4,
             "w": 12,
             "x": 0,
-            "y": 73
+            "y": 81
           },
           "hideTimeOverride": false,
           "id": 155,
@@ -7800,8 +7781,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7834,7 +7814,7 @@
             "h": 4,
             "w": 12,
             "x": 12,
-            "y": 73
+            "y": 81
           },
           "hideTimeOverride": false,
           "id": 157,
@@ -7960,7 +7940,7 @@
             "h": 10,
             "w": 12,
             "x": 0,
-            "y": 72
+            "y": 80
           },
           "heatmap": {},
           "highlightCards": true,
@@ -8077,7 +8057,7 @@
             "h": 10,
             "w": 12,
             "x": 12,
-            "y": 72
+            "y": 80
           },
           "heatmap": {},
           "highlightCards": true,
@@ -8232,8 +8212,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8269,7 +8248,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 73
+            "y": 81
           },
           "id": 61,
           "options": {
@@ -8348,8 +8327,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8365,7 +8343,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 73
+            "y": 81
           },
           "id": 60,
           "options": {
@@ -8443,8 +8421,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8480,7 +8457,7 @@
             "h": 4,
             "w": 12,
             "x": 0,
-            "y": 79
+            "y": 87
           },
           "id": 90,
           "options": {
@@ -8570,8 +8547,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8607,7 +8583,7 @@
             "h": 4,
             "w": 12,
             "x": 12,
-            "y": 79
+            "y": 87
           },
           "id": 97,
           "options": {
@@ -8678,62 +8654,134 @@
       "id": 79,
       "panels": [
         {
-          "circleMaxSize": "10",
-          "circleMinSize": 2,
-          "colors": [
-            "#890f02",
-            "#890f02"
-          ],
           "datasource": {
+            "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "decimals": 0,
-          "esGeoPoint": "geohash",
-          "esLocationName": "place",
-          "esMetric": "Value",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "custom": {
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
           "gridPos": {
-            "h": 18,
+            "h": 20,
             "w": 24,
             "x": 0,
-            "y": 92
+            "y": 74
           },
-          "hideEmpty": false,
-          "hideZero": false,
-          "id": 251,
-          "initialZoom": "3",
-          "locationData": "geohash",
-          "mapCenter": "Europe",
-          "mapCenterLatitude": 46,
-          "mapCenterLongitude": 14,
-          "maxDataPoints": 1,
-          "mouseWheelZoom": false,
-          "showLegend": false,
-          "stickyLabels": false,
-          "tableQueryOptions": {
-            "geohashField": "geohash",
-            "latitudeField": "latitude",
-            "longitudeField": "longitude",
-            "metricField": "metric",
-            "queryType": "geohash"
+          "id": 262,
+          "options": {
+            "basemap": {
+              "config": {},
+              "name": "Layer 0",
+              "type": "default"
+            },
+            "controls": {
+              "mouseWheelZoom": true,
+              "showAttribution": true,
+              "showDebug": false,
+              "showMeasure": false,
+              "showScale": false,
+              "showZoom": true
+            },
+            "layers": [
+              {
+                "config": {
+                  "showLegend": true,
+                  "style": {
+                    "color": {
+                      "field": "Value",
+                      "fixed": "dark-green"
+                    },
+                    "opacity": 0.5,
+                    "rotation": {
+                      "fixed": 0,
+                      "max": 360,
+                      "min": -360,
+                      "mode": "mod"
+                    },
+                    "size": {
+                      "field": "Value",
+                      "fixed": 5,
+                      "max": 30,
+                      "min": 2
+                    },
+                    "symbol": {
+                      "fixed": "img/icons/marker/circle.svg",
+                      "mode": "fixed"
+                    },
+                    "symbolAlign": {
+                      "horizontal": "center",
+                      "vertical": "center"
+                    },
+                    "textConfig": {
+                      "fontSize": 12,
+                      "offsetX": 0,
+                      "offsetY": 0,
+                      "textAlign": "center",
+                      "textBaseline": "middle"
+                    }
+                  }
+                },
+                "location": {
+                  "geohash": "geohash",
+                  "mode": "geohash"
+                },
+                "name": "Layer 1",
+                "tooltip": true,
+                "type": "markers"
+              }
+            ],
+            "tooltip": {
+              "mode": "details"
+            },
+            "view": {
+              "allLayers": true,
+              "id": "zero",
+              "lat": 0,
+              "lon": 0,
+              "zoom": 1
+            }
           },
+          "pluginVersion": "10.4.5",
           "targets": [
             {
               "datasource": {
+                "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
+              "editorMode": "code",
+              "exemplar": false,
               "expr": "sum(increase(ingress_nginx_${metric}_geohash_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__range])) by (geohash, place) > 0",
               "format": "table",
               "instant": true,
-              "intervalFactor": 1,
+              "legendFormat": "__auto",
+              "range": false,
               "refId": "A"
             }
           ],
-          "thresholds": "",
           "title": "Requests",
-          "type": "grafana-worldmap-panel",
-          "unitPlural": "",
-          "unitSingle": "",
-          "valueName": "total"
+          "type": "geomap"
         }
       ],
       "targets": [
@@ -8785,8 +8833,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9370,7 +9417,7 @@
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 75
+            "y": 83
           },
           "id": 42,
           "options": {
@@ -9712,8 +9759,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9729,7 +9775,7 @@
             "h": 4,
             "w": 8,
             "x": 0,
-            "y": 81
+            "y": 89
           },
           "id": 39,
           "options": {
@@ -9807,8 +9853,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9824,7 +9869,7 @@
             "h": 4,
             "w": 8,
             "x": 8,
-            "y": 81
+            "y": 89
           },
           "id": 41,
           "options": {
@@ -9908,8 +9953,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9925,7 +9969,7 @@
             "h": 4,
             "w": 8,
             "x": 16,
-            "y": 81
+            "y": 89
           },
           "id": 40,
           "options": {
