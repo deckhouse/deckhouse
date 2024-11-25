@@ -62,6 +62,9 @@ spec:
       - image: {{ include "helm_lib_module_image" (list . "oomKillsExporter") }}
         name: oom-kills-exporter
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        env:
+        - name: PROMETHEUS_SCRAPE_INTERVAL
+          value: {{ .Values.global.discovery.prometheusScrapeInterval | default 30 | quote }}
         readinessProbe:
           httpGet:
             path: /ready

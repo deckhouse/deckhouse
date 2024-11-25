@@ -17,7 +17,9 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,7 +30,8 @@ import (
 )
 
 var (
-	local = prometheus.NewRegistry()
+	local  = prometheus.NewRegistry()
+	sleepG time.Duration
 )
 
 func checkMetricExistenceByLabels(metricName string, labels map[string]string, r *prometheus.Registry) bool {
@@ -79,6 +82,17 @@ func getContainerIDFromLog(line string) (string, error) {
 	return "", errors.New("Don't oom-kill log")
 }
 
+func init() {
+	if envValue := os.Getenv("PROMETHEUS_SCRAPE_INTERVAL"); envValue != "" {
+		interval, err := strconv.Atoi(envValue)
+		if err != nil {
+			log.Fatal("PROMETHEUS_SCRAPE_INTERVAL must be a number")
+		}
+		sleepG = time.Duration(interval+1) * time.Second
+	}
+
+}
+
 func main() {
 	handler := promhttp.HandlerFor(
 		local,
@@ -114,10 +128,11 @@ func main() {
 			}
 			sleep := 0 * time.Second
 			if !checkMetricExistenceByLabels("klog_oomkill", labels, local) {
+				// The GetMetricWith query creates a metric with 0 value.
 				if _, err := klogOomkill.GetMetricWith(labels); err != nil {
 					log.Fatal("Could not create metrics")
 				}
-				sleep = 31 * time.Second
+				sleep = sleepG // Delay so that prometeus can read the metric value with zero value.
 			}
 
 			go func() {
