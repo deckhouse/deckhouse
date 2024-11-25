@@ -119,7 +119,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 
 	if changed, err = sc.EnsurePKI(ctx, &sc.PKIState); err != nil {
 		if errors.Is(err, errorPKIInvalid) {
-			log.Error(err, "PKI secret not found and cannot be restored form internal state, stopping reconcile")
+			log.Error(err, "PKI is invalid and cannot be restored form internal state, stopping reconcile")
 			err = nil
 			return
 		}
