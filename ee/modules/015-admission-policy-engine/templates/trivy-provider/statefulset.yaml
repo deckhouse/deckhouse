@@ -46,8 +46,6 @@ spec:
       labels:
         app: trivy-provider
         app.kubernetes.io/part-of: gatekeeper
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/trivy-provider/configmap.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -64,6 +62,11 @@ spec:
           - --cert-file=/certs/tls.crt
           - --client-ca-file=/client-cert/ca.crt
           - --timeout=25
+        env:
+        - name: TRIVY_REMOTE_URL
+          value: "http://trivy-server.d8-operator-trivy:4954"
+        - name: TRIVY_JAVA_DB_IMAGE
+          value: {{ printf "%s/security/trivy-java-db:1" .Values.global.modulesImages.registry.base | quote }}
         envFrom:
         - configMapRef:
             name: trivy-provider

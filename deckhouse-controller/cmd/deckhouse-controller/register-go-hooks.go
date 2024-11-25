@@ -8,6 +8,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/340-monitoring-applications/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-basic-auth/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-okmeter/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/015-admission-policy-engine/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/021-cni-cilium/hooks/ee"
 	_ "github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/hooks/lib"

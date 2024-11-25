@@ -94,23 +94,3 @@ properties:
               type: string
             namespace:
               type: string
-      insecureDbRegistry:
-        type: boolean
-        default: false
-        description: |
-          Allows Trivy provider to download vulnerability databases using insecure HTTPS connections (not passed TLS certificate verification) or HTTP connections.
-        x-doc-default: false
-        x-examples: [true, false]
-
-      insecureRegistries:
-        type: array
-        description: |
-          List of container registry addresses to which insecure HTTPS connections (not passed TLS certificate verification) or HTTP connections are allowed.
-        x-examples:
-        -
-          - my.registry.com
-          - http-only.registry.io
-        items:
-          type: string
-        description: |
-          Container registries to which insecure connections are allowed.
