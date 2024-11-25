@@ -64,7 +64,7 @@ spec:
                   properties:
                     X-Scope-OrgID: 
                       type: string
-                    required: ["X-Scope-OrgID"]
+                  required: ["X-Scope-OrgID"]
                 writeRelabelConfigs:
                   description: |
                     The list of remote write relabel configurations.
