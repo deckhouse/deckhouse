@@ -1,4 +1,4 @@
-{{- if .Values.monitoringKubernetes.oomKillsExporterEnabledEnabledEnabled }}
+{{- if .Values.monitoringKubernetes.oomKillsExporterEnabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
