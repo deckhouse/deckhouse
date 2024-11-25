@@ -66,7 +66,7 @@ spec:
                         Vector will keep pods metadata for this time as well to read logs from deleted pods.
                         This option is useful in cases of a log storage unavailability or a network partition. Vector will keep log files opened until finally sending them to the destination.
 
-                        However, the following option may affect the resource consumption of the Vector and also flood a disk with deleted logs. Use it with caution.
+                        However, enabling this option may affect the resource consumption of the Vector and also flood a disk with deleted logs. Use it with caution.
 
                         The format is a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
                       default: 1h30m
