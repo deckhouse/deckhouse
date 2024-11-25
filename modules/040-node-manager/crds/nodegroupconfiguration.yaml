@@ -69,7 +69,7 @@ spec:
                     ```
 
 
-                    Example of using proxy parameters from ClusterConfiguration:
+                    Example of using the proxy parameters of ClusterConfiguration resource:
 
                     ```shell
                     bb-set-proxy

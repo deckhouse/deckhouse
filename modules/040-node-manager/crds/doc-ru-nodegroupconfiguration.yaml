@@ -57,7 +57,7 @@ spec:
                     }
                     ```
 
-                    Пример использования параметров proxy из ClusterConfiguration:
+                    Пример использования параметров proxy, указанных в ресурсе ClusterConfiguration:
 
                     ```shell
                     bb-set-proxy
