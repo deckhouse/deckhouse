@@ -401,6 +401,14 @@ metadata:
 				      "zones": []
 				    },
                     "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -422,6 +430,14 @@ metadata:
 				      ]
 				    },
                     "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -471,6 +487,14 @@ metadata:
                       "type": "Containerd"
                     },
 					"manualRolloutID": "",
+		   "kubelet": {
+			"containerLogMaxSize": "50Mi",
+			"containerLogMaxFiles": 4,
+			"resourceReservation": {
+				"mode": "Auto"
+			},
+			"topologyManager": {}
+		    },
                     "name": "cp1",
                     "nodeType": "CloudPermanent",
                     "updateEpoch": "` + calculateEpoch("cp1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
@@ -489,6 +513,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -510,6 +542,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -524,6 +564,14 @@ metadata:
                       "type": "Containerd"
                     },
                     "manualRolloutID": "",
+		   "kubelet": {
+			"containerLogMaxSize": "50Mi",
+			"containerLogMaxFiles": 4,
+			"resourceReservation": {
+				"mode": "Auto"
+			},
+			"topologyManager": {}
+		    },
                     "name": "static1",
                     "nodeType": "Static",
                     "updateEpoch": "` + calculateEpoch("static1", f.ValuesGet("global.discovery.clusterUUID").String()) + `",
@@ -561,6 +609,14 @@ metadata:
 					"cri": {
                       "type": "Containerd"
                     },
+		    "kubelet": {
+			"containerLogMaxSize": "50Mi",
+			"containerLogMaxFiles": 4,
+			"resourceReservation": {
+				"mode": "Auto"
+			},
+			"topologyManager": {}
+		    },
                     "manualRolloutID": "",
                     "name": "cp1",
                     "nodeType": "CloudPermanent",
@@ -580,6 +636,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -601,6 +665,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -614,6 +686,14 @@ metadata:
 					"cri": {
                       "type": "Containerd"
                     },
+		    "kubelet": {
+			"containerLogMaxSize": "50Mi",
+			"containerLogMaxFiles": 4,
+			"resourceReservation": {
+				"mode": "Auto"
+			},
+			"topologyManager": {}
+		    },
                     "manualRolloutID": "",
                     "name": "static1",
                     "nodeType": "Static",
@@ -659,6 +739,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -680,6 +768,14 @@ metadata:
 				      ]
 				    },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
 				    "manualRolloutID": "",
                     "kubernetesVersion": "1.27",
 					"cri": {
@@ -732,6 +828,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -753,6 +857,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
@@ -817,6 +929,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -838,6 +958,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
@@ -887,6 +1015,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -908,6 +1044,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
@@ -957,6 +1101,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -978,6 +1130,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]
@@ -1042,6 +1202,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper1", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  },
 				  {
@@ -1063,6 +1231,14 @@ metadata:
                       "type": "Containerd"
                     },
 				    "instanceClass": null,
+				    "kubelet": {
+					"containerLogMaxSize": "50Mi",
+					"containerLogMaxFiles": 4,
+					"resourceReservation": {
+						"mode": "Auto"
+					},
+					"topologyManager": {}
+				    },
                     "updateEpoch": "` + calculateEpoch("proper2", f.ValuesGet("global.discovery.clusterUUID").String()) + `"
 				  }
 				]

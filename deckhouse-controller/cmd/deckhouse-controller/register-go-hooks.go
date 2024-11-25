@@ -5,6 +5,7 @@ import (
 	_ "github.com/flant/addon-operator/sdk"
 
 	_ "github.com/deckhouse/deckhouse/ee/be/modules/350-node-local-dns/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/fe/modules/300-prometheus/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/340-monitoring-applications/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-basic-auth/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-okmeter/hooks"
@@ -78,6 +79,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-ping/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks"

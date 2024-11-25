@@ -65,13 +65,13 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context
 
 	for i, release := range pointerReleases {
 		switch release.Status.Phase {
-		case v1alpha1.PhasePending:
+		case v1alpha1.ModuleReleasePhasePending:
 			pendingReleasesIndexes = append(pendingReleasesIndexes, i)
 
-		case v1alpha1.PhaseDeployed:
+		case v1alpha1.ModuleReleasePhaseDeployed:
 			deployedReleasesIndexes = append(deployedReleasesIndexes, i)
 
-		case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSkipped, v1alpha1.PhaseSuspended:
+		case v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuspended:
 			outdatedReleasesIndexes = append(outdatedReleasesIndexes, i)
 		}
 	}
@@ -79,7 +79,7 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context
 	if len(deployedReleasesIndexes) > 1 {
 		// cleanup releases stacked in Deployed status
 		sp, _ := json.Marshal(d8updater.StatusPatch{
-			Phase:          v1alpha1.PhaseSuperseded,
+			Phase:          v1alpha1.ModuleReleasePhaseSuperseded,
 			TransitionTime: metav1.NewTime(now),
 		})
 		// everything except the last Deployed release
@@ -110,7 +110,7 @@ func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context
 	if len(deployedReleasesIndexes) > 0 && len(pendingReleasesIndexes) > 0 {
 		lastDeployed := deployedReleasesIndexes[0] // releases are reversed, that's why we have to take the first one (latest Deployed release)
 		sp, _ := json.Marshal(d8updater.StatusPatch{
-			Phase:          v1alpha1.PhaseSkipped,
+			Phase:          v1alpha1.ModuleReleasePhaseSkipped,
 			Message:        "Skipped by cleanup hook",
 			TransitionTime: metav1.NewTime(now),
 		})

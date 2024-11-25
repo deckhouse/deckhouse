@@ -74,7 +74,7 @@ var _ = Describe("User Authz hooks :: handle authorization rules ::", func() {
 
 		It("ARs must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.authRuleCrds").String()).To(MatchJSON(`[{"name":"ar0","namespace":"test","spec":{"accessLevel":"User", "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"ar1","namespace":"test","spec":{"accessLevel":"Admin", "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
+			Expect(f.ValuesGet("userAuthz.internal.authRuleCrds").String()).To(MatchJSON(`[{"name":"ar0","namespace":"test","spec":{"accessLevel":"User", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"ar1","namespace":"test","spec":{"accessLevel":"Admin", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
 		})
 	})
 })

@@ -233,6 +233,28 @@ spec:
           readOnly: true
         - name: xtables-lock
           mountPath: /run/xtables.lock
+      {{- if eq $context.Values.cniCilium.internal.mode "VXLAN" }}
+      - name: handle-vxlan-offload
+        image: {{ include "helm_lib_module_common_image" (list $context "vxlanOffloadingFixer") }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+        securityContext:
+          capabilities:
+            add:
+              - NET_ADMIN
+            drop:
+              - ALL
+          privileged: false
+        terminationMessagePolicy: FallbackToLogsOnError
+      {{- end }}
       - name: config
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         imagePullPolicy: IfNotPresent

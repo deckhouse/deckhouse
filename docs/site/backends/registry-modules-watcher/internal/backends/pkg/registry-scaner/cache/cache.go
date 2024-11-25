@@ -67,16 +67,16 @@ func (c *Cache) GetRange() (versions []backends.Version) {
 	defer c.m.RUnlock()
 
 	state := c.GetState()
-	for _, version := range state {
-		if !contain(c.stateSnap, version) {
-			version.ToDelete = false
+	for _, version := range c.stateSnap {
+		if !contain(state, version) {
+			version.ToDelete = true
 			versions = append(versions, version)
 		}
 	}
 
-	for _, version := range c.stateSnap {
-		if !contain(state, version) {
-			version.ToDelete = true
+	for _, version := range state {
+		if !contain(c.stateSnap, version) {
+			version.ToDelete = false
 			versions = append(versions, version)
 		}
 	}

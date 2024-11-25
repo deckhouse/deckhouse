@@ -210,6 +210,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pythonStatic":              "imageHash-common-pythonStatic",
 		"redisStatic":               "imageHash-common-redisStatic",
 		"shellOperator":             "imageHash-common-shellOperator",
+		"vxlanOffloadingFixer":      "imageHash-common-vxlanOffloadingFixer",
 	},
 	"controlPlaneManager": map[string]interface{}{
 		"controlPlaneManager127":   "imageHash-controlPlaneManager-controlPlaneManager127",
@@ -388,6 +389,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
 		"mimir":                       "imageHash-prometheus-mimir",
 		"prometheus":                  "imageHash-prometheus-prometheus",
+		"prometheuspp":                "imageHash-prometheus-prometheuspp",
 		"promxy":                      "imageHash-prometheus-promxy",
 		"trickster":                   "imageHash-prometheus-trickster",
 	},

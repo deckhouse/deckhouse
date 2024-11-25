@@ -27,7 +27,7 @@ status:
   approved: false
   message: 'Release is waiting for the ''release.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -35,12 +35,12 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.26.0
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   version: v1.26.0
 status:
   approved: false
-  message: ""
+  message: Awaiting for v1.25.1 release to be deployed
   phase: Pending
   transitionTime: null
 ---

@@ -15,19 +15,16 @@
 package session
 
 import (
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
 func TestCreatingNewSShSession(t *testing.T) {
-	const host = "a"
+	host := Host{Host: "a", Name: "master-0"}
 
 	ses := NewSession(Input{
-		AvailableHosts: []string{host},
+		AvailableHosts: []Host{host},
 	})
 
 	t.Run("Create settings with not empty AvailableHosts returns session struct without errors", func(t *testing.T) {
@@ -35,7 +32,7 @@ func TestCreatingNewSShSession(t *testing.T) {
 	})
 
 	t.Run("Create settings with not empty AvailableHosts sets hosts field", func(t *testing.T) {
-		require.Equal(t, ses.host, host)
+		require.Equal(t, ses.host, host.Host)
 	})
 
 	t.Run("Create settings with not empty AvailableHosts choices host from remainingHosts (not contains host in remainingHosts)", func(t *testing.T) {
@@ -44,11 +41,11 @@ func TestCreatingNewSShSession(t *testing.T) {
 }
 
 func TestSession_SetNewAvailableHosts(t *testing.T) {
-	const oldHost = "a"
-	const newHost = "b"
+	oldHost := Host{Host: "a", Name: "master-0"}
+	newHost := Host{Host: "b", Name: "master-1"}
 
-	oldHostsList := []string{oldHost}
-	newHostsList := []string{newHost}
+	oldHostsList := []Host{oldHost}
+	newHostsList := []Host{newHost}
 
 	tests := []struct {
 		name   string
@@ -57,7 +54,7 @@ func TestSession_SetNewAvailableHosts(t *testing.T) {
 		{
 			name: "Set new available hosts sets new host",
 			assert: func(t *testing.T, s *Session) {
-				require.Equal(t, s.host, newHost)
+				require.Equal(t, s.host, newHost.Host)
 			},
 		},
 
@@ -92,19 +89,19 @@ func TestSession_SetNewAvailableHosts(t *testing.T) {
 
 func TestSession_ChoiceNewHost(t *testing.T) {
 	t.Run("ChoiceNewHost should always return one host when setting contains one host", func(t *testing.T) {
-		const host = "a"
+		host := Host{Host: "a", Name: "master-0"}
 		ses := NewSession(Input{
-			AvailableHosts: []string{host},
+			AvailableHosts: []Host{host},
 		})
 
 		for i := 0; i < 3; i++ {
 			ses.ChoiceNewHost()
-			require.Equal(t, ses.host, host)
+			require.Equal(t, ses.host, host.Host)
 		}
 	})
 
 	t.Run("With multiple hosts ChoiceNewHost does not repeat hosts for calling count - 1 times", func(t *testing.T) {
-		availableHosts := []string{"a", "b", "c"}
+		availableHosts := []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}}
 		ses := NewSession(Input{
 			AvailableHosts: availableHosts,
 		})
@@ -122,7 +119,7 @@ func TestSession_ChoiceNewHost(t *testing.T) {
 	})
 
 	t.Run("With multiple hosts ChoiceNewHost should resets remainingHosts", func(t *testing.T) {
-		availableHosts := []string{"a", "b", "c"}
+		availableHosts := []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}}
 		ses := NewSession(Input{
 			AvailableHosts: availableHosts,
 		})
@@ -131,8 +128,14 @@ func TestSession_ChoiceNewHost(t *testing.T) {
 			ses.ChoiceNewHost()
 		}
 
-		remainedHosts := stringsutil.ExcludeElementFromSlice(availableHosts, ses.host)
-		var expectedRemainedHosts []string
+		var remainedHosts []Host
+		for i, host := range availableHosts {
+			if host.Host == ses.host {
+				remainedHosts = append(availableHosts[:i], availableHosts[i+1:]...)
+				break
+			}
+		}
+		var expectedRemainedHosts []Host
 		expectedRemainedHosts = append(expectedRemainedHosts, remainedHosts...)
 
 		require.Len(t, ses.remainingHosts, len(availableHosts)-1)
@@ -146,37 +149,46 @@ func TestSession_ChoiceNewHost(t *testing.T) {
 
 func TestSession_AddAvailableHosts(t *testing.T) {
 	tests := []struct {
-		hosts    []string
-		newHosts []string
-		expected []string
+		hosts    []Host
+		newHosts []Host
+		expected []Host
 	}{
 		{
-			newHosts: []string{"a", "b", "c"},
-			expected: []string{"a", "b", "c"},
+			newHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
 		},
 		{
-			hosts:    []string{"a", "b", "c"},
-			newHosts: []string{"a", "b", "c"},
-			expected: []string{"a", "b", "c"},
+			newHosts: []Host{{Host: "b", Name: ""}, {Host: "a", Name: ""}, {Host: "c", Name: ""}},
+			expected: []Host{{Host: "a", Name: ""}, {Host: "b", Name: ""}, {Host: "c", Name: ""}},
 		},
 		{
-			hosts:    []string{"a", "b", "c"},
-			newHosts: []string{"a", "b", "c", "d"},
-			expected: []string{"a", "b", "c", "d"},
+			hosts:    []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			newHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
 		},
 		{
-			hosts:    []string{"a", "b", "c"},
-			newHosts: []string{"a", "b"},
-			expected: []string{"a", "b", "c"},
+			hosts:    []Host{{Host: "c", Name: ""}, {Host: "b", Name: ""}, {Host: "a", Name: ""}},
+			newHosts: []Host{{Host: "b", Name: ""}, {Host: "a", Name: ""}, {Host: "c", Name: ""}},
+			expected: []Host{{Host: "a", Name: ""}, {Host: "b", Name: ""}, {Host: "c", Name: ""}},
 		},
 		{
-			hosts:    []string{"a", "b", "c"},
-			newHosts: []string{"a", "b", "d"},
-			expected: []string{"a", "b", "c", "d"},
+			hosts:    []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			newHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}, {Host: "d", Name: "master-3"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}, {Host: "d", Name: "master-3"}},
 		},
 		{
-			hosts:    []string{"a"},
-			expected: []string{"a"},
+			hosts:    []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			newHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+		},
+		{
+			hosts:    []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			newHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "d", Name: "master-3"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}, {Host: "d", Name: "master-3"}},
+		},
+		{
+			hosts:    []Host{{Host: "a", Name: "master-0"}},
+			expected: []Host{{Host: "a", Name: "master-0"}},
 		},
 	}
 
@@ -189,36 +201,34 @@ func TestSession_AddAvailableHosts(t *testing.T) {
 
 		availableHosts := s.AvailableHosts()
 
-		sort.Strings(availableHosts)
-
 		require.Equal(t, test.expected, availableHosts)
 	}
 }
 
 func TestSession_RemoveAvailableHosts(t *testing.T) {
 	tests := []struct {
-		hosts       []string
-		removeHosts []string
-		expected    []string
+		hosts       []Host
+		removeHosts []Host
+		expected    []Host
 	}{
 		{
-			hosts:    []string{"a", "b", "c"},
-			expected: []string{"a", "b", "c"},
+			hosts:    []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			expected: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
 		},
 		{
-			hosts:       []string{"a", "b", "c"},
-			removeHosts: []string{"a", "b", "c"},
-			expected:    []string{},
+			hosts:       []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			removeHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			expected:    []Host{},
 		},
 		{
-			hosts:       []string{"a", "b", "c"},
-			removeHosts: []string{"a", "b"},
-			expected:    []string{"c"},
+			hosts:       []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			removeHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}},
+			expected:    []Host{{Host: "c", Name: "master-2"}},
 		},
 		{
-			hosts:       []string{"a", "b", "c"},
-			removeHosts: []string{"a", "b", "d"},
-			expected:    []string{"c"},
+			hosts:       []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "c", Name: "master-2"}},
+			removeHosts: []Host{{Host: "a", Name: "master-0"}, {Host: "b", Name: "master-1"}, {Host: "d", Name: "master-3"}},
+			expected:    []Host{{Host: "c", Name: "master-2"}},
 		},
 	}
 
@@ -230,8 +240,6 @@ func TestSession_RemoveAvailableHosts(t *testing.T) {
 		s.RemoveAvailableHosts(test.removeHosts...)
 
 		availableHosts := s.AvailableHosts()
-
-		sort.Strings(availableHosts)
 
 		require.Equal(t, test.expected, availableHosts)
 	}

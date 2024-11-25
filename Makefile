@@ -182,6 +182,9 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 	@docker run --rm -v ${PWD}:/workdir ${MDLINTER_IMAGE} \
 		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md" --fix && (echo 'Fixed successfully.')
 
+lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
+	@werf config render | awk 'NR!=1 {print}' | go run ./tools/lint-src-artifact/lint-src-artifact.go
+
 ##@ Generate
 
 .PHONY: generate render-workflow

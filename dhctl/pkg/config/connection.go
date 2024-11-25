@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -166,9 +167,9 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 		keys = append(keys, key.Key)
 	}
 
-	hosts := make([]string, 0, len(cfg.SSHHosts))
-	for _, host := range cfg.SSHHosts {
-		hosts = append(hosts, host.Host)
+	hosts := make([]session.Host, 0, len(cfg.SSHHosts))
+	for i, host := range cfg.SSHHosts {
+		hosts = append(hosts, session.Host{Host: host.Host, Name: strconv.Itoa(i)})
 	}
 
 	bastionPort := ""

@@ -21,31 +21,32 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
+      deprecated: true
       schema:
         openAPIV3Schema:
           type: object
           description: |
             Defines the update settings for a module's release.
           x-doc-examples:
-          - apiVersion: deckhouse.io/v1alpha1
-            kind: ModuleUpdatePolicy
-            metadata:
-              name: example-update-policy
-            spec:
-              moduleReleaseSelector:
-                labelSelector:
-                  matchLabels:
-                    source: example
-                    module: module-1
-              releaseChannel: Alpha
-              update:
-                mode: Auto
-                windows:
-                  - days:
-                      - "Mon"
-                      - "Wed"
-                    from: "13:30"
-                    to: "14:00"
+            - apiVersion: deckhouse.io/v1alpha1
+              kind: ModuleUpdatePolicy
+              metadata:
+                name: example-update-policy
+              spec:
+                moduleReleaseSelector:
+                  labelSelector:
+                    matchLabels:
+                      source: example
+                      module: module-1
+                releaseChannel: Alpha
+                update:
+                  mode: Auto
+                  windows:
+                    - days:
+                        - "Mon"
+                        - "Wed"
+                      from: "13:30"
+                      to: "14:00"
           required:
             - spec
           properties:
@@ -208,3 +209,130 @@ spec:
           priority: 1
           type: string
           description: Module release update windows.
+    - name: v1alpha2
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Defines the update settings for a module's release.
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha2
+              kind: ModuleUpdatePolicy
+              metadata:
+                name: example-update-policy
+              spec:
+                releaseChannel: Alpha
+                update:
+                  mode: Auto
+                  windows:
+                    - days:
+                        - "Mon"
+                        - "Wed"
+                      from: "13:30"
+                      to: "14:00"
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - update
+              properties:
+                releaseChannel:
+                  type: string
+                  description: |
+                    Desirable module release channel.
+
+                    The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+                  default: Stable
+                  enum:
+                    - Alpha
+                    - Beta
+                    - EarlyAccess
+                    - Stable
+                    - RockSolid
+                update:
+                  type: object
+                  description: Update settings for target modules.
+                  properties:
+                    mode:
+                      type: string
+                      default: 'Auto'
+                      description: |
+                        Modules version update mode (release change).
+
+                        - `AutoPatch` — automatic update mode for patch releases.
+
+                          To change a minor version (for example, from `v1.65.*` to `v1.66.*`), confirmation is required.
+
+                          Set `modules.deckhouse.io/approved="true"` annotation on the corresponding ModuleRelease resource, to confirm the update.
+
+                          A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied according to the [update windows](./modules/002-deckhouse/configuration.html#parameters-update-windows), if they are set.
+
+                        - `Auto` — all updates are applied automatically.
+
+                          Modules minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the [update windows](./modules/002-deckhouse/configuration.html#parameters-update-windows) or (if no update windows are set) as they appear on the corresponding release channel;
+                        - `Manual` — to change a minor version of modules (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required. Set `modules.deckhouse.io/approved="true"` annotation on the corresponding ModuleRelease resource, to confirm the update.
+
+                      enum:
+                        - 'Auto'
+                        - 'Manual'
+                        - 'AutoPatch'
+                    windows:
+                      type: array
+                      description: |
+                        Modules update timetable.
+                      items:
+                        type: object
+                        required:
+                          - from
+                          - to
+                        properties:
+                          from:
+                            type: string
+                            pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                            x-doc-examples: ["13:00"]
+                            description: |
+                              Start time of the update window (UTC timezone).
+
+                              Should be less than the end time of the update window.
+                          to:
+                            type: string
+                            pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                            x-doc-examples: ["18:30"]
+                            description: |
+                              End time of the update window (UTC timezone).
+
+                              Should be more than the start time of the update window.
+                          days:
+                            type: array
+                            description: The days of the week on which the update window is applied.
+                            x-doc-examples: ["Mon", "Wed"]
+                            items:
+                              type: string
+                              description: Day of the week.
+                              x-doc-examples: ["Mon"]
+                              enum:
+                                - Mon
+                                - Tue
+                                - Wed
+                                - Thu
+                                - Fri
+                                - Sat
+                                - Sun
+      additionalPrinterColumns:
+        - name: release channel
+          jsonPath: .spec.releaseChannel
+          type: string
+          description: The module release channel.
+        - name: update mode
+          jsonPath: .spec.update.mode
+          type: string
+          description: The module release update mode.
+        - name: update windows
+          jsonPath: .spec.update.windows
+          priority: 1
+          type: string
+          description: The module release update windows.

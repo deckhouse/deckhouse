@@ -80,12 +80,14 @@ func (g *apiResourceListGetter) Get(gvk *schema.GroupVersionKind) (*metav1.APIRe
 type Creator struct {
 	kubeCl    *client.KubernetesClient
 	resources []*template.Resource
+	mcTasks   []actions.ModuleConfigTask
 }
 
-func NewCreator(kubeCl *client.KubernetesClient, resources template.Resources) *Creator {
+func NewCreator(kubeCl *client.KubernetesClient, resources template.Resources, tasks []actions.ModuleConfigTask) *Creator {
 	return &Creator{
 		kubeCl:    kubeCl,
 		resources: resources,
+		mcTasks:   tasks,
 	}
 }
 
@@ -221,6 +223,20 @@ func (c *Creator) TryToCreate() error {
 		}
 	}
 
+	for _, task := range c.mcTasks {
+		err := c.runSingleMCTask(task)
+		if err != nil {
+			return err
+		}
+	}
+
+	// we do not want to support same creation logic for module config tasks as for resources
+	// if task was failed we return error.
+	// thus, all tasks were done here, just remove tasks for prevent multiple applying
+	if len(c.mcTasks) > 0 {
+		c.mcTasks = make([]actions.ModuleConfigTask, 0)
+	}
+
 	if len(c.resources) > 0 {
 		log.InfoF("\rResources to create: \n\t%s\n\n", strings.Join(resourcesToCreate, "\n\t"))
 		return ErrNotAllResourcesCreated
@@ -292,13 +308,20 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 	})
 }
 
-func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker) error {
+func (c *Creator) runSingleMCTask(task actions.ModuleConfigTask) error {
+	// Wait up to 10 minutes
+	return retry.NewLoop(task.Title, 60, 5*time.Second).Run(func() error {
+		return task.Do(c.kubeCl)
+	})
+}
+
+func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
 	endChannel := time.After(app.ResourcesTimeout)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
-	resourceCreator := NewCreator(kubeCl, resources)
+	resourceCreator := NewCreator(kubeCl, resources, tasks)
 
 	waiter := NewWaiter(checkers)
 	for {

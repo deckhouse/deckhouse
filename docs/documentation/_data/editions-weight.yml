@@ -1,6 +1,8 @@
 ce: 1
 be: 2
 se: 3
-ee: 4
-cse: 5
-fe: 6
+se-plus: 13
+ee: 7
+cse-lite: 14
+cse-pro: 15
+fe: 8
