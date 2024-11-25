@@ -1,12 +1,13 @@
 {{- define "node_group_static_or_hybrid_machine_deployment" }}
   {{- $context := index . 0 }}
   {{- $ng := index . 1 }}
+  {{- $staticMachineTemplateName := include "node_group.generate_static_machine_template_name" (list $ng) }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
   namespace: d8-cloud-instance-manager
-  name: {{ $ng.name }}
+  name: {{ $staticMachineTemplateName }}
   {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name "app" "caps-controller")) | nindent 2 }}
 spec:
   clusterName: static
