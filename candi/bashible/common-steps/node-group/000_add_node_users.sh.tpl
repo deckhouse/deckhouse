@@ -184,12 +184,12 @@ function main() {
   default_shell="/bin/bash"
   comment="created by deckhouse"
 
-	if [ -d "$home_base_path" ]; then
-		chmod -c 755  $home_base_path
-		chown -c root:root $home_base_path
-	else
-		mkdir -p $home_base_path
-	fi
+  if [ -d "$home_base_path" ]; then
+    chmod -c 755  $home_base_path
+    chown -c root:root $home_base_path
+  else
+    mkdir -p $home_base_path
+  fi
 
   for uid in $(jq -rc '.[].spec.uid' <<< "$node_users_json"); do
     user_name="$(jq --arg uid $uid -rc '.[] | select(.spec.uid==($uid | tonumber)) | .name' <<< "$node_users_json")"
@@ -237,12 +237,14 @@ function main() {
       error_message=$(modify_user "$user_name" "$extra_groups" "$password_hash" 2>&1)
       if bb-error?
       then
+        bb-log-error "Error modifying user '$user_name': ${error_message}"
         nodeuser_add_error "${user_name}" "${error_message}"
         continue
       fi
       error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
       if bb-error?
       then
+        bb-log-error "Error updating SSH keys for user '$user_name': ${error_message}"
         nodeuser_add_error "${user_name}" "${error_message}"
         continue
       fi
@@ -256,12 +258,14 @@ function main() {
       error_message=$(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name" 2>&1)
       if bb-error?
       then
+        bb-log-error "Error adding user '$user_name': ${error_message}"
         nodeuser_add_error "${user_name}" "${error_message}"
         continue
       fi
       error_message=$(put_user_ssh_key "$user_name" "$home_base_path" "$main_group" "$ssh_public_keys" 2>&1)
       if bb-error?
       then
+        bb-log-error "Error updating SSH keys for user '$user_name': ${error_message}"
         nodeuser_add_error "${user_name}" "${error_message}"
         continue
       fi
