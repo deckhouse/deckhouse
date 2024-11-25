@@ -4,13 +4,13 @@ description: Управление узлами кластера Kubernetes. До
 search: добавить ноду в кластер, добавить узел в кластер, настроить узел с GPU, эфемерные узлы
 ---
 
-<div id='Как добавить master-узлы в облачном кластере (single-master в multi-master)'></div>
+<div id='как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master'></div>
 
 ## Как добавить master-узлы в облачном кластере?
 
 Как конвертировать кластер с одним master-узлом в мультикластерный описано [в FAQ модуля control-plane-manager](../040-control-plane-manager/faq.html#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master).
 
-<div id='Как уменьшить число master-узлов в облачном кластере (multi-master в single-master)'></div>
+<div id='как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master'></div>
 
 ## Как уменьшить число master-узлов в облачном кластере?
 
