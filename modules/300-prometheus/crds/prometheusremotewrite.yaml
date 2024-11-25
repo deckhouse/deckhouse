@@ -61,10 +61,10 @@ spec:
                   description: |
                     Custom HTTP headers to be sent along with each remote write request. Allowed headers: X-scope-OrgID.
                   type: object
-                  patternProperties:
-                    "^X-Scope-OrgID$": 
+                  properties:
+                    X-Scope-OrgID: 
                       type: string
-                  additionalProperties: false
+                    required: ["X-Scope-OrgID"]
                 writeRelabelConfigs:
                   description: |
                     The list of remote write relabel configurations.
