@@ -8,7 +8,17 @@
   {%- assign siteD8Edition = site.d8Revision | downcase %}
 {%- endif %}
 
-<table markdown="0">
+<table markdown="0" style="table-layout: fixed">
+  <colgroup>
+    <col width="225px">
+    <col width="68px">
+    <col width="68px">
+    <col width="68px">
+    <col width="68px">
+    <col width="68px">
+    <col width="90px">
+    <col width="90px">
+  </colgroup>
   <thead>
   <tr>
     <th style="text-align: center"></th>
@@ -86,7 +96,7 @@
         {%- endif %}
         {%- if skip %}{% continue %}{% endif %}
 
-        <td style="text-align: center; width: 170px;">
+        <td style="text-align: center;">
           {%- if editionsWeight[moduleEdition] <= editionsWeight[currentEdition] or module[1].editionRestrictions contains currentEdition %}
 
             {%- if site.data.editions[currentEdition].excludeModules contains moduleName %}
