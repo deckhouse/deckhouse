@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-okmeter
-  name: d8:manage:capability:module:okmeter:view
+  name: d8:manage:permission:module:okmeter:view
 rules:
 - apiGroups:
   - deckhouse.io

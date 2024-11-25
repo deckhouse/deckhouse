@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/aggregate-to-networking-as: manager
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
-  name: d8:manage:capability:module:flow-schema:edit
+  name: d8:manage:permission:module:flow-schema:edit
 rules:
 - apiGroups:
   - deckhouse.io

@@ -8,7 +8,7 @@ metadata:
     rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
-  name: d8:manage:capability:module:priority-class:edit
+  name: d8:manage:permission:module:priority-class:edit
 rules:
 - apiGroups:
   - deckhouse.io

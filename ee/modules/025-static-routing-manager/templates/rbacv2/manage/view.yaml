@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-static-routing-manager
-  name: d8:manage:capability:module:static-routing-manager:view
+  name: d8:manage:permission:module:static-routing-manager:view
 rules:
 - apiGroups:
   - deckhouse.io

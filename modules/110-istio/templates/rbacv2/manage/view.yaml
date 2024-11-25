@@ -10,12 +10,11 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-istio
-  name: d8:manage:capability:module:istio:view
+  name: d8:manage:permission:module:istio:view
 rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - ingressistiocontrollers
   - istiofederations
   - istiomulticlusters
   verbs:
