@@ -1,14 +1,7 @@
+x-config-version: 2
 type: object
 properties:
-  ebpfExporterEnabled:
-    type: boolean
-    default: true
-    x-doc-deprecated: true
-    x-examples:
-    - false
-    description: |
-      Does not affect the operation of module components.
-  oomKillExporterEnabled:
+  oomKillsExporterEnabled:
     type: boolean
     default: true
     x-examples:

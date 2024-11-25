@@ -1,4 +1,4 @@
-{{- if .Values.monitoringKubernetes.oomKillsExporter }}
+{{- if .Values.monitoringKubernetes.oomKillsExporterEnabled }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor

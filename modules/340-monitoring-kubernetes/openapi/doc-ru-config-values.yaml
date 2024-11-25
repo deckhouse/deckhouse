@@ -1,9 +1,6 @@
 type: object
 properties:
-  ebpfExporterEnabled:
-    description: |
-      Не влияет на работу компонентов модуля.
-  oomKillExporterEnabled:
+  oomKillsExporterEnabled:
     description: |
       Флаг отключения oomKillExporter для случаев, когда его работа создает проблемы в нормальной работе узлов.
   highAvailability:
