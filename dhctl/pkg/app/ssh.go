@@ -156,12 +156,10 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 		Short('K').
 		BoolVar(&AskBecomePass)
 
-	cmd.PreAction(func(c *kingpin.ParseContext) error {
-		if SSHUser == "root" {
-			AskBecomePass = false
-		}
-		return nil
-	})
+	if SSHUser == "root" {
+		_ = fmt.Errorf("flag --ssh-become-pass cannot be set for --ssh-user=root")
+		os.Exit(1)
+	}
 }
 
 func processConnectionConfigFile(sshFlagSetByUser bool, parser connectionConfigParser) error {
