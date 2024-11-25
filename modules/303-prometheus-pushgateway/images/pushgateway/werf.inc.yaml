@@ -30,8 +30,8 @@ import:
   to: /bin/pushgateway
   before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /empty
-  to: /pushgateway
+  add: /empty/
+  to: /pushgateway/
   before: setup
 docker:
   EXPOSE:
