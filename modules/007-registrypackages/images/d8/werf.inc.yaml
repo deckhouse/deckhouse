@@ -27,8 +27,8 @@ git:
 shell:
   setup:
   - export GOPROXY={{ $.GOPROXY }}
-  - go install github.com/go-task/task/v3/cmd/task@latest
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - go install github.com/go-task/task/v3/cmd/task@latest
   - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
   - cd /deckhouse-cli
   {{- include "debian packages proxy" . | nindent 2 }}
