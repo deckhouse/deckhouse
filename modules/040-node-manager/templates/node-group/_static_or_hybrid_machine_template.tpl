@@ -1,7 +1,7 @@
 {{- define "node_group_static_or_hybrid_machine_template" }}
   {{- $context := index . 0 }}
   {{- $ng := index . 1 }}
-  {{- $staticMachineTemplateName := include "node_group.generate_static_machine_template_name" (list $ng) }}
+  {{- $staticMachineTemplateName := include "static_machine_template_name" (list $ng) }}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: StaticMachineTemplate
