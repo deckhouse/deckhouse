@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	addonOpUtils "github.com/flant/addon-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -28,8 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
-
-	addonOpUtils "github.com/flant/addon-operator/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
