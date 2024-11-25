@@ -19,7 +19,6 @@ spec:
   releaseChannel: alpha
 status:
   message: ""
-  moduleErrors: []
   modules:
   - name: echo
     overridden: true
@@ -32,6 +31,9 @@ metadata:
   annotations:
     modules.deckhouse.io/deployed-on: dev-master-0
   creationTimestamp: "2024-05-22T10:05:44Z"
+  deletionTimestamp: "2024-05-22T10:05:44Z"
+  finalizers:
+  - kubernetes
   generation: 1
   labels:
     module: echo

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
@@ -28,6 +29,7 @@ import (
 	scriptextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
 	staticextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,9 +43,19 @@ import (
 // refreshModule refreshes module in cluster
 func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
 	r.log.Debugf("refresh the %q module status", moduleName)
+
+	// events happen quite often, so conflicts happen often, default backoff not suitable
+	backoff := wait.Backoff{
+		Steps: 6,
+		// magic number
+		Duration: 20 * time.Millisecond,
+		Factor:   1.0,
+		Jitter:   0.1,
+	}
+
+	module := new(v1alpha1.Module)
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			module := new(v1alpha1.Module)
+		return retry.RetryOnConflict(backoff, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 				return err
 			}
@@ -61,9 +73,9 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 	metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
+	moduleConfig := new(v1alpha1.ModuleConfig)
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			moduleConfig := new(v1alpha1.ModuleConfig)
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
 					r.log.Debugf("the module '%s' config not found", configName)
@@ -95,9 +107,6 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	basicModule := r.moduleManager.GetModule(module.Name)
 	if basicModule == nil {
-		module.Status.Phase = v1alpha1.ModuleMessageNotInstalled
-		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
-		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 		return
 	}
 
@@ -142,8 +151,11 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			}
 
 		case modules.OnStartupDone:
-			module.Status.Phase = v1alpha1.ModulePhaseReconciling
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonReconciling, v1alpha1.ModuleMessageOnStartupHook)
+			if module.Status.Phase != v1alpha1.ModulePhaseInstalling {
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonReconciling, v1alpha1.ModuleMessageOnStartupHook)
+			} else {
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonInstalling, v1alpha1.ModuleMessageOnStartupHook)
+			}
 
 		case modules.WaitForSynchronization:
 			module.Status.Phase = v1alpha1.ModulePhaseWaitSyncTasks
