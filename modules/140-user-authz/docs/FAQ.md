@@ -295,7 +295,7 @@ If the resource belongs to a namespace, you need to extend the use role instead 
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-role: user
+     rbac.deckhouse.io/aggregate-to-kubernetes-as: user
      rbac.deckhouse.io/kind: use
    name: custom:use:capability:mycustom:superresource:view
  rules:
@@ -309,4 +309,4 @@ If the resource belongs to a namespace, you need to extend the use role instead 
    - watch
  ```
 
-This role will be added to the `d8:use:role:user` role.
+This role will be added to the `d8:use:role:user:kubernetes` role.
