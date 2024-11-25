@@ -39,6 +39,7 @@ modules:
 discovery:
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
   kubernetesVersion: 1.15.4
+  prometheusScrapeInterval: 60
   d8SpecificNodeCountByRole:
     system: 1
     master: 1
@@ -84,5 +85,12 @@ var _ = Describe("Module :: monitoring-kubernetes :: helm template ::", func() {
 				Expect(test.Exists()).To(BeTrue())
 			})
 		}
+
+		It("DaemonSet oom-kills-exporter check env", func() {
+			test := f.KubernetesResource("DaemonSet", "d8-monitoring", "oom-kills-exporter")
+			Expect(test.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
+				[{ "name": "PROMETHEUS_SCRAPE_INTERVAL", "value": "60" }]
+			`))
+		})
 	})
 })
