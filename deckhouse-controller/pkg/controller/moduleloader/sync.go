@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 )
@@ -38,7 +39,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		return errors.New("determine the node name deckhouse pod is running on: missing or empty DECKHOUSE_NODE_NAME env")
 	}
 
-	mpos := new(v1alpha1.ModulePullOverrideList)
+	mpos := new(v1alpha2.ModulePullOverrideList)
 	if err := l.client.List(ctx, mpos); err != nil {
 		return fmt.Errorf("list module pull overrides: %w", err)
 	}
@@ -49,10 +50,46 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 			continue
 		}
 
+		module := new(v1alpha1.Module)
+		if err := l.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
+			if !apierrors.IsNotFound(err) {
+				l.log.Errorf("failed to get the '%s' module: %v", mpo.Name, err)
+				return err
+			}
+			l.log.Infof("the module '%s' does not exist, skip restoring module pull override process", mpo.Name)
+			continue
+		}
+
+		// skip embedded module
+		if module.IsEmbedded() {
+			l.log.Infof("the module '%s' is embbedded, skip restoring module pull override process", mpo.Name)
+			continue
+		}
+
+		// module must be enabled
+		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+			l.log.Infof("the '%s' module disabled, skip restoring module pull override process", mpo.Name)
+			continue
+		}
+
+		// source must be
+		if module.Properties.Source == "" {
+			l.log.Infof("the '%s' module does have an active source, skip restoring module pull override process", mpo.Name)
+			continue
+		}
+
+		err := utils.Update[*v1alpha1.Module](ctx, l.client, module, func(module *v1alpha1.Module) bool {
+			module.Properties.Version = mpo.Spec.ImageTag
+			return true
+		})
+		if err != nil {
+			return fmt.Errorf("set the '%s' module version: %w", module.Name, err)
+		}
+
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
-		if err := l.client.Get(ctx, client.ObjectKey{Name: mpo.Spec.Source}, source); err != nil {
-			return fmt.Errorf("get the '%s' module source for the '%s' module: %w", mpo.Spec.Source, mpo.Name, err)
+		if err = l.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
+			return fmt.Errorf("get the '%s' module source for the '%s' module: %w", module.Properties.Source, mpo.Name, err)
 		}
 
 		// mpo's status.weight field isn't set - get it from the module's definition
@@ -72,7 +109,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		}
 
 		// if deployedOn annotation isn't set or its value doesn't equal to current node name - overwrite the module from the repository
-		if annotationNodeName, set := mpo.GetAnnotations()[v1alpha1.ModulePullOverrideAnnotationDeployedOn]; !set || annotationNodeName != currentNodeName {
+		if deployedOn, set := mpo.GetAnnotations()[v1alpha1.ModulePullOverrideAnnotationDeployedOn]; !set || deployedOn != currentNodeName {
 			l.log.Infof("reinitialize the '%s' module pull override due to stale/absent deployedOn annotation", mpo.Name)
 			if err := os.RemoveAll(filepath.Join(l.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion)); err != nil {
 				return fmt.Errorf("delete the stale directory of the '%s' module: %w", mpo.Name, err)
@@ -91,6 +128,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		// if annotation is ok - we have to check that the file system is in sync
 		moduleSymLink := filepath.Join(l.symlinksDir, fmt.Sprintf("%d-%s", mpo.Status.Weight, mpo.Name))
 		if _, err := os.Stat(moduleSymLink); err != nil {
+			// module symlink not found
 			if !os.IsNotExist(err) {
 				return fmt.Errorf("check the '%s' module symlink: %w", mpo.Name, err)
 			}
@@ -139,7 +177,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 		moduleVersion := "v" + release.Spec.Version.String()
 
 		// if ModulePullOverride exists, don't check and restore overridden release
-		exists, err := utils.ModulePullOverrideExists(ctx, l.client, release.GetModuleSource(), release.Spec.ModuleName)
+		exists, err := utils.ModulePullOverrideExists(ctx, l.client, release.Spec.ModuleName)
 		if err != nil {
 			return fmt.Errorf("get module pull override for the '%s' module: %w", release.Spec.ModuleName, err)
 		}
@@ -246,7 +284,7 @@ func (l *Loader) deleteModulesWithAbsentRelease(ctx context.Context) error {
 	}
 
 	for module, moduleLinkPath := range modulesLinks {
-		mpo := new(v1alpha1.ModulePullOverride)
+		mpo := new(v1alpha2.ModulePullOverride)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err != nil && apierrors.IsNotFound(err) {
 			l.log.Warnf("the '%s' module has neither release nor override, purge it from fs", module)
 			_ = os.RemoveAll(moduleLinkPath)
