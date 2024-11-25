@@ -98,7 +98,7 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 
 		name := obj.GetName()
 
-		return name == state.RegistryPKISecretName || name == state.UserROSecretName || name == state.UserRWSecretName
+		return name == state.PKISecretName || name == state.UserROSecretName || name == state.UserRWSecretName
 	})
 
 	noopHandler := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {

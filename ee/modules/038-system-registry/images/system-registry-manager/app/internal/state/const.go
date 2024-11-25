@@ -8,10 +8,6 @@ package state
 const (
 	RegistryModuleName = "system-registry"
 
-	RegistryPKISecretName = "registry-pki"
-
-	CASecretName = "registry-pki"
-
 	LabelTypeKey             = "type"
 	LabelModuleKey           = "module"
 	LabelNodeSecretTypeValue = "node-secret"

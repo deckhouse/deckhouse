@@ -8,7 +8,10 @@ package registry_controller
 import (
 	"context"
 	"embeded-registry-manager/internal/state"
+	"embeded-registry-manager/internal/utils/pki"
+	"errors"
 	"fmt"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -25,6 +28,8 @@ type StateController = stateController
 
 var _ reconcile.Reconciler = &stateController{}
 
+var errorPKIInvalid = errors.New("invalid PKI found and internal state is not populated")
+
 type stateController struct {
 	Client    client.Client
 	Namespace string
@@ -33,8 +38,9 @@ type stateController struct {
 
 	eventRecorder record.EventRecorder
 
-	UserRO *state.User
-	UserRW *state.User
+	UserRO   *state.User
+	UserRW   *state.User
+	PKIState *state.PKIState
 }
 
 func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
@@ -59,7 +65,7 @@ func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 
 		name := obj.GetName()
 
-		return name == state.RegistryPKISecretName || name == state.UserROSecretName || name == state.UserRWSecretName
+		return name == state.PKISecretName || name == state.UserROSecretName || name == state.UserRWSecretName
 	})
 
 	secretsHandler := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -111,6 +117,18 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 
 	var changed, skipReprocess bool
 
+	if changed, err = sc.EnsurePKI(ctx, &sc.PKIState); err != nil {
+		if errors.Is(err, errorPKIInvalid) {
+			log.Error(err, "PKI secret not found and cannot be restored form internal state, stopping reconcile")
+			err = nil
+			return
+		}
+
+		err = fmt.Errorf("cannot ensure PKI: %w", err)
+		return
+	}
+	skipReprocess = skipReprocess || changed
+
 	if changed, err = sc.EnsureUserSecret(
 		ctx,
 		state.UserROSecretName,
@@ -141,12 +159,11 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 	return
 }
 
-func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, user **state.User) (bool, error) {
+func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, currentUser **state.User) (bool, error) {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsureUserSecret", "name", name)
 
 	secret := corev1.Secret{}
-
 	key := types.NamespacedName{
 		Name:      name,
 		Namespace: sc.Namespace,
@@ -158,40 +175,46 @@ func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, us
 		return false, fmt.Errorf("cannot get secret %v k8s object: %w", name, err)
 	}
 
-	var ret state.User
+	var actualUser state.User
 	notFound := false
 
 	// Not found
 	if err != nil {
 		notFound = true
 	} else {
-		ret.UserName = string(secret.Data["name"])
-		ret.Password = string(secret.Data["password"])
-		ret.HashedPassword = string(secret.Data["passwordHash"])
+		actualUser.UserName = string(secret.Data["name"])
+		actualUser.Password = string(secret.Data["password"])
+		actualUser.HashedPassword = string(secret.Data["passwordHash"])
 	}
 
-	if notFound || !ret.IsValid() {
-		if *user != nil && (*user).IsValid() {
+	if notFound || !actualUser.IsValid() {
+		if *currentUser != nil && (*currentUser).IsValid() {
 			if notFound {
 				log.Info("Secret for user not found, will restore from memory")
 			} else {
 				log.Info("Secret for user is invalid, will restore from memory")
 			}
 
-			ret = **user
+			actualUser = **currentUser
 		} else {
 			log.Info("User is invalid, generating new")
 
-			ret.UserName = name
-			ret.GenerateNewPassword()
+			actualUser.UserName = name
+			actualUser.GenerateNewPassword()
 		}
 	}
 
-	if !ret.IsPasswordHashValid() {
-		ret.UpdatePasswordHash()
+	if !actualUser.IsPasswordHashValid() {
+		actualUser.UpdatePasswordHash()
 
 		log.Info("Password hash for user not corresponds password, updating")
 	}
+
+	// Making a copy unconditionally is a bit wasteful, since we don't
+	// always need to update the service. But, making an unconditional
+	// copy makes the code much easier to follow, and we have a GC for
+	// a reason.
+	secretOrig := secret.DeepCopy()
 
 	// Set labels
 	if secret.Labels == nil {
@@ -204,9 +227,9 @@ func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, us
 
 	// Set data
 	secret.Data = map[string][]byte{
-		"name":         []byte(ret.UserName),
-		"password":     []byte(ret.Password),
-		"passwordHash": []byte(ret.HashedPassword),
+		"name":         []byte(actualUser.UserName),
+		"password":     []byte(actualUser.Password),
+		"passwordHash": []byte(actualUser.HashedPassword),
 	}
 
 	changed := false
@@ -216,26 +239,165 @@ func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, us
 		secret.Type = state.UserSecretType
 
 		if err = sc.Client.Create(ctx, &secret); err != nil {
-			return changed, fmt.Errorf("cannot create k8s object: %w", err)
+			return false, fmt.Errorf("cannot create k8s object: %w", err)
 		}
 
 		changed = true
-		log.Info("New secret for user was created")
+		log.Info("New secret was created")
 	} else {
-		currentVersion := secret.ResourceVersion
+		// Check than we're need to update secret
+		if !reflect.DeepEqual(secretOrig, secret) {
+			if err = sc.Client.Update(ctx, &secret); err != nil {
+				return false, fmt.Errorf("cannot update k8s object: %w", err)
+			}
 
-		if err = sc.Client.Update(ctx, &secret); err != nil {
-			return changed, fmt.Errorf("cannot update k8s object: %w", err)
-		}
+			if secretOrig.ResourceVersion != secret.ResourceVersion {
+				log.Info("Secret was updated")
+				changed = true
+			}
 
-		if currentVersion != secret.ResourceVersion {
-			log.Info("Secret for user was updated")
-			changed = true
 		}
 	}
 
-	// Set actual user value
-	*user = &ret
+	// Save actual value
+	*currentUser = &actualUser
+
+	return changed, nil
+}
+
+func (sc *stateController) EnsurePKI(ctx context.Context, currentState **state.PKIState) (bool, error) {
+	log := ctrl.LoggerFrom(ctx).
+		WithValues("action", "EnsurePKI")
+
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.PKISecretName,
+		Namespace: sc.Namespace,
+	}
+
+	err := sc.Client.Get(ctx, key, &secret)
+
+	if client.IgnoreNotFound(err) != nil {
+		return false, fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+	}
+
+	var actualState state.PKIState
+	notFound := false
+	isValid := true
+
+	if err != nil {
+		notFound = true
+	} else {
+		caPKI, err := state.DecodeCertKeyFromSecret(
+			state.CACertSecretField,
+			state.CAKeySecretField,
+			&secret,
+		)
+
+		if err != nil {
+			log.Error(err, "Cannot decode CA PKI")
+			isValid = false
+		} else {
+			actualState.CA = &caPKI
+		}
+
+		if isValid {
+			tokenPKI, err := state.DecodeCertKeyFromSecret(
+				state.TokenCertSecretField,
+				state.TokenKeySecretField,
+				&secret,
+			)
+
+			if err != nil {
+				log.Error(err, "Cannot decode Token PKI")
+				isValid = false
+			} else {
+				actualState.Token = &tokenPKI
+			}
+		}
+
+		if isValid {
+			err = pki.ValidateCertWithCAChain(actualState.Token.Cert, actualState.CA.Cert)
+			if err != nil {
+				log.Error(err, "Token certificate validation error")
+				isValid = false
+			}
+		}
+	}
+
+	if notFound || !isValid {
+		if currentState != nil && *currentState != nil {
+			if notFound {
+				log.Info("Secret for user not found, will restore from memory")
+			} else {
+				log.Info("Secret for user is invalid, will restore from memory")
+			}
+
+			actualState = **currentState
+		} else {
+			// PKI is invalid and we don't have some to restore
+			return false, errorPKIInvalid
+		}
+	}
+
+	// Making a copy unconditionally is a bit wasteful, since we don't
+	// always need to update the service. But, making an unconditional
+	// copy makes the code much easier to follow, and we have a GC for
+	// a reason.
+	secretOrig := secret.DeepCopy()
+
+	// Set labels
+	if secret.Labels == nil {
+		secret.Labels = make(map[string]string)
+	}
+
+	secret.Data = make(map[string][]byte)
+	if err = state.EncodeCertKeyToSecret(
+		*actualState.CA,
+		state.CACertSecretField,
+		state.CAKeySecretField,
+		&secret,
+	); err != nil {
+		return false, fmt.Errorf("cannot encode CA PKI to secret: %w", err)
+	}
+
+	if err = state.EncodeCertKeyToSecret(
+		*actualState.Token,
+		state.TokenCertSecretField,
+		state.TokenKeySecretField,
+		&secret,
+	); err != nil {
+		return false, fmt.Errorf("cannot encode Token PKI to secret: %w", err)
+	}
+
+	changed := false
+	if notFound {
+		secret.Name = key.Name
+		secret.Namespace = key.Namespace
+
+		// if err = sc.Client.Create(ctx, &secret); err != nil {
+		// 	return false, fmt.Errorf("cannot create k8s object: %w", err)
+		// }
+
+		changed = true
+		log.Info("New secret was created")
+	} else {
+		// Check than we're need to update secret
+		if !reflect.DeepEqual(secretOrig, secret) {
+			// if err = sc.Client.Update(ctx, &secret); err != nil {
+			// 	return false, fmt.Errorf("cannot update k8s object: %w", err)
+			// }
+
+			if secretOrig.ResourceVersion != secret.ResourceVersion {
+				log.Info("Secret was updated")
+				changed = true
+			}
+
+		}
+	}
+
+	// Save actual value
+	*currentState = &actualState
 
 	return changed, nil
 }
