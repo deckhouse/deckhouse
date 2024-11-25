@@ -1,64 +1,51 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:manage:capability:scope:kubernetes:manage_resources
+  name: d8:manage:permission:subsystem:kubernetes:view_resources
   labels:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
 rules:
   - apiGroups:
       - apiextensions.k8s.io
     resources:
       - customresourcedefinitions
     verbs:
-      - create
-      - update
-      - patch
-      - delete
+      - get
+      - list
+      - watch
   - apiGroups:
       - ""
     resources:
       - namespaces
+      - namespaces/status
     verbs:
-      - create
-      - update
-      - patch
-      - delete
+      - get
+      - list
+      - watch
   - apiGroups:
       - ""
     resources:
       - nodes
     verbs:
-      - create
-      - update
-      - patch
-      - delete
-  - apiGroups:
-      - ""
-    resources:
-      - nodes/log
-      - nodes/metrics
-      - nodes/proxy
-      - nodes/stats
-    verbs:
-      - '*'
+      - get
+      - list
+      - watch
   - apiGroups:
       - node.k8s.io
     resources:
       - runtimeclasses
     verbs:
-      - create
-      - update
-      - patch
-      - delete
+      - get
+      - list
+      - watch
   - apiGroups:
       - scheduling.k8s.io
     resources:
       - priorityclasses
     verbs:
-      - create
-      - update
-      - patch
-      - delete
+      - get
+      - list
+      - watch

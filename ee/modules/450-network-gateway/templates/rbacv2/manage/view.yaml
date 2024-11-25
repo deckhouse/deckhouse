@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-network-gateway
-  name: d8:manage:capability:module:network-gateway:view
+  name: d8:manage:permission:module:network-gateway:view
 rules:
 - apiGroups:
   - deckhouse.io

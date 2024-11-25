@@ -1,10 +1,10 @@
-{%- assign scopes = site.data.rbac.scopes %}
+{%- assign subsystem = site.data.rbac.subsystems %}
 <div class="table-wrapper">
 <table>
 <thead>
   <tr>
-    <th>{{ site.data.i18n.common['scope'][page.lang] }}</th>
-    <th>{{ site.data.i18n.common['modules_of_a_scope'][page.lang] }}</th>
+    <th>{{ site.data.i18n.common['subsystem'][page.lang] }}</th>
+    <th>{{ site.data.i18n.common['modules_of_a_subsystem'][page.lang] }}</th>
     <th>{{ site.data.i18n.common['namespaces_used_by_modules'][page.lang] }}</th>
   </tr>
 </thead>
@@ -14,11 +14,11 @@
     <td>{{ site.data.i18n.common['all_modules'][page.lang] }}</td>
     <td>{{ site.data.i18n.common['all_namespaces'][page.lang] }}</td>
   </tr>
-{%- for scope in scopes %}
+{%- for subsystem in subsystems %}
   <tr>
-    <td>{{ scope[0] }}</td>
+    <td>{{ subsystem[0] }}</td>
     <td>
-    {%- assign modules = scope[1].modules | sort %}
+    {%- assign modules = subsystem[1].modules | sort %}
       {%- if modules %}
         <ul>
         {%- for module in modules %}
@@ -29,7 +29,7 @@
       {%- endif %}
     </td>
     <td>
-    {%- assign namespaces = scope[1].namespaces | sort %}
+    {%- assign namespaces = subsystem[1].namespaces | sort %}
       {%- if namespaces %}
         <ul>
         {%- for namespace in namespaces %}
