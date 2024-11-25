@@ -35,7 +35,7 @@ var cloudProviderNameToModule = map[string]string{
 	"VCD":         "cloudProviderVcd",
 	"Zvirt":       "cloudProviderZvirt",
 	"Dynamix":     "cloudProviderDynamix",
-	"Huaweicloud": "cloudProviderHuaweiCloud",
+	"Huaweicloud": "cloudProviderHuaweicloud",
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
