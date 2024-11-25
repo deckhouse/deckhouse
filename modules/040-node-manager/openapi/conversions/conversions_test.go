@@ -42,8 +42,6 @@ allowedBundles:
 earlyOomEnabled: false
 `,
 			expected: `
-allowedBundles:
-  - ubuntu-lts
 earlyOomEnabled: false
 `,
 			currentVersion:  1,

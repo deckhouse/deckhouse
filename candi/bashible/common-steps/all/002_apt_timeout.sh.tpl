@@ -12,16 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function set_apt_timeout() {
+if [[ -d /etc/apt/apt.conf.d ]]; then
   if [[ -f /etc/apt/apt.conf.d/99timeout ]]; then
-    return 0
+    exit 0
   fi
-
   echo 'Acquire::http::Timeout "120";' > /etc/apt/apt.conf.d/99timeout
-}
-
-case $(bb-is-bundle) in
-  debian|ubuntu-lts|astra|altlinux) set_apt_timeout ;;
-esac
-
-
+fi
