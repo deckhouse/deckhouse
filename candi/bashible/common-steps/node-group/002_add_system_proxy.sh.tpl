@@ -39,6 +39,8 @@ Environment="HTTP_PROXY=${HTTP_PROXY}" "http_proxy=${HTTP_PROXY}" "HTTPS_PROXY=$
 EOF
   {{- end }}
 
+bb-unset-proxy
+
 {{- else }}
 if [ -f /etc/systemd/system.conf.d/proxy-default-environment.conf ]; then
   rm -f /etc/systemd/system.conf.d/proxy-default-environment.conf
@@ -53,6 +55,5 @@ fi
 if [ -f /etc/profile.d/d8-system-proxy.sh ]; then
   rm -f /etc/profile.d/d8-system-proxy.sh
 fi
-{{- end }}
 
-bb-unset-proxy
+{{- end }}
