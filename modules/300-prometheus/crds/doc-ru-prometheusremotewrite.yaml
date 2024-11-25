@@ -28,8 +28,9 @@ spec:
                   description: |
                     HTTP-заголовки, которые будут добавлены к запросу.
                   properties:
-                    description: |
-                      Допустимые заголовки: X-Scope-OrgID.
+                    X-Scope-OrgID:
+                      description: |
+                        Допустимые заголовки: X-Scope-OrgID.
                 writeRelabelConfigs:
                   description: |
                     Параметры для relabel'инга данных для отправки.
