@@ -28,12 +28,17 @@ import (
 
 type DeckhouseV1alpha2Interface interface {
 	RESTClient() rest.Interface
+	ModulePullOverridesGetter
 	ModuleUpdatePoliciesGetter
 }
 
 // DeckhouseV1alpha2Client is used to interact with features provided by the deckhouse.io group.
 type DeckhouseV1alpha2Client struct {
 	restClient rest.Interface
+}
+
+func (c *DeckhouseV1alpha2Client) ModulePullOverrides() ModulePullOverrideInterface {
+	return newModulePullOverrides(c)
 }
 
 func (c *DeckhouseV1alpha2Client) ModuleUpdatePolicies() ModuleUpdatePolicyInterface {
