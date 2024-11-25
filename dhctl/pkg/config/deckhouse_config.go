@@ -78,6 +78,9 @@ type DeckhouseInstaller struct {
 
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	registryNameTemplate := "%s%s:%s"
+	if tag, ok := os.LookupEnv("DHCTL_TEST_VERSION_TAG"); ok {
+		return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
+	}
 	tag := c.DevBranch
 	if forceVersionTag {
 		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer()

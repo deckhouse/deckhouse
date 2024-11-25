@@ -205,6 +205,11 @@ spec:
     headers:
       X-Auth-Token: {{ .spec.customAuthToken }}
     {{- end }}
+    {{- if .spec.headers }}
+      {{- range $key, $value := .spec.headers }}
+      {{ $key }}: {{ $value | quote }}
+      {{- end }}
+    {{- end }}
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
       {{- .spec.writeRelabelConfigs | toYaml | nindent 6 }}
