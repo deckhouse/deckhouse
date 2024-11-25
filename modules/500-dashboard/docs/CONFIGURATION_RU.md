@@ -8,7 +8,7 @@ title: "Модуль dashboard: настройки"
 
 ## Аутентификация
 
-По умолчанию используется модуль [user-authn](/products/kubernetes-platform/documentation/v1/modules/150-user-authn/). Также можно настроить аутентификацию через [`externalAuthentication`](../cr.html#examples).
+По умолчанию используется модуль [user-authn](/products/kubernetes-platform/documentation/v1/modules/150-user-authn/). Также можно настроить аутентификацию через [`externalAuthentication`](examples.html).
 
 Если ни один из этих способов не включен, модуль `dashboard` будет отключен.
 
