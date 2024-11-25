@@ -59,12 +59,14 @@ spec:
                   description: Custom token sent as a value of the X-Auth-Token header.
                 headers:
                   description: |
-                    Custom HTTP headers to be sent along with each remote write request. Allowed headers: X-scope-OrgID.
+                    HTTP headers to include in the request.
                   type: object
-                  patternProperties:
-                    "^X-Scope-OrgID$": 
+                  properties:
+                    X-Scope-OrgID:
+                      description: |
+                        The `X-Scope-OrgID` header specifying the tenant ID.
                       type: string
-                  additionalProperties: false
+                  required: ["X-Scope-OrgID"]
                 writeRelabelConfigs:
                   description: |
                     The list of remote write relabel configurations.
