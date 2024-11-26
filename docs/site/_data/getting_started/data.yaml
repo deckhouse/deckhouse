@@ -1,6 +1,8 @@
 global:
   revisions:
     - ce
+    - be
+    - se
     - ee
   step1:
     name:
