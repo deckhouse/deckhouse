@@ -19,7 +19,7 @@ git:
     install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/bundle.tar.gz
-  to: /
+  to: /bundle.tar.gz
   stageDependencies:
     install:
       - '**/*'
