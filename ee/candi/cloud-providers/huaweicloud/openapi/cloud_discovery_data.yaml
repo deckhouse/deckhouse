@@ -24,3 +24,23 @@ apiVersions:
         uniqueItems: true
       instances:
         type: object
+      volumeTypes:
+        type: array
+        description: |
+          List of volumes types in the cloud.
+        items:
+          type: object
+          required: [name]
+          properties:
+            id:
+              type: string
+              description: |
+                The ID of the volume type.
+            name:
+              type: string
+              description: |
+                The name of the volume type.
+            isPublic:
+              type: boolean
+              description: |
+                The flag that indicates whether the volume type is public.
