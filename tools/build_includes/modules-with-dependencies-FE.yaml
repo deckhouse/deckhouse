@@ -763,29 +763,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/380-metallb/templates/rbacv2
-  to: /deckhouse/modules/380-metallb/templates/rbacv2
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
+- add: /ee/modules/380-metallb/templates/rbac-for-us.yaml
+  to: /deckhouse/modules/380-metallb/templates/rbac-for-us.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/380-metallb/templates/speaker
   to: /deckhouse/modules/380-metallb/templates/speaker
   excludePaths:

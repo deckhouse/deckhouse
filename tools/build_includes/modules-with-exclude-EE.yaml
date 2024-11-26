@@ -412,19 +412,11 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/380-metallb/templates/rbacv2
-  to: /deckhouse/modules/380-metallb/templates/rbacv2
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
+- add: /ee/modules/380-metallb/templates/rbac-for-us.yaml
+  to: /deckhouse/modules/380-metallb/templates/rbac-for-us.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/modules/380-metallb/templates/speaker
   to: /deckhouse/modules/380-metallb/templates/speaker
   excludePaths:

@@ -259,11 +259,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/380-metallb/templates/rbacv2
-  to: /deckhouse/modules/380-metallb/templates/rbacv2
+- add: /ee/modules/380-metallb/templates/rbac-for-us.yaml
+  to: /deckhouse/modules/380-metallb/templates/rbac-for-us.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/380-metallb/templates/speaker
   to: /deckhouse/modules/380-metallb/templates/speaker
   stageDependencies:
