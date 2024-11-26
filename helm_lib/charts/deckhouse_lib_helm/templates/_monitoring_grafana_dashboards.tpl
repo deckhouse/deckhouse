@@ -26,25 +26,8 @@
 {{ include "helm_lib_single_dashboard" (list $context $resourceName $folder $definition) }}
   {{- end }}
 
-  {{- range $path, $_ := $context.Files.Glob (print $currentDir "/*.tpl") }}
-    {{- $fileName := ($path | splitList "/" | last ) }}
-    {{- $definition := tpl ($context.Files.Get $path) $context }}
-
-    {{- $folder := (index ($currentDir | splitList "/") $folderNamesIndex | replace "-" " " | title) }}
-    {{- $resourceName := (regexReplaceAllLiteral "\\.tpl$" $path "") }}
-    {{- $resourceName = ($resourceName | replace " " "-" | replace "." "-" | replace "_" "-") }}
-    {{- $resourceName = (slice ($resourceName | splitList "/") $folderNamesIndex | join "-") }}
-    {{- $resourceName = (printf "%s-%s" $context.Chart.Name $resourceName) }}
-
-{{ include "helm_lib_single_dashboard" (list $context $resourceName $folder $definition) }}
-  {{- end }}
-
   {{- $subDirs := list }}
   {{- range $path, $_ := ($context.Files.Glob (print $currentDir "/**.json")) }}
-    {{- $pathSlice := ($path | splitList "/") }}
-    {{- $subDirs = append $subDirs (slice $pathSlice 0 (add $currentDirIndex 2) | join "/") }}
-  {{- end }}
-  {{- range $path, $_ := ($context.Files.Glob (print $currentDir "/**.tpl")) }}
     {{- $pathSlice := ($path | splitList "/") }}
     {{- $subDirs = append $subDirs (slice $pathSlice 0 (add $currentDirIndex 2) | join "/") }}
   {{- end }}
@@ -52,7 +35,6 @@
   {{- range $subDir := ($subDirs | uniq) }}
 {{ include "helm_lib_grafana_dashboard_definitions_recursion" (list $context $rootDir $subDir) }}
   {{- end }}
-
 {{- end }}
 
 

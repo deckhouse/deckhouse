@@ -21,7 +21,7 @@
       }
     ]
   },
-  "description": "A dashboard to visualize trivy image vulnerabilities using metrics from trivy-operator.",
+  "description": "A dashboard to visualise trivy image vulnerabilities using metrics from trivy-operator.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "gnetId": 16742,
@@ -160,7 +160,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(trivy_vulnerability_id{severity=\"Critical\",namespace=~\"$namespace\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"{{- range .Values.operatorTrivy.additionalVulnerabilityReportFields }},{{ . | lower}}=~\"${{ . | lower}}\"{{- end }}})",
+          "expr": "sum(trivy_vulnerability_id{severity=\"Critical\",namespace=~\"$namespace\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"})",
           "instant": true,
           "legendFormat": "Critical",
           "range": false,
@@ -173,7 +173,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(trivy_vulnerability_id{severity=\"High\", namespace=~\"$namespace\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"{{- range .Values.operatorTrivy.additionalVulnerabilityReportFields }},{{ . | lower}}=~\"${{ . | lower}}\"{{- end }}})",
+          "expr": "sum(trivy_vulnerability_id{severity=\"High\", namespace=~\"$namespace\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"})",
           "hide": false,
           "instant": true,
           "legendFormat": "High",
@@ -187,7 +187,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(trivy_vulnerability_id{severity=\"Medium\", namespace=~\"$namespace\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"{{- range .Values.operatorTrivy.additionalVulnerabilityReportFields }},{{ . | lower}}=~\"${{ . | lower}}\"{{- end }}})",
+          "expr": "sum(trivy_vulnerability_id{severity=\"Medium\", namespace=~\"$namespace\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"})",
           "hide": false,
           "instant": true,
           "legendFormat": "Medium",
@@ -201,7 +201,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(trivy_vulnerability_id{severity=\"Low\", namespace=~\"$namespace\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"{{- range .Values.operatorTrivy.additionalVulnerabilityReportFields }},{{ . | lower}}=~\"${{ . | lower}}\"{{- end }}})",
+          "expr": "sum(trivy_vulnerability_id{severity=\"Low\", namespace=~\"$namespace\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"})",
           "hide": false,
           "instant": true,
           "legendFormat": "Low",
@@ -215,7 +215,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(trivy_vulnerability_id{severity=\"Unknown\", namespace=~\"$namespace\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"{{- range .Values.operatorTrivy.additionalVulnerabilityReportFields }},{{ . | lower}}=~\"${{ . | lower}}\"{{- end }}})",
+          "expr": "sum(trivy_vulnerability_id{severity=\"Unknown\", namespace=~\"$namespace\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"})",
           "hide": false,
           "instant": true,
           "legendFormat": "Unknown",
@@ -362,7 +362,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(trivy_vulnerability_id{namespace=~\"$namespace\",severity=~\"$severity\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"{{- range .Values.operatorTrivy.additionalVulnerabilityReportFields }},{{ . | lower}}=~\"${{ . | lower}}\"{{- end }}}) by (image_repository,image_tag,severity, vuln_id, installed_version, fixed_version, namespace, resource_kind, resource, resource_name,vuln_title,vuln_url{{- range .Values.operatorTrivy.additionalVulnerabilityReportFields }},{{ . | lower}}{{- end }})",
+          "expr": "sum(trivy_vulnerability_id{namespace=~\"$namespace\",severity=~\"$severity\",vuln_id=~\"$vuln_id\",resource_name=~\"$resource_name\",resource=~\"$resource\"}) by (image_repository,image_tag,severity, vuln_id, namespace, resource_kind, resource, resource_name,vuln_title,vuln_url)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -388,9 +388,6 @@
               "resource": 3,
               "resource_kind": 9,
               "resource_name": 4,
-              "image_tag": 10,
-              "installed_version": 20,
-              "fixed_version": 21,
               "severity": 5,
               "vuln_id": 6,
               "vuln_title": 7
@@ -556,40 +553,6 @@
         "sort": 1,
         "type": "query"
       },
-{{- range .Values.operatorTrivy.additionalVulnerabilityReportFields }}
-      {
-        "allValue": ".*",
-        "current": {
-          "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${ds_prometheus}"
-        },
-        "definition": "label_values(trivy_vulnerability_id, {{ . | lower }})",
-        "hide": 0,
-        "includeAll": true,
-        "label": {{ . | quote }},
-        "multi": true,
-        "name": {{ . | lower | quote }},
-        "options": [],
-        "query": {
-          "query": "label_values(trivy_vulnerability_id, {{ . | lower }})",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "type": "query"
-      },
-{{- end }}
       {
         "current": {
           "selected": false,

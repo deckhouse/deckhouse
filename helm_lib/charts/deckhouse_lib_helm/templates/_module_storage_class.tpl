@@ -18,15 +18,17 @@
     {{- $_ := set $annotations "storageclass.deckhouse.io/volume-expansion-mode" "offline" }}
   {{- end }}
 
-  {{- if $context.Values.global.discovery.defaultStorageClass }}
-    {{- if eq $context.Values.global.discovery.defaultStorageClass $sc_name }}
+  {{- if hasKey $module_values.internal "defaultStorageClass" }}
+    {{- if eq $module_values.internal.defaultStorageClass $sc_name }}
       {{- $_ := set $annotations "storageclass.kubernetes.io/is-default-class" "true" }}
     {{- end }}
   {{- else }}
-    {{- /* Annotate first StorageClass in list as default in case there is `global.discovery.defaultStorageClass` and */ -}}
-    {{- /* `global.defaultClusterStorageClass` NOT defined/empty */ -}}
-    {{- if (eq $sc_index 0) }}
-      {{- if or (not (hasKey $context.Values.global "defaultClusterStorageClass")) (and (hasKey $context.Values.global "defaultClusterStorageClass") (not $context.Values.global.defaultClusterStorageClass)) }}
+    {{- if eq $sc_index 0 }}
+      {{- if $context.Values.global.discovery.defaultStorageClass }}
+        {{- if eq $context.Values.global.discovery.defaultStorageClass $sc_name }}
+          {{- $_ := set $annotations "storageclass.kubernetes.io/is-default-class" "true" }}
+        {{- end }}
+      {{- else }}
         {{- $_ := set $annotations "storageclass.kubernetes.io/is-default-class" "true" }}
       {{- end }}
     {{- end }}
