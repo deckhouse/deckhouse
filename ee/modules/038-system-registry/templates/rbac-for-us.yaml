@@ -27,7 +27,7 @@ rules:
   verbs: ["watch", "list", "create"]
 - apiGroups: [""]
   resources: ["events"]
-  verbs: ["get", "list", "update", "create"]
+  verbs: ["get", "list", "update", "create", "patch"]
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
