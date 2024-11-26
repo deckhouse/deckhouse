@@ -84,6 +84,8 @@ spec:
                                 type: string
                               port:
                                 type: integer
+                        metadataCA:
+                          type: string
                     privateLastFetchTimestamp:
                       format: date-time
                       type: string
