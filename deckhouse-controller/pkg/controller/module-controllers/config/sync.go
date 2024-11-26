@@ -52,7 +52,7 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 		// handle too long disabled embedded modules
 		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
 			// delete module releases of a stale module
-			r.log.Infof("the '%s' module disabled too long, delete module releases", module.Name)
+			r.log.Infof("the %q module disabled too long, delete module releases", module.Name)
 			moduleReleases := new(v1alpha1.ModuleReleaseList)
 			if err := r.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
 				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
