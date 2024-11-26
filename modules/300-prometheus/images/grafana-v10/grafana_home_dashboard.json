@@ -922,7 +922,7 @@
           "links": [
             {
               "title": "",
-              "url": "http://${__data.fields.docs_url}/${__data.fields.module_name}"
+              "url": "${__data.fields.docs_url}/${__data.fields.module_name}"
             }
           ],
           "mappings": [],
