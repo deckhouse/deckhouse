@@ -92,7 +92,7 @@ spec:
                     Bundles for step execution. You can set `'*'` for selecting all bundles.
                   items:
                     type: string
-                  enum: [ubuntu-lts, centos, debian, redos, rosa, astra, altlinux, opensuse, "*"]
+                  enum: [ubuntu-lts, centos, debian, redos, rosa, astra, altlinux, opensuse, *]
       additionalPrinterColumns:
         - name: Weight
           jsonPath: .spec.weight
