@@ -21,7 +21,10 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/coreos/go-iptables/iptables"
@@ -42,9 +45,13 @@ var (
 	inputAcceptRule      = strings.Fields("-p tcp -m multiport --dport 1081,1444 -d 169.254.20.11 -m comment --comment ingress-failover -j ACCEPT")
 
 	linkName = "ingressfailover"
+
+	natTable        = "nat"
+	preroutingChain = "PREROUTING"
 )
 
 func main() {
+	log.Default().Print("Start iptables-loop")
 	iptablesMgr, err := iptables.NewWithProtocol(iptables.ProtocolIPv4)
 	if err != nil {
 		log.Fatal(err)
@@ -52,6 +59,7 @@ func main() {
 
 	migrationRemoveOldRules(iptablesMgr)
 
+	log.Default().Print("Create link")
 	err = addLinkAndAddress()
 	if err != nil {
 		log.Fatal(err)
@@ -60,6 +68,40 @@ func main() {
 	// during the failover rollout remove failover-jump-rule setting all traffic to primary
 	_ = iptablesMgr.DeleteIfExists("nat", "PREROUTING", jumpRule...)
 	// do nothing on error, since ingress-failover chain may not exist yet
+
+	if len(os.Args) > 1 && os.Args[1] == "remove" {
+		log.Default().Print("Remove iptables rules in ingress-failover chain")
+		err = iptablesMgr.DeleteIfExists("nat", chainName, socketExistsRule...)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Default().Print("Remove iptables rules in INPUT chain")
+		err = iptablesMgr.DeleteIfExists("filter", "INPUT", inputAcceptRule...)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Default().Print("Remove iptables rules in NAT chain")
+		err = iptablesMgr.ClearAndDeleteChain(natTable, chainName)
+		if err != nil {
+			log.Fatal("failed to clear and delete chain", err)
+		}
+		log.Default().Print("Remove iptables rules in MANGLE chain")
+		err = iptablesMgr.DeleteIfExists("mangle", "PREROUTING", restoreHttpMarkRule...)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Default().Print("Remove link")
+		link, err := netlink.LinkByName(linkName)
+		if err != nil {
+			log.Fatal("failed to create link by name", err)
+		}
+		err = netlink.LinkDel(link)
+		if err != nil {
+			log.Fatal("failed to delete link", err)
+		}
+
+		return
+	}
 
 	// check 1081/1444 ports accepted
 	err = insertUnique(iptablesMgr, "filter", "INPUT", inputAcceptRule, 1)
@@ -119,10 +161,11 @@ func main() {
 
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
-	done := make(chan bool)
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		select {
-		case <-done:
+		case <-signals:
 			return
 		case <-ticker.C:
 			err := loop(iptablesMgr)
