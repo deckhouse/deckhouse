@@ -8,13 +8,13 @@ lang: ru
 
 Если узлы кластера Kubernetes анализируются сканерами безопасности (антивирусными средствами), то может потребоваться их настройка для исключения ложноположительных срабатываний.
 
-Deckhouse использует следующие директории при работе ([скачать в csv](deckhouse-directories.csv)):
+Deckhouse Kubernetes Platform (DKP) использует следующие директории при работе ([скачать в csv](deckhouse-directories.csv)):
 
 {% include security_software_setup.liquid %}
 
 ### KESL
 
-Этот документ содержит рекомендации по конфигурации Kaspersky Endpoint Security for Linux (KESL) для корректной работы с платформой Deckhouse Kubernetes Platform (DKP), вне зависимости от её редакции.
+Этот документ содержит рекомендации по конфигурации Kaspersky Endpoint Security for Linux (KESL) для корректной работы с платформой Deckhouse Kubernetes Platform, вне зависимости от её редакции.
 
 Для обеспечения совместимости с DKP на стороне KESL необходимо отключить следующие задачи:
 
