@@ -9,7 +9,8 @@ metadata:
   namespace: d8-cloud-instance-manager
   name: {{ $staticMachineTemplateName }}
   {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | nindent 2 }}
-  helm.sh/resource-policy: keep
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   template:
     metadata:
