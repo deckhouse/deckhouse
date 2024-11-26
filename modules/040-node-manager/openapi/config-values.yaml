@@ -25,17 +25,3 @@ properties:
       Set to 'true' to disable machine-controller-manager in case of potentially cluster-damaging changes.
 
       > **Warning!** Use this flag only if you know why you are doing it and clearly understand the consequences.
-  allowedBundles:
-    type: array
-    default:
-      - "ubuntu-lts"
-      - "centos"
-      - "debian"
-      - "opensuse"
-    x-examples:
-      - ["ubuntu-lts"]
-    items:
-      type: string
-      enum: [ubuntu-lts, centos, debian, opensuse]
-    description: |
-      Names of available bashible OS bundles to reduce Helm release size.

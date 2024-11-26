@@ -3,4 +3,3 @@
 positive:
   configValues:
     - {}
-    - allowedBundles: ["redos", "rosa", "ubuntu-lts", "centos", "debian", "astra", "altlinux"]

@@ -67,10 +67,6 @@ clusterConfiguration:
 
 // Defaults from openapi/config-values.yaml.
 const nodeManagerConfigValues = `
-allowedBundles:
-  - "ubuntu-lts"
-  - "centos"
-  - "debian"
 mcmEmergencyBrake: false
 `
 
@@ -84,6 +80,10 @@ internal:
     ca: string
     key: string
     crt: string
+  allowedBundles:
+    - "ubuntu-lts"
+    - "centos"
+    - "debian"
 `
 
 const nodeManagerAWS = `

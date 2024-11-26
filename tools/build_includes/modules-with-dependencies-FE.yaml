@@ -14,6 +14,11 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/be/modules/040-node-manager/openapi/values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/modules/140-user-authz/templates/webhook
   to: /deckhouse/modules/140-user-authz/templates/webhook
   excludePaths:
