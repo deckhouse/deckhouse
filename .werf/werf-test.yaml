@@ -35,8 +35,8 @@ git:
   - modules/[1-9][0-9][0-9]-*/crds
   - candi/cloud-providers/*/layouts
   - candi/cloud-providers/*/terraform-modules
-- url: https://github.com/flant/shell-operator
-  tag: v1.1.3
+- url: {{ .SOURCE_REPO }}/flant/shell-operator
+  tag: v1.4.10
   add: /frameworks/shell
   to: /deckhouse/shell-operator/frameworks/shell
   {{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
