@@ -12,52 +12,112 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-{{- $nodeTypeList := list "CloudEphemeral" "CloudPermanent" "CloudStatic" }}
+{{- $nodeTypeList := list "CloudPermanent" }}
+{{- if has .nodeGroup.nodeType $nodeTypeList }}
+  {{- if eq .nodeGroup.name "master" }}
 
-  {{- if has .nodeGroup.nodeType $nodeTypeList }}
-    {{- if eq .nodeGroup.name "master" }}
-function get_data_device_secret() {
-  secret="d8-masters-system-registry-data-device-path"
+function exec_kubectl() {
+  kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
+}
 
-  if [ -f /var/lib/bashible/bootstrap-token ]; then
-    while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        if d8-curl -s -f -X GET "https://$server/api/v1/namespaces/d8-system/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
-        then
-          return 0
-        else
-          >&2 echo "failed to get secret $secret from server $server"
-        fi
-      done
-      sleep 10
-    done
-  else
-    >&2 echo "failed to get secret $secret: can't find bootstrap-token"
-    return 1
+function setup_registry_data_device() {
+  local data_device=$1
+  mkdir -p /mnt/system-registry-data
+  if ! file -s "$data_device" | grep -q ext4; then
+    mkfs.ext4 -F -L registry-data "$data_device"
+  fi
+
+  if grep -qv registry-data /etc/fstab; then
+    echo "LABEL=registry-data /mnt/system-registry-data ext4 defaults,discard,x-systemd.automount 0 0" >> /etc/fstab
+  fi
+
+  if ! mount | grep -q "$data_device"; then
+    mount -L registry-data
+  fi
+
+  if [[ "$(find /opt/deckhouse/system-registry/ -type f 2>/dev/null | wc -l)" == "0" ]]; then
+    rm -rf /opt/deckhouse/system-registry
+    ln -s /mnt/system-registry-data /opt/deckhouse/system-registry
   fi
 }
 
-if [ -f /var/lib/bashible/system-registry-data-device-installed ]; then
-  exit 0
-fi
+function fetch_registry_data_device_secret() {
+  local secret_name="d8-masters-system-registry-data-device-path"
+  local namespace="d8-system"
 
-if [ -f /var/lib/bashible/system_registry_data_device_path ]; then
-  DATA_DEVICE="$(</var/lib/bashible/system_registry_data_device_path)"
-else
-  DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d)"
-  if [ -z "$DATA_DEVICE" ]; then
-    >&2 echo "failed to get data device path"
-    exit 1
+  if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
+    if [ -f "$BOOTSTRAP_DIR/bootstrap-token" ]; then
+      for ((i=1; i<=5; i++)); do
+        for server in {{ .normal.apiserverEndpoints | join " " }}; do
+          local http_status
+          http_status=$(d8-curl -s -w "%{http_code}" -o /dev/null \
+            -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
+            --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
+            --cacert "$BOOTSTRAP_DIR/ca.crt")
+
+          if [ "$http_status" -eq 404 ]; then
+            # empty result if secret not exist (http status: 404)
+            return 0
+          fi
+
+          if d8-curl -s -f \
+            -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
+            --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
+            --cacert "$BOOTSTRAP_DIR/ca.crt"; then
+            return 0
+          fi
+
+          >&2 echo "Attempt $i: Failed to get secret $secret_name from server $server"
+        done
+
+        if [ $i -lt 5 ]; then
+          sleep 10
+        fi
+      done
+      >&2 echo "Exceeded maximum retry attempts to get secret $secret_name."
+      exit 1
+    else
+      >&2 echo "Failed to get secret $secret_name: can't find bootstrap-token."
+      exit 1
+    fi
+  else
+    if exec_kubectl get secrets -n "$namespace" | grep -q "^$secret_name "; then
+      exec_kubectl get secret "$secret_name" -n "$namespace" -o json
+    else
+      # empty result if secret not exist
+      return 0
+    fi
   fi
-fi
+}
+
+function extract_registry_data_device_from_secret() {
+  fetch_registry_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
+}
+
+function get_registry_data_device_from_terraform() {
+  local data_device=""
+  if [ -f "$BOOTSTRAP_DIR/system_registry_data_device_path" ]; then
+    # for first master node (after bootstrap)
+    data_device=$(<"$BOOTSTRAP_DIR/system_registry_data_device_path")
+  else
+    # for other master nodes (and first, but only after converge)
+    data_device=$(extract_registry_data_device_from_secret)
+  fi
+  echo "$data_device"
+}
+
+function find_first_unmounted_data_device() {
+  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r \
+    '[ .blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path ] | sort | first'
+}
+
+function find_mounted_registry_data_device() {
+  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r \
+    '[.blockdevices[] | select(.mountpoint == "/mnt/system-registry-data" ) | .path] | first'
+}
 
 {{- /*
-# Sometimes the `device_path` output from terraform points to a non-existent device.
-# In such situation we want to find an unpartitioned unused disk
-# with no file system, assuming it is the correct one.
-#
-# Example of this situation (lsblk -o path,type,mountpoint,fstype --tree --json):
+# Example (lsblk -o path,type,mountpoint,fstype --tree --json):
 #         {
 #          "path": "/dev/vda",
 #          "type": "disk",
@@ -83,41 +143,54 @@ fi
 #          "fstype": null
 #       }
 */}}
-if ! [ -b "$DATA_DEVICE" ]; then
-  >&2 echo "failed to find $DATA_DEVICE disk. Trying to detect the correct one"
-  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '[ .blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path ] | first')
+
+function is_unmounted_data_device_exists() {
+  local data_device
+  data_device=$(find_first_unmounted_data_device)
+  if [ "$data_device" != "null" ] && [ -n "$data_device" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+function is_registry_data_device_mounted() {
+  local data_device
+  data_device=$(find_mounted_registry_data_device)
+  if [ "$data_device" != "null" ] && [ -n "$data_device" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+function create_registry_data_device_installed_file() {
+  local installed_file="$BOOTSTRAP_DIR/system-registry-data-device-installed"
+  touch "$installed_file"
+}
+
+function remove_registry_data_device_installed_file() {
+  local installed_file="$BOOTSTRAP_DIR/system-registry-data-device-installed"
+  if [ -f "$installed_file" ]; then
+    rm -f "$installed_file"
+  fi
+}
+
+if is_registry_data_device_mounted; then
+  create_registry_data_device_installed_file
+else
+  if is_unmounted_data_device_exists; then
+    data_device=$(get_registry_data_device_from_terraform)
+    if ! [ -b "$data_device" ]; then
+      >&2 echo "Failed to find $data_device disk. Detecting the correct one..."
+      data_device=$(find_first_unmounted_data_device)
+    fi
+    setup_registry_data_device "$data_device"
+    create_registry_data_device_installed_file
+  else
+    remove_registry_data_device_installed_file
+  fi
 fi
 
-if [ $(wc -l <<< $DATA_DEVICE) -ne 1 ]; then
-  >&2 echo "failed to detect the correct disk: more than one or no matching disks found: $DATA_DEVICE"
-  return 1
-fi
-
-mkdir -p /mnt/system-registry-data
-
-if ! file -s $DATA_DEVICE | grep -q ext4; then
-  mkfs.ext4 -F -L registry-data $DATA_DEVICE
-fi
-
-if grep -qv registry-data /etc/fstab; then
-  cat >> /etc/fstab << EOF
-LABEL=registry-data           /mnt/system-registry-data     ext4   defaults,discard,x-systemd.automount        0 0
-EOF
-fi
-
-if ! mount | grep -q $DATA_DEVICE; then
-  mount -L registry-data
-fi
-
-# if there is system-registry dir with regular files then we can't delete it
-# if there aren't files then we can delete dir to prevent symlink creation problems
-if [[ "$(find /opt/deckhouse/system-registry/ -type f 2>/dev/null | wc -l)" == "0" ]]; then
-  rm -rf /opt/deckhouse/system-registry
-  ln -s /mnt/system-registry-data /opt/deckhouse/system-registry
-fi
-
-touch /var/lib/bashible/system-registry-data-device-installed
-
-    {{- end  }}
   {{- end  }}
-{{- end }}
+{{- end  }}

@@ -87,7 +87,7 @@ fi
 */}}
 if ! [ -b "$DATA_DEVICE" ]; then
   >&2 echo "failed to find $DATA_DEVICE disk. Trying to detect the correct one"
-  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '[ .blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path ] | first')
+  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '[ .blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path ] | sort | first')
 fi
 
 if [ $(wc -l <<< $DATA_DEVICE) -ne 1 ]; then
