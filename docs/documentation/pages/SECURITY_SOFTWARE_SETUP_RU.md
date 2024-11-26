@@ -8,7 +8,7 @@ lang: ru
 
 Если узлы кластера Kubernetes анализируются сканерами безопасности (антивирусными средствами), то может потребоваться их настройка для исключения ложноположительных срабатываний.
 
-Deckhouse использует следующие директории при работе ([скачать в csv.](deckhouse-directories.csv)):
+Deckhouse использует следующие директории при работе ([скачать в csv](deckhouse-directories.csv)):
 
 {% include security_software_setup.liquid %}
 
@@ -18,10 +18,10 @@ Deckhouse использует следующие директории при р
 
 Для обеспечения совместимости с DKP на стороне KESL необходимо отключить следующие задачи:
 
-- `Firewall_Management (ID: 12)`
-- `Web Threat Protection (ID: 14)`
-- `Network Threat protection (ID: 17)`
-- `Web Control (ID: 26)`
+- `Firewall_Management (ID: 12)`.
+- `Web Threat Protection (ID: 14)`.
+- `Network Threat protection (ID: 17)`.
+- `Web Control (ID: 26)`.
 
 {% alert level="info" %}
 Список задач может отличаться в будущих версиях KESL.
