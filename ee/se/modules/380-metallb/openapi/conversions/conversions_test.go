@@ -8,7 +8,7 @@ package conversions
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
 func TestPrometheusConversions(t *testing.T) {
