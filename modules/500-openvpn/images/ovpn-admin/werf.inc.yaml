@@ -49,9 +49,8 @@ shell:
   - git clone {{ .SOURCE_REPO }}/palark/ovpn-admin.git .
   - git checkout {{ $gitCommit }}
   - git apply /patches/*.patch --verbose
-  - rm -r .git
+  - rm -rf .git
   - echo {{ $gitCommit }} > version
-  - rm -r .git
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
