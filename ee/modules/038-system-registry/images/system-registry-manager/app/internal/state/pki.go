@@ -14,7 +14,9 @@ import (
 )
 
 const (
-	PKISecretName = "registry-pki"
+	PKISecretName     = "registry-pki"
+	CASecretType      = "system-registry/ca-secret"
+	CASecretTypeLabel = "ca-secret"
 
 	CACertSecretField = "registry-ca.crt"
 	CAKeySecretField  = "registry-ca.key"

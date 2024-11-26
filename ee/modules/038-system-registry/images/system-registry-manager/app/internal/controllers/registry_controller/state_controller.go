@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -41,6 +42,7 @@ type stateController struct {
 	UserRO   *state.User
 	UserRW   *state.User
 	PKIState *state.PKIState
+	StateOK  bool
 }
 
 func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
@@ -112,6 +114,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 
 	if !config.Enabled {
 		log.Info("Module disabled will not reconcile other objects")
+
 		return
 	}
 
@@ -119,7 +122,16 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 
 	if changed, err = sc.ensurePKI(ctx, &sc.PKIState); err != nil {
 		if errors.Is(err, errorPKIInvalid) {
-			log.Error(err, "PKI is invalid and cannot be restored form internal state, stopping reconcile")
+			log.Error(err, "PKI is invalid and cannot be restored from internal state")
+
+			sc.logModuleWarning(
+				nil,
+				"PKIFatal",
+				"PKI is invalid and cannot be restored from internal state",
+			)
+
+			sc.StateOK = false
+
 			err = nil
 			return
 		}
@@ -127,6 +139,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		err = fmt.Errorf("cannot ensure PKI: %w", err)
 		return
 	}
+
 	skipReprocess = skipReprocess || changed
 
 	if changed, err = sc.ensureUserSecret(
@@ -148,6 +161,16 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		return
 	}
 	skipReprocess = skipReprocess || changed
+
+	if !sc.StateOK {
+		sc.StateOK = true
+
+		sc.logModuleInfo(
+			&log,
+			"NoError",
+			"Module global state is OK",
+		)
+	}
 
 	if !skipReprocess {
 		err = sc.ReprocessAllNodes(ctx)
@@ -175,6 +198,12 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 		return false, fmt.Errorf("cannot get secret %v k8s object: %w", name, err)
 	}
 
+	// Making a copy unconditionally is a bit wasteful, since we don't
+	// always need to update the service. But, making an unconditional
+	// copy makes the code much easier to follow, and we have a GC for
+	// a reason.
+	secretOrig := secret.DeepCopy()
+
 	var actualUser state.User
 	notFound := false
 
@@ -190,14 +219,26 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 	if notFound || !actualUser.IsValid() {
 		if *currentUser != nil && (*currentUser).IsValid() {
 			if notFound {
-				log.Info("Secret for user not found, will restore from memory")
+				sc.logModuleWarning(
+					&log,
+					fmt.Sprintf("NotFoundUserSecretRestored: %v", name),
+					"Secret for user not found, will restore from controller's internal state",
+				)
 			} else {
-				log.Info("Secret for user is invalid, will restore from memory")
+				sc.logModuleWarning(
+					&log,
+					fmt.Sprintf("InvidUserSecretRestored: %v", name),
+					"Secret for user invalid, will restore from controller's internal state",
+				)
 			}
 
 			actualUser = **currentUser
 		} else {
-			log.Info("User is invalid, generating new")
+			sc.logModuleWarning(
+				&log,
+				fmt.Sprintf("NewUserSecretGenerated: %v", name),
+				"User is invalid, generating new",
+			)
 
 			actualUser.UserName = name
 			actualUser.GenerateNewPassword()
@@ -207,14 +248,12 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 	if !actualUser.IsPasswordHashValid() {
 		actualUser.UpdatePasswordHash()
 
-		log.Info("Password hash for user not corresponds password, updating")
+		sc.logModuleWarning(
+			&log,
+			fmt.Sprintf("UserPasswordHashUpdated: %v", name),
+			"Password hash updated to correspond password",
+		)
 	}
-
-	// Making a copy unconditionally is a bit wasteful, since we don't
-	// always need to update the service. But, making an unconditional
-	// copy makes the code much easier to follow, and we have a GC for
-	// a reason.
-	secretOrig := secret.DeepCopy()
 
 	// Set labels
 	if secret.Labels == nil {
@@ -224,6 +263,7 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 	secret.Labels[state.LabelModuleKey] = state.RegistryModuleName
 	secret.Labels[state.LabelHeritageKey] = state.LabelHeritageValue
 	secret.Labels[state.LabelManagedBy] = state.RegistryModuleName
+	secret.Labels[state.LabelTypeKey] = state.UserSecretTypeLabel
 
 	// Set data
 	secret.Data = map[string][]byte{
@@ -281,6 +321,12 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 		return false, fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
 	}
 
+	// Making a copy unconditionally is a bit wasteful, since we don't
+	// always need to update the service. But, making an unconditional
+	// copy makes the code much easier to follow, and we have a GC for
+	// a reason.
+	secretOrig := secret.DeepCopy()
+
 	var actualState state.PKIState
 	notFound := false
 	isValid := true
@@ -296,6 +342,13 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 
 		if err != nil {
 			log.Error(err, "Cannot decode CA PKI")
+
+			sc.logModuleWarning(
+				&log,
+				"PKICADecodeError",
+				fmt.Sprintf("PKI CA decode error: %v", err),
+			)
+
 			isValid = false
 		} else {
 			actualState.CA = &caPKI
@@ -310,6 +363,13 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 
 			if err != nil {
 				log.Error(err, "Cannot decode Token PKI")
+
+				sc.logModuleWarning(
+					&log,
+					"PKITokenDecodeError",
+					fmt.Sprintf("PKI Token decode error: %v", err),
+				)
+
 				isValid = false
 			} else {
 				actualState.Token = &tokenPKI
@@ -320,6 +380,13 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 			err = pki.ValidateCertWithCAChain(actualState.Token.Cert, actualState.CA.Cert)
 			if err != nil {
 				log.Error(err, "Token certificate validation error")
+
+				sc.logModuleWarning(
+					&log,
+					"PKITokenCertValidationError",
+					fmt.Sprintf("PKI Token certificate validation error: %v", err),
+				)
+
 				isValid = false
 			}
 		}
@@ -328,9 +395,17 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 	if notFound || !isValid {
 		if currentState != nil && *currentState != nil {
 			if notFound {
-				log.Info("Secret for user not found, will restore from memory")
+				sc.logModuleWarning(
+					&log,
+					"PKINotfoundRestored",
+					"PKI secret not found, will restore from controller's internal state",
+				)
 			} else {
-				log.Info("Secret for user is invalid, will restore from memory")
+				sc.logModuleWarning(
+					&log,
+					"PKIInvalidRestored",
+					"PKI secret invalid, so restored from controller's internal state",
+				)
 			}
 
 			actualState = **currentState
@@ -340,16 +415,15 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 		}
 	}
 
-	// Making a copy unconditionally is a bit wasteful, since we don't
-	// always need to update the service. But, making an unconditional
-	// copy makes the code much easier to follow, and we have a GC for
-	// a reason.
-	secretOrig := secret.DeepCopy()
-
 	// Set labels
 	if secret.Labels == nil {
 		secret.Labels = make(map[string]string)
 	}
+
+	secret.Labels[state.LabelModuleKey] = state.RegistryModuleName
+	secret.Labels[state.LabelHeritageKey] = state.LabelHeritageValue
+	secret.Labels[state.LabelManagedBy] = state.RegistryModuleName
+	secret.Labels[state.LabelTypeKey] = state.CASecretTypeLabel
 
 	secret.Data = make(map[string][]byte)
 	if err = state.EncodeCertKeyToSecret(
@@ -374,19 +448,20 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 	if notFound {
 		secret.Name = key.Name
 		secret.Namespace = key.Namespace
+		secret.Type = state.CASecretType
 
-		// if err = sc.Client.Create(ctx, &secret); err != nil {
-		// 	return false, fmt.Errorf("cannot create k8s object: %w", err)
-		// }
+		if err = sc.Client.Create(ctx, &secret); err != nil {
+			return false, fmt.Errorf("cannot create k8s object: %w", err)
+		}
 
 		changed = true
 		log.Info("New secret was created")
 	} else {
 		// Check than we're need to update secret
 		if !reflect.DeepEqual(secretOrig, secret) {
-			// if err = sc.Client.Update(ctx, &secret); err != nil {
-			// 	return false, fmt.Errorf("cannot update k8s object: %w", err)
-			// }
+			if err = sc.Client.Update(ctx, &secret); err != nil {
+				return false, fmt.Errorf("cannot update k8s object: %w", err)
+			}
 
 			if secretOrig.ResourceVersion != secret.ResourceVersion {
 				log.Info("Secret was updated")
@@ -400,4 +475,26 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 	*currentState = &actualState
 
 	return changed, nil
+}
+
+func (sc *stateController) logModuleWarning(log *logr.Logger, reason, message string) {
+	obj := state.GetModuleConfigObject()
+	obj.SetNamespace(sc.Namespace)
+
+	sc.eventRecorder.Event(&obj, corev1.EventTypeWarning, reason, message)
+
+	if log != nil {
+		log.Info(message, "reason", reason)
+	}
+}
+
+func (sc *stateController) logModuleInfo(log *logr.Logger, reason, message string) {
+	obj := state.GetModuleConfigObject()
+	obj.SetNamespace(sc.Namespace)
+
+	sc.eventRecorder.Event(&obj, corev1.EventTypeNormal, reason, message)
+
+	if log != nil {
+		log.Info(message, "reason", reason)
+	}
 }

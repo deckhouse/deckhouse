@@ -21,7 +21,8 @@ const (
 	UserROSecretName = "registry-user-ro"
 	UserRWSecretName = "registry-user-rw"
 
-	UserSecretType = "system-registry/user"
+	UserSecretType      = "system-registry/user"
+	UserSecretTypeLabel = "system-registry-user"
 )
 
 type User struct {
