@@ -717,73 +717,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/380-metallb/images/metallb/werf.inc.yaml
-  to: /deckhouse/modules/380-metallb/images/metallb/werf.inc.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/controller/deployment.yaml
-  to: /deckhouse/modules/380-metallb/templates/controller/deployment.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/controller/ipaddresspools.yaml
-  to: /deckhouse/modules/380-metallb/templates/controller/ipaddresspools.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/controller/pdb.yaml
-  to: /deckhouse/modules/380-metallb/templates/controller/pdb.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/controller/podmonitor.yaml
-  to: /deckhouse/modules/380-metallb/templates/controller/podmonitor.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/controller/rbac-for-us.yaml
-  to: /deckhouse/modules/380-metallb/templates/controller/rbac-for-us.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/speaker/_helper.tpl
-  to: /deckhouse/modules/380-metallb/templates/speaker/_helper.tpl
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/speaker/bgp-advertisements.yaml
-  to: /deckhouse/modules/380-metallb/templates/speaker/bgp-advertisements.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/speaker/bgppeers.yaml
-  to: /deckhouse/modules/380-metallb/templates/speaker/bgppeers.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/speaker/daemonset.yaml
-  to: /deckhouse/modules/380-metallb/templates/speaker/daemonset.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/speaker/podmonitor.yaml
-  to: /deckhouse/modules/380-metallb/templates/speaker/podmonitor.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/templates/speaker/rbac-for-us.yaml
-  to: /deckhouse/modules/380-metallb/templates/speaker/rbac-for-us.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/template_tests/bgp_test.go
-  to: /deckhouse/modules/380-metallb/template_tests/bgp_test.go
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster
-  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster
+- add: /ee/modules/380-metallb/images/metallb
+  to: /deckhouse/modules/380-metallb/images/metallb
   excludePaths:
     - images
     - templates
@@ -805,11 +740,126 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
-  to: /deckhouse/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+- add: /ee/modules/380-metallb/templates/controller
+  to: /deckhouse/modules/380-metallb/templates/controller
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/templates/rbacv2
+  to: /deckhouse/modules/380-metallb/templates/rbacv2
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/templates/speaker
+  to: /deckhouse/modules/380-metallb/templates/speaker
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/template_tests/bgp_test.go
+  to: /deckhouse/modules/380-metallb/template_tests/bgp_test.go
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/modules/380-metallb/monitoring/grafana-dashboards
+  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/380-metallb/monitoring/prometheus-rules
+  to: /deckhouse/modules/380-metallb/monitoring/prometheus-rules
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/450-keepalived
   to: /deckhouse/modules/450-keepalived
   excludePaths:
