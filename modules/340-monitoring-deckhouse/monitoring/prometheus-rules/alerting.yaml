@@ -173,6 +173,6 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       description: |
-        ModuleConfig {{ $labels.name }} has an obsolete version, update to the latest.
+        ModuleConfig {{ $labels.name }} is outdated. Update ModuleConfig {{ $labels.name }} to the latest version.
       summary: |
-        ModuleConfig {{ $labels.name }} has an obsolete version.
+        ModuleConfig {{ $labels.name }} is outdated.
