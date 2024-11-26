@@ -9,11 +9,14 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -24,7 +27,8 @@ import (
 	"oras.land/oras-go/v2/content/memory"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/retry"
+
+	"github.com/google/go-containerregistry/pkg/name"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -71,19 +75,23 @@ type VulnerabilityCache struct {
 }
 
 func NewVulnerabilityCache(logger *log.Logger) (*VulnerabilityCache, error) {
-	var dockerConfig DockerConfig
-	var containerRegistry ContainerRegistry
-	var ok bool
+	var (
+		dockerConfig      DockerConfig
+		containerRegistry ContainerRegistry
+		ok                bool
+	)
 
 	image := os.Getenv("DICTIONARY_OCI_IMAGE")
 	if len(image) == 0 {
 		return nil, fmt.Errorf("DICTIONARY_OCI_IMAGE env not set")
 	}
 
-	if len(strings.Split(image, ":")) < 2 || len(strings.Split(image, "/")) < 2 {
-		return nil, fmt.Errorf("dictionary image env value seems to be malformed, should adhere to the following format: '<registry>/<repository>:<tag>'")
+	ref, err := name.ParseReference(image, name.StrictValidation)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't parse image %s: %w", image, err)
 	}
-	registry := strings.Split(image, "/")[0]
+
+	registry := ref.Context().RegistryStr()
 
 	dockerConfigFile, err := os.Open(dockerConfigPath)
 	if err != nil {
@@ -96,23 +104,29 @@ func NewVulnerabilityCache(logger *log.Logger) (*VulnerabilityCache, error) {
 		return nil, fmt.Errorf("failed to unmarshal docker config.json: %w", err)
 	}
 
+	var (
+		user     string
+		password string
+	)
 	if containerRegistry, ok = dockerConfig.Auths[registry]; !ok {
-		return nil, fmt.Errorf("failed to find auth config for bdu registry %s", registry)
-	}
+		logger.Printf("failed to find auth config for bdu registry %s in docker file\n", registry)
+	} else {
+		if len(containerRegistry.Auth) == 0 {
+			return nil, fmt.Errorf("bdu registry auth config is empty")
+		}
 
-	if len(containerRegistry.Auth) == 0 {
-		return nil, fmt.Errorf("bdu registry auth config is empty")
-	}
+		decoded, err := base64.StdEncoding.DecodeString(containerRegistry.Auth)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode bdu registry auth config: %w", err)
+		}
 
-	decoded, err := base64.StdEncoding.DecodeString(containerRegistry.Auth)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode bdu registry auth config: %w", err)
-	}
+		auth := string(decoded)
 
-	auth := string(decoded)
-
-	if len(strings.Split(auth, ":")) < 2 {
-		return nil, fmt.Errorf("bdu registry auth config seems to be malformed, should have the following format: 'user:password'")
+		if len(strings.Split(auth, ":")) < 2 {
+			return nil, fmt.Errorf("bdu registry auth config seems to be malformed, should have the following format: 'user:password'")
+		}
+		user = strings.Split(auth, ":")[0]
+		password = strings.Split(auth, ":")[1]
 	}
 
 	d := &VulnerabilityCache{
@@ -122,15 +136,14 @@ func NewVulnerabilityCache(logger *log.Logger) (*VulnerabilityCache, error) {
 		},
 		sourceConfig: RegistryConfig{
 			registry:   registry,
-			repository: strings.Split(image, ":")[0],
-			tag:        strings.Split(image, ":")[1],
-			user:       strings.Split(auth, ":")[0],
-			password:   strings.Split(auth, ":")[1],
+			repository: ref.Context().RepositoryStr(),
+			tag:        ref.Identifier(),
+			user:       user,
+			password:   password,
 		},
 	}
 
-	err = d.initDictionary()
-	if err != nil {
+	if err = d.initDictionary(); err != nil {
 		return nil, err
 	}
 
@@ -146,27 +159,56 @@ func (c *VulnerabilityCache) Check() error {
 }
 
 func (c *VulnerabilityCache) getDataFromImageDescriptors() error {
-	//download
+	// download
 	c.logger.Println("downloading BDU image")
-	//create oras in-memory storage
+	// create oras in-memory storage
 	store := memory.New()
 	ctx := context.Background()
 
-	//set target repository
-	repo, err := remote.NewRepository(c.sourceConfig.repository)
+	// set target repository
+	repo, err := remote.NewRepository(c.sourceConfig.registry + "/" + c.sourceConfig.repository)
 	if err != nil {
 		return err
 	}
 
+	var plainHttp bool
+	// customize http client transport
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if os.Getenv("INSECURE_REGISTRY") == "true" {
+		plainHttp = true
+	} else {
+		// add tls config
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: false,
+		}
+		registryCA := os.Getenv("CUSTOM_REGISTRY_CA")
+		// add custom ca
+		if len(registryCA) != 0 {
+			certPool, err := x509.SystemCertPool()
+			if err != nil {
+				return fmt.Errorf("get system cert pool: %w", err)
+			}
+
+			if !certPool.AppendCertsFromPEM([]byte(registryCA)) {
+				c.logger.Println("parse registry CA error")
+			}
+			tlsConfig.RootCAs = certPool
+		}
+		transport.TLSClientConfig = tlsConfig
+	}
+
 	//set repository auth
 	repo.Client = &auth.Client{
-		Client: retry.DefaultClient,
-		Cache:  auth.DefaultCache,
+		Client: &http.Client{
+			Transport: transport,
+		},
+		Cache: auth.DefaultCache,
 		Credential: auth.StaticCredential(c.sourceConfig.registry, auth.Credential{
 			Username: c.sourceConfig.user,
 			Password: c.sourceConfig.password,
 		}),
 	}
+	repo.PlainHTTP = plainHttp
 
 	//copy requested image from remote repository to oras in-memory storage and save its descriptor
 	descriptor, err := oras.Copy(ctx, repo, c.sourceConfig.tag, store, c.sourceConfig.tag, oras.DefaultCopyOptions)
