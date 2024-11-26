@@ -25,20 +25,18 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-var (
-	cloudProviderNameToModule = map[string]string{
-		"OpenStack":   "cloudProviderOpenstack",
-		"AWS":         "cloudProviderAws",
-		"GCP":         "cloudProviderGcp",
-		"Yandex":      "cloudProviderYandex",
-		"vSphere":     "cloudProviderVsphere",
-		"Azure":       "cloudProviderAzure",
-		"VCD":         "cloudProviderVcd",
-		"Zvirt":       "cloudProviderZvirt",
-		"Dynamix":     "cloudProviderDynamix",
-		"HuaweiCloud": "cloudProviderHuaweiCloud",
-	}
-)
+var cloudProviderNameToModule = map[string]string{
+	"OpenStack":   "cloudProviderOpenstack",
+	"AWS":         "cloudProviderAws",
+	"GCP":         "cloudProviderGcp",
+	"Yandex":      "cloudProviderYandex",
+	"vSphere":     "cloudProviderVsphere",
+	"Azure":       "cloudProviderAzure",
+	"VCD":         "cloudProviderVcd",
+	"Zvirt":       "cloudProviderZvirt",
+	"Dynamix":     "cloudProviderDynamix",
+	"Huaweicloud": "cloudProviderHuaweicloud",
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
