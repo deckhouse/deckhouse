@@ -2,10 +2,6 @@
 title: "Модуль dashboard: настройки"
 ---
 
-У модуля нет обязательных настроек.
-
-<!-- SCHEMA -->
-
 ## Аутентификация
 
 По умолчанию используется модуль [user-authn](/products/kubernetes-platform/documentation/v1/modules/150-user-authn/). Также можно настроить аутентификацию через [`externalAuthentication`](examples.html).
@@ -15,3 +11,9 @@ title: "Модуль dashboard: настройки"
 {% alert level="warning" %}
 Параметры `auth.password` и `accessLevel` больше не поддерживаются.
 {% endalert %}
+
+## Настройки
+
+У модуля нет обязательных настроек.
+
+<!-- SCHEMA -->

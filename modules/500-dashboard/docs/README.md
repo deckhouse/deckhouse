@@ -18,6 +18,6 @@ The `dashboard` module requires the `user-authn` module enabled or the [`externa
 
 Kubernetes Dashboard provides the following features:
 
-- Management of pods and other high-level resources;
-- Exec to containers via a web console for debugging purposes;
-- Viewing logs of individual containers.
+- management of pods and other high-level resources;
+- exec to containers via a web console for debugging purposes;
+- viewing logs of individual containers.
