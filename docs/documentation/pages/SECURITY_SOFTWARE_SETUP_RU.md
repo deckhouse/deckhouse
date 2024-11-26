@@ -14,7 +14,7 @@ Deckhouse Kubernetes Platform (DKP) использует следующие ди
 
 ### KESL
 
-Этот документ содержит рекомендации по конфигурации Kaspersky Endpoint Security for Linux (KESL) для корректной работы с платформой Deckhouse Kubernetes Platform, вне зависимости от её редакции.
+Далее приведены рекомендации по настройке Kaspersky Endpoint Security for Linux (KESL) для обеспечения корректной работы с платформой Deckhouse Kubernetes Platform, независимо от выбранной редакции.
 
 Для обеспечения совместимости с DKP на стороне KESL необходимо отключить следующие задачи:
 
