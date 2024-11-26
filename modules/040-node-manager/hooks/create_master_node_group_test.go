@@ -120,12 +120,7 @@ spec:
 			}
 
 			// TODO(miklezzzz): fix master ng template
-			var masterNgDefaultYAML = string(masterNgDefaultYAMLBBytes) +
-				`  kubelet:
-    containerLogMaxFiles: 4
-    containerLogMaxSize: 50Mi
-    resourceReservation:
-      mode: Auto`
+			var masterNgDefaultYAML = f.ApplyCRDefaults(string(masterNgDefaultYAMLBBytes))
 			assertDefaultMasterNodeGroupOnlyPresent := func(f *HookExecutionConfig) {
 				masterNg := f.KubernetesResource("NodeGroup", "", "master")
 				Expect(masterNg.ToYaml()).To(MatchYAML(masterNgDefaultYAML))
