@@ -39,8 +39,7 @@ type stapelManifest struct {
 }
 
 var (
-	cloneRegexp = regexp.MustCompile(`git clone.*(([&><|]){1,2}|<<<|$)`)
-	rmGitRegexp = regexp.MustCompile(`rm -rf.* (\/src\/)?\.git(.*)*`)
+	cloneRegexp = regexp.MustCompile(`git(\s+-{1,2}[\w-]+)*\s+clone`)
 )
 
 func main() {
@@ -62,7 +61,7 @@ func main() {
 		}
 
 		validators := []func(manifest *stapelManifest) error{
-			validateSrcArtifactSuffix, validateDotGitRemoval,
+			validateSrcArtifactSuffix, validateGitCloneNotUsed,
 		}
 
 		for _, validator := range validators {
@@ -84,26 +83,18 @@ func validateSrcArtifactSuffix(stapel *stapelManifest) error {
 	return nil
 }
 
-func validateDotGitRemoval(stapel *stapelManifest) error {
+func validateGitCloneNotUsed(stapel *stapelManifest) error {
 	commands := append(stapel.Shell.BeforeInstall,
 		append(stapel.Shell.Install,
 			append(stapel.Shell.BeforeSetup, stapel.Shell.Setup...)...)...,
 	)
 
-	seenClones, seenRemovals := 0, 0
 	for _, cmd := range commands {
-		if cloneRegexp.MatchString(cmd) {
-			seenClones += 1
+		if strings.Contains(cmd, "git clone") || cloneRegexp.MatchString(cmd) {
+			return fmt.Errorf(
+				"[SRC-M2] %s: instead of 'git' werf directive, 'git clone' is used in the 'shell' directive as %q",
+				stapel.Artifact, cmd)
 		}
-		if rmGitRegexp.MatchString(cmd) {
-			seenRemovals += 1
-		}
-	}
-
-	if seenClones > seenRemovals {
-		return fmt.Errorf(
-			"[SRC-M2] %s: .git is not removed from image layer after git clone",
-			stapel.Artifact)
 	}
 
 	return nil
