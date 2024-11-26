@@ -72,7 +72,7 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 				return true
 			})
 			if err != nil {
-				return fmt.Errorf("clear the '%s' module: %w", module.Name, err)
+				return fmt.Errorf("clear the %q module: %w", module.Name, err)
 			}
 
 			// set available and skip
