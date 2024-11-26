@@ -3,13 +3,13 @@ title: Security software settings for working with Deckhouse
 permalink: en/security_software_setup.html
 ---
 
-## Security Software Configuration
-
 If Kubernetes cluster nodes are analyzed by security scanners (antivirus tools), you may need to configure them to avoid false positives.
 
 Deckhouse Kubernetes Platform (DKP) uses the following directories during operation ([download in CSV](deckhouse-directories.csv)):
 
 {% include security_software_setup.liquid %}
+
+## Security Software
 
 ### KESL
 
