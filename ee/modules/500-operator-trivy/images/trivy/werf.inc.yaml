@@ -11,10 +11,17 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: src-artifact
+git:
+- url: {{ $.SOURCE_REPO }}/aquasecurity/trivy-db.git
+  branch: flant-v2
+  add: /
+  to: /src/trivy-db
+- url: {{ $.SOURCE_REPO }}/aquasecurity/trivy.git
+  branch: v0.55.0-flant
+  add: /
+  to: /src/trivy
 shell:
   install:
-  - git clone --depth 1 --branch flant-v2 {{ $.SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
-  - git clone --depth 1 --branch v0.56.1-flant {{ $.SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
   - cd /src/trivy
   - find . -type d -name "testdata" | xargs rm -rf
   - rm -rf docs

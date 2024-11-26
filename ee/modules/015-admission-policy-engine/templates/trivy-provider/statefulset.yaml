@@ -3,10 +3,8 @@ cpu: 100m
 memory: 128Mi
 {{- end }}
 
-{{ $JavaDbRepository := printf "%s/security/trivy-java-db:1" .Values.global.modulesImages.registry.base | quote }}
-
 {{- if include "trivy.provider.enabled" $ }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -53,7 +51,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "trivy-provider")) | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody_with_writable_fs" . | nindent 6 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list . "trivyProvider") }}
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add"  (list . (list)) | nindent 8 }}
@@ -68,7 +66,10 @@ spec:
         - name: TRIVY_REMOTE_URL
           value: "http://trivy-server.d8-operator-trivy:4954"
         - name: TRIVY_JAVA_DB_IMAGE
-          value: {{ $JavaDbRepository }}
+          value: {{ printf "%s/security/trivy-java-db:1" .Values.global.modulesImages.registry.base | quote }}
+        envFrom:
+        - configMapRef:
+            name: trivy-provider
         ports:
         - containerPort: 8443
           protocol: TCP
@@ -88,7 +89,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
       dnsPolicy: ClusterFirst

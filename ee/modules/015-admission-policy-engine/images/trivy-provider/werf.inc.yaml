@@ -17,6 +17,14 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- url: {{ $.SOURCE_REPO }}/aquasecurity/trivy-db.git
+  branch: flant-v2
+  add: /
+  to: /src/trivy-db
+- url: {{ $.SOURCE_REPO }}/aquasecurity/trivy.git
+  branch: v0.55.0-flant
+  add: /
+  to: /src/trivy
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
@@ -31,6 +39,10 @@ mount:
 shell:
   install:
   - cd /src
+  - go work init
+  - go work use trivy
+  - go work use trivy-db
+  - go work use .
   - GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o /trivy-provider .
   - chown 64535:64535 /trivy-provider
   - chmod 0700 /trivy-provider

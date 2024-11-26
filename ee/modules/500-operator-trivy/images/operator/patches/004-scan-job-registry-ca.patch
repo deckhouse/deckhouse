@@ -7,7 +7,7 @@ index 8f5383fe..457b4d4d 100644
  	"fmt"
  	"net/url"
 +	"os"
-
+ 
  	"github.com/aquasecurity/trivy-operator/pkg/docker"
  	"github.com/aquasecurity/trivy-operator/pkg/kube"
 @@ -378,6 +379,12 @@ func GetPodSpecForClientServerFSMode(ctx trivyoperator.PluginContext, config Con
@@ -34,7 +34,7 @@ index 4f098c11..807acd5a 100644
 +	"os"
  	"regexp"
  	"strings"
-
+ 
 @@ -380,6 +381,12 @@ func GetPodSpecForClientServerMode(ctx trivyoperator.PluginContext, config Confi
  			constructEnvVarSourceFromSecret("TRIVY_TOKEN", trivyConfigName, keyTrivyServerToken),
  			constructEnvVarSourceFromSecret("TRIVY_CUSTOM_HEADERS", trivyConfigName, keyTrivyServerCustomHeaders),

@@ -40,3 +40,4 @@ index 9a571562..dbdc4101 100644
  					metrics <- prometheus.MustNewConstMetric(c.vulnIdDesc, prometheus.GaugeValue, float64(1), vulnLabelValues...)
  				}
  			}
+

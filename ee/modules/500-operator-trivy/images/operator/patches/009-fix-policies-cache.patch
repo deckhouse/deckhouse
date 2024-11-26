@@ -48,3 +48,4 @@ index d8b439ab..675fe710 100644
 +	_ = pl.cache.Set(bundlePath, bundlePaths)
  	return contentData, bundlePaths, nil
  }
+ 

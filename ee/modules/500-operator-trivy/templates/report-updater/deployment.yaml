@@ -3,11 +3,9 @@ cpu: 50m
 memory: 50Mi
 {{- end }}
 
-{{ $dictRepository := printf "%s/security/trivy-bdu:1" .Values.global.modulesImages.registry.base | quote }}
-
 {{- if .Values.operatorTrivy.linkCVEtoBDU }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -50,6 +48,8 @@ spec:
     metadata:
       labels:
         app: report-updater
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/report-updater/configmap.yaml") . | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
@@ -63,9 +63,9 @@ spec:
       - name: report-updater
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "reportUpdater") }}
-        env:
-        - name: DICTIONARY_OCI_IMAGE
-          value: {{ $dictRepository }}
+        envFrom:
+        - configMapRef:
+            name: report-updater
         volumeMounts:
         - mountPath: /etc/ssl/report-updater
           name: report-updater-webhook-ssl
@@ -87,7 +87,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "operator_trivy_report_updater" . | nindent 12 }}
 {{- end }}
       volumes:

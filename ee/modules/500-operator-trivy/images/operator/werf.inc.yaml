@@ -18,6 +18,11 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/bundle.tar.gz
+  to: /
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
@@ -29,6 +34,9 @@ shell:
       for f in /patches/*.patch; do
         patch -p1 < $f
       done
+  - mkdir -p local
+  - tar -zxvf /bundle.tar.gz -C ./local
+  - rm -f /bundle.tar.gz
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

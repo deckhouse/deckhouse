@@ -8,7 +8,7 @@ index 5878a5d6..d6c293ed 100644
  	"fmt"
 +	"sync"
  	"time"
-
+ 
  	"github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
 @@ -24,6 +25,9 @@ type ClusterComplianceReportReconciler struct {
  	etc.Config
@@ -18,7 +18,7 @@ index 5878a5d6..d6c293ed 100644
 +	onStartupOnce map[types.NamespacedName]*sync.Once
 +	mu            sync.Mutex
  }
-
+ 
  // +kubebuilder:rbac:groups=aquasecurity.github.io,resources=clustercompliancereports,verbs=get;list;watch;create;update;patch;delete
 @@ -58,6 +62,16 @@ func (r *ClusterComplianceReportReconciler) generateComplianceReport(ctx context
  			}
