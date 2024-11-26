@@ -3696,7 +3696,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        ModuleConfig {{ $labels.name }} has an obsolete version, update to the latest.
+        ModuleConfig {{ $labels.name }} is outdated. Update ModuleConfig {{ $labels.name }} to the latest version.
       summary: |
         ModuleConfig {{ $labels.name }} is outdated.
       severity: "4"
