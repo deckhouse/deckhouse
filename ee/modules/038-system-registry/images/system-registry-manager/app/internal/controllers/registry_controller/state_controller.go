@@ -117,7 +117,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 
 	var changed, skipReprocess bool
 
-	if changed, err = sc.EnsurePKI(ctx, &sc.PKIState); err != nil {
+	if changed, err = sc.ensurePKI(ctx, &sc.PKIState); err != nil {
 		if errors.Is(err, errorPKIInvalid) {
 			log.Error(err, "PKI is invalid and cannot be restored form internal state, stopping reconcile")
 			err = nil
@@ -129,7 +129,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 	}
 	skipReprocess = skipReprocess || changed
 
-	if changed, err = sc.EnsureUserSecret(
+	if changed, err = sc.ensureUserSecret(
 		ctx,
 		state.UserROSecretName,
 		&sc.UserRO,
@@ -139,7 +139,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 	}
 	skipReprocess = skipReprocess || changed
 
-	if changed, err = sc.EnsureUserSecret(
+	if changed, err = sc.ensureUserSecret(
 		ctx,
 		state.UserRWSecretName,
 		&sc.UserRW,
@@ -159,7 +159,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 	return
 }
 
-func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, currentUser **state.User) (bool, error) {
+func (sc *stateController) ensureUserSecret(ctx context.Context, name string, currentUser **state.User) (bool, error) {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsureUserSecret", "name", name)
 
@@ -265,7 +265,7 @@ func (sc *stateController) EnsureUserSecret(ctx context.Context, name string, cu
 	return changed, nil
 }
 
-func (sc *stateController) EnsurePKI(ctx context.Context, currentState **state.PKIState) (bool, error) {
+func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.PKIState) (bool, error) {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsurePKI")
 
