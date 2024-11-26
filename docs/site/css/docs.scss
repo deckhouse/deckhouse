@@ -1890,15 +1890,24 @@ select#contact-select {
 
   .tippy-content {
     text-align: start;
-    padding: 32px 40px 64px 40px;
+    padding: 24px 24px 32px;
     color: #00122C;
   }
 
   .tippy-content code {
     background: #E2E5E9;
   }
-
-  .tippy-svg-arrow {
+  
+  &[data-placement^='left'] .tippy-svg-arrow {
     right: -9px;
   }
+
+  &[data-placement^='right'] .tippy-svg-arrow {
+    left: -9px;
+
+    svg {
+      transform: rotate(180deg);
+    }
+  }
 }
+
