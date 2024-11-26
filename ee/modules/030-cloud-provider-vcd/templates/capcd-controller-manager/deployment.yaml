@@ -4,7 +4,16 @@ memory: 50Mi
 {{- end }}
 
 {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
-{{- $capcdImageName := join "" (list "capcdControllerManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+
+{{- define "capcd_node_image_name" -}}
+{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
+  capcdControllerManager
+{{- else -}}
+  capcdControllerManagerLegacy
+{{- end }}
+{{- end }}
+
+{{- $capcdImageName := join "" (list (include "capcd_node_image_name" .) $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
 {{- $capcdImage := include "helm_lib_module_image_no_fail" (list . $capcdImageName) }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
