@@ -4,7 +4,7 @@ memory: 128Mi
 {{- end }}
 
 {{- if include "trivy.provider.enabled" $ }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -89,7 +89,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
       dnsPolicy: ClusterFirst
