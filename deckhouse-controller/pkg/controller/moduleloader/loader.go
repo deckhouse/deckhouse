@@ -127,7 +127,7 @@ func (l *Loader) processModuleDefinition(def *Definition) (*Module, error) {
 	// 1. from static values.yaml inside the module
 	moduleStaticValues, err := utils.LoadValuesFileFromDir(def.Path)
 	if err != nil {
-		return nil, fmt.Errorf("load values file from the '%s' dir: %w", def.Path, err)
+		return nil, fmt.Errorf("load values file from the %q dir: %w", def.Path, err)
 	}
 
 	if moduleStaticValues.HasKey(valuesModuleName) {
