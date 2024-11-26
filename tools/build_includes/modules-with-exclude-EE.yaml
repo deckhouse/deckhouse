@@ -3,17 +3,17 @@
   to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/doc-ru-config-values.yaml
   to: /deckhouse/modules/040-node-manager/openapi/doc-ru-config-values.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/openapi-case-tests.yaml
   to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/be/modules/140-user-authz/templates/webhook
   to: /deckhouse/modules/140-user-authz/templates/webhook
   excludePaths:
@@ -70,22 +70,22 @@
   to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/021-cni-cilium/crds/egressgateways.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/egressgateways.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/021-cni-cilium/crds/internal
   to: /deckhouse/modules/021-cni-cilium/crds/internal
   excludePaths:
@@ -155,7 +155,7 @@
   to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/025-static-routing-manager
   to: /deckhouse/modules/025-static-routing-manager
   excludePaths:
@@ -355,39 +355,104 @@
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/110-istio/crds/istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/istiofederation.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/110-istio/crds/istiomulticluster.yaml
   to: /deckhouse/modules/110-istio/crds/istiomulticluster.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/federation.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/federation.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   stageDependencies:
     setup:
-      - "**/*"
-- add: /ee/modules/381-l2-load-balancer
-  to: /deckhouse/modules/381-l2-load-balancer
+        - '**/*'
+- add: /ee/modules/380-metallb/images/metallb/werf.inc.yaml
+  to: /deckhouse/modules/380-metallb/images/metallb/werf.inc.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/controller/deployment.yaml
+  to: /deckhouse/modules/380-metallb/templates/controller/deployment.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/controller/ipaddresspools.yaml
+  to: /deckhouse/modules/380-metallb/templates/controller/ipaddresspools.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/controller/pdb.yaml
+  to: /deckhouse/modules/380-metallb/templates/controller/pdb.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/controller/podmonitor.yaml
+  to: /deckhouse/modules/380-metallb/templates/controller/podmonitor.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/controller/rbac-for-us.yaml
+  to: /deckhouse/modules/380-metallb/templates/controller/rbac-for-us.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/speaker/_helper.tpl
+  to: /deckhouse/modules/380-metallb/templates/speaker/_helper.tpl
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/speaker/bgp-advertisements.yaml
+  to: /deckhouse/modules/380-metallb/templates/speaker/bgp-advertisements.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/speaker/bgppeers.yaml
+  to: /deckhouse/modules/380-metallb/templates/speaker/bgppeers.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/speaker/daemonset.yaml
+  to: /deckhouse/modules/380-metallb/templates/speaker/daemonset.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/speaker/podmonitor.yaml
+  to: /deckhouse/modules/380-metallb/templates/speaker/podmonitor.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/speaker/rbac-for-us.yaml
+  to: /deckhouse/modules/380-metallb/templates/speaker/rbac-for-us.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/template_tests/bgp_test.go
+  to: /deckhouse/modules/380-metallb/template_tests/bgp_test.go
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster
+  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards/kubernetes-cluster
   excludePaths:
     - docs
     - README.md
@@ -403,7 +468,7 @@
   to: /deckhouse/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
   stageDependencies:
     setup:
-      - "**/*"
+        - '**/*'
 - add: /ee/modules/450-keepalived
   to: /deckhouse/modules/450-keepalived
   excludePaths:
