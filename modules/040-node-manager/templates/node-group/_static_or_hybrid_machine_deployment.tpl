@@ -7,7 +7,7 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
   namespace: d8-cloud-instance-manager
-  name: {{ $staticMachineTemplateName }}
+  name: {{ $ng.name }}
   {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name "app" "caps-controller")) | nindent 2 }}
 spec:
   clusterName: static
@@ -20,6 +20,6 @@ spec:
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
         kind: StaticMachineTemplate
-        name: {{ $ng.name }}
+        name: {{ $staticMachineTemplateName }}
   selector: {}
 {{- end }}
