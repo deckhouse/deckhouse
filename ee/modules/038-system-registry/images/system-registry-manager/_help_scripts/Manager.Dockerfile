@@ -20,9 +20,8 @@ COPY $MANAGER_PATH_FROM/go.mod $MANAGER_PATH_FROM/go.sum $MANAGER_PATH_TO/
 COPY $GO_LIB_PATH_FROM/go.mod $GO_LIB_PATH_FROM/go.sum $GO_LIB_PATH_TO/
 
 # Download libs
-RUN --mount=type=cache,target=/go/pkg/mod \
-    cd $MANAGER_PATH_TO && go mod download && \
-    cd $GO_LIB_PATH_TO && go mod download
+RUN cd $MANAGER_PATH_TO && go mod download -x && \
+    cd $GO_LIB_PATH_TO && go mod download -x
 
 # Copy other files
 RUN mkdir -p $MANAGER_PATH_TO $GO_LIB_PATH_TO
