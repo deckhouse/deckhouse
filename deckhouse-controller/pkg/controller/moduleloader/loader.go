@@ -149,7 +149,7 @@ func (l *Loader) processModuleDefinition(def *Definition) (*Module, error) {
 	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
 		l.log.Debugf("conversions for the '%s' module found", def.Name)
 		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
-			return nil, fmt.Errorf("load conversions for the '%s' module: %w", def.Name, err)
+			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
 	} else if !os.IsNotExist(err) {
 		return nil, fmt.Errorf("load conversions for the '%s' module: %w", def.Name, err)
