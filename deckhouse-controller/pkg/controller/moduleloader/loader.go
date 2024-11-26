@@ -152,7 +152,7 @@ func (l *Loader) processModuleDefinition(def *Definition) (*Module, error) {
 			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
 	} else if !os.IsNotExist(err) {
-		return nil, fmt.Errorf("load conversions for the '%s' module: %w", def.Name, err)
+		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 
 	// load constrains
