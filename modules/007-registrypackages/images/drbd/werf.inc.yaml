@@ -22,7 +22,7 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_ALPINE }}
 
 git:
-  - url: {{ .SOURCE_REPO }}/LINBIT/drbd/
+  - url: https://github.com/LINBIT/drbd/
     add: /
     to: /drbd
     tag: drbd-{{ $version }}
