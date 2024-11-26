@@ -26,6 +26,6 @@ To ensure compatibility with DKP, the following tasks must be disabled on the KE
 The list of tasks may differ in future versions of KESL.
 {% endalert %}
 
-Ensure that your Kubernetes nodes meet the minimum resource requirements specified for [DKP](https://deckhouse.ru/products/kubernetes-platform/guides/production.html#requirements-for-resources) and [KESL](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/197642.htm).
+Ensure that your Kubernetes nodes meet the minimum resource requirements specified for [DKP](https://deckhouse.io/products/kubernetes-platform/guides/production.html#requirements-for-resources) and [KESL](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/197642.htm).
 
 For the combined use of KESL and Deckhouse, performance optimization may be required according to [Kaspersky's recommendations](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/206054.htm).
