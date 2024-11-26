@@ -73,7 +73,6 @@ func (r *RegistryReconciler) handleCAPKI(ctx context.Context, req ctrl.Request, 
 		Key:  secret.Data[k8s.AuthTokenKey],
 	}
 
-	// TODO: WTF?
 	// Clear the master nodes slice
 	for nodeName := range r.embeddedRegistry.masterNodes {
 		delete(r.embeddedRegistry.masterNodes, nodeName)
