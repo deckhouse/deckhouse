@@ -134,11 +134,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 	return nil
 }
 
-func handleDiscoveryDataVolumeTypes(
-	input *go_hook.HookInput,
-	volumeTypes []cloudDataV1.DynamixStorageEndpoint,
-) {
-
+func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []cloudDataV1.DynamixStorageEndpoint) {
 	volumeTypesMap := make(map[string]storageClass, len(volumeTypes))
 
 	for _, volumeType := range volumeTypes {
