@@ -1,0 +1,16 @@
+---
+apiVersion: config.ratify.deislabs.io/v1beta1
+kind: KeyManagementProvider
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+  name: ratify-cosign-inline-key-0
+spec:
+  refreshInterval: ""
+  type: inline
+  parameters:
+    contentType: key
+    value: >
+      -----BEGIN PUBLIC KEY-----
+      MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEiD5FNnvxxRae5KcnA3jEdUl0j6vh
+      BR0RIFSARjMJIj5YA31PdCUb16YZ8F2MjqweWxK1bsTcjXm7h/v8ZQLyXw==
+      -----END PUBLIC KEY-----
