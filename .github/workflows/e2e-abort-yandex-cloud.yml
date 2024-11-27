@@ -25,12 +25,10 @@ on:
       layout:
         description: 'Cloud provider layout which was tested'
         required: true
-      cri:
-        description: 'CRI which was tested'
-        required: true
-      k8s_version:
-        description: 'CRI which was tested'
-        required: true
+      test_config:
+        description: 'JSON string of parameters which was tested'
+        required: false
+        default: '{"cri":"Containerd","ver":"1.27","edition":"FE"}'
       # needs for run correct installer image for abort
       installer_image_path:
         description: 'Installer image without host'
@@ -108,7 +106,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_26:
     name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.26"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.26' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.26' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -213,7 +211,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -400,7 +398,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_27:
     name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.27"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.27' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.27' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -505,7 +503,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -692,7 +690,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_28:
     name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.28"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.28' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.28' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -797,7 +795,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -984,7 +982,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_29:
     name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.29"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.29' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.29' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -1089,7 +1087,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -1276,7 +1274,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_30:
     name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.30"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.30' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.30' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -1381,7 +1379,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -1568,7 +1566,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_1_31:
     name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.31"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == '1.31' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == '1.31' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -1673,7 +1671,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -1860,7 +1858,7 @@ jobs:
   # <template: e2e_run_job_template>
   run_containerd_automatic:
     name: "destroy cluster: Yandex.Cloud, Containerd, Kubernetes Automatic"
-    if: ${{ github.event.inputs.cri == 'containerd' && github.event.inputs.k8s_version == 'Automatic' && github.event.inputs.layout == 'WithoutNAT' }}
+    if: ${{ fromJson(inputs.test_config).cri == 'containerd' && fromJson(inputs.test_config).ver == 'Automatic' && github.event.inputs.layout == 'WithoutNAT' }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -1965,7 +1963,7 @@ jobs:
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
         run: |
           # Create tmppath for test script.
-          TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+          TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}

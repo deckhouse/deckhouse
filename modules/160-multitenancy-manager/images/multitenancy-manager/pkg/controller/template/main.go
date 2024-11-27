@@ -19,6 +19,7 @@ package template
 import (
 	"context"
 	"sync"
+	"time"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	templatemanager "controller/pkg/manager/template"
@@ -26,7 +27,9 @@ import (
 	"github.com/go-logr/logr"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -39,7 +42,7 @@ const controllerName = "d8-template-controller"
 
 func Register(runtimeManager manager.Manager, defaultPath string, log logr.Logger) error {
 	r := &reconciler{
-		init:            &sync.WaitGroup{},
+		init:            new(sync.WaitGroup),
 		log:             log.WithName(controllerName),
 		client:          runtimeManager.GetClient(),
 		templateManager: templatemanager.New(runtimeManager.GetClient(), log),
@@ -55,7 +58,21 @@ func Register(runtimeManager manager.Manager, defaultPath string, log logr.Logge
 
 	// init template manager
 	if err = runtimeManager.Add(manager.RunnableFunc(func(ctx context.Context) error {
-		return r.templateManager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init, defaultPath)
+		return retry.OnError(
+			wait.Backoff{
+				Steps:    10,
+				Duration: 100 * time.Millisecond,
+				Factor:   2.0,
+				Jitter:   0.1,
+			},
+			func(e error) bool {
+				log.Info("failed to init template manager - retrying", "error", e.Error())
+				return true
+			},
+			func() error {
+				return r.templateManager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init, defaultPath)
+			},
+		)
 	})); err != nil {
 		r.log.Error(err, "failed to init template manager")
 		return err

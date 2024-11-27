@@ -52,8 +52,6 @@ func New(client client.Client, helmClient *helm.Client, log logr.Logger) *Manage
 }
 
 func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup) error {
-	defer init.Done()
-
 	m.log.Info("waiting for webhook server starting")
 	check := func(ctx context.Context) (bool, error) {
 		if err := checker(nil); err != nil {
@@ -63,22 +61,18 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		return true, nil
 	}
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, check); err != nil {
-		m.log.Error(err, "webhook server failed to start")
-		return fmt.Errorf("webhook server failed to start: %w", err)
-	}
-	// to make sure that the server is started, without working server reconcile is failed
-	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, false, check); err != nil {
-		m.log.Error(err, "webhook server failed to start")
 		return fmt.Errorf("webhook server failed to start: %w", err)
 	}
 	m.log.Info("webhook server started")
 
 	m.log.Info("ensuring virtual projects")
 	if err := m.ensureVirtualProjects(ctx); err != nil {
-		m.log.Error(err, "failed to ensure virtual projects")
 		return fmt.Errorf("failed to ensure virtual projects: %w", err)
 	}
+
 	m.log.Info("ensured virtual projects")
+	init.Done()
+
 	return nil
 }
 

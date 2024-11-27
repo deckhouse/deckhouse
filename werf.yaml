@@ -426,15 +426,15 @@ dependencies:
   - type: ImageDigest
     targetEnv: deckhouseImageDigest
 import:
-- artifact: yq-artifact
+- artifact: yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
 shell:
   install:
   - |
-    version="{{ env "CI_COMMIT_REF_NAME" }}"
-    yq w /deckhouse/release.yaml version $version digest $deckhouseImageDigest | yq r - -j > version.json
+    export version="{{ env "CI_COMMIT_REF_NAME" }}"
+    yq eval '.version = env(version)' /deckhouse/release.yaml | yq eval -j > version.json
     # changelog exists only for tags, we have to skip it for branches
     {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
     {{ if $changelog }}
@@ -463,7 +463,7 @@ import:
 artifact: version-map-artifact
 from: {{ .Images.BASE_ALPINE }}
 import:
-- artifact: yq-artifact
+- artifact: yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
@@ -493,7 +493,7 @@ shell:
 
      {{- if $previousEditionFile }}
   - cp {{ $edition.versionMapFile }} {{ $tmpEditionFile }}
-  - yq m {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
+  - yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
 
       {{- else }}
 

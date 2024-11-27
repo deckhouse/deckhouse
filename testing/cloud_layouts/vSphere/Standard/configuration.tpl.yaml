@@ -27,33 +27,29 @@ kind: VsphereClusterConfiguration
 sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSNdUmV2ekit0rFrQE9IoRsVqKTJfR8h+skMYjXHBv/nJN6J2eBvQlebnhfZngxTvHYYxl0XeRu3KEz5v23gIidT21o9x0+tD4b2PcyZ24o64GwnF/oFnQ9mYBJDRisZNdXYPadTp/RafQ0qNUX/6h8vZYlSPM77dhW7Oyf6hcbaniAmOD30bO89UM//VHbllGgfhlIbU382/EnPOfGvAHReATADBBHmxxtTCLbu48rN35DlOtMgPob3ZwOsJI3keRrIZOf5qxeF3VB0Ox4inoR6PUzWMFLCJyIMp7hzY+JLakO4dqfvRJZjgTZHQUvjDs+aeUcH8tD4Wd5NDzmxnHLtJup0lkHkqgjo6vqWIcQeDXuXsk3+YGw0PwMpwO2HMVPs2SnfT6cZ+Mo6Dmq0t1EjtSBXLMe5C5aac5w6NrXuypRQDoce7p3uZP2TVsxmpyvkd6RyiWr+wuOOB3h/k8q+kRh4LKzivJMEkZoZeCxkJiIWDknxEAU1sl25W4hEU="
 layout: Standard
 vmFolderPath: 'flant-e2e-tests/${PREFIX}'
-regionTagCategory: k8s-region
-zoneTagCategory: k8s-zone
-region: X2
+regionTagCategory: k8s-e2e-region
+zoneTagCategory: k8s-e2e-zone
+region: spb5-region
 zones:
-- X2-A
-externalNetworkNames:
-- msk3-k8s-1203
+- spb5-zone
 internalNetworkNames:
-- DEVOPS_36
-internalNetworkCIDR: 172.16.25.0/24
-baseResourcePool: kubernetes-stage/cloud-layout-tests
+- DPortGroup-lab-vms
+internalNetworkCIDR: 192.168.240.0/24
+baseResourcePool: cloud-layout-tests
 masterNodeGroup:
   replicas: ${MASTERS_COUNT}
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template: Templates/ubuntu-jammy-22.04-packer
-    mainNetwork: msk3-k8s-1203
-    additionalNetworks:
-    - DEVOPS_36
-    datastore: 3par_4_Lun105
+    template: vm-teamplates/ubuntu-24.04-cloudinit
+    mainNetwork: DPortGroup-lab-vms
+    datastore: vsan-spb-5-datastore
     rootDiskSize: 50
     runtimeOptions:
       nestedHardwareVirtualization: false
 provider:
-  server: p-vc-3.${VSPHERE_BASE_DOMAIN}
-  username: dvadm@vsphere.local
+  server: vcenter01.${VSPHERE_BASE_DOMAIN}
+  username: e2e-autotests@vsphere.local
   password: '${VSPHERE_PASSWORD}'
   insecure: true
 ---
@@ -80,27 +76,6 @@ metadata:
   name: keepalived
 spec:
   enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: network-gateway
-spec:
-  enabled: true
-  version: 1
-  settings:
-    nodeSelector:
-      node-role.kubernetes.io/control-plane: ""
-    tolerations:
-      - operator: Exists
-    publicAddress: 10.220.203.240
-    subnet: 172.16.25.0/24
-    dns:
-      servers:
-        - 10.80.44.235
-        - 10.220.8.235
-      search:
-        - ${VSPHERE_BASE_DOMAIN}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

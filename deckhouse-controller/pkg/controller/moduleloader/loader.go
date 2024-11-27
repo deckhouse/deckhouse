@@ -118,15 +118,16 @@ func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) 
 
 func (l *Loader) processModuleDefinition(def *Definition) (*Module, error) {
 	if err := validateModuleName(def.Name); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid name: %w", err)
 	}
 
 	// load values for the module
 	valuesModuleName := utils.ModuleNameToValuesKey(def.Name)
+
 	// 1. from static values.yaml inside the module
 	moduleStaticValues, err := utils.LoadValuesFileFromDir(def.Path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load values file from the %q dir: %w", def.Path, err)
 	}
 
 	if moduleStaticValues.HasKey(valuesModuleName) {
@@ -136,7 +137,7 @@ func (l *Loader) processModuleDefinition(def *Definition) (*Module, error) {
 	// 2. from openapi defaults
 	configBytes, vb, err := utils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read openapi files: %w", err)
 	}
 
 	module, err := newModule(def, moduleStaticValues, configBytes, vb, l.log.Named("module"))
@@ -148,20 +149,15 @@ func (l *Loader) processModuleDefinition(def *Definition) (*Module, error) {
 	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
 		l.log.Debugf("conversions for the '%s' module found", def.Name)
 		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
-			l.log.Debugf("failed to load conversions for the '%s' module: %v", def.Name, err)
-			return nil, err
+			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
-	} else {
-		if !os.IsNotExist(err) {
-			l.log.Debugf("failed to load conversions for the '%s' module: %v", def.Name, err)
-			return nil, err
-		}
-		l.log.Debugf("conversions for the '%s' module not found", def.Name)
+	} else if !os.IsNotExist(err) {
+		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 
 	// load constrains
 	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
 	return module, nil
@@ -193,8 +189,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 		l.log.Debugf("parse modules from the '%s' dir", dir)
 		definitions, err := l.parseModulesDir(dir)
 		if err != nil {
-			l.log.Errorf("failed to parse modules from the '%s' dir: %v", dir, err)
-			return err
+			return fmt.Errorf("parse modules from the %q dir: %w", dir, err)
 		}
 		l.log.Debugf("%d parsed modules from the '%s' dir", len(definitions), dir)
 		for _, def := range definitions {
@@ -205,7 +200,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			}
 
 			if _, ok := l.modules[def.Name]; ok {
-				l.log.Warnf("the '%q' module is already exists, skip it from the %q", def.Name, def.Path)
+				l.log.Warnf("the %q module already exists, skip it from the %q", def.Name, def.Path)
 				continue
 			}
 
@@ -225,6 +220,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	}
 	for _, module := range modulesList.Items {
 		if module.IsEmbedded() && l.modules[module.Name] == nil {
+			l.log.Debugf("delete the '%s' embedded module", module.Name)
 			if err := l.client.Delete(ctx, &module); err != nil {
 				return fmt.Errorf("delete the '%s' emebedded module: %w", module.Name, err)
 			}
@@ -240,7 +236,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *Definition, embedded boo
 			module := new(v1alpha1.Module)
 			if err := l.client.Get(ctx, client.ObjectKey{Name: def.Name}, module); err != nil {
 				if !apierrors.IsNotFound(err) {
-					return err
+					return fmt.Errorf("get the %q module: %w", def.Name, err)
 				}
 				if !embedded {
 					l.log.Warnf("the '%s' downloaded module does not exist, skip it", def.Name)
@@ -312,7 +308,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *Definition, embedded boo
 
 			if needsUpdate {
 				if err := l.client.Update(ctx, module); err != nil {
-					return fmt.Errorf("update the '%s' embedded module: %w", def.Name, err)
+					return err
 				}
 			}
 

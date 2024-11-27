@@ -1,6 +1,5 @@
----
-artifact: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
-from: {{ .Images.BASE_GOLANG_19_ALPINE }}
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}/modules/302-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -9,22 +8,37 @@ git:
       - '**/*'
 shell:
   install:
-    - apk add --no-cache git
-    - mkdir -p /src
-    - cd /src
-    - git clone --depth 1 -b vertical-pod-autoscaler-0.14.0 {{ $.SOURCE_REPO }}/kubernetes/autoscaler.git .
-    - find /patches -name '*.patch' -exec git apply {} \;
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
-    - cd vertical-pod-autoscaler/pkg/admission-controller
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /admission-controller
-    - chown 64535:64535 /admission-controller
-    - chmod 0700 /admission-controller
-    - cd ../../../vertical-pod-autoscaler/pkg/recommender
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /recommender
-    - chown 64535:64535 /recommender
-    - chmod 0700 /recommender
-    - cd ../../../vertical-pod-autoscaler/pkg/updater
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /updater
-    - chown 64535:64535 /updater
-    - chmod 0700 /updater
+    - git clone --depth 1 -b vertical-pod-autoscaler-1.2.1 {{ $.SOURCE_REPO }}/kubernetes/autoscaler.git /src/autoscaler
+    - cd /src/autoscaler
+    - git apply /patches/*.patch --verbose
+    - mv vertical-pod-autoscaler /src/vertical-pod-autoscaler
+    - rm -rf /src/autoscaler /src/vertical-pod-autoscaler/e2e/ /patches /src/autoscaler/.git/
+---
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+  - artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd /src/vertical-pod-autoscaler/
+    - go mod download -x
+    - go mod vendor
+
+    - cd /src/vertical-pod-autoscaler/pkg/admission-controller
+    - go build -ldflags="-s -w" -o /admission-controller
+
+    - cd /src/vertical-pod-autoscaler/pkg/recommender
+    - go build -ldflags="-s -w" -o /recommender
+
+    - cd /src/vertical-pod-autoscaler/pkg/updater
+    - go build -ldflags="-s -w" -o /updater
+
+    - chown 64535:64535 /admission-controller  /updater /recommender
+    - chmod 0700 /updater /recommender /admission-controller
