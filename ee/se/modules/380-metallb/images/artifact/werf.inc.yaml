@@ -12,7 +12,7 @@ shell:
   - git clone -b v0.14.8 {{ $.SOURCE_REPO }}/metallb/metallb.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
-  - rm -f .git
+  - rm -r .git
 ---
 artifact: {{ .ModuleName }}/metallb-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
