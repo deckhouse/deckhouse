@@ -37,10 +37,10 @@ type stateController struct {
 
 	eventRecorder record.EventRecorder
 
-	UserRO   *state.User
-	UserRW   *state.User
-	PKIState *state.PKIState
-	StateOK  bool
+	userRO   *state.User
+	userRW   *state.User
+	pkiState *state.PKIState
+	stateOK  bool
 }
 
 func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
@@ -112,7 +112,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		return
 	}
 
-	if err = sc.ensurePKI(ctx, &sc.PKIState); err != nil {
+	if err = sc.ensurePKI(ctx, &sc.pkiState); err != nil {
 		if errors.Is(err, errorPKIInvalid) {
 			log.Error(err, "PKI is invalid and cannot be restored from internal state")
 
@@ -122,7 +122,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 				"PKI is invalid and cannot be restored from internal state",
 			)
 
-			sc.StateOK = false
+			sc.stateOK = false
 
 			err = nil
 			return
@@ -135,7 +135,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 	if err = sc.ensureUserSecret(
 		ctx,
 		state.UserROSecretName,
-		&sc.UserRO,
+		&sc.userRO,
 	); err != nil {
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserROSecretName, err)
 		return
@@ -144,14 +144,14 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 	if err = sc.ensureUserSecret(
 		ctx,
 		state.UserRWSecretName,
-		&sc.UserRW,
+		&sc.userRW,
 	); err != nil {
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserRWSecretName, err)
 		return
 	}
 
-	if !sc.StateOK {
-		sc.StateOK = true
+	if !sc.stateOK {
+		sc.stateOK = true
 
 		sc.logModuleInfo(
 			&log,
