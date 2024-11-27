@@ -55,11 +55,18 @@ resource "openstack_blockstorage_volume_v3" "volume" {
   volume_type       = local.volume_type
   availability_zone = module.volume_zone.zone
   enable_online_resize = true
+
   lifecycle {
     ignore_changes = [
       metadata,
       availability_zone,
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
   }
 }
 
@@ -97,6 +104,12 @@ resource "openstack_compute_instance_v2" "node" {
     ]
   }
 
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
+
   metadata = local.metadata_tags
 }
 
@@ -117,4 +130,3 @@ resource "openstack_compute_floatingip_associate_v2" "node" {
     ]
   }
 }
-
