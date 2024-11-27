@@ -288,6 +288,28 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
+	isFirst, err := nc.isFirstMasterNode(ctx, node)
+	if err != nil {
+		err = fmt.Errorf("cannot check node is first master node: %w", err)
+		return
+	}
+
+	staticPodManagerIP, err := nc.findStaticPodManagerIP(ctx, node.Name)
+	if err != nil {
+		err = fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
+	}
+
+	if config.Settings.Mode == state.RegistryModeDirect {
+		// TODO: shutdown all static pods and delete PKI
+		log.Info(
+			"Shutdown node static pod because mode = direct",
+			"node", node.Name,
+			"first", isFirst,
+			"staticPodManagerIP", staticPodManagerIP,
+		)
+		return
+	}
+
 	userRO, err := nc.loadUserSecret(ctx, state.UserROSecretName)
 	if err != nil {
 		err = fmt.Errorf("cannot load RO user: %w", err)
@@ -322,24 +344,44 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
-	isFirst, err := nc.isFirstMasterNode(ctx, node)
-	if err != nil {
-		err = fmt.Errorf("cannot check node is first master node: %w", err)
-		return
-	}
-
 	// TODO
 	_ = userRO
 	_ = userRW
 	_ = globalPKI
 	_ = nodePKI
 
-	staticPodManagerIP, err := nc.findStaticPodManagerIP(ctx, node.Name)
-	if err != nil {
-		err = fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
+	if config.Settings.Mode == state.RegistryModeDetached {
+		if isFirst {
+			log.Info(
+				"Processing first master node for mode == detached",
+				"node", node.Name,
+				"first", isFirst,
+				"staticPodManagerIP", staticPodManagerIP,
+			)
+
+			// TODO
+
+			return
+		}
+
+		log.Info(
+			"Shutdown node static pod on non-master node for mode = detached",
+			"node", node.Name,
+			"first", isFirst,
+			"staticPodManagerIP", staticPodManagerIP,
+		)
+
+		// TODO
+
+		return
 	}
 
-	log.Info("Processing master node", "node", node.Name, "first", isFirst, "staticPodManagerIP", staticPodManagerIP)
+	log.Info(
+		"Processing master node",
+		"node", node.Name,
+		"first", isFirst,
+		"staticPodManagerIP", staticPodManagerIP,
+	)
 
 	return
 }
