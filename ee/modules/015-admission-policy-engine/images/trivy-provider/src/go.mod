@@ -387,5 +387,5 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-replace github.com/aquasecurity/trivy => ./trivy
-replace github.com/aquasecurity/trivy-db => ./trivy-db
+replace fox.flant.com/deckhouse/3p/aquasecurity/trivy => ./trivy
+replace fox.flant.com/deckhouse/3p/aquasecurity/trivy-db => ./trivy-db
