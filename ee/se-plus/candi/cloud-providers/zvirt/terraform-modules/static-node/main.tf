@@ -32,6 +32,12 @@ resource "ovirt_vm" "node_vm" {
       placement_policy_host_ids
     ]
   }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 data "ovirt_disk_attachments" "node-vm-boot-disk-attachment" {
