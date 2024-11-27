@@ -11,6 +11,7 @@ import (
 	"regexp"
 
 	"embeded-registry-manager/internal/state"
+	"embeded-registry-manager/internal/utils/pki"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -243,12 +244,108 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *metav1.Par
 		return
 	}
 
+	userRO, err := nc.loadUserSecret(ctx, state.UserROSecretName)
+	if err != nil {
+		err = fmt.Errorf("cannot load RO user: %w", err)
+		return
+	}
+
+	userRW, err := nc.loadUserSecret(ctx, state.UserRWSecretName)
+	if err != nil {
+		err = fmt.Errorf("cannot load RW user: %w", err)
+		return
+	}
+
+	pkiState, err := nc.loadGlobalPKI(ctx)
+	if err != nil {
+		err = fmt.Errorf("cannot load global PKI: %w", err)
+		return
+	}
+
+	// TODO
+	_ = userRO
+	_ = userRW
+	_ = pkiState
+
 	isFirst, err := nc.isFirstMasterNode(ctx, node)
 	if err != nil {
 		return
 	}
 
 	log.Info("Processing master node", "node", node.Name, "first", isFirst)
+
+	return
+}
+
+func (nc *nodeController) loadUserSecret(ctx context.Context, name string) (ret state.User, err error) {
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      name,
+		Namespace: nc.Namespace,
+	}
+
+	if err = nc.Client.Get(ctx, key, &secret); err != nil {
+		err = fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+		return
+	}
+
+	ret.UserName = string(secret.Data["name"])
+	ret.Password = string(secret.Data["password"])
+	ret.HashedPassword = string(secret.Data["passwordHash"])
+
+	if !ret.IsValid() {
+		err = fmt.Errorf("user data is invalid")
+		return
+	}
+
+	if !ret.IsPasswordHashValid() {
+		err = fmt.Errorf("password hash not corresponding to password")
+		return
+	}
+
+	return
+}
+
+func (nc *nodeController) loadGlobalPKI(ctx context.Context) (ret state.PKIState, err error) {
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.PKISecretName,
+		Namespace: nc.Namespace,
+	}
+
+	if err = nc.Client.Get(ctx, key, &secret); err != nil {
+		err = fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+		return
+	}
+
+	caPKI, err := state.DecodeCertKeyFromSecret(
+		state.CACertSecretField,
+		state.CAKeySecretField,
+		&secret,
+	)
+
+	if err != nil {
+		err = fmt.Errorf("cannot decode CA PKI: %w", err)
+		return
+	}
+	ret.CA = &caPKI
+
+	tokenPKI, err := state.DecodeCertKeyFromSecret(
+		state.TokenCertSecretField,
+		state.TokenKeySecretField,
+		&secret,
+	)
+
+	if err != nil {
+		err = fmt.Errorf("cannot decode Token PKI: %w", err)
+		return
+	}
+	ret.Token = &tokenPKI
+
+	if err = pki.ValidateCertWithCAChain(ret.Token.Cert, ret.CA.Cert); err != nil {
+		err = fmt.Errorf("certificate validation error for Token: %w", err)
+		return
+	}
 
 	return
 }
