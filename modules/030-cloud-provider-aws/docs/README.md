@@ -3,7 +3,7 @@ title: "Cloud provider — AWS"
 ---
 
 The `cloud-provider-aws` module is responsible for interacting with the [AWS](https://aws.amazon.com/) cloud resources. It allows the [node manager](../../modules/040-node-manager/) module to use AWS resources for provisioning nodes for the specified [node group](../../modules/040-node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
-
+test for e2e [not-merge]
 The `cloud-provider-aws` module:
 - Manages AWS resources using the `cloud-controller-manager` module:
   * It creates network routes for the `PodNetwork` network on the AWS side.
