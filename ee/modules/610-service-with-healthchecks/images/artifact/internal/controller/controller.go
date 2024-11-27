@@ -7,6 +7,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
 	"service-with-healthchecks/internal/kubernetes"
 	"slices"
@@ -118,7 +119,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 		}
 		serviceWithHC.Status.LoadBalancer = childService.Status.LoadBalancer
 	}
-	newCondition := createStatusConditionForService(errUpdatingSvc)
+	newCondition := createStatusConditionForService(errUpdatingSvc, serviceWithHC.Name)
 	serviceWithHC.Status.Conditions = kubernetes.UpdateStatusWithCondition(serviceWithHC.Status.Conditions, newCondition)
 	if err := r.Status().Patch(ctx, serviceWithHC, patch); err != nil {
 		r.Logger.Error(err, "failed to update ServiceWithHealthchecks Status", "name", req.Name, "namespace", req.Namespace)
@@ -127,12 +128,12 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	return ctrl.Result{}, nil
 }
 
-func createStatusConditionForService(err error) metav1.Condition {
+func createStatusConditionForService(err error, svcName string) metav1.Condition {
 	if err != nil {
 		return metav1.Condition{
 			Type:               "ChildService",
 			Status:             metav1.ConditionFalse,
-			Message:            err.Error(),
+			Message:            fmt.Sprintf("can't create child Service \"%s\": %s", svcName, err.Error()),
 			Reason:             "ChildServiceWasNotCreated",
 			LastTransitionTime: metav1.Now(),
 		}
