@@ -6,11 +6,11 @@ lang: ru
 
 ## Образы
 
-Ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage) используется для загрузки образов виртуальных машин в внутрикластерное хранилище, что позволяет создавать диски для виртуальных машин. Этот ресурс доступен в любом пространстве имен или проекте кластера.
+Ресурс [`ClusterVirtualImage`](../../../../reference/cr.html#clustervirtualimage) используется для загрузки образов виртуальных машин в внутрикластерное хранилище, что позволяет создавать диски для виртуальных машин. Этот ресурс доступен в любом пространстве имен или проекте кластера.
 
 Процесс создания образа включает следующие шаги:
 
-1. Пользователь создаёт ресурс [ClusterVirtualImage](../../../../reference/cr.html#clustervirtualimage).
+1. Пользователь создаёт ресурс [`ClusterVirtualImage`](../../reference/cr.html#clustervirtualimage).
 1. После создания, образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
 1. По завершении загрузки ресурс становится доступным для создания дисков.
 
@@ -31,13 +31,13 @@ lang: ru
 
 Образы могут быть созданы на основе других образов и дисков виртуальных машин.
 
-С полным описанием параметров конфигурации ресурса ClusterVirtualImage можно ознакомиться [в документации](../../../../reference/cr.html#clustervirtualimage).
+С полным описанием параметров конфигурации ресурса `ClusterVirtualImage` можно ознакомиться [в документации](../../reference/cr.html#clustervirtualimage).
 
 ### Создание образа с HTTP-сервера
 
 Рассмотрим вариант создания кластерного образа.
 
-Выполните следующую команду для создания ClusterVirtualImage:
+Выполните следующую команду для создания `ClusterVirtualImage`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -54,9 +54,9 @@ spec:
 EOF
 ```
 
-Проверьте результат создания ClusterVirtualImage:
+Проверьте результат создания `ClusterVirtualImage`:
 
-```bash
+```shell
 d8 k get clustervirtualimage ubuntu-22.04
 # или более короткий вариант
 d8 k get cvi ubuntu-22.04
@@ -65,7 +65,7 @@ d8 k get cvi ubuntu-22.04
 # ubuntu-22.04   Ready   false   100%       23h
 ```
 
-После создания ресурс ClusterVirtualImage может находиться в следующих состояниях (фазах):
+После создания ресурс `ClusterVirtualImage` может находиться в следующих состояниях (фазах):
 
 - `Pending` — ожидание готовности всех зависимых ресурсов, требующихся для создания образа.
 - `WaitForUserUpload` — ожидание загрузки образа пользователем (фаза присутствует только для `type=Upload`).
@@ -79,7 +79,7 @@ d8 k get cvi ubuntu-22.04
 
 Отследить процесс создания образа можно путем добавления ключа `-w` к предыдущей команде:
 
-```bash
+```shell
 d8 k get cvi ubuntu-22.04 -w
 
 # NAME           PHASE          CDROM   PROGRESS   AGE
@@ -92,9 +92,9 @@ d8 k get cvi ubuntu-22.04 -w
 # ubuntu-22.04   Ready          false   100%       18s
 ```
 
-В описание ресурса ClusterVirtualImage можно получить дополнительную информацию о скачанном образе:
+В описании ресурса `ClusterVirtualImage` можно получить дополнительную информацию о скачанном образе:
 
-```bash
+```shell
 d8 k describe cvi ubuntu-22.04
 ```
 
@@ -104,7 +104,7 @@ d8 k describe cvi ubuntu-22.04
 
 Загрузите образ локально:
 
-```bash
+```shell
 curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
 ```
 
@@ -117,7 +117,7 @@ COPY ubuntu2204.img /disk/ubuntu2204.img
 
 Соберите образ и загрузите его в container registry. В качестве примера используется [docker.io](https://www.docker.com/).  Для выполнения этих шагов необходимо иметь учетную запись в сервисе и настроенную среду:
 
-```bash
+```shell
 docker build -t docker.io/<username>/ubuntu2204:latest
 ```
 
@@ -125,7 +125,7 @@ docker build -t docker.io/<username>/ubuntu2204:latest
 
 Загрузите созданный образ в container registry:
 
-```bash
+```shell
 docker push docker.io/<username>/ubuntu2204:latest
 ```
 
@@ -147,7 +147,7 @@ EOF
 
 ### Загрузка образа из командной строки
 
-Чтобы загрузить образ из командной строки, предварительно создайте следующий ресурс, как показано ниже на примере ClusterVirtualImage:
+Чтобы загрузить образ из командной строки, предварительно создайте следующий ресурс, как показано ниже на примере `ClusterVirtualImage`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -166,7 +166,7 @@ EOF
 
 Существует два варианта загрузки — с узла кластера или с произвольного узла за пределами кластера:
 
-```bash
+```shell
 d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 
 # {
@@ -177,19 +177,19 @@ d8 k get cvi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
 
 В качестве примера загрузите образ Cirros:
 
-```bash
+```shell
 curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
 ```
 
 Затем выполните загрузку образа с помощью следующей команды:
 
-```bash
+```shell
 curl https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm --progress-bar -T cirros.img | cat
 ```
 
 После завершения загрузки образ должен быть создан и перейти в фазу Ready. Для проверки состояния образа выполните команду:
 
-```bash
+```shell
 d8 k get cvi some-image
 # NAME         PHASE   CDROM   PROGRESS   AGE
 # some-image   Ready   false   100%       1m

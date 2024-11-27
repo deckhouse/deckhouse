@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/user/resource-management/vir
 lang: ru
 ---
 
-Для создания виртуальной машины используется ресурс [VirtualMachine](../../../reference/cr.html#virtualmachine), его параметры позволяют сконфигурировать:
+Для создания виртуальной машины используется ресурс [VirtualMachine](../../reference/cr.html#virtualmachine), его параметры позволяют сконфигурировать:
 
 - [класс виртуальной машины](../../admin/platform-management/virtualization/virtual_machine_classes.html)
 - ресурсы, требуемые для работы виртуальной машины (процессор, память, диски и образы);
@@ -20,7 +20,7 @@ lang: ru
 
 Пароль в примере был сгенерирован с использованием команды `mkpasswd --method=SHA-512 --rounds=4096 -S saltsalt` и при необходимости вы можете его поменять на свой:
 
-Создайте виртуальную машину [с диском](./disk.html#создание-диска-из-образа):
+Создайте виртуальную машину [с диском](./disks.html#создание-диска-из-образа):
 
 ```yaml
 d8 k apply -f - <<"EOF"
@@ -82,7 +82,7 @@ EOF
 
 Проверьте состояние виртуальной машины после создания:
 
-```bash
+```shell
 d8 k get vm linux-vm
 
 # NAME       PHASE     NODE           IPADDRESS     AGE
@@ -97,11 +97,11 @@ d8 k get vm linux-vm
 
 - протокол удаленного управления (например SSH), который должен быть предварительно настроен на виртуальной машине;
 - серийная консоль (serial console);
-- протокол VNCЮ
+- протокол VNC.
 
 Пример подключения к виртуальной машине с использованием серийной консоли:
 
-```bash
+```shell
 d8 v console linux-vm
 
 # Successfully connected to linux-vm console. The escape sequence is ^]
@@ -135,8 +135,8 @@ d8 v ssh cloud@linux-vm --local-ssh
 
 Состоянием виртуальной машины можно управлять с помощью следующих методов:
 
-- Создание ресурса [VirtualMachineOperation](../../../reference/cr.html#virtualmachineoperation) (`vmop`).
-- Использование утилиты `d8` с соответствующей подкомандой.
+- Создание ресурса [VirtualMachineOperation](../../reference/cr.html#virtualmachineoperation) (`vmop`).
+- Использование утилиты [`d8`](../../reference/console-utilities/d8.html) с соответствующей подкомандой.
 
 Ресурс `VirtualMachineOperation` декларативно определяет действие, которое должно быть выполнено на виртуальной машине.
 
@@ -157,7 +157,7 @@ EOF
 
 Посмотреть результат действия можно с использованием команды:
 
-```bash
+```shell
 d8 k get virtualmachineoperation
 # или
 d8 k get vmop
@@ -165,7 +165,7 @@ d8 k get vmop
 
 Аналогичное действие можно выполнить с использованием утилиты `d8`:
 
-```bash
+```shell
 d8 v restart  linux-vm
 ```
 
@@ -204,28 +204,28 @@ d8 k edit vm linux-vm
 
 Предположим, мы хотим изменить количество ядер процессора. В данный момент виртуальная машина запущена и использует одно ядро, что можно подтвердить, подключившись к ней через серийную консоль и выполнив команду `nproc`.
 
-```bash
+```shell
 d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 # 1
 ```
 
 Примените следующий патч к виртуальной машине, чтобы изменить количество ядер с 1 на 2.
 
-```bash
+```shell
 d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":2}}}'
 # virtualmachine.virtualization.deckhouse.io/linux-vm patched
 ```
 
-Изменения в конфигурации внесены, но ещё не применены к виртуальной машине. Проверьте это, повторно выполнив:
+Изменения в конфигурацию внесены, но ещё не применены к виртуальной машине. Проверьте это, повторно выполнив:
 
-```bash
+```shell
 d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 # 1
 ```
 
 Для применения этого изменения необходим перезапуск виртуальной машины. Выполните следующую команду, чтобы увидеть изменения, ожидающие применения (требующие перезапуска):
 
-```bash
+```shell
 d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
 
 # [
@@ -240,7 +240,7 @@ d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
 
 Выполните команду:
 
-```bash
+```shell
 d8 k get vm linux-vm -o wide
 
 # NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
@@ -251,7 +251,7 @@ d8 k get vm linux-vm -o wide
 
 Выполним перезагрузку виртуальной машины:
 
-```bash
+```shell
 d8 v restart linux-vm
 ```
 
@@ -259,7 +259,7 @@ d8 v restart linux-vm
 
 Выполните команду для проверки:
 
-```bash
+```shell
 d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 # 2
 ```
@@ -305,7 +305,7 @@ data:
 type: provisioning.virtualization.deckhouse.io/cloud-init
 ```
 
-Фрагмент конфигурации виртуальной машины с при использовании скрипта начальной инициализации CloudInit хранящегося в ресурсе `Secret`:
+Фрагмент конфигурации виртуальной машины при использовании скрипта начальной инициализации CloudInit хранящегося в ресурсе `Secret`:
 
 ```yaml
 spec:
@@ -444,9 +444,9 @@ spec:
 
 Статические блочные устройства указываются в спецификации виртуальной машины в блоке `.spec.blockDeviceRefs`. Этот блок представляет собой список, в который могут быть включены следующие блочные устройства:
 
-- [VirtualImage](../../../reference/cr.html#virtualimage)
-- [ClusterVirtualImage](../../../reference/cr.html#clustervirtualimage)
-- [VirtualDisk](../../../reference/cr.html#virtualdisk)
+- [VirtualImage](../../reference/cr.html#virtualimage)
+- [ClusterVirtualImage](../../reference/cr.html#clustervirtualimage)
+- [VirtualDisk](../../reference/cr.html#virtualdisk)
 
 Порядок устройств в этом списке определяет последовательность их загрузки. Таким образом, если диск или образ указан первым, загрузчик сначала попробует загрузиться с него. Если это не удастся, система перейдет к следующему устройству в списке и попытается загрузиться с него. И так далее до момента обнаружения первого загрузчика.
 
@@ -456,7 +456,7 @@ spec:
 
 Динамические блочные устройства можно подключать и отключать от виртуальной машины, находящейся в запущенном состоянии, без необходимости её перезагрузки.
 
-Для подключения динамических блочных устройств используется ресурс [VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment) (`vmbda`). На данный момент для подключения в качестве динамического блочного устройства поддерживается только [VirtualDisk](../../../reference/cr.html#virtualdisk).
+Для подключения динамических блочных устройств используется ресурс [VirtualMachineBlockDeviceAttachment](../../reference/cr.html#virtualmachineblockdeviceattachment) (`vmbda`). На данный момент для подключения в качестве динамического блочного устройства поддерживается только [VirtualDisk](../../reference/cr.html#virtualdisk).
 
 Создайте следующий ресурс, который подключит пустой диск blank-disk к виртуальной машине linux-vm:
 
@@ -482,7 +482,7 @@ EOF
 
 Проверьте состояние вашего ресурса:
 
-```bash
+```shell
 d8 k get vmbda attach-blank-disk
 
 # NAME                PHASE      VIRTUAL MACHINE NAME   AGE
@@ -491,7 +491,7 @@ d8 k get vmbda attach-blank-disk
 
 Подключитесь к виртуальной машине и удостоверьтесь, что диск подключен:
 
-```bash
+```shell
 d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
 
 # NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
@@ -505,7 +505,7 @@ d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
 
 Для отключения диска от виртуальной машины удалите ранее созданный ресурс:
 
-```bash
+```shell
 d8 k delete vmbda attach-blank-disk
 ```
 
@@ -523,7 +523,7 @@ d8 k delete vmbda attach-blank-disk
 
 Перед запуском миграции посмотрите текущий статус виртуальной машины:
 
-```bash
+```shell
 d8 k get vm
 # NAME       PHASE     NODE           IPADDRESS     AGE
 # linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
@@ -531,7 +531,7 @@ d8 k get vm
 
 Виртуальная машина запущена на узле `virtlab-pt-1`.
 
-Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperations](../../../reference/cr.html#virtualmachineoperations) (`vmop`) с типом Evict.
+Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperations](../../reference/cr.html#virtualmachineoperations) (`vmop`) с типом Evict.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -549,7 +549,7 @@ EOF
 
 Сразу после создания ресурса `vmop`, выполните команду:
 
-```bash
+```shell
 d8 k get vm -w
 # NAME       PHASE       NODE           IPADDRESS     AGE
 # linux-vm   Running     virtlab-pt-1   10.66.10.14   79m
@@ -560,7 +560,7 @@ d8 k get vm -w
 
 Также для выполнения миграции можно использовать команду:
 
-```bash
+```shell
 d8 v evict <vm-name>
 ```
 
@@ -568,21 +568,21 @@ d8 v evict <vm-name>
 
 Блок `.spec.settings.virtualMachineCIDRs` в конфигурации модуля virtualization задает список подсетей для назначения IP-адресов виртуальным машинам (общий пул IP-адресов). Все адреса в этих подсетях доступны для использования, за исключением первого (адрес сети) и последнего (широковещательный адрес).
 
-Ресурс [VirtualMachineIPAddressLease](../../../reference/cr.html#VirtualMachineIPAddressLease) (`vmipl`): Кластерный ресурс, который управляет временным выделением IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
+Ресурс [VirtualMachineIPAddressLease](../../reference/cr.html#VirtualMachineIPAddressLease) (`vmipl`): кластерный ресурс, который управляет временным выделением IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
 
 Чтобы посмотреть список временно выделенных IP-адресов (`vmipl`), используйте команду:
 
-```bash
+```shell
 d8 k get vmipl
 # NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
 # ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
-Ресурс [VirtualMachineIPAddress](../../../reference/cr.html#VirtualMachineIPAddress) (`vmip`) это ресурс проекта или пространства имен, который отвечает за резервирование выделенных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по запросу.
+Ресурс [VirtualMachineIPAddress](../../reference/cr.html#VirtualMachineIPAddress) (`vmip`) — это ресурс проекта или пространства имен, который отвечает за резервирование выделенных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по запросу.
 
 Чтобы посмотреть список `vmip`, используйте команду:
 
-```bash
+```shell
 d8 k get vmipl
 # NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
 # ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
@@ -590,7 +590,7 @@ d8 k get vmipl
 
 Проверить назначенный IP-адрес можно с помощью команды:
 
-```bash
+```shell
 d8 k get vmip
 # NAME             ADDRESS       STATUS     VM         AGE
 # linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
@@ -634,7 +634,7 @@ spec:
 
 Получите название ресурса `vmip` для заданной виртуальной машины:
 
-```bash
+```shell
 d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
 
 # linux-vm-7prpx
@@ -642,7 +642,7 @@ d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
 
 Удалите блоки `.metadata.ownerReferences` из найденного ресурса:
 
-```bash
+```shell
 d8 k patch vmip linux-vm-7prpx --type=merge --patch '{"metadata":{"ownerReferences":null}}'
 ```
 

@@ -23,9 +23,9 @@ lang: ru
 
 ## Создание пользователя
 
-Для создания статического пользователя используется ресурс [User](../../../reference/cr.html#user).
+Для создания статического пользователя используется ресурс [User](../../reference/cr.html#user).
 
-Перед этим необходимо сгенерировать хеш пароля с помощью следующей команды:
+Перед этим необходимо сгенерировать хэш пароля с помощью следующей команды:
 
 ```shell
 # В начале команды используйте пробел, чтобы пароль не сохранился в истории команд.
@@ -43,14 +43,14 @@ kind: User
 metadata:
   name: joe
 spec:
-  email: joe@example.com # используется в RoleBinding, ClusterRoleBinding для назначения прав пользователю
+  email: joe@example.com # Используется в RoleBinding, ClusterRoleBinding для назначения прав пользователю.
   password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
-  ttl: 24h # (опционально) задает срок жизни учетной записи
+  ttl: 24h # (Опционально) задает срок жизни учетной записи.
 ```
 
 ## Создание группы пользователей
 
-Для создания группы пользователей используется ресурс [Group](../../../reference/cr.html#group).
+Для создания группы пользователей используется ресурс [Group](../../reference/cr.html#group).
 
 Пример манифеста для создания группы:
 
@@ -72,23 +72,23 @@ spec:
 Для того чтобы удалённо управлять кластером с помощью утилит командной строки (`d8` или `kubectl`), необходимо создать конфигурационный файл:
 
 1. Включите доступ к API платформы, установив параметр `.spec.settings.publishAPI.enabled` в значении `true` в ресурсе ModuleConfig модуля`user-authn`.
-1. Через веб-интерфейс kubeconfigurator, сгенерируйте `kubeconfig` файл для удалённого доступа к кластеру. Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра `publicDomainTemplate`.
+1. Через веб-интерфейс kubeconfigurator, сгенерируйте `kubeconfig`-файл для удалённого доступа к кластеру. Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра `publicDomainTemplate`.
 
-Чтобы узнать адрес, по которому доступен сервис, выполните следующую команду:
-
-```bash
-d8 k get ingress -n d8-user-authn
-# NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
-# ...
-# kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
-# ...
-```
+    Чтобы узнать адрес, по которому доступен сервис, выполните следующую команду:
+    
+    ```shell
+    d8 k get ingress -n d8-user-authn
+    # NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
+    # ...
+    # kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
+    # ...
+    ```
 
 1. Перейдите по предоставленному адресу и используйте в качестве учетных данных e-mail и пароль, которые вы указали при создании пользователя.
 
 ## Настройка внешних провайдеров
 
-Для настройки внешни провайдеров используется ресурс [DexProvider](../../../reference/cr.html#dexprovider).
+Для настройки внешниx провайдеров используется ресурс [DexProvider](../../reference/cr.html#dexprovider).
 
 ### GitHub
 
@@ -107,13 +107,13 @@ spec:
     clientSecret: plainstring
 ```
 
-В организации GitHub необходимо создать новое приложение, для этого выполните следующие шаги:
+В [организации GitHub](https://docs.github.com/ru/organizations) необходимо создать новое приложение, для этого выполните следующие шаги:
 
 1. Перейдите в «Settings» → «Developer settings» → «OAuth Aps» → «Register a new OAuth application».
 1. В поле «Authorization callback URL» укажите адрес:
    `https://dex.<modules.publicDomainTemplate>/callback`.
 
-Полученные `Client ID` и `Client Secret` укажите в Custom Resource DexProvider.
+Полученные `Client ID` и `Client Secret` укажите в кастомном ресурсе `DexProvider`.
 
 Если организация GitHub находится под управлением клиента, выполните следующие шаги:
 
@@ -151,7 +151,7 @@ spec:
 1. Перейдите в «Admin area» → «Application» → «New application».
 1. В поле «Redirect URI (Callback URL)» укажите адрес:  
    `https://dex.<modules.publicDomainTemplate>/callback`.
-1. Выберите следующие scopes:
+1. Выберите следующие категории доступа:
    - `read_user`
    - `openid`
 
@@ -160,16 +160,16 @@ spec:
 1. Под главной учетной записью проекта перейдите в «User Settings» → «Applications» → «New application».
 1. В поле «Redirect URI (Callback URL)» укажите адрес:  
    `https://dex.<modules.publicDomainTemplate>/callback`.
-1. Выберите следующие scopes:
+1. Выберите следующие категории доступа:
    - `read_user`
    - `openid`
 
 Для GitLab версии 16 и выше:
 
- Включите опцию «Trusted»:  
+1. Включите опцию «Trusted»:  
 `Trusted applications are automatically authorized on GitLab OAuth flow` при создании приложения.
 
-Полученные `Application ID` и `Secret` укажите в Custom Resource DexProvider.
+1. Полученные `Application ID` и `Secret` укажите в кастомном ресурсе `DexProvider`.
 
 ### Atlassian Crowd
 
@@ -196,11 +196,8 @@ spec:
 Для того чтобы создать Generic-приложение в Atlassian Crowd, выполните следующие шаги:
 
 1. Перейдите в раздел «Applications» → «Add application».
-1. Полученные «Application Name» и «Password» укажите в Custom Resource [DexProvider](../../../reference/cr.html#dexprovider).
-
-Полученные `Application Name` и `Password` укажите в Custom Resource DexProvider.
-
-Группы CROWD укажите в lowercase-формате для Custom Resource `DexProvider`.
+1. Полученные `Application Name` и `Password` укажите в ресурсе [DexProvider](../../reference/cr.html#dexprovider).
+1. Группы CROWD укажите в lowercase-формате для ресурса `DexProvider`.
 
 ### Bitbucket Cloud
 
@@ -225,11 +222,10 @@ spec:
 
 Для настройки аутентификации в Bitbucket выполните следующие шаги:
 
-1. В меню команды создайте новый OAuth consumer.
+1. В меню команды создайте новый OAuth-consumer.
 1. Перейдите в «Settings» → «OAuth consumers» → «New application» и в качестве «Callback URL» укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
 1. Разрешите доступ для `Account: Read` и `Workspace membership: Read`.
-
-Полученные `Key` и `Secret` укажите в Custom Resource DexProvider.
+1. Полученные `Key` и `Secret` укажите в кастомном ресурсе `DexProvider`.
 
 ### LDAP
 
@@ -269,10 +265,9 @@ spec:
       nameAttr: cn
 ```
 
-Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
-
-Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource DexProvider.
-
+Для настройки аутентификации в LDAP выполните следующие шаги:
+1. Создайте в LDAP read-only-пользователя (service account).
+1. Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` кастомного ресурса `DexProvider`.
 1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
 1. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
 
@@ -280,7 +275,7 @@ spec:
 
 Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration) или [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
 
-Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в Custom Resource DexProvider.
+Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в кастомном ресурсе `DexProvider`.
 
 Далее можно ознакомиться с некоторыми примерами.
 

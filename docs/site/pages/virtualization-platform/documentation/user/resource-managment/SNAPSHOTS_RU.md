@@ -8,26 +8,26 @@ lang: ru
 
 ## Создание снимков из дисков
 
-Для создания снимков дисков используется ресурс [`VirtualDiskSnapshot`](../../../reference/cr.html#virtualdisksnapshot). Он может быть использован в качестве источников данных для создания новых виртуальных дисков.
+Для создания снимков дисков используется ресурс [`VirtualDiskSnapshot`](../../reference/cr.html#virtualdisksnapshot). Он может быть использован в качестве источников данных для создания новых виртуальных дисков.
 
 Для гарантии целостности и консистентности данных, снимок диска можно создать в следующих случаях:
 
 - виртуальный диск не подключен ни к одной виртуальной машине;
 - виртуальный диск подключен к виртуальной машине, которая выключена;
-- виртуальный диск подключен к запущенной виртуальной машине, в ОС виртуальной машины установлен агент (`qemu-guest-agent`), операция по «заморозке» файловой системы прошла успешено.
+- виртуальный диск подключен к запущенной виртуальной машине, в ОС виртуальной машины установлен агент (`qemu-guest-agent`), операция по «заморозке» файловой системы прошла успешно.
 
-Если целостность и консистентность неважна, снимок можно выполнить на работающей виртуальной машине и без «заморозки» файловой системы. Для этого в спецификации ресурса `VirtualDiskSnapshot` добавить:
+Если целостность и консистентность неважна, снимок можно выполнить на работающей виртуальной машине и без «заморозки» файловой системы. Для этого в спецификации ресурса `VirtualDiskSnapshot` добавьте:
 
 ```yaml
 spec:
   requiredConsistency: false
 ```
 
-При создании снимка требуется указать названия класса снимка томов `VolumeSnapshotClass`, который будет использоваться для создания снимка.
+При создании снимка требуется указать название класса снимка томов `VolumeSnapshotClass`, который будет использоваться для создания снимка.
 
 Для получения списка поддерживаемых ресурсов `VolumeSnapshotClass` выполните команду:
 
-```bash
+```shell
 d8 k get volumesnapshotclasses
 # NAME                     DRIVER                                DELETIONPOLICY   AGE
 # csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
@@ -51,13 +51,13 @@ EOF
 
 Для просмотра списка снимков дисков, выполните команду:
 
-```bash
+```shell
 d8 k get vdsnapshot
 # NAME                   PHASE     CONSISTENT   AGE
 # linux-vm-root-snapshot Ready     true         3m2s
 ```
 
-После создания `VirtualDiskSnapshot` может находиться в следующих состояниях:
+После создания, `VirtualDiskSnapshot` может находиться в следующих состояниях:
 
 - `Pending` - ожидание готовности всех зависимых ресурсов, требующихся для создания снимка.
 - `InProgress` — идет процесс создания снимка виртуального диска.
@@ -78,11 +78,11 @@ metadata:
 spec:
   # Настройки параметров хранения диска.
   persistentVolumeClaim:
-    # Укажем размер больше чем значение .
+    # Укажите размер больше чем значение.
     size: 10Gi
     # Подставьте ваше название StorageClass.
     storageClassName: i-linstor-thin-r2
-  # Источник из которого создается диск.
+  # Источник, из которого создается диск.
   dataSource:
     type: ObjectRef
     objectRef:
@@ -111,14 +111,14 @@ spec:
 
 Чтобы получить список поддерживаемых ресурсов `VolumeSnapshotClass`, выполните команду:
 
-```bash
+```shell
 d8 k get volumesnapshotclasses
 # NAME                     DRIVER                                DELETIONPOLICY   AGE
 # csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
 # sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
 ```
 
-Создание снимка виртуальной машины будет неудачным, если выполнится хотя бы одно из следующих условий:
+Снимок виртуальной машины не будет создан, если выполнится хотя бы одно из следующих условий:
 
 - не все зависимые устройства виртуальной машины готовы;
 - есть изменения, ожидающие перезапуска виртуальной машины;
@@ -153,13 +153,13 @@ EOF
 
 ## Восстановление снимков из виртуальных машин
 
-Для восстановления виртуальных машин из снимков используется ресурс [VirtualMachineRestore](../../../reference/cr.html#virtualmachinerestore).
+Для восстановления виртуальных машин из снимков используется ресурс [VirtualMachineRestore](../../reference/cr.html#virtualmachinerestore).
 
 В процессе восстановления будет создана новая виртуальная машина, а также все её зависимые ресурсы (диски, IP-адрес, ресурс со сценарием автоматизации (Secret) и ресурсы для динамического подключения дисков [VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment)) .
 
-Если возникает конфликт имен между существующими и восстанавливаемыми ресурсами для [VirtualMachine](../../../reference/cr.html#virtualmachine), [VirtualDisk](../../../reference/cr.html#virtualdisk) или [VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment), восстановление не будет успешно. Чтобы избежать этого, используйте параметр `nameReplacements`.
+Если возникает конфликт имен между существующими и восстанавливаемыми ресурсами для [VirtualMachine](../../reference/cr.html#virtualmachine), [VirtualDisk](../../reference/cr.html#virtualdisk) или [VirtualMachineBlockDeviceAttachment](../../../reference/cr.html#virtualmachineblockdeviceattachment), восстановление не будет успешно. Чтобы избежать этого, используйте параметр `nameReplacements`.
 
-Если восстанавливаемый ресурс [VirtualMachineIPAddress](../../../reference/cr.html#virtualmachineipaddress) уже присутствует в кластере, он не должен быть присоединен к другой виртуальной машине, а если это ресурс типа `Static`, его IP-адрес должен совпадать. Восстанавливаемый секрет с автоматизацией также должен полностью соответствовать восстановленному. Несоблюдение этих условий приведет к неудаче восстановления.
+Если восстанавливаемый ресурс [VirtualMachineIPAddress](../../reference/cr.html#virtualmachineipaddress) уже присутствует в кластере, он не должен быть присоединен к другой виртуальной машине, а если это ресурс типа `Static`, его IP-адрес должен совпадать. Восстанавливаемый секрет с автоматизацией также должен полностью соответствовать восстановленному. Несоблюдение этих условий приведет к неудаче восстановления.
 
 Пример манифеста для восстановления виртуальной машины из снимка:
 
@@ -175,18 +175,18 @@ spec:
     - from:
         kind: VirtualMachine
         name: linux-vm
-      to: linux-vm-2 # воссоздать существующую виртуальную машину `linux-vm` с новым именем `linux-vm-2`.
+      to: linux-vm-2 # Воссоздание существующей виртуальной машины `linux-vm` с новым именем `linux-vm-2`.
     - from:
         kind: VirtualDisk
         name: linux-vm-root
-      to: linux-vm-root-2 # воссоздать существующий виртуальный диск `linux-vm-root` с новым именем `linux-vm-root-2`.
+      to: linux-vm-root-2 # Воссоздание существующего виртуального диска `linux-vm-root` с новым именем `linux-vm-root-2`.
     - from:
         kind: VirtualDisk
         name: blank-disk
-      to: blank-disk-2 # воссоздать существующий виртуальный диск `blank-disk` с новым именем `blank-disk-2`.
+      to: blank-disk-2 # Воссоздание существующего виртуального диска `blank-disk` с новым именем `blank-disk-2`.
     - from:
         kind: VirtualMachineBlockDeviceAttachment
         name: attach-blank-disk
-      to: attach-blank-disk-2 # воссоздать существующий виртуальный диск `attach-blank-disk` с новым именем `attach-blank-disk-2`.
+      to: attach-blank-disk-2 # Воссоздание существующего виртуального диска `attach-blank-disk` с новым именем `attach-blank-disk-2`.
 EOF
 ```

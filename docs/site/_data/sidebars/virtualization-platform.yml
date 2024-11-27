@@ -28,7 +28,7 @@ entries:
         - title:
             en: Install
             ru: Установка платформы
-          url: /virtualization-platform/documentation/admin/install/steps/install.html  
+          url: /virtualization-platform/documentation/admin/install/steps/install.html
           folders:
             - title:
                 en: Requirements
@@ -275,8 +275,8 @@ entries:
                 ru: Сетевые политики
               url: /virtualization-platform/documentation/user/network/network-policies.html
             - title:
-                en: Virtual Machine Publishing
-                ru: Публикация ВМ
+                en: Public Access to a VM
+                ru: Публичный доступ к ВМ
               url: /virtualization-platform/documentation/user/network/vm-publishing.html
     #- title:
     #    en: Architecture
