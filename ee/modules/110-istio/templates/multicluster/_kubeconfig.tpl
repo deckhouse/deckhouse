@@ -6,7 +6,7 @@ kind: Config
 clusters:
 - cluster:
     server: https://{{ $multicluster.apiHost }}
-    certificate-authority-data: {{ $multicluster.metadataCA | base64encode }}
+    certificate-authority-data: {{ $multicluster.metadataCA | b64enc }}
   name: {{ $multicluster.name }}
 contexts:
 - context:
