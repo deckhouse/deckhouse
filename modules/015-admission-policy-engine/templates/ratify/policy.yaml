@@ -1,3 +1,4 @@
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.enabled) }}
 ---
 apiVersion: config.ratify.deislabs.io/v1beta1
 kind: Policy
@@ -9,3 +10,4 @@ spec:
   parameters:
     artifactVerificationPolicies:
       default: all
+{{- end }}

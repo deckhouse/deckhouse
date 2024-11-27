@@ -7,7 +7,7 @@ clientConfig:
     name: gatekeeper-webhook-service
     namespace: d8-admission-policy-engine
     path: /v1/admit
-failurePolicy: Ignore
+failurePolicy: Fail
 matchPolicy: Exact
 sideEffects: None
 objectSelector: {}
