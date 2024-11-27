@@ -437,12 +437,14 @@ const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }
   let ver = [defaultVersion];
   let multimaster = [defaultMultimaster];
 
-  if (!!context.payload.inputs.cri) {
-    const requested_cri = context.payload.inputs.cri.toLowerCase();
+  let test_config = JSON.parse(context.payload.inputs.test_config)
+
+  if (!!test_config.cri) {
+    const requested_cri = test_config.cri.toLowerCase();
     cri = requested_cri.split(',');
   }
-  if (!!context.payload.inputs.ver) {
-    const requested_ver = context.payload.inputs.ver.replace(/\./g, '_');
+  if (!!test_config.ver) {
+    const requested_ver = test_config.ver.replace(/\./g, '_');
     ver = requested_ver.split(',');
   }
   if (!!context.payload.inputs.multimaster) {
@@ -450,8 +452,10 @@ const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }
     multimaster = requested_multimaster;
   }
 
-  core.info(`workflow_dispatch is release related. e2e inputs: cri='${context.payload.inputs.cri}', multimaster='${context.payload.inputs.multimaster}' and version='${context.payload.inputs.ver}'.`);
+  core.info(`e2e inputs: '${JSON.stringify(context.payload.inputs)}'`);
+  core.info(`workflow_dispatch is release related. e2e parsed inputs: cri='${test_config.cri}' and version='${test_config.ver}'.`);
   core.setOutput(`multimaster`, `${multimaster}`);
+
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.info(`run_${out_cri}_${out_ver}: true`);
@@ -721,6 +725,7 @@ const detectSlashCommand = ({ comment , context, core}) => {
       let ver = [];
       let cri = [];
       let multimaster;
+      let edition = "fe";
       for (const line of lines) {
         let useParts = line.split('/e2e/use/cri/');
         if (useParts[1]) {
@@ -734,11 +739,14 @@ const detectSlashCommand = ({ comment , context, core}) => {
         if (useParts[1]) {
           multimaster.push(true);
         }
+        useParts = line.split('/e2e/use/edition/');
+        if (useParts[1]) {
+          edition = useParts[1]
+        }
       }
 
       inputs = {
-        cri: cri.join(','),
-        ver: ver.join(','),
+        test_config: JSON.stringify({ cri: cri.join(','), ver: ver.join(','), edition: edition }),
         multimaster: multimaster,
       }
 
@@ -778,9 +786,17 @@ const detectSlashCommand = ({ comment , context, core}) => {
     }
   }
 
-  const isBuild = command === '/build';
+  // Detect /build/* commands.
+  const isBuild = command.startsWith('/build');
   if (isBuild) {
     workflow_id = 'build-and-test_release.yml';
+    // Extract editions if command consists of 2 parts: /build/ce,ee release-1.64
+    const cmdParts = command.split('/');
+    if (cmdParts[2]) {
+      inputs = {
+        editions: cmdParts[2],
+      }
+    }
   }
 
   if (workflow_id === '') {
@@ -1207,8 +1223,11 @@ You can trigger release related actions by commenting on this issue:
   - \`git_ref_2\` is a release-* or main branch
 - \`/e2e/use/k8s/<version>\` specifies which Kubernetes version to use for e2e test.
   - \`version\` is one of \`${availableKubernetesVersions}\`
+- \`/e2e/use/edition/<edition>\` specifies which edition to use for e2e test.
+  - \`edition\` is one of \`${availableEditions}\`
 - \`/build git_ref\` will run build for release related refs.
   - \`git_ref\` is ${possibleGitRefs}
+  - \`/build/<edition> git_ref\` will also build specified edition
 
 
 **Note 1:**
