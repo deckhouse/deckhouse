@@ -18,7 +18,7 @@ func UpdateStatusWithCondition(existingConditions []metav1.Condition, newConditi
 }
 
 func UpdateStatusWithConditions(existingConditions []metav1.Condition, newConditions []metav1.Condition) []metav1.Condition {
-	resultConditions := make([]metav1.Condition, 0, len(existingConditions)+len(newConditions))
+	resultConditions := existingConditions
 	for _, newCondition := range newConditions {
 		resultConditions = UpdateStatusWithCondition(resultConditions, newCondition)
 	}

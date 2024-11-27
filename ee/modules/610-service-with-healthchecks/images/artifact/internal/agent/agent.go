@@ -138,7 +138,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	newStatus := r.buildRenewedStatus(updatedServiceWithHC)
 	updatedServiceWithHC.Status.HealthcheckCondition = newStatus.HealthcheckCondition
 	updatedServiceWithHC.Status.EndpointStatuses = newStatus.EndpointStatuses
-	updatedServiceWithHC.Status.Conditions = kubernetes.UpdateStatusWithConditions(updatedServiceWithHC.Status.Conditions, newStatus.Conditions)
+	updatedServiceWithHC.Status.Conditions = kubernetes.UpdateStatusWithConditions(serviceWithHC.Status.Conditions, newStatus.Conditions)
 
 	if isNew {
 		r.logger.Info("updating status of ServiceWithHealthchecks with healthchecks probes results", "name", updatedServiceWithHC.GetName(), "namespace", updatedServiceWithHC.GetNamespace())
