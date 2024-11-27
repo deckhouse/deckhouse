@@ -42,6 +42,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "20m"
+}
+
 locals {
   prefix                       = var.clusterConfiguration.cloud.prefix
   node_groups                  = lookup(var.providerClusterConfiguration, "nodeGroups", [])
