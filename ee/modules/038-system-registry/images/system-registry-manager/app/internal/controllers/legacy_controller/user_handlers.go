@@ -13,7 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"embeded-registry-manager/internal/utils/k8s"
+	k8s "embeded-registry-manager/internal/utils/k8s_legacy"
 )
 
 func (r *RegistryReconciler) handleRegistryUser(ctx context.Context, req ctrl.Request, secretName string, user *k8s.RegistryUser, secret *corev1.Secret) (bool, error) {

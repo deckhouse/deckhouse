@@ -12,7 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"embeded-registry-manager/internal/utils/k8s"
+	k8s "embeded-registry-manager/internal/utils/k8s_legacy"
 )
 
 func (r *RegistryReconciler) handleCAPKI(ctx context.Context, req ctrl.Request, secret *corev1.Secret) error {

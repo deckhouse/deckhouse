@@ -10,12 +10,16 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"embeded-registry-manager/internal/utils/k8s"
 	utiltime "embeded-registry-manager/internal/utils/time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	ModuleConfigApiVersion = "deckhouse.io/v1alpha1"
+	ModuleConfigKind       = "ModuleConfig"
 )
 
 type ModuleConfig struct {
@@ -61,8 +65,8 @@ type ProxyConfig struct {
 
 func GetModuleConfigObject() unstructured.Unstructured {
 	ret := unstructured.Unstructured{}
-	ret.SetAPIVersion(k8s.ModuleConfigApiVersion)
-	ret.SetKind(k8s.ModuleConfigKind)
+	ret.SetAPIVersion(ModuleConfigApiVersion)
+	ret.SetKind(ModuleConfigKind)
 	ret.SetName(RegistryModuleName)
 
 	return ret

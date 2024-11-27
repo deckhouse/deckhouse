@@ -8,14 +8,12 @@ package legacy_controller
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -26,21 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	staticpod "embeded-registry-manager/internal/static-pod"
 	httpclient "embeded-registry-manager/internal/utils/http_client"
-	"embeded-registry-manager/internal/utils/k8s"
+	k8s "embeded-registry-manager/internal/utils/k8s_legacy"
 )
-
-type embeddedRegistry struct {
-	mutex          sync.Mutex
-	mc             ModuleConfig
-	caPKI          k8s.Certificate
-	authTokenPKI   k8s.Certificate
-	registryRwUser k8s.RegistryUser
-	registryRoUser k8s.RegistryUser
-	masterNodes    map[string]k8s.MasterNode
-	images         staticpod.Images
-}
 
 type RegistryReconciler struct {
 	client.Client
@@ -258,159 +244,6 @@ func (r *RegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return ctrl.Result{}, nil
 }
 
-func (r *RegistryReconciler) syncRegistryStaticPods(ctx context.Context, node k8s.MasterNode) ([]byte, error) {
-
-	// Prepare the upstream registry struct
-	var upstreamRegistry staticpod.UpstreamRegistry
-	if r.embeddedRegistry.mc.Settings.Mode == "Proxy" {
-		upstreamRegistry = r.prepareUpstreamRegistry()
-	}
-
-	// Prepare the embedded registry config struct
-	data := r.prepareEmbeddedRegistryConfig(node, upstreamRegistry)
-
-	return r.createNodeRegistry(ctx, node.Name, data)
-
-}
-
-func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) error {
-	logger := ctrl.LoggerFrom(ctx)
-	logger.Info("Embedded registry startup initialization", "component", "registry-controller")
-
-	// Lock mutex to ensure thread safety
-	r.embeddedRegistry.mutex.Lock()
-	defer r.embeddedRegistry.mutex.Unlock()
-
-	// Get the required environment variables
-	registryAddress := os.Getenv("REGISTRY_ADDRESS")
-	registryPath := os.Getenv("REGISTRY_PATH")
-	imageDockerAuth := os.Getenv("IMAGE_DOCKER_AUTH")
-	imageDockerDistribution := os.Getenv("IMAGE_DOCKER_DISTRIBUTION")
-
-	if registryAddress == "" || imageDockerAuth == "" || imageDockerDistribution == "" || registryPath == "" {
-		return fmt.Errorf("missing required environment variables: REGISTRY_ADDRESS, REGISTRY_PATH, IMAGE_DOCKER_AUTH, or IMAGE_DOCKER_DISTRIBUTION")
-	}
-
-	// Fill the embedded registry images struct with the registry address and image names
-	r.embeddedRegistry.images.DockerAuth = fmt.Sprintf("%s%s@%s", registryAddress, registryPath, imageDockerAuth)
-	r.embeddedRegistry.images.DockerDistribution = fmt.Sprintf("%s%s@%s", registryAddress, registryPath, imageDockerDistribution)
-
-	// Ensure CA certificate exists and create if not
-	isGenerated, caCertStruct, err := k8s.EnsureCASecret(ctx, r.Client)
-	if err != nil {
-		return err
-	}
-
-	// If CA certificate was generated, delete all PKI secrets
-	if isGenerated {
-		logger.Info("New registry root CA generated", "secret", "registry-pki", "component", "registry-controller")
-
-		// Delete all PKI secrets
-		deletedSecrets, err := k8s.DeleteAllRegistryNodeSecrets(ctx, r.Client)
-		if err != nil {
-			return err
-		}
-		for _, deletedSecret := range deletedSecrets {
-			logger.Info("Deleted node PKI secret, because CA certificate was regenerated", "secret", deletedSecret, "component", "registry-controller")
-		}
-	}
-
-	// Fill the embedded registry struct with the CA PKI
-	r.embeddedRegistry.caPKI = k8s.Certificate{
-		Cert: caCertStruct.CACertPEM,
-		Key:  caCertStruct.CAKeyPEM,
-	}
-
-	// Fill the embedded registry struct with the Auth Token PKI
-	r.embeddedRegistry.authTokenPKI = k8s.Certificate{
-		Cert: caCertStruct.AuthTokenCertPEM,
-		Key:  caCertStruct.AuthTokenKeyPEM,
-	}
-
-	for masterNodeName, masterNode := range r.embeddedRegistry.masterNodes {
-		// Check if the node PKI secret exists
-		secret, err := k8s.GetRegistryNodeSecret(ctx, r.Client, masterNodeName)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-
-		// Create the node PKI secret if it doesn't exist
-		if len(secret.Data) == 0 {
-			dc, dk, ac, ak, err := k8s.CreateNodePKISecret(
-				ctx,
-				r.Client,
-				masterNode,
-				caCertStruct.CACertPEM,
-				caCertStruct.CAKeyPEM,
-			)
-			if err != nil {
-				return err
-			}
-			logger.Info("Node secret created", "nodeName", masterNodeName, "component", "registry-controller")
-
-			masterNode.AuthCertificate = k8s.Certificate{
-				Cert: ac,
-				Key:  ak,
-			}
-			masterNode.DistributionCertificate = k8s.Certificate{
-				Cert: dc,
-				Key:  dk,
-			}
-		} else {
-			// Extract the existing secret data
-			masterNode.AuthCertificate = k8s.Certificate{
-				Cert: secret.Data[k8s.AuthCert],
-				Key:  secret.Data[k8s.AuthKey],
-			}
-			masterNode.DistributionCertificate = k8s.Certificate{
-				Cert: secret.Data[k8s.DistributionCert],
-				Key:  secret.Data[k8s.DistributionKey],
-			}
-		}
-
-		// Add the node to the embedded registry struct
-		r.embeddedRegistry.masterNodes[masterNode.Name] = masterNode
-	}
-
-	// Ensure registry user secrets exist and create if not
-	var registryUserRwSecret *k8s.RegistryUser
-	var registryUserRoSecret *k8s.RegistryUser
-
-	registryUserRwSecret, err = k8s.GetRegistryUser(ctx, r.Client, "registry-user-rw")
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			if registryUserRwSecret, err = k8s.CreateRegistryUser(ctx, r.Client, "registry-user-rw"); err != nil {
-				return fmt.Errorf("cannot create registry rw user secret: %w", err)
-			}
-
-			logger.Info("Created registry rw user secret", "component", "registry-controller")
-		} else {
-			return fmt.Errorf("cannot get regstry rw user: %w", err)
-		}
-	}
-
-	registryUserRoSecret, err = k8s.GetRegistryUser(ctx, r.Client, "registry-user-ro")
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			if registryUserRoSecret, err = k8s.CreateRegistryUser(ctx, r.Client, "registry-user-ro"); err != nil {
-				return fmt.Errorf("cannot create registry ro user secret: %w", err)
-			}
-
-			logger.Info("Created registry ro user secret", "component", "registry-controller")
-		} else {
-			return fmt.Errorf("cannot get regstry ro user: %w", err)
-		}
-	}
-
-	// Fill the embedded registry struct with the registry user secrets
-	r.embeddedRegistry.registryRwUser = *registryUserRwSecret
-	r.embeddedRegistry.registryRoUser = *registryUserRoSecret
-
-	logger.Info("Embedded registry startup initialization complete", "component", "registry-controller")
-	return nil
-
-}
-
 // extractModuleConfigFieldsFromObject extracts the 'enabled' and 'settings' fields from the ModuleConfig CR
 func (r *RegistryReconciler) extractModuleConfigFieldsFromObject(cr *unstructured.Unstructured) (bool, map[string]interface{}, error) {
 	// Extract the 'enabled' field from the ModuleConfig CR
@@ -424,32 +257,4 @@ func (r *RegistryReconciler) extractModuleConfigFieldsFromObject(cr *unstructure
 		return false, nil, fmt.Errorf("field 'settings' not found or failed to parse: %w", err)
 	}
 	return enabled, settings, nil
-}
-
-func hasMasterLabel(node *corev1.Node) bool {
-	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
-	return isMaster
-}
-
-func (r *RegistryReconciler) listWithFallback(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	logger := ctrl.LoggerFrom(ctx)
-	err := r.Client.List(ctx, list, opts...)
-	// Error other than not found, return err
-	if err != nil {
-		return err
-	}
-
-	// Can't extract list items, return err
-	items, err := meta.ExtractList(list)
-	if err != nil {
-		return err
-	}
-
-	// Object found in cache, return
-	if len(items) > 0 {
-		return nil
-	}
-
-	logger.Info("Object not found in cache, trying to List directly")
-	return r.APIReader.List(ctx, list, opts...)
 }

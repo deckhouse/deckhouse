@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"embeded-registry-manager/internal/utils/k8s"
+	k8s "embeded-registry-manager/internal/utils/k8s_legacy"
 )
 
 func (r *RegistryReconciler) handleNodeAdd(ctx context.Context, mgr ctrl.Manager, node *corev1.Node) {

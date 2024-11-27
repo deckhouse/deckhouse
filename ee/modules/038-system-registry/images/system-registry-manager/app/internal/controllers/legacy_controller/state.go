@@ -6,8 +6,23 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package legacy_controller
 
 import (
+	"sync"
+
+	staticpod "embeded-registry-manager/internal/static-pod"
+	k8s "embeded-registry-manager/internal/utils/k8s_legacy"
 	util_time "embeded-registry-manager/internal/utils/time"
 )
+
+type embeddedRegistry struct {
+	mutex          sync.Mutex
+	mc             ModuleConfig
+	caPKI          k8s.Certificate
+	authTokenPKI   k8s.Certificate
+	registryRwUser k8s.RegistryUser
+	registryRoUser k8s.RegistryUser
+	masterNodes    map[string]k8s.MasterNode
+	images         staticpod.Images
+}
 
 type RegistryUser struct {
 	UserName       string
