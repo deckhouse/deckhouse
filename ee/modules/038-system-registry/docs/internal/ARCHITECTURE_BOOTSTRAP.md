@@ -13,7 +13,7 @@ deckhouse:
 registry:
     mode: Proxy
     proxy:
-    repo: nexus.company.my/deckhouse/ee
+    imagesRepo: nexus.company.my/deckhouse/ee
     dockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
     scheme: HTTPS
     ca: |
