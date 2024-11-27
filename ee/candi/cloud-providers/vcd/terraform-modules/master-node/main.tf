@@ -51,6 +51,12 @@ resource "vcd_vm_internal_disk" "kubernetes_data"{
   bus_number      = 0
   unit_number     = 1
   bus_type        = "paravirtual"
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "vcd_vapp_vm" "master" {
@@ -94,6 +100,12 @@ resource "vcd_vapp_vm" "master" {
     ]
   }
 
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
+
   guest_properties = merge({
     "instance-id"         = join("-", [local.prefix, "master", var.nodeIndex])
     "local-hostname"      = join("-", [local.prefix, "master", var.nodeIndex])
@@ -101,4 +113,3 @@ resource "vcd_vapp_vm" "master" {
     "disk.EnableUUID"     = "1"
   }, length(var.cloudConfig) > 0 ? {"user-data" = var.cloudConfig} : {} )
 }
-
