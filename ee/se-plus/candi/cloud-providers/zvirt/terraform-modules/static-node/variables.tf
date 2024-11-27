@@ -23,6 +23,11 @@ variable "nodeGroupName" {
   type = string
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "20m"
+}
+
 locals {
   resource_name_prefix = var.clusterConfiguration.cloud.prefix
   ng             = [for i in var.providerClusterConfiguration.nodeGroups : i if i.name == var.nodeGroupName][0]
