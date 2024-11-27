@@ -103,7 +103,6 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	})
 	if errUpdatingSvc != nil {
 		r.Logger.Error(errUpdatingSvc, "failed to create/update child Service for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
-		return ctrl.Result{}, errUpdatingSvc
 	}
 	r.Logger.Info("child Service has been reconciled", "name", req.Name, "namespace", req.Namespace, "operation", op)
 
