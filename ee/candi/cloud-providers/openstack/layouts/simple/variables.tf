@@ -23,6 +23,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "resourceManagementTimeout" {
+  type = string
+  default = "20m"
+}
+
 locals {
   prefix                = var.clusterConfiguration.cloud.prefix
   pod_subnet_cidr       = var.clusterConfiguration.podSubnetCIDR
