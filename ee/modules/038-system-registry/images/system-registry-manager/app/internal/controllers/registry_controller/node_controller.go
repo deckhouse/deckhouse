@@ -276,7 +276,8 @@ func (nc *nodeController) triggerReconcileForNode(ctx context.Context, req recon
 }
 
 func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node) (result ctrl.Result, err error) {
-	log := ctrl.LoggerFrom(ctx)
+	log := ctrl.LoggerFrom(ctx).
+		WithValues("node", node.Name)
 
 	config, err := state.LoadModuleConfig(ctx, nc.Client)
 	if err != nil {
@@ -287,26 +288,17 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 	if !config.Enabled {
 		return
 	}
-
-	isFirst, err := nc.isFirstMasterNode(ctx, node)
-	if err != nil {
-		err = fmt.Errorf("cannot check node is first master node: %w", err)
-		return
-	}
+	log = log.WithValues("mode", config.Settings.Mode)
 
 	staticPodManagerIP, err := nc.findStaticPodManagerIP(ctx, node.Name)
 	if err != nil {
 		err = fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
 	}
+	log = log.WithValues("staticPodManagerIP", staticPodManagerIP)
 
 	if config.Settings.Mode == state.RegistryModeDirect {
 		// TODO: shutdown all static pods and delete PKI
-		log.Info(
-			"Shutdown node static pod because mode = direct",
-			"node", node.Name,
-			"first", isFirst,
-			"staticPodManagerIP", staticPodManagerIP,
-		)
+		log.Info("Shutdown node static pod for mode = direct")
 		return
 	}
 
@@ -351,37 +343,31 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 	_ = nodePKI
 
 	if config.Settings.Mode == state.RegistryModeDetached {
-		if isFirst {
-			log.Info(
-				"Processing first master node for mode == detached",
-				"node", node.Name,
-				"first", isFirst,
-				"staticPodManagerIP", staticPodManagerIP,
-			)
+		var isFirstMasterNode bool
+
+		isFirstMasterNode, err = nc.isFirstMasterNode(ctx, node)
+		if err != nil {
+			err = fmt.Errorf("cannot check node is first master node: %w", err)
+			return
+		}
+		log = log.WithValues("firstMasterNode", isFirstMasterNode)
+
+		if isFirstMasterNode {
+			log.Info("Processing first master node for mode == detached")
 
 			// TODO
 
 			return
 		}
 
-		log.Info(
-			"Shutdown node static pod on non-master node for mode = detached",
-			"node", node.Name,
-			"first", isFirst,
-			"staticPodManagerIP", staticPodManagerIP,
-		)
+		log.Info("Shutdown node static pod on non-master node for mode = detached")
 
 		// TODO
 
 		return
 	}
 
-	log.Info(
-		"Processing master node",
-		"node", node.Name,
-		"first", isFirst,
-		"staticPodManagerIP", staticPodManagerIP,
-	)
+	log.Info("Processing master node")
 
 	return
 }
