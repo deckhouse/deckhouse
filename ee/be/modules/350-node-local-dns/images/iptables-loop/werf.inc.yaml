@@ -21,7 +21,7 @@ docker:
   ENTRYPOINT: ["/iptables-loop.sh"]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromArtifact: relocate-artifact
+fromArtifact: common/relocate-artifact
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
