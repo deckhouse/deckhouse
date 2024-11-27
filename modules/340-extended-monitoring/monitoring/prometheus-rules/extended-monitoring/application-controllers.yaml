@@ -36,6 +36,8 @@
       (
         max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
       )
+      unless
+      (deployment == "standby-holder-worker-production")
     for: 5m
     labels:
       severity_level: "5"
@@ -186,3 +188,28 @@
         Count of ready replicas in StatefulSet {{$labels.namespace}}/{{$labels.statefulset}} at zero.
 
         List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"StatefulSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+
+  - alert: StandbyHolderDeploymentUnavailable
+    expr: |
+      (
+        (kube_deployment_status_replicas_available == 0) * (kube_deployment_spec_replicas != 0)
+      )
+      * on (namespace, deployment)
+      (
+        max by (namespace, deployment) (extended_monitoring_deployment_threshold{threshold="replicas-not-ready"})
+      )
+      and (deployment == "standby-holder-worker-production")
+    for: 5m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      plk_grouped_by__controllers_malfunctioning: "KubernetesControllersMalfunctioningInNamespace,prometheus=deckhouse,namespace={{ $labels.namespace }},kubernetes=~kubernetes"
+      summary: |-
+        Count of available replicas in Deployment {{$labels.namespace}}/standby-holder-worker-production is at zero.
+      description: |-
+        Count of available replicas in Deployment {{$labels.namespace}}/{{$labels.deployment}} is at zero.
+
+        List of unavailable Pod(s): {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"Deployment\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.deployment | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
