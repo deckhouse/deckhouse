@@ -8,7 +8,7 @@ import:
 docker:
   ENTRYPOINT: ["/egress-gateway-agent"]
 ---
-{{ $discovererAbsPath := "/deckhouse/ee/modules/021-cni-cilium/images/egress-gateway-agent" }}
+{{ $discovererAbsPath := "/deckhouse/ee/se_plus/modules/021-cni-cilium/images/egress-gateway-agent" }}
   {{ $discovererRelPath := printf "%s/modules/021-cni-cilium/images/egress-gateway-agent" .ModulePath }}
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromCacheVersion: 20241021-1

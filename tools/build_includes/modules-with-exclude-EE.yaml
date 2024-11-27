@@ -53,6 +53,122 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/se_plus/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/se_plus/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/se_plus/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/se_plus/modules/021-cni-cilium/crds/egressgateways.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/egressgateways.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/se_plus/modules/021-cni-cilium/crds/internal
+  to: /deckhouse/modules/021-cni-cilium/crds/internal
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/se_plus/modules/021-cni-cilium/images/egress-gateway-agent
+  to: /deckhouse/modules/021-cni-cilium/images/egress-gateway-agent
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/se_plus/modules/021-cni-cilium/templates/egress-gateway-agent
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/se_plus/modules/021-cni-cilium/templates/egress-gateway-instance
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-instance
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/se_plus/modules/021-cni-cilium/templates/egress-policy
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-policy
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/se_plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/se_plus/modules/030-cloud-provider-vsphere
+  to: /deckhouse/modules/030-cloud-provider-vsphere
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/se_plus/modules/030-cloud-provider-zvirt
+  to: /deckhouse/modules/030-cloud-provider-zvirt
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   excludePaths:
@@ -66,96 +182,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
-  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
-  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
-  to: /deckhouse/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/021-cni-cilium/crds/egressgateways.yaml
-  to: /deckhouse/modules/021-cni-cilium/crds/egressgateways.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/021-cni-cilium/crds/internal
-  to: /deckhouse/modules/021-cni-cilium/crds/internal
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/021-cni-cilium/images/egress-gateway-agent
-  to: /deckhouse/modules/021-cni-cilium/images/egress-gateway-agent
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/021-cni-cilium/templates/egress-gateway-agent
-  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/021-cni-cilium/templates/egress-gateway-instance
-  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-instance
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/021-cni-cilium/templates/egress-policy
-  to: /deckhouse/modules/021-cni-cilium/templates/egress-policy
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
-  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/025-static-routing-manager
   to: /deckhouse/modules/025-static-routing-manager
   excludePaths:
@@ -197,32 +223,6 @@
     - .build.yaml
 - add: /ee/modules/030-cloud-provider-vcd
   to: /deckhouse/modules/030-cloud-provider-vcd
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/030-cloud-provider-vsphere
-  to: /deckhouse/modules/030-cloud-provider-vsphere
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/030-cloud-provider-zvirt
-  to: /deckhouse/modules/030-cloud-provider-zvirt
   excludePaths:
     - docs
     - README.md

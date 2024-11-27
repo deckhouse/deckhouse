@@ -162,10 +162,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: CniCiliumOrphanEgressGatewayPolicyFound
-      sourceFile: ee/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+      sourceFile: ee/se_plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
       moduleUrl: 021-cni-cilium
       module: cni-cilium
-      edition: ee
+      edition: se
       description: |
         There is orphan EgressGatewayPolicy in the cluster: with the name: `{{$labels.name}}` which has irrelevant EgressGateway name.
 

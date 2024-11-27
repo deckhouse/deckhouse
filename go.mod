@@ -258,7 +258,7 @@ replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ./go_lib/cloud-data
 
 replace github.com/deckhouse/deckhouse/pkg/log => ./pkg/log
 
-replace github.com/deckhouse/deckhouse/egress-gateway-agent => ./ee/modules/021-cni-cilium/images/egress-gateway-agent
+replace github.com/deckhouse/deckhouse/egress-gateway-agent => ./ee/se_plus/modules/021-cni-cilium/images/egress-gateway-agent
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.1

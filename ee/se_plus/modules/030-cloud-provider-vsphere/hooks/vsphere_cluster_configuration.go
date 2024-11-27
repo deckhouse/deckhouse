@@ -15,7 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vsphere/hooks/internal/v1"
+	v1 "github.com/deckhouse/deckhouse/ee/se_plus/modules/030-cloud-provider-vsphere/hooks/internal/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 

@@ -2,7 +2,7 @@
 {{- $_ := set . "UsePrebuildJekyllImage" true }}
 {{- $_ := set . "Mode" "production" }}
 {{- $_ := set . "Edition" "EE" }}
-{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") -}}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "SE+") (eq $.Env "EE") -}}
   {{- $_ := set . "Edition" $.Env }}
 {{- else if eq $.Env "FE"  }}
   {{- $_ := set . "Edition" "EE" }}

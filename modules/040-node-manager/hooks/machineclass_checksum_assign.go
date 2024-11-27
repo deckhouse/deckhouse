@@ -167,7 +167,7 @@ func readChecksumTemplate(cloudType string) ([]byte, error) {
 func getChecksumTemplatePath(cloudType string) string {
 	// Memorize: we can not use MODULES_DIR env variable anymore
 	// because MODULES_DIR could contain multiple paths, joined with colon (:) in the unpredictable order
-	for _, dir := range []string{"/deckhouse/modules", "/deckhouse/ee/modules", "/deckhouse/ee/fe/modules"} {
+	for _, dir := range []string{"/deckhouse/modules", "/deckhouse/ee/modules", "/deckhouse/ee/fe/modules", "/deckhouse/ee/se_plus/modules"} {
 		checksumFilePath := filepath.Join(dir, fmt.Sprintf("030-cloud-provider-%s", cloudType), "cloud-instance-manager", "machine-class.checksum")
 		if _, err := os.Stat(checksumFilePath); err == nil {
 			return checksumFilePath

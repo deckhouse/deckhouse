@@ -47,7 +47,7 @@ endif
 
 # Set testing path for tests-modules
 ifeq ($(FOCUS),)
-	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/...
+	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/... ./ee/se_plus/modules/...
 else
 	CE_MODULES = $(shell find ./modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(CE_MODULES),)
@@ -68,6 +68,10 @@ else
 	SE_MODULES = $(shell find ./ee/se/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(FE_MODULES),)
 		SE_MODULES_RECURSE = ${SE_MODULES}/...
+	endif
+	SE_PLUS_MODULES = $(shell find ./ee/se_plus/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
+	ifneq ($(FE_MODULES),)
+		SE_PLUS_MODULES_RECURSE = ${SE_PLUS_MODULES}/...
 	endif
 	TESTS_PATH = ${CE_MODULES_RECURSE} ${EE_MODULES_RECURSE} ${FE_MODULES_RECURSE} ${BE_MODULES_RECURSE} ${SE_MODULES_RECURSE}
 endif

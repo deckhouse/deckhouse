@@ -198,7 +198,7 @@ require (
 replace (
 	github.com/deckhouse/deckhouse => ../
 	github.com/deckhouse/deckhouse/dhctl => ../dhctl
-	github.com/deckhouse/deckhouse/egress-gateway-agent => ../ee/modules/021-cni-cilium/images/egress-gateway-agent
+	github.com/deckhouse/deckhouse/egress-gateway-agent => ../ee/se_plus/modules/021-cni-cilium/images/egress-gateway-agent
 	github.com/deckhouse/deckhouse/go_lib/cloud-data => ../go_lib/cloud-data
 )
 

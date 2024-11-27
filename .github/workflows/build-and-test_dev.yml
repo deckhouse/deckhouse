@@ -202,6 +202,7 @@ jobs:
             const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
             const hasBE = pr.labels.some((l) => l.name === 'edition/be');
             const hasSE = pr.labels.some((l) => l.name === 'edition/se');
+            const hasSE_plus = pr.labels.some((l) => l.name === 'edition/se+');
             let edition = defaultEdition;
             if (hasCE) {
               edition = 'CE';
@@ -211,8 +212,10 @@ jobs:
               edition = 'BE';
             } else if (hasSE) {
               edition = 'SE';
+            } else if (hasSE_plus) {
+              edition = 'SE+';
             }
-            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}`);
+            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}, 'edition/se+':${hasSE_plus}`);
             core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
 
             // Construct head commit ref using pr number.
@@ -405,6 +408,16 @@ jobs:
   enable_se:
     if: ${{ needs.pull_request_info.outputs.edition == 'SE' }}
     name: Enable SE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
+  enable_se_plus:
+    if: ${{ needs.pull_request_info.outputs.edition == 'SE+' }}
+    name: Enable SE+
     needs:
       - pull_request_info
     runs-on: ubuntu-latest
