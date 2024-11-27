@@ -35,8 +35,7 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
 		return r.moduleManager.AreModulesInited(), nil
 	}); err != nil {
-		r.log.Errorf("failed to init module manager: %v", err)
-		return err
+		return fmt.Errorf("init module manager: %w", err)
 	}
 
 	r.log.Debugf("init registered modules")
@@ -47,22 +46,19 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 				r.log.Warnf("the '%s' module not found", moduleName)
 				continue
 			}
-			r.log.Errorf("failed to get the '%s' module: %v", moduleName, err)
 			return fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
 
 		// handle too long disabled embedded modules
 		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
 			// delete module releases of a stale module
-			r.log.Warnf("the '%s' module disabled too long, delete module releases", module.Name)
+			r.log.Infof("the %q module disabled too long, delete module releases", module.Name)
 			moduleReleases := new(v1alpha1.ModuleReleaseList)
 			if err := r.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
-				r.log.Errorf("failed to list module releases for the '%s' module: %v", module.Name, err)
 				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
 			}
 			for _, release := range moduleReleases.Items {
 				if err := r.client.Delete(ctx, &release); err != nil {
-					r.log.Errorf("failed to delete the '%s' module release for the '%s' module: %v", release.Name, module.Name, err)
 					return fmt.Errorf("delete the '%s' module release for the '%s' module: %w", release.Name, module.Name, err)
 				}
 			}
@@ -76,17 +72,16 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 				return true
 			})
 			if err != nil {
-				r.log.Errorf("failed to clear the '%s' module: %v", module.Name, err)
-				return fmt.Errorf("clear module %s: %w", module.Name, err)
+				return fmt.Errorf("clear the %q module: %w", module.Name, err)
 			}
 
+			// set available and skip
 			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				module.Status.Phase = v1alpha1.ModulePhaseAvailable
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 				return true
 			})
 			if err != nil {
-				r.log.Errorf("failed to set the Available module phase for the '%s' module: %v", module.Name, err)
 				return fmt.Errorf("set the Available module phase for the '%s' module: %w", module.Name, err)
 			}
 			continue
@@ -104,14 +99,12 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 			return true
 		})
 		if err != nil {
-			r.log.Errorf("failed to set enabled to the '%s' module: %v", moduleName, err)
 			return fmt.Errorf("set enabled to the '%s' module: %w", moduleName, err)
 		}
 	}
 	r.log.Debug("registered modules are inited, init module configs")
 
 	if err := r.syncModuleConfigs(ctx); err != nil {
-		r.log.Errorf("failed to sync module configs: %v", err)
 		return fmt.Errorf("sync module configs: %w", err)
 	}
 

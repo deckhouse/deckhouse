@@ -249,11 +249,11 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	}, nil
 }
 
-// Start loads and ensures modules from FS, starts pluggable controllers and runs deckhouse config event loop
+// Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
 func (c *DeckhouseController) Start(ctx context.Context) error {
 	// run preflight checks
 	if d8env.GetDownloadedModulesDir() != "" {
-		c.startPluggableModulesControllers(ctx)
+		c.startModulesControllers(ctx)
 	}
 
 	// wait for cache sync
@@ -263,7 +263,7 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 
 	// load and ensure modules from FS at start
 	if err := c.moduleLoader.LoadModulesFromFS(ctx); err != nil {
-		return err
+		return fmt.Errorf("load modules from fs: %w", err)
 	}
 
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
@@ -272,8 +272,8 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	return nil
 }
 
-// startPluggableModulesControllers starts all child controllers
-func (c *DeckhouseController) startPluggableModulesControllers(ctx context.Context) {
+// startModulesControllers starts all child controllers
+func (c *DeckhouseController) startModulesControllers(ctx context.Context) {
 	// syncs the fs with the cluster state, starts the manager and various controllers
 	go func() {
 		if err := c.runtimeManager.Start(ctx); err != nil {
@@ -299,7 +299,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		settings.Update.DisruptionApprovalMode = "Auto"
 
 		if err := yaml.Unmarshal(configBytes, settings); err != nil {
-			c.logger.Errorf("error occurred during the Deckhouse settings unmarshalling: %s", err)
+			c.logger.Errorf("failed to unmarshal the deckhouse setting: %s", err)
 			continue
 		}
 
@@ -308,7 +308,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
 			settings.ReleaseChannel = "Stable"
-			c.logger.Debugf("embedded deckhouse policy release channel set to %s", settings.ReleaseChannel)
+			c.logger.Debugf("the embedded deckhouse policy release channel set to %q", settings.ReleaseChannel)
 		}
 		c.embeddedPolicy.Set(settings)
 	}
