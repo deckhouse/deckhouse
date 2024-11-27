@@ -33,6 +33,12 @@ resource "google_compute_disk" "kubernetes_data" {
   type   = "pd-ssd"
   size   = local.etcd_disk_size_gb
   labels = local.additional_labels
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "google_compute_instance" "master" {
@@ -67,10 +73,17 @@ resource "google_compute_instance" "master" {
     ssh-keys  = "${local.ssh_user}:${local.ssh_key}"
     user-data = base64decode(var.cloudConfig)
   }
+
   lifecycle {
     ignore_changes = [
       attached_disk,
       metadata["user-data"]
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
   }
 }
