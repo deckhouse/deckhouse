@@ -61,7 +61,7 @@ var (
 )
 
 const (
-	haModeEnv    = "HA_MODE"
+	haModeEnv      = "HA_MODE"
 	controllerName = "multitenancy-manager"
 )
 
