@@ -92,7 +92,13 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		},
 	}
 
-	secretsPredicate := predicate.NewPredicateFuncs(secretObjectIsNodePKI)
+	secretsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		if obj.GetNamespace() != nc.Namespace {
+			return false
+		}
+
+		return state.NodePKISecretRegex.MatchString(obj.GetName())
+	})
 
 	moduleConfig := state.GetModuleConfigObject()
 	moduleConfigPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -105,7 +111,6 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		}
 
 		name := obj.GetName()
-
 		return name == state.PKISecretName || name == state.UserROSecretName || name == state.UserRWSecretName
 	})
 
@@ -125,7 +130,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 				name := obj.GetName()
 				sub := state.NodePKISecretRegex.FindStringSubmatch(name)
 
-				if len(sub) < 2 {
+				if sub == nil || len(sub) < 2 {
 					return nil
 				}
 
@@ -719,20 +724,6 @@ func (nc *nodeController) logModuleInfo(log *logr.Logger, reason, message string
 	if log != nil {
 		log.Info(message, "reason", reason)
 	}
-}
-
-func secretObjectIsNodePKI(obj client.Object) bool {
-	labels := obj.GetLabels()
-
-	if labels[state.LabelTypeKey] != state.LabelNodeSecretTypeValue {
-		return false
-	}
-
-	if labels[state.LabelHeritageKey] != state.LabelHeritageValue {
-		return false
-	}
-
-	return state.NodePKISecretRegex.MatchString(obj.GetName())
 }
 
 func nodeObjectIsMaster(obj client.Object) bool {

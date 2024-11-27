@@ -12,11 +12,10 @@ const (
 
 	RegistrySvcName = "embedded-registry"
 
-	LabelTypeKey             = "type"
-	LabelModuleKey           = "module"
-	LabelNodeSecretTypeValue = "node-secret"
-	LabelHeritageKey         = "heritage"
-	LabelHeritageValue       = "deckhouse"
-	LabelNodeIsMasterKey     = "node-role.kubernetes.io/master"
-	LabelManagedBy           = "app.kubernetes.io/managed-by"
+	LabelTypeKey         = "type"
+	LabelModuleKey       = "module"
+	LabelHeritageKey     = "heritage"
+	LabelHeritageValue   = "deckhouse"
+	LabelNodeIsMasterKey = "node-role.kubernetes.io/master"
+	LabelManagedBy       = "app.kubernetes.io/managed-by"
 )
