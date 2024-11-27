@@ -44,14 +44,14 @@ git:
       - '**/*.mod'
       - '**/*.sum'
       - '**/*.go'
-      - 'internal/static-pod/templates/**'
+      - 'internal/staticpod/templates/**'
     stageDependencies:
       install:
         - '**/*.mod'
         - '**/*.sum'
       setup:
         - "**/*.go"
-        - 'internal/static-pod/templates/**'
+        - 'internal/staticpod/templates/**'
   - add: /go_lib/system-registry-manager
     to: /deckhouse/go_lib/system-registry-manager
     includePaths:
