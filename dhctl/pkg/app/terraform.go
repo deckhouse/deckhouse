@@ -41,7 +41,7 @@ var (
 	CacheKubeName            = ""
 	CacheKubeLabels          = make(map[string]string)
 
-	ResourceManagmentTimeout = ""
+	ResourceManagementTimeout = ""
 )
 
 func DefineCacheFlags(cmd *kingpin.CmdClause) {
@@ -84,8 +84,8 @@ func DefineDropCacheFlags(cmd *kingpin.CmdClause) {
 		BoolVar(&DropCache)
 }
 
-func DefineTFResourceManagmentTimeout(cmd *kingpin.CmdClause) {
+func DefineTFResourceManagementTimeout(cmd *kingpin.CmdClause) {
 	cmd.Flag("tf-resource-managment-timeout", "Redefine terraform resource management timeouts").
 		Envar(configEnvName("DHCTL_TF_RESOURCE_MANAGMENT_TIMEOUT")).
-		StringVar(&ResourceManagmentTimeout)
+		StringVar(&ResourceManagementTimeout)
 }
