@@ -35,6 +35,10 @@ var (
 	masterNodesMatchingLabels = client.MatchingLabels{
 		state.LabelNodeIsMasterKey: "",
 	}
+
+	staticPodMatchingLabels = client.MatchingLabels{
+		"app": "system-registry-staticpod-manager",
+	}
 )
 
 type NodeController = nodeController
@@ -100,6 +104,30 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		return state.NodePKISecretRegex.MatchString(obj.GetName())
 	})
 
+	secretsHandler := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+		name := obj.GetName()
+		sub := state.NodePKISecretRegex.FindStringSubmatch(name)
+
+		if sub == nil || len(sub) < 2 {
+			return nil
+		}
+
+		var ret reconcile.Request
+		ret.Name = sub[1]
+
+		log := ctrl.LoggerFrom(ctx)
+
+		log.Info(
+			"Node PKI secret changed, will trigger reconcile",
+			"secret", obj.GetName(),
+			"namespace", obj.GetNamespace(),
+			"node", ret.Name,
+			"controller", controllerName,
+		)
+
+		return []reconcile.Request{ret}
+	})
+
 	moduleConfig := state.GetModuleConfigObject()
 	moduleConfigPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetName() == state.RegistryModuleName
@@ -114,6 +142,33 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		return name == state.PKISecretName || name == state.UserROSecretName || name == state.UserRWSecretName
 	})
 
+	staticPodManagerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		if obj.GetNamespace() != nc.Namespace {
+			return false
+		}
+
+		labels := obj.GetLabels()
+		for k, v := range staticPodMatchingLabels {
+			if labels[k] != v {
+				return false
+			}
+		}
+
+		return true
+	})
+
+	staticPodManagerHandler := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+		pod, ok := obj.(*corev1.Pod)
+
+		if !ok {
+			return nil
+		}
+
+		var ret reconcile.Request
+		ret.Name = pod.Spec.NodeName
+		return []reconcile.Request{ret}
+	})
+
 	reprocessAllHandler := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
 		return []reconcile.Request{nodeReprocessAllRequest}
 	})
@@ -126,30 +181,13 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		).
 		Watches(
 			&corev1.Secret{},
-			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-				name := obj.GetName()
-				sub := state.NodePKISecretRegex.FindStringSubmatch(name)
-
-				if sub == nil || len(sub) < 2 {
-					return nil
-				}
-
-				var ret reconcile.Request
-				ret.Name = sub[1]
-
-				log := ctrl.LoggerFrom(ctx)
-
-				log.Info(
-					"Node PKI secret changed, will trigger reconcile",
-					"secret", obj.GetName(),
-					"namespace", obj.GetNamespace(),
-					"node", ret.Name,
-					"controller", controllerName,
-				)
-
-				return []reconcile.Request{ret}
-			}),
+			secretsHandler,
 			builder.WithPredicates(secretsPredicate),
+		).
+		Watches(
+			&corev1.Pod{},
+			staticPodManagerHandler,
+			builder.WithPredicates(staticPodManagerPredicate),
 		).
 		WatchesRawSource(nc.reprocessChannelSource()).
 		Watches(
@@ -284,20 +322,51 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
+	isFirst, err := nc.isFirstMasterNode(ctx, node)
+	if err != nil {
+		err = fmt.Errorf("cannot check node is first master node: %w", err)
+		return
+	}
+
 	// TODO
 	_ = userRO
 	_ = userRW
 	_ = globalPKI
 	_ = nodePKI
 
-	isFirst, err := nc.isFirstMasterNode(ctx, node)
+	staticPodManagerIP, err := nc.findStaticPodManagerIP(ctx, node.Name)
 	if err != nil {
-		return
+		err = fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
 	}
 
-	log.Info("Processing master node", "node", node.Name, "first", isFirst)
+	log.Info("Processing master node", "node", node.Name, "first", isFirst, "staticPodManagerIP", staticPodManagerIP)
 
 	return
+}
+
+func (nc *nodeController) findStaticPodManagerIP(ctx context.Context, nodeName string) (string, error) {
+	var pods corev1.PodList
+
+	err := nc.Client.List(
+		ctx,
+		&pods,
+		staticPodMatchingLabels,
+		client.MatchingFields{
+			"spec.nodeName": nodeName,
+		},
+	)
+
+	if err != nil {
+		return "", err
+	}
+	if len(pods.Items) == 0 {
+		return "", fmt.Errorf("system-registry-staticpod-manager pod not found for node %s", nodeName)
+	}
+	if pods.Items[0].Status.PodIP == "" {
+		return "", fmt.Errorf("system-registry-staticpod-manager pod IP is empty for node %s", nodeName)
+	}
+
+	return pods.Items[0].Status.PodIP, nil
 }
 
 func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddress string, globalPKI state.GlobalPKI) (ret state.NodePKI, err error) {
@@ -454,7 +523,7 @@ func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddre
 			nc.logModuleWarning(
 				&log,
 				"NodePKIInvalid",
-				"PKI secret invalid, will generate new",
+				"NodePKI secret invalid, will generate new",
 			)
 		}
 
