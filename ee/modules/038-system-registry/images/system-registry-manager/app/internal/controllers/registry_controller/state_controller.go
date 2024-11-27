@@ -35,8 +35,6 @@ type stateController struct {
 	Client    client.Client
 	Namespace string
 
-	ReprocessAllNodes func(ctx context.Context) error
-
 	eventRecorder record.EventRecorder
 
 	UserRO   *state.User
@@ -46,10 +44,6 @@ type stateController struct {
 }
 
 func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	if sc.ReprocessAllNodes == nil {
-		return fmt.Errorf("please set ReprocessAllNodes field")
-	}
-
 	controllerName := "global-state-controller"
 
 	sc.eventRecorder = mgr.GetEventRecorderFor(controllerName)
@@ -118,9 +112,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		return
 	}
 
-	var changed, skipReprocess bool
-
-	if changed, err = sc.ensurePKI(ctx, &sc.PKIState); err != nil {
+	if err = sc.ensurePKI(ctx, &sc.PKIState); err != nil {
 		if errors.Is(err, errorPKIInvalid) {
 			log.Error(err, "PKI is invalid and cannot be restored from internal state")
 
@@ -140,9 +132,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		return
 	}
 
-	skipReprocess = skipReprocess || changed
-
-	if changed, err = sc.ensureUserSecret(
+	if err = sc.ensureUserSecret(
 		ctx,
 		state.UserROSecretName,
 		&sc.UserRO,
@@ -150,9 +140,8 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserROSecretName, err)
 		return
 	}
-	skipReprocess = skipReprocess || changed
 
-	if changed, err = sc.ensureUserSecret(
+	if err = sc.ensureUserSecret(
 		ctx,
 		state.UserRWSecretName,
 		&sc.UserRW,
@@ -160,7 +149,6 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserRWSecretName, err)
 		return
 	}
-	skipReprocess = skipReprocess || changed
 
 	if !sc.StateOK {
 		sc.StateOK = true
@@ -172,17 +160,10 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		)
 	}
 
-	if !skipReprocess {
-		err = sc.ReprocessAllNodes(ctx)
-		if err != nil {
-			err = fmt.Errorf("cannot reprocess all nodes: %w", err)
-		}
-	}
-
 	return
 }
 
-func (sc *stateController) ensureUserSecret(ctx context.Context, name string, currentUser **state.User) (bool, error) {
+func (sc *stateController) ensureUserSecret(ctx context.Context, name string, currentUser **state.User) error {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsureUserSecret", "name", name)
 
@@ -195,7 +176,7 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 	err := sc.Client.Get(ctx, key, &secret)
 
 	if client.IgnoreNotFound(err) != nil {
-		return false, fmt.Errorf("cannot get secret %v k8s object: %w", name, err)
+		return fmt.Errorf("cannot get secret %v k8s object: %w", name, err)
 	}
 
 	// Making a copy unconditionally is a bit wasteful, since we don't
@@ -272,28 +253,25 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 		"passwordHash": []byte(actualUser.HashedPassword),
 	}
 
-	changed := false
 	if notFound {
 		secret.Name = key.Name
 		secret.Namespace = key.Namespace
 		secret.Type = state.UserSecretType
 
 		if err = sc.Client.Create(ctx, &secret); err != nil {
-			return false, fmt.Errorf("cannot create k8s object: %w", err)
+			return fmt.Errorf("cannot create k8s object: %w", err)
 		}
 
-		changed = true
 		log.Info("New secret was created")
 	} else {
 		// Check than we're need to update secret
 		if !reflect.DeepEqual(secretOrig, secret) {
 			if err = sc.Client.Update(ctx, &secret); err != nil {
-				return false, fmt.Errorf("cannot update k8s object: %w", err)
+				return fmt.Errorf("cannot update k8s object: %w", err)
 			}
 
 			if secretOrig.ResourceVersion != secret.ResourceVersion {
 				log.Info("Secret was updated")
-				changed = true
 			}
 
 		}
@@ -302,10 +280,10 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 	// Save actual value
 	*currentUser = &actualUser
 
-	return changed, nil
+	return nil
 }
 
-func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.PKIState) (bool, error) {
+func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.PKIState) error {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsurePKI")
 
@@ -318,7 +296,7 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 	err := sc.Client.Get(ctx, key, &secret)
 
 	if client.IgnoreNotFound(err) != nil {
-		return false, fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+		return fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
 	}
 
 	// Making a copy unconditionally is a bit wasteful, since we don't
@@ -411,7 +389,7 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 			actualState = **currentState
 		} else {
 			// PKI is invalid and we don't have some to restore
-			return false, errorPKIInvalid
+			return errorPKIInvalid
 		}
 	}
 
@@ -432,7 +410,7 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 		state.CAKeySecretField,
 		&secret,
 	); err != nil {
-		return false, fmt.Errorf("cannot encode CA PKI to secret: %w", err)
+		return fmt.Errorf("cannot encode CA PKI to secret: %w", err)
 	}
 
 	if err = state.EncodeCertKeyToSecret(
@@ -441,31 +419,28 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 		state.TokenKeySecretField,
 		&secret,
 	); err != nil {
-		return false, fmt.Errorf("cannot encode Token PKI to secret: %w", err)
+		return fmt.Errorf("cannot encode Token PKI to secret: %w", err)
 	}
 
-	changed := false
 	if notFound {
 		secret.Name = key.Name
 		secret.Namespace = key.Namespace
 		secret.Type = state.CASecretType
 
 		if err = sc.Client.Create(ctx, &secret); err != nil {
-			return false, fmt.Errorf("cannot create k8s object: %w", err)
+			return fmt.Errorf("cannot create k8s object: %w", err)
 		}
 
-		changed = true
 		log.Info("New secret was created")
 	} else {
 		// Check than we're need to update secret
 		if !reflect.DeepEqual(secretOrig, secret) {
 			if err = sc.Client.Update(ctx, &secret); err != nil {
-				return false, fmt.Errorf("cannot update k8s object: %w", err)
+				return fmt.Errorf("cannot update k8s object: %w", err)
 			}
 
 			if secretOrig.ResourceVersion != secret.ResourceVersion {
 				log.Info("Secret was updated")
-				changed = true
 			}
 
 		}
@@ -474,7 +449,7 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 	// Save actual value
 	*currentState = &actualState
 
-	return changed, nil
+	return nil
 }
 
 func (sc *stateController) logModuleWarning(log *logr.Logger, reason, message string) {

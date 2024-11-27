@@ -101,8 +101,8 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 		return name == state.PKISecretName || name == state.UserROSecretName || name == state.UserRWSecretName
 	})
 
-	noopHandler := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
-		return nil
+	reprocessAllHandler := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+		return []reconcile.Request{nodeReprocessAllRequest}
 	})
 
 	err = ctrl.NewControllerManagedBy(mgr).
@@ -140,9 +140,16 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 			builder.WithPredicates(secretsPredicate),
 		).
 		WatchesRawSource(r.reprocessChannelSource()).
-		// Cache
-		Watches(&moduleConfig, noopHandler, builder.WithPredicates(moduleConfigPredicate)).
-		Watches(&corev1.Secret{}, noopHandler, builder.WithPredicates(globalSecretsPredicate)).
+		Watches(
+			&moduleConfig,
+			reprocessAllHandler,
+			builder.WithPredicates(moduleConfigPredicate),
+		).
+		Watches(
+			&corev1.Secret{},
+			reprocessAllHandler,
+			builder.WithPredicates(globalSecretsPredicate),
+		).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 10,
 		}).
@@ -221,10 +228,6 @@ func (nc *nodeController) triggerReconcileForNode(ctx context.Context, req recon
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-}
-
-func (nc *nodeController) ReprocessAllNodes(ctx context.Context) error {
-	return nc.triggerReconcileForNode(ctx, nodeReprocessAllRequest)
 }
 
 func (nc *nodeController) handleMasterNode(ctx context.Context, node *metav1.PartialObjectMetadata) (result ctrl.Result, err error) {

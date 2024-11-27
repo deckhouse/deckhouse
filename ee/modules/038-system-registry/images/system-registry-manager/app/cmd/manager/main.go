@@ -105,9 +105,8 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config) error {
 	}
 
 	stateController := registry_controller.StateController{
-		Client:            mgr.GetClient(),
-		Namespace:         namespace,
-		ReprocessAllNodes: nodeController.ReprocessAllNodes,
+		Client:    mgr.GetClient(),
+		Namespace: namespace,
 	}
 
 	if err := stateController.SetupWithManager(ctx, mgr); err != nil {
