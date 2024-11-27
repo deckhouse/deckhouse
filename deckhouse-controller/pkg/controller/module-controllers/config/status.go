@@ -40,6 +40,7 @@ import (
 
 // refreshModule refreshes module in cluster
 func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
+	r.log.Debugf("refresh the %q module status", moduleName)
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			module := new(v1alpha1.Module)
@@ -54,13 +55,14 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 
 // refreshModuleConfig refreshes module config in cluster
 func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string) error {
+	r.log.Debugf("refresh the %q module config status", configName)
+
+	// clear metrics
+	metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			r.log.Debugf("refresh the '%s' module config status", configName)
-
-			metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
-			r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
-
 			moduleConfig := new(v1alpha1.ModuleConfig)
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
@@ -72,7 +74,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 
 			r.refreshModuleConfigStatus(moduleConfig)
 			if err := r.client.Status().Update(ctx, moduleConfig); err != nil {
-				return fmt.Errorf("refresh the %s module config status: %w", moduleConfig.Name, err)
+				return err
 			}
 
 			// update metrics
@@ -211,12 +213,15 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
 	}
 
-	module.Status.Phase = v1alpha1.ModulePhaseDownloaded
+	// do not change phase of not installed module
+	if module.Status.Phase != v1alpha1.ModulePhaseAvailable {
+		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
+	}
 	module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, reason, message)
 	module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, reason, message)
 }
 
-// refreshModuleConfigStatus refreshes module config status by addon-operator
+// refreshModuleConfigStatus refreshes module config status by validator and conversions
 func (r *reconciler) refreshModuleConfigStatus(config *v1alpha1.ModuleConfig) {
 	validationResult := r.configValidator.Validate(config)
 	if validationResult.HasError() {

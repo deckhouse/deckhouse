@@ -380,6 +380,14 @@ git:
       - go.sum
     setup:
       - "**/*.go"
+- add: /go_lib/dependency/k8s/drain
+  to: /go_lib/dependency/k8s/drain
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - "**/*.go"
 - add: /pkg/log
   to: /pkg/log
   stageDependencies:
