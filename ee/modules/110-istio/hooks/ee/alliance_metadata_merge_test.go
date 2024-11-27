@@ -159,7 +159,8 @@ metadata:
   name: multicluster-full-0
 spec:
   enableIngressGateway: true
-  metadataEndpoint: "https://some-proper-host/"
+  metadata:
+    metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -178,7 +179,8 @@ metadata:
   name: multicluster-full-1
 spec:
   enableIngressGateway: false
-  metadataEndpoint: "https://some-proper-host/"
+  metadata:
+    metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -195,7 +197,8 @@ metadata:
   name: multicluster-only-public
 spec:
   enableIngressGateway: true
-  metadataEndpoint: "https://some-proper-host/"
+  metadata:
+    metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
     public:
@@ -209,7 +212,8 @@ metadata:
   name: multicluster-no-ig
 spec:
   enableIngressGateway: true
-  metadataEndpoint: "https://some-proper-host/"
+  metadata:
+    metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -226,7 +230,8 @@ metadata:
   name: multicluster-empty-ig
 spec:
   enableIngressGateway: true
-  metadataEndpoint: "https://some-proper-host/"
+  metadata:
+    metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -244,7 +249,8 @@ metadata:
   name: multicluster-no-apiHost
 spec:
   enableIngressGateway: true
-  metadataEndpoint: "https://some-proper-host/"
+  metadata:
+    metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -262,7 +268,8 @@ metadata:
   name: multicluster-no-networkname
 spec:
   enableIngressGateway: true
-  metadataEndpoint: "https://some-proper-host/"
+  metadata:
+    metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -280,7 +287,8 @@ metadata:
   name: multicluster-no-public
 spec:
   enableIngressGateway: true
-  metadataEndpoint: "https://some-proper-host/"
+  metadata:
+    metadataEndpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:

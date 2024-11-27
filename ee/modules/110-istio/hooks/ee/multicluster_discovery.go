@@ -71,7 +71,7 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		clusterUUID = multicluster.Status.MetadataCache.Public.ClusterUUID
 	}
 
-	me := multicluster.Spec.MetadataEndpoint
+	me := multicluster.Spec.Metadata.Endpoint
 	me = strings.TrimSuffix(me, "/")
 
 	return IstioMulticlusterDiscoveryCrdInfo{

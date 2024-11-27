@@ -31,6 +31,8 @@ type IstioMulticlusterMergeCrdInfo struct {
 	Name                 string                               `json:"name"`
 	SpiffeEndpoint       string                               `json:"spiffeEndpoint"`
 	EnableIngressGateway bool                                 `json:"enableIngressGateway"`
+	MetadataCA           string                               `json:"metadataCA"`
+	MetadataInsecure     bool                                 `json:"metadataInsecure"`
 	APIHost              string                               `json:"apiHost"`
 	NetworkName          string                               `json:"networkName"`
 	APIJWT               string                               `json:"apiJWT"`
@@ -82,7 +84,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, err
 	}
 
-	me := multicluster.Spec.MetadataEndpoint
+	me := multicluster.Spec.Metadata.Endpoint
 	me = strings.TrimSuffix(me, "/")
 
 	var igs *[]eeCrd.MulticlusterIngressGateways
@@ -104,6 +106,8 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	return IstioMulticlusterMergeCrdInfo{
 		Name:                 multicluster.GetName(),
 		SpiffeEndpoint:       me + "/public/spiffe-bundle-endpoint",
+		MetadataCA:           multicluster.Spec.Metadata.CA,
+		MetadataInsecure:     multicluster.Spec.Metadata.Insecure,
 		EnableIngressGateway: multicluster.Spec.EnableIngressGateway,
 		APIHost:              apiHost,
 		NetworkName:          networkName,
