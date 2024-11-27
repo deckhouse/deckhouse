@@ -90,11 +90,17 @@ type SecurityPolicySpec struct {
 			Type  string `json:"type,omitempty"`
 			User  string `json:"user,omitempty"`
 		} `json:"seLinux,omitempty"`
+		VerifyImageSignatures *VerifyImageSignatures `json:"verifyImageSignatures,omitempty"`
 	} `json:"policies"`
 	Match struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`
 		LabelSelector     metav1.LabelSelector `json:"labelSelector,omitempty"`
 	} `json:"match"`
+}
+
+type VerifyImageSignatures struct {
+	PublicKeys      []string `json:"publicKeys"`
+	ImageReferences []string `json:"imageReferences"`
 }
 
 type SelectUIDStrategy struct {

@@ -32,7 +32,7 @@ const (
 
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security policies", func() {
 	f := HookExecutionConfigInit(
-		`{"admissionPolicyEngine": {"internal": {"bootstrapped": true} } }`,
+		`{"admissionPolicyEngine": {"internal": {"ratify": {}, "bootstrapped": true} } }`,
 		`{"admissionPolicyEngine":{}}`,
 	)
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)

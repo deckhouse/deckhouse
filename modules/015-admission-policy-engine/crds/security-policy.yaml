@@ -422,6 +422,23 @@ spec:
                           - secret
                           - storageos
                           - vsphereVolume
+                    verifyImageSignatures:
+                      type: object
+                      description: Defines cosign trust policy to verify image signatures.
+                      required: ["publicKeys", "imageReferences"]
+                      properties:
+                        publicKeys:
+                          type: array
+                          description: The list of cosign compliant public keys to check image signatures with.
+                          items:
+                            type: string
+                        imageReferences:
+                          type: array
+                          description: The list of image reference subjected to signature checks.
+                          x-doc-examples: ["docker.io/myuser/*", "*"]
+                          items:
+                            type: string
+                            pattern: '^[a-z0-9\.\-:@\/]*\*?$'
                 match:
                   type: object
                   description: Container filtering rules. Use selectors to specify the pods and containers to which you want to apply the policy.
