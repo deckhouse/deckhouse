@@ -59,6 +59,12 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 
 	controllerName := "node-controller"
 
+	// TODO
+	// registryAddress := os.Getenv("REGISTRY_ADDRESS")
+	// registryPath := os.Getenv("REGISTRY_PATH")
+	// imageDockerAuth := os.Getenv("IMAGE_DOCKER_AUTH")
+	// imageDockerDistribution := os.Getenv("IMAGE_DOCKER_DISTRIBUTION")
+
 	// Set up the field indexer to index Pods by spec.nodeName
 	err := mgr.GetFieldIndexer().
 		IndexField(ctx, &corev1.Pod{}, "spec.nodeName", func(obj client.Object) []string {
