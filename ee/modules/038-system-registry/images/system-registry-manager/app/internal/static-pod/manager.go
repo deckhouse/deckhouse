@@ -18,10 +18,11 @@ import (
 const (
 	listenAddr = "127.0.0.1:4576"
 
-	authConfigPath              = "/etc/kubernetes/system-registry/auth_config/config.yaml"
-	distributionConfigPath      = "/etc/kubernetes/system-registry/distribution_config/config.yaml"
+	authConfigPath         = "/etc/kubernetes/system-registry/auth_config/config.yaml"
+	distributionConfigPath = "/etc/kubernetes/system-registry/distribution_config/config.yaml"
+	pkiConfigDirectoryPath = "/etc/kubernetes/system-registry/pki"
+
 	registryStaticPodConfigPath = "/etc/kubernetes/manifests/system-registry.yaml"
-	pkiConfigDirectoryPath      = "/etc/kubernetes/system-registry/pki"
 
 	distributionConfiguration = "distributionConfiguration"
 	authConfiguration         = "authConfiguration"
@@ -45,8 +46,7 @@ func Run(ctx context.Context) error {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/staticpod/create", api.CreateStaticPodHandler)
-	mux.HandleFunc("/staticpod/delete", api.DeleteStaticPodHandler)
+	mux.HandleFunc("/staticpod", api.handleStaticPod)
 
 	httpServer := &http.Server{
 		Addr:    listenAddr,
@@ -70,7 +70,21 @@ func Run(ctx context.Context) error {
 	return nil
 }
 
-func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Request) {
+func (s *apiServer) handleStaticPod(w http.ResponseWriter, r *http.Request) {
+	log := s.log.With("endpoint", r.RequestURI, "method", r.Method)
+
+	switch r.Method {
+	case http.MethodPost:
+		s.handleStaticPodPost(w, r)
+	case http.MethodDelete:
+		s.handleStaticPodDelete(w, r)
+	default:
+		log.Warn("Method not allowed")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) {
 	log := s.log.With("handler", "create")
 
 	log.Info("Received request to create/update static pod and configuration", "Client address:", r.RemoteAddr)
@@ -121,21 +135,36 @@ func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Reques
 
 	// Process the templates with the given data and create the static pod and configuration files
 
-	changes[authConfiguration], err = data.processTemplate(authConfigTemplateName, authConfigPath, &data.ConfigHashes.AuthTemplateHash)
+	changes[authConfiguration], err = data.processTemplate(
+		authConfigTemplateName,
+		authConfigPath,
+		&data.ConfigHashes.AuthTemplateHash,
+	)
+
 	if err != nil {
 		log.Error("Error processing auth template", "error", err)
 		http.Error(w, "Error processing auth template", http.StatusInternalServerError)
 		return
 	}
 
-	changes[distributionConfiguration], err = data.processTemplate(distributionConfigTemplateName, distributionConfigPath, &data.ConfigHashes.DistributionTemplateHash)
+	changes[distributionConfiguration], err = data.processTemplate(
+		distributionConfigTemplateName,
+		distributionConfigPath,
+		&data.ConfigHashes.DistributionTemplateHash,
+	)
+
 	if err != nil {
 		log.Error("Error processing distribution template", "error", err)
 		http.Error(w, "Error processing distribution template", http.StatusInternalServerError)
 		return
 	}
 
-	changes[staticPodConfiguration], err = data.processTemplate(registryStaticPodTemplateName, registryStaticPodConfigPath, nil)
+	changes[staticPodConfiguration], err = data.processTemplate(
+		registryStaticPodTemplateName,
+		registryStaticPodConfigPath,
+		nil,
+	)
+
 	if err != nil {
 		log.Error("Error processing static pod template", "error", err)
 		http.Error(w, "Error processing static pod template", http.StatusInternalServerError)
@@ -149,16 +178,18 @@ func (s *apiServer) CreateStaticPodHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(map[string]interface{}{
-		"changes": changes,
-	})
+	err = json.NewEncoder(w).
+		Encode(map[string]interface{}{
+			"changes": changes,
+		})
+
 	if err != nil {
 		log.Error("Error encoding response", "error", err)
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}
 }
 
-func (s *apiServer) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Request) {
+func (s *apiServer) handleStaticPodDelete(w http.ResponseWriter, r *http.Request) {
 	log := s.log.With("handler", "delete")
 
 	log.Info("Received request to delete static pod and configuration", "Client address:", r.RemoteAddr)
@@ -214,9 +245,11 @@ func (s *apiServer) DeleteStaticPodHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(map[string]interface{}{
-		"changes": changes,
-	})
+	err = json.NewEncoder(w).
+		Encode(map[string]interface{}{
+			"changes": changes,
+		})
+
 	if err != nil {
 		log.Error("Error encoding response", "error", err)
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
