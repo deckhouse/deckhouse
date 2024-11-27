@@ -78,15 +78,12 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 
 	nodePredicate := predicate.Funcs{
 		CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
-			// Only process master nodes
 			return nodeObjectIsMaster(e.Object)
 		},
 		DeleteFunc: func(e event.TypedDeleteEvent[client.Object]) bool {
-			// Only process master nodes
 			return nodeObjectIsMaster(e.Object)
 		},
 		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
-			// Only on master status change
 			return nodeObjectIsMaster(e.ObjectOld) != nodeObjectIsMaster(e.ObjectNew)
 		},
 	}
@@ -267,6 +264,8 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *metav1.Par
 		err = fmt.Errorf("cannot load global PKI: %w", err)
 		return
 	}
+
+	// TODO: node PKI
 
 	// TODO
 	_ = userRO
