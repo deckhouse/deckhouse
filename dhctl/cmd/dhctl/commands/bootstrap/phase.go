@@ -31,6 +31,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
+	app.DefineTFResourceManagementTimeout(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineDeckhouseFlags(cmd)
 	app.DefineDeckhouseInstallFlags(cmd)

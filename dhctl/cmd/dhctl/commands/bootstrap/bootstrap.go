@@ -31,6 +31,7 @@ func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	app.DefineCacheFlags(cmd)
 	app.DefineDropCacheFlags(cmd)
 	app.DefineResourcesFlags(cmd, false)
+	app.DefineTFResourceManagementTimeout(cmd)
 	app.DefineDeckhouseFlags(cmd)
 	app.DefineDontUsePublicImagesFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)
