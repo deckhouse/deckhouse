@@ -75,6 +75,8 @@ docker:
   ENV:
     EDITOR: vim
 shell:
+  beforeInstall:
+  - apt-get update && apt-get install -y locale && apt-get clean
   setup:
   - |
     ln -fs /dhctl /usr/bin/dhctl
@@ -103,5 +105,3 @@ shell:
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
     echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
-
-    apt-get update && apt-get install -y locale && apt-get clean
