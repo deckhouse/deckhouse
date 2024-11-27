@@ -8,16 +8,18 @@ package registry_controller
 import (
 	"context"
 	"fmt"
-	"regexp"
+	"reflect"
 
 	"embeded-registry-manager/internal/state"
 	"embeded-registry-manager/internal/utils/pki"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,7 +32,6 @@ import (
 )
 
 var (
-	nodePKISecretRegex        = regexp.MustCompile(`^registry-node-(.*)-pki$`)
 	masterNodesMatchingLabels = client.MatchingLabels{
 		state.LabelNodeIsMasterKey: "",
 	}
@@ -44,7 +45,8 @@ type nodeController struct {
 	Client    client.Client
 	Namespace string
 
-	reprocessCh chan event.TypedGenericEvent[reconcile.Request]
+	eventRecorder record.EventRecorder
+	reprocessCh   chan event.TypedGenericEvent[reconcile.Request]
 }
 
 var nodeReprocessAllRequest = reconcile.Request{
@@ -54,10 +56,12 @@ var nodeReprocessAllRequest = reconcile.Request{
 	},
 }
 
-func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	r.reprocessCh = make(chan event.TypedGenericEvent[reconcile.Request])
+func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	nc.reprocessCh = make(chan event.TypedGenericEvent[reconcile.Request])
 
 	controllerName := "node-controller"
+
+	nc.eventRecorder = mgr.GetEventRecorderFor(controllerName)
 
 	// TODO
 	// registryAddress := os.Getenv("REGISTRY_ADDRESS")
@@ -96,7 +100,7 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 	})
 
 	globalSecretsPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		if obj.GetNamespace() != r.Namespace {
+		if obj.GetNamespace() != nc.Namespace {
 			return false
 		}
 
@@ -114,13 +118,12 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 		For(
 			&corev1.Node{},
 			builder.WithPredicates(nodePredicate),
-			builder.OnlyMetadata,
 		).
 		Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
 				name := obj.GetName()
-				sub := nodePKISecretRegex.FindStringSubmatch(name)
+				sub := state.NodePKISecretRegex.FindStringSubmatch(name)
 
 				if len(sub) < 2 {
 					return nil
@@ -143,7 +146,7 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 			}),
 			builder.WithPredicates(secretsPredicate),
 		).
-		WatchesRawSource(r.reprocessChannelSource()).
+		WatchesRawSource(nc.reprocessChannelSource()).
 		Watches(
 			&moduleConfig,
 			reprocessAllHandler,
@@ -157,7 +160,7 @@ func (r *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: 10,
 		}).
-		Complete(r)
+		Complete(nc)
 
 	if err != nil {
 		return fmt.Errorf("cannot build controller: %w", err)
@@ -175,12 +178,7 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		req.Namespace = ""
 	}
 
-	node := &metav1.PartialObjectMetadata{}
-	node.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "",
-		Version: "v1",
-		Kind:    "Node",
-	})
+	node := &corev1.Node{}
 
 	err := nc.Client.Get(ctx, req.NamespacedName, node)
 	if err != nil {
@@ -234,7 +232,7 @@ func (nc *nodeController) triggerReconcileForNode(ctx context.Context, req recon
 	}
 }
 
-func (nc *nodeController) handleMasterNode(ctx context.Context, node *metav1.PartialObjectMetadata) (result ctrl.Result, err error) {
+func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node) (result ctrl.Result, err error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	config, err := state.LoadModuleConfig(ctx, nc.Client)
@@ -259,18 +257,33 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *metav1.Par
 		return
 	}
 
-	pkiState, err := nc.loadGlobalPKI(ctx)
+	globalPKI, err := nc.loadGlobalPKI(ctx)
 	if err != nil {
 		err = fmt.Errorf("cannot load global PKI: %w", err)
 		return
 	}
 
-	// TODO: node PKI
+	if len(node.Status.Addresses) == 0 {
+		err = fmt.Errorf("node does not have address")
+		return
+	}
+
+	nodePKI, err := nc.ensureNodePKI(
+		ctx,
+		node.Name,
+		node.Status.Addresses[0].Address,
+		globalPKI,
+	)
+	if err != nil {
+		err = fmt.Errorf("cannot ensure node PKI: %w", err)
+		return
+	}
 
 	// TODO
 	_ = userRO
 	_ = userRW
-	_ = pkiState
+	_ = globalPKI
+	_ = nodePKI
 
 	isFirst, err := nc.isFirstMasterNode(ctx, node)
 	if err != nil {
@@ -278,6 +291,241 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *metav1.Par
 	}
 
 	log.Info("Processing master node", "node", node.Name, "first", isFirst)
+
+	return
+}
+
+func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddress string, globalPKI state.GlobalPKI) (ret state.NodePKI, err error) {
+	log := ctrl.LoggerFrom(ctx).
+		WithValues("action", "EnsureNodePKI")
+
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.NodePKISecretName(nodeName),
+		Namespace: nc.Namespace,
+	}
+
+	err = nc.Client.Get(ctx, key, &secret)
+	if client.IgnoreNotFound(err) != nil {
+		err = fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+		return
+	}
+
+	// Making a copy unconditionally is a bit wasteful, since we don't
+	// always need to update the service. But, making an unconditional
+	// copy makes the code much easier to follow, and we have a GC for
+	// a reason.
+	secretOrig := secret.DeepCopy()
+
+	hosts := []string{
+		"127.0.0.1",
+		"localhost",
+		nodeAddress,
+		fmt.Sprintf("%s.%s.svc", state.RegistrySvcName, state.RegistryNamespace),
+	}
+
+	notFound := false
+	isValid := true
+	if err != nil {
+		notFound = true
+	} else {
+		authPKI, err := state.DecodeCertKeyFromSecret(
+			state.NodeAuthCertSecretField,
+			state.NodeAuthKeySecretField,
+			&secret,
+		)
+
+		if err != nil {
+			log.Error(err, "Cannot decode auth PKI")
+
+			nc.logModuleWarning(
+				&log,
+				"NodePKIAuthDecodeError",
+				fmt.Sprintf("NodePKI Auth decode error: %v", err),
+			)
+
+			isValid = false
+		} else {
+			ret.Auth = &authPKI
+		}
+
+		if isValid {
+			err = pki.ValidateCertWithCAChain(ret.Auth.Cert, globalPKI.CA.Cert)
+			if err != nil {
+				log.Error(err, "Auth certificate validation error")
+
+				nc.logModuleWarning(
+					&log,
+					"NodePKIAuthCertValidationError",
+					fmt.Sprintf("NodePKI Auth certificate validation error: %v", err),
+				)
+
+				isValid = false
+			}
+		}
+
+		if isValid {
+			for _, host := range hosts {
+				err = ret.Auth.Cert.VerifyHostname(host)
+				if err != nil {
+					log.Error(err, "Hostname not supported by Auth certificate", "hostName", host)
+
+					nc.logModuleWarning(
+						&log,
+						"NodePKIAuthCertHostUnsupported",
+						fmt.Sprintf("NodePKI Auth certificate not support hostname %v: %v", host, err),
+					)
+
+					isValid = false
+					break
+				}
+			}
+		}
+
+		if isValid {
+			distributionPKI, err := state.DecodeCertKeyFromSecret(
+				state.NodeDistributionCertSecretField,
+				state.NodeDistributionKeySecretField,
+				&secret,
+			)
+
+			if err != nil {
+				log.Error(err, "Cannot decode Distribution PKI")
+
+				nc.logModuleWarning(
+					&log,
+					"NodePKIDistributionDecodeError",
+					fmt.Sprintf("NodePKI Distribution decode error: %v", err),
+				)
+
+				isValid = false
+			} else {
+				ret.Distribution = &distributionPKI
+			}
+		}
+
+		if isValid {
+			err = pki.ValidateCertWithCAChain(ret.Distribution.Cert, globalPKI.CA.Cert)
+			if err != nil {
+				log.Error(err, "Distribution certificate validation error")
+
+				nc.logModuleWarning(
+					&log,
+					"NodePKIDistributionCertValidationError",
+					fmt.Sprintf("NodePKI Distribution certificate validation error: %v", err),
+				)
+
+				isValid = false
+			}
+		}
+
+		if isValid {
+			for _, host := range hosts {
+				err = ret.Distribution.Cert.VerifyHostname(host)
+				if err != nil {
+					log.Error(err, "Hostname not supported by distribution certificate", "hostName", host)
+
+					nc.logModuleWarning(
+						&log,
+						"NodePKIDistributionCertHostUnsupported",
+						fmt.Sprintf("NodePKI Distribution certificate not support hostname %v: %v", host, err),
+					)
+
+					isValid = false
+					break
+				}
+			}
+		}
+	}
+
+	if notFound || !isValid {
+		if notFound {
+			nc.logModuleWarning(
+				&log,
+				"NodePKINotfound",
+				"NodePKI secret not found, will generate new",
+			)
+		} else {
+			nc.logModuleWarning(
+				&log,
+				"NodePKIInvalid",
+				"PKI secret invalid, will generate new",
+			)
+		}
+
+		var generatedPKI pki.CertKey
+
+		generatedPKI, err = pki.GenerateCertificate(state.NodeAuthCertCN, hosts, *globalPKI.CA)
+		if err != nil {
+			err = fmt.Errorf("cannot generate Auth PKI: %w", err)
+			return
+		}
+		ret.Auth = &generatedPKI
+
+		generatedPKI, err = pki.GenerateCertificate(state.NodeDistributionCertCN, hosts, *globalPKI.CA)
+		if err != nil {
+			err = fmt.Errorf("cannot generate Distribution PKI: %w", err)
+			return
+		}
+		ret.Distribution = &generatedPKI
+	}
+
+	// Set labels
+	if secret.Labels == nil {
+		secret.Labels = make(map[string]string)
+	}
+
+	secret.Labels[state.LabelModuleKey] = state.RegistryModuleName
+	secret.Labels[state.LabelHeritageKey] = state.LabelHeritageValue
+	secret.Labels[state.LabelManagedBy] = state.RegistryModuleName
+	secret.Labels[state.LabelTypeKey] = state.NodePKISecretTypeLabel
+
+	secret.Data = make(map[string][]byte)
+	if err = state.EncodeCertKeyToSecret(
+		*ret.Auth,
+		state.NodeAuthCertSecretField,
+		state.NodeAuthKeySecretField,
+		&secret,
+	); err != nil {
+		err = fmt.Errorf("cannot encode Auth NodePKI to secret: %w", err)
+		return
+	}
+
+	if err = state.EncodeCertKeyToSecret(
+		*ret.Distribution,
+		state.NodeDistributionCertSecretField,
+		state.NodeDistributionKeySecretField,
+		&secret,
+	); err != nil {
+		err = fmt.Errorf("cannot encode Distribution NodePKI to secret: %w", err)
+		return
+	}
+
+	if notFound {
+		secret.Name = key.Name
+		secret.Namespace = key.Namespace
+		secret.Type = state.NodePKISecretType
+
+		if err = nc.Client.Create(ctx, &secret); err != nil {
+			err = fmt.Errorf("cannot create k8s object: %w", err)
+			return
+		}
+
+		log.Info("New secret was created")
+	} else {
+		// Check than we're need to update secret
+		if !reflect.DeepEqual(secretOrig, secret) {
+			if err = nc.Client.Update(ctx, &secret); err != nil {
+				err = fmt.Errorf("cannot update k8s object: %w", err)
+				return
+			}
+
+			if secretOrig.ResourceVersion != secret.ResourceVersion {
+				log.Info("Secret was updated")
+			}
+
+		}
+	}
 
 	return
 }
@@ -311,7 +559,7 @@ func (nc *nodeController) loadUserSecret(ctx context.Context, name string) (ret 
 	return
 }
 
-func (nc *nodeController) loadGlobalPKI(ctx context.Context) (ret state.PKIState, err error) {
+func (nc *nodeController) loadGlobalPKI(ctx context.Context) (ret state.GlobalPKI, err error) {
 	secret := corev1.Secret{}
 	key := types.NamespacedName{
 		Name:      state.PKISecretName,
@@ -355,7 +603,7 @@ func (nc *nodeController) loadGlobalPKI(ctx context.Context) (ret state.PKIState
 	return
 }
 
-func (nc *nodeController) isFirstMasterNode(ctx context.Context, node *metav1.PartialObjectMetadata) (bool, error) {
+func (nc *nodeController) isFirstMasterNode(ctx context.Context, node *corev1.Node) (bool, error) {
 	nodes, err := nc.getAllMasterNodes(ctx)
 	if err != nil {
 		return false, err
@@ -389,7 +637,7 @@ func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *metav1.
 	return
 }
 
-func (nc *nodeController) handleNodeNotMaster(ctx context.Context, node *metav1.PartialObjectMetadata) (ctrl.Result, error) {
+func (nc *nodeController) handleNodeNotMaster(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
 	// Delete node secret if exists
 	if err := nc.deleteNodePKI(ctx, node.Name); err != nil {
 		return ctrl.Result{}, err
@@ -413,12 +661,16 @@ func (nc *nodeController) handleNodeDelete(ctx context.Context, name string) (ct
 }
 
 func (nc *nodeController) deleteNodePKI(ctx context.Context, nodeName string) error {
-	log := ctrl.LoggerFrom(ctx)
+	log := ctrl.LoggerFrom(ctx).
+		WithValues("action", "DeleteNodePKI")
 
-	secretName := fmt.Sprintf("registry-node-%s-pki", nodeName)
 	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.NodePKISecretName(nodeName),
+		Namespace: nc.Namespace,
+	}
 
-	err := nc.Client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: nc.Namespace}, &secret)
+	err := nc.Client.Get(ctx, key, &secret)
 
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -447,6 +699,28 @@ func (nc *nodeController) reprocessChannelSource() source.Source {
 	))
 }
 
+func (nc *nodeController) logModuleWarning(log *logr.Logger, reason, message string) {
+	obj := state.GetModuleConfigObject()
+	obj.SetNamespace(nc.Namespace)
+
+	nc.eventRecorder.Event(&obj, corev1.EventTypeWarning, reason, message)
+
+	if log != nil {
+		log.Info(message, "reason", reason)
+	}
+}
+
+func (nc *nodeController) logModuleInfo(log *logr.Logger, reason, message string) {
+	obj := state.GetModuleConfigObject()
+	obj.SetNamespace(nc.Namespace)
+
+	nc.eventRecorder.Event(&obj, corev1.EventTypeNormal, reason, message)
+
+	if log != nil {
+		log.Info(message, "reason", reason)
+	}
+}
+
 func secretObjectIsNodePKI(obj client.Object) bool {
 	labels := obj.GetLabels()
 
@@ -458,7 +732,7 @@ func secretObjectIsNodePKI(obj client.Object) bool {
 		return false
 	}
 
-	return nodePKISecretRegex.MatchString(obj.GetName())
+	return state.NodePKISecretRegex.MatchString(obj.GetName())
 }
 
 func nodeObjectIsMaster(obj client.Object) bool {
@@ -476,7 +750,7 @@ func nodeObjectIsMaster(obj client.Object) bool {
 	return hasMasterLabel
 }
 
-func hasMasterLabel(node *metav1.PartialObjectMetadata) bool {
+func hasMasterLabel(node *corev1.Node) bool {
 	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
 	return isMaster
 }

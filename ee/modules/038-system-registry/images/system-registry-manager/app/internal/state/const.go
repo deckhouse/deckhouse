@@ -6,7 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package state
 
 const (
+	RegistryNamespace = "d8-system"
+
 	RegistryModuleName = "system-registry"
+
+	RegistrySvcName = "embedded-registry"
 
 	LabelTypeKey             = "type"
 	LabelModuleKey           = "module"

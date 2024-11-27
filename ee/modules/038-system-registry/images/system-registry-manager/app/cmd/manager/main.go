@@ -22,13 +22,12 @@ import (
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
 
 	"embeded-registry-manager/internal/controllers/registry_controller"
-	"embeded-registry-manager/internal/utils/k8s"
+	"embeded-registry-manager/internal/state"
 )
 
 const (
 	metricsBindAddressPort = "127.0.0.1:8081"
 	healthListenAddr       = ":8097"
-	namespace              = k8s.RegistryNamespace
 )
 
 var logHandler slog.Handler = dlog.Default().Handler()
@@ -97,7 +96,7 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config) error {
 
 	nodeController := registry_controller.NodeController{
 		Client:    mgr.GetClient(),
-		Namespace: namespace,
+		Namespace: state.RegistryNamespace,
 	}
 
 	if err := nodeController.SetupWithManager(ctx, mgr); err != nil {
@@ -106,7 +105,7 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config) error {
 
 	stateController := registry_controller.StateController{
 		Client:    mgr.GetClient(),
-		Namespace: namespace,
+		Namespace: state.RegistryNamespace,
 	}
 
 	if err := stateController.SetupWithManager(ctx, mgr); err != nil {

@@ -6,29 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package state
 
 import (
+	"embeded-registry-manager/internal/utils/pki"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-
-	"embeded-registry-manager/internal/utils/pki"
 )
-
-const (
-	PKISecretName     = "registry-pki"
-	CASecretType      = "system-registry/ca-secret"
-	CASecretTypeLabel = "ca-secret"
-
-	CACertSecretField = "registry-ca.crt"
-	CAKeySecretField  = "registry-ca.key"
-
-	TokenCertSecretField = "token.crt"
-	TokenKeySecretField  = "token.key"
-)
-
-type PKIState struct {
-	CA    *pki.CertKey
-	Token *pki.CertKey
-}
 
 func DecodeCertKeyFromSecret(certField, keyField string, secret *corev1.Secret) (ret pki.CertKey, err error) {
 	if ret.Cert, err = pki.DecodeCertificate(secret.Data[certField]); err != nil {

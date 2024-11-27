@@ -37,10 +37,10 @@ type stateController struct {
 
 	eventRecorder record.EventRecorder
 
-	userRO   *state.User
-	userRW   *state.User
-	pkiState *state.PKIState
-	stateOK  bool
+	userRO    *state.User
+	userRW    *state.User
+	globalPKI *state.GlobalPKI
+	stateOK   bool
 }
 
 func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
@@ -112,7 +112,7 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		return
 	}
 
-	if err = sc.ensurePKI(ctx, &sc.pkiState); err != nil {
+	if err = sc.ensurePKI(ctx, &sc.globalPKI); err != nil {
 		if errors.Is(err, errorPKIInvalid) {
 			log.Error(err, "PKI is invalid and cannot be restored from internal state")
 
@@ -283,7 +283,7 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 	return nil
 }
 
-func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.PKIState) error {
+func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.GlobalPKI) error {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsurePKI")
 
@@ -305,7 +305,7 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.P
 	// a reason.
 	secretOrig := secret.DeepCopy()
 
-	var actualState state.PKIState
+	var actualState state.GlobalPKI
 	notFound := false
 	isValid := true
 
