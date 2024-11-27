@@ -82,10 +82,12 @@ function teardown_registry_data_device() {
 function fetch_registry_data_device_secret() {
   local secret_name="d8-masters-system-registry-data-device-path"
   local namespace="d8-system"
+  local max_attempts=5
+  local sleep_interval=10
 
-  if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
-    if [ -f "$BOOTSTRAP_DIR/bootstrap-token" ]; then
-      for ((i=1; i<=5; i++)); do
+  for ((i=1; i<=max_attempts; i++)); do
+    if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
+      if [ -f "$BOOTSTRAP_DIR/bootstrap-token" ]; then
         for server in {{ .normal.apiserverEndpoints | join " " }}; do
           local http_status
           http_status=$(d8-curl -s -w "%{http_code}" -o /dev/null \
@@ -94,34 +96,35 @@ function fetch_registry_data_device_secret() {
             --cacert "$BOOTSTRAP_DIR/ca.crt")
 
           if [ "$http_status" -eq 404 ]; then
-            # empty result if secret not exist (http status: 404)
+            # Empty result if secret does not exist (HTTP status: 404)
             return 0
           fi
-
           if d8-curl -s -f \
             -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
             --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
             --cacert "$BOOTSTRAP_DIR/ca.crt"; then
             return 0
           fi
-
           >&2 echo "Attempt $i: Failed to get secret $secret_name from server $server"
         done
+      else
+        >&2 echo "Failed to get secret $secret_name: can't find bootstrap-token."
+        exit 1
+      fi
+    else
+      if exec_kubectl get secret "$secret_name" -n "$namespace" --ignore-not-found=true -o json; then
+        return 0
+      fi
+      >&2 echo "Attempt $i: Failed to get secret $secret_name using kubectl."
+    fi
 
-        if [ $i -lt 5 ]; then
-          sleep 10
-        fi
-      done
+    if [ $i -lt $max_attempts ]; then
+      sleep $sleep_interval
+    else
       >&2 echo "Exceeded maximum retry attempts to get secret $secret_name."
       exit 1
-    else
-      >&2 echo "Failed to get secret $secret_name: can't find bootstrap-token."
-      exit 1
     fi
-  else
-    exec_kubectl get secret "$secret_name" -n "$namespace" --ignore-not-found=true -o json
-    return 0
-  fi
+  done
 }
 
 function extract_registry_data_device_from_secret() {
