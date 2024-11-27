@@ -21,24 +21,62 @@ function exec_kubectl() {
 }
 
 function setup_registry_data_device() {
-  local data_device=$1
-  mkdir -p /mnt/system-registry-data
-  if ! file -s "$data_device" | grep -q ext4; then
-    mkfs.ext4 -F -L registry-data "$data_device"
-  fi
+    local data_device="$1"
+    local mount_point="/mnt/system-registry-data"
+    local fstab_file="/etc/fstab"
+    local symlink_target="/opt/deckhouse/system-registry"
+    local label="registry-data"
 
-  if grep -qv registry-data /etc/fstab; then
-    echo "LABEL=registry-data /mnt/system-registry-data ext4 defaults,discard,x-systemd.automount 0 0" >> /etc/fstab
-  fi
+    if ! [ -b "$data_device" ]; then
+      >&2 echo "Failed to find $data_device disk."
+      exit 1
+    fi
 
-  if ! mount | grep -q "$data_device"; then
-    mount -L registry-data
-  fi
+    # Ensure the mount directory exists
+    mkdir -p "$mount_point"
 
-  if [[ "$(find /opt/deckhouse/system-registry/ -type f 2>/dev/null | wc -l)" == "0" ]]; then
-    rm -rf /opt/deckhouse/system-registry
-    ln -s /mnt/system-registry-data /opt/deckhouse/system-registry
-  fi
+    # Format the data device if it is not already ext4
+    if ! file -s "$data_device" | grep -q ext4; then
+        mkfs.ext4 -F -L "$label" "$data_device"
+    fi
+
+    # Add an entry to /etc/fstab if it does not already exist
+    if ! grep -q "$label" "$fstab_file"; then
+        echo "LABEL=$label $mount_point ext4 defaults,discard,x-systemd.automount 0 0" >> "$fstab_file"
+    fi
+
+    # Mount the device if it is not already mounted
+    if ! mount | grep -q "$mount_point"; then
+        mount -L "$label"
+    fi
+
+    # Create a symlink if the target directory is empty
+    if [[ "$(find "$symlink_target" -type f 2>/dev/null | wc -l)" == "0" ]]; then
+        rm -rf "$symlink_target"
+        ln -s "$mount_point" "$symlink_target"
+    fi
+}
+
+function teardown_registry_data_device() {
+    local mount_point="/mnt/system-registry-data"
+    local fstab_file="/etc/fstab"
+    local link_target="/opt/deckhouse/system-registry"
+    local label="registry-data"
+  
+    # Remove the symbolic link if it exists and points to the correct location
+    if [[ -L "$link_target" && "$(readlink "$link_target")" == "$mount_point" ]]; then
+        rm -f "$link_target"
+    fi
+    
+    # Remove the entry from /etc/fstab
+    if grep -q "$label" "$fstab_file"; then
+        sed -i "/^LABEL=${label}.*/d" "$fstab_file"
+    fi
+    
+    # Unmount the device
+    if mount | grep -q "$mount_point"; then
+        umount "$mount_point"
+    fi
 }
 
 function fetch_registry_data_device_secret() {
@@ -81,12 +119,8 @@ function fetch_registry_data_device_secret() {
       exit 1
     fi
   else
-    if exec_kubectl get secrets -n "$namespace" | grep -q "^$secret_name "; then
-      exec_kubectl get secret "$secret_name" -n "$namespace" -o json
-    else
-      # empty result if secret not exist
-      return 0
-    fi
+    exec_kubectl get secret "$secret_name" -n "$namespace" --ignore-not-found=true -o json
+    return 0
   fi
 }
 
@@ -188,6 +222,7 @@ else
     setup_registry_data_device "$data_device"
     create_registry_data_device_installed_file
   else
+    teardown_registry_data_device
     remove_registry_data_device_installed_file
   fi
 fi
