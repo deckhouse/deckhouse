@@ -8,7 +8,7 @@ package legacy_controller
 import (
 	"sync"
 
-	staticpod "embeded-registry-manager/internal/static-pod"
+	"embeded-registry-manager/internal/staticpod"
 	k8s "embeded-registry-manager/internal/utils/k8s_legacy"
 	util_time "embeded-registry-manager/internal/utils/time"
 )

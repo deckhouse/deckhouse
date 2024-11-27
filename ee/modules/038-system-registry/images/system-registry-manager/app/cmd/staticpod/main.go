@@ -18,7 +18,7 @@ import (
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
 
-	staticpodmanager "embeded-registry-manager/internal/static-pod"
+	"embeded-registry-manager/internal/staticpod"
 )
 
 const (
@@ -58,7 +58,7 @@ func main() {
 	}()
 
 	log.Info("Starting manager")
-	err := staticpodmanager.Run(ctx)
+	err := staticpod.Run(ctx)
 	if err != nil {
 		log.Error("Manager run error", "error", err)
 	}

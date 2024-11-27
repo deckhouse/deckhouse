@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"net/http"
 
-	staticpod "embeded-registry-manager/internal/static-pod"
+	"embeded-registry-manager/internal/staticpod"
 	k8s "embeded-registry-manager/internal/utils/k8s_legacy"
 
 	corev1 "k8s.io/api/core/v1"
