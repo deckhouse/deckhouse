@@ -192,7 +192,7 @@ entries:
               folders:
                 - title:
                     en: Reliability
-                    ru: Механизмы обеспечения нажености
+                    ru: Механизмы обеспечения надежности
                   url: /virtualization-platform/documentation/admin/platform-management/virtualization/reliability.html
                 - title:
                     en: Virtual Machine Classes
