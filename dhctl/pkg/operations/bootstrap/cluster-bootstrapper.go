@@ -349,6 +349,13 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
 			deckhouseInstallConfig.NodesTerraformState[masterNodeName] = masterOutputs.TerraformState
 
+			deckhouseInstallConfig.NodesDataDevices = make(map[string]config.NodeDataDevices)
+			dataDevices := masterOutputs.GetDataDevices()
+			deckhouseInstallConfig.NodesDataDevices[masterNodeName] = config.NodeDataDevices{
+				SystemRegistryDataDevicePath: dataDevices.SystemRegistryDataDevicePath,
+				KubeDataDevicePath:           dataDevices.KubeDataDevicePath,
+			}
+
 			masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
 			SaveMasterHostsToCache(masterAddressesForSSH)
 			return nil

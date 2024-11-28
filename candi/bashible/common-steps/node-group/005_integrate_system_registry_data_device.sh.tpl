@@ -233,16 +233,47 @@ function extract_registry_data_device_from_secret() {
   fetch_registry_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
 }
 
-function get_registry_data_device_from_terraform() {
+{{- /*
+# This function retrieves the system registry data device path from a file or a Kubernetes secret.
+# 
+# Behavior:
+#   - If the system_registry_data_device_path file exists, reads its content and assigns the value to `data_device`.
+#     This is used:
+#     - For the first master node during the bootstrap process.
+#     - For specific cloud providers that may require an override device path.
+#   - If the file does not exist, it falls back to calling the extract_registry_data_device_from_secret 
+#     function to fetch the device information from the Kubernetes secret.
+#
+# Purpose:
+#   The function provides flexibility in determining the device path by supporting both a file-based 
+#   approach (for bootstrap and overrides) and a secret-based approach (for up-to-date information 
+#   after convergence).
+*/}}
+function get_registry_data_device_from_secret_or_from_file() {
   local data_device=""
   if [ -f "$BOOTSTRAP_DIR/system_registry_data_device_path" ]; then
-    # for first master node (after bootstrap)
+    # For the first master node (after bootstrap) or for overrides for specific clouds
     data_device=$(<"$BOOTSTRAP_DIR/system_registry_data_device_path")
   else
-    # for other master nodes (and first, but only after converge)
     data_device=$(extract_registry_data_device_from_secret)
   fi
   echo "$data_device"
+}
+
+{{- /*
+# This function removes the system_registry_data_device_path file, which is used by the 
+# function get_registry_data_device_from_secret_or_from_file
+#
+# Purpose:
+#   After this step, the file must be deleted to ensure the system uses the latest data from the 
+#   Kubernetes secret d8-masters-system-registry-data-device-path. This secret is updated after 
+#   the "converge" operation and contains the actual device information.
+*/}}
+function remove_registry_data_device_file() {
+  local data_device_file="$BOOTSTRAP_DIR/system_registry_data_device_path"
+  if [ -f "$data_device_file" ]; then
+    rm -f "$data_device_file"
+  fi
 }
 
 function find_first_unmounted_data_device() {
@@ -319,7 +350,7 @@ if is_registry_data_device_mounted; then
   create_registry_data_device_installed_file
 else
   if is_unmounted_data_device_exists; then
-    data_device=$(get_registry_data_device_from_terraform)
+    data_device=$(get_registry_data_device_from_secret_or_from_file)
     if ! [ -b "$data_device" ]; then
       >&2 echo "Failed to find $data_device disk. Detecting the correct one..."
       data_device=$(find_first_unmounted_data_device)
@@ -331,6 +362,8 @@ else
     remove_registry_data_device_installed_file
   fi
 fi
+
+remove_registry_data_device_file
 
   {{- end  }}
 {{- end  }}

@@ -65,6 +65,7 @@ type DeckhouseInstaller struct {
 	SystemRegistryConfig  []byte
 	TerraformState        []byte
 	NodesTerraformState   map[string][]byte
+	NodesDataDevices      map[string]NodeDataDevices
 	CloudDiscovery        []byte
 	ModuleConfigs         []*ModuleConfig
 
@@ -75,6 +76,11 @@ type DeckhouseInstaller struct {
 
 	CommanderMode bool
 	CommanderUUID uuid.UUID
+}
+
+type NodeDataDevices struct {
+	KubeDataDevicePath           string
+	SystemRegistryDataDevicePath string
 }
 
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
