@@ -55,7 +55,7 @@ const labels = {
   'e2e/use/edition/ee': { type: 'e2e-edition', edition: 'EE' },
   'e2e/use/edition/be': { type: 'e2e-edition', edition: 'BE' },
   'e2e/use/edition/se': { type: 'e2e-edition', edition: 'SE' },
-  'e2e/use/edition/se+': { type: 'e2e-edition', edition: 'SE+' },
+  'e2e/use/edition/se+': { type: 'e2e-edition', edition: 'SE-plus' },
   'e2e/use/edition/fe': { type: 'e2e-edition', edition: 'FE' },
 
   // Allow running workflows for external PRs.
@@ -70,7 +70,7 @@ const labels = {
   'edition/ee': { type: 'edition', edition: 'EE' },
   'edition/be': { type: 'edition', edition: 'BE' },
   'edition/se': { type: 'edition', edition: 'SE' },
-  'edition/se+': { type: 'edition', edition: 'SE+' }
+  'edition/se+': { type: 'edition', edition: 'SE-plus' }
 };
 module.exports.knownLabels = labels;
 
@@ -166,6 +166,6 @@ const editions = [
   'FE',
   'BE',
   'SE',
-  'SE+'
+  'SE-plus'
 ];
 module.exports.knownEditions = editions;

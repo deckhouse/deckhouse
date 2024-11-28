@@ -1344,15 +1344,15 @@ jobs:
 
 
   build_se_plus:
-    name: Build SE+
+    name: Build SE-plus
     needs:
       - git_info
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'se+') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'se-plus') }}
     env:
-      WERF_ENV: "SE+"
+      WERF_ENV: "SE-plus"
     # <template: build_template>
     runs-on: [self-hosted, regular, selectel]
     outputs:
@@ -1649,7 +1649,7 @@ jobs:
           retries: 3
           script: |
             const statusConfig = 'job,one-line';
-            const name = 'Build SE+';
+            const name = 'Build SE-plus';
             const needsContext = JSON.parse(process.env.NEEDS_CONTEXT);
             const jobContext = JSON.parse(process.env.JOB_CONTEXT);
             const stepsContext = JSON.parse(process.env.STEPS_CONTEXT);
@@ -3720,7 +3720,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JOB_NAMES: |
-        {"build_be":"Build BE","build_ce":"Build CE","build_ee":"Build EE","build_fe":"Build FE","build_se":"Build SE","build_se_plus":"Build SE+","deploy_latest_web_doc_prod_sel":"(Prod) Deploy latest doc","deploy_latest_web_site_prod_sel":"(Prod) Deploy latest site","dhctl_tests":"Dhctl Tests","doc_web_build":"Doc web build","go_generate":"Go Generate","golangci_lint":"GolangCI Lint","main_web_build":"Main web build","matrix_tests":"Matrix tests","openapi_test_cases":"OpenAPI Test Cases","tests":"Tests","validators":"Validators","web_links_test":"Web links test","workflow_render":"Render workflow"}
+        {"build_be":"Build BE","build_ce":"Build CE","build_ee":"Build EE","build_fe":"Build FE","build_se":"Build SE","build_se_plus":"Build SE-plus","deploy_latest_web_doc_prod_sel":"(Prod) Deploy latest doc","deploy_latest_web_site_prod_sel":"(Prod) Deploy latest site","dhctl_tests":"Dhctl Tests","doc_web_build":"Doc web build","go_generate":"Go Generate","golangci_lint":"GolangCI Lint","main_web_build":"Main web build","matrix_tests":"Matrix tests","openapi_test_cases":"OpenAPI Test Cases","tests":"Tests","validators":"Validators","web_links_test":"Web links test","workflow_render":"Render workflow"}
     steps:
 
       # <template: checkout_step>

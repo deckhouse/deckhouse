@@ -213,7 +213,7 @@ jobs:
             } else if (hasSE) {
               edition = 'SE';
             } else if (hasSE_plus) {
-              edition = 'SE+';
+              edition = 'SE-plus';
             }
             core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}, 'edition/se+':${hasSE_plus}`);
             core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
@@ -416,8 +416,8 @@ jobs:
           echo Enable ${{ needs.pull_request_info.outputs.edition }}
 
   enable_se_plus:
-    if: ${{ needs.pull_request_info.outputs.edition == 'SE+' }}
-    name: Enable SE+
+    if: ${{ needs.pull_request_info.outputs.edition == 'SE-plus' }}
+    name: Enable SE-plus
     needs:
       - pull_request_info
     runs-on: ubuntu-latest

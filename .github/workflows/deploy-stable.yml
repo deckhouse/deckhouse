@@ -32,7 +32,7 @@ on:
         description: 'Id of comment in issue where to put workflow run status'
         required: false
       editions:
-        description: 'Comma separated editions to deploy. Example: ee,fe,ce,be,se,se+'
+        description: 'Comma separated editions to deploy. Example: ee,fe,ce,be,se,se-plus'
         required: false
       cooldown:
         description: 'Postpone release until specified datetime (YYYY-MM-DD HH:MM) UTC only. Example: 2026-06-06 16:16'
@@ -140,7 +140,7 @@ jobs:
       DEPLOY_FE: ${{steps.detect_editions.outputs.DEPLOY_FE}}
       DEPLOY_BE: ${{steps.detect_editions.outputs.DEPLOY_BE}}
       DEPLOY_SE: ${{steps.detect_editions.outputs.DEPLOY_SE}}
-      DEPLOY_SE+: ${{steps.detect_editions.outputs.DEPLOY_SE+}}
+      DEPLOY_SE-plus: ${{steps.detect_editions.outputs.DEPLOY_SE-plus}}
     steps:
       - name: Detect editions
         id: detect_editions
@@ -151,7 +151,7 @@ jobs:
 
           RESTRICTED=no
 
-          for edition in CE EE FE BE SE SE+ ; do
+          for edition in CE EE FE BE SE SE-plus ; do
             if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
               echo "  - enable deploy of ${edition} edition."
               echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
@@ -161,7 +161,7 @@ jobs:
 
           if [[ $RESTRICTED == "no" ]] ; then
             echo "No restrictions. Enable deploy to all editions."
-            for edition in CE EE FE BE SE SE+ ; do
+            for edition in CE EE FE BE SE SE-plus ; do
               echo "DEPLOY_${edition}=true" >> $GITHUB_OUTPUT
             done
           fi
@@ -213,14 +213,14 @@ jobs:
     steps:
       - run: ": Enable SE"
 
-  enable_SE+:
-    if: ${{ needs.detect_editions.outputs.DEPLOY_SE+ == 'true' }}
-    name: Enable SE+
+  enable_SE-plus:
+    if: ${{ needs.detect_editions.outputs.DEPLOY_SE-plus == 'true' }}
+    name: Enable SE-plus
     needs:
       - detect_editions
     runs-on: ubuntu-latest
     steps:
-      - run: ": Enable SE+"
+      - run: ": Enable SE-plus"
 
 
   run_deploy:
@@ -473,12 +473,12 @@ jobs:
 
           echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
           docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
-      - name: Set cooldown for release (SE+)
+      - name: Set cooldown for release (SE-plus)
         if: ${{ github.event.inputs.cooldown }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          WERF_ENV: SE+
+          WERF_ENV: SE-plus
           COOLDOWN: ${{ github.event.inputs.cooldown }}
         run: |
           PROD_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
@@ -1152,13 +1152,13 @@ jobs:
           echo "Release version image:"
           echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
           echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
-      - name: Publish release images for SE+
-        if: ${{ needs.detect_editions.outputs.DEPLOY_SE+ == 'true' }}
+      - name: Publish release images for SE-plus
+        if: ${{ needs.detect_editions.outputs.DEPLOY_SE-plus == 'true' }}
         env:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          WERF_ENV: SE+
+          WERF_ENV: SE-plus
           SKIP_PUSH_FOR_DEPLOY: ${{secrets.SKIP_PUSH_FOR_DEPLOY}}
         run: |
           # SRC_NAME is a name of image from werf.yaml.
@@ -1208,7 +1208,7 @@ jobs:
             exit 1
           fi
 
-          echo "Publish SE+ edition".
+          echo "Publish SE-plus edition".
 
           # Variables
           #   1. Edition and channel.

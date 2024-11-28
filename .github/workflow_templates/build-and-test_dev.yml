@@ -87,8 +87,8 @@ jobs:
           echo Enable ${{ needs.pull_request_info.outputs.edition }}
 
   enable_se_plus:
-    if: ${{ needs.pull_request_info.outputs.edition == 'SE+' }}
-    name: Enable SE+
+    if: ${{ needs.pull_request_info.outputs.edition == 'SE-plus' }}
+    name: Enable SE-plus
     needs:
       - pull_request_info
     runs-on: ubuntu-latest
