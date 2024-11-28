@@ -62,4 +62,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ../../../../../go_lib/cloud-data/
+replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ../../../../../../go_lib/cloud-data/
