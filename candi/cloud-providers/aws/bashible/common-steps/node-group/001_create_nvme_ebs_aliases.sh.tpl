@@ -16,31 +16,41 @@
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
 
-if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
-  exit 0
-fi
 
-if [ -f /var/lib/bashible/kubernetes-data-device-installed ]; then
-  exit 0
-fi
-
+# Get the list of NVMe devices
 volume_names="$(find /dev | grep -i 'nvme[0-21]n1$' || true)"
 
 if [ ! -z "${volume_names}" ]; then
-  bb-package-install "ebsnvme-id:{{ .images.registrypackages.amazonEc2Utils220 }}"
-fi
+    # Check if ebsnvme-id is installed, and install it if not
+    if ! command -v ebsnvme-id &> /dev/null; then
+        bb-package-install "ebsnvme-id:{{ .images.registrypackages.amazonEc2Utils220 }}"
+    fi
 
-for volume in ${volume_names}
-do
-  symlink="$(nvme id-ctrl -v "${volume}" | ( grep '^0000:' || true ) | sed -E 's/.*"(\/dev\/)?([a-z0-9]+)\.+"$/\/dev\/\2/')"
-  if [ -z "${symlink}" ]; then
-    symlink="$(/opt/deckhouse/bin/ebsnvme-id "${volume}" | sed -n '2p' )"
-  fi
-  
-  if [ ! -z "${symlink}" ] && [ ! -e "${symlink}" ]; then
-    ln -s "${volume}" "${symlink}"
-  fi
-done
+    # Iterate over each found NVMe device
+    for volume in ${volume_names}; do
+        # Check if the found device is a symbolic link
+        if [ -L "${volume}" ]; then
+            # echo "${volume} is a symbolic link, skipping."
+            continue
+        fi
+
+        # Extract the potential symlink using 'nvme id-ctrl'
+        symlink="$(nvme id-ctrl -v "${volume}" | ( grep '^0000:' || true ) | sed -E 's/.*"(\/dev\/)?([a-z0-9]+)\.+"$/\/dev\/\2/')"
+
+        if [ -z "${symlink}" ]; then
+            # Alternative way to extract the symlink
+            symlink="$(/opt/deckhouse/bin/ebsnvme-id "${volume}" | sed -n '2p' )"
+        fi
+
+        # Create the symlink if it does not already exist
+        if [ ! -z "${symlink}" ] && [ ! -e "${symlink}" ]; then
+            ln -s "${volume}" "${symlink}"
+            # echo "Created symlink ${symlink} -> ${volume}"
+        else
+            # echo "Symlink ${symlink} already exists or is invalid for device ${volume}."
+        fi
+    done
+fi
 
   {{- end  }}
 {{- end  }}
