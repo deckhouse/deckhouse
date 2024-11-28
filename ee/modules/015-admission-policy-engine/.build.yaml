@@ -1,3 +1,4 @@
 templates/trivy-provider
 hooks/*
-webhooks/*
+webhooks/lib
+webhooks/validating/security_policy.py
