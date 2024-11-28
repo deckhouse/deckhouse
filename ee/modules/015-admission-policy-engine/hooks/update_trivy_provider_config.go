@@ -20,8 +20,6 @@ import (
 
 const (
 	insecureRegistryPrefix = "trivy.insecureRegistry."
-	trivyProvider          = "trivy-provider"
-	apeNS                  = "d8-admission-policy-engine"
 	registryCAKey          = "TRIVY_REGISTRY_CA"
 	insecureKey            = "TRIVY_INSECURE"
 )
