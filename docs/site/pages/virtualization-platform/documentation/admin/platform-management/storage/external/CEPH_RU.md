@@ -4,11 +4,11 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-Чтобы создать StorageClass’ы на основе RBD (RADOS Block Device) или файловой системы Ceph, можно использовать модуль csi-ceph, который позволяет настроить подключение к одному или нескольким Ceph-кластерам.
+Чтобы создать объекты StorageClass на основе RBD (RADOS Block Device) или файловой системы Ceph, можно использовать модуль csi-ceph, который позволяет настроить подключение к одному или нескольким Ceph-кластерам.
 
 ## Включение модуля
 
-Чтобы включить модуль csi-ceph, примените следующий ресурс ModuleConfig:
+Чтобы включить модуль csi-ceph, примените следующий ресурс `ModuleConfig`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -23,7 +23,7 @@ EOF
 
 ## Подключение к Ceph-кластеру
 
-Чтобы настроить подключение к Ceph-кластеру, необходимо применить ресурс `CephClusterConnection`. Пример ресурса:
+Чтобы настроить подключение к Ceph-кластеру, необходимо применить ресурс `CephClusterConnection`. Пример команды:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -41,7 +41,7 @@ spec:
 EOF
 ```
 
-Проверить создание подключения можно командой (фаза должна быть в статусе `Created`):
+Проверить создание подключения можно командой (фаза должна быть в статусе Created):
 
 ```shell
 d8 k get cephclusterconnection ceph-cluster-1
@@ -67,7 +67,7 @@ EOF
 
 ## Создание StorageClass
 
-Создание StorageClass’ов осуществляется через ресурс `CephStorageClass`, который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без `CephStorageClass` может привести к нежелательному поведению.
+Создание объектов StorageClass осуществляется через ресурс `CephStorageClass`, который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без `CephStorageClass` может привести к ошибкам.
 
 Пример создания StorageClass на основе RBD (RADOS Block Device):
 
@@ -106,7 +106,7 @@ spec:
 EOF
 ```
 
-Проверьте, что созданные CephStorageClass'ы перешли в состояние `Created` и соответствующие StorageClass'ы создались:
+Проверьте, что созданные ресурсы CephStorageClass перешли в состояние Created и соответствующие объекты StorageClass создались:
 
 ```shell
 d8 k get cephstorageclass
@@ -126,6 +126,5 @@ d8 k get sc
 # ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ```
 
-Если StorageClass'ы появились, значит настройка модуля csi-ceph завершена.
-Теперь пользователи могут создавать PersistentVolume, указывая созданные StorageClass`ы.
-Теперь пользователи могут создавать PersistentVolume, указывая созданные StorageClass`ы.
+Если объекты StorageClass появились, значит настройка модуля csi-ceph завершена.
+Теперь пользователи могут создавать PersistentVolume, указывая созданные объекты StorageClass.

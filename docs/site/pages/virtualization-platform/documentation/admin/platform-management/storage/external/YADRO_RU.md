@@ -58,7 +58,7 @@ EOF
 ## Создание StorageClass
 
 Для создания StorageClass необходимо использовать ресурс `YadroStorageClass`.
-Ручное создание ресурса StorageClass без `YadroStorageClass` может привести к нежелательным последствиям.
+Ручное создание ресурса StorageClass без `YadroStorageClass` может привести к ошибкам.
 
 Пример команды для создания класса хранения на основе системы хранения данных TATLIN.UNIFIED:
 

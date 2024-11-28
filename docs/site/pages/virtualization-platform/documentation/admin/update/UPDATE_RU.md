@@ -98,11 +98,8 @@ d8 k get deckhouserelease
 d8 k get modulereleases
 ```
 {% offtopic title="Схема использования параметра releaseChannel при установке и в процессе работы платформы" %}
-
 ![Схема использования параметра releaseChannel при установке и в процессе работы платформы](/images/common/deckhouse-update-process.png)
-
 {% endofftopic %}
-
 
 Для отключения механизма обновления платформы, удалите в конфигурации модуля `deckhouse` параметр `.spec.settings.releaseChannel`. В этом случае платформа не проверяет обновления и обновление на patch-релизы не выполняется.
 

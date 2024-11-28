@@ -34,7 +34,7 @@ d8 k get module csi-nfs -w
 ## Создание StorageClass
 
 Для создания StorageClass необходимо использовать ресурс `NFSStorageClass`.
-Ручное создание ресурса StorageClass без `NFSStorageClass` может привести к нежелательным последствиям.
+Ручное создание ресурса StorageClass без `NFSStorageClass` может привести к ошибкам.
 
 Пример команды для создания класса хранения на базе NFS:
 
@@ -48,7 +48,7 @@ spec:
   connection:
     # Адрес NFS сервера.
     host: 10.223.187.3
-    # Путь к точке монтирования на NFS сервере
+    # Путь к точке монтирования на NFS сервере.
     share: /
     # Версия NFS сервера.
     nfsVersion: "4.1"
