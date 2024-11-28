@@ -49,7 +49,7 @@ editions:
   excludeModules:
   - dashboard
 
-- name: SE+
+- name: SE-plus
   modulesDir: "ee/se-plus/modules"
   terraformProviders:
     - vsphere
