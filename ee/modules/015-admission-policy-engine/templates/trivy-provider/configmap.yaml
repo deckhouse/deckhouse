@@ -1,4 +1,5 @@
 {{- if include "trivy.provider.enabled" $ }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
