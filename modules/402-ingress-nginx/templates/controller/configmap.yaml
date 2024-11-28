@@ -80,7 +80,7 @@ data:
   use-http3: "true"
   {{- end}}
   {{- if $crd.spec.legacySSL }}
-  ssl-protocols: "TLSv1 TLSv1.1 TLSv1.2"
+  ssl-protocols: "TLSv1 TLSv1.1 TLSv1.2 TLSv1.3"
   ssl-ciphers: "DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:\
                 ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:\
                 DHE-RSA-AES256-SHA256:DHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384:\
