@@ -55,7 +55,6 @@ def main(ctx: hook.Context):
 
 
 def validate(ctx: DotMap, output: hook.ValidationsCollector):
-    print("RUN")
     operation = ctx.review.request.operation
     if operation == "CREATE" or operation == "UPDATE":
         validate_creation_or_update(ctx, output)
@@ -67,9 +66,26 @@ def validate(ctx: DotMap, output: hook.ValidationsCollector):
 
 def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
     references = ctx.review.request.object.spec.policies.verifyImageSignatures.imageReferences
+    if references is None:
+        output.allow()
+        return
+
     print("New references:", references)
-    existing_references = [obj.filterResult for obj in ctx.snapshots.policies if obj.filterResult is not None]
+    existing_references = [obj.filterResult for obj in ctx.snapshots.policies if obj.filterResult.imageReferences is not None]
     print("Existing references:", existing_references)
+
+    for exobj in existing_references:
+        for exref in exobj.imageReferences:
+            for ref in references:
+                ref_clean = ref.replace("*",'').strip()
+                exref_clean = exref.replace("*",'').strip()
+                print("Check1: ", ref_clean)
+                print("Check2: ", exref_clean)
+                min_length = min(len(ref_clean), len(exref_clean))
+                if ref_clean[:min_length] == exref_clean[:min_length]:
+                    output.deny(f"ImageReference \"{ref}\" has intersection in the policy \"{exobj.name}\"")
+                    return
+
 
     # output.deny(f"users.deckhouse.io \"{user_name}\", user \"{user_with_the_same_email[0].name}\" is already using email \"{email}\"")
     output.allow()
