@@ -1,0 +1,62 @@
+{{- $version := "2.11" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
+from: {{ .Images.BASE_SCRATCH }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - nvme
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    growpart: {{ $version }}
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+fromArtifact: common/src-artifact
+git:
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+shell:
+  install:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone -b v{{ $version }} --depth 1 {{ .SOURCE_REPO }}/linux-nvme/nvme-cli.git /src/nvme-cli
+  - cd /src/nvme-cli
+  - git apply /patches/*.patch --verbose
+  - git clone -b v1.11 --depth 1 {{ .SOURCE_REPO }}/linux-nvme/libnvme.git /src/nvme-cli/subprojects/libnvme
+  - rm -rf /src/nvme-cli/.git /src/nvme-cli/subprojects/libnvme/.git
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+from: {{ .Images.BASE_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make meson build-base bash linux-headers
+  install:
+  - cd /src/nvme-cli
+  - |
+    meson .build --buildtype=release --default-library=static -Dc_link_args="-static" \
+      --wrap-mode=forcefallback -Dlibnvme:tests=false -Dlibnvme:keyutils=disabled \
+      -Djson-c=disabled -Dlibnvme:json-c=disabled -Dlibnvme:openssl=disabled -Dlibnvme:python=disabled
+  - ninja -C .build
