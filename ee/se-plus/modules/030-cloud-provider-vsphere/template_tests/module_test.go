@@ -226,7 +226,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 	BeforeSuite(func() {
 		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/vsphere", "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
+		err = os.Symlink("/deckhouse/ee/se-plus/candi/cloud-providers/vsphere", "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
