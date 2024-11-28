@@ -76,6 +76,7 @@ spec:
         - --disable-cert-rotation=true
         - --metrics-backend=prometheus
         - --disable-opa-builtin={http.send}
+        - --external-data-provider-response-cache-ttl=30s
         env:
         - name: POD_NAMESPACE
           valueFrom:
