@@ -11,7 +11,7 @@ lang: ru
 - [GitHub](#github);
 - [GitLab](#gitlab);
 - [Crowd](#atlassian-crowd);
-- [BitBucket Cloud](#bitbucket-cloud);
+- [Bitbucket Cloud](#bitbucket-cloud);
 - [LDAP](#ldap);
 - [OIDC](#oidc-openid-connect).
 
@@ -23,7 +23,7 @@ lang: ru
 
 ## Создание пользователя
 
-Для создания статического пользователя используется ресурс [User](../../reference/cr.html#user).
+Для создания статического пользователя используется ресурс [User](../../reference/cr/user.html).
 
 Перед этим необходимо сгенерировать хэш пароля с помощью следующей команды:
 
@@ -50,7 +50,7 @@ spec:
 
 ## Создание группы пользователей
 
-Для создания группы пользователей используется ресурс [Group](../../reference/cr.html#group).
+Для создания группы пользователей используется ресурс [Group](../../reference/cr/group.html).
 
 Пример манифеста для создания группы:
 
@@ -84,11 +84,11 @@ spec:
     # ...
     ```
 
-1. Перейдите по предоставленному адресу и используйте в качестве учетных данных e-mail и пароль, которые вы указали при создании пользователя.
+1. Перейдите по предоставленному адресу и используйте в качестве учетных данных email и пароль, которые вы указали при создании пользователя.
 
 ## Настройка внешних провайдеров
 
-Для настройки внешниx провайдеров используется ресурс [DexProvider](../../reference/cr.html#dexprovider).
+Для настройки внешниx провайдеров используется ресурс [DexProvider](../../reference/cr/dexprovider.html).
 
 ### GitHub
 
@@ -107,9 +107,9 @@ spec:
     clientSecret: plainstring
 ```
 
-В [организации GitHub](https://docs.github.com/ru/organizations) необходимо создать новое приложение, для этого выполните следующие шаги:
+В [организации GitHub](https://docs.github.com/ru/organizations) необходимо создать новое приложение. Для этого выполните следующие шаги:
 
-1. Перейдите в «Settings» → «Developer settings» → «OAuth Aps» → «Register a new OAuth application».
+1. Перейдите в «Settings» → «Developer settings» → «OAuth Apps» → «Register a new OAuth application».
 1. В поле «Authorization callback URL» укажите адрес:
    `https://dex.<modules.publicDomainTemplate>/callback`.
 
@@ -196,7 +196,7 @@ spec:
 Для того чтобы создать Generic-приложение в Atlassian Crowd, выполните следующие шаги:
 
 1. Перейдите в раздел «Applications» → «Add application».
-1. Полученные `Application Name` и `Password` укажите в ресурсе [DexProvider](../../reference/cr.html#dexprovider).
+1. Полученные `Application Name` и `Password` укажите в ресурсе [DexProvider](../../reference/cr/dexprovider.html).
 1. Группы CROWD укажите в lowercase-формате для ресурса `DexProvider`.
 
 ### Bitbucket Cloud
@@ -266,6 +266,7 @@ spec:
 ```
 
 Для настройки аутентификации в LDAP выполните следующие шаги:
+
 1. Создайте в LDAP read-only-пользователя (service account).
 1. Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` кастомного ресурса `DexProvider`.
 1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
@@ -336,8 +337,8 @@ spec:
 
 Для обеспечения детализированного доступа пользователя к приложениям необходимо:
 
-* добавить параметр `allowedUserGroups` в ModuleConfig нужного приложения;
-* добавить группы к пользователю (наименования групп должны совпадать как на стороне Blitz, так и на стороне Deckhouse).
+1. добавить параметр `allowedUserGroups` в ModuleConfig нужного приложения;
+1. добавить группы к пользователю (наименования групп должны совпадать как на стороне Blitz, так и на стороне Deckhouse).
 
 Пример добавления групп для модуля Prometheus:
 

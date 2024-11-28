@@ -6,11 +6,11 @@ lang: ru
 
 ## Описание
 
-Проекты (ресурс [Project](../../reference/cr.html#project)) в платформе обеспечивают изолированные окружения для создания ресурсов пользователя.
+Проекты (ресурс [Project](../../reference/cr/project.html)) в платформе обеспечивают изолированные окружения для создания ресурсов пользователя.
 
 Настройки проекта позволяют задать квоты для ресурсов, ограничить сетевое взаимодействие, как внутри платформы, так и вне её.
 
-Для создания проектов используются шаблоны (ресурс [ProjectTemplate](../../reference/cr.html#projecttemplate)).
+Для создания проектов используются шаблоны (ресурс [ProjectTemplate](../../reference/cr/projecttemplate.html)).
 
 {% alert level="warning" %}
 При изменении шаблона проекта, все созданные проекты будут обновлены в соответствии с новым шаблоном.
@@ -30,7 +30,7 @@ lang: ru
   - настройка для администрирования проекта.
 
 - `secure` — включает все возможности шаблона `default`, а также дополнительные функции:
-  - правила аудита обращения Linux-пользователей проекта к ядру;
+  - правила аудита обращения Linux-пользователей проекта к ядру.
 
 Чтобы получить список всех доступных параметров для шаблона проекта, выполните следующую команду:
 
@@ -40,8 +40,8 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 ## Создание проекта
 
-1. Чтобы создать проект, создайте ресурс [Project](../../reference/cr.html#project), указав имя шаблона проекта в поле `.spec.projectTemplateName`.
-1. В параметре `.spec.parameters` ресурса [Project](../../reference/cr.html#project) укажите значения для параметров из секции `.spec.parametersSchema.openAPIV3Schema` ресурса [ProjectTemplate](../../reference/cr.html#projecttemplate).
+1. Чтобы создать проект, создайте ресурс [Project](../../reference/cr/project.html), указав имя шаблона проекта в поле `.spec.projectTemplateName`.
+1. В параметре `.spec.parameters` ресурса [Project](../../reference/cr/project.html) укажите значения для параметров из секции `.spec.parametersSchema.openAPIV3Schema` ресурса [ProjectTemplate](../../reference/cr/projecttemplate.html).
 
    Пример создания проекта с помощью ресурса Project из `default` ProjectTemplate представлен ниже:
 
