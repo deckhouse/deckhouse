@@ -149,6 +149,18 @@ common:
   version:
     en: version
     ru: версия
+  modules_of_a_scope:
+    en: The modules within the scope
+    ru: Модули, входящие в область
+  namespaces_used_by_modules:
+    en: Namespaces in which modules of a scope operate
+    ru: Пространства имен используемых модулями области
+  all_modules:
+    en: All modules
+    ru: Все модули
+  all_namespaces:
+    en: All namespaces
+    ru: Все пространства имен         
   versions:
     en: versions
     ru: версии
