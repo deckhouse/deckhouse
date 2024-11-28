@@ -37,7 +37,6 @@ function check_readiness() {
     fi
   else
     echo "Unknown state in file \"$readiness_file_path\": \"$(< "$readiness_file_path")\""
-    exit 1
   fi
 }
 
