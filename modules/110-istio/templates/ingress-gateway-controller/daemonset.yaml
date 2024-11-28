@@ -202,7 +202,7 @@ spec:
           httpGet:
             path: /healthz/ready
             port: 15021
-  {{- if $.Values.istio.sidecar.livenessProbeEnabled }}
+  {{- if ($.Values.global.enabledModules | has "admission-policy-engine") }}
         livenessProbe:
           httpGet:
             path: /healthz/ready
