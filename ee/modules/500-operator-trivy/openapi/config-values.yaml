@@ -125,33 +125,13 @@ properties:
       List of registry CA certificates for connecting to private registries.
       
       If there is more than one certificate, they are specified sequentially without additional line breaks.
-
-      *Example:*
+    x-doc-examples:
+    - |
       ```yaml
-      registriesCA: |-
         -----BEGIN CERTIFICATE-----
-        MIIDfDCCAmSgAwIBAgIUPSUV/R5CLPXseGlF7YVCr9gt4LAwDQYJKoZIhvcNAQEL
-        BQAwWDELMAkGA1UEBhMCVVMxDjAMBgNVBAgMBVN0YXRlMQ0wCwYDVQQHDARUb3du
-        MRUwEwYDVQQKDAxPcmdhbml6YXRpb24xEzARBgNVBAMMCm5leHVzLXRlc3QwHhcN
-        MjQxMTIxMDc1MjE2WhcNMjUxMTIxMDc1MjE2WjBYMQswCQYDVQQGEwJVUzEOMAwG
-        KoZIhvcNAQELBQADggEBAClOsateVJj11YvRCDrfYZvPpMWDdZHiPxV9yQgkq7uP
-        63Bzp+6zB1IM16cbgitrkCQEBJhvluRbHn4a6utrnA3dWMHH2+qzYRySQi2FOdPN
-        Yl8pxqA9hnXFFAXPfI8Rk3UQLjTYhWsV5Xeis442dUopJJPExN9PNvJ6mrQX29e8
-        GAN3OmUiK928Mkgdf+qooUsiPexNnRStJ2SulK/dLdQc4r8aZ8HP4JWl6vCSeDI0
-        M6inHZJ77Q+xWy997+07q0wswjZ7f9SWkGMTVvDq8dp7HRTMvBtregBpRQecDvuj
-        35CMgeCZPoBbgknXszKw7O0aTWgr7+ehBI+Q8sAXMJY=
+             .................
         -----END CERTIFICATE-----
         -----BEGIN CERTIFICATE-----
-        MIIDfDCCAmSgAwIBAgIUU6lD+uD4N9aOL4soKXNwY6OUj60wDQYJKoZIhvcNAQEL
-        BQAwWDELMAkGA1UEBhMCVVMxDjAMBgNVBAgMBVN0YXRlMQ0wCwYDVQQHDARUb3du
-        MRUwEwYDVQQKDAxPcmdhbml6YXRpb24xEzARBgNVBAMMCm5leHVzLXRlc3QwHhcN
-        MjQxMTIxMTEzNjI1WhcNMjUxMTIxMTEzNjI1WjBYMQswCQYDVQQGEwJVUzEOMAwG
-        A1UECAwFU3RhdGUxDTALBgNVBAcMBFRvd24xFTATBgNVBAoMDE9yZ2FuaXphdGlv
-        ntCzLpMZ7zuKn7SMxmebphUQVuHKIC0CAwEAAaM+MDwwGwYDVR0RBBQwEocECoAA
-        /ogiONhTGS/AchSvv40dtbXJG44xT2HBY2kGm/0euWa83ZYLqKHIEyvV52npeXSq
-        tktThvl8peBkd/LS3PF/TPTxsplM1yaNvT0B5RrUSQ6IlKoshxY+xFktDboF/RIY
-        eG8dt39/n7BduItv2hNaNwgU9GEUIQ6VQV+pbQFsvGcu9+1NxnJbUi/vXKSJEOkk
-        AIyO7AA1TFlJ/m5Pd8SQYhz5WfCSIwFfp/H2rY73cyNUlAgY0oCxrwxjxzFIpdCF
-        67hTqj/DMwFWC8qPS3iiGr1TO9phnjPUBV6ch5qed4I=
+             .................
         -----END CERTIFICATE-----
       ```
