@@ -45,9 +45,6 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache git openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GOPROXY={{ .GOPROXY }}
   - git clone {{ .SOURCE_REPO }}/mikefarah/yq --branch v2.4.1
