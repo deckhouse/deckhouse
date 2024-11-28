@@ -24,7 +24,7 @@
 Создайте файл `config.yml`.
 {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
 {% snippetcut name="config.yml" selector="config-yml" %}
-{% include_file "{{ includePath }}" syntax="yaml" %}
+{% include_file "_includes/getting_started/bm/partials/config.ru.yml.ce.inc" syntax="yaml" %}
 {% endsnippetcut %}
 
 {%- if page.platform_type == 'existing' %}
