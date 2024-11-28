@@ -69,7 +69,7 @@ func NewHttpClient(config *ClientConfig) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) Send(url, method string, body interface{}) ([]byte, error) {
+func (c *Client) SendJSON(url, method string, body any) ([]byte, error) {
 	token, err := c.token.GetToken()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get token: %v", err)

@@ -7,12 +7,18 @@ package staticpod
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
 	"sync"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/render"
+	slogchi "github.com/samber/slog-chi"
 )
 
 const (
@@ -23,20 +29,17 @@ const (
 	pkiConfigDirectoryPath = "/etc/kubernetes/system-registry/pki"
 
 	registryStaticPodConfigPath = "/etc/kubernetes/manifests/system-registry.yaml"
-
-	distributionConfiguration = "distributionConfiguration"
-	authConfiguration         = "authConfiguration"
-	pkiFiles                  = "pkiFiles"
-	staticPodConfiguration    = "staticPodConfiguration"
 )
 
 type apiServer struct {
 	requestMutex sync.Mutex
-	log          *dlog.Logger
+
+	log *dlog.Logger
 }
 
 func Run(ctx context.Context) error {
-	log := dlog.Default().With("component", "static pod manager")
+	log := dlog.Default().
+		With("component", "static pod manager")
 
 	log.Info("Starting")
 	defer log.Info("Stopped")
@@ -45,12 +48,26 @@ func Run(ctx context.Context) error {
 		log: log,
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/staticpod", api.handleStaticPod)
+	logConfig := slogchi.Config{
+		WithSpanID:    true,
+		WithTraceID:   true,
+		WithRequestID: true,
+	}
+
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(slogchi.NewWithConfig(slog.New(log.Handler()), logConfig))
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.NoCache)
+	r.Use(middleware.AllowContentType("application/json"))
+	r.Use(render.SetContentType(render.ContentTypeJSON))
+
+	r.Post("/staticpod", api.handleStaticPodPost)
+	r.Delete("/staticpod", api.handleStaticPodDelete)
 
 	httpServer := &http.Server{
 		Addr:    listenAddr,
-		Handler: mux,
+		Handler: r,
 	}
 
 	context.AfterFunc(ctx, func() {
@@ -70,134 +87,102 @@ func Run(ctx context.Context) error {
 	return nil
 }
 
-func (s *apiServer) handleStaticPod(w http.ResponseWriter, r *http.Request) {
-	log := s.log.With("endpoint", r.RequestURI, "method", r.Method)
-
-	switch r.Method {
-	case http.MethodPost:
-		s.handleStaticPodPost(w, r)
-	case http.MethodDelete:
-		s.handleStaticPodDelete(w, r)
-	default:
-		log.Warn("Method not allowed")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
 func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) {
-	log := s.log.With("handler", "create")
+	log := s.log.With(
+		"handler", "post",
+		"endpoint", r.RequestURI,
+		"method", r.Method,
+		"remoteAddr", r.RemoteAddr,
+	)
 
-	log.Info("Received request to create/update static pod and configuration", "Client address:", r.RemoteAddr)
-
-	if r.Method != http.MethodPost {
-		log.Warn("Method not allowed", "endpoint", r.RequestURI, "method", r.Method)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
+	sendInternalError := func(message string, err error) {
+		log.Error(message, "error", err)
+		render.Render(w, r, ErrInternalErrorText(message))
 	}
 
 	// Lock the requestMutex to prevent concurrent requests and release it after the request is processed
 	s.requestMutex.Lock()
 	defer s.requestMutex.Unlock()
 
-	var data EmbeddedRegistryConfig
+	var (
+		data EmbeddedRegistryConfig
+		err  error
+	)
+
 	// Decode request body to struct EmbeddedRegistryConfig and return error if decoding fails
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		log.Warn("Error decoding request body", "error", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	if err = render.Bind(r, &data); err != nil {
+		render.Render(w, r, ErrBadRequest(err))
 		return
 	}
 
-	// Fill the host IP address from the HOST_IP environment variable
-	hostIpAddress, err := data.fillHostIpAddress()
-	if err != nil {
-		log.Error("Error getting IP address", "error", err)
-		http.Error(w, "Internal server error: fillHostIpAddress", http.StatusInternalServerError)
-		return
-	}
-	data.IpAddress = hostIpAddress
-
-	// Validate the request data
-	if err := data.validate(); err != nil {
-		log.Warn("Request validation error", "error", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	data.IpAddress = os.Getenv("HOST_IP")
+	if data.IpAddress == "" {
+		err = fmt.Errorf("HOST_IP environment variable is not set")
+		sendInternalError("Error getting IP address", err)
 		return
 	}
 
-	changes := make(map[string]bool)
+	var resp ChangesReponse
 
 	// Save the PKI files
-	changes[pkiFiles], err = data.Pki.savePkiFiles(pkiConfigDirectoryPath, &data.ConfigHashes)
-	if err != nil {
-		log.Error("Error saving PKI files", "error", err)
-		http.Error(w, "Error saving PKI files", http.StatusInternalServerError)
+	if resp.PKI, err = data.Pki.savePkiFiles(
+		pkiConfigDirectoryPath,
+		&data.ConfigHashes,
+	); err != nil {
+		sendInternalError("Error saving PKI files", err)
 		return
 	}
 
 	// Process the templates with the given data and create the static pod and configuration files
-
-	changes[authConfiguration], err = data.processTemplate(
+	if resp.Auth, err = data.processTemplate(
 		authConfigTemplateName,
 		authConfigPath,
 		&data.ConfigHashes.AuthTemplateHash,
-	)
-
-	if err != nil {
-		log.Error("Error processing auth template", "error", err)
-		http.Error(w, "Error processing auth template", http.StatusInternalServerError)
+	); err != nil {
+		sendInternalError("Error processing Auth template", err)
 		return
 	}
 
-	changes[distributionConfiguration], err = data.processTemplate(
+	if resp.Distribution, err = data.processTemplate(
 		distributionConfigTemplateName,
 		distributionConfigPath,
 		&data.ConfigHashes.DistributionTemplateHash,
-	)
-
-	if err != nil {
-		log.Error("Error processing distribution template", "error", err)
-		http.Error(w, "Error processing distribution template", http.StatusInternalServerError)
+	); err != nil {
+		sendInternalError("Error processing Distribution template", err)
 		return
 	}
 
-	changes[staticPodConfiguration], err = data.processTemplate(
+	if resp.Pod, err = data.processTemplate(
 		registryStaticPodTemplateName,
 		registryStaticPodConfigPath,
 		nil,
-	)
-
-	if err != nil {
-		log.Error("Error processing static pod template", "error", err)
-		http.Error(w, "Error processing static pod template", http.StatusInternalServerError)
+	); err != nil {
+		sendInternalError("Error processing static pod template", err)
 		return
 	}
 
-	if hasChanges(changes) {
+	if resp.HasChanges() {
 		log.Info("Static pod and configuration created/updated successfully")
 	} else {
 		log.Info("No changes in static pod and configuration")
 	}
 
-	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).
-		Encode(map[string]interface{}{
-			"changes": changes,
-		})
-
-	if err != nil {
-		log.Error("Error encoding response", "error", err)
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	if err = render.Render(w, r, resp); err != nil {
+		sendInternalError("Error encoding response", err)
 	}
 }
 
 func (s *apiServer) handleStaticPodDelete(w http.ResponseWriter, r *http.Request) {
-	log := s.log.With("handler", "delete")
+	log := s.log.With(
+		"handler", "delete",
+		"endpoint", r.RequestURI,
+		"method", r.Method,
+		"remoteAddr", r.RemoteAddr,
+	)
 
-	log.Info("Received request to delete static pod and configuration", "Client address:", r.RemoteAddr)
-
-	if r.Method != http.MethodDelete {
-		log.Warn("method not allowed", "endpoint", r.RequestURI, "method", r.Method)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
+	sendInternalError := func(message string, err error) {
+		log.Error(message, "error", err)
+		render.Render(w, r, ErrInternalErrorText(message))
 	}
 
 	// Lock the requestMutex to prevent concurrent requests and release it after the request is processed
@@ -205,62 +190,38 @@ func (s *apiServer) handleStaticPodDelete(w http.ResponseWriter, r *http.Request
 	defer s.requestMutex.Unlock()
 
 	var err error
-	changes := make(map[string]bool)
+	var resp ChangesReponse
 
 	// Delete the static pod file
-	changes[staticPodConfiguration], err = deleteFile(registryStaticPodConfigPath)
-	if err != nil {
-		log.Error("Error deleting static pod file", "error", err)
-		http.Error(w, "Error deleting static pod file", http.StatusInternalServerError)
+	if resp.Pod, err = deleteFile(registryStaticPodConfigPath); err != nil {
+		sendInternalError("Error deleting static pod file", err)
 		return
 	}
 
 	// Delete the auth config file
-	changes[authConfiguration], err = deleteFile(authConfigPath)
-	if err != nil {
-		log.Error("Error deleting auth config file", "error", err)
-		http.Error(w, "Error deleting auth config file", http.StatusInternalServerError)
+	if resp.Auth, err = deleteFile(authConfigPath); err != nil {
+		sendInternalError("Error deleting Auth config file", err)
 		return
 	}
 
 	// Delete the distribution config file
-	changes[distributionConfiguration], err = deleteFile(distributionConfigPath)
-	if err != nil {
-		log.Error("Error deleting distribution config file", "error", err)
-		http.Error(w, "Error deleting distribution config file", http.StatusInternalServerError)
+	if resp.Distribution, err = deleteFile(distributionConfigPath); err != nil {
+		sendInternalError("Error deleting Distribution config file", err)
 		return
 	}
 
-	changes[pkiFiles], err = deleteDirectory(pkiConfigDirectoryPath)
-	if err != nil {
-		log.Error("Error deleting registry pki directory", "error", err)
-		http.Error(w, "Error deleting registry pki directory", http.StatusInternalServerError)
+	if resp.PKI, err = deleteDirectory(pkiConfigDirectoryPath); err != nil {
+		sendInternalError("Error deleting registry PKI directory", err)
 		return
 	}
 
-	if hasChanges(changes) {
+	if resp.HasChanges() {
 		log.Info("Static pod and configuration deleted successfully")
 	} else {
 		log.Info("No static pod and configuration to delete")
 	}
 
-	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).
-		Encode(map[string]interface{}{
-			"changes": changes,
-		})
-
-	if err != nil {
-		log.Error("Error encoding response", "error", err)
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	if err = render.Render(w, r, resp); err != nil {
+		sendInternalError("Error encoding response", err)
 	}
-}
-
-func hasChanges(changes map[string]bool) bool {
-	for _, changed := range changes {
-		if changed {
-			return true
-		}
-	}
-	return false
 }

@@ -7,7 +7,10 @@ toolchain go1.23.3
 require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241118153122-73959200f55f
-	github.com/go-logr/logr v1.4.1
+	github.com/go-chi/chi/v5 v5.1.0
+	github.com/go-chi/render v1.0.3
+	github.com/go-logr/logr v1.4.2
+	github.com/samber/slog-chi v1.12.3
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.21.0
 	k8s.io/api v0.30.3
@@ -19,6 +22,7 @@ require (
 
 require (
 	github.com/DataDog/gostackparse v0.7.0 // indirect
+	github.com/ajg/form v1.5.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -55,6 +59,8 @@ require (
 	github.com/weppos/publicsuffix-go v0.30.0 // indirect
 	github.com/zmap/zcrypto v0.0.0-20230310154051-c8b263fd8300 // indirect
 	github.com/zmap/zlint/v3 v3.5.0 // indirect
+	go.opentelemetry.io/otel v1.29.0 // indirect
+	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.16.0 // indirect

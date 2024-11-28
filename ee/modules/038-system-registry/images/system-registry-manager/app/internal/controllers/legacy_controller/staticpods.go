@@ -37,7 +37,7 @@ func (r *RegistryReconciler) deleteNodeRegistry(ctx context.Context, nodeName st
 	if err != nil {
 		return nil, err
 	}
-	return r.HttpClient.Send(fmt.Sprintf("https://%s:4577/staticpod/delete", podIP), http.MethodDelete, nil)
+	return r.HttpClient.SendJSON(fmt.Sprintf("https://%s:4577/staticpod/delete", podIP), http.MethodDelete, nil)
 }
 
 func (r *RegistryReconciler) createNodeRegistry(ctx context.Context, nodeName string, data staticpod.EmbeddedRegistryConfig) ([]byte, error) {
@@ -46,7 +46,7 @@ func (r *RegistryReconciler) createNodeRegistry(ctx context.Context, nodeName st
 	if err != nil {
 		return nil, err
 	}
-	return r.HttpClient.Send(fmt.Sprintf("https://%s:4577/staticpod/create", podIP), http.MethodPost, data)
+	return r.HttpClient.SendJSON(fmt.Sprintf("https://%s:4577/staticpod/create", podIP), http.MethodPost, data)
 }
 
 func (r *RegistryReconciler) prepareUpstreamRegistry() staticpod.UpstreamRegistry {

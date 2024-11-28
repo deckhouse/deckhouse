@@ -8,9 +8,11 @@ package registry_controller
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 
 	"embeded-registry-manager/internal/state"
+	httpclient "embeded-registry-manager/internal/utils/http_client"
 	"embeded-registry-manager/internal/utils/pki"
 
 	"github.com/go-logr/logr"
@@ -31,6 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+const (
+	staticPodURLFormat = "https://%s:4577/staticpod"
+)
+
 var (
 	masterNodesMatchingLabels = client.MatchingLabels{
 		state.LabelNodeIsMasterKey: "",
@@ -48,6 +54,8 @@ var _ reconcile.Reconciler = &nodeController{}
 type nodeController struct {
 	Client    client.Client
 	Namespace string
+
+	HttpClient *httpclient.Client
 
 	eventRecorder record.EventRecorder
 	reprocessCh   chan event.TypedGenericEvent[reconcile.Request]
@@ -290,12 +298,6 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 	}
 	log = log.WithValues("mode", config.Settings.Mode)
 
-	staticPodManagerIP, err := nc.findStaticPodManagerIP(ctx, node.Name)
-	if err != nil {
-		err = fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
-	}
-	log = log.WithValues("staticPodManagerIP", staticPodManagerIP)
-
 	if config.Settings.Mode == state.RegistryModeDirect {
 		// TODO: shutdown all static pods and delete PKI
 		log.Info("Shutdown node static pod for mode = direct")
@@ -356,6 +358,11 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 			log.Info("Processing first master node for mode == detached")
 
 			// TODO
+			err = nc.applyStaticPodConfig(ctx, node.Name)
+			if err != nil {
+				err = fmt.Errorf("apply Static Pod Configuration: %w", err)
+
+			}
 
 			return
 		}
@@ -369,7 +376,46 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 
 	log.Info("Processing master node")
 
+	// TODO
+	err = nc.applyStaticPodConfig(ctx, node.Name)
+	if err != nil {
+		err = fmt.Errorf("apply Static Pod Configuration: %w", err)
+
+	}
+
 	return
+}
+
+func (nc *nodeController) applyStaticPodConfig(ctx context.Context, nodeName string) error {
+	podIP, err := nc.findStaticPodManagerIP(ctx, nodeName)
+	if err != nil {
+		return fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
+	}
+
+	url := fmt.Sprintf(staticPodURLFormat, podIP)
+	buf, err := nc.HttpClient.SendJSON(url, http.MethodPost, "test")
+
+	if err != nil {
+		return fmt.Errorf("error sending HTTP request: %w, body: %s", err, buf)
+	}
+
+	return nil
+}
+
+func (nc *nodeController) deleteStaticPodConfig(ctx context.Context, nodeName string) error {
+	podIP, err := nc.findStaticPodManagerIP(ctx, nodeName)
+	if err != nil {
+		return fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
+	}
+
+	url := fmt.Sprintf(staticPodURLFormat, podIP)
+	buf, err := nc.HttpClient.SendJSON(url, http.MethodDelete, nil)
+
+	if err != nil {
+		return fmt.Errorf("error sending HTTP request: %w, body: %s", err, buf)
+	}
+
+	return nil
 }
 
 func (nc *nodeController) findStaticPodManagerIP(ctx context.Context, nodeName string) (string, error) {

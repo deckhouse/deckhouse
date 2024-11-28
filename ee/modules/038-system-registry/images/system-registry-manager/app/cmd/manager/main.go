@@ -23,6 +23,7 @@ import (
 
 	"embeded-registry-manager/internal/controllers/registry_controller"
 	"embeded-registry-manager/internal/state"
+	httpclient "embeded-registry-manager/internal/utils/http_client"
 )
 
 const (
@@ -45,6 +46,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create custom HTTP client
+	httpClient, err := httpclient.NewDefaultHttpClient()
+	if err != nil {
+		log.Error(err, "Unable to create HTTP client")
+		os.Exit(1)
+	}
+
 	ctx := ctrl.SetupSignalHandler()
 
 	context.AfterFunc(ctx, func() {
@@ -52,7 +60,7 @@ func main() {
 	})
 
 	// Set up and start manager
-	err = setupAndStartManager(ctx, cfg)
+	err = setupAndStartManager(ctx, cfg, httpClient)
 	if err != nil {
 		ctrl.Log.Error(err, "Failed to start the embedded registry manager")
 	}
@@ -65,7 +73,7 @@ func main() {
 }
 
 // setupAndStartManager sets up the manager, adds components, and starts the manager
-func setupAndStartManager(ctx context.Context, cfg *rest.Config) error {
+func setupAndStartManager(ctx context.Context, cfg *rest.Config, httpClient *httpclient.Client) error {
 	// Set up the manager with leader election and other options
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Metrics: metricsserver.Options{
@@ -95,8 +103,9 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config) error {
 	}
 
 	nodeController := registry_controller.NodeController{
-		Client:    mgr.GetClient(),
-		Namespace: state.RegistryNamespace,
+		Client:     mgr.GetClient(),
+		Namespace:  state.RegistryNamespace,
+		HttpClient: httpClient,
 	}
 
 	if err := nodeController.SetupWithManager(ctx, mgr); err != nil {
