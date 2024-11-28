@@ -53,6 +53,7 @@ editions:
   modulesDir: "ee/se-plus/modules"
   terraformProviders:
     - vsphere
+    - ovirt
   excludeModules:
   - dashboard
 
@@ -61,7 +62,6 @@ editions:
   terraformProviders:
     - openstack
     - vcd
-    - ovirt
     - decort
 
 - name: FE

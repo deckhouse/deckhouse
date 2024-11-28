@@ -165,7 +165,7 @@ alerts:
       sourceFile: ee/se-plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
       moduleUrl: 021-cni-cilium
       module: cni-cilium
-      edition: se
+      edition: se+
       description: |
         There is orphan EgressGatewayPolicy in the cluster: with the name: `{{$labels.name}}` which has irrelevant EgressGateway name.
 

@@ -307,7 +307,7 @@ func modules(deckhouseRoot string) (modules []module) {
 			md := module{
 				Name:    file.Name(),
 				Path:    filepath.Join("ee/se-plus/modules", file.Name()),
-				Edition: se,
+				Edition: sePlus,
 			}
 			modules = append(modules, md)
 		}
