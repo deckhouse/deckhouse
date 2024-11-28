@@ -65,6 +65,8 @@ var (
 			"properties.clusterConfiguration.properties.cloud.properties.provider",
 			// http and https
 			"properties.modulesImages.properties.registry.properties.scheme",
+			// allow SE-plus redaction
+			"properties.deckhouseEdition",
 		},
 		"modules/150-user-authn/crds/dex-provider.yaml": {
 			// v1alpha1 migrated to v1
