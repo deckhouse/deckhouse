@@ -1,4 +1,4 @@
-{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.verifyImageSignatures.enabled) }}
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) }}
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8VerifyImageSignature
@@ -11,10 +11,14 @@ spec:
     scope: Namespaced
     namespaceSelector:
       matchLabels:
-        security.deckhouse.io/ratify-provider: ""
+        security.deckhouse.io/trivy-provider: ""
+  enforcementAction: deny
+  match:
     kinds:
     - apiGroups:
       - ""
       kinds:
       - Pod
+    namespaces:
+    - default
 {{- end }}
