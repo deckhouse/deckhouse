@@ -34,7 +34,7 @@ kubernetes:
         "imageReferences": .spec.policies.verifyImageSignatures.imageReferences
       }
 kubernetesValidating:
-- name: securitypolicies-verifyImageSignatures.deckhouse.io
+- name: securitypolicies.deckhouse.io
   group: main
   rules:
   - apiGroups:   ["deckhouse.io"]
