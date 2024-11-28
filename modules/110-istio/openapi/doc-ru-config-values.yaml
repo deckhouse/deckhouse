@@ -130,8 +130,6 @@ properties:
         items:
           type: string
           pattern: '^[0-9]{1,5}$'
-      livenessProbeEnabled:
-        description: Включение livenessProbe для sidecar контейнеров.
       resourcesManagement:
         description: |
           Управляет ресурсами sidecar-контейнера Istio.
