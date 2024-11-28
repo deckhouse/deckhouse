@@ -79,22 +79,26 @@ spec:
             value: "false"
           - name: OPERATOR_SCAN_JOB_TIMEOUT
             value: "5m"
-          {{- if or $.Values.global.modulesImages.registry.CA .Values.operatorTrivy.registriesCA }}
+          {{- if or $.Values.global.modulesImages.registry.CA .Values.operatorTrivy.additionalRegistryCA }}
           - name: OPERATOR_SCAN_JOB_REGISTRY_CA
             value: |-
             {{- if $.Values.global.modulesImages.registry.CA -}}
             {{- trim $.Values.global.modulesImages.registry.CA | nindent 14 -}}
             {{- end -}}
-            {{- if .Values.operatorTrivy.registriesCA -}}
-            {{- trim .Values.operatorTrivy.registriesCA | nindent 14 -}}
+            {{- if .Values.operatorTrivy.additionalRegistryCA -}}
+            {{- range .Values.operatorTrivy.additionalRegistryCA }} 
+            {{- trim .ca | nindent 14 }}
+            {{- end -}}
             {{- end }}
           - name: TRIVY_REGISTRY_CA
             value: |-
             {{- if $.Values.global.modulesImages.registry.CA -}}
             {{- trim $.Values.global.modulesImages.registry.CA | nindent 14 -}}
             {{- end -}}
-            {{- if .Values.operatorTrivy.registriesCA -}}
-            {{- trim .Values.operatorTrivy.registriesCA | nindent 14 -}}
+            {{- if .Values.operatorTrivy.additionalRegistryCA -}}
+            {{- range .Values.operatorTrivy.additionalRegistryCA }} 
+            {{- trim .ca | nindent 14 }}
+            {{- end -}}
             {{- end -}}
           {{- end }}
           - name: OPERATOR_CONCURRENT_SCAN_JOBS_LIMIT

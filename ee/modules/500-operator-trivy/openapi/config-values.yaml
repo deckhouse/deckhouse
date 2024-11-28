@@ -119,20 +119,34 @@ properties:
       - http-only.registry.io
     items:
       type: string
-  registriesCA:
-    type: string
+  additionalRegistryCA:
+    type: array
     description: |
       List of registry CA certificates for connecting to private registries.
 
-      If there is more than one certificate, they are specified sequentially without additional line breaks.
+      If it is necessary to specify a certificate with an intermediate certificate, the chain is specified without additional line breaks.
+    items:
+      type: object   
+      properties:
+        name:
+          type: string
+        ca:
+          type: string       
     x-doc-examples:
     - |
       ```yaml
-      registriesCA: |
-        -----BEGIN CERTIFICATE-----
-        .................
-        -----END CERTIFICATE-----
-        -----BEGIN CERTIFICATE-----
-        .................
-        -----END CERTIFICATE-----
+      additionalRegistryCA:
+        - name: example CA
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            .................
+            -----END CERTIFICATE-----
+        - name: CA with intermediate CA
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            .................
+            -----END CERTIFICATE-----
+            -----BEGIN CERTIFICATE-----
+            .................
+            -----END CERTIFICATE-----
       ```
