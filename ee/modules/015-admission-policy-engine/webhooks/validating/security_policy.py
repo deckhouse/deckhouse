@@ -30,6 +30,7 @@ kubernetes:
     keepFullObjectsInMemory: false
     jqFilter: |
       {
+        "name": .metadata.name,
         "imageReferences": .spec.policies.verifyImageSignatures.imageReferences
       }
 kubernetesValidating:
