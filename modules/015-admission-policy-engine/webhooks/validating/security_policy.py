@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from typing import Optional
 
 # Copyright 2024 Flant JSC
 #
@@ -65,34 +66,35 @@ def validate(ctx: DotMap, output: hook.ValidationsCollector):
 
 
 def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
-    references = ctx.review.request.object.spec.policies.verifyImageSignatures.imageReferences
-    if references is None:
-        output.allow()
+    error = check_verify_image_signatures(ctx)
+    if error is not None:
+        output.deny(error)
         return
 
-    print("New references:", references)
+    output.allow()
+
+
+def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
+    return
+
+
+# check that all image references don't have intersection, it's required by ratify
+# https://ratify.dev/docs/plugins/verifier/cosign/#scopes
+def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
+    references = ctx.review.request.object.spec.policies.verifyImageSignatures.imageReferences
+    if references is None:
+        return None
+
     existing_references = [obj.filterResult for obj in ctx.snapshots.policies if obj.filterResult.imageReferences is not None]
-    print("Existing references:", existing_references)
 
     for exobj in existing_references:
         for exref in exobj.imageReferences:
             for ref in references:
                 ref_clean = ref.replace("*",'').strip()
                 exref_clean = exref.replace("*",'').strip()
-                print("Check1: ", ref_clean)
-                print("Check2: ", exref_clean)
                 min_length = min(len(ref_clean), len(exref_clean))
                 if ref_clean[:min_length] == exref_clean[:min_length]:
-                    output.deny(f"ImageReference \"{ref}\" has intersection in the policy \"{exobj.name}\"")
-                    return
-
-
-    # output.deny(f"users.deckhouse.io \"{user_name}\", user \"{user_with_the_same_email[0].name}\" is already using email \"{email}\"")
-    output.allow()
-
-
-def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
-    return
+                    return f"ImageReference \"{ref}\" has intersection in the policy \"{exobj.name}\""
 
 
 if __name__ == "__main__":
