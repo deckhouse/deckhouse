@@ -100,24 +100,12 @@ func updateConfig(input *go_hook.HookInput) error {
 		trivyData := make(map[string]string, 0)
 		customCA := input.Values.Get("global.modulesImages.registry.CA").String()
 
-		if len(input.Snapshots["trivy_provider_config"]) == 0 {
-			if len(customCA) != 0 {
-				trivyData[registryCAKey] = customCA
-			}
-
-			trivyData[insecureKey] = trivyConfig.InsecureDbRegistry
-
-			for k, v := range trivyConfig.InsecureRegistries {
-				trivyData[k] = v
-			}
-		} else {
-			if len(customCA) != 0 {
-				trivyData[registryCAKey] = customCA
-			}
-			trivyData[insecureKey] = trivyConfig.InsecureDbRegistry
-			for k, v := range trivyConfig.InsecureRegistries {
-				trivyData[k] = v
-			}
+		if len(customCA) != 0 {
+			trivyData[registryCAKey] = customCA
+		}
+		trivyData[insecureKey] = trivyConfig.InsecureDbRegistry
+		for k, v := range trivyConfig.InsecureRegistries {
+			trivyData[k] = v
 		}
 
 		input.Values.Set("admissionPolicyEngine.internal.trivyConfigData", trivyData)
