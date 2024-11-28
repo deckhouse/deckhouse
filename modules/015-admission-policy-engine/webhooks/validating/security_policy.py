@@ -82,7 +82,8 @@ def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
 # https://ratify.dev/docs/plugins/verifier/cosign/#scopes
 def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
     references = ctx.review.request.object.spec.policies.verifyImageSignatures.imageReferences
-    if references is None:
+    if len(references.toDict()) == 0:
+        print("Dont check")
         return None
 
     existing_references = [obj.filterResult for obj in ctx.snapshots.policies if obj.filterResult.imageReferences is not None]
@@ -95,6 +96,8 @@ def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
                 min_length = min(len(ref_clean), len(exref_clean))
                 if ref_clean[:min_length] == exref_clean[:min_length]:
                     return f"ImageReference \"{ref}\" has intersection in the policy \"{exobj.name}\""
+
+    return None
 
 
 if __name__ == "__main__":
