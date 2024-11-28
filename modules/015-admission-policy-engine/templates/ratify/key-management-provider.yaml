@@ -1,13 +1,15 @@
-{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.verifyImageSignatures.enabled) }}
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.enabled) }}
 {{- $context := . }}
-{{- range $refid, $ref := .Values.admissionPolicyEngine.verifyImageSignatures.imageReferences }}
-{{- range $keyid, $key := $ref.publicKeys }}
+{{- range $sp := .Values.admissionPolicyEngine.internal.securityPolicies }}
+{{- if $sp.spec.policies.verifyImageSignatures }}
+{{- $spName := $sp.metadata.name }}
+{{- range $id, $key := $sp.spec.policies.verifyImageSignatures.publicKeys }}
 ---
 apiVersion: config.ratify.deislabs.io/v1beta1
 kind: KeyManagementProvider
 metadata:
   {{- include "helm_lib_module_labels" (list $context (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
-  name: {{ printf "ratify-cosign-inline-key-%d-%d" $refid $keyid }}
+  name: {{ printf "ratify-cosign-inline-key-%s-%d" $spName $id }}
 spec:
   refreshInterval: ""
   type: inline
@@ -15,6 +17,7 @@ spec:
     contentType: key
     value: |
 {{ $key | indent 6 }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}
