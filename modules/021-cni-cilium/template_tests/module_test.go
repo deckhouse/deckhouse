@@ -127,7 +127,7 @@ func getSubdirs(dir string) ([]string, error) {
 }
 
 const (
-	ciliumEETempaltesPath = "/deckhouse/ee/se_plus/modules/021-cni-cilium/templates/"
+	ciliumEETempaltesPath = "/deckhouse/ee/se-plus/modules/021-cni-cilium/templates/"
 	ciliumCETempaltesPath = "/deckhouse/modules/021-cni-cilium/templates/"
 )
 

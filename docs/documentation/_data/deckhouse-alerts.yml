@@ -162,7 +162,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: CniCiliumOrphanEgressGatewayPolicyFound
-      sourceFile: ee/se_plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+      sourceFile: ee/se-plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
       moduleUrl: 021-cni-cilium
       module: cni-cilium
       edition: se

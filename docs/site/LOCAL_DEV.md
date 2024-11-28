@@ -73,7 +73,7 @@ Use the following commands:
   Example:
 
   ```shell
-  file=ee/se_plus/modules/030-cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck`
+  file=ee/se-plus/modules/030-cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck`
   ```
 
 - `make docs-spellcheck-generate-dictionary` — to generate a dictionary of words. Run it after adding new words to the tools/spelling/wordlist file.

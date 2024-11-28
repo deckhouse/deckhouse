@@ -224,16 +224,16 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 	f := SetupHelmConfig(``)
 
 	BeforeSuite(func() {
-		err := os.Remove("/deckhouse/ee/se_plus/modules/030-cloud-provider-vsphere/candi")
+		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/vsphere", "/deckhouse/ee/se_plus/modules/030-cloud-provider-vsphere/candi")
+		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/vsphere", "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
-		err := os.Remove("/deckhouse/ee/se_plus/modules/030-cloud-provider-vsphere/candi")
+		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/candi/cloud-providers/vsphere", "/deckhouse/ee/se_plus/modules/030-cloud-provider-vsphere/candi")
+		err = os.Symlink("/deckhouse/candi/cloud-providers/vsphere", "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 

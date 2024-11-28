@@ -415,7 +415,7 @@ jobs:
       - run: |
           echo Enable ${{ needs.pull_request_info.outputs.edition }}
 
-  enable_se_plus:
+  enable_se-plus:
     if: ${{ needs.pull_request_info.outputs.edition == 'SE+' }}
     name: Enable SE+
     needs:

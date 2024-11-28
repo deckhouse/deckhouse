@@ -14,7 +14,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
-	v1 "github.com/deckhouse/deckhouse/ee/se_plus/modules/030-cloud-provider-vsphere/hooks/internal/v1"
+	v1 "github.com/deckhouse/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/hooks/internal/v1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/vsphere"
 )

@@ -280,9 +280,9 @@ git:
     - deckhouse-controller
     - global-hooks/**/*.go
     - modules/**/*.go
-    - ee/se_plus/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
-    - ee/se_plus/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
-    - ee/se_plus/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
+    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
+    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
+    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
     - go_lib/**/*.go
     - go_lib/**/go.mod
     - go_lib/**/go.sum

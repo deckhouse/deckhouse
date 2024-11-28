@@ -301,12 +301,12 @@ func modules(deckhouseRoot string) (modules []module) {
 		}
 	}
 
-	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/se_plus/modules"))
+	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/se-plus/modules"))
 	for _, file := range files {
 		if file.IsDir() {
 			md := module{
 				Name:    file.Name(),
-				Path:    filepath.Join("ee/se_plus/modules", file.Name()),
+				Path:    filepath.Join("ee/se-plus/modules", file.Name()),
 				Edition: se,
 			}
 			modules = append(modules, md)

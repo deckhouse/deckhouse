@@ -94,13 +94,13 @@ func (s *TestMatrixSuite) changeSymlinks() {
 		"/deckhouse/ee/modules/030-cloud-provider-openstack/candi",
 		"/deckhouse/ee/candi/cloud-providers/openstack/")
 	s.changeSymlink(
-		"/deckhouse/ee/se_plus/modules/030-cloud-provider-vsphere/candi",
+		"/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi",
 		"/deckhouse/ee/candi/cloud-providers/vsphere/")
 	s.changeSymlink(
 		"/deckhouse/ee/modules/030-cloud-provider-vcd/candi",
 		"/deckhouse/ee/candi/cloud-providers/vcd/")
 	s.changeSymlink(
-		"/deckhouse/ee/se_plus/modules/030-cloud-provider-zvirt/candi",
+		"/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi",
 		"/deckhouse/ee/candi/cloud-providers/zvirt/")
 	s.delSymlink("/deckhouse/modules/040-node-manager/images_digests.json")
 	s.symlink(
@@ -108,7 +108,7 @@ func (s *TestMatrixSuite) changeSymlinks() {
 		"/deckhouse/modules/040-node-manager/cloud-providers/openstack",
 	)
 	s.symlink(
-		"/deckhouse/ee/se_plus/modules/030-cloud-provider-vsphere/cloud-instance-manager/",
+		"/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager/",
 		"/deckhouse/modules/040-node-manager/cloud-providers/vsphere",
 	)
 	s.changeSymlink(
@@ -122,7 +122,7 @@ func (s *TestMatrixSuite) restoreSymlinks() {
 		"/deckhouse/ee/modules/030-cloud-provider-openstack/candi",
 		"/deckhouse/candi/cloud-providers/openstack/")
 	s.changeSymlink(
-		"/deckhouse/ee/se_plus/modules/030-cloud-provider-vsphere/candi",
+		"/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi",
 		"/deckhouse/candi/cloud-providers/vsphere/")
 	s.changeSymlink(
 		"/deckhouse/ee/modules/030-cloud-provider-vcd/candi",
