@@ -16,8 +16,6 @@
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
 
-exit 1
-
 # Get the list of NVMe devices
 volume_names="$(find /dev | grep -i 'nvme[0-21]n1$' || true)"
 
@@ -31,7 +29,7 @@ if [ ! -z "${volume_names}" ]; then
     for volume in ${volume_names}; do
         # Check if the found device is a symbolic link
         if [ -L "${volume}" ]; then
-            # echo "${volume} is a symbolic link, skipping."
+            echo "${volume} is a symbolic link, skipping."
             continue
         fi
 
@@ -46,9 +44,9 @@ if [ ! -z "${volume_names}" ]; then
         # Create the symlink if it does not already exist
         if [ ! -z "${symlink}" ] && [ ! -e "${symlink}" ]; then
             ln -s "${volume}" "${symlink}"
-            # echo "Created symlink ${symlink} -> ${volume}"
+            echo "Created symlink ${symlink} -> ${volume}"
         else
-            # echo "Symlink ${symlink} already exists or is invalid for device ${volume}."
+            echo "Symlink ${symlink} already exists"
         fi
     done
 fi
