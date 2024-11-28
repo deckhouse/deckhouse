@@ -123,15 +123,16 @@ properties:
     type: string
     description: |
       List of registry CA certificates for connecting to private registries.
-      
+
       If there is more than one certificate, they are specified sequentially without additional line breaks.
     x-doc-examples:
     - |
       ```yaml
+      registriesCA: |
         -----BEGIN CERTIFICATE-----
-             .................
+        .................
         -----END CERTIFICATE-----
         -----BEGIN CERTIFICATE-----
-             .................
+        .................
         -----END CERTIFICATE-----
       ```
