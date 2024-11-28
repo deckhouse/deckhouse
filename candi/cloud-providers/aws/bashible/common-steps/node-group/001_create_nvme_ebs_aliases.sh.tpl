@@ -16,6 +16,7 @@
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
 
+exit 1
 
 # Get the list of NVMe devices
 volume_names="$(find /dev | grep -i 'nvme[0-21]n1$' || true)"
