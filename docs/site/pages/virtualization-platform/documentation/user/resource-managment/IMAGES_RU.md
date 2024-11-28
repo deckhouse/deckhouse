@@ -4,11 +4,11 @@ permalink: ru/virtualization-platform/documentation/user/resource-management/ima
 lang: ru
 ---
 
-Ресурс [`VirtualImage`](../../reference/cr/virtualimage.html) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин. Этот ресурс доступен только в пространстве имен или проекте, в котором он был создан.
+Ресурс [`VirtualImage`](../../../reference/cr/virtualimage.html) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин. Этот ресурс доступен только в пространстве имен или проекте, в котором он был создан.
 
 Процесс создания образа включает следующие шаги:
 
-1. Пользователь создаёт ресурс [`VirtualImage`](../../reference/cr.html/virtualimage).
+1. Пользователь создаёт ресурс [`VirtualImage`](../../../reference/cr/virtualimage.html).
 1. После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
 1. После завершения загрузки ресурс становится доступным для создания дисков.
 
@@ -36,7 +36,7 @@ lang: ru
 
 ### Создание образа с HTTP-сервера
 
-Рассмотрим вариант создания образа с вариантом хранения в DVCR. Выполните следующую команду для создания [VirtualImage](../../reference/cr.html/virtualimage):
+Рассмотрим вариант создания образа с вариантом хранения в DVCR. Выполните следующую команду для создания [VirtualImage](../../../reference/cr/virtualimage.html):
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -55,7 +55,7 @@ spec:
 EOF
 ```
 
-Проверить результат создания [VirtualImage](../../reference/cr.html/virtualimage):
+Проверить результат создания [VirtualImage](../../../reference/cr/virtualimage.html):
 
 ```bash
 d8 k get virtualimage ubuntu-22.04
@@ -66,7 +66,7 @@ d8 k get vi ubuntu-22.04
 # ubuntu-22.04   Ready   false   100%       23h
 ```
 
-После создания ресурс [VirtualImage](../../reference/cr.html/virtualimage) может находиться в следующих состояниях:
+После создания ресурс [VirtualImage](../../../reference/cr/virtualimage.html) может находиться в следующих состояниях:
 
 - `Pending` - ожидание готовности всех зависимых ресурсов, требующихся для создания образа.
 - `WaitForUserUpload` - ожидание загрузки образа пользователем (состояние присутствует только для `type=Upload`).
@@ -92,7 +92,7 @@ d8 k get vi ubuntu-22.04 -w
 # ubuntu-22.04   Ready          false   100%       18s
 ```
 
-В описании ресурса [VirtualImage](../../reference/cr.html/virtualimage) можно получить дополнительную информацию о скачанном образе:
+В описании ресурса [VirtualImage](../../../reference/cr/virtualimage.html) можно получить дополнительную информацию о скачанном образе:
 
 ```bash
 d8 k describe vi ubuntu-22.04
@@ -117,7 +117,7 @@ spec:
 EOF
 ```
 
-Проверить результат создания [VirtualImage](../../reference/cr.html/virtualimage):
+Проверить результат создания [VirtualImage](../../../reference/cr/virtualimage.html):
 
 ```bash
 d8 k get vi ubuntu-22.04-pvc

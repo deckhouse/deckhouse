@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/user/resource-management/vir
 lang: ru
 ---
 
-Для создания виртуальной машины используется ресурс [VirtualMachine](../../reference/cr.html#virtualmachine), его параметры позволяют сконфигурировать:
+Для создания виртуальной машины используется ресурс [VirtualMachine](../../../reference/cr/virtualmachine.html), его параметры позволяют сконфигурировать:
 
 - [класс виртуальной машины](../../admin/platform-management/virtualization/virtual_machine_classes.html)
 - ресурсы, требуемые для работы виртуальной машины (процессор, память, диски и образы);
@@ -135,7 +135,7 @@ d8 v ssh cloud@linux-vm --local-ssh
 
 Состоянием виртуальной машины можно управлять с помощью следующих методов:
 
-- Создание ресурса [VirtualMachineOperation](../../reference/cr.html#virtualmachineoperation) (`vmop`).
+- Создание ресурса [VirtualMachineOperation](../../../reference/cr/virtualmachineoperation.html) (`vmop`).
 - Использование утилиты [`d8`](../../reference/console-utilities/d8.html) с соответствующей подкомандой.
 
 Ресурс `VirtualMachineOperation` декларативно определяет действие, которое должно быть выполнено на виртуальной машине.
@@ -444,9 +444,9 @@ spec:
 
 Статические блочные устройства указываются в спецификации виртуальной машины в блоке `.spec.blockDeviceRefs`. Этот блок представляет собой список, в который могут быть включены следующие блочные устройства:
 
-- [VirtualImage](../../reference/cr.html#virtualimage)
-- [ClusterVirtualImage](../../reference/cr.html#clustervirtualimage)
-- [VirtualDisk](../../reference/cr.html#virtualdisk)
+- [VirtualImage](../../../reference/cr/virtualimage.html)
+- [ClusterVirtualImage](../../../reference/cr/clustervirtualimage.html)
+- [VirtualDisk](../../../reference/cr/virtualdisk.html)
 
 Порядок устройств в этом списке определяет последовательность их загрузки. Таким образом, если диск или образ указан первым, загрузчик сначала попробует загрузиться с него. Если это не удастся, система перейдет к следующему устройству в списке и попытается загрузиться с него. И так далее до момента обнаружения первого загрузчика.
 
@@ -456,7 +456,7 @@ spec:
 
 Динамические блочные устройства можно подключать и отключать от виртуальной машины, находящейся в запущенном состоянии, без необходимости её перезагрузки.
 
-Для подключения динамических блочных устройств используется ресурс [VirtualMachineBlockDeviceAttachment](../../reference/cr.html#virtualmachineblockdeviceattachment) (`vmbda`). На данный момент для подключения в качестве динамического блочного устройства поддерживается только [VirtualDisk](../../reference/cr.html#virtualdisk).
+Для подключения динамических блочных устройств используется ресурс [VirtualMachineBlockDeviceAttachment](../../../reference/cr/virtualmachineblockdeviceattachment.html) (`vmbda`). На данный момент для подключения в качестве динамического блочного устройства поддерживается только [VirtualDisk](../../../reference/cr/virtualdisk.html).
 
 Создайте следующий ресурс, который подключит пустой диск blank-disk к виртуальной машине linux-vm:
 
@@ -531,7 +531,7 @@ d8 k get vm
 
 Виртуальная машина запущена на узле `virtlab-pt-1`.
 
-Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperations](../../reference/cr.html#virtualmachineoperations) (`vmop`) с типом Evict.
+Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperations](../../reference/cr/virtualmachineoperations.html) (`vmop`) с типом Evict.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -568,7 +568,7 @@ d8 v evict <vm-name>
 
 Блок `.spec.settings.virtualMachineCIDRs` в конфигурации модуля virtualization задает список подсетей для назначения IP-адресов виртуальным машинам (общий пул IP-адресов). Все адреса в этих подсетях доступны для использования, за исключением первого (адрес сети) и последнего (широковещательный адрес).
 
-Ресурс [VirtualMachineIPAddressLease](../../reference/cr.html#VirtualMachineIPAddressLease) (`vmipl`): кластерный ресурс, который управляет временным выделением IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
+Ресурс [VirtualMachineIPAddressLease](../../../reference/cr/virtualmachineipaddressLease.html) (`vmipl`): кластерный ресурс, который управляет временным выделением IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
 
 Чтобы посмотреть список временно выделенных IP-адресов (`vmipl`), используйте команду:
 
@@ -578,7 +578,7 @@ d8 k get vmipl
 # ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
-Ресурс [VirtualMachineIPAddress](../../reference/cr.html#VirtualMachineIPAddress) (`vmip`) — это ресурс проекта или пространства имен, который отвечает за резервирование выделенных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по запросу.
+Ресурс [VirtualMachineIPAddress](../../../reference/cr/virtualmachineipaddress.html) (`vmip`) — это ресурс проекта или пространства имен, который отвечает за резервирование выделенных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по запросу.
 
 Чтобы посмотреть список `vmip`, используйте команду:
 
