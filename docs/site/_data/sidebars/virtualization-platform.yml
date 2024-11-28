@@ -329,8 +329,8 @@ entries:
                 ru: dhctl
               url: /virtualization-platform/documentation/reference/console-utilities/dhctl.html
             - title:
-                en: D8
-                ru: D8
+                en: d8
+                ru: d8
               url: /virtualization-platform/documentation/reference/console-utilities/d8.html
     #- title:
     #    en: DVP editions

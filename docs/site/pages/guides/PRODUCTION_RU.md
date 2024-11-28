@@ -138,7 +138,7 @@ Inlet `HostWithFailover` подходит для кластеров с одни�
 
 С помощью custom resource [CustomAlertmanager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager) можно настроить отправку уведомлений на [электронную почту](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), в [Slack](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), в [Telegram](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/usage.html#отправка-алертов-в-telegram), через [webhook](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), а также другими способами.
 
-## Сбор логов
+<!-- ## Сбор логов
 
 {% alert %}
 [Настройте](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/) централизованный сбор логов.
@@ -152,6 +152,7 @@ Inlet `HostWithFailover` подходит для кластеров с одни�
 - [Пример для Grafana Loki](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/examples.html#чтение-логов-из-всех-подов-кластера-и-направление-их-в-loki)
 - [Пример для Logstash](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/examples.html#простой-пример-logstash)
 - [Пример для Splunk](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/examples.html#пример-интеграции-со-splunk)
+-->
 
 ## Резервное копирование
 
