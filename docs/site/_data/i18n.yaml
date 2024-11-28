@@ -80,6 +80,9 @@ common:
   deprecated_parameter_hint:
     en: Support for the parameter might be removed in a later release.
     ru: Поддержка параметра может быть исключена в следующих версиях.
+  coming_soon:
+    en: "coming soon..."
+    ru: "скоро..."
   for_example:
     en: for example
     ru: например
