@@ -49,6 +49,11 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/modules/015-admission-policy-engine/webhooks/lib
+  to: /deckhouse/modules/015-admission-policy-engine/webhooks/lib
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/webhooks/validating
   to: /deckhouse/modules/015-admission-policy-engine/webhooks/validating
   stageDependencies:
