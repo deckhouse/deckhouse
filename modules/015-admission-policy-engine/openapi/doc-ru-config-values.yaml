@@ -28,6 +28,24 @@ properties:
               knownRanges:
                 description: "Список диапазонов портов, которые будут разрешены в привязке hostPort."
 
+  verifyImageSignatures:
+    description: |
+      Ratify-провайдер запрещает создание `Pod` с образами, несоответствующими требованиям подписиi (неподписанные или подписанные неизвестной подписью).
+    properties:
+      enabled:
+        description: Включает проверку подписи.
+      imageReferences:
+        description: Список шаблонов имен образов для проверки.
+        properties:
+          scope:
+            description: |
+              Шаблон имени для сопоставления.
+
+              **Внимание.** Шаблоны имен не должны пересекаться.
+
+          publicKeys:
+            description: Список cosign-совместимсых публичных ключей используемых для проверки подписей.
+
   denyVulnerableImages:
     description: |
       Настройки trivy-провайдера.

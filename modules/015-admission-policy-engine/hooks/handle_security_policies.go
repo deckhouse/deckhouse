@@ -42,8 +42,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleSP(input *go_hook.HookInput) error {
 	result := make([]*securityPolicy, 0)
-	var runRatify bool
-
 	snap := input.Snapshots["security-policies"]
 
 	for _, sn := range snap {
@@ -52,15 +50,11 @@ func handleSP(input *go_hook.HookInput) error {
 		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
-		if !runRatify && sp.Spec.Policies.VerifyImageSignatures != nil {
-			runRatify = true
-		}
 	}
 
 	data, _ := json.Marshal(result)
 
 	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", json.RawMessage(data))
-	input.Values.Set("admissionPolicyEngine.internal.ratify.enabled", runRatify)
 
 	return nil
 }

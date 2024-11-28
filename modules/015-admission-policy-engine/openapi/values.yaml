@@ -128,9 +128,6 @@ properties:
         type: object
         default: {}
         properties:
-          enabled:
-            type: boolean
-            default: false
           webhook:
             type: object
             default: {}
