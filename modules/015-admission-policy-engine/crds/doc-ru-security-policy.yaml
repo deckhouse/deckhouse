@@ -177,11 +177,14 @@ spec:
                       description: Список разрешенных volume-плагинов.
                     verifyImageSignatures:
                       description: Определяет cosign политику проверки подписей образов.
-                      properties:
-                        publicKeys:
-                          description: Список cosign-совместимсых публичных ключей используемых для проверки подписей.
-                        imageReferences:
-                          description: Список имен образов для проверки.
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          publicKeys:
+                            description: Список cosign-совместимсых публичных ключей используемых для проверки подписей.
+                          reference:
+                            description: Шаблон имени для проверки.
 
                 match:
                   description: Условия фильтрации контейнеров. С помощью условий можно выбрать группу подов или контейнеров, к которой будут применены политики.

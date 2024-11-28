@@ -16,7 +16,9 @@ limitations under the License.
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 type OperationPolicy struct {
 	metav1.TypeMeta `json:",inline"`
@@ -90,7 +92,7 @@ type SecurityPolicySpec struct {
 			Type  string `json:"type,omitempty"`
 			User  string `json:"user,omitempty"`
 		} `json:"seLinux,omitempty"`
-		VerifyImageSignatures *VerifyImageSignatures `json:"verifyImageSignatures,omitempty"`
+		VerifyImageSignatures []ImageReference `json:"verifyImageSignatures,omitempty"`
 	} `json:"policies"`
 	Match struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`
@@ -98,9 +100,9 @@ type SecurityPolicySpec struct {
 	} `json:"match"`
 }
 
-type VerifyImageSignatures struct {
-	PublicKeys      []string `json:"publicKeys"`
-	ImageReferences []string `json:"imageReferences"`
+type ImageReference struct {
+	PublicKeys []string `json:"publicKeys"`
+	Reference  string   `json:"reference"`
 }
 
 type SelectUIDStrategy struct {
