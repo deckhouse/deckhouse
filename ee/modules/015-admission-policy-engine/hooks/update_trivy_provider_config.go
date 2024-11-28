@@ -113,7 +113,7 @@ func updateConfig(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	// either operator-trivy or trivy-provider is disabled, cclean up the configmap
+	// either operator-trivy or trivy-provider is disabled, clean up the configmap
 	input.Values.Remove("admissionPolicyEngine.internal.trivyConfigData")
 
 	return nil
