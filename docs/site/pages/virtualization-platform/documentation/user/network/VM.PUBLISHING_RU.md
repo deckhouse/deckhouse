@@ -68,7 +68,7 @@ EOF
 
 ### Использование сервисов с активными проверками
 
-Ресурс [ServiceWithHealthcheck](../../reference/cr.html#servicewithhealthcheck) позволяет настраивать для сервиса активные проверки на заданные TCP-порты. Если проверки для виртуальных машин не будут успешными, эти машины не будут включены в балансировку трафика.
+Ресурс [ServiceWithHealthcheck](../../reference/cr/servicewithhealthcheck.html) позволяет настраивать для сервиса активные проверки на заданные TCP-порты. Если проверки для виртуальных машин не будут успешными, эти машины не будут включены в балансировку трафика.
 
 Поддерживаются следующие виды проверок:
 
@@ -238,7 +238,7 @@ d8 k create secret generic cred-secret --from-literal=user=postgres --from-liter
 
 Чтобы включить аутентификацию через `Dex` для приложения, выполните следующие шаги:
 
-1. Создайте кастомный ресурс [DexAuthenticator](../../reference/cr.html/dexauthenticator). Это приведет к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к `Dex`. После появления кастомного ресурса `DexAuthenticator`, в указанном `namespace` появятся необходимые объекты Deployment, Service, Ingress, Secret.
+1. Создайте кастомный ресурс [DexAuthenticator](../../reference/cr/dexauthenticator.html). Это приведет к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к `Dex`. После появления кастомного ресурса `DexAuthenticator`, в указанном `namespace` появятся необходимые объекты Deployment, Service, Ingress, Secret.
 
    Пример ресурса `DexAuthenticator`:
 
