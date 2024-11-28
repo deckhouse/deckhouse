@@ -95,7 +95,7 @@ data:
     {{- end -}}
     {{- if .Values.operatorTrivy.additionalRegistryCA -}}
     {{- range .Values.operatorTrivy.additionalRegistryCA }} 
-    {{- trim .ca |  | nindent 4 }}
+    {{- trim .ca | nindent 4 }}
     {{- end -}}
     {{- end -}}
   {{- end }}
