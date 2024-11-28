@@ -32,6 +32,10 @@ on:
       comment_id:
         description: 'Id of comment in issue where to put workflow run status'
         required: false
+      editions:
+        description: 'Comma-separated list of editions to build'
+        required: false
+        type: string
 
 env:
 
@@ -589,9 +593,13 @@ jobs:
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # Add edition name for non-FE builds
+            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+              IMAGE_EDITION=${WERF_ENV,,}
+            fi
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
@@ -720,7 +728,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'ee') }}
     env:
       WERF_ENV: "EE"
     # <template: build_template>
@@ -935,9 +943,13 @@ jobs:
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # Add edition name for non-FE builds
+            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+              IMAGE_EDITION=${WERF_ENV,,}
+            fi
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
@@ -1066,7 +1078,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'se') }}
     env:
       WERF_ENV: "SE"
     # <template: build_template>
@@ -1281,9 +1293,13 @@ jobs:
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # Add edition name for non-FE builds
+            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+              IMAGE_EDITION=${WERF_ENV,,}
+            fi
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
@@ -1412,7 +1428,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'be') }}
     env:
       WERF_ENV: "BE"
     # <template: build_template>
@@ -1627,9 +1643,13 @@ jobs:
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # Add edition name for non-FE builds
+            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+              IMAGE_EDITION=${WERF_ENV,,}
+            fi
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
@@ -1758,7 +1778,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'ce') }}
     env:
       WERF_ENV: "CE"
     # <template: build_template>
@@ -1973,9 +1993,13 @@ jobs:
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # Add edition name for non-FE builds
+            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+              IMAGE_EDITION=${WERF_ENV,,}
+            fi
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 

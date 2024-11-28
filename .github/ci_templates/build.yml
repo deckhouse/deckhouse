@@ -154,9 +154,13 @@ steps:
 
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+        # Add edition name for non-FE builds
+        if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+          IMAGE_EDITION=${WERF_ENV,,}
+        fi
         # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
         # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
         echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 
