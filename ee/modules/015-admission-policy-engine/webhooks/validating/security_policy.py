@@ -55,6 +55,7 @@ def main(ctx: hook.Context):
 
 
 def validate(ctx: DotMap, output: hook.ValidationsCollector):
+    print("RUN")
     operation = ctx.review.request.operation
     if operation == "CREATE" or operation == "UPDATE":
         validate_creation_or_update(ctx, output)
