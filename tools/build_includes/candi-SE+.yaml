@@ -22,3 +22,7 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/se_plus/candi/clodu-providers/vsphere
+  to: /deckhouse/candi/clodu-providers/vsphere
+- add: /ee/se_plus/candi/clodu-providers/zvirt
+  to: /deckhouse/candi/clodu-providers/zvirt
