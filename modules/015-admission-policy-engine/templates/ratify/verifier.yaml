@@ -1,4 +1,4 @@
-{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.enabled) }}
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.verifyImageSignatures.enabled) }}
 ---
 apiVersion: config.ratify.deislabs.io/v1beta1
 kind: Verifier
@@ -10,20 +10,15 @@ spec:
   artifactTypes: application/vnd.dev.cosign.artifact.sig.v1+json
   parameters:
     trustPolicies:
-{{- range $sp := .Values.admissionPolicyEngine.internal.securityPolicies }}
-{{- if $sp.spec.policies.verifyImageSignatures }}
-{{- $spName := $sp.metadata.name }}
-    - name: {{ printf "security-policy-%s" $spName }}
+{{- range $refid, $ref := .Values.admissionPolicyEngine.imageReferences }}
+    - name: {{ printf "policy-%d" $refid }}
       version: 1.0.0
       scopes:
-{{- range $ref := $sp.spec.policies.verifyImageSignatures.imageReferences }}
-      - {{ $ref | quote }}
-{{- end }}
+      - {{ $ref.scope | quote }}
       keys:
-{{- range $id, $key := $sp.spec.policies.verifyImageSignatures.publicKeys }}
-      - provider: {{ printf "ratify-cosign-inline-key-%s-%d" $spName $id }}
+{{- range $keyid, $key := $ref.publicKeys }}
+      - provider: {{ printf "ratify-cosign-inline-key-%d-%d" $refid $keyid }}
 {{- end }}
       tLogVerify: false
-{{- end }}
 {{- end }}
 {{- end }}

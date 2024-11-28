@@ -49,6 +49,7 @@ admissionPolicyEngine:
       key: YjY0ZW5jX3N0cmluZwo=
     trackedConstraintResources: []
     trackedMutateResources: []
+  verifyImageSignatures: {}
   denyVulnerableImages: {}
   podSecurityStandards:
     policies:

@@ -59,7 +59,7 @@ modules:
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "podSecurityStandards": {}, "internal": {"ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
+	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "verifyImageSignatures": {}, "podSecurityStandards": {}, "internal": {"ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
     {
       "metadata": {
         "name": "foo"

@@ -3,7 +3,7 @@ cpu: 100m
 memory: 128Mi
 {{- end }}
 
-{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.enabled) }}
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.verifyImageSignatures.enabled) }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1

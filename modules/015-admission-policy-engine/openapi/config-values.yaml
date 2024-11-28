@@ -53,6 +53,49 @@ properties:
                     max:
                       type: integer
 
+  verifyImageSignatures:
+    type: object
+    default: {}
+    description: |
+      Ratify provider will deny creation of pods running non-signature-compliant (unsigned or signed with an unknown signature) images.
+    oneOf:
+    - properties:
+        enabled:
+          enum: [true]
+        imageReferences: {}
+      required: 
+      - imageReferences
+    - properties:
+        enabled:
+          enum: [false] 
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: Enables image signatures verification.
+      imageReferences:
+        type: array
+        description: The list of image references subjected to signature checks.
+        required:
+        - scope
+        - publicKeys
+        items:
+          type: object
+          properties:
+            scope:
+              type: string
+              description: |
+                An image reference to match by name.
+
+                **Warning.** Scopes shouldn't overlap.
+
+              pattern: '^[a-z0-9\.\-:@\/]*\*?$'
+              x-examples: ["docker.io/alpine/*", "docker.io/golang:1.23"]
+            publicKeys:
+              type: array
+              description: The list of cosign compliant public keys to check image signatures with.
+              items:
+                type: string
   denyVulnerableImages:
     type: object
     default: {}

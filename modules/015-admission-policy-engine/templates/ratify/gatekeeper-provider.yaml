@@ -1,4 +1,4 @@
-{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.enabled) }}
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.verifyImageSignatures.enabled) }}
 ---
 apiVersion: externaldata.gatekeeper.sh/v1beta1
 kind: Provider
