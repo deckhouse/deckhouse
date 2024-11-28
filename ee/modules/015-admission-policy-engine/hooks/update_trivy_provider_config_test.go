@@ -147,7 +147,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: trivy provider 
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(Equal(`{"TRIVY_INSECURE":"false"}`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE":"false"}`))
 		})
 	})
 
@@ -161,7 +161,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: trivy provider 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(Equal(`{"TRIVY_INSECURE":"false"}`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE": "false"}`))
 		})
 	})
 
@@ -175,7 +175,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: trivy provider 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(Equal(`{"TRIVY_INSECURE":"false"}`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE": "false"}`))
 		})
 	})
 
@@ -189,7 +189,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: trivy provider 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(Equal(`{"TRIVY_INSECURE":"false"}`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE": "false"}`))
 		})
 	})
 
@@ -203,7 +203,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: trivy provider 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(Equal(`{"TRIVY_INSECURE":"false","TRIVY_REGISTRY_CA":"123"}`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE": "false", "TRIVY_REGISTRY_CA": "123"}`))
 		})
 	})
 
@@ -254,7 +254,7 @@ data:
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeTrue())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(Equal(`{"TRIVY_INSECURE":"true","trivy.insecureRegistry.0": "nexus.com"}`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE":"true","trivy.insecureRegistry.0": "nexus.com"}`))
 		})
 	})
 
