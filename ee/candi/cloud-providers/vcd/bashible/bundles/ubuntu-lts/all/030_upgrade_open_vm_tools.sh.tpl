@@ -1,6 +1,7 @@
 # Copyright 2021 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
+# update
 bb-apt-install "open-vm-tools"
 
 bb-event-on 'bb-package-installed' 'restart-open-vm-tools'

@@ -17,5 +17,3 @@ bundleName="${ID}-${VERSION_ID}"
 if ! [[ "$bundleName" =~ "centos-" ]]; then
  exit 0
 fi
-
-bb-yum-install "centos-release"
