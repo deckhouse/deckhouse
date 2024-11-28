@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $nodeTypeList := list "CloudEphemeral" "CloudPermanent" "CloudStatic" }}
+{{- $nodeTypeList := list "CloudPermanent" }}
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
+
 function get_data_device_secret() {
   secret="d8-masters-kubernetes-data-device-path"
 
@@ -128,5 +129,6 @@ if [[ "$(find /var/lib/etcd/ -type f 2>/dev/null | wc -l)" == "0" ]]; then
 fi
 
 touch /var/lib/bashible/kubernetes-data-device-installed
+
   {{- end  }}
 {{- end  }}

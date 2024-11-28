@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-{{- if eq .nodeGroup.name "master" }}
+{{- $nodeTypeList := list "CloudPermanent" }}
+{{- if has .nodeGroup.nodeType $nodeTypeList }}
+  {{- if eq .nodeGroup.name "master" }}
+    {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
+
 function get_data_device_secret() {
   secret="d8-masters-system-registry-data-device-path"
 
@@ -65,5 +68,6 @@ fi
 
 echo "$(discover_device_path "$cloud_disk_name")" > /var/lib/bashible/system_registry_data_device_path
 
-{{- end }}
-{{- end }}
+    {{- end  }}
+  {{- end  }}
+{{- end  }}

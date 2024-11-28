@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .nodeGroup.name "master" }}
+{{- $nodeTypeList := list "CloudPermanent" }}
+{{- if has .nodeGroup.nodeType $nodeTypeList }}
+  {{- if eq .nodeGroup.name "master" }}
+
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
   exit 0
 fi
@@ -38,4 +41,6 @@ do
     ln -s "${volume}" "${symlink}"
   fi
 done
-{{- end }}
+
+  {{- end  }}
+{{- end  }}

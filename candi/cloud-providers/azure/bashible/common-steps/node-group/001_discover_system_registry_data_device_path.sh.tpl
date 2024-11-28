@@ -1,5 +1,7 @@
-{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-{{- if eq .nodeGroup.name "master" }}
+{{- $nodeTypeList := list "CloudPermanent" }}
+{{- if has .nodeGroup.nodeType $nodeTypeList }}
+  {{- if eq .nodeGroup.name "master" }}
+    {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
 
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
   return 0
@@ -26,5 +28,6 @@ echo "system_registry_data_device: $system_registry_data_device_path"
 blkid
 echo "$system_registry_data_device_path" > /var/lib/bashible/system_registry_data_device_path
 
-{{- end }}
-{{- end }}
+    {{- end  }}
+  {{- end  }}
+{{- end  }}

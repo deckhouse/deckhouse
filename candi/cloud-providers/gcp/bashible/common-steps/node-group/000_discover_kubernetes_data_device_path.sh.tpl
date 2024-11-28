@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .nodeGroup.name "master" }}
+{{- $nodeTypeList := list "CloudPermanent" }}
+{{- if has .nodeGroup.nodeType $nodeTypeList }}
+  {{- if eq .nodeGroup.name "master" }}
+
 function get_data_device_secret() {
   secret="d8-masters-kubernetes-data-device-path"
 
@@ -63,4 +66,6 @@ else
 fi
 
 echo "$(discover_device_path "$cloud_disk_name")" > /var/lib/bashible/kubernetes_data_device_path
-{{- end }}
+
+  {{- end  }}
+{{- end  }}
