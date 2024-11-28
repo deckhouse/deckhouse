@@ -12,9 +12,9 @@
 {%- assign layout = site.data.getting_started.dkp_data.installTypes[page.platform_code].layout %}
 {% unless page.ee_only == true or page.platform_code == "bm-private" -%}
 {% if page.lang == 'ru' %}
-#### Выберите редакцию Deckhouse Kubernetes Platform
+#### Выберите редакцию Deckhouse Virtualization Platform
 {% else %}
-#### Select the Deckhouse Kubernetes Platform revision
+#### Select the Deckhouse Virtualization Platform revision
 {% endif %}
 <div class="tabs">
     {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
@@ -34,9 +34,9 @@
 {% assign layoutCode = '' | append: layout.code %}
 <div id='block_layout_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
     {% if page.lang == 'ru' %}
-    {% include getting_started/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
+    {% include getting_started/dvp/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
     {% else %}
-    {% include getting_started/global/partials/INSTALL_CONFIG.liquid revision=revision layout=layoutCode %}
+    {% include getting_started/dvp/global/partials/INSTALL_CONFIG.liquid revision=revision layout=layoutCode %}
     {% endif %}
 </div>
 {%- endfor %}
@@ -65,9 +65,6 @@
 Create the `resources.yml` file.
 {% endif %}
 
-{% snippetcut name="resources.yml" selector="resources-yml" %}
-{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/resources.yml.minimal.inc" syntax="yaml" %}
-{% endsnippetcut %}
 {% endif %}
 
 </div>
@@ -81,9 +78,9 @@ Create the `resources.yml` file.
 
 <div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
 {% if page.lang == 'ru' %}
-{% include getting_started/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
+{% include getting_started/dvp/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
 {% else %}
-{% include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
+{% include getting_started/dvp/global/partials/INSTALL_OTHER.liquid revision=revision %}
 {% endif %}
 </div>
 {% if revision == 'ee' %}

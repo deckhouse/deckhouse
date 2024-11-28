@@ -1,19 +1,17 @@
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
 metadata:
-  name: admin
-spec:
-  # [<ru>] список учётных записей Kubernetes RBAC
-  # [<en>] Kubernetes RBAC accounts list
-  subjects:
-  - kind: User
-    name: admin@deckhouse.io
-  # [<ru>] предустановленный шаблон уровня доступа
-  # [<en>] pre-defined access template
-  accessLevel: SuperAdmin
-  # [<ru>] разрешить пользователю делать kubectl port-forward
-  # [<en>] allow user to do kubectl port-forward
-  portForwarding: true
+  name: project-admin-joe
+  namespace: vms
+subjects:
+- kind: User
+  name: admin@deckhouse.io # для users.deckhouse.io параметр .spec.email
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  # Роль пользователя
+  name: d8:manage:all:admin
+  apiGroup: rbac.authorization.k8s.io
 ---
 # [<en>] section containing the parameters of the static user
 # [<ru>] секция, описывающая параметры статического пользователя
