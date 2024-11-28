@@ -153,13 +153,13 @@ EOF
 
 ## Восстановление снимков из виртуальных машин
 
-Для восстановления виртуальных машин из снимков используется ресурс [VirtualMachineRestore](../../reference/cr.html/virtualmachinerestore).
+Для восстановления виртуальных машин из снимков используется ресурс [VirtualMachineRestore](/../../reference/cr.html/virtualmachinerestore).
 
 В процессе восстановления будет создана новая виртуальная машина, а также все её зависимые ресурсы (диски, IP-адрес, ресурс со сценарием автоматизации (Secret) и ресурсы для динамического подключения дисков [VirtualMachineBlockDeviceAttachment](../../reference/cr.html/virtualmachineblockdeviceattachment)) .
 
-Если возникает конфликт имен между существующими и восстанавливаемыми ресурсами для [VirtualMachine](../../reference/cr.html/virtualmachine), [VirtualDisk](../../reference/cr.html/virtualdisk) или [VirtualMachineBlockDeviceAttachment](../../reference/cr.html/virtualmachineblockdeviceattachment), восстановление не будет успешно. Чтобы избежать этого, используйте параметр `nameReplacements`.
+Если возникает конфликт имен между существующими и восстанавливаемыми ресурсами для [VirtualMachine](../../../reference/cr.html/virtualmachine), [VirtualDisk](../../../../reference/cr.html/virtualdisk) или [VirtualMachineBlockDeviceAttachment](../../reference/cr.html/virtualmachineblockdeviceattachment), восстановление не будет успешно. Чтобы избежать этого, используйте параметр `nameReplacements`.
 
-Если восстанавливаемый ресурс [VirtualMachineIPAddress](../../reference/cr.html/virtualmachineipaddress) уже присутствует в кластере, он не должен быть присоединен к другой виртуальной машине, а если это ресурс типа `Static`, его IP-адрес должен совпадать. Восстанавливаемый секрет с автоматизацией также должен полностью соответствовать восстановленному. Несоблюдение этих условий приведет к неудаче восстановления.
+Если восстанавливаемый ресурс [VirtualMachineIPAddress](/../../../reference/cr.html/virtualmachineipaddress) уже присутствует в кластере, он не должен быть присоединен к другой виртуальной машине, а если это ресурс типа `Static`, его IP-адрес должен совпадать. Восстанавливаемый секрет с автоматизацией также должен полностью соответствовать восстановленному. Несоблюдение этих условий приведет к неудаче восстановления.
 
 Пример манифеста для восстановления виртуальной машины из снимка:
 
