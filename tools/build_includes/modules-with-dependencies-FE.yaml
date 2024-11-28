@@ -121,34 +121,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/015-admission-policy-engine/webhooks/lib
-  to: /deckhouse/modules/015-admission-policy-engine/webhooks/lib
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/015-admission-policy-engine/webhooks/validating/security_policy.py
-  to: /deckhouse/modules/015-admission-policy-engine/webhooks/validating/security_policy.py
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
   stageDependencies:
