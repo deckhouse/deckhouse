@@ -4,4 +4,6 @@ permalink: ru/virtualization-platform/documentation/reference/console-utilities/
 lang: ru
 ---
 
+## Как установить Deckhouse CLI?
+
 {% include d8-cli-install/main.liquid %}
