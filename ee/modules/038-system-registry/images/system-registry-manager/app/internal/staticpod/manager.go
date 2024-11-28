@@ -100,10 +100,6 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 		render.Render(w, r, ErrInternalErrorText(message))
 	}
 
-	// Lock the requestMutex to prevent concurrent requests and release it after the request is processed
-	s.requestMutex.Lock()
-	defer s.requestMutex.Unlock()
-
 	var (
 		data EmbeddedRegistryConfig
 		err  error
@@ -121,6 +117,10 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 		sendInternalError("Error getting IP address", err)
 		return
 	}
+
+	// Lock the requestMutex to prevent concurrent requests and release it after the request is processed
+	s.requestMutex.Lock()
+	defer s.requestMutex.Unlock()
 
 	var resp ChangesReponse
 

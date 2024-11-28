@@ -393,10 +393,10 @@ func (nc *nodeController) applyStaticPodConfig(ctx context.Context, nodeName str
 	}
 
 	url := fmt.Sprintf(staticPodURLFormat, podIP)
-	buf, err := nc.HttpClient.SendJSON(url, http.MethodPost, "test")
+	_, err = nc.HttpClient.SendJSON(url, http.MethodPost, struct{}{})
 
 	if err != nil {
-		return fmt.Errorf("error sending HTTP request: %w, body: %s", err, buf)
+		return fmt.Errorf("error sending HTTP request: %w", err)
 	}
 
 	return nil
@@ -409,10 +409,10 @@ func (nc *nodeController) deleteStaticPodConfig(ctx context.Context, nodeName st
 	}
 
 	url := fmt.Sprintf(staticPodURLFormat, podIP)
-	buf, err := nc.HttpClient.SendJSON(url, http.MethodDelete, nil)
+	_, err = nc.HttpClient.SendJSON(url, http.MethodDelete, nil)
 
 	if err != nil {
-		return fmt.Errorf("error sending HTTP request: %w, body: %s", err, buf)
+		return fmt.Errorf("error sending HTTP request: %w", err)
 	}
 
 	return nil
