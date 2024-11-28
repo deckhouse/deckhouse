@@ -431,113 +431,7 @@ func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddre
 	if err != nil {
 		notFound = true
 	} else {
-		authPKI, err := state.DecodeCertKeyFromSecret(
-			state.NodeAuthCertSecretField,
-			state.NodeAuthKeySecretField,
-			&secret,
-		)
-
-		if err != nil {
-			log.Error(err, "Cannot decode auth PKI")
-
-			nc.logModuleWarning(
-				&log,
-				"NodePKIAuthDecodeError",
-				fmt.Sprintf("NodePKI Auth decode error: %v", err),
-			)
-
-			isValid = false
-		} else {
-			ret.Auth = &authPKI
-		}
-
-		if isValid {
-			err = pki.ValidateCertWithCAChain(ret.Auth.Cert, globalPKI.CA.Cert)
-			if err != nil {
-				log.Error(err, "Auth certificate validation error")
-
-				nc.logModuleWarning(
-					&log,
-					"NodePKIAuthCertValidationError",
-					fmt.Sprintf("NodePKI Auth certificate validation error: %v", err),
-				)
-
-				isValid = false
-			}
-		}
-
-		if isValid {
-			for _, host := range hosts {
-				err = ret.Auth.Cert.VerifyHostname(host)
-				if err != nil {
-					log.Error(err, "Hostname not supported by Auth certificate", "hostName", host)
-
-					nc.logModuleWarning(
-						&log,
-						"NodePKIAuthCertHostUnsupported",
-						fmt.Sprintf("NodePKI Auth certificate not support hostname %v: %v", host, err),
-					)
-
-					isValid = false
-					break
-				}
-			}
-		}
-
-		if isValid {
-			distributionPKI, err := state.DecodeCertKeyFromSecret(
-				state.NodeDistributionCertSecretField,
-				state.NodeDistributionKeySecretField,
-				&secret,
-			)
-
-			if err != nil {
-				log.Error(err, "Cannot decode Distribution PKI")
-
-				nc.logModuleWarning(
-					&log,
-					"NodePKIDistributionDecodeError",
-					fmt.Sprintf("NodePKI Distribution decode error: %v", err),
-				)
-
-				isValid = false
-			} else {
-				ret.Distribution = &distributionPKI
-			}
-		}
-
-		if isValid {
-			err = pki.ValidateCertWithCAChain(ret.Distribution.Cert, globalPKI.CA.Cert)
-			if err != nil {
-				log.Error(err, "Distribution certificate validation error")
-
-				nc.logModuleWarning(
-					&log,
-					"NodePKIDistributionCertValidationError",
-					fmt.Sprintf("NodePKI Distribution certificate validation error: %v", err),
-				)
-
-				isValid = false
-			}
-		}
-
-		if isValid {
-			for _, host := range hosts {
-				err = ret.Distribution.Cert.VerifyHostname(host)
-				if err != nil {
-					log.Error(err, "Hostname not supported by distribution certificate", "hostName", host)
-
-					nc.logModuleWarning(
-						&log,
-						"NodePKIDistributionCertHostUnsupported",
-						fmt.Sprintf("NodePKI Distribution certificate not support hostname %v: %v", host, err),
-					)
-
-					isValid = false
-					break
-				}
-			}
-		}
+		ret, isValid = nc.loadNodePKIFromSecret(log, &secret, &globalPKI, hosts)
 	}
 
 	if notFound || !isValid {
@@ -629,6 +523,105 @@ func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddre
 		}
 	}
 
+	return
+}
+
+func (nc *nodeController) loadNodePKIFromSecret(log logr.Logger, secret *corev1.Secret, globalPKI *state.GlobalPKI, hosts []string) (ret state.NodePKI, isValid bool) {
+	authPKI, err := state.DecodeCertKeyFromSecret(
+		state.NodeAuthCertSecretField,
+		state.NodeAuthKeySecretField,
+		secret,
+	)
+
+	if err != nil {
+		log.Error(err, "Cannot decode auth PKI")
+
+		nc.logModuleWarning(
+			&log,
+			"NodePKIAuthDecodeError",
+			fmt.Sprintf("NodePKI Auth decode error: %v", err),
+		)
+
+		return
+	}
+	ret.Auth = &authPKI
+
+	err = pki.ValidateCertWithCAChain(ret.Auth.Cert, globalPKI.CA.Cert)
+	if err != nil {
+		log.Error(err, "Auth certificate validation error")
+
+		nc.logModuleWarning(
+			&log,
+			"NodePKIAuthCertValidationError",
+			fmt.Sprintf("NodePKI Auth certificate validation error: %v", err),
+		)
+
+		return
+	}
+
+	for _, host := range hosts {
+		err = ret.Auth.Cert.VerifyHostname(host)
+		if err != nil {
+			log.Error(err, "Hostname not supported by Auth certificate", "hostName", host)
+
+			nc.logModuleWarning(
+				&log,
+				"NodePKIAuthCertHostUnsupported",
+				fmt.Sprintf("NodePKI Auth certificate not support hostname %v: %v", host, err),
+			)
+
+			return
+		}
+	}
+
+	distributionPKI, err := state.DecodeCertKeyFromSecret(
+		state.NodeDistributionCertSecretField,
+		state.NodeDistributionKeySecretField,
+		secret,
+	)
+
+	if err != nil {
+		log.Error(err, "Cannot decode Distribution PKI")
+
+		nc.logModuleWarning(
+			&log,
+			"NodePKIDistributionDecodeError",
+			fmt.Sprintf("NodePKI Distribution decode error: %v", err),
+		)
+
+		return
+	}
+	ret.Distribution = &distributionPKI
+
+	err = pki.ValidateCertWithCAChain(ret.Distribution.Cert, globalPKI.CA.Cert)
+	if err != nil {
+		log.Error(err, "Distribution certificate validation error")
+
+		nc.logModuleWarning(
+			&log,
+			"NodePKIDistributionCertValidationError",
+			fmt.Sprintf("NodePKI Distribution certificate validation error: %v", err),
+		)
+
+		return
+	}
+
+	for _, host := range hosts {
+		err = ret.Distribution.Cert.VerifyHostname(host)
+		if err != nil {
+			log.Error(err, "Hostname not supported by distribution certificate", "hostName", host)
+
+			nc.logModuleWarning(
+				&log,
+				"NodePKIDistributionCertHostUnsupported",
+				fmt.Sprintf("NodePKI Distribution certificate not support hostname %v: %v", host, err),
+			)
+
+			return
+		}
+	}
+
+	isValid = true
 	return
 }
 
