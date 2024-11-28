@@ -128,9 +128,17 @@ properties:
         type: object
         default: {}
         properties:
-          enabled:
-            type: boolean
-            default: false
+          imageReferences:
+            type: array
+            items:
+              type: object
+              properties:
+                reference:
+                  type: string
+                publicKeys:
+                  type: array
+                  items:
+                    type: string
           webhook:
             type: object
             default: {}

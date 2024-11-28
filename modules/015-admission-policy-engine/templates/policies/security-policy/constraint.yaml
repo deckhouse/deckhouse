@@ -54,6 +54,9 @@
   {{- if or (hasKey $cr.spec.policies "seccompProfiles") }}
     {{- include "seccomp_profiles" (list $context $cr) }}
   {{- end }}
+  {{- if or (hasKey $cr.spec.policies "verifyImageSignatures") }}
+    {{- include "verify_image_signatures" (list $context $cr) }}
+  {{- end }}
 {{- end }}
 
 {{- end }} # end if bootstrapped
@@ -466,4 +469,23 @@ spec:
     allowedLocalhostFiles:
       {{- $cr.spec.policies.seccompProfiles.allowedLocalhostFiles | toYaml | nindent 6 }}
     {{- end }}
+{{- end }}
+
+{{- define "verify_image_signatures" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8VerifyImageSignature
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
 {{- end }}

@@ -25,6 +25,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
 )
 
@@ -42,7 +43,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleSP(input *go_hook.HookInput) error {
 	result := make([]*securityPolicy, 0)
-	var runRatify bool
+	refs := make(map[string]set.Set, 0)
 
 	snap := input.Snapshots["security-policies"]
 
@@ -52,15 +53,33 @@ func handleSP(input *go_hook.HookInput) error {
 		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
-		if !runRatify && sp.Spec.Policies.VerifyImageSignatures != nil {
-			runRatify = true
+		for _, v := range sp.Spec.Policies.VerifyImageSignatures {
+			if keys, ok := refs[v.Reference]; ok {
+				for _, key := range v.PublicKeys {
+					if !keys.Has(key) {
+						keys.Add(key)
+					}
+				}
+			} else {
+				refs[v.Reference] = set.New(v.PublicKeys...)
+			}
 		}
 	}
 
 	data, _ := json.Marshal(result)
-
 	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", json.RawMessage(data))
-	input.Values.Set("admissionPolicyEngine.internal.ratify.enabled", runRatify)
+
+	if len(refs) > 0 {
+		imageReferences := make([]v1alpha1.ImageReference, 0, len(refs))
+		for k, v := range refs {
+			imageReferences = append(imageReferences, v1alpha1.ImageReference{
+				Reference:  k,
+				PublicKeys: v.Slice(),
+			})
+		}
+		data, _ := json.Marshal(imageReferences)
+		input.Values.Set("admissionPolicyEngine.internal.ratify.imageReferences", json.RawMessage(data))
+	}
 
 	return nil
 }
