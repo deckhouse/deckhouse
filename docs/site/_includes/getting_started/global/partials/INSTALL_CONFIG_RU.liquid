@@ -1,12 +1,9 @@
 {% assign revision=include.revision %}
 
-{% if revision == 'ee' or revision == 'be' or revision == 'se' %}
-{% include getting_started/global/EE_ACCESS_RU.md %}
-<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
-{% endif %}
+
 
 <div markdown="1">
-Ниже сгенерированы рекомендованные настройки для установки Deckhouse Kubernetes Platform {% if revision == 'ee' %}Enterprise Edition{% else %}Community Edition{% endif %}:
+Ниже сгенерированы рекомендованные настройки для установки Deckhouse Kubernetes Platform {{ site.data.i18n[revision] }}:
 - `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера{% endif %} и начальные параметры кластера.
 {% if page.platform_type == 'cloud' %}- `resources.yml` — описание ресурсов для создания после установки (настройки узлов и Ingress-контроллера).{% endif %}
 
@@ -22,9 +19,9 @@
 {%- endif %}
 
 Создайте файл `config.yml`.
-{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
 {% snippetcut name="config.yml" selector="config-yml" %}
-{% include_file "_includes/getting_started/bm/partials/config.ru.yml.ce.inc" syntax="yaml" %}
+{% include_file "{{ includePath }}" syntax="yaml" |  %}
 {% endsnippetcut %}
 
 {%- if page.platform_type == 'existing' %}
@@ -65,6 +62,4 @@
 {% endif %}
 </div>
 
-{% if revision == 'ee' or revision == 'be' or revision == 'se' %}
-</div>
-{% endif %}
+
