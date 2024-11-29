@@ -88,6 +88,9 @@ def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
     existing_references = [obj.filterResult for obj in ctx.snapshots.policies if obj.filterResult.imageReferences is not None]
 
     for exobj in existing_references:
+        # On update skip self intersection
+        if exobj.name == ctx.review.request.object.metadata.name:
+            continue
         for exref in exobj.imageReferences:
             for ref in references:
                 ref_clean = ref.replace("*",'').strip()
