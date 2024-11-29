@@ -75,6 +75,10 @@ docker:
   ENV:
     EDITOR: vim
 shell:
+  beforeInstall:
+  - |
+    apt-get update && apt-get install -y locale && apt-get clean
+    find /var/lib/apt/ /var/cache/apt/ -type f -delete
   setup:
   - |
     ln -fs /dhctl /usr/bin/dhctl
