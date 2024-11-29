@@ -57,8 +57,18 @@ def is_monitoring_enabled(labels, annotations):
     return True
 
 
-def parse_thresholds(labels, annotations, default_thresholds):
+def parse_thresholds(labels, annotations, default_thresholds, namespace=None):
+    """
+    Parses and returns thresholds by overriding default values with those from
+    namespace labels, annotations, and object labels.
+    """
     thresholds = copy.deepcopy(default_thresholds)
+    if namespace:
+        for name, value in corev1.read_namespace(namespace).metadata.labels.items():
+            if name.startswith(EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX):
+                unprefixed_name = name.replace(EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX, "")
+                thresholds[unprefixed_name] = value
+                logging.info('Overiding defaults with namespace values: {}/{}'.format(name, value))
     if annotations:
         for name, value in annotations.items():
             if name.startswith(DEPRECATED_EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX):
@@ -69,7 +79,6 @@ def parse_thresholds(labels, annotations, default_thresholds):
             if name.startswith(EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX):
                 unprefixed_name = name.replace(EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX, "")
                 thresholds[unprefixed_name] = value
-
     return thresholds
 
 
@@ -88,7 +97,7 @@ class Annotated(ABC):
         self.namespace = namespace
         self.name = name
         self.enabled = is_monitoring_enabled(kube_labels, kube_annotations)
-        self.thresholds = parse_thresholds(kube_labels, kube_annotations, self.default_thresholds)
+        self.thresholds = parse_thresholds(kube_labels, kube_annotations, self.default_thresholds, self.namespace)
 
     @classmethod
     def list_threshold_annotated_objects(cls, namespace):
@@ -271,12 +280,12 @@ def _get_metrics():
         (ns.metadata.annotations and DEPRECATED_EXTENDED_MONITORING_ENABLED_ANNOTATION in ns.metadata.annotations)
     )
 
-    response = """# HELP extended_monitoring_annotations Extended monitoring annotations
-      # TYPE extended_monitoring_annotations gauge\n"""
+    response = "# HELP extended_monitoring_annotations Extended monitoring annotations\n"
+    response += "# TYPE extended_monitoring_annotations gauge\n"
 
     with ThreadPoolExecutor(max_workers=8) as executor:
         def _list_in_ns(ns):
-            enabled_nses.append('\nextended_monitoring_enabled{{namespace="{}"}} 1'.format(ns))
+            enabled_nses.append('extended_monitoring_enabled{{namespace="{}"}} 1'.format(ns))
             yield from _list_objects(executor, KUBERNETES_NAMESPACED_OBJECTS, ns)
 
         for annotated_object in chain.from_iterable(executor.map(_list_in_ns, ns_list)):
