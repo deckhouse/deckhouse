@@ -476,7 +476,7 @@ spec:
   {{- $cr := index . 1 }}
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: D8VerifyImageSignature
+kind: D8VerifyImageSignatures
 metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}

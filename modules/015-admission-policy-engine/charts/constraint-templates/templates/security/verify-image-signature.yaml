@@ -2,7 +2,7 @@
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
-  name: d8verifyimagesignature
+  name: d8verifyimagesignatures
   labels:
     heritage: deckhouse
     module: admission-policy-engine
@@ -11,7 +11,7 @@ spec:
   crd:
     spec:
       names:
-        kind: D8VerifyImageSignature
+        kind: D8VerifyImageSignatures
       validation:
         openAPIV3Schema:
           type: object
