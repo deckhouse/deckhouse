@@ -111,8 +111,8 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	data.IpAddress = os.Getenv("HOST_IP")
-	if data.IpAddress == "" {
+	data.IPAddress = os.Getenv("HOST_IP")
+	if data.IPAddress == "" {
 		err = fmt.Errorf("HOST_IP environment variable is not set")
 		sendInternalError("Error getting IP address", err)
 		return
@@ -125,7 +125,7 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	var resp ChangesReponse
 
 	// Save the PKI files
-	if resp.PKI, err = data.Pki.savePkiFiles(
+	if resp.PKI, err = data.PKI.savePkiFiles(
 		pkiConfigDirectoryPath,
 		&data.ConfigHashes,
 	); err != nil {
@@ -137,7 +137,7 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	if resp.Auth, err = data.processTemplate(
 		authConfigTemplateName,
 		authConfigPath,
-		&data.ConfigHashes.AuthTemplateHash,
+		&data.ConfigHashes.AuthTemplate,
 	); err != nil {
 		sendInternalError("Error processing Auth template", err)
 		return
@@ -146,7 +146,7 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	if resp.Distribution, err = data.processTemplate(
 		distributionConfigTemplateName,
 		distributionConfigPath,
-		&data.ConfigHashes.DistributionTemplateHash,
+		&data.ConfigHashes.DistributionTemplate,
 	); err != nil {
 		sendInternalError("Error processing Distribution template", err)
 		return

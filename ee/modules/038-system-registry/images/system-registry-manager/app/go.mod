@@ -10,6 +10,7 @@ require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-chi/render v1.0.3
 	github.com/go-logr/logr v1.4.2
+	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/samber/slog-chi v1.12.3
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.21.0

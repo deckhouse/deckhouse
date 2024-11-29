@@ -64,28 +64,28 @@ func (r *RegistryReconciler) prepareUpstreamRegistry() staticpod.UpstreamRegistr
 func (r *RegistryReconciler) prepareEmbeddedRegistryConfig(node k8s.MasterNode, upstreamRegistry staticpod.UpstreamRegistry) staticpod.EmbeddedRegistryConfig {
 	return staticpod.EmbeddedRegistryConfig{
 		Registry: staticpod.RegistryDetails{
-			UserRw: staticpod.User{
+			UserRW: staticpod.User{
 				Name:         r.embeddedRegistry.registryRwUser.UserName,
 				PasswordHash: r.embeddedRegistry.registryRwUser.HashedPassword,
 			},
-			UserRo: staticpod.User{
+			UserRO: staticpod.User{
 				Name:         r.embeddedRegistry.registryRoUser.UserName,
 				PasswordHash: r.embeddedRegistry.registryRoUser.HashedPassword,
 			},
-			RegistryMode:     r.embeddedRegistry.mc.Settings.Mode,
-			HttpSecret:       "http-secret",
-			UpstreamRegistry: upstreamRegistry, // Will be empty for non-Proxy modes
+			Mode:       r.embeddedRegistry.mc.Settings.Mode,
+			HttpSecret: "http-secret",
+			Upstream:   upstreamRegistry, // Will be empty for non-Proxy modes
 		},
 		Images: staticpod.Images{
 			DockerDistribution: r.embeddedRegistry.images.DockerDistribution,
 			DockerAuth:         r.embeddedRegistry.images.DockerAuth,
 		},
-		Pki: staticpod.Pki{
-			CaCert:           string(r.embeddedRegistry.caPKI.Cert),
+		PKI: staticpod.PKIModel{
+			CACert:           string(r.embeddedRegistry.caPKI.Cert),
 			AuthCert:         string(node.AuthCertificate.Cert),
 			AuthKey:          string(node.AuthCertificate.Key),
-			AuthTokenCert:    string(r.embeddedRegistry.authTokenPKI.Cert),
-			AuthTokenKey:     string(r.embeddedRegistry.authTokenPKI.Key),
+			TokenCert:        string(r.embeddedRegistry.authTokenPKI.Cert),
+			TokenKey:         string(r.embeddedRegistry.authTokenPKI.Key),
 			DistributionCert: string(node.DistributionCertificate.Cert),
 			DistributionKey:  string(node.DistributionCertificate.Key),
 		},

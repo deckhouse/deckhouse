@@ -10,72 +10,127 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
+
+	validation "github.com/go-ozzo/ozzo-validation"
 )
 
 // EmbeddedRegistryConfig represents the configuration for the registry
 type EmbeddedRegistryConfig struct {
-	IpAddress    string
-	Registry     RegistryDetails
-	Images       Images
-	ConfigHashes ConfigHashes
-	Pki          Pki
-	Proxy        *Proxy
+	IPAddress    string          `json:"ipAddress,omitempty"`
+	Registry     RegistryDetails `json:"registry,omitempty"`
+	Images       Images          `json:"images,omitempty"`
+	ConfigHashes ConfigHashes    `json:"configHashes,omitempty"`
+	PKI          PKIModel        `json:"pki,omitempty"`
+	Proxy        *Proxy          `json:"proxy,omitempty"`
+}
+
+func (config *EmbeddedRegistryConfig) Validate() error {
+	return validation.ValidateStruct(config,
+		validation.Field(&config.IPAddress, validation.Required),
+		validation.Field(&config.Registry, validation.Required),
+		validation.Field(&config.Images, validation.Required),
+		validation.Field(&config.PKI, validation.Required),
+		validation.Field(&config.Proxy),
+	)
 }
 
 func (cfg *EmbeddedRegistryConfig) Bind(r *http.Request) error {
-	cfg.IpAddress = os.Getenv("HOST_IP")
-	return cfg.validate()
+	cfg.IPAddress = os.Getenv("HOST_IP")
+	return cfg.Validate()
 }
 
-// Pki holds the configuration for the PKI
-type Pki struct {
-	CaCert           string
-	AuthCert         string
-	AuthKey          string
-	AuthTokenCert    string
-	AuthTokenKey     string
-	DistributionCert string
-	DistributionKey  string
+// PKIModel holds the configuration for the PKI
+type PKIModel struct {
+	CACert           string `json:"ca,omitempty"`
+	AuthCert         string `json:"authCert,omitempty"`
+	AuthKey          string `json:"authKey,omitempty"`
+	TokenCert        string `json:"tokenCert,omitempty"`
+	TokenKey         string `json:"tokenKey,omitempty"`
+	DistributionCert string `json:"distributionCert,omitempty"`
+	DistributionKey  string `json:"distributionKey,omitempty"`
+}
+
+func (p PKIModel) Validate() error {
+	return validation.ValidateStruct(&p,
+		validation.Field(&p.CACert, validation.Required),
+		validation.Field(&p.AuthCert, validation.Required),
+		validation.Field(&p.AuthKey, validation.Required),
+		validation.Field(&p.TokenCert, validation.Required),
+		validation.Field(&p.TokenKey, validation.Required),
+		validation.Field(&p.DistributionCert, validation.Required),
+		validation.Field(&p.DistributionKey, validation.Required),
+	)
 }
 
 // ConfigHashes holds the hash of the configuration files
 type ConfigHashes struct {
-	AuthTemplateHash         string
-	DistributionTemplateHash string
-	CaCertHash               string
-	AuthCertHash             string
-	AuthKeyHash              string
-	AuthTokenCertHash        string
-	AuthTokenKeyHash         string
-	DistributionCertHash     string
-	DistributionKeyHash      string
+	AuthTemplate         string
+	DistributionTemplate string
+	CACert               string
+	AuthCert             string
+	AuthKey              string
+	TokenCert            string
+	TokenKey             string
+	DistributionCert     string
+	DistributionKey      string
 }
 
 // RegistryDetails holds detailed configuration of the registry
 type RegistryDetails struct {
-	UserRw           User
-	UserRo           User
-	RegistryMode     string
-	UpstreamRegistry UpstreamRegistry
-	HttpSecret       string
+	UserRW     User             `json:"userRW,omitempty"`
+	UserRO     User             `json:"userRO,omitempty"`
+	Mode       string           `json:"mode,omitempty"`
+	Upstream   UpstreamRegistry `json:"upstream,omitempty"`
+	HttpSecret string           `json:"httpSecret,omitempty"`
+}
+
+func (rd RegistryDetails) Validate() error {
+	var fields []*validation.FieldRules
+
+	fields = append(fields, validation.Field(&rd.Mode, validation.Required))
+	fields = append(fields, validation.Field(&rd.HttpSecret, validation.Required))
+	fields = append(fields, validation.Field(&rd.UserRO))
+	fields = append(fields, validation.Field(&rd.UserRW))
+
+	if rd.Mode == "Proxy" {
+		fields = append(fields, validation.Field(&rd.Upstream))
+	}
+
+	return validation.ValidateStruct(&rd, fields...)
 }
 
 // User represents a user with a name and a password hash
 type User struct {
-	Name         string
-	PasswordHash string
+	Name         string `json:"name"`
+	PasswordHash string `json:"passwordHash"`
+}
+
+func (u User) Validate() error {
+	return validation.ValidateStruct(&u,
+		validation.Field(&u.Name, validation.Required),
+		validation.Field(&u.PasswordHash, validation.Required),
+	)
 }
 
 // UpstreamRegistry holds upstream registry configuration details
 type UpstreamRegistry struct {
-	Scheme   string
-	Host     string
-	Path     string
-	CA       string
-	User     string
-	Password string
-	TTL      *string
+	Scheme   string  `json:"scheme,omitempty"`
+	Host     string  `json:"host,omitempty"`
+	Path     string  `json:"path,omitempty"`
+	CA       string  `json:"ca,omitempty"`
+	User     string  `json:"user,omitempty"`
+	Password string  `json:"password,omitempty"`
+	TTL      *string `json:"ttl,omitempty"`
+}
+
+func (u UpstreamRegistry) Validate() error {
+	return validation.ValidateStruct(&u,
+		validation.Field(&u.Scheme, validation.Required),
+		validation.Field(&u.Host, validation.Required),
+		validation.Field(&u.Path, validation.Required),
+		validation.Field(&u.User, validation.Required),
+		validation.Field(&u.Password, validation.Required),
+	)
 }
 
 type Images struct {
@@ -83,10 +138,25 @@ type Images struct {
 	DockerAuth         string
 }
 
+func (im Images) Validate() error {
+	return validation.ValidateStruct(&im,
+		validation.Field(&im.DockerAuth, validation.Required),
+		validation.Field(&im.DockerDistribution, validation.Required),
+	)
+}
+
 type Proxy struct {
-	HttpProxy  string
-	HttpsProxy string
-	NoProxy    string
+	Http    string `json:"http,omitempty"`
+	Https   string `json:"https,omitempty"`
+	NoProxy string `json:"noProxy,omitempty"`
+}
+
+func (p Proxy) Validate() error {
+	return validation.ValidateStruct(&p,
+		validation.Field(&p.Http, validation.Required),
+		validation.Field(&p.Https, validation.Required),
+		validation.Field(&p.NoProxy, validation.Required),
+	)
 }
 
 // processTemplate processes the given template file and saves the rendered result to the specified path
@@ -126,109 +196,8 @@ func (config *EmbeddedRegistryConfig) processTemplate(name templateName, outputP
 	return true, nil
 }
 
-func (config *EmbeddedRegistryConfig) validate() error {
-	var missingFields []string
-
-	// Validate IP address
-	if config.IpAddress == "" {
-		missingFields = append(missingFields, "IpAddress")
-	}
-
-	// Validate registry users
-	if config.Registry.UserRw.Name == "" {
-		missingFields = append(missingFields, "UserRw.Name")
-	}
-	if config.Registry.UserRw.PasswordHash == "" {
-		missingFields = append(missingFields, "UserRw.PasswordHash")
-	}
-	if config.Registry.UserRo.Name == "" {
-		missingFields = append(missingFields, "UserRo.Name")
-	}
-	if config.Registry.UserRo.PasswordHash == "" {
-		missingFields = append(missingFields, "UserRo.PasswordHash")
-	}
-
-	// Validate registry mode and upstream registry
-	if config.Registry.RegistryMode == "" {
-		missingFields = append(missingFields, "RegistryMode")
-	}
-	if config.Registry.RegistryMode == "Proxy" {
-		if config.Registry.UpstreamRegistry.Scheme == "" {
-			missingFields = append(missingFields, "UpstreamRegistry.Scheme")
-		}
-		if config.Registry.UpstreamRegistry.Host == "" {
-			missingFields = append(missingFields, "UpstreamRegistry.Host")
-		}
-		if config.Registry.UpstreamRegistry.Path == "" {
-			missingFields = append(missingFields, "UpstreamRegistry.Path")
-		}
-		if config.Registry.UpstreamRegistry.User == "" {
-			missingFields = append(missingFields, "UpstreamRegistry.User")
-		}
-		if config.Registry.UpstreamRegistry.Password == "" {
-			missingFields = append(missingFields, "UpstreamRegistry.Password")
-		}
-	}
-
-	// Validate registry http secret
-	if config.Registry.HttpSecret == "" {
-		missingFields = append(missingFields, "Registry.HttpSecret")
-	}
-
-	// Validate images
-	if config.Images.DockerDistribution == "" {
-		missingFields = append(missingFields, "Images.DockerDistribution")
-	}
-	if config.Images.DockerAuth == "" {
-		missingFields = append(missingFields, "Images.DockerAuth")
-	}
-
-	// Validate node PKI
-	if config.Pki.CaCert == "" {
-		missingFields = append(missingFields, "Pki.CaCert")
-	}
-	if config.Pki.AuthCert == "" {
-		missingFields = append(missingFields, "Pki.AuthCert")
-	}
-	if config.Pki.AuthKey == "" {
-		missingFields = append(missingFields, "Pki.AuthKey")
-	}
-	if config.Pki.AuthTokenCert == "" {
-		missingFields = append(missingFields, "Pki.AuthTokenCert")
-	}
-	if config.Pki.AuthTokenKey == "" {
-		missingFields = append(missingFields, "Pki.AuthTokenCert")
-	}
-	if config.Pki.DistributionCert == "" {
-		missingFields = append(missingFields, "Pki.DistributionCert")
-	}
-	if config.Pki.DistributionKey == "" {
-		missingFields = append(missingFields, "Pki.DistributionKey")
-	}
-
-	// Validate proxy if present
-	if config.Proxy != nil {
-		if config.Proxy.HttpProxy == "" {
-			missingFields = append(missingFields, "Proxy.HttpProxy")
-		}
-		if config.Proxy.HttpsProxy == "" {
-			missingFields = append(missingFields, "Proxy.HttpsProxy")
-		}
-		if config.Proxy.NoProxy == "" {
-			missingFields = append(missingFields, "Proxy.NoProxy")
-		}
-	}
-
-	// If there are missing fields, return an error
-	if len(missingFields) > 0 {
-		return fmt.Errorf("validation error, missing fields: %s", strings.Join(missingFields, ", "))
-	}
-
-	return nil
-}
-
 // savePkiFiles saves the PKI-related files to the specified directory and updates hashes in ConfigHashes if they change
-func (pki *Pki) savePkiFiles(basePath string, configHashes *ConfigHashes) (bool, error) {
+func (pki *PKIModel) savePkiFiles(basePath string, configHashes *ConfigHashes) (bool, error) {
 	anyFileChanged := false
 
 	// Define paths for each PKI file and corresponding hash field in ConfigHashes
@@ -236,13 +205,13 @@ func (pki *Pki) savePkiFiles(basePath string, configHashes *ConfigHashes) (bool,
 		content   string
 		hashField *string
 	}{
-		"ca.crt":           {pki.CaCert, &configHashes.CaCertHash},
-		"auth.crt":         {pki.AuthCert, &configHashes.AuthCertHash},
-		"auth.key":         {pki.AuthKey, &configHashes.AuthKeyHash},
-		"token.crt":        {pki.AuthTokenCert, &configHashes.AuthTokenCertHash},
-		"token.key":        {pki.AuthTokenKey, &configHashes.AuthTokenKeyHash},
-		"distribution.crt": {pki.DistributionCert, &configHashes.DistributionCertHash},
-		"distribution.key": {pki.DistributionKey, &configHashes.DistributionKeyHash},
+		"ca.crt":           {pki.CACert, &configHashes.CACert},
+		"auth.crt":         {pki.AuthCert, &configHashes.AuthCert},
+		"auth.key":         {pki.AuthKey, &configHashes.AuthKey},
+		"token.crt":        {pki.TokenCert, &configHashes.TokenCert},
+		"token.key":        {pki.TokenKey, &configHashes.TokenKey},
+		"distribution.crt": {pki.DistributionCert, &configHashes.DistributionCert},
+		"distribution.key": {pki.DistributionKey, &configHashes.DistributionKey},
 	}
 
 	// Iterate over the PKI files and process them
