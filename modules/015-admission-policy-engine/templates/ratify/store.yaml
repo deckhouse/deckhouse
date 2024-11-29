@@ -3,7 +3,7 @@
 apiVersion: config.ratify.deislabs.io/v1beta1
 kind: Store
 metadata:
-  name: store-oras
+  name: oras
   {{- include "helm_lib_module_labels" (list . (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
 spec:
   name: oras
@@ -19,8 +19,10 @@ spec:
 {{- range $sp := .Values.admissionPolicyEngine.internal.securityPolicies }}
 {{- $spname := $sp.metadata.name }}
 {{- range $refid, $ref := $sp.spec.policies.verifyImageSignatures }}
+  {{- if $ref.dockerCfg }}
       - secretName: {{ printf "ratify-%s-%d" $spname $refid }}
         namespace: d8-{{ $.Chart.Name }}
+  {{- end }}
 {{- end }}
 {{- end }}
 {{- end }}
