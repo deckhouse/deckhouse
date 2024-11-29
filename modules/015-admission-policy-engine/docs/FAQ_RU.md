@@ -131,3 +131,68 @@ spec:
           - NET_BIND_SERVICE
       readOnlyRootFilesystem: true
 ```
+
+## Проверка подписи образов
+
+*Доступно только в EE версии*
+
+В целях безопасности Docker образы могут быть подписаны с помощью инструмента cosign. Подробнее о cosign можно узнать [здесь](https://github.com/sigstore/cosign).
+(*** Артем, [тут](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys) лежит дока, как делать подписи. Можно дать на нее ссылку или вставить сюда конкретные команды.)
+
+
+Реализовать проверку подписи контейнеров в кластере можно с помощью SecurityPolicy
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: example
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: default
+  policies:
+    verifyImageSignatures:
+      - reference: docker.io/myrepo/*
+        publicKeys:
+        - |-
+          -----BEGIN PUBLIC KEY-----
+          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
+          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
+          -----END PUBLIC KEY-----
+      - reference: company.registry.com/*
+        dockerCfg: zxc==
+        publicKeys:
+        - |-
+          -----BEGIN PUBLIC KEY-----
+          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
+          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
+          -----END PUBLIC KEY-----
+```
+
+verifyImageSignatures - список политик проверки подписи образов.
+где в каждой записи:
+ - `reference` - это абсолютная ссылка на образ или glob-pattern(если указана звездочка)
+Например:
+ - company.registry.com/* - будет проверять образы: `company.registry.com/foo/bar:v1`, `company.registry.com/example/tool:v2` и тд
+ - docker.io/nginx - будет проверять только nginx из deckhouse.io
+
+(***Звездочка может быть только одна и только в конце
+Вот выдержка из документации тулзы:
+```
+A reference MAY contain a wildcard * character which represents 0+ matching characters
+The wild card character MUST be the last character in the reference string, if used at all
+Multiple wildcard characers CANNOT be used within the same reference
+A scope, which does NOT have a suffixed * character, is assumed to be an absolute reference. The entire reference must be an exact match to the image reference.
+```
+)
+
+- `publicKeys` - массив публичных ключей, которыми проверяется подпись.
+
+Данная политика будет запрещать создавать поды с неподписанными образами или образами с неверной подписью:
+```shell
+[example] Image signature verification failed: nginx:1.17.2
+```
+
+Образы, которые не подходят под reference pattern не проверяются на подпись.
