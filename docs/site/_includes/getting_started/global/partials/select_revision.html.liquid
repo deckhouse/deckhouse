@@ -111,6 +111,12 @@ $(document).ready(function() {
 
   triggerBlockOnItemContent('[license-token]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
 
+  {%- for revision in site.data.getting_started.data.global.revisions %}
+  {% if revision != "ce" %}
+  update_parameter('block_layout_{{ revision }}', 'imagesRepo', '<REVISION>', '{{ revision }}', '[config-yml]');
+  {% endif %}
+  {% endfor %}
+
   generate_password(true);
   replace_snippet_password();
   sessionStorage.setItem('dhctl-revision','{% if page.ee_only == true %}ee{% else %}ce{% endif %}');
