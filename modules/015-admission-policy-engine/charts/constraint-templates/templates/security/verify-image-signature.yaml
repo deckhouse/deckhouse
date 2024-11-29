@@ -31,14 +31,9 @@ spec:
           images := [img | img = retrieve_images[_]]
           filtered_images := [image |
             image := images[_];
-            matches_any_regex(image, input.parameters.references[_])
+            regex.match(input.parameters.references[_], image)
           ]
           response := external_data({"provider": "ratify-provider", "keys": filtered_images})
-        }
-
-        matches_any_regex(image, reg_list) = true {
-          reg := reg_list[_]
-          regex.match(reg, image)
         }
 
         retrieve_images[imgs] {
