@@ -73,6 +73,6 @@ spec:
         general_violation[{"result": result}] {
           subject_validation := remote_data.responses[_]
           subject_validation[1].isSuccess == false
-          result := sprintf("Subject failed verification: %s", [subject_validation[0]])
+          result := sprintf("Image signature verification failed: %s", [subject_validation[0]])
         }
       target: admission.k8s.gatekeeper.sh
