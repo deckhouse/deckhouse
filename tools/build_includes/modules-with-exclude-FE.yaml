@@ -456,11 +456,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/fe/modules/300-prometheus/openapi/openapi-case-tests.yaml
   to: /deckhouse/modules/300-prometheus/openapi/openapi-case-tests.yaml
   stageDependencies:
