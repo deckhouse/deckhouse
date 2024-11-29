@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -66,8 +65,7 @@ func handleSP(input *go_hook.HookInput) error {
 		}
 	}
 
-	data, _ := json.Marshal(result)
-	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", json.RawMessage(data))
+	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", result)
 
 	if len(refs) > 0 {
 		imageReferences := make([]v1alpha1.ImageReference, 0, len(refs))
@@ -77,8 +75,7 @@ func handleSP(input *go_hook.HookInput) error {
 				PublicKeys: v.Slice(),
 			})
 		}
-		data, _ := json.Marshal(imageReferences)
-		input.Values.Set("admissionPolicyEngine.internal.ratify.imageReferences", json.RawMessage(data))
+		input.Values.Set("admissionPolicyEngine.internal.ratify.imageReferences", imageReferences)
 	}
 
 	return nil

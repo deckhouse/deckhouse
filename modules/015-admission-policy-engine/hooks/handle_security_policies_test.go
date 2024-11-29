@@ -65,7 +65,8 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 								"operation-policy.deckhouse.io/enabled": "true"
 							}
 						}
-					}
+					},
+					"labelSelector": {}
 				},
 				"policies": {
 					"allowedAppArmor": [

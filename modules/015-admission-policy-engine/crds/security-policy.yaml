@@ -429,6 +429,9 @@ spec:
                         type: object
                         required: ["publicKeys", "reference"]
                         properties:
+                          dockerCfg:
+                            type: string
+                            description: Container registry access config in Base64 for checking image signatures from private.
                           publicKeys:
                             type: array
                             description: The list of cosign compliant public keys to check image signatures with.

@@ -11,5 +11,16 @@ spec:
   parameters:
     cosignEnabled: true
     cacheEnabled: true
-    ttl: 10
+    ttl: 180
+    authProvider:
+      name: k8Secrets
+      serviceAccountName: ratify
+      secrets:
+{{- range $sp := .Values.admissionPolicyEngine.internal.securityPolicies }}
+{{- $spname := $sp.metadata.name }}
+{{- range $refid, $ref := $sp.spec.policies.verifyImageSignatures }}
+      - secretName: {{ printf "ratify-%s-%d" $spname $refid }}
+        namespace: d8-{{ $.Chart.Name }}
+{{- end }}
+{{- end }}
 {{- end }}
