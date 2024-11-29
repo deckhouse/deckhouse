@@ -5,7 +5,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
 from: {{ .Images.BASE_SCRATCH }}
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
-  add: /
+  add: /relocate
   to: /
   includePaths:
   - nvme
@@ -26,24 +26,15 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  includePaths:
-  - '**/*.patch'
-  stageDependencies:
-    install:
-    - '**/*.patch'
 shell:
   install:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -b v{{ $version }} --depth 1 {{ .SOURCE_REPO }}/linux-nvme/nvme-cli.git /src/nvme-cli
-  - cd /src/nvme-cli
-  - git apply /patches/*.patch --verbose
-  - git clone -b v1.11 --depth 1 {{ .SOURCE_REPO }}/linux-nvme/libnvme.git /src/nvme-cli/subprojects/libnvme
+  - git clone -b v1.11.1 --depth 1 {{ .SOURCE_REPO }}/linux-nvme/libnvme.git /src/nvme-cli/subprojects/libnvme
   - rm -rf /src/nvme-cli/.git /src/nvme-cli/subprojects/libnvme/.git
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
-from: {{ .Images.BASE_ALPINE }}
+from: {{ .Images.BASE_ALT_P11 }}
 import:
 - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -51,12 +42,16 @@ import:
   before: install
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make meson build-base bash linux-headers
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential meson glibc-devel-static
+  - find /var/lib/apt/lists/ /var/cache/apt/ -type f -delete
   install:
   - cd /src/nvme-cli
   - |
-    meson .build --buildtype=release --default-library=static -Dc_link_args="-static" \
-      --wrap-mode=forcefallback -Dlibnvme:tests=false -Dlibnvme:keyutils=disabled \
-      -Djson-c=disabled -Dlibnvme:json-c=disabled -Dlibnvme:openssl=disabled -Dlibnvme:python=disabled
+    meson .build --buildtype=release --default-library=static -Dc_link_args="-static" --wrap-mode=forcefallback \
+      -Dlibnvme:tests=false -Dlibnvme:keyutils=disabled -Djson-c=disabled -Dlibnvme:json-c=disabled \
+      -Dlibnvme:openssl=disabled -Dlibnvme:python=disabled -Ddocs=false
   - ninja -C .build
+  - mkdir /relocate
+  - cp .build/nvme /relocate
+  - cp /src/scripts/* /relocate
