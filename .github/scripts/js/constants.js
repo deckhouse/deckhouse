@@ -51,12 +51,12 @@ const labels = {
   'e2e/use/multimaster': { type: 'e2e-use', multimaster: true },
 
   // E2E: edition
-  'e2e/use/edition/ce': { type: 'e2e-edition', edition: 'CE' },
-  'e2e/use/edition/ee': { type: 'e2e-edition', edition: 'EE' },
-  'e2e/use/edition/be': { type: 'e2e-edition', edition: 'BE' },
-  'e2e/use/edition/se': { type: 'e2e-edition', edition: 'SE' },
-  'e2e/use/edition/se+': { type: 'e2e-edition', edition: 'SE-plus' },
-  'e2e/use/edition/fe': { type: 'e2e-edition', edition: 'FE' },
+  'e2e/use/edition/ce': { type: 'e2e-use', edition: 'CE' },
+  'e2e/use/edition/ee': { type: 'e2e-use', edition: 'EE' },
+  'e2e/use/edition/be': { type: 'e2e-use', edition: 'BE' },
+  'e2e/use/edition/se': { type: 'e2e-use', edition: 'SE' },
+  'e2e/use/edition/se+': { type: 'e2e-use', edition: 'SE-plus' },
+  'e2e/use/edition/fe': { type: 'e2e-use', edition: 'FE' },
 
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
@@ -157,6 +157,7 @@ module.exports.knownKubernetesVersions = kubernetesVersions;
 
 module.exports.e2eDefaults = {
   criName: 'Containerd',
+  edition: 'FE',
   multimaster: false,
 }
 
