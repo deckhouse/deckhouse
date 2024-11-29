@@ -31,7 +31,7 @@ fi
 
 for volume in ${volume_names}
 do
-  symlink="$(nvme id-ctrl -v "${volume}" | ( grep '^0000:' || true ) | sed -E 's/.*"(\/dev\/)?([a-z0-9]+)\.+"$/\/dev\/\2/')"
+  symlink="$(/opt/deckhouse/bin/nvme id-ctrl -v "${volume}" | ( grep '^0000:' || true ) | sed -E 's/.*"(\/dev\/)?([a-z0-9]+)\.+"$/\/dev\/\2/')"
   if [ -z "${symlink}" ]; then
     symlink="$(/opt/deckhouse/bin/ebsnvme-id "${volume}" | sed -n '2p' )"
   fi
