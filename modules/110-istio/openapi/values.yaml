@@ -67,7 +67,7 @@ properties:
         type: array
         default: []
         x-examples:
-        - [{"name": "aaa", "spiffeEndpoint": "ccc", "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
+        - [{"name": "aaa", "spiffeEndpoint": "ccc", "ca": "---CERT---asdasda314g---ENDCERT", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
       remotePublicMetadata:
         type: object
         default: {}
@@ -78,6 +78,10 @@ properties:
               type: string
             spiffeEndpoint:
               type: string
+            ca:
+              type: string
+            insecureSkipVerify:
+              type: bool
             enableIngressGateway:
               type: bool
             apiHost:
