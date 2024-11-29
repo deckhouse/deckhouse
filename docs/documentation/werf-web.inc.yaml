@@ -53,7 +53,7 @@ shell:
         cat modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
 
         echo '[] Edition - {{ .Edition }}. Merging modules of different editions...'
-        for dir in {be,se,ee,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
+        for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
 
         echo '[] Preparing modules structure...'
         export MODULES_SRC_DIR=/src/modules
@@ -214,6 +214,14 @@ git:
   - modules/**/docs/README.md
 - add: /{{ .ModulePath }}ee/se
   to: /comparison/se
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/se-plus
+  to: /comparison/se-plus
   owner: jekyll
   group: jekyll
   stageDependencies:
