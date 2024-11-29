@@ -182,7 +182,7 @@ spec:
                         type: object
                         properties:
                           dockerCfg:
-                          description: Строка с конфигурацией доступа к container registry в Base64 для проверки подписей образов в приватном container registry.
+                            description: Строка с конфигурацией доступа к container registry в Base64 для проверки подписей образов в приватном container registry.
                           publicKeys:
                             description: Список cosign-совместимсых публичных ключей используемых для проверки подписей.
                           reference:
