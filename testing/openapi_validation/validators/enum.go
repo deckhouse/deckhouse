@@ -65,6 +65,8 @@ var (
 			"properties.clusterConfiguration.properties.cloud.properties.provider",
 			// http and https
 			"properties.modulesImages.properties.registry.properties.scheme",
+			// allow SE-plus edition
+			"properties.deckhouseEdition",
 		},
 		"modules/150-user-authn/crds/dex-provider.yaml": {
 			// v1alpha1 migrated to v1
@@ -119,7 +121,7 @@ var (
 			// ignore temporary flag that is already used (will be deleted after all CSIs are migrated)
 			"properties.storageClass.properties.compatibilityFlag",
 		},
-		"ee/modules/030-cloud-provider-vsphere/openapi/config-values.yaml": {
+		"ee/se-plus/modules/030-cloud-provider-vsphere/openapi/config-values.yaml": {
 			// ignore temporary flag that is already used (will be deleted after all CSIs are migrated)
 			"properties.storageClass.properties.compatibilityFlag",
 		},
@@ -128,7 +130,7 @@ var (
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 		},
-		"ee/modules/030-cloud-provider-vsphere/openapi/values.yaml": {
+		"ee/se-plus/modules/030-cloud-provider-vsphere/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
