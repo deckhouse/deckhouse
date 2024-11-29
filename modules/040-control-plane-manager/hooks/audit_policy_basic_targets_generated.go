@@ -48,6 +48,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cert-manager:cainjector",
 	"system:serviceaccount:d8-cert-manager:cert-manager",
 	"system:serviceaccount:d8-cert-manager:webhook",
+	"system:serviceaccount:d8-chrony:chrony-exporter",
 	"system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager",
 	"system:serviceaccount:d8-cloud-instance-manager:cluster-autoscaler",
 	"system:serviceaccount:d8-cloud-instance-manager:early-oom",
