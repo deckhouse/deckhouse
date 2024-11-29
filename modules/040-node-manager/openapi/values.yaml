@@ -65,6 +65,18 @@ properties:
         type: object
         default: {}
         properties:
+          dataDevices:
+            type: array
+            description: |
+              Array of system registry data devices.
+            default: []
+            items:
+              type: object
+              properties:
+                nodeName:
+                  type: string
+                deviceName:
+                  type: string
           addresses:
             type: array
             description: |

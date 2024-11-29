@@ -27,3 +27,35 @@ spec:
       altlinux)                 bb-apt-rpm-install nfs-utils ;;
       centos|redos|rosa)        bb-yum-install nfs-utils ;;
     esac
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: trigger-bashible-for-master-nodes-sh
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  weight: 999
+  nodeGroups: ["master"]
+  bundles: ["*"]
+  content: |
+    # Copyright 2024 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    {{- if hasKey $.Values.nodeManager.internal "systemRegistry" }}
+      {{- if hasKey $.Values.nodeManager.internal.systemRegistry "dataDevices" }}
+        {{- range $nodeInfo := $.Values.nodeManager.internal.systemRegistry.dataDevices }}
+    echo "NodeName: {{ $nodeInfo.nodeName }} -> deviceName: {{ $nodeInfo.deviceName }}"
+        {{- end }}
+      {{- end }}
+    {{- end }}
