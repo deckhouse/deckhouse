@@ -95,6 +95,9 @@ def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
             for ref in references:
                 ref_clean = ref.replace("*",'').strip()
                 exref_clean = exref.replace("*",'').strip()
+                if ref_clean == "" or exref_clean == "":
+                    # Skip `*` references, they are treat as default
+                    continue
                 min_length = min(len(ref_clean), len(exref_clean))
                 # Check intersection but ignore fully equal references
                 if ref_clean[:min_length] == exref_clean[:min_length] and ref_clean != exref_clean:
