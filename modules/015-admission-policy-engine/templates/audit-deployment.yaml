@@ -81,7 +81,6 @@ spec:
         - --enable-external-data=true
         - --metrics-backend=prometheus
         - --disable-cert-rotation=true
-        - --external-data-provider-response-cache-ttl=30s
         env:
         - name: POD_NAMESPACE
           valueFrom:

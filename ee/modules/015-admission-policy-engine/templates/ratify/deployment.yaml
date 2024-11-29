@@ -81,7 +81,7 @@ spec:
         - --cache-type=ristretto
         - --cache-name=dapr-redis
         - --cache-size=256
-        - --cache-ttl=10s
+        - --cache-ttl=180s
         - --metrics-enabled=false
         ports:
         - containerPort: 6001

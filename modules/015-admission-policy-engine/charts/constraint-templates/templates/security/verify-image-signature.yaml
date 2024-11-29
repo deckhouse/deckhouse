@@ -1,3 +1,4 @@
+---
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
@@ -15,7 +16,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: >-
-            Restricts running container images without correct signature.
+            Restricts running container images without a correct signature.
           properties:
             references:
               description: "The list of image references to check"

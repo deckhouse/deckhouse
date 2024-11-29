@@ -51,10 +51,10 @@
   {{- if or (hasKey $cr.spec.policies "allowedUnsafeSysctls") (hasKey $cr.spec.policies "forbiddenSysctls") }}
     {{- include "allowed_sysctls" (list $context $cr) }}
   {{- end }}
-  {{- if or (hasKey $cr.spec.policies "seccompProfiles") }}
+  {{- if hasKey $cr.spec.policies "seccompProfiles" }}
     {{- include "seccomp_profiles" (list $context $cr) }}
   {{- end }}
-  {{- if or (hasKey $cr.spec.policies "verifyImageSignatures") }}
+  {{- if and (hasKey $cr.spec.policies "verifyImageSignatures") (regexMatch "^(EE|FE|CSE|SE-plus)$" $context.Values.global.deckhouseEdition) }}
     {{- include "verify_image_signatures" (list $context $cr) }}
   {{- end }}
 {{- end }}
@@ -484,8 +484,8 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+    - apiGroups: [""]
+      kinds: ["Pod"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
