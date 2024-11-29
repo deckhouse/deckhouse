@@ -37,8 +37,9 @@ func compareFileHash(path string, newContent []byte) (bool, error) {
 	return currentHash == newHash, nil
 }
 
-// processTemplateForFile processes the content, compares it with the existing file, and updates the hash field
-func processTemplateForFile(outputPath string, content []byte, hashField *string) (bool, error) {
+// saveFileIfChanged computing content's hash, compares it with the existing file hash and overwrites file if it different
+// hash is updated with actual value
+func saveFileIfChanged(outputPath string, content []byte, hashField *string) (bool, error) {
 	// Compute the hash of the new content
 	hash := computeHash(content)
 
@@ -68,7 +69,6 @@ func processTemplateForFile(outputPath string, content []byte, hashField *string
 
 // deleteFile deletes the file at the specified path
 func deleteFile(path string) (bool, error) {
-
 	// Check if the file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return false, nil
@@ -82,7 +82,6 @@ func deleteFile(path string) (bool, error) {
 
 // deleteDirectory deletes the directory at the specified path
 func deleteDirectory(path string) (bool, error) {
-
 	// Check if the file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return false, nil

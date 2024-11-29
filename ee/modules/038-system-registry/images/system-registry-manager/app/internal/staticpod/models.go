@@ -199,8 +199,8 @@ func (config *templateModel) processTemplate(name templateName, outputPath strin
 	return true, nil
 }
 
-// savePkiFiles saves the PKI-related files to the specified directory and updates hashes in ConfigHashes if they change
-func (pki *PKIModel) savePkiFiles(basePath string, configHashes *ConfigHashes) (bool, error) {
+// savePKIFiles saves the PKI-related files to the specified directory and updates hashes in ConfigHashes if they change
+func (pki *PKIModel) savePKIFiles(basePath string, configHashes *ConfigHashes) (bool, error) {
 	anyFileChanged := false
 
 	// Define paths for each PKI file and corresponding hash field in ConfigHashes
@@ -218,11 +218,11 @@ func (pki *PKIModel) savePkiFiles(basePath string, configHashes *ConfigHashes) (
 	}
 
 	// Iterate over the PKI files and process them
-	for filename, fileData := range fileMap {
-		path := filepath.Join(basePath, filename)
+	for name, data := range fileMap {
+		path := filepath.Join(basePath, name)
 
 		// Process each template and check if it has changed
-		changed, err := processTemplateForFile(path, []byte(fileData.content), fileData.hashField)
+		changed, err := saveFileIfChanged(path, []byte(data.content), data.hashField)
 		if err != nil {
 			return false, fmt.Errorf("failed to process PKI file %s: %v", path, err)
 		}

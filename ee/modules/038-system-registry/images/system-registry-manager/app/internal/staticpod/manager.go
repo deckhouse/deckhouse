@@ -123,7 +123,7 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	var resp ChangesReponse
 
 	// Save the PKI files
-	if resp.PKI, err = data.PKI.savePkiFiles(
+	if resp.PKI, err = data.PKI.savePKIFiles(
 		pkiConfigDirectoryPath,
 		&model.Hashes,
 	); err != nil {
