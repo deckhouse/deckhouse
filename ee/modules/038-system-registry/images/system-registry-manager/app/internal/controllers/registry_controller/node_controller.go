@@ -924,17 +924,6 @@ func (nc *nodeController) logModuleWarning(log *logr.Logger, reason, message str
 	}
 }
 
-func (nc *nodeController) logModuleInfo(log *logr.Logger, reason, message string) {
-	obj := state.GetModuleConfigObject()
-	obj.SetNamespace(nc.Namespace)
-
-	nc.eventRecorder.Event(&obj, corev1.EventTypeNormal, reason, message)
-
-	if log != nil {
-		log.Info(message, "reason", reason)
-	}
-}
-
 func nodeObjectIsMaster(obj client.Object) bool {
 	if obj == nil {
 		return false
