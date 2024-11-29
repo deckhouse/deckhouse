@@ -216,3 +216,6 @@ dataDevice=$(get_registry_data_device_from_secret_or_from_file)
 
 # Write the new device path to the file
 echo "$dataDevice" > "$BOOTSTRAP_DIR/system_registry_data_device_path"
+
+  {{- end  }}
+{{- end  }}
