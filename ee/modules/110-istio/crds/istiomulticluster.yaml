@@ -46,19 +46,19 @@ spec:
                 metadata:
                   type: object
                   properties:
-                    metadataEndpoint:
+                    endpoint:
                       type: string
                       x-doc-d8Revision: ee
                       description: |
                         HTTPS endpoint with remote cluster metadata.
                       pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
                       x-doc-examples: ['https://istio.k8s.example.com/metadata/']
-                    metadataCA:
+                    ca:
                       type: string
                       x-doc-d8Revision: ee
                       description: |
                         HTTPS certificate authority for remote cluster metadata.
-                    metadataInsecure:
+                    insecureSkipVerify:
                       type: boolean
                       x-doc-d8Revision: ee
                       description: |
@@ -99,7 +99,7 @@ spec:
                                 type: string
                               port:
                                 type: integer
-                        metadataCA:
+                        ca:
                           type: string
                     privateLastFetchTimestamp:
                       format: date-time

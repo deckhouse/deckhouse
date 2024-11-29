@@ -21,9 +21,9 @@ type IstioMulticluster struct {
 
 type IstioMulticlusterSpec struct {
 	Metadata struct {
-		Endpoint string `json:"metadataEndpoint"`
-		CA       string `json:"metadataCA"`
-		Insecure bool   `json:"metadataInsecure"`
+		Endpoint string `json:"endpoint"`
+		CA       string `json:"ca"`
+		Insecure bool   `json:"insecureSkipVerify"`
 	} `json:"metadata,omitempty"`
 	EnableIngressGateway bool `json:"enableIngressGateway"`
 }

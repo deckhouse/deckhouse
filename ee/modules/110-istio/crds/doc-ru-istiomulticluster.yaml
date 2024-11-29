@@ -17,12 +17,12 @@ spec:
                   default: true
                 metadata:
                   properties:
-                    metadataEndpoint:
+                    endpoint:
                       description: |
                         HTTPS-эндпоинт c метаданными удаленного кластера.
-                    metadataCA:
+                    ca:
                       description: |
                         HTTPS сертификат удостоверяющего центра для чтения метаданных удаленного кластера.
-                    metadataInsecure:
+                    insecureSkipVerify:
                       description: |
                         Включение или выключения проверки ертификат удостоверяющего центра для чтения метаданных удаленного кластера.

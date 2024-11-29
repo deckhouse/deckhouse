@@ -31,8 +31,8 @@ type IstioMulticlusterMergeCrdInfo struct {
 	Name                 string                               `json:"name"`
 	SpiffeEndpoint       string                               `json:"spiffeEndpoint"`
 	EnableIngressGateway bool                                 `json:"enableIngressGateway"`
-	MetadataCA           string                               `json:"metadataCA"`
-	MetadataInsecure     bool                                 `json:"metadataInsecure"`
+	MetadataCA           string                               `json:"ca"`
+	MetadataInsecure     bool                                 `json:"insecureSkipVerify"`
 	APIHost              string                               `json:"apiHost"`
 	NetworkName          string                               `json:"networkName"`
 	APIJWT               string                               `json:"apiJWT"`

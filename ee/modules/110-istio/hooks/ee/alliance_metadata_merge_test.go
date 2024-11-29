@@ -160,7 +160,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://some-proper-host/"
+    endpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -180,7 +180,7 @@ metadata:
 spec:
   enableIngressGateway: false
   metadata:
-    metadataEndpoint: "https://some-proper-host/"
+    endpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -198,7 +198,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://some-proper-host/"
+    endpoint: "https://some-proper-host/"
 status:
   metadataCache:
     public:
@@ -213,7 +213,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://some-proper-host/"
+    endpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -231,7 +231,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://some-proper-host/"
+    endpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -250,7 +250,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://some-proper-host/"
+    endpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -269,7 +269,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://some-proper-host/"
+    endpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:
@@ -288,7 +288,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://some-proper-host/"
+    endpoint: "https://some-proper-host/"
 status:
   metadataCache:
     private:

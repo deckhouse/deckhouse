@@ -87,7 +87,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://proper-hostname-0/metadata/"
+    endpoint: "https://proper-hostname-0/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -97,7 +97,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://proper-hostname-1/metadata/"
+    endpoint: "https://proper-hostname-1/metadata/"
 status:
   metadataCache:
     private:
@@ -117,7 +117,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://proper-hostname-2/metadata/"
+    endpoint: "https://proper-hostname-2/metadata/"
 status:
   metadataCache:
     ingressGateways:
@@ -423,7 +423,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://public-internal-error/metadata/"
+    endpoint: "https://public-internal-error/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -433,7 +433,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://public-bad-json/metadata/"
+    endpoint: "https://public-bad-json/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -443,7 +443,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://public-wrong-format/metadata/"
+    endpoint: "https://public-wrong-format/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -453,7 +453,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://private-internal-error/metadata/"
+    endpoint: "https://private-internal-error/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -463,7 +463,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://private-bad-json/metadata/"
+    endpoint: "https://private-bad-json/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -473,7 +473,7 @@ metadata:
 spec:
   enableIngressGateway: true
   metadata:
-    metadataEndpoint: "https://private-wrong-format/metadata/"
+    endpoint: "https://private-wrong-format/metadata/"
 status: {}
 `))
 
