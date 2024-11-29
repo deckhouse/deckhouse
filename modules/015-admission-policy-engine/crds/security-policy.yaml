@@ -424,6 +424,7 @@ spec:
                           - vsphereVolume
                     verifyImageSignatures:
                       type: array
+                      x-doc-d8Revision: ee
                       description: Defines cosign trust policy to verify image signatures.
                       items:
                         type: object
