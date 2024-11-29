@@ -32,7 +32,7 @@ kubernetes:
     jqFilter: |
       {
         "name": .metadata.name,
-        "imageReferences": .spec.policies.verifyImageSignatures.imageReferences
+        "references": [.spec.policies.verifyImageSignatures[].reference]
       }
 kubernetesValidating:
 - name: securitypolicies.deckhouse.io
@@ -81,17 +81,17 @@ def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
 # check that all image references don't have intersection, it's required by ratify
 # https://ratify.dev/docs/plugins/verifier/cosign/#scopes
 def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
-    references = ctx.review.request.object.spec.policies.verifyImageSignatures.imageReferences
+    references = [item.reference for item in ctx.review.request.object.spec.policies.verifyImageSignatures]
     if len(references) == 0:
         return None
 
-    existing_references = [obj.filterResult for obj in ctx.snapshots.policies if obj.filterResult.imageReferences is not None]
+    existing_references = [obj.filterResult for obj in ctx.snapshots.policies if obj.filterResult.references is not None]
 
     for exobj in existing_references:
         # On update skip self intersection
         if exobj.name == ctx.review.request.object.metadata.name:
             continue
-        for exref in exobj.imageReferences:
+        for exref in exobj.references:
             for ref in references:
                 ref_clean = ref.replace("*",'').strip()
                 exref_clean = exref.replace("*",'').strip()
