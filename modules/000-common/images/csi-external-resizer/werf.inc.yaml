@@ -18,6 +18,7 @@ fromArtifact: common/src-artifact
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.resizer }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-resizer.git /src
+  - rm -r /src/.git
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}

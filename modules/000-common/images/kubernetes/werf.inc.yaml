@@ -25,6 +25,7 @@ shell:
     KUBE_GIT_TREE_STATE='archive'
     EOF
   - git apply /patches/*/{{ $version }}/*.patch --verbose
+  - rm -r .git
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $full_version | replace "." "-" }}
             {{- if semverCompare ">=1.30" $version }}

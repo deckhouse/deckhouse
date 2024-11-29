@@ -1,5 +1,0 @@
-## Patches
-
-
-### setuptools
-Fix cve.

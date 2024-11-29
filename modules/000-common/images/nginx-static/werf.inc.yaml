@@ -7,7 +7,9 @@ shell:
   install:
   - git clone -b release-{{ $NginxVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/nginx/nginx.git /src
   - cd /src
+  - rm -r .git
   - git clone -b openssl-{{ $OpenSSLVersion }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/openssl/openssl.git
+  - rm -r openssl/.git
 ---
 artifact: {{ .ModuleName }}/build-nginx-static-artifact
 from: {{ .Images.BASE_UBUNTU }}

@@ -37,6 +37,7 @@ fromArtifact: common/src-artifact
 shell:
   install:
   - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ .SOURCE_REPO }}/flant/shell-operator.git /src/shell-operator
+  - rm -r /src/shell-operator/.git
   - git clone --depth 1 {{ .SOURCE_REPO }}/jqlang/jq --branch "jq-1.7.1" /src/jq
   - cd /src/jq
   - |
@@ -47,6 +48,8 @@ shell:
     EOF
   - git submodule update --init
   - rm -r docs
+  - rm -r /src/jq/.git
+  - rm -r /src/jq/modules/oniguruma/.git
   - mkdir -p docs/content/manual
   - touch docs/content/manual/manual.yml
 ---
