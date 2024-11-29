@@ -6,15 +6,15 @@ metadata:
     component: system-registry
     tier: control-plane
   annotations:
-    authConfigHash: {{ quote .ConfigHashes.AuthTemplateHash }}
-    distributionConfigHash: {{ quote .ConfigHashes.DistributionTemplateHash }}
-    caCertHash: {{ quote .ConfigHashes.CaCertHash }}
-    authCertHash: {{ quote .ConfigHashes.AuthCertHash }}
-    authKeyHash: {{ quote .ConfigHashes.AuthKeyHash }}
-    authTokenCertHash: {{ quote .ConfigHashes.AuthTokenCertHash }}
-    authTokenKeyHash: {{ quote .ConfigHashes.AuthTokenKeyHash }}
-    distributionCertHash: {{ quote .ConfigHashes.DistributionCertHash }}
-    distributionKeyHash: {{ quote .ConfigHashes.DistributionKeyHash }}
+    authConfigHash: {{ quote .Hashes.AuthTemplate }}
+    distributionConfigHash: {{ quote .Hashes.DistributionTemplate }}
+    caCertHash: {{ quote .Hashes.CACert }}
+    authCertHash: {{ quote .Hashes.AuthCert }}
+    authKeyHash: {{ quote .Hashes.AuthKey }}
+    authTokenCertHash: {{ quote .Hashes.TokenCert }}
+    authTokenKeyHash: {{ quote .Hashes.TokenKey }}
+    distributionCertHash: {{ quote .Hashes.DistributionCert }}
+    distributionKeyHash: {{ quote .Hashes.DistributionKey }}
   name: system-registry
   namespace: d8-system
 spec:
@@ -22,7 +22,7 @@ spec:
   hostNetwork: true
   containers:
   - name: distribution
-    image: {{ .Images.DockerDistribution }}
+    image: {{ .Images.Distribution }}
     imagePullPolicy: IfNotPresent
     args:
       - serve
@@ -30,13 +30,13 @@ spec:
 {{- if .Proxy }}
     env:
       - name: HTTP_PROXY
-        value: {{ .Proxy.HttpProxy }}
+        value: {{ .Proxy.Http }}
       - name: http_proxy
-        value: {{ .Proxy.HttpProxy }}
+        value: {{ .Proxy.Http }}
       - name: HTTPS_PROXY
-        value: {{ .Proxy.HttpsProxy }}
+        value: {{ .Proxy.Https }}
       - name: https_proxy
-        value: {{ .Proxy.HttpsProxy }}
+        value: {{ .Proxy.Https }}
       - name: NO_PROXY
         value: {{ .Proxy.NoProxy }}
       - name: no_proxy
@@ -54,7 +54,7 @@ spec:
       - mountPath: /system_registry_pki
         name: system-registry-pki-volume
   - name: auth
-    image: {{ .Images.DockerAuth }}
+    image: {{ .Images.Auth }}
     imagePullPolicy: IfNotPresent
     args:
       - -logtostderr

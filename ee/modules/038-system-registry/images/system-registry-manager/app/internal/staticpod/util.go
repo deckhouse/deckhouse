@@ -6,14 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package staticpod
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"text/template"
 )
 
 // computeHash computes the SHA-256 hash of the given content.
@@ -96,25 +93,6 @@ func deleteDirectory(path string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-// RenderTemplate renders the provided template content with the given data
-func renderTemplate(templateContent string, data interface{}) ([]byte, error) {
-	funcMap := template.FuncMap{
-		"quote": func(s string) string { return strconv.Quote(s) },
-	}
-
-	tmpl, err := template.New("template").Funcs(funcMap).Parse(templateContent)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing template: %v", err)
-	}
-
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return nil, fmt.Errorf("error executing template: %v", err)
-	}
-
-	return buf.Bytes(), nil
 }
 
 // SaveToFile saves the rendered content to the specified file path

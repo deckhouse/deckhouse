@@ -8,25 +8,27 @@ package staticpod
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 )
 
+type templateModel struct {
+	EmbeddedRegistryConfig
+	Address string
+	Hashes  ConfigHashes
+}
+
 // EmbeddedRegistryConfig represents the configuration for the registry
 type EmbeddedRegistryConfig struct {
-	IPAddress    string          `json:"ipAddress,omitempty"`
-	Registry     RegistryDetails `json:"registry,omitempty"`
-	Images       Images          `json:"images,omitempty"`
-	ConfigHashes ConfigHashes    `json:"configHashes,omitempty"`
-	PKI          PKIModel        `json:"pki,omitempty"`
-	Proxy        *Proxy          `json:"proxy,omitempty"`
+	Registry RegistryDetails `json:"registry,omitempty"`
+	Images   Images          `json:"images,omitempty"`
+	PKI      PKIModel        `json:"pki,omitempty"`
+	Proxy    *Proxy          `json:"proxy,omitempty"`
 }
 
 func (config *EmbeddedRegistryConfig) Validate() error {
 	return validation.ValidateStruct(config,
-		validation.Field(&config.IPAddress, validation.Required),
 		validation.Field(&config.Registry, validation.Required),
 		validation.Field(&config.Images, validation.Required),
 		validation.Field(&config.PKI, validation.Required),
@@ -35,7 +37,6 @@ func (config *EmbeddedRegistryConfig) Validate() error {
 }
 
 func (cfg *EmbeddedRegistryConfig) Bind(r *http.Request) error {
-	cfg.IPAddress = os.Getenv("HOST_IP")
 	return cfg.Validate()
 }
 
@@ -75,11 +76,19 @@ type ConfigHashes struct {
 	DistributionKey      string
 }
 
+type RegistryMode string
+
+const (
+	RegistryModeDirect   RegistryMode = "Direct"
+	RegistryModeProxy    RegistryMode = "Proxy"
+	RegistryModeDetached RegistryMode = "Detached"
+)
+
 // RegistryDetails holds detailed configuration of the registry
 type RegistryDetails struct {
 	UserRW     User             `json:"userRW,omitempty"`
 	UserRO     User             `json:"userRO,omitempty"`
-	Mode       string           `json:"mode,omitempty"`
+	Mode       RegistryMode     `json:"mode,omitempty"`
 	Upstream   UpstreamRegistry `json:"upstream,omitempty"`
 	HttpSecret string           `json:"httpSecret,omitempty"`
 }
@@ -92,7 +101,7 @@ func (rd RegistryDetails) Validate() error {
 	fields = append(fields, validation.Field(&rd.UserRO))
 	fields = append(fields, validation.Field(&rd.UserRW))
 
-	if rd.Mode == "Proxy" {
+	if rd.Mode == RegistryModeProxy {
 		fields = append(fields, validation.Field(&rd.Upstream))
 	}
 
@@ -134,14 +143,14 @@ func (u UpstreamRegistry) Validate() error {
 }
 
 type Images struct {
-	DockerDistribution string
-	DockerAuth         string
+	Distribution string `json:"distribution,omitempty"`
+	Auth         string `json:"auth,omitempty"`
 }
 
 func (im Images) Validate() error {
 	return validation.ValidateStruct(&im,
-		validation.Field(&im.DockerAuth, validation.Required),
-		validation.Field(&im.DockerDistribution, validation.Required),
+		validation.Field(&im.Auth, validation.Required),
+		validation.Field(&im.Distribution, validation.Required),
 	)
 }
 
@@ -160,15 +169,9 @@ func (p Proxy) Validate() error {
 }
 
 // processTemplate processes the given template file and saves the rendered result to the specified path
-func (config *EmbeddedRegistryConfig) processTemplate(name templateName, outputPath string, hashField *string) (bool, error) {
-	// Read the template file content
-	templateBytes, err := getTemplateContent(name)
-	if err != nil {
-		return false, fmt.Errorf("failed to read template %s: %v", name, err)
-	}
-
+func (config *templateModel) processTemplate(name templateName, outputPath string, hashField *string) (bool, error) {
 	// Render the template with the given configuration
-	renderedContent, err := renderTemplate(string(templateBytes), config)
+	renderedContent, err := renderTemplate(name, config)
 	if err != nil {
 		return false, fmt.Errorf("failed to render template %s: %v", name, err)
 	}

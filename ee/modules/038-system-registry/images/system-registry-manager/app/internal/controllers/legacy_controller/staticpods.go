@@ -72,13 +72,13 @@ func (r *RegistryReconciler) prepareEmbeddedRegistryConfig(node k8s.MasterNode, 
 				Name:         r.embeddedRegistry.registryRoUser.UserName,
 				PasswordHash: r.embeddedRegistry.registryRoUser.HashedPassword,
 			},
-			Mode:       r.embeddedRegistry.mc.Settings.Mode,
+			Mode:       staticpod.RegistryMode(r.embeddedRegistry.mc.Settings.Mode),
 			HttpSecret: "http-secret",
 			Upstream:   upstreamRegistry, // Will be empty for non-Proxy modes
 		},
 		Images: staticpod.Images{
-			DockerDistribution: r.embeddedRegistry.images.DockerDistribution,
-			DockerAuth:         r.embeddedRegistry.images.DockerAuth,
+			Distribution: r.embeddedRegistry.images.Distribution,
+			Auth:         r.embeddedRegistry.images.Auth,
 		},
 		PKI: staticpod.PKIModel{
 			CACert:           string(r.embeddedRegistry.caPKI.Cert),

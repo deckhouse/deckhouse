@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"sync"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
@@ -33,11 +32,11 @@ const (
 
 type apiServer struct {
 	requestMutex sync.Mutex
-
-	log *dlog.Logger
+	log          *dlog.Logger
+	hostIP       string
 }
 
-func Run(ctx context.Context) error {
+func Run(ctx context.Context, hostIP string) error {
 	log := dlog.Default().
 		With("component", "static pod manager")
 
@@ -45,7 +44,8 @@ func Run(ctx context.Context) error {
 	defer log.Info("Stopped")
 
 	api := &apiServer{
-		log: log,
+		log:    log,
+		hostIP: hostIP,
 	}
 
 	logConfig := slogchi.Config{
@@ -111,11 +111,9 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	data.IPAddress = os.Getenv("HOST_IP")
-	if data.IPAddress == "" {
-		err = fmt.Errorf("HOST_IP environment variable is not set")
-		sendInternalError("Error getting IP address", err)
-		return
+	model := templateModel{
+		EmbeddedRegistryConfig: data,
+		Address:                s.hostIP,
 	}
 
 	// Lock the requestMutex to prevent concurrent requests and release it after the request is processed
@@ -127,32 +125,32 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	// Save the PKI files
 	if resp.PKI, err = data.PKI.savePkiFiles(
 		pkiConfigDirectoryPath,
-		&data.ConfigHashes,
+		&model.Hashes,
 	); err != nil {
 		sendInternalError("Error saving PKI files", err)
 		return
 	}
 
 	// Process the templates with the given data and create the static pod and configuration files
-	if resp.Auth, err = data.processTemplate(
+	if resp.Auth, err = model.processTemplate(
 		authConfigTemplateName,
 		authConfigPath,
-		&data.ConfigHashes.AuthTemplate,
+		&model.Hashes.AuthTemplate,
 	); err != nil {
 		sendInternalError("Error processing Auth template", err)
 		return
 	}
 
-	if resp.Distribution, err = data.processTemplate(
+	if resp.Distribution, err = model.processTemplate(
 		distributionConfigTemplateName,
 		distributionConfigPath,
-		&data.ConfigHashes.DistributionTemplate,
+		&model.Hashes.DistributionTemplate,
 	); err != nil {
 		sendInternalError("Error processing Distribution template", err)
 		return
 	}
 
-	if resp.Pod, err = data.processTemplate(
+	if resp.Pod, err = model.processTemplate(
 		registryStaticPodTemplateName,
 		registryStaticPodConfigPath,
 		nil,

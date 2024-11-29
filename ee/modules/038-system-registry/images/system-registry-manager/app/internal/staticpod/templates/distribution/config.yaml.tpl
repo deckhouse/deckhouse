@@ -11,7 +11,7 @@ storage:
     disable: true
 
 http:
-  addr: {{ .IpAddress }}:5001
+  addr: {{ .Address }}:5001
   prefix: /
   secret: {{ quote .Registry.HttpSecret }}
   debug:
@@ -23,20 +23,20 @@ http:
     certificate: /system_registry_pki/distribution.crt
     key: /system_registry_pki/distribution.key
 
-{{- if eq .Registry.RegistryMode "Proxy" }}
+{{- if eq .Registry.Mode "Proxy" }}
 proxy:
-  remoteurl: "{{ .Registry.UpstreamRegistry.Scheme }}://{{ .Registry.UpstreamRegistry.Host }}"
-  username: {{ quote .Registry.UpstreamRegistry.User }}
-  password: {{ quote .Registry.UpstreamRegistry.Password }}
-  remotepathonly: {{ quote .Registry.UpstreamRegistry.Path }}
+  remoteurl: "{{ .Registry.Upstream.Scheme }}://{{ .Registry.Upstream.Host }}"
+  username: {{ quote .Registry.Upstream.User }}
+  password: {{ quote .Registry.Upstream.Password }}
+  remotepathonly: {{ quote .Registry.Upstream.Path }}
   localpathalias: "/system/deckhouse"
-  {{- if .Registry.UpstreamRegistry.TTL }}
-  ttl: {{ quote .Registry.UpstreamRegistry.TTL }}
+  {{- if .Registry.Upstream.TTL }}
+  ttl: {{ quote .Registry.Upstream.TTL }}
   {{- end }}
 {{- end }}
 auth:
   token:
-    realm: "https://{{ .IpAddress }}:5051/auth"
+    realm: "https://{{ .Address }}:5051/auth"
     service: Docker registry
     issuer: Registry server
     rootcertbundle: /system_registry_pki/token.crt

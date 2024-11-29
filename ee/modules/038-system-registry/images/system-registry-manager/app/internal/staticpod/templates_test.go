@@ -36,26 +36,39 @@ func Test_TemplatesExists(t *testing.T) {
 	}
 }
 
-func Test_TemplatesLoading(t *testing.T) {
+func Test_TemplatesRenders(t *testing.T) {
 	matrix := map[string]templateName{
 		"auth config":         authConfigTemplateName,
 		"distribution config": distributionConfigTemplateName,
 		"registry static pod": registryStaticPodTemplateName,
 	}
 
-	for k, tpl := range matrix {
-		buf, err := getTemplateContent(tpl)
+	modes := []RegistryMode{
+		RegistryModeProxy,
+		RegistryModeDirect,
+		RegistryModeDetached,
+	}
 
-		if err != nil {
-			t.Errorf("Cannot load %v template: %v", k, err)
+	for _, mode := range modes {
+		t.Logf("Mode: %v\n", mode)
+
+		var model EmbeddedRegistryConfig
+		model.Registry.Mode = mode
+
+		for k, tpl := range matrix {
+			buf, err := renderTemplate(tpl, &model)
+
+			if err != nil {
+				t.Errorf("Cannot load %v template: %v", k, err)
+			}
+
+			size := len(buf)
+
+			if size == 0 {
+				t.Errorf("Template %v content is empty!", k)
+			}
+
+			t.Logf("- %v: { path: %v, size: %v }", k, tpl, size)
 		}
-
-		size := len(buf)
-
-		if size == 0 {
-			t.Errorf("Template %v content is empty!", k)
-		}
-
-		t.Logf("- %v template: { path: %v, size: %v }", k, tpl, size)
 	}
 }

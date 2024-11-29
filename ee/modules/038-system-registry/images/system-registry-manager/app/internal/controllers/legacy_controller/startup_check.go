@@ -35,8 +35,8 @@ func (r *RegistryReconciler) SecretsStartupCheckCreate(ctx context.Context) erro
 	}
 
 	// Fill the embedded registry images struct with the registry address and image names
-	r.embeddedRegistry.images.DockerAuth = fmt.Sprintf("%s%s@%s", registryAddress, registryPath, imageDockerAuth)
-	r.embeddedRegistry.images.DockerDistribution = fmt.Sprintf("%s%s@%s", registryAddress, registryPath, imageDockerDistribution)
+	r.embeddedRegistry.images.Auth = fmt.Sprintf("%s%s@%s", registryAddress, registryPath, imageDockerAuth)
+	r.embeddedRegistry.images.Distribution = fmt.Sprintf("%s%s@%s", registryAddress, registryPath, imageDockerDistribution)
 
 	// Ensure CA certificate exists and create if not
 	isGenerated, caCertStruct, err := k8s.EnsureCASecret(ctx, r.Client)

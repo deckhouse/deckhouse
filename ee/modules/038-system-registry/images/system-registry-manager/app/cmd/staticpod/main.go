@@ -37,6 +37,12 @@ func main() {
 	log := slog.New(logHandler).With("component", "main")
 	log = log.With("node", nodeName)
 
+	hostIP := os.Getenv("HOST_IP")
+	if hostIP == "" {
+		log.Error("HOST_IP environment variable is not set")
+		os.Exit(1)
+	}
+
 	log.Info("Starting static pod manager")
 	defer log.Info("Stopped")
 
@@ -58,7 +64,7 @@ func main() {
 	}()
 
 	log.Info("Starting manager")
-	err := staticpod.Run(ctx)
+	err := staticpod.Run(ctx, hostIP)
 	if err != nil {
 		log.Error("Manager run error", "error", err)
 	}
