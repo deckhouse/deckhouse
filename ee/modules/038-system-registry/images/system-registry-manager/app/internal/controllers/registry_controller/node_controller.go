@@ -373,7 +373,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		}
 
 		log.Info("Shutdown node static pod on non-master node for mode = detached")
-		err = nc.deleteStaticPodConfig(ctx, node.Name)
+		err = nc.deleteStaticPodConfig(ctx, node.Name, false)
 		if err != nil {
 			err = fmt.Errorf("delete static pod configuration error: %w", err)
 			return
@@ -470,10 +470,13 @@ func (nc *nodeController) applyStaticPodConfig(ctx context.Context, nodeName str
 	return nil
 }
 
-func (nc *nodeController) deleteStaticPodConfig(ctx context.Context, nodeName string) error {
-	// TODO: return ok if not found?
+func (nc *nodeController) deleteStaticPodConfig(ctx context.Context, nodeName string, onlyIfFound bool) error {
 	podIP, err := nc.findStaticPodManagerIP(ctx, nodeName)
 	if err != nil {
+		if onlyIfFound {
+			return nil
+		}
+
 		return fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
 	}
 
@@ -849,7 +852,7 @@ func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *metav1.
 
 func (nc *nodeController) cleanupNodeState(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
 	// Delete static pod (let's race with k8s sheduler)
-	if err := nc.deleteStaticPodConfig(ctx, node.Name); err != nil {
+	if err := nc.deleteStaticPodConfig(ctx, node.Name, true); err != nil {
 		err = fmt.Errorf("delete static pod configuration error: %w", err)
 		return ctrl.Result{}, err
 	}
