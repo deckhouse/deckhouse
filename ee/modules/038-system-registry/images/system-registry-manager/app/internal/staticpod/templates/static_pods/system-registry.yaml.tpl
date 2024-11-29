@@ -2,6 +2,9 @@ apiVersion: v1
 kind: Pod
 metadata:
   labels:
+    app.kubernetes.io/managed-by: system-registry
+    heritage: deckhouse
+    module: system-registry
     app: system-registry
     component: system-registry
     tier: control-plane
