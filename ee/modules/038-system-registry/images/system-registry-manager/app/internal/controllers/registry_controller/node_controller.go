@@ -242,10 +242,25 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, fmt.Errorf("cannot get node: %w", err)
 	}
 
+	moduleConfig, err := state.LoadModuleConfig(ctx, nc.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot load module config: %w", err)
+	}
+
+	if !moduleConfig.Enabled {
+		return ctrl.Result{}, nil
+	}
+
+	log := ctrl.LoggerFrom(ctx)
+	if moduleConfig.Settings.Mode == state.RegistryModeDirect {
+		log.Info("Cleanup node for mode = direct")
+		return nc.cleanupNodeState(ctx, node)
+	}
+
 	if hasMasterLabel(node) {
-		return nc.handleMasterNode(ctx, node)
+		return nc.handleMasterNode(ctx, node, moduleConfig)
 	} else {
-		return nc.handleNodeNotMaster(ctx, node)
+		return nc.cleanupNodeState(ctx, node)
 	}
 }
 
@@ -285,37 +300,10 @@ func (nc *nodeController) triggerReconcileForNode(ctx context.Context, req recon
 	}
 }
 
-func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node) (result ctrl.Result, err error) {
+func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Node, moduleConfig state.ModuleConfig) (result ctrl.Result, err error) {
 	log := ctrl.LoggerFrom(ctx).
-		WithValues("node", node.Name)
-
-	moduleConfig, err := state.LoadModuleConfig(ctx, nc.Client)
-	if err != nil {
-		err = fmt.Errorf("cannot load module config: %w", err)
-		return
-	}
-
-	if !moduleConfig.Enabled {
-		return
-	}
-	log = log.WithValues("mode", moduleConfig.Settings.Mode)
-
-	if moduleConfig.Settings.Mode == state.RegistryModeDirect {
-		log.Info("Shutdown node static pod for mode = direct")
-
-		err = nc.deleteStaticPodConfig(ctx, node.Name)
-		if err != nil {
-			err = fmt.Errorf("delete static pod configuration error: %w", err)
-			return
-		}
-
-		err = nc.deleteNodePKI(ctx, node.Name)
-		if err != nil {
-			err = fmt.Errorf("cannot delete node PKI: %w", err)
-			return
-		}
-		return
-	}
+		WithValues("node", node.Name).
+		WithValues("mode", moduleConfig.Settings.Mode)
 
 	userRO, err := nc.loadUserSecret(ctx, state.UserROSecretName)
 	if err != nil {
@@ -483,6 +471,7 @@ func (nc *nodeController) applyStaticPodConfig(ctx context.Context, nodeName str
 }
 
 func (nc *nodeController) deleteStaticPodConfig(ctx context.Context, nodeName string) error {
+	// TODO: return ok if not found?
 	podIP, err := nc.findStaticPodManagerIP(ctx, nodeName)
 	if err != nil {
 		return fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
@@ -858,16 +847,17 @@ func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *metav1.
 	return
 }
 
-func (nc *nodeController) handleNodeNotMaster(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
+func (nc *nodeController) cleanupNodeState(ctx context.Context, node *corev1.Node) (ctrl.Result, error) {
+	// Delete static pod (let's race with k8s sheduler)
+	if err := nc.deleteStaticPodConfig(ctx, node.Name); err != nil {
+		err = fmt.Errorf("delete static pod configuration error: %w", err)
+		return ctrl.Result{}, err
+	}
+
 	// Delete node secret if exists
 	if err := nc.deleteNodePKI(ctx, node.Name); err != nil {
 		return ctrl.Result{}, err
 	}
-
-	/*
-		Here we may stop static pods, but it will be a race with k8s scheduler
-		So NOOP
-	*/
 
 	return ctrl.Result{}, nil
 }
