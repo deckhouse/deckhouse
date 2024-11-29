@@ -1,5 +1,10 @@
+#!/bin/bash
 
-// rw password BU84m2rBGkq7zjrjuxpC
+#############
+# OUTDATED! #
+#############
+
+# rw password BU84m2rBGkq7zjrjuxpC
 
 curl -XPOST -i 127.0.0.1:4576/staticpod/create -d '{
   "Registry": {
