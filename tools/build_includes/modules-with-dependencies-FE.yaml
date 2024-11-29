@@ -292,6 +292,52 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
+  to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se-plus/modules/040-node-manager/capi/zvirt
+  to: /deckhouse/modules/040-node-manager/capi/zvirt
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   excludePaths:
@@ -445,29 +491,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/040-node-manager/cloud-providers/vsphere
-  to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/dynamix
   to: /deckhouse/modules/040-node-manager/capi/dynamix
   excludePaths:
@@ -493,29 +516,6 @@
         - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/040-node-manager/capi/zvirt
-  to: /deckhouse/modules/040-node-manager/capi/zvirt
   excludePaths:
     - images
     - templates
