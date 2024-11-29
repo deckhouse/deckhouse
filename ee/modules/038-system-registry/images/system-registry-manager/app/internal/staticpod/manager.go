@@ -160,7 +160,10 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if resp.HasChanges() {
-		log.Info("Static pod and configuration created/updated successfully")
+		log.Info(
+			"Static pod and configuration created/updated successfully",
+			"changes", resp,
+		)
 	} else {
 		log.Info("No changes in static pod and configuration")
 	}
@@ -214,7 +217,10 @@ func (s *apiServer) handleStaticPodDelete(w http.ResponseWriter, r *http.Request
 	}
 
 	if resp.HasChanges() {
-		log.Info("Static pod and configuration deleted successfully")
+		log.Info(
+			"Static pod and configuration deleted successfully",
+			"changes", resp,
+		)
 	} else {
 		log.Info("No static pod and configuration to delete")
 	}
