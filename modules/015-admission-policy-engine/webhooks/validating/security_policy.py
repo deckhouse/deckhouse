@@ -96,7 +96,8 @@ def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
                 ref_clean = ref.replace("*",'').strip()
                 exref_clean = exref.replace("*",'').strip()
                 min_length = min(len(ref_clean), len(exref_clean))
-                if ref_clean[:min_length] == exref_clean[:min_length]:
+                # Check intersection but ignore fully equal references
+                if ref_clean[:min_length] == exref_clean[:min_length] and ref_clean != exref_clean:
                     return f"ImageReference \"{ref}\" has intersection in the SecurityPolicy \"{exobj.name}\""
 
     return None
