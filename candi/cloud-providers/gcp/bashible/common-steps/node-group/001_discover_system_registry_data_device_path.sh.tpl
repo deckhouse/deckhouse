@@ -15,59 +15,40 @@
 {{- $nodeTypeList := list "CloudPermanent" }}
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
-    {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
 
-function get_data_device_secret() {
-  secret="d8-masters-system-registry-data-device-path"
-
-  if [ -f /var/lib/bashible/bootstrap-token ]; then
-    while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        if d8-curl -s -f -X GET "https://$server/api/v1/namespaces/d8-system/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
-        then
-          return 0
-        else
-          >&2 echo "failed to get secret $secret from server $server"
-        fi
-      done
-      sleep 10
-    done
-  else
-    >&2 echo "failed to get secret $secret: can't find bootstrap-token"
-    return 1
-  fi
-}
-
+# Function to discover the device path based on the cloud disk name
 function discover_device_path() {
-  cloud_disk_name="$1"
+  local cloud_disk_name="$1"
+  # Use lsblk to find the device name associated with the given cloud disk serial
   device_name="$(lsblk -lo name,serial | grep "$cloud_disk_name" | cut -d " " -f1)"
-  if [ "$device_name" == "" ]; then
-    >&2 echo "failed to discover system-registry-data device"
-    return 1
+
+  # Check if a device name was discovered
+  if [ -z "$device_name" ]; then
+    >&2 echo "Failed to discover system-registry-data device for cloud disk name: $cloud_disk_name"
+    exit 1
   fi
+
+  # Return the full device path
   echo "/dev/$device_name"
 }
 
-if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
-  return 0
+# The system registry file is always created in step 000_create_system_registry_data_device_path.sh.tpl
+# and it is removed after the process completes in step 005_integrate_system_registry_data_device.sh.tpl
+system_registry_file="$BOOTSTRAP_DIR/system_registry_data_device_path"
+
+# Read the cloud disk name from the system registry file
+cloud_disk_name=$(cat "$system_registry_file")
+
+# Proceed only if the cloud_disk_name is non-empty and doesn't already start with /dev
+if [ -n "$cloud_disk_name" ] && [[ "$cloud_disk_name" != /dev/* ]]; then
+  # Discover the device path using the cloud disk name
+  dataDevice=$(discover_device_path "$cloud_disk_name")
+  echo "system_registry_data_device: $dataDevice"
+  echo "$dataDevice" > /var/lib/bashible/system_registry_data_device_path
 fi
 
-if [ -f /var/lib/bashible/system-registry-data-device-installed ]; then
-  return 0
-fi
+# List block devices for diagnostic purposes
+blkid
 
-if [ -f /var/lib/bashible/system_registry_data_device_path ]; then
-  if ! grep "/dev" /var/lib/bashible/system_registry_data_device_path >/dev/null; then
-    cloud_disk_name="$(cat /var/lib/bashible/system_registry_data_device_path)"
-  else
-    return 0
-  fi
-else
-  cloud_disk_name="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname]' | base64 -d)"
-fi
-
-echo "$(discover_device_path "$cloud_disk_name")" > /var/lib/bashible/system_registry_data_device_path
-
-    {{- end  }}
   {{- end  }}
 {{- end  }}
