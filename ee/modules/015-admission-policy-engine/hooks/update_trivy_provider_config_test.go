@@ -97,7 +97,7 @@ spec:
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: trivy provider config ::", func() {
 
 	Context(":: empty cluster", func() {
-		f := HookExecutionConfigInit("", "")
+		f := HookExecutionConfigInit(`{"admissionPolicyEngine": { "internal": {} }}`, "")
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -111,7 +111,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: trivy provider 
 	})
 
 	Context(":: empty cluster with operator-trivy module enabled", func() {
-		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}}`, "")
+		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}, "admissionPolicyEngine": { "internal": {} }}`, "")
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -125,7 +125,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: trivy provider 
 	})
 
 	Context(":: empty cluster with provider enabled", func() {
-		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["foo-bar"]}}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
+		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["foo-bar"]}, "admissionPolicyEngine": { "internal": {} }}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -139,7 +139,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: trivy provider 
 	})
 
 	Context(":: empty cluster with operator-trivy enabled and provider enabled", func() {
-		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
+		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}, "admissionPolicyEngine": { "internal": {} }}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -147,26 +147,12 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: trivy provider 
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			provCm := f.KubernetesResource("ConfigMap", "d8-admission-policy-engine", "trivy-provider")
-			Expect(provCm.Exists()).To(BeTrue())
-			Expect(provCm.ToYaml()).To(MatchYAML(`
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-    module: admission-policy-engine
-  name: trivy-provider
-  namespace: d8-admission-policy-engine
-data:
-  TRIVY_INSECURE: "false"
-`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE":"false"}`))
 		})
 	})
 
 	Context(":: cluster with trivy configmap, but no provider statefulset", func() {
-		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
+		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}, "admissionPolicyEngine": { "internal": {} }}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
 		BeforeEach(func() {
 			f.KubeStateSet(trivyAndProviderNs + trivyCmInsecureFalse)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -174,27 +160,13 @@ data:
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			provCm := f.KubernetesResource("ConfigMap", "d8-admission-policy-engine", "trivy-provider")
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeTrue())
-			Expect(provCm.Exists()).To(BeTrue())
-			Expect(provCm.ToYaml()).To(MatchYAML(`
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-    module: admission-policy-engine
-  name: trivy-provider
-  namespace: d8-admission-policy-engine
-data:
-  TRIVY_INSECURE: "false"
-`))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE": "false"}`))
 		})
 	})
 
 	Context(":: cluster with trivy configmap and provider statefulset", func() {
-		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
+		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}, "admissionPolicyEngine": { "internal": {} }}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
 		BeforeEach(func() {
 			f.KubeStateSet(trivyAndProviderNs + trivyCmInsecureFalse + providerSts)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -202,30 +174,13 @@ data:
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			provCm := f.KubernetesResource("ConfigMap", "d8-admission-policy-engine", "trivy-provider")
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeTrue())
-			Expect(provCm.Exists()).To(BeTrue())
-			Expect(provCm.ToYaml()).To(MatchYAML(`
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-    module: admission-policy-engine
-  name: trivy-provider
-  namespace: d8-admission-policy-engine
-data:
-  TRIVY_INSECURE: "false"
-`))
-			providerSts := f.KubernetesResource("StatefulSet", "d8-admission-policy-engine", "trivy-provider")
-			Expect(providerSts.Exists()).To(BeTrue())
-			Expect(providerSts.Field("spec.template.metadata.annotations.restartedAt").String()).NotTo(Equal(""))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE": "false"}`))
 		})
 	})
 
 	Context(":: cluster with equal trivy and provider configmaps, and provider statefulset", func() {
-		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
+		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}, "admissionPolicyEngine": { "internal": {} }}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
 		BeforeEach(func() {
 			f.KubeStateSet(trivyAndProviderNs + trivyCmInsecureFalse + providerSts + providerCm)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -233,18 +188,13 @@ data:
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			provCm := f.KubernetesResource("ConfigMap", "d8-admission-policy-engine", "trivy-provider")
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeTrue())
-			Expect(provCm.Exists()).To(BeTrue())
-			Expect(provCm.ToYaml()).To(MatchYAML(providerCm))
-			providerSts := f.KubernetesResource("StatefulSet", "d8-admission-policy-engine", "trivy-provider")
-			Expect(providerSts.Exists()).To(BeTrue())
-			Expect(providerSts.Field("spec.template.metadata.annotations.restartedAt").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE": "false"}`))
 		})
 	})
 
 	Context(":: cluster with equal trivy and provider configmaps, provider statefulset and custom CA set", func() {
-		f := HookExecutionConfigInit(`{"global": {"modulesImages": {"registry": {"CA": "123"}}, "enabledModules": ["operator-trivy", "foo-bar"]}}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
+		f := HookExecutionConfigInit(`{"global": {"modulesImages": {"registry": {"CA": "123"}}, "enabledModules": ["operator-trivy", "foo-bar"]}, "admissionPolicyEngine": { "internal": {} }}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
 		BeforeEach(func() {
 			f.KubeStateSet(trivyAndProviderNs + trivyCmInsecureFalse + providerSts + providerCm)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -252,31 +202,13 @@ data:
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			provCm := f.KubernetesResource("ConfigMap", "d8-admission-policy-engine", "trivy-provider")
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeTrue())
-			Expect(provCm.Exists()).To(BeTrue())
-			Expect(provCm.ToYaml()).To(MatchYAML(`
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-    module: admission-policy-engine
-  name: trivy-provider
-  namespace: d8-admission-policy-engine
-data:
-  TRIVY_INSECURE: "false"
-  TRIVY_REGISTRY_CA: "123"
-`))
-			providerSts := f.KubernetesResource("StatefulSet", "d8-admission-policy-engine", "trivy-provider")
-			Expect(providerSts.Exists()).To(BeTrue())
-			Expect(providerSts.Field("spec.template.metadata.annotations.restartedAt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE": "false", "TRIVY_REGISTRY_CA": "123"}`))
 		})
 	})
 
 	Context(":: cluster with different trivy and provider configmaps, provider statefulset and no custom CA set", func() {
-		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
+		f := HookExecutionConfigInit(`{"global": {"enabledModules": ["operator-trivy", "foo-bar"]}, "admissionPolicyEngine": { "internal": {} }}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
 		BeforeEach(func() {
 			f.KubeStateSet(trivyAndProviderNs + `
 ---
@@ -321,31 +253,13 @@ data:
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			provCm := f.KubernetesResource("ConfigMap", "d8-admission-policy-engine", "trivy-provider")
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeTrue())
-			Expect(provCm.Exists()).To(BeTrue())
-			Expect(provCm.ToYaml()).To(MatchYAML(`
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-    module: admission-policy-engine
-  name: trivy-provider
-  namespace: d8-admission-policy-engine
-data:
-  TRIVY_INSECURE: "true"
-  trivy.insecureRegistry.0: "nexus.com"
-`))
-			providerSts := f.KubernetesResource("StatefulSet", "d8-admission-policy-engine", "trivy-provider")
-			Expect(providerSts.Exists()).To(BeTrue())
-			Expect(providerSts.Field("spec.template.metadata.annotations.restartedAt").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").String()).To(MatchJSON(`{"TRIVY_INSECURE":"true","trivy.insecureRegistry.0": "nexus.com"}`))
 		})
 	})
 
 	Context(":: cluster with operator-trivy disabled, but provider configmap exists", func() {
-		f := HookExecutionConfigInit(`{"global": {"modulesImages": {"registry": {"CA": "123"}}, "enabledModules": ["foo-bar"]}}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
+		f := HookExecutionConfigInit(`{"global": {"modulesImages": {"registry": {"CA": "123"}}, "enabledModules": ["foo-bar"]}, "admissionPolicyEngine": { "internal": {} }}`, `{"admissionPolicyEngine": {"denyVulnerableImages": {"enabled": true}}}`)
 		BeforeEach(func() {
 			f.KubeStateSet(trivyAndProviderNs + providerCm)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -353,9 +267,8 @@ data:
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			provCm := f.KubernetesResource("ConfigMap", "d8-admission-policy-engine", "trivy-provider")
 			Expect(f.KubernetesResource("ConfigMap", "d8-operator-trivy", "trivy-operator-trivy-config").Exists()).To(BeFalse())
-			Expect(provCm.Exists()).To(BeFalse())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trivyConfigData").Exists()).To(BeFalse())
 		})
 	})
 })

@@ -43,6 +43,8 @@ spec:
       app.kubernetes.io/part-of: gatekeeper
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/trivy-provider/configmap.yaml") . | sha256sum }}
       labels:
         app: trivy-provider
         app.kubernetes.io/part-of: gatekeeper
