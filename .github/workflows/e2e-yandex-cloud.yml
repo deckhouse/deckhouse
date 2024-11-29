@@ -220,6 +220,11 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -716,6 +721,11 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -1212,6 +1222,11 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -1708,6 +1723,11 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -2204,6 +2224,11 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -2700,6 +2725,11 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -3196,6 +3226,11 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
