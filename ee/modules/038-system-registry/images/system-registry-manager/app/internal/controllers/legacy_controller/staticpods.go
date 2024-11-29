@@ -40,7 +40,7 @@ func (r *RegistryReconciler) deleteNodeRegistry(ctx context.Context, nodeName st
 	return r.HttpClient.SendJSON(fmt.Sprintf("https://%s:4577/staticpod/delete", podIP), http.MethodDelete, nil)
 }
 
-func (r *RegistryReconciler) createNodeRegistry(ctx context.Context, nodeName string, data staticpod.EmbeddedRegistryConfig) ([]byte, error) {
+func (r *RegistryReconciler) createNodeRegistry(ctx context.Context, nodeName string, data staticpod.Config) ([]byte, error) {
 	// Get the pod IP for the node
 	podIP, err := r.getPodIPForNode(ctx, nodeName)
 	if err != nil {
@@ -61,9 +61,9 @@ func (r *RegistryReconciler) prepareUpstreamRegistry() staticpod.UpstreamRegistr
 	}
 }
 
-func (r *RegistryReconciler) prepareEmbeddedRegistryConfig(node k8s.MasterNode, upstreamRegistry staticpod.UpstreamRegistry) staticpod.EmbeddedRegistryConfig {
-	return staticpod.EmbeddedRegistryConfig{
-		Registry: staticpod.RegistryDetails{
+func (r *RegistryReconciler) prepareEmbeddedRegistryConfig(node k8s.MasterNode, upstreamRegistry staticpod.UpstreamRegistry) staticpod.Config {
+	return staticpod.Config{
+		Registry: staticpod.RegistryConfig{
 			UserRW: staticpod.User{
 				Name:         r.embeddedRegistry.registryRwUser.UserName,
 				PasswordHash: r.embeddedRegistry.registryRwUser.HashedPassword,

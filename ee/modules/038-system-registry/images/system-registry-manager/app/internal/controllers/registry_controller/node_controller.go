@@ -12,6 +12,7 @@ import (
 	"reflect"
 
 	"embeded-registry-manager/internal/state"
+	"embeded-registry-manager/internal/staticpod"
 	httpclient "embeded-registry-manager/internal/utils/http_client"
 	"embeded-registry-manager/internal/utils/pki"
 
@@ -35,6 +36,7 @@ import (
 
 const (
 	staticPodURLFormat = "https://%s:4577/staticpod"
+	registryHttpSecret = "http-secret"
 )
 
 var (
@@ -51,11 +53,18 @@ type NodeController = nodeController
 
 var _ reconcile.Reconciler = &nodeController{}
 
-type nodeController struct {
-	Client    client.Client
-	Namespace string
+type NodeControllerSettings struct {
+	RegistryAddress   string
+	RegistryPath      string
+	ImageAuth         string
+	ImageDistribution string
+}
 
+type nodeController struct {
+	Namespace  string
+	Client     client.Client
 	HttpClient *httpclient.Client
+	Settings   NodeControllerSettings
 
 	eventRecorder record.EventRecorder
 	reprocessCh   chan event.TypedGenericEvent[reconcile.Request]
@@ -72,14 +81,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 	nc.reprocessCh = make(chan event.TypedGenericEvent[reconcile.Request])
 
 	controllerName := "node-controller"
-
 	nc.eventRecorder = mgr.GetEventRecorderFor(controllerName)
-
-	// TODO
-	// registryAddress := os.Getenv("REGISTRY_ADDRESS")
-	// registryPath := os.Getenv("REGISTRY_PATH")
-	// imageDockerAuth := os.Getenv("IMAGE_DOCKER_AUTH")
-	// imageDockerDistribution := os.Getenv("IMAGE_DOCKER_DISTRIBUTION")
 
 	// Set up the field indexer to index Pods by spec.nodeName
 	err := mgr.GetFieldIndexer().
@@ -287,20 +289,31 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("node", node.Name)
 
-	config, err := state.LoadModuleConfig(ctx, nc.Client)
+	moduleConfig, err := state.LoadModuleConfig(ctx, nc.Client)
 	if err != nil {
 		err = fmt.Errorf("cannot load module config: %w", err)
 		return
 	}
 
-	if !config.Enabled {
+	if !moduleConfig.Enabled {
 		return
 	}
-	log = log.WithValues("mode", config.Settings.Mode)
+	log = log.WithValues("mode", moduleConfig.Settings.Mode)
 
-	if config.Settings.Mode == state.RegistryModeDirect {
-		// TODO: shutdown all static pods and delete PKI
+	if moduleConfig.Settings.Mode == state.RegistryModeDirect {
 		log.Info("Shutdown node static pod for mode = direct")
+
+		err = nc.deleteStaticPodConfig(ctx, node.Name)
+		if err != nil {
+			err = fmt.Errorf("delete static pod configuration error: %w", err)
+			return
+		}
+
+		err = nc.deleteNodePKI(ctx, node.Name)
+		if err != nil {
+			err = fmt.Errorf("cannot delete node PKI: %w", err)
+			return
+		}
 		return
 	}
 
@@ -338,13 +351,20 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
-	// TODO
-	_ = userRO
-	_ = userRW
-	_ = globalPKI
-	_ = nodePKI
+	staticPodConfig, err := nc.contructStaticPodConfig(
+		moduleConfig,
+		userRO,
+		userRW,
+		globalPKI,
+		nodePKI,
+	)
 
-	if config.Settings.Mode == state.RegistryModeDetached {
+	if err != nil {
+		err = fmt.Errorf("cannot construct static pod config: %w", err)
+		return
+	}
+
+	if moduleConfig.Settings.Mode == state.RegistryModeDetached {
 		var isFirstMasterNode bool
 
 		isFirstMasterNode, err = nc.isFirstMasterNode(ctx, node)
@@ -356,44 +376,104 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 
 		if isFirstMasterNode {
 			log.Info("Processing first master node for mode == detached")
-
-			// TODO
-			err = nc.applyStaticPodConfig(ctx, node.Name)
+			err = nc.applyStaticPodConfig(ctx, node.Name, staticPodConfig)
 			if err != nil {
-				err = fmt.Errorf("apply Static Pod Configuration: %w", err)
-
+				err = fmt.Errorf("apply static pod configuration error: %w", err)
 			}
 
 			return
 		}
 
 		log.Info("Shutdown node static pod on non-master node for mode = detached")
-
-		// TODO
+		err = nc.deleteStaticPodConfig(ctx, node.Name)
+		if err != nil {
+			err = fmt.Errorf("delete static pod configuration error: %w", err)
+			return
+		}
 
 		return
 	}
 
 	log.Info("Processing master node")
-
-	// TODO
-	err = nc.applyStaticPodConfig(ctx, node.Name)
+	err = nc.applyStaticPodConfig(ctx, node.Name, staticPodConfig)
 	if err != nil {
-		err = fmt.Errorf("apply Static Pod Configuration: %w", err)
-
+		err = fmt.Errorf("apply static pod configuration error: %w", err)
+		return
 	}
 
 	return
 }
 
-func (nc *nodeController) applyStaticPodConfig(ctx context.Context, nodeName string) error {
+func (nc *nodeController) contructStaticPodConfig(moduleConfig state.ModuleConfig, userRO, userRW state.User, globalPKI state.GlobalPKI, nodePKI state.NodePKI) (config staticpod.Config, err error) {
+	tokenKey, err := pki.EncodePrivateKey(globalPKI.Token.Key)
+	if err != nil {
+		err = fmt.Errorf("cannot encode Token key: %w", err)
+		return
+	}
+
+	authKey, err := pki.EncodePrivateKey(nodePKI.Auth.Key)
+	if err != nil {
+		err = fmt.Errorf("cannot encode node's Auth key: %w", err)
+		return
+	}
+
+	distributionKey, err := pki.EncodePrivateKey(nodePKI.Distribution.Key)
+	if err != nil {
+		err = fmt.Errorf("cannot encode node's Distribution key: %w", err)
+		return
+	}
+
+	config = staticpod.Config{
+		Images: staticpod.Images{
+			Auth:         nc.Settings.ImageAuth,
+			Distribution: nc.Settings.ImageDistribution,
+		},
+		Registry: staticpod.RegistryConfig{
+			Mode:       staticpod.RegistryMode(moduleConfig.Settings.Mode),
+			HttpSecret: registryHttpSecret,
+			UserRO: staticpod.User{
+				Name:         userRO.UserName,
+				PasswordHash: userRO.HashedPassword,
+			},
+			UserRW: staticpod.User{
+				Name:         userRW.UserName,
+				PasswordHash: userRW.HashedPassword,
+			},
+		},
+		PKI: staticpod.PKIModel{
+			CACert:           string(pki.EncodeCertificate(globalPKI.CA.Cert)),
+			TokenCert:        string(pki.EncodeCertificate(globalPKI.Token.Cert)),
+			TokenKey:         string(tokenKey),
+			AuthCert:         string(pki.EncodeCertificate(nodePKI.Auth.Cert)),
+			AuthKey:          string(authKey),
+			DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
+			DistributionKey:  string(distributionKey),
+		},
+	}
+
+	if moduleConfig.Settings.Mode == state.RegistryModeProxy {
+		config.Registry.Upstream = staticpod.UpstreamRegistry{
+			Scheme:   moduleConfig.Settings.Proxy.Scheme,
+			Host:     moduleConfig.Settings.Proxy.Host,
+			Path:     moduleConfig.Settings.Proxy.Path,
+			CA:       moduleConfig.Settings.Proxy.CA,
+			User:     moduleConfig.Settings.Proxy.User,
+			Password: moduleConfig.Settings.Proxy.Password,
+			TTL:      moduleConfig.Settings.Proxy.TTL.StringPointer(),
+		}
+	}
+
+	return
+}
+
+func (nc *nodeController) applyStaticPodConfig(ctx context.Context, nodeName string, config staticpod.Config) error {
 	podIP, err := nc.findStaticPodManagerIP(ctx, nodeName)
 	if err != nil {
 		return fmt.Errorf("cannot find Static Pod Manager IP for Node: %w", err)
 	}
 
 	url := fmt.Sprintf(staticPodURLFormat, podIP)
-	_, err = nc.HttpClient.SendJSON(url, http.MethodPost, struct{}{})
+	_, err = nc.HttpClient.SendJSON(url, http.MethodPost, config)
 
 	if err != nil {
 		return fmt.Errorf("error sending HTTP request: %w", err)

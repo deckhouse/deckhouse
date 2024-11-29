@@ -14,20 +14,20 @@ import (
 )
 
 type templateModel struct {
-	EmbeddedRegistryConfig
+	Config
 	Address string
 	Hashes  ConfigHashes
 }
 
-// EmbeddedRegistryConfig represents the configuration for the registry
-type EmbeddedRegistryConfig struct {
-	Registry RegistryDetails `json:"registry,omitempty"`
-	Images   Images          `json:"images,omitempty"`
-	PKI      PKIModel        `json:"pki,omitempty"`
-	Proxy    *Proxy          `json:"proxy,omitempty"`
+// Config represents the configuration
+type Config struct {
+	Registry RegistryConfig `json:"registry,omitempty"`
+	Images   Images         `json:"images,omitempty"`
+	PKI      PKIModel       `json:"pki,omitempty"`
+	Proxy    *Proxy         `json:"proxy,omitempty"`
 }
 
-func (config *EmbeddedRegistryConfig) Validate() error {
+func (config *Config) Validate() error {
 	return validation.ValidateStruct(config,
 		validation.Field(&config.Registry, validation.Required),
 		validation.Field(&config.Images, validation.Required),
@@ -36,7 +36,7 @@ func (config *EmbeddedRegistryConfig) Validate() error {
 	)
 }
 
-func (cfg *EmbeddedRegistryConfig) Bind(r *http.Request) error {
+func (cfg *Config) Bind(r *http.Request) error {
 	return cfg.Validate()
 }
 
@@ -84,8 +84,8 @@ const (
 	RegistryModeDetached RegistryMode = "Detached"
 )
 
-// RegistryDetails holds detailed configuration of the registry
-type RegistryDetails struct {
+// RegistryConfig holds detailed configuration of the registry
+type RegistryConfig struct {
 	UserRW     User             `json:"userRW,omitempty"`
 	UserRO     User             `json:"userRO,omitempty"`
 	Mode       RegistryMode     `json:"mode,omitempty"`
@@ -93,7 +93,7 @@ type RegistryDetails struct {
 	HttpSecret string           `json:"httpSecret,omitempty"`
 }
 
-func (rd RegistryDetails) Validate() error {
+func (rd RegistryConfig) Validate() error {
 	var fields []*validation.FieldRules
 
 	fields = append(fields, validation.Field(&rd.Mode, validation.Required))

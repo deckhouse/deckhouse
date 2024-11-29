@@ -52,7 +52,7 @@ func Test_TemplatesRenders(t *testing.T) {
 	for _, mode := range modes {
 		t.Logf("Mode: %v\n", mode)
 
-		var model EmbeddedRegistryConfig
+		var model templateModel
 		model.Registry.Mode = mode
 
 		for k, tpl := range matrix {

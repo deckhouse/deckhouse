@@ -101,7 +101,7 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var (
-		data EmbeddedRegistryConfig
+		data Config
 		err  error
 	)
 
@@ -112,8 +112,8 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	}
 
 	model := templateModel{
-		EmbeddedRegistryConfig: data,
-		Address:                s.hostIP,
+		Config:  data,
+		Address: s.hostIP,
 	}
 
 	// Lock the requestMutex to prevent concurrent requests and release it after the request is processed
