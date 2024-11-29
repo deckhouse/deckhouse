@@ -290,6 +290,7 @@ check_e2e_labels:
     {!{ printf "run_%s_%s: ${{ steps.check.outputs.run_%s_%s }}" $cri $kubernetesVersionSlug $cri $kubernetesVersionSlug }!}
 {!{- end -}!}
 {!{- end }!}
+    edition: ${{ steps.check.outputs.edition }}
     multimaster: ${{ steps.check.outputs.multimaster }}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
@@ -346,7 +347,7 @@ check_e2e_labels:
 {!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
 {!{- if coll.Has $ctx "manualRun" }!}
-    WERF_ENV: "${{ fromJson(inputs.test_config).edition || 'FE'}}"
+    WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
 {!{- end }!}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
