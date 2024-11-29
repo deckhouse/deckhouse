@@ -480,6 +480,17 @@ func (hec *HookExecutionConfig) prepareCRDSchemas() (map[string]map[string]*spec
 	return schemas, nil
 }
 
+// ApplyCRDefaults applies default values to the provided resources.
+// In case of absent default schema or an error, it returns the original definition
+func (hec *HookExecutionConfig) ApplyCRDefaults(definition string) string {
+	result, err := hec.applyDefaults(definition)
+	if err != nil {
+		return definition
+	}
+
+	return result
+}
+
 func (hec *HookExecutionConfig) applyDefaults(newKubeState string) (string, error) {
 	yamls, err := kio.FromBytes([]byte(newKubeState))
 	if err != nil {

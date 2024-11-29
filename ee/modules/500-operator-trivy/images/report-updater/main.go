@@ -17,12 +17,9 @@ import (
 var config web.ServerConfig
 
 func init() {
-	logger := log.New(os.Stdout, "", log.LstdFlags)
-
 	var renewInterval string
-
+	logger := log.New(os.Stdout, "", log.LstdFlags)
 	flag.StringVar(&renewInterval, "renewInterval", "6h", "Bdu dictionary renew interval (e.g. \"30m\")")
-
 	flag.Parse()
 
 	duration, err := time.ParseDuration(renewInterval)

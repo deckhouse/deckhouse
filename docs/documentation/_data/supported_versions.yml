@@ -115,7 +115,7 @@ registries:
     url: https://quay.io/
     additionalInfo:
       ru: |
-        <em>Требуется добавить поддержку дополнительных типов артефактов OCI.</em>
+        <em>Для версий ниже 3.12 требуется добавить поддержку дополнительных типов артефактов OCI.</em>
         <em>Подробнее можно ознакомиться <a href="https://docs.redhat.com/en/documentation/red_hat_quay/3/html/manage_red_hat_quay/supported-oci-media-types#configuring-additional-oci-media-types-proc" target="_blank">в документации Red Hat Quay</a> или <a href="https://docs.projectquay.io/manage_quay.html#configuring-additional-oci-media-types-proc" target="_blank">документации Project Quay</a></em>
         <pre>
         FEATURE_GENERAL_OCI_SUPPORT: true
@@ -128,7 +128,7 @@ registries:
             - application/vnd.aquasec.trivy.db.layer.v1.tar+gzip
         </pre>
       en: |
-        <em>It is required to add support for additional types of OCI artifacts.</em>
+        <em>For versions below 3.12, it is required to add support for additional types of OCI artifacts.</em>
         <em>More information you can get in the <a href="https://docs.redhat.com/en/documentation/red_hat_quay/3/html/manage_red_hat_quay/supported-oci-media-types#configuring-additional-oci-media-types-proc" target="_blank">Red Hat Quay documentation</a> or <a href="https://docs.projectquay.io/manage_quay.html#configuring-additional-oci-media-types-proc" target="_blank">Project Quay documentation</a></em>
         <pre>
         FEATURE_GENERAL_OCI_SUPPORT: true

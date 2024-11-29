@@ -320,5 +320,3 @@ properties:
               type: string
             allowVolumeExpansion:
               type: boolean
-      defaultStorageClass:
-        type: string

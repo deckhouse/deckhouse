@@ -42,12 +42,10 @@ on:
       pull_request_head_label:
         description: 'Head label of pull request. e.g. my_repo:my_feature_branch'
         required: false
-      cri:
-        description: 'A comma-separated list of cri to test. Available: Containerd.'
+      test_config:
+        description: 'JSON string of parameters of current test'
         required: false
-      ver:
-        description: 'A comma-separated list of versions to test. Available: from 1.24 to 1.28.'
-        required: false
+        default: '{"cri":"Containerd","ver":"1.27","edition":"FE"}'
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'
         required: false
@@ -174,6 +172,7 @@ jobs:
       run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
       run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
     steps:
 
@@ -218,6 +217,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.26"
       EVENT_LABEL: ${{ github.event.label.name }}
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
 
@@ -340,7 +340,7 @@ jobs:
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -371,16 +371,21 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
+          # Add edition name for non-FE tests on branch
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
@@ -708,6 +713,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.27"
       EVENT_LABEL: ${{ github.event.label.name }}
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
 
@@ -830,7 +836,7 @@ jobs:
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -861,16 +867,21 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
+          # Add edition name for non-FE tests on branch
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
@@ -1198,6 +1209,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.28"
       EVENT_LABEL: ${{ github.event.label.name }}
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
 
@@ -1320,7 +1332,7 @@ jobs:
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -1351,16 +1363,21 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
+          # Add edition name for non-FE tests on branch
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
@@ -1688,6 +1705,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
 
@@ -1810,7 +1828,7 @@ jobs:
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -1841,16 +1859,21 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
+          # Add edition name for non-FE tests on branch
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
@@ -2178,6 +2201,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
 
@@ -2300,7 +2324,7 @@ jobs:
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -2331,16 +2355,21 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
+          # Add edition name for non-FE tests on branch
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
@@ -2668,6 +2697,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
 
@@ -2790,7 +2820,7 @@ jobs:
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -2821,16 +2851,21 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
+          # Add edition name for non-FE tests on branch
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then
@@ -3158,6 +3193,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
     steps:
 
@@ -3280,7 +3316,7 @@ jobs:
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
           # Create tmppath for test script.
-          TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
           if [[ -d "${TMP_DIR_PATH}" ]] ; then
             echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
             ls -la ${TMP_DIR_PATH}
@@ -3311,16 +3347,21 @@ jobs:
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
+          # Add edition name for non-FE tests on branch
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+
           # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
           INITIAL_IMAGE_TAG=
           if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
 
           # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
           # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
           INSTALL_IMAGE_NAME=
           if [[ -n ${CI_COMMIT_BRANCH} ]]; then

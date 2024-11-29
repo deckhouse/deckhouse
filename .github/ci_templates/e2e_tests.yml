@@ -290,6 +290,7 @@ check_e2e_labels:
     {!{ printf "run_%s_%s: ${{ steps.check.outputs.run_%s_%s }}" $cri $kubernetesVersionSlug $cri $kubernetesVersionSlug }!}
 {!{- end -}!}
 {!{- end }!}
+    edition: ${{ steps.check.outputs.edition }}
     multimaster: ${{ steps.check.outputs.multimaster }}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
@@ -345,6 +346,9 @@ check_e2e_labels:
     KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
+{!{- if coll.Has $ctx "manualRun" }!}
+    WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
+{!{- end }!}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
@@ -391,7 +395,7 @@ check_e2e_labels:
         DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
         # Create tmppath for test script.
-        TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+        TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
         if [[ -d "${TMP_DIR_PATH}" ]] ; then
           echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
           ls -la ${TMP_DIR_PATH}
@@ -422,16 +426,21 @@ check_e2e_labels:
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
         fi
 
+        # Add edition name for non-FE tests on branch
+        if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+          IMAGE_EDITION=${WERF_ENV,,}
+        fi
+
         # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
         INITIAL_IMAGE_TAG=
         if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-          INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
         fi
 
         # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
         # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
         # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
         INSTALL_IMAGE_NAME=
 {!{- if eq $provider "eks" }!}
@@ -637,7 +646,7 @@ check_e2e_labels:
 # <template: e2e_run_job_template>
 {!{ $ctx.jobID }!}:
   name: "{!{ $ctx.jobName }!}"
-  if: ${{ github.event.inputs.cri == '{!{ $ctx.cri }!}' && github.event.inputs.k8s_version == '{!{ $ctx.kubernetesVersion }!}' && github.event.inputs.layout == '{!{ $ctx.layout }!}' }}
+  if: ${{ fromJson(inputs.test_config).cri == '{!{ $ctx.cri }!}' && fromJson(inputs.test_config).ver == '{!{ $ctx.kubernetesVersion }!}' && github.event.inputs.layout == '{!{ $ctx.layout }!}' }}
   env:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
@@ -670,7 +679,7 @@ check_e2e_labels:
         MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
       run: |
         # Create tmppath for test script.
-        TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+        TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
         if [[ -d "${TMP_DIR_PATH}" ]] ; then
           echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
           ls -la ${TMP_DIR_PATH}

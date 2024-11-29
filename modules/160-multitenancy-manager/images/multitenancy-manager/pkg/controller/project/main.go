@@ -18,9 +18,11 @@ package project
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
 	"controller/pkg/consts"
@@ -32,6 +34,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,7 +51,7 @@ const controllerName = "d8-project-controller"
 
 func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.Logger) error {
 	r := &reconciler{
-		init:           &sync.WaitGroup{},
+		init:           new(sync.WaitGroup),
 		log:            log.WithName(controllerName),
 		client:         runtimeManager.GetClient(),
 		projectManager: projectmanager.New(runtimeManager.GetClient(), helmClient, log),
@@ -57,16 +61,28 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 
 	// init project manager, project manager have to ensure default templates
 	if err := runtimeManager.Add(manager.RunnableFunc(func(ctx context.Context) error {
-		return r.projectManager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init)
+		return retry.OnError(
+			wait.Backoff{
+				Steps:    10,
+				Duration: 100 * time.Millisecond,
+				Factor:   2.0,
+				Jitter:   0.1,
+			},
+			func(e error) bool {
+				log.Info("failed to init project manager - retrying", "error", e.Error())
+				return true
+			},
+			func() error {
+				return r.projectManager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init)
+			},
+		)
 	})); err != nil {
-		r.log.Error(err, "failed to init project manager")
-		return err
+		return fmt.Errorf("failed to init project manager: %w", err)
 	}
 
 	projectController, err := controller.New(controllerName, runtimeManager, controller.Options{Reconciler: r})
 	if err != nil {
-		log.Error(err, "failed to create project controller")
-		return err
+		return fmt.Errorf("failed to create project controller: %w", err)
 	}
 
 	r.log.Info("initializing project controller")

@@ -277,7 +277,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			return fmt.Errorf("get update policy for the '%s' module: %w", moduleName, err)
 		}
 
-		// TODO(ipaqsa): can be removed
 		availableModule.Policy = policy.Name
 
 		// create or update module
@@ -409,10 +408,12 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 
 	if controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
-		for _, module := range source.Status.AvailableModules {
-			if err := r.cleanSourceInModule(ctx, source.Name, module.Name); err != nil {
-				r.log.Errorf("failed to clean source in the '%s' module, during deleting the '%s' module source", module.Name, source.Name)
-				return ctrl.Result{Requeue: true}, nil
+		if source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationForceDelete] != "true" {
+			for _, module := range source.Status.AvailableModules {
+				if err := r.cleanSourceInModule(ctx, source.Name, module.Name); err != nil {
+					r.log.Errorf("failed to clean source in the %q module during deleting the %q module source: %v", module.Name, source.Name, err)
+					return ctrl.Result{Requeue: true}, nil
+				}
 			}
 		}
 

@@ -88,7 +88,7 @@ func main() {
 	}
 
 	remoteURL := os.Getenv("TRIVY_REMOTE_URL")
-	scanner := validators.NewRemoteValidator(remoteURL, logger)
+	scanner := validators.NewRemoteValidator(remoteURL, logger, os.Environ())
 	scanningTimeout := time.Duration(timeoutSeconds) * time.Second
 	validator := web.NewHandler(scanner, scanningTimeout, logger)
 	handler.HandleFunc("/validate", validator.HandleRequest())
@@ -120,7 +120,12 @@ func initJavaDB() error {
 		return err
 	}
 
-	javadb.Init("/home/javadb", ref, false, true, ftypes.RegistryOptions{Insecure: false})
+	insecure := false
+	if os.Getenv("TRIVY_INSECURE") == "true" {
+		insecure = true
+	}
+
+	javadb.Init("/home/javadb", ref, false, true, ftypes.RegistryOptions{Insecure: insecure})
 	if err = javadb.Update(); err != nil {
 		return err
 	}

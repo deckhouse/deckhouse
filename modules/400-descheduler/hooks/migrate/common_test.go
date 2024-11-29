@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2022 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,7 +17,13 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/110-istio/_crds/*.yaml")
+func Test(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "")
+}

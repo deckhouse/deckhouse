@@ -148,8 +148,6 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 			return rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, module.Properties.AvailableSources))
 		}
 
-		var warning string
-
 		// empty policy means module uses deckhouse embedded policy
 		if cfg.Spec.UpdatePolicy != "" {
 			tmp := new(v1alpha1.ModuleUpdatePolicy)
@@ -157,9 +155,11 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 				if !apierrors.IsNotFound(err) {
 					return nil, fmt.Errorf("get the '%s' module policy: %w", cfg.Spec.UpdatePolicy, err)
 				}
-				warning = fmt.Sprintf("the '%s' module policy not found, the policy from the deckhouse settings will be used instead", cfg.Spec.UpdatePolicy)
+				return rejectResult(fmt.Sprintf("the '%s' module policy does not exist", cfg.Spec.UpdatePolicy))
 			}
 		}
+
+		var warning string
 
 		// check if spec.version value is valid and the version is the latest.
 		if res := configValidator.Validate(cfg); res.HasError() {

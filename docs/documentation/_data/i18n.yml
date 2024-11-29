@@ -244,7 +244,7 @@ common:
     en: Deckhouse Kubernetes Platform — Custom resources of the <MODULENAME> module.
   description_configuration:
     ru: Deckhouse Kubernetes Platform, параметры конфигурации модуля <MODULENAME>.
-    en: Deckhouse Kubernetes Platform — сonfiguration parameters of the <MODULENAME> module.
+    en: Deckhouse Kubernetes Platform — configuration parameters of the <MODULENAME> module.
   description_examples:
     ru: Deckhouse Kubernetes Platform, примеры конфигурации модуля <MODULENAME>.
     en: Deckhouse Kubernetes Platform — examples of configuring the <MODULENAME> module.

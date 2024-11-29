@@ -36,19 +36,6 @@ shell:
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/yq
 
 ---
-artifact: yq-artifact
-from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  install:
-  - export GOPROXY={{ .GOPROXY }}
-  - git clone {{ .SOURCE_REPO }}/mikefarah/yq --branch v2.4.1
-  - cd yq/
-  - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/yq
-
----
 artifact: semver-artifact
 from: {{ $.Images.BASE_ALPINE_DEV }}
 shell:

@@ -15,7 +15,7 @@ kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
-# [<en>] Proxy server settings. In the exception list (noProxy parameter), also specify the сomma-separated IP addresses of cluster nodes, container registry, or proxy server.
+# [<en>] Proxy server settings. In the exception list (noProxy parameter), also specify the comma-separated IP addresses of cluster nodes, container registry, or proxy server.
 # [<ru>] Настройки proxy-сервера. В списке исключений (параметр noProxy) также укажите IP-адреса узлов кластера, container registry или прокси-сервера, разделённые запятой.
 proxy:
   httpProxy: <HTTP_PROXY_ADDRESS>

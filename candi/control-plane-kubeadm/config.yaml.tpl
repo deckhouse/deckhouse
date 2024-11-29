@@ -44,7 +44,7 @@ apiServer:
   extraArgs:
 {{- if .apiserver.serviceAccount }}
     {{- $defaultAud := printf "https://kubernetes.default.svc.%s" .clusterConfiguration.clusterDomain }}
-    {{- $uniqueAdditionalAuds := .apiserver.serviceAccount.additionalAPIAudiences | uniq }}
+    {{- $uniqueAdditionalAuds := (default (list) .apiserver.serviceAccount.additionalAPIAudiences) | uniq }}
     {{- $filteredAuds := list }}
     {{- range $uniqueAdditionalAuds }}
       {{- if ne . $defaultAud }}
@@ -84,9 +84,8 @@ apiServer:
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
   {{- end }}
-  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare ">= 1.27" .clusterConfiguration.kubernetesVersion) }}
-    default-not-ready-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
-    default-unreachable-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
+  {{- if hasKey .arguments "podEvictionTimeout" }}
+    default-not-ready-toleration-seconds: {{ .arguments.podEvictionTimeout | quote }}
   {{- end }}
 {{- end }}
 {{- if hasKey . "apiserver" }}
