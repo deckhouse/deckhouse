@@ -68,9 +68,9 @@ func handleSP(input *go_hook.HookInput) error {
 	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", result)
 
 	if len(refs) > 0 {
-		imageReferences := make([]v1alpha1.ImageReference, 0, len(refs))
+		imageReferences := make([]ratifyReference, 0, len(refs))
 		for k, v := range refs {
-			imageReferences = append(imageReferences, v1alpha1.ImageReference{
+			imageReferences = append(imageReferences, ratifyReference{
 				Reference:  k,
 				PublicKeys: v.Slice(),
 			})
@@ -160,4 +160,9 @@ type securityPolicy struct {
 		Name string `json:"name"`
 	} `json:"metadata"`
 	Spec v1alpha1.SecurityPolicySpec `json:"spec"`
+}
+
+type ratifyReference struct {
+	PublicKeys []string `json:"publicKeys"`
+	Reference  string   `json:"reference"`
 }
