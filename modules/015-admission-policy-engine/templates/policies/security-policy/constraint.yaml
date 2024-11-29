@@ -488,4 +488,9 @@ spec:
         kinds: ["Pod"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    references:
+    {{- range $policy := $cr.spec.policies.verifyImageSignatures }}
+    - {{ printf "^%s$" ($policy.reference | replace "*" ".*") }}
+    {{- end }}
 {{- end }}
