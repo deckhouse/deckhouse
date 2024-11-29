@@ -11,12 +11,24 @@
         - '**/*'
 - add: /ee/be/candi/bashible/bundles/altlinux
   to: /deckhouse/candi/bashible/bundles/altlinux
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/candi/bashible/bundles/astra
   to: /deckhouse/candi/bashible/bundles/astra
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/candi/bashible/bundles/redos
   to: /deckhouse/candi/bashible/bundles/redos
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/candi/bashible/bundles/rosa
   to: /deckhouse/candi/bashible/bundles/rosa
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/candi/bashible/detect_bundle.sh
   to: /deckhouse/candi/bashible/detect_bundle.sh
   stageDependencies:

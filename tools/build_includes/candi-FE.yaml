@@ -11,12 +11,24 @@
         - '**/*'
 - add: /ee/be/candi/bashible/bundles/altlinux
   to: /deckhouse/candi/bashible/bundles/altlinux
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/candi/bashible/bundles/astra
   to: /deckhouse/candi/bashible/bundles/astra
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/candi/bashible/bundles/redos
   to: /deckhouse/candi/bashible/bundles/redos
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/candi/bashible/bundles/rosa
   to: /deckhouse/candi/bashible/bundles/rosa
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/candi/bashible/detect_bundle.sh
   to: /deckhouse/candi/bashible/detect_bundle.sh
   stageDependencies:
@@ -24,14 +36,29 @@
         - '**/*'
 - add: /ee/candi/cloud-providers/openstack
   to: /deckhouse/candi/cloud-providers/openstack
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/candi/cloud-providers/vsphere
   to: /deckhouse/candi/cloud-providers/vsphere
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/candi/cloud-providers/vcd
   to: /deckhouse/candi/cloud-providers/vcd
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/candi/cloud-providers/zvirt
   to: /deckhouse/candi/cloud-providers/zvirt
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/candi/cloud-providers/dynamix
   to: /deckhouse/candi/cloud-providers/dynamix
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/fe/candi/bashible/common-steps/all/099_upd_tfadm.sh.tpl
   to: /deckhouse/candi/bashible/common-steps/all/099_upd_tfadm.sh.tpl
   stageDependencies:
