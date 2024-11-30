@@ -134,18 +134,25 @@ spec:
 
 ## Проверка подписи образов
 
-*Доступно только в EE версии*
+{% alert level="warning" %}Доступно только в Enterprise edition.{% endalert %}
 
-В целях безопасности Docker образы могут быть подписаны с помощью инструмента cosign. Подробнее о cosign можно узнать [здесь](https://github.com/sigstore/cosign).
-(*** Артем, [тут](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys) лежит дока, как делать подписи. Можно дать на нее ссылку или вставить сюда конкретные команды.)
+В модуле реализована функция проверки подписи образов контейнеров, подписанных с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Проверка подписи образов контейнеров позволяет убедиться в их целостности (что образ не был изменен после его создания) и подлинности (что образ был создан доверенным источником). Включить проверку подписи образов контейнеров в кластере можно с помощью параметра [policies.verifyImageSignatures](cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy.
+ 
+{% offtopic title="Как подписать образ..." %}
+Шаги для подписания образа:
+- Сгенерируйте ключи: `cosign generate-key-pair`
+- Подпишите образ: `cosign sign --key <key> <image>`
 
+Подробнее о работе с Cosign можно узнать в [документации](https://docs.sigstore.dev/cosign/key_management).
+{% endofftopic %}
 
-Реализовать проверку подписи контейнеров в кластере можно с помощью SecurityPolicy
+Пример SecurityPolicy для настройки проверки подписи образов контейнеров:
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: example
+  name: verify-image-signatures
 spec:
   match:
     namespaceSelector:
@@ -171,29 +178,10 @@ spec:
           -----END PUBLIC KEY-----
 ```
 
-verifyImageSignatures - список политик проверки подписи образов.
-где в каждой записи:
- - `reference` - это абсолютная ссылка на образ или glob-pattern(если указана звездочка)
-Например:
- - company.registry.com/* - будет проверять образы: `company.registry.com/foo/bar:v1`, `company.registry.com/example/tool:v2` и тд
- - docker.io/nginx - будет проверять только nginx из deckhouse.io
+Политика не влияет на создание подов, адреса образов контейнеров которых не подходят под описанные в параметре `reference`.  Если же адрес какого-либо образа контейнера подходит под описанные в параметре `reference` политики, и образ не подписан или подпись не соответствует указанным в политике ключам, создание пода будет запрещено.
 
-(***Звездочка может быть только одна и только в конце
-Вот выдержка из документации тулзы:
+Пример вывода ошибки при создании пода с образом контейнера, не прошедшим проверку подписи:
+
+```console
+[verify-image-signatures] Image signature verification failed: nginx:1.17.2
 ```
-A reference MAY contain a wildcard * character which represents 0+ matching characters
-The wild card character MUST be the last character in the reference string, if used at all
-Multiple wildcard characers CANNOT be used within the same reference
-A scope, which does NOT have a suffixed * character, is assumed to be an absolute reference. The entire reference must be an exact match to the image reference.
-```
-)
-
-- `publicKeys` - массив публичных ключей, которыми проверяется подпись.
-- `dockerCfg` - если регистри закрыт авторизацией, надо положить авторизационные данные для registry в base64. для анонимного доступа можно оставить пустым.
-
-Данная политика будет запрещать создавать поды с неподписанными образами или образами с неверной подписью:
-```shell
-[example] Image signature verification failed: nginx:1.17.2
-```
-
-Образы, которые не подходят под reference pattern не проверяются на подпись.
