@@ -7,7 +7,6 @@ $( document ).ready(function() {
           });
           $('a.lang-switcher').each(function() {
             let pageDomain = window.location.hostname;
-            console.log("говнокод", this, pageDomain)
             if (window.location.pathname.startsWith('/ru/')) {
               $(this).attr('href', window.location.href.replace('/ru/', '/en/'))
             } else if (window.location.pathname.startsWith('/en/')) {
@@ -21,15 +20,12 @@ $( document ).ready(function() {
                   $(this).attr('href', window.location.href.replace('deckhouse.ru', 'deckhouse.io'))
                   break;
                 case 'ru.localhost':
-                  console.log("ru.localhost");
                   $(this).attr('href', window.location.href.replace('ru.localhost', 'localhost'))
                   break;
                 case 'localhost':
-                  console.log("localhost");
                   $(this).attr('href', window.location.href.replace('localhost', 'ru.localhost'))
                   break;
                 default:
-                  console.log("default");
                   if (pageDomain.includes('deckhouse.ru.')) {
                     $(this).attr('href', window.location.href.replace('deckhouse.ru.', 'deckhouse.'))
                   } else if (pageDomain.includes('deckhouse.')) {
@@ -55,7 +51,6 @@ $( document ).ready(function() {
     //this script says, if the height of the viewport is greater than 800px, then insert affix class, which makes the nav bar float in a fixed
     // position as your scroll. if you have a lot of nav items, this height may not work for you.
     var h = $(window).height();
-    //console.log (h);
     if (h > 800) {
         // $( "#mysidebar" ).attr("class", "nav affix");
         // $( "#mysidebar" ).attr("class", "nav");
