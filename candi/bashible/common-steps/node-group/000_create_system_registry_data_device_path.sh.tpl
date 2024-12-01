@@ -22,13 +22,11 @@ function exec_kubectl() {
 
 {{- /*
 # This function attempts to retrieve a Kubernetes secret related to the device registry
-# from the specified namespace. It retries multiple times if the secret is not found.
+# from the specified namespace.
 #
 # Behavior:
-#   - Tries to retrieve the secret with multiple retries.
-#   - If the secret is successfully retrieved, it will be printed to stdout.
-#   - If the secret is not found after the maximum number of
-#     attempts, an error message will be printed and the function
+#   - If the secret is successfully found, it will be printed to stdout.
+#   - If the secret is not found, an error message will be printed and the function
 #     will exit with a non-zero status.
 #
 # Return Values:
@@ -78,63 +76,52 @@ function exec_kubectl() {
 function fetch_registry_data_device_secret() {
   local secret_name="d8-masters-system-registry-data-device-path"
   local namespace="d8-system"
-  local max_attempts=5
-  local sleep_interval=10
 
-  for ((i=1; i<=max_attempts; i++)); do
-    if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
-      # Ensure bootstrap-token exists before proceeding
-      if [ -f "$BOOTSTRAP_DIR/bootstrap-token" ]; then
-        # Iterate through each API server endpoint
-        for server in {{ .normal.apiserverEndpoints | join " " }}; do
-          local http_status
-          # Check HTTP status without outputting error details
-          http_status=$(d8-curl -s -w "%{http_code}" -o /dev/null \
-            -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
-            --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
-            --cacert "$BOOTSTRAP_DIR/ca.crt" 2>/dev/null)
+  if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+    # Ensure bootstrap-token exists before proceeding
+    if [ -f "$BOOTSTRAP_DIR/bootstrap-token" ]; then
+      # Iterate through each API server endpoint
+      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+        local http_status
+        # Check HTTP status without outputting error details
+        http_status=$(d8-curl -s -w "%{http_code}" -o /dev/null \
+          -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
+          --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
+          --cacert "$BOOTSTRAP_DIR/ca.crt" 2>/dev/null)
 
-          if [ "$http_status" -eq 404 ]; then
-            # Secret does not exist (HTTP 404), return successfully
-            return 0
-          fi
+        if [ "$http_status" -eq 404 ]; then
+          # Secret does not exist (HTTP 404), return successfully
+          return 0
+        fi
 
-          # Try to retrieve the secret; if successful, output the result
-          if output=$(d8-curl -s -f \
-                -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
-                --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
-                --cacert "$BOOTSTRAP_DIR/ca.crt" 2>/dev/null); then
-            echo "$output"
-            return 0
-          fi
+        # Try to retrieve the secret; if successful, output the result
+        if output=$(d8-curl -s -f \
+              -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
+              --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
+              --cacert "$BOOTSTRAP_DIR/ca.crt" 2>/dev/null); then
+          echo "$output"
+          return 0
+        fi
 
-          # Output error message if the attempt fails
-          >&2 echo "Attempt $i: Failed to get secret $secret_name from server $server"
-        done
-      else
-        # Error: bootstrap-token is missing
-        >&2 echo "Failed to get secret $secret_name: can't find bootstrap-token."
+        # Output error message if the attempt fails
+        >&2 echo "Failed to get secret $secret_name from server $server"
         exit 1
-      fi
+      done
     else
-      # Use kubectl to retrieve the secret
-      if output=$(exec_kubectl get secret "$secret_name" -n "$namespace" --ignore-not-found=true -o json 2>/dev/null); then
-        echo "$output"
-        return 0
-      fi
-      # Output error message if kubectl fails
-      >&2 echo "Attempt $i: Failed to get secret $secret_name using kubectl."
-    fi
-
-    # Wait before the next retry attempt
-    if [ $i -lt $max_attempts ]; then
-      sleep $sleep_interval
-    else
-      # Output error message if maximum retries are exceeded
-      >&2 echo "Exceeded maximum retry attempts to get secret $secret_name."
+      # Error: bootstrap-token is missing
+      >&2 echo "Failed to get secret $secret_name: can't find bootstrap-token."
       exit 1
     fi
-  done
+  else
+    # Use kubectl to retrieve the secret
+    if output=$(exec_kubectl get secret "$secret_name" -n "$namespace" --ignore-not-found=true -o json 2>/dev/null); then
+      echo "$output"
+      return 0
+    fi
+    # Output error message if kubectl fails
+    >&2 echo "Failed to get secret $secret_name using kubectl."
+    exit 1
+  fi
 }
 
 {{- /*
