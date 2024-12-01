@@ -79,7 +79,6 @@ apiVersions:
 
               The Deckhouse bundle to use in the cluster.
             enum: [Minimal, Managed, Default]
-            default: Default
           logLevel:
             type: string
             deprecated: true
@@ -88,4 +87,3 @@ apiVersions:
 
               Deckhouse logging Level.
             enum: [Debug, Info, Error]
-            default: Info

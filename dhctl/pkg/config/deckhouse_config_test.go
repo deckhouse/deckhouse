@@ -39,6 +39,10 @@ deckhouse:
   bundle: {{ .bundle }}
 {{- end }}
 
+{{- if .releaseChannel }}
+  releaseChannel: {{ .releaseChannel }}
+{{- end }}
+
 {{- if .logLevel }}
   logLevel: {{ .logLevel }}
 {{- end }}
@@ -142,6 +146,33 @@ configOverrides:
   common:
     testString: aaaaa
 `,
+		})
+
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
+	})
+
+	t.Run("Forbid to use releaseChannel", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"releaseChannel": "Beta",
+		})
+
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
+	})
+
+	t.Run("Forbid to use bundle", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"bundle": "Default",
+		})
+
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
+	})
+
+	t.Run("Forbid to use logLevel", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"logLevel": "Info",
 		})
 
 		_, err := PrepareDeckhouseInstallConfig(metaConfig)
