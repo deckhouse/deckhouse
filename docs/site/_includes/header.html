@@ -225,28 +225,31 @@
 </div>
 {%- unless site.mode == "module" %}
 {%- if page.lang == "ru" %}
-  <div class="header header__product-menu">
-    <div class="container">
-      <div class="header__product-menu-logo">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <path d="M12.0913 2.08469L15.4502 0.526367L19.9966 3.00774L20 8.43812L17.1431 9.99348L17.1393 4.57335L12.0913 2.08469Z" fill="#00003C"/>
-          <path d="M12.0913 17.9154L15.4502 19.4737L19.9966 16.9924L20 11.562L17.1431 10.0066L17.1393 15.4268L12.0913 17.9154Z" fill="#00003C"/>
-          <path d="M7.90871 2.08469L4.54982 0.526367L0.00341143 3.00774L0 8.43812L2.85694 9.99348L2.86068 4.57335L7.90871 2.08469Z" fill="#00003C"/>
-          <path d="M7.90871 17.9154L4.54982 19.4737L0.00341143 16.9924L0 11.562L2.85694 10.0066L2.86068 15.4268L7.90871 17.9154Z" fill="#00003C"/>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M9.99393 4.7695L14.7826 7.38975L14.7887 12.6203L10.0061 15.2306L5.21735 12.6103L5.21129 7.37979L9.99393 4.7695ZM7.90873 12.2331H10.2659C11.564 12.2331 12.623 11.2299 12.623 10.0001C12.623 8.77024 11.564 7.76697 10.2659 7.76697H7.90873V12.2331Z" fill="#0064FF"/>
-        </svg>
-        <span>Kubernetes Platform</span>
+  {%- assign l2MenuData = site.data.topnav-l2-products[page.lang] %}
+  {%- if l2MenuData %}
+    {%- assign productCode = page.product_code | default: "kubernetes-platform" %}
+    {%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
+    {%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
+    {%- assign productLogoURL = "/images/sprite.svg#" | append: productCode | append: "-icon" %}
+    {%- assign productName = productMenuData.title %}
+    <div class="header header__product-menu">
+      <div class="container">
+        <div class="header__product-menu-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+             <use xlink:href="{{ productLogoURL }}"></use>
+          </svg>
+          <span>{{ productName }}</span>
+        </div>
+    {%- if page.lang == 'ru' %}
+        <ul class="nav">
+          {%- for item in productMenuData.items %}
+            {%- if item.rel == "doc" %}{% assign itemClass='class="active"' %}{% else %}{% assign itemClass='' %}{% endif %}
+            <li {{ itemClass }}><a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a></li>
+          {%- endfor %}
+        </ul>
+    {%- endif %}
       </div>
-  {%- if page.lang == 'ru' %}
-      <ul class="nav">
-        {%- assign dkpMenuData = site.data.topnav-l2-products[page.lang] | where: "url", "/products/kubernetes-platform/" | first %}
-        {%- for item in dkpMenuData.items %}
-          {%- if item.rel == "doc" %}{% assign itemClass='class="active"' %}{% else %}{% assign itemClass='' %}{% endif %}
-          <li {{ itemClass }}><a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a></li>
-        {%- endfor %}
-      </ul>
-  {%- endif %}
     </div>
-  </div>
+  {%- endif %}
 {%- endif %}
 {%- endunless %}

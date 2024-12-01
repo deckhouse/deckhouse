@@ -182,6 +182,9 @@ git:
     - site/_includes/footer.html
     - site/_data/topnav.*
     - site/backends
+    - site/_plugins/gs_generator.rb
+    - site/_plugins/dvp_resource_generator.rb
+    - site/pages/virtualization-platform
 {{ end }}
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']

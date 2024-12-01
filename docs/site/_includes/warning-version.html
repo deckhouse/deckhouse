@@ -1,0 +1,15 @@
+{%- if page.d8Revision %}
+{% alert level="warning" %}
+{{ site.data.i18n.features[page.d8Revision][page.lang] }}
+{% endalert %}
+{%- endif %}
+{%- if page.featureStatus %}
+{% alert level="warning" %}
+{{ site.data.i18n.features[page.featureStatus][page.lang] }}
+{% endalert %}
+{%- endif %}
+{%- if page.documentation_state == "develop" %}
+{% alert level="warning" %}
+{{ site.data.i18n.common.documentation_develop[page.lang] }}
+{% endalert %}
+{%- endif %}

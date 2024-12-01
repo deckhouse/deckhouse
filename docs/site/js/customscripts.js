@@ -5,7 +5,39 @@ $( document ).ready(function() {
             if (e.target.value.length > 0 ) $(".search__results").addClass("active");
             else $(".search__results").removeClass("active");
           });
-
+          $('a.lang-switcher').each(function() {
+            let pageDomain = window.location.hostname;
+            console.log("говнокод", this, pageDomain)
+            if (window.location.pathname.startsWith('/ru/')) {
+              $(this).attr('href', window.location.href.replace('/ru/', '/en/'))
+            } else if (window.location.pathname.startsWith('/en/')) {
+              $(this).attr('href', window.location.href.replace('/en/', '/ru/'))
+            } else {
+              switch (pageDomain) {
+                case 'deckhouse.io':
+                  $(this).attr('href', window.location.href.replace('deckhouse.io', 'deckhouse.ru'))
+                  break;
+                case 'deckhouse.ru':
+                  $(this).attr('href', window.location.href.replace('deckhouse.ru', 'deckhouse.io'))
+                  break;
+                case 'ru.localhost':
+                  console.log("ru.localhost");
+                  $(this).attr('href', window.location.href.replace('ru.localhost', 'localhost'))
+                  break;
+                case 'localhost':
+                  console.log("localhost");
+                  $(this).attr('href', window.location.href.replace('localhost', 'ru.localhost'))
+                  break;
+                default:
+                  console.log("default");
+                  if (pageDomain.includes('deckhouse.ru.')) {
+                    $(this).attr('href', window.location.href.replace('deckhouse.ru.', 'deckhouse.'))
+                  } else if (pageDomain.includes('deckhouse.')) {
+                    $(this).attr('href', window.location.href.replace('deckhouse.', 'deckhouse.ru.'))
+                  }
+              }
+            }
+          });
 });
 
 document.addEventListener("DOMContentLoaded", function() {
