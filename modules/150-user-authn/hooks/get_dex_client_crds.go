@@ -78,11 +78,19 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
 	// argocd.argoproj.io is used by ArgoCD to identify secrets managed by it.
 	// app.kubernetes.io/managed-by is used by Helm to identify secrets managed by it.
-	delete(labels, "certmanager.k8s.io/certificate-name")
-	delete(labels, "argocd.argoproj.io/instance")
-	delete(labels, "argocd.argoproj.io/secret-type")
-	if labels["app.kubernetes.io/managed-by"] == "Helm" {
-		delete(labels, "app.kubernetes.io/managed-by")
+	// Delete labels that should not be transferred to the secret
+	labelKeysToIgnore := []string{
+		"app",
+		"heritage",
+		"module",
+		"name",
+		"app.kubernetes.io/managed-by",
+		"argocd.argoproj.io/secret-type",
+		"argocd.argoproj.io/instance",
+		"certmanager.k8s.io/certificate-name",
+	}
+	for _, key := range labelKeysToIgnore {
+		delete(labels, key)
 	}
 
 	annotations := obj.GetAnnotations()
