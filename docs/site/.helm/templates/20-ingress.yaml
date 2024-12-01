@@ -216,6 +216,41 @@ spec:
             name: backend
             port:
               name: http
+      - path: /products/virtualization-platform/documentation/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/reference/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/guides/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/gs/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/modules/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
 {{- if ne $.Values.web.env "web-production" }}
 ---
 apiVersion: cert-manager.io/v1

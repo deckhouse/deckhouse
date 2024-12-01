@@ -23,7 +23,7 @@ toc: false
     <div>
       <h3>Облачная платформа</h3>
       <div class="button-group">
-        {%- for provider in site.data.getting_started.data.installTypes %}
+        {%- for provider in site.data.getting_started.dkp_data.installTypes %}
         {%- if provider[1].type != 'cloud' %}{% continue %}{% endif %}
         {%- if provider[1].languages %}
           {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
@@ -57,7 +57,7 @@ toc: false
     <div>
       <h3>Другие варианты</h3>
       <div class="button-group">
-        {%- for provider in site.data.getting_started.data.installTypes %}
+        {%- for provider in site.data.getting_started.dkp_data.installTypes %}
         {%- if provider[1].type == 'cloud' %}{% continue %}{% endif %}
         {%- if provider[1].languages %}
           {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
