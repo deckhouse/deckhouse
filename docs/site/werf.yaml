@@ -9,6 +9,10 @@
 {{- else }}
   {{- $_ := set . "Mode" $.Env }}
 {{- end }}
+
+{{- $context := . }}
+{{- $_ := set $context "ModulePath" "../../" }}
+
 project: deckhouse-web
 configVersion: 1
 cleanup:
@@ -58,7 +62,11 @@ shell:
     - |
       jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
     - |
-      jq '."header-products" | if ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
+      # REVERT ! TODO
+      # jq '."header-products" | if ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
+      jq '."header-products" | if ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end| (.ru[]| select(.url=="/products/virtualization-platform/").items |= .+ [{"title": "Быстрый старт", "url": "/products/virtualization-platform/gs/bm/", "target": "", "rel": ""},{"title": "Подготовка к Production", "url": "/products/virtualization-platform/guides/production.html", "target": "", "rel": ""}])' /tmp/menus.json | jq -s '{"ru": .}' > /data/topnav-l2-products.json
+      #  REMOVE! TODO
+      sed -i 's#products/kubernetes-platform/modules/virtualization/stable/#products/virtualization-platform/documentation/#' /data/topnav-l2-products.json
     - |
       jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
     - |
@@ -75,18 +83,34 @@ shell:
         bundle --version
   setup:
   - |
-        # "Build static files"
+        # "Generating CR schemas for DVP..."
+        cd /srv/jekyll-data/site/
+        export MODULES_RAW_DIR=/rawdata
+        export CRD_PATH=virtualization-platform/crds
+        export OPENAPI_PATH=virtualization-platform/openapi
+        bash ./prepare_resources.sh
+
+        # "Building static files"
         cd /srv/jekyll-data/site/
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
-        jekyll build -d /app/_site/ --config _config.yml
+        jekyll build -d /app/_site/ --config  _config.yml
 git:
+- add: /docs/documentation/js
+  to: /srv/jekyll-data/site/js
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - lunr*.js
+  - pdf.worker.min.js
+  - search.js
+  stageDependencies:
+    setup: '**/*'
 - add: /docs/site
   to: /srv/jekyll-data/site
   owner: jekyll
   group: jekyll
   excludePaths:
-  - '**/*.sh'
   - LOCAL_DEV.md
   - werf*.yaml
   - docker-compose*.yml
@@ -97,6 +121,150 @@ git:
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     setup: '**/*'
+- add: /{{ .ModulePath }}
+  to: /rawdata/crds
+{{/*  to: /srv/jekyll-data/site/_data/schemas/virtualization-platform/crds*/}}
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "**/*-admission-policy-engine/crds/*.yaml"
+  - "**/*-cert-manager/crds/*.yaml"
+  - "**/*-chrony/crds/*.yaml"
+  - "**/*-cilium-hubble/crds/*.yaml"
+  - "**/*-cni-cilium/crds/*.yaml"
+  - "**/*-control-plane-manager/crds/*.yaml"
+  - "**/*-descheduler/crds/*.yaml"
+  - "**/*-extended-monitoring/crds/*.yaml"
+  - "**/*-ingress-nginx/crds/*.yaml"
+  - "**/*-l2-load-balancer/crds/*.yaml"
+  - "**/*-log-shipper/crds/*.yaml"
+  - "**/*-loki/crds/*.yaml"
+  - "**/*-metallb/crds/*.yaml"
+  - "**/*-monitoring-custom/crds/*.yaml"
+  - "**/*-monitoring-deckhouse/crds/*.yaml"
+  - "**/*-monitoring-kubernetes-control-plane/crds/*.yaml"
+  - "**/*-monitoring-kubernetes/crds/*.yaml"
+  - "**/*-monitoring-ping/crds/*.yaml"
+  - "**/*-multitenancy-manager/crds/*.yaml"
+  - "**/*-node-manager/crds/*.yaml"
+  - "**/*-operator-prometheus/crds/*.yaml"
+  - "**/*-prometheus-metrics-adapter/crds/*.yaml"
+  - "**/*-prometheus/crds/*.yaml"
+  - "**/*-snapshot-controller/crds/*.yaml"
+  - "**/*-upmeter/crds/*.yaml"
+  - "**/*-user-authn/crds/*.yaml"
+  - "**/*-user-authz/crds/*.yaml"
+  - "**/*-vertical-pod-autoscaler/crds/*.yaml"
+  stageDependencies:
+    setup: '**/*'
+# add moduleConfigs schemas
+- url: https://github.com/deckhouse/virtualization.git
+  branch: main
+  add: /
+  to: /rawdata/external/modules/virtualization
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "crds/*.yaml"
+  - "openapi/config-values.yaml"
+  - "openapi/doc-ru-config-values.yaml"
+  stageDependencies:
+    setup: '**/*'
+- url: https://github.com/deckhouse/sds-replicated-volume.git
+  branch: main
+  add: /
+  to: /rawdata/external/modules/sds-replicated-volume
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "crds/*.yaml"
+  - "openapi/config-values.yaml"
+  - "openapi/doc-ru-config-values.yaml"
+  stageDependencies:
+    setup: '**/*'
+- url: https://github.com/deckhouse/sds-node-configurator.git
+  branch: main
+  add: /
+  to: /rawdata/external/modules/sds-node-configurator
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "crds/*.yaml"
+  - "openapi/config-values.yaml"
+  - "openapi/doc-ru-config-values.yaml"
+  stageDependencies:
+    setup: '**/*'
+- url: https://github.com/deckhouse/sds-local-volume.git
+  branch: main
+  add: /
+  to: /rawdata/external/modules/sds-local-volume
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "crds/*.yaml"
+  - "openapi/config-values.yaml"
+  - "openapi/doc-ru-config-values.yaml"
+  stageDependencies:
+    setup: '**/*'
+- add: /{{ .ModulePath }}
+  to: /rawdata/openapi
+{{/*  to: /srv/jekyll-data/site/_data/schemas/virtualization-platform/crds*/}}
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  #- "**/*-l2-load-balancer/openapi/*"
+  #- "**/*-node-manager/openapi/*"
+  - "**/*-admission-policy-engine/openapi/*"
+  - "**/*-cert-manager/openapi/*"
+  - "**/*-chrony/openapi/*"
+  - "**/*-cilium-hubble/openapi/*"
+  - "**/*-cni-cilium/openapi/*"
+  - "**/*-control-plane-manager/openapi/*"
+  - "**/*-descheduler/openapi/*"
+  - "**/*-extended-monitoring/openapi/*"
+  - "**/*-ingress-nginx/openapi/*"
+  - "**/*-log-shipper/openapi/*"
+  - "**/*-loki/openapi/*"
+  - "**/*-monitoring-custom/openapi/*"
+  - "**/*-monitoring-deckhouse/openapi/*"
+  - "**/*-monitoring-kubernetes-control-plane/openapi/*"
+  - "**/*-monitoring-kubernetes/openapi/*"
+  - "**/*-monitoring-ping/openapi/*"
+  - "**/*-multitenancy-manager/openapi/*"
+  - "**/*-operator-prometheus/openapi/*"
+  - "**/*-prometheus-metrics-adapter/openapi/*"
+  - "**/*-prometheus/openapi/*"
+  - "**/*-snapshot-controller/openapi/*"
+  - "**/*-upmeter/openapi/*"
+  - "**/*-user-authn/openapi/*"
+  - "**/*-user-authz/openapi/*"
+  - "**/*-vertical-pod-autoscaler/openapi/*"
+  - "**/se/modules/*-metallb/openapi/*"
+  excludePaths:
+  - "**/global-hooks/"
+  - "**/testdata/"
+  stageDependencies:
+    setup: '**/*'
+- add: /global-hooks/openapi
+  to: /rawdata/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*config-values.yaml','doc-ru-config-values.yaml']
+- add: /candi/openapi
+  to: /rawdata/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+- add: /deckhouse-controller/crds
+  to: /rawdata/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 import:
   - artifact: site-external-artifacts
