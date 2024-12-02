@@ -83,7 +83,7 @@ spec:
                   description: |
                     An enforcement action as a result of the constraint:
                     - `Deny` — Deny action.
-                    - `Dryrun` — No action. Used for debugging. Information about the event can be viewed in Grafana or in the console via kubectl.
+                    - `Dryrun` — No action. Used for debugging. Information about the event can be viewed in Grafana in dashboard `Security/Admission policy engine`.
                     - `Warn` — No action; similar to `Dryrun`. Provides information about the constraint that would result in a denial if the `Deny` action is used.
                   enum:
                     - Warn
