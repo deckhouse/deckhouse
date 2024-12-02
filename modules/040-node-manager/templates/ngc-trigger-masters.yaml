@@ -1,11 +1,11 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: install-mount-nfs-sh
+  name: trigger-bashible-for-master-nodes-sh
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
-  weight: 4
-  nodeGroups: ["*"]
+  weight: 999
+  nodeGroups: ["master"]
   bundles: ["*"]
   content: |
     # Copyright 2024 Flant JSC
@@ -22,9 +22,11 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    # https://kubernetes.io/docs/concepts/storage/volumes/#nfs
-    case $(bb-is-bundle) in
-      debian|ubuntu-lts|astra)  bb-apt-install nfs-common ;;
-      altlinux)                 bb-apt-rpm-install nfs-utils ;;
-      centos|redos|rosa)        bb-yum-install nfs-utils ;;
-    esac
+    # Show registry data devices
+    {{- if hasKey $.Values.nodeManager.internal "systemRegistry" }}
+      {{- if hasKey $.Values.nodeManager.internal.systemRegistry "dataDevices" }}
+        {{- range $nodeInfo := $.Values.nodeManager.internal.systemRegistry.dataDevices }}
+    echo 'NodeName: "{{ $nodeInfo.nodeName }}" -> registryDeviceName: "{{ $nodeInfo.deviceName }}"'
+        {{- end }}
+      {{- end }}
+    {{- end }}
