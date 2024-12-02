@@ -62,11 +62,7 @@ shell:
     - |
       jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
     - |
-      # REVERT ! TODO
-      # jq '."header-products" | if ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
-      jq '."header-products" | if ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end| (.ru[]| select(.url=="/products/virtualization-platform/").items |= .+ [{"title": "Быстрый старт", "url": "/products/virtualization-platform/gs/bm/", "target": "", "rel": ""},{"title": "Подготовка к Production", "url": "/products/virtualization-platform/guides/production.html", "target": "", "rel": ""}])' /tmp/menus.json | jq -s '{"ru": .}' > /data/topnav-l2-products.json
-      #  REMOVE! TODO
-      sed -i 's#products/kubernetes-platform/modules/virtualization/stable/#products/virtualization-platform/documentation/#' /data/topnav-l2-products.json
+      jq '."header-products" | if ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
     - |
       jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
     - |

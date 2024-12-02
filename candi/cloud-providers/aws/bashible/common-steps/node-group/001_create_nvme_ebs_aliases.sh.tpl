@@ -20,11 +20,9 @@
 volume_names="$(find /dev | grep -i 'nvme[0-21]n1$' || true)"
 
 if [ ! -z "${volume_names}" ]; then
-    # Check if ebsnvme-id is installed, and install it if not
-    if ! command -v ebsnvme-id &> /dev/null; then
-        bb-package-install "ebsnvme-id:{{ .images.registrypackages.amazonEc2Utils220 }}"
-    fi
-
+    {{- with .images.registrypackages }}
+    bb-package-install "ebsnvme-id:{{ .amazonEc2Utils220 }}" "nvme-cli:{{ .nvmeCli211 }}"
+    {{- end }}
     # Iterate over each found NVMe device
     for volume in ${volume_names}; do
         # Check if the found device is a symbolic link
@@ -32,10 +30,8 @@ if [ ! -z "${volume_names}" ]; then
             echo "${volume} is a symbolic link, skipping."
             continue
         fi
-
         # Extract the potential symlink using 'nvme id-ctrl'
-        symlink="$(nvme id-ctrl -v "${volume}" | ( grep '^0000:' || true ) | sed -E 's/.*"(\/dev\/)?([a-z0-9]+)\.+"$/\/dev\/\2/')"
-
+        symlink="$(/opt/deckhouse/bin/nvme id-ctrl -v "${volume}" | ( grep '^0000:' || true ) | sed -E 's/.*"(\/dev\/)?([a-z0-9]+)\.+"$/\/dev\/\2/')"
         if [ -z "${symlink}" ]; then
             # Alternative way to extract the symlink
             symlink="$(/opt/deckhouse/bin/ebsnvme-id "${volume}" | sed -n '2p' )"
