@@ -29,13 +29,13 @@ shell:
   - cd /src
   - /bin/promu build
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
-    add: /src/chrony_exporter
-    to: /usr/bin/chrony_exporter
-    before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+  add: /src/chrony_exporter
+  to: /usr/bin/chrony_exporter
+  before: install
 docker:
   EXPOSE:
     - "9123"
