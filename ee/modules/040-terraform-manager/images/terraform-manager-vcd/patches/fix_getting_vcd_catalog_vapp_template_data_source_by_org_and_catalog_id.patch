@@ -7,16 +7,27 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/vcd/resource_vcd_catalog_vapp_template.go b/vcd/resource_vcd_catalog_vapp_template.go
 --- a/vcd/resource_vcd_catalog_vapp_template.go	(revision 2df7e589a92135093f3327e9d8698404bdf65bd0)
-+++ b/vcd/resource_vcd_catalog_vapp_template.go	(date 1727329211575)
-@@ -382,6 +382,32 @@
++++ b/vcd/resource_vcd_catalog_vapp_template.go	(date 1730884397001)
+@@ -382,6 +382,43 @@
  	// No filter: we continue with single item  GET
  
  	if isSearchedByCatalog {
 +		orgName, ok := d.GetOk("org")
 +		if ok {
-+			org, err := vcdClient.GetOrg(orgName.(string))
-+			if err != nil {
-+				return nil, fmt.Errorf("error retrieving org: %s", err)
++			var href string
++
++			org, err := vcdClient.GetOrgByName(orgName.(string))
++			if err == nil {
++				href = org.Org.HREF
++			} else {
++				util.Logger.Printf("[TRACE] error retrieving org: %s", err)
++
++				org, err := vcdClient.GetAdminOrgByName(orgName.(string))
++				if err != nil {
++					return nil, fmt.Errorf("error retrieving Admin Org: %s", err)
++				}
++
++				href = org.AdminOrg.HREF
 +			}
 +
 +			vAppTemplates, err := catalog.QueryVappTemplateList()
@@ -25,7 +36,7 @@ diff --git a/vcd/resource_vcd_catalog_vapp_template.go b/vcd/resource_vcd_catalo
 +			}
 +
 +			for _, vAppTemplate := range vAppTemplates {
-+				if vAppTemplate.Name == identifier && vAppTemplate.Org == org.Org.HREF {
++				if vAppTemplate.Name == identifier && vAppTemplate.Org == href {
 +					vAppTemplateHrefPrefix := vcdClient.Client.VCDHREF
 +					vAppTemplateHrefPrefix.Path += "/vAppTemplate/vappTemplate-"
 +
