@@ -18,13 +18,18 @@ package hooks
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+const (
+	ClusterDashboardKind      = "ClusterObservabilityDashboard"
+	PropagatedDashboardKind   = "ClusterObservabilityPropagatedDashboard"
+	LegacyDashboardDefinition = "GrafanaDashboardDefinition"
 )
 
 type LegacyDashboard struct {
@@ -58,19 +63,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:       "cluster_observability_dashboards",
 			ApiVersion: "observability.deckhouse.io/v1alpha1",
-			Kind:       "ClusterObservabilityDashboard",
+			Kind:       ClusterDashboardKind,
 			FilterFunc: filterDashboardName,
 		},
 		{
 			Name:       "propagated_observability_dashboards",
 			ApiVersion: "observability.deckhouse.io/v1alpha1",
-			Kind:       "PropagatedObservabilityDashboard",
+			Kind:       PropagatedDashboardKind,
 			FilterFunc: filterDashboardName,
 		},
 		{
 			Name:       "legacy_dashboards",
 			ApiVersion: "deckhouse.io/v1",
-			Kind:       "GrafanaDashboardDefinition",
+			Kind:       LegacyDashboardDefinition,
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
 					"module": "prometheus",
@@ -101,14 +106,14 @@ func convertDashboards(input *go_hook.HookInput) error {
 	for _, sn := range clusterObservabilityDashboardsSnap {
 		resourceName := sn.(string)
 		if _, ok := dashboards[resourceName]; !ok {
-			input.PatchCollector.Delete("observability.deckhouse.io/v1alpha1", "ClusterObservabilityDashboard", "", resourceName)
+			input.PatchCollector.Delete("observability.deckhouse.io/v1alpha1", ClusterDashboardKind, "", resourceName)
 		}
 	}
 
 	for _, sn := range propagatedObservabilityDashboardsSnap {
 		resourceName := sn.(string)
 		if _, ok := dashboards[resourceName]; !ok {
-			input.PatchCollector.Delete("observability.deckhouse.io/v1alpha1", "PropagatedObservabilityDashboard", "", resourceName)
+			input.PatchCollector.Delete("observability.deckhouse.io/v1alpha1", PropagatedDashboardKind, "", resourceName)
 		}
 	}
 
@@ -145,20 +150,18 @@ func dashboardKindByName(name string) string {
 	}
 
 	if _, ok := propagatedDashboards[name]; ok {
-		return "PropagatedObservabilityDashboard"
+		return PropagatedDashboardKind
 	}
 
-	return "ClusterObservabilityDashboard"
+	return ClusterDashboardKind
 }
 
 func createDashboard(name string, kind string, definition string) unstructured.Unstructured {
-	customName := fmt.Sprintf("d8-custom-%s", name)
-
 	un := unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "observability.deckhouse.io/v1alpha1",
 		"kind":       kind,
 		"metadata": map[string]interface{}{
-			"name":      customName,
+			"name":      name,
 			"namespace": "d8-monitoring",
 			"labels": map[string]interface{}{
 				"module":   "observability",
