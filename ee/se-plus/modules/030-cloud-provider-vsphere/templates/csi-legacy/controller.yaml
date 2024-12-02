@@ -48,6 +48,7 @@
   value: "node"
 - name: X_CSI_SPEC_REQ_VALIDATION
   value: "false"
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- $csiNodeConfig := dict }}
@@ -61,6 +62,3 @@
 {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
 {{- end }}
 
-{{- define "csi_node_envs" }}
-{{- include "helm_lib_envs_for_proxy" . }}
-{{- end }}
