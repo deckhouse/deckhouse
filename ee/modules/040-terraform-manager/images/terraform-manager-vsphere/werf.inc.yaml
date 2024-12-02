@@ -17,11 +17,10 @@ mount:
     to: /go/pkg
 shell:
   beforeInstall:
-    - apk add --no-cache make patch git bash openssh-client
+    - apk add --no-cache make patch git bash
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.vsphere.version }}-flant.1 {{ $.SOURCE_REPO }}/deckhouse/3p-terraform-provider-vsphere.git /src
     - cd /src
     - make fmt
