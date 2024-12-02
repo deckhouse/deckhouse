@@ -30,7 +30,7 @@ shell:
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch v{{ .TF.ovirt.version }} {{ $.SOURCE_REPO }}/oVirt/terraform-provider-ovirt.git /src
     - cd /src
-    - git apply /patches/*.patch --verbose
+    - find /patches -name '*.patch' | xargs git apply --verbose
     - go mod edit -go=1.20
     - go mod tidy
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X main.version={{ .TF.ovirt.version }} -X main.commit=00000000"
