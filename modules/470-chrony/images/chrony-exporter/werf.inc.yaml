@@ -27,13 +27,13 @@ shell:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 EXPORTER_VERSION=v0.11.0
   - git clone -b "${EXPORTER_VERSION}" --single-branch {{ $.SOURCE_REPO }}/chrony/chrony_exporter /src
   - cd /src
-  - /bin/promu crossbuild -p linux/amd64
+  - /bin/promu build
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-exporter
 fromImage: common/distroless
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
-    add: /src/linux-amd64/chrony_exporter
+    add: /src/chrony_exporter
     to: /usr/bin/chrony_exporter
     before: install
 docker:
