@@ -21,7 +21,7 @@ pip3 install -r /requirements.txt
 
 mkdir /tests
 
-find /src -wholename '*/webhooks/*.py' -exec sh -c 'module="$(echo "$1" | cut -d / -f 3)"; mkdir -p "/tests/${module}"; cp "$1" "/tests/${module}"' sh {}  \;
+find /src -wholename '*/webhooks/*.py' -exec sh -c 'module="$(echo "$1" | grep -Po "\d{3}\-[a-z\-]+")"; mkdir -p "/tests/${module}"; cp "$1" "/tests/${module}"' sh {}  \;
 
 cd /tests
 
