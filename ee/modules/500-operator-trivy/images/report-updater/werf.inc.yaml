@@ -10,7 +10,6 @@ docker:
   ENTRYPOINT: ["/report-updater"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromCacheVersion: "2024-09-25 14:50"
 fromArtifact: src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
