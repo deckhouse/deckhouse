@@ -105,7 +105,7 @@ spec:
               path: /metrics
               authorization:
                 resourceAttributes:
-                  namespace: d8-monitoring
+                  namespace: d8-chrony
                   apiGroup: apps
                   apiVersion: v1
                   resource: daemonsets
