@@ -17,6 +17,7 @@ COPY main.go go.mod go.sum /src/
 COPY validators /src/validators/
 COPY web /src/web/
 
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN --mount=type=ssh git clone --depth 1 --branch ${TRIVY_DB_VERSION} ${SOURCE_REPO}/aquasecurity/trivy-db.git
 RUN --mount=type=ssh git clone --depth 1 --branch ${TRIVY_VERSION} ${SOURCE_REPO}/aquasecurity/trivy.git
 RUN go work init && go work use trivy && go work use trivy-db && go work use . && \
