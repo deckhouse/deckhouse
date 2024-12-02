@@ -16,7 +16,7 @@ sudo d8 k -n d8-ingress-nginx get po -l app=kruise
   <li><p><strong>Установка Ingress-контроллера</strong></p>
 {% snippetcut %}
 ```shell
-sudo d8 k apply -f - <<EOF
+d8 k apply -f - <<EOF
 # Секция, описывающая параметры NGINX Ingress controller.
 # https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
 apiVersion: deckhouse.io/v1
