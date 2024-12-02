@@ -32,6 +32,8 @@ import:
     to: /app
     before: setup
 shell:
+  beforeInstall:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   setup:
     {{- include "debian packages proxy" . | nindent 4 }}
     - export GOPROXY={{ $.GOPROXY }}

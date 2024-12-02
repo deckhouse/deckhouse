@@ -23,6 +23,8 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.11.0 {{ .SOURCE_REPO }}/brancz/kube-rbac-proxy.git /src
   install:
   - cd /src

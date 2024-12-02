@@ -7,13 +7,16 @@ TEST_TIMEOUT: "15m"
 DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
 # Registry for additional repositories used for testing Github Actions workflows.
 GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
+# Need for ssh: default.
+DOCKER_BUILDKIT: "1"
+WERF_LOG_TERMINAL_WIDTH: "200"
 # </template: werf_envs>
 {!{- end -}!}
 
 {!{ define "git_source_envs" }!}
 # <template: git_source_envs>
-# source repo should contain creds for repo for ex https://user:password@my-repo.com/group
-SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
+# source repo git@my-repo.com:group
+SOURCE_REPO: "${{secrets.SOURCE_REPO_GIT}}"
 # cloud providers source repo should contain creds for repo for ex https://user:password@my-repo.com/group
 CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
 GOPROXY: "${{secrets.GOPROXY}}"

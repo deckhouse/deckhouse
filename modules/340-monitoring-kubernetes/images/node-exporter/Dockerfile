@@ -12,7 +12,9 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
-RUN git clone --depth 1 --branch v1.8.1 ${SOURCE_REPO}/prometheus/node_exporter.git /node_exporter
+RUN apk add --no-cache openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --depth 1 --branch v1.8.1 ${SOURCE_REPO}/prometheus/node_exporter.git /node_exporter
 WORKDIR /node_exporter/
 
 RUN go mod tidy

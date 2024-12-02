@@ -5,6 +5,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
 dockerfile: Dockerfile
+ssh: default
 args:
   BASE_ALPINE: {{ .Images.BASE_ALPINE }}
   BASE_ALPINE_DEV: {{ .Images.BASE_ALPINE_DEV }}
