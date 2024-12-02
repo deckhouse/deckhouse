@@ -121,7 +121,7 @@ spec:
         - --expander=priority,least-waste
         - --max-failing-time=120m
         - --max-node-provision-time=5m
-        - --v=99
+        - --v=4
         env:
         - name: CONTROL_NAMESPACE
           value: d8-cloud-instance-manager
