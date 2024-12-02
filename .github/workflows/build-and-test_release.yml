@@ -700,7 +700,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'ee') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event.inputs.editions == 'ee') }}
     env:
       WERF_ENV: "EE"
     # <template: build_template>
@@ -1025,7 +1025,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'se') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event.inputs.editions == 'se') }}
     env:
       WERF_ENV: "SE"
     # <template: build_template>
@@ -1350,7 +1350,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'se-plus') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event.inputs.editions == 'se-plus') }}
     env:
       WERF_ENV: "SE-plus"
     # <template: build_template>
@@ -1675,7 +1675,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'be') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event.inputs.editions == 'be') }}
     env:
       WERF_ENV: "BE"
     # <template: build_template>
@@ -2000,7 +2000,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'ce') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event.inputs.editions == 'ce') }}
     env:
       WERF_ENV: "CE"
     # <template: build_template>
