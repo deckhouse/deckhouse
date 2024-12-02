@@ -64,6 +64,10 @@ metadata:
     argocd.argoproj.io/instance: test-instance
     argocd.argoproj.io/secret-type: secret-type
     app.kubernetes.io/managed-by: Helm
+    app: should-be-removed
+    heritage: should-be-removed
+    module: should-be-removed
+    name: should-be-removed
   annotations:
     test-annotation: test-value
     new-annotation: test-new-value
@@ -226,6 +230,10 @@ metadata:
     argocd.argoproj.io/instance: test-instance
     argocd.argoproj.io/secret-type: secret-type
     app.kubernetes.io/managed-by: Helm
+    app: should-be-removed
+    heritage: should-be-removed
+    module: should-be-removed
+    name: should-be-removed
   annotations:
     test-annotation: test-value
     new-annotation: test-new-value
