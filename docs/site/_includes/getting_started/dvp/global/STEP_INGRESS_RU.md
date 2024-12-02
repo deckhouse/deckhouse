@@ -1,6 +1,6 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-Убедитесь, что под Kruise controller manager запустился и находится в статусе `Ready`.
+Убедитесь, что под Kruise controller manager запустился и находится в статусе `Running`.
   Выполните на **master-узле** следующую команду:
 
 {% snippetcut %}
@@ -17,7 +17,7 @@ sudo d8 k -n d8-ingress-nginx get po -l app=kruise
 {% snippetcut %}
 ```shell
 sudo d8 k apply -f - <<EOF
-# Параметры контроллера NGINX Ingress .
+# Параметры контроллера NGINX Ingress.
 # https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
