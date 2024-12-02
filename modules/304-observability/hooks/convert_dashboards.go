@@ -161,8 +161,7 @@ func createDashboard(name string, kind string, definition string) unstructured.U
 		"apiVersion": "observability.deckhouse.io/v1alpha1",
 		"kind":       kind,
 		"metadata": map[string]interface{}{
-			"name":      name,
-			"namespace": "d8-monitoring",
+			"name": name,
 			"labels": map[string]interface{}{
 				"module":   "observability",
 				"heritage": "deckhouse",
