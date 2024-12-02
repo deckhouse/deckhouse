@@ -159,6 +159,37 @@ jobs:
 
   # </template: git_info_job>
 
+  detect_editions:
+    name: Detect editions
+    runs-on: ubuntu-latest
+    outputs:
+      BUILD_CE: ${{steps.detect_editions.outputs.BUILD_CE}}
+      BUILD_EE: ${{steps.detect_editions.outputs.BUILD_EE}}
+      BUILD_BE: ${{steps.detect_editions.outputs.BUILD_BE}}
+      BUILD_SE: ${{steps.detect_editions.outputs.BUILD_SE}}
+      BUILD_SE-plus: ${{steps.detect_editions.outputs.BUILD_SE-plus}}
+    steps:
+      - name: Detect editions
+        id: detect_editions
+        env:
+          EDITIONS: ${{ github.event.inputs.editions }}
+        run: |
+          echo "Input allowed editions: '${EDITIONS}'"
+
+          EMPTY_EDITIONS=yes
+
+          for edition in CE EE BE SE SE-plus ; do
+            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
+              echo "  - enable build of ${edition} edition."
+              echo "BUILD_${edition}=true" >> $GITHUB_OUTPUT
+              EMPTY_EDITIONS=no
+            fi
+          done
+
+          if [[ $EMPTY_EDITIONS == "yes" ]] ; then
+            echo "No editions requested. Building only FE."
+          fi
+
   comment_on_start:
     name: Update issue comment
     runs-on: ubuntu-latest
@@ -700,7 +731,8 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event.inputs.editions == 'ee') }}
+      - detect_editions
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_EE == 'true') }}
     env:
       WERF_ENV: "EE"
     # <template: build_template>
@@ -1025,7 +1057,8 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event.inputs.editions == 'se') }}
+      - detect_editions
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE == 'true') }}
     env:
       WERF_ENV: "SE"
     # <template: build_template>
@@ -1350,7 +1383,8 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event.inputs.editions == 'se-plus') }}
+      - detect_editions
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE-plus == 'true') }}
     env:
       WERF_ENV: "SE-plus"
     # <template: build_template>
@@ -1675,7 +1709,8 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event.inputs.editions == 'be') }}
+      - detect_editions
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_BE == 'true') }}
     env:
       WERF_ENV: "BE"
     # <template: build_template>
@@ -2000,7 +2035,8 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (github.event.inputs.editions == 'ce') }}
+      - detect_editions
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_CE == 'true') }}
     env:
       WERF_ENV: "CE"
     # <template: build_template>
