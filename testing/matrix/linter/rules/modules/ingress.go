@@ -52,7 +52,7 @@ func IngressHooksCheck(m utils.Module, object storage.StoreObject) errors.LintRu
 			"INGRESS",
 			m.Name,
 			nil,
-			"Ingress does not contains copy_custom_certificate hook",
+			"Ingress does not contain copy_custom_certificate hook",
 		)
 	}
 
