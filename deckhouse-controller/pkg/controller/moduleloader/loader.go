@@ -117,6 +117,12 @@ func (l *Loader) Sync(ctx context.Context) error {
 		return fmt.Errorf("delete modules with absent releases: %w", err)
 	}
 
+	// TODO(ipaqsa): delete it after 1.68
+	l.log.Debugf("migrate update policies")
+	if err := l.migrateUpdatePolicies(ctx); err != nil {
+		return fmt.Errorf("migrate update policies: %w", err)
+	}
+
 	l.log.Debug("module loader initialized")
 
 	return nil

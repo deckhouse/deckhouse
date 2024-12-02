@@ -24,6 +24,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -232,6 +233,62 @@ func (l *Loader) deleteModulesWithAbsentRelease(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+// TODO(ipaqsa): delete it after 1.68
+// migrateUpdatePolicies migrates update policies
+func (l *Loader) migrateUpdatePolicies(ctx context.Context) error {
+	policies := new(v1alpha1.ModuleUpdatePolicyList)
+	if err := l.client.List(ctx, policies); err != nil {
+		return fmt.Errorf("list module update policies: %w", err)
+	}
+	l.log.Debugf("found %d policies", len(policies.Items))
+
+	modules := new(v1alpha1.ModuleList)
+	if err := l.client.List(ctx, modules); err != nil {
+		return fmt.Errorf("list modules: %w", err)
+	}
+
+	l.log.Debugf("found %d modules", len(modules.Items))
+
+	for _, module := range modules.Items {
+		// skip module if it does not require migrate
+		if module.Properties.UpdatePolicy != "" || module.Properties.Source == "" || module.IsEmbedded() {
+			continue
+		}
+
+		var releaseLabelsSet labels.Set = map[string]string{"module": module.Name, "source": module.Properties.Source}
+
+		for _, policy := range policies.Items {
+			if policy.Spec.ModuleReleaseSelector.LabelSelector == nil {
+				l.log.Debugf("the '%s' policy has no label selector", policy.Name)
+				continue
+			}
+			l.log.Debugf("the '%s' policy has selector: %v", policy.Name, policy.Spec.ModuleReleaseSelector.LabelSelector)
+			selector, err := metav1.LabelSelectorAsSelector(policy.Spec.ModuleReleaseSelector.LabelSelector)
+			if err != nil {
+				return fmt.Errorf("parse the '%s' label selector: %w", policy.Spec.ModuleReleaseSelector.LabelSelector, err)
+			}
+			selectorSourceName, sourceLabelExists := selector.RequiresExactMatch("source")
+			if sourceLabelExists && selectorSourceName != module.Properties.Source {
+				l.log.Debugf("the '%s' policy has source selector, but the '%s' module has a different source", policy.Name, module.Name)
+				continue
+			}
+			if selector.Matches(releaseLabelsSet) {
+				l.log.Debugf("migrate the '%s' policy for the '%s' module", policy.Name, module.Name)
+				err = utils.Update[*v1alpha1.Module](ctx, l.client, &module, func(module *v1alpha1.Module) bool {
+					module.Properties.UpdatePolicy = policy.Name
+					return true
+				})
+				if err != nil {
+					return fmt.Errorf("update the '%s' module: %w", module.Name, err)
+				}
+				continue
+			}
+		}
+	}
+	l.log.Debug("update policies migrated")
 	return nil
 }
 
