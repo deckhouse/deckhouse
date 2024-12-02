@@ -411,10 +411,12 @@ func (nc *nodeController) contructStaticPodConfig(moduleConfig state.ModuleConfi
 		return
 	}
 
+	registryHostPath := fmt.Sprintf("%s%s", nc.Settings.RegistryAddress, nc.Settings.RegistryPath)
+
 	config = staticpod.Config{
 		Images: staticpod.Images{
-			Auth:         nc.Settings.ImageAuth,
-			Distribution: nc.Settings.ImageDistribution,
+			Auth:         fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageAuth),
+			Distribution: fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageDistribution),
 		},
 		Registry: staticpod.RegistryConfig{
 			Mode:       staticpod.RegistryMode(moduleConfig.Settings.Mode),
