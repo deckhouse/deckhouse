@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -75,11 +76,14 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		labels = make(map[string]string)
 	}
 	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
+	// argocd.argoproj.io is used by ArgoCD to identify secrets managed by it.
+	// app.kubernetes.io/managed-by is used by Helm to identify secrets managed by it.
 	delete(labels, "certmanager.k8s.io/certificate-name")
-
-	// Secrets with that labels lead to ArgoCD control over them.
 	delete(labels, "argocd.argoproj.io/instance")
 	delete(labels, "argocd.argoproj.io/secret-type")
+	if labels["app.kubernetes.io/managed-by"] == "Helm" {
+		delete(labels, "app.kubernetes.io/managed-by")
+	}
 
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
@@ -87,6 +91,13 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	}
 
 	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+	delete(annotations, "meta.helm.sh/release-name")
+	delete(annotations, "meta.helm.sh/release-namespace")
+	for key := range annotations {
+		if strings.Contains(key, "werf.io/") {
+			delete(annotations, key)
+		}
+	}
 
 	return DexClient{
 		ID:              id,
