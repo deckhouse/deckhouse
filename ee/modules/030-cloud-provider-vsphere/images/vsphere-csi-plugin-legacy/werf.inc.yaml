@@ -31,7 +31,7 @@ shell:
   - mkdir -p /src
   - git clone --depth 1 --branch v0.2.1 {{ $.SOURCE_REPO }}/flant/cloud-provider-vsphere.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
+  - find /patches -name '*.patch' -exec git apply {} \;
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
@@ -59,7 +59,7 @@ shell:
   - git clone {{ $.SOURCE_REPO }}/flant/vsphere-csi-driver.git /src
   - cd /src
   - git checkout 6189afc2522d83a96d3857110c61478710110347
-  - git apply /patches/*.patch --verbose
+  - find /patches -name '*.patch' -exec git apply {} \;
   - go mod edit -replace=k8s.io/cloud-provider-vsphere=/cloud-provider-vsphere
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
 ---
