@@ -15,7 +15,7 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 git:
-  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}
     to: /patches
     includePaths:
       - '**/*.patch'
@@ -24,11 +24,10 @@ git:
         - '**/*'
 shell:
   beforeInstall:
-    - apk add --no-cache make patch git bash openssh-client
+    - apk add --no-cache make patch git bash
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.ovirt.version }} {{ $.SOURCE_REPO }}/oVirt/terraform-provider-ovirt.git /src
     - cd /src
     - git apply /patches/*.patch --verbose
