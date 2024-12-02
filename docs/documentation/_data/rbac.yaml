@@ -892,6 +892,7 @@ modules:
         - apiGroups:
           - deckhouse.io
           resources:
+          - ingressistiocontrollers
           - istiofederations
           - istiomulticlusters
           verbs:
@@ -913,6 +914,7 @@ modules:
         - apiGroups:
           - deckhouse.io
           resources:
+          - ingressistiocontrollers
           - istiofederations
           - istiomulticlusters
           verbs:
@@ -2424,9 +2426,9 @@ subsystems:
     modules:
     - cloud-provider-openstack
     - cloud-provider-vcd
+    - keepalived
     - cloud-provider-vsphere
     - cloud-provider-zvirt
-    - keepalived
     - cloud-provider-aws
     - cloud-provider-azure
     - cloud-provider-gcp

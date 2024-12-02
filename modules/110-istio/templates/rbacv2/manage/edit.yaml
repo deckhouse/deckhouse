@@ -15,6 +15,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - ingressistiocontrollers
   - istiofederations
   - istiomulticlusters
   verbs:
