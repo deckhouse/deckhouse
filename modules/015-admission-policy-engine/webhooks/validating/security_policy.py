@@ -32,7 +32,7 @@ kubernetes:
     jqFilter: |
       {
         "name": .metadata.name,
-        "references": [.spec.policies.verifyImageSignatures[].reference]
+        "references": [.spec.policies.verifyImageSignatures[]?.reference]
       }
 kubernetesValidating:
 - name: securitypolicies.deckhouse.io
