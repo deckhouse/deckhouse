@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -25,6 +24,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
+	"github.com/deckhouse/deckhouse/go_lib/set"
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
 )
 
@@ -42,6 +42,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func handleSP(input *go_hook.HookInput) error {
 	result := make([]*securityPolicy, 0)
+	refs := make(map[string]set.Set, 0)
 
 	snap := input.Snapshots["security-policies"]
 
@@ -51,11 +52,31 @@ func handleSP(input *go_hook.HookInput) error {
 		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
 		sp.preprocesSecurityPolicy()
 		result = append(result, sp)
+		for _, v := range sp.Spec.Policies.VerifyImageSignatures {
+			if keys, ok := refs[v.Reference]; ok {
+				for _, key := range v.PublicKeys {
+					if !keys.Has(key) {
+						keys.Add(key)
+					}
+				}
+			} else {
+				refs[v.Reference] = set.New(v.PublicKeys...)
+			}
+		}
 	}
 
-	data, _ := json.Marshal(result)
+	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", result)
 
-	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", json.RawMessage(data))
+	if len(refs) > 0 {
+		imageReferences := make([]ratifyReference, 0, len(refs))
+		for k, v := range refs {
+			imageReferences = append(imageReferences, ratifyReference{
+				Reference:  k,
+				PublicKeys: v.Slice(),
+			})
+		}
+		input.Values.Set("admissionPolicyEngine.internal.ratify.imageReferences", imageReferences)
+	}
 
 	return nil
 }
@@ -139,4 +160,9 @@ type securityPolicy struct {
 		Name string `json:"name"`
 	} `json:"metadata"`
 	Spec v1alpha1.SecurityPolicySpec `json:"spec"`
+}
+
+type ratifyReference struct {
+	PublicKeys []string `json:"publicKeys"`
+	Reference  string   `json:"reference"`
 }

@@ -60,10 +60,10 @@ metadata:
 		})
 	})
 
-	Context("global.storageClass is defined", func() {
+	Context("global.modules.storageClass is defined", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
-			f.ConfigValuesSet("global.storageClass", "global-sc")
+			f.ConfigValuesSet("global.modules.storageClass", "global-sc")
 			f.RunHook()
 		})
 
@@ -141,7 +141,7 @@ metadata:
 		})
 	})
 
-	Context("cluster with PersistentVolumeClaim and new value defined in global.storageClass", func() {
+	Context("cluster with PersistentVolumeClaim and new value defined in global.modules.storageClass", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
@@ -156,7 +156,7 @@ metadata:
 spec:
   storageClassName: pvc-sc
 `))
-			f.ConfigValuesSet("global.storageClass", "global-sc")
+			f.ConfigValuesSet("global.modules.storageClass", "global-sc")
 			f.RunHook()
 		})
 

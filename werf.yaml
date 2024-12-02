@@ -120,6 +120,10 @@ cleanup:
 # Source repo with observability private code
 {{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
 
+# Stronghold repo access for building d8 cli
+{{- $_ := set . "STRONGHOLD_PULL_TOKEN" (env "STRONGHOLD_PULL_TOKEN") }}
+{{- $_ := set . "DECKHOUSE_PRIVATE_REPO" (env "DECKHOUSE_PRIVATE_REPO") }}
+
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
 ---

@@ -208,6 +208,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/015-admission-policy-engine/templates/ratify
+  to: /deckhouse/modules/015-admission-policy-engine/templates/ratify
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/025-static-routing-manager
   to: /deckhouse/modules/025-static-routing-manager
   excludePaths:
