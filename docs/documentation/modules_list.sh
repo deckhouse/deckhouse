@@ -51,8 +51,8 @@ fi
 
 modules_with_docs=$(find ${MODULES_DIR} -regex '.*/docs/README.md' -print | sed -E 's#^.+/modules/([^/]+)(/.+?)?$#\1#; s#^[0-9]+-##' | sort -u)
 
-for module_edition_path in $(find ${MODULES_DIR} -type d -print | grep -E '.+/modules/[^/]+' |sed -E 's#^(.+/modules/[^/]+)(/.+?)?$#\1#' | sort -u | sed -E "s#^${MODULES_DIR}/modules/#${MODULES_DIR}/ce/modules/#" | sed -E "s#^${MODULES_DIR}/(ce/|be/|se/|ee/|fe/)?modules/([^/]+)\$#\1\2#" | sort -t/ -k 2.4 ); do
-  module_name=$(echo $module_edition_path | sed -E 's#ce/|be/|se/|ee/|fe/##; s#^[0-9]+-##')
+for module_edition_path in $(find ${MODULES_DIR} -type d -print | grep -E '.+/modules/[^/]+' |sed -E 's#^(.+/modules/[^/]+)(/.+?)?$#\1#' | sort -u | sed -E "s#^${MODULES_DIR}/modules/#${MODULES_DIR}/ce/modules/#" | sed -E "s#^${MODULES_DIR}/(ce/|be/|se/|se-plus/|ee/|fe/)?modules/([^/]+)\$#\1\2#" | sort -t/ -k 2.4 ); do
+  module_name=$(echo $module_edition_path | sed -E 's#ce/|be/|se/|se-plus/|ee/|fe/##; s#^[0-9]+-##')
   module_doc_path=""
 
   # Skip modules, which are listed in modules_menu_skip file

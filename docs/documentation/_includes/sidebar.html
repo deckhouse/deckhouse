@@ -6,9 +6,8 @@
   {%- else %}
       {%- assign sidebar = site.data.sidebars[page.sidebar].entries %}
 
-  {%- if page.product_code == kubernetes-platform %}
-    <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
-      <div class="channel-menu submenu-parent">
+      <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
+        <div class="channel-menu submenu-parent">
 
           <!-- documentation-section-badge -->
           <a data-proofer-ignore="" href="#" class="highlight">{{ site.data.i18n.common.platform[page.lang] | capitalize }}</a>
@@ -21,6 +20,7 @@
               </li>
             </ul>
           </div>
+        </div>
 
         {% unless site.mode == 'module' %}
         <!-- module-version-badge -->
@@ -29,10 +29,8 @@
         </div>
         {% endunless %}
       </div>
-    </div>
-  {%- endif %}
-  <div class="sidebar__wrapper-inner">
-    <nav class="sidebar__container">
+      <div class="sidebar__wrapper-inner">
+        <nav class="sidebar__container">
 
           <ul class="sidebar" id="mysidebar">
 
