@@ -14,15 +14,13 @@ docker:
   ENTRYPOINT: ["/csi-provisioner"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.28" $version }}
+    {{- if semverCompare ">=1.30" $version }}
 from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
     {{- else }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
     {{- end }}
 shell:
   beforeInstall:
-    - apk add --no-cache openssh-client
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch {{ $value.csi.provisioner }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-provisioner.git /src
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
