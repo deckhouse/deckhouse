@@ -22,6 +22,7 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
+    # https://kubernetes.io/docs/concepts/storage/volumes/#nfs
     case $(bb-is-bundle) in
       debian|ubuntu-lts|astra)  bb-apt-install nfs-common ;;
       altlinux)                 bb-apt-rpm-install nfs-utils ;;
