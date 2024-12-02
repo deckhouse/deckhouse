@@ -13,6 +13,19 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "speaker")) | nindent 2 }}
 rules:
   - apiGroups:
+    - metallb.io
+    resources:
+    - servicel2statuses
+    - servicel2statuses/status
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
       - ""
     resources:
       - services
