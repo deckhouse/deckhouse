@@ -66,7 +66,6 @@ Also, you can list the necessary cluster node taints in ModuleConfig `global` in
 
 <script>
   $(document).ready(function() {
-    //update_parameter('block_layout_{{ revision }}', 'imagesRepo', '<REVISION>', '{{ revision }}', '[config-yml]');
     document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
       element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
     })
