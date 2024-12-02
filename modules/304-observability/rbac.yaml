@@ -1,0 +1,7 @@
+module: observability 
+namespace: d8-monitoring
+scopes:
+  - observability
+crds:
+  - modules/300-prometheus/crds/*.yaml
+  - modules/304-observability/crds/*.yaml
