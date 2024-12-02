@@ -30,6 +30,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-monitoring",
 	"d8-multitenancy-manager",
 	"d8-network-gateway",
+	"d8-observability",
 	"d8-okmeter",
 	"d8-openvpn",
 	"d8-operator-prometheus",
