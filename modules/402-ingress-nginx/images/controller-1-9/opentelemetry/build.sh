@@ -17,7 +17,6 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-set -x
 
 export SOURCE_REPO="${SOURCE_REPO}"
 # Check for recent changes: ${SOURCE_REPO}/open-telemetry/opentelemetry-cpp/compare/v1.2.0...main
