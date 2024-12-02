@@ -1,0 +1,74 @@
+---
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8verifyimagesignatures
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: external-data
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8VerifyImageSignatures
+      validation:
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Restricts running container images without a correct signature.
+          properties:
+            references:
+              description: "The list of image references to check"
+              type: array
+              items:
+                type: string
+  targets:
+    - rego: |
+        package d8.verify_image_signatures
+
+        # Get data from Ratify
+        remote_data := response {
+          images := [img | img = retrieve_images[_]]
+          filtered_images := [image |
+            image := images[_];
+            regex.match(input.parameters.references[_], image)
+          ]
+          response := external_data({"provider": "ratify-provider", "keys": filtered_images})
+        }
+
+        retrieve_images[imgs] {
+          count(input.review.object.spec.containers[_].image) > 0
+          imgs := input.review.object.spec.containers[_].image
+        }
+
+        retrieve_images[imgs] {
+          count(input.review.object.spec.initContainers[_].image) > 0
+          imgs := input.review.object.spec.initContainers[_].image
+        }
+
+        # Base Gatekeeper violation
+        violation[{"msg": msg}] {
+          general_violation[{"result": msg}]
+        }
+
+        # Check if there are any system errors
+        general_violation[{"result": result}] {
+          err := remote_data.system_error
+          err != ""
+          result := sprintf("System error calling external data provider: %s", [err])
+        }
+
+        # Check if there are errors for any of the images
+        general_violation[{"result": result}] {
+          count(remote_data.errors) > 0
+          result := sprintf("Error validating one or more images: %s", remote_data.errors)
+        }
+
+        # Check if the success criteria is true
+        general_violation[{"result": result}] {
+          subject_validation := remote_data.responses[_]
+          subject_validation[1].isSuccess == false
+          result := sprintf("Image signature verification failed: %s", [subject_validation[0]])
+        }
+      target: admission.k8s.gatekeeper.sh
