@@ -125,3 +125,57 @@ spec:
           - NET_BIND_SERVICE
       readOnlyRootFilesystem: true
 ```
+
+## Проверка подписи образов
+
+{% alert level="warning" %}Доступно только в Enterprise edition.{% endalert %}
+
+В модуле реализована функция проверки подписи образов контейнеров, подписанных с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Проверка подписи образов контейнеров позволяет убедиться в их целостности (что образ не был изменен после его создания) и подлинности (что образ был создан доверенным источником). Включить проверку подписи образов контейнеров в кластере можно с помощью параметра [policies.verifyImageSignatures](cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy.
+
+{% offtopic title="Как подписать образ..." %}
+Шаги для подписания образа:
+- Сгенерируйте ключи: `cosign generate-key-pair`
+- Подпишите образ: `cosign sign --key <key> <image>`
+
+Подробнее о работе с Cosign можно узнать в [документации](https://docs.sigstore.dev/cosign/key_management).
+{% endofftopic %}
+
+Пример SecurityPolicy для настройки проверки подписи образов контейнеров:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: verify-image-signatures
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: default
+  policies:
+    verifyImageSignatures:
+      - reference: docker.io/myrepo/*
+        publicKeys:
+        - |-
+          -----BEGIN PUBLIC KEY-----
+          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
+          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
+          -----END PUBLIC KEY-----
+      - reference: company.registry.com/*
+        dockerCfg: zxc==
+        publicKeys:
+        - |-
+          -----BEGIN PUBLIC KEY-----
+          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
+          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
+          -----END PUBLIC KEY-----
+```
+
+Политика не влияет на создание подов, адреса образов контейнеров которых не подходят под описанные в параметре `reference`.  Если же адрес какого-либо образа контейнера подходит под описанные в параметре `reference` политики, и образ не подписан или подпись не соответствует указанным в политике ключам, создание пода будет запрещено.
+
+Пример вывода ошибки при создании пода с образом контейнера, не прошедшим проверку подписи:
+
+```console
+[verify-image-signatures] Image signature verification failed: nginx:1.17.2
+```
