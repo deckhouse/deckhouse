@@ -1,16 +1,29 @@
 project: deckhouse
 configVersion: 1
 cleanup:
+  # All date calculations are based on the dates of the last commits in the branches.
+  keepImagesBuiltWithinLastNHours: 24 # don't touch fresh builds for 24h
+  disableKubernetesBasedPolicy: true
   keepPolicies:
+  # keep 3 days dev builds
   - references:
       branch: /.*/
       limit:
         in: 72h
+  # keep 3 pre-release builds
   - references:
       branch: /release-.*/
       limit:
-        in: 360h
+        last: 3
+  # keep 3 release builds
   - references:
       tag: /.*/
       limit:
-        in: 360h
+        last: 3
+  # Keep 14 days of all builds in main.
+  # This should reduce what needs to be built for pr after the branch is cleared after 3 days.
+  - references:
+      branch: main
+    imagesPerReference:
+      last: -1
+      in: 336h

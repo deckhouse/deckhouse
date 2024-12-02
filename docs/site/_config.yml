@@ -82,6 +82,8 @@ defaults:
       sidebar: main
       multilang: true
       comparable: true
+      product_code: kubernetes-platform
+      search_bage_enabled: true
       lang: en
   - scope:
       path: "pages/includes"
@@ -97,6 +99,26 @@ defaults:
     values:
       toc_in_sidebar: true
       toc: false
+      layout: guide
+      search_bage_enabled: false
+  - scope:
+      path: "pages/virtualization-platform"
+    values:
+      toc_in_sidebar: false
+      toc: false
+      product_code: virtualization-platform
+      documentation_state: develop
+      search_bage_enabled: true
+      sidebar: virtualization-platform
+      sitemap_include: false
+  - scope:
+      path: "pages/virtualization-platform/guides"
+      type: "pages"
+    values:
+      toc_in_sidebar: true
+      toc: false
+      sitemap_include: false
+      layout: guide
   - scope:
       path: "modules_ru"
       type: "pages"
