@@ -27,9 +27,6 @@ git:
   - 001-support-fcd-disk-resize.patch
   - 002-find-by-converted-uuid.patch
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - mkdir -p /src
   - git clone --depth 1 --branch v0.2.1 {{ $.SOURCE_REPO }}/flant/cloud-provider-vsphere.git /src
@@ -55,9 +52,6 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
