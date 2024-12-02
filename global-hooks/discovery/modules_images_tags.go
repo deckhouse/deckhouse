@@ -26,7 +26,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/iancoleman/strcase"
 
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 )
 
 var re = regexp.MustCompile(`^([0-9]+)-([a-zA-Z-]+)$`)

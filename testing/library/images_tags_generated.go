@@ -6,6 +6,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	"admissionPolicyEngine": map[string]interface{}{
 		"constraintExporter": "imageHash-admissionPolicyEngine-constraintExporter",
 		"gatekeeper":         "imageHash-admissionPolicyEngine-gatekeeper",
+		"ratify":             "imageHash-admissionPolicyEngine-ratify",
 		"trivyProvider":      "imageHash-admissionPolicyEngine-trivyProvider",
 	},
 	"basicAuth": map[string]interface{}{
@@ -210,6 +211,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pythonStatic":              "imageHash-common-pythonStatic",
 		"redisStatic":               "imageHash-common-redisStatic",
 		"shellOperator":             "imageHash-common-shellOperator",
+		"vxlanOffloadingFixer":      "imageHash-common-vxlanOffloadingFixer",
 	},
 	"controlPlaneManager": map[string]interface{}{
 		"controlPlaneManager127":   "imageHash-controlPlaneManager-controlPlaneManager127",
@@ -386,6 +388,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
 		"mimir":                       "imageHash-prometheus-mimir",
 		"prometheus":                  "imageHash-prometheus-prometheus",
+		"prometheuspp":                "imageHash-prometheus-prometheuspp",
 		"promxy":                      "imageHash-prometheus-promxy",
 		"trickster":                   "imageHash-prometheus-trickster",
 	},
@@ -440,6 +443,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubernetesCni140":          "imageHash-registrypackages-kubernetesCni140",
 		"lsblk2402":                 "imageHash-registrypackages-lsblk2402",
 		"netcat110481":              "imageHash-registrypackages-netcat110481",
+		"nvmeCli211":                "imageHash-registrypackages-nvmeCli211",
 		"socat1734":                 "imageHash-registrypackages-socat1734",
 		"tomlMerge01":               "imageHash-registrypackages-tomlMerge01",
 		"virtWhat125":               "imageHash-registrypackages-virtWhat125",

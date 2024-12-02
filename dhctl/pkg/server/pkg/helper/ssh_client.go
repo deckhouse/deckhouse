@@ -51,10 +51,10 @@ func CreateSSHClient(config *config.ConnectionConfig) (*ssh.Client, func() error
 		})
 	}
 
-	var sshHosts []string
+	var sshHosts []session.Host
 	if len(config.SSHHosts) > 0 {
 		for _, h := range config.SSHHosts {
-			sshHosts = append(sshHosts, h.Host)
+			sshHosts = append(sshHosts, session.Host{Host: h.Host, Name: h.Host})
 		}
 	} else {
 		mastersIPs, err := bootstrap.GetMasterHostsIPs()

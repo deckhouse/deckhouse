@@ -200,7 +200,7 @@ properties:
     properties:
       nodeSelector:
         description: |
-          Опциональный селектор для компонентa istiod. Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+          Опциональный селектор для компонента istiod. Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
           Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
       tolerations:

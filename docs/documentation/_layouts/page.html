@@ -17,8 +17,8 @@ layout: sidebar
                 }
                 // Shows warning the viewing documentation about unreleased version
                 if (window.location.pathname.indexOf('/latest/') !== -1) {
-                  console.log("Latest");
-                  $('#notice-latest-doc-version-block').addClass('active');
+                    console.log("The latest version");
+                    $('#notice-latest-doc-version-block div').removeClass('hide');
                 }
             });
         </script>

@@ -63,10 +63,26 @@ metadata:
     certmanager.k8s.io/certificate-name: test-cert-name
     argocd.argoproj.io/instance: test-instance
     argocd.argoproj.io/secret-type: secret-type
+    app.kubernetes.io/managed-by: Helm
+    app: should-be-removed
+    heritage: should-be-removed
+    module: should-be-removed
+    name: should-be-removed
   annotations:
     test-annotation: test-value
     new-annotation: test-new-value
     kubectl.kubernetes.io/last-applied-configuration: should-be-removed
+    meta.helm.sh/release-name: opendistro
+    meta.helm.sh/release-namespace: test
+    ci.werf.io/commit: 90we4affe93154c1200cd3db0f5ee3085c31def6
+    ci.werf.io/tag: v1
+    gitlab.ci.werf.io/job-url: https://gitlab.example.com/job-url
+    gitlab.ci.werf.io/pipeline-url: https://gitlab.example.com/pipeline-url
+    project.werf.io/env: test
+    project.werf.io/git: https://gitlab.example.com/
+    project.werf.io/name: opendistro
+    werf.io/release-channel: 1 alpha
+    werf.io/version: v1
 spec:
   redirectURIs:
   - https://opendistro.example.com/callback
@@ -213,10 +229,26 @@ metadata:
     certmanager.k8s.io/certificate-name: test-cert-name
     argocd.argoproj.io/instance: test-instance
     argocd.argoproj.io/secret-type: secret-type
+    app.kubernetes.io/managed-by: Helm
+    app: should-be-removed
+    heritage: should-be-removed
+    module: should-be-removed
+    name: should-be-removed
   annotations:
     test-annotation: test-value
     new-annotation: test-new-value
     kubectl.kubernetes.io/last-applied-configuration: should-be-removed
+    meta.helm.sh/release-name: opendistro
+    meta.helm.sh/release-namespace: test
+    ci.werf.io/commit: 90we4affe93154c1200cd3db0f5ee3085c31def6
+    ci.werf.io/tag: v1
+    gitlab.ci.werf.io/job-url: https://gitlab.example.com/job-url
+    gitlab.ci.werf.io/pipeline-url: https://gitlab.example.com/pipeline-url
+    project.werf.io/env: test
+    project.werf.io/git: https://gitlab.example.com/
+    project.werf.io/name: opendistro
+    werf.io/release-channel: 1 alpha
+    werf.io/version: v1
 spec:
   redirectURIs:
   - https://opendistro.example.com/callback

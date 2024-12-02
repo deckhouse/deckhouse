@@ -2,9 +2,9 @@
 title: "Модуль network-policy-engine"
 ---
 
-<div class="docs__information warning active">
+{% alert level="warning" %}
 Не используйте модуль, если включен модуль <a href="../021-cni-cilium/">cilium</a>, так как в нем уже есть функционал управления сетевыми политиками.
-</div>
+{% endalert %}
 
 Модуль управления сетевыми политиками.
 

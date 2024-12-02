@@ -37,10 +37,6 @@ type clusterConfig struct {
 	KubernetesVersion string `json:"kubernetesVersion"`
 }
 
-type moduleManager interface {
-	IsModuleEnabled(moduleName string) bool
-}
-
 func kubernetesVersionHandler(mm moduleManager) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		secret, ok := obj.(*v1.Secret)
@@ -58,7 +54,7 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 		clusterConf := new(clusterConfig)
 		if err := yaml.Unmarshal(clusterConfigurationRaw, clusterConf); err != nil {
 			log.Debugf("failed to unmarshal cluster configuration: %v", err)
-			return nil, err
+			return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
 		}
 
 		if clusterConf.KubernetesVersion == "Automatic" {
@@ -71,7 +67,7 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 				return rejectResult(err.Error())
 			}
 			if mm.IsModuleEnabled(moduleName) {
-				log.Debugf("module %s has unsatisfied requierements", moduleName)
+				log.Debugf("the module %q has unsatisfied requirements", moduleName)
 				return rejectResult(err.Error())
 			}
 		}

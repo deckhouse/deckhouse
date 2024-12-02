@@ -16,6 +16,7 @@ package manifests
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -79,6 +80,21 @@ func compareDeployments(t *testing.T, depl1, depl2 *appsv1.Deployment) {
 }
 
 func Test_struct_vs_unmarshal(t *testing.T) {
+	err := os.Setenv("DHCTL_TEST", "yes")
+	require.NoError(t, err)
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+	}()
+
+	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		os.Remove("/deckhouse/version")
+	}()
+
 	params := DeckhouseDeploymentParams{
 		Registry:         "registry.example.com/deckhouse:master",
 		LogLevel:         "debug",
@@ -94,6 +110,21 @@ func Test_struct_vs_unmarshal(t *testing.T) {
 }
 
 func Test_DeployTime(t *testing.T) {
+	err := os.Setenv("DHCTL_TEST", "yes")
+	require.NoError(t, err)
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+	}()
+
+	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		os.Remove("/deckhouse/version")
+	}()
+
 	paramsGet := func() DeckhouseDeploymentParams {
 		return DeckhouseDeploymentParams{
 			Registry:         "registry.example.com/deckhouse:master",
@@ -127,6 +158,21 @@ func Test_DeployTime(t *testing.T) {
 }
 
 func Test_DoNotMutateDeployment(t *testing.T) {
+	err := os.Setenv("DHCTL_TEST", "yes")
+	require.NoError(t, err)
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+	}()
+
+	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		os.Remove("/deckhouse/version")
+	}()
+
 	tc := []struct {
 		name   string
 		params DeckhouseDeploymentParams

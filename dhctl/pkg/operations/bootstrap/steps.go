@@ -40,6 +40,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -49,6 +50,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -684,17 +686,24 @@ func WaitForSSHConnectionOnMaster(sshClient *ssh.Client) error {
 	})
 }
 
-func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) error {
-	return log.Process("bootstrap", "Install Deckhouse", func() error {
+type InstallDeckhouseResult struct {
+	ManifestResult *deckhouse.ManifestsResult
+}
+
+func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller) (*InstallDeckhouseResult, error) {
+	res := &InstallDeckhouseResult{}
+	err := log.Process("bootstrap", "Install Deckhouse", func() error {
 		err := CheckPreventBreakAnotherBootstrappedCluster(kubeCl, config)
 		if err != nil {
 			return err
 		}
 
-		err = deckhouse.CreateDeckhouseManifests(kubeCl, config)
+		resManifests, err := deckhouse.CreateDeckhouseManifests(kubeCl, config)
 		if err != nil {
 			return fmt.Errorf("deckhouse create manifests: %v", err)
 		}
+
+		res.ManifestResult = resManifests
 
 		err = cache.Global().Save(ManifestCreatedInClusterCacheKey, []byte("yes"))
 		if err != nil {
@@ -708,6 +717,11 @@ func InstallDeckhouse(kubeCl *client.KubernetesClient, config *config.DeckhouseI
 
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func BootstrapTerraNodes(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
@@ -744,18 +758,18 @@ func SaveMasterHostsToCache(hosts map[string]string) {
 	}
 }
 
-func GetMasterHostsIPs() ([]string, error) {
+func GetMasterHostsIPs() ([]session.Host, error) {
 	var hosts map[string]string
 	err := cache.Global().LoadStruct(MasterHostsCacheKey, &hosts)
 	if err != nil {
 		return nil, err
 	}
-	mastersIPs := make([]string, 0, len(hosts))
-	for _, ip := range hosts {
-		mastersIPs = append(mastersIPs, ip)
+	mastersIPs := make([]session.Host, 0, len(hosts))
+	for name, ip := range hosts {
+		mastersIPs = append(mastersIPs, session.Host{Host: ip, Name: name})
 	}
 
-	sort.Strings(mastersIPs)
+	sort.Sort(session.SortByName(mastersIPs))
 
 	return mastersIPs, nil
 }
@@ -846,4 +860,34 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 		return nil
 	})
 	return nodesFromCache, err
+}
+
+func applyPostBootstrapModuleConfigs(kubeCl *client.KubernetesClient, tasks []actions.ModuleConfigTask) error {
+	for _, task := range tasks {
+		err := retry.NewLoop(task.Title, 15, 5*time.Second).
+			Run(func() error {
+				return task.Do(kubeCl)
+			})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func RunPostInstallTasks(kubeCl *client.KubernetesClient, result *InstallDeckhouseResult) error {
+	if result == nil {
+		log.DebugF("Skip post install tasks because result is nil\n")
+		return nil
+	}
+
+	return log.Process("bootstrap", "Run post bootstrap actions", func() error {
+		err := deckhouse.ConfigureDeckhouseRelease(kubeCl)
+		if err != nil {
+			return err
+		}
+
+		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
+	})
 }

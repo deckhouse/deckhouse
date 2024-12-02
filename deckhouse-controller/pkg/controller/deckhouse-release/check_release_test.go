@@ -48,23 +48,26 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	}
 
 	var initValues = `{
- "global": {
-   "modulesImages": {
-     "registry": {
-       "base": "my.registry.com/deckhouse"
-     }
-   },
-   "discovery": {
-     "clusterUUID": "21da7734-77a7-45ad-a795-ea0b629ee930"
-   }
- },
- "deckhouse":{
-   "bundle": "Default",
-   "releaseChannel": "Stable",
-   "internal":{
-     "releaseVersionImageHash":"zxczxczxc"
-   }
- }
+"global": {
+	"clusterConfiguration": {
+		"kubernetesVersion": "1.29"
+	},
+	"modulesImages": {
+		"registry": {
+			"base": "my.registry.com/deckhouse"
+		}
+	},
+	"discovery": {
+		"clusterUUID": "21da7734-77a7-45ad-a795-ea0b629ee930"
+	}
+},
+"deckhouse":{
+	"bundle": "Default",
+	"releaseChannel": "Stable",
+	"internal":{
+		"releaseVersionImageHash":"zxczxczxc"
+		}
+	}
 }`
 
 	suite.Run("Have new deckhouse image", func() {

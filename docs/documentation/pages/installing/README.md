@@ -5,9 +5,9 @@ description: |
   Information on installing the Deckhouse Kubernetes Platform, including infrastructure preparation, configuration, and installer run.
 ---
 
-<div class="docs__information warning active">
+{% alert level="warning" %}
 This page is under active development and may contain incomplete information. It provides an overview of the steps required to install Deckhouse. Please refer to the [Getting Started guide](/gs/) section for detailed step-by-step instructions.
-</div>
+{% endalert %}
 
 The Deckhouse installer is available as a container image. It is based on the [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>) tool which is responsible for:
 * Creating and configuring objects in the cloud infrastructure using Terraform;

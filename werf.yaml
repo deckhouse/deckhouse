@@ -280,9 +280,9 @@ git:
     - deckhouse-controller
     - global-hooks/**/*.go
     - modules/**/*.go
-    - ee/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
-    - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
-    - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
+    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
+    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
+    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
     - go_lib/**/*.go
     - go_lib/**/go.mod
     - go_lib/**/go.sum
@@ -335,6 +335,20 @@ shell:
   - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
   {{- end }}
 {{- end }}
+  - |
+    if [ -z "$CI_COMMIT_TAG" ]; then
+        latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/deckhouse/deckhouse.git 'v*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
+        IFS='.' read -r -a version_parts <<< "$latest_tag"
+
+        major=${version_parts[0]}
+        minor=${version_parts[1]}
+        new_minor=$((minor + 1))
+        new_patch=0
+        prerelease={{- env "CI_COMMIT_REF_SLUG" "main" }}
+
+        new_version="${major}.${new_minor}.${new_patch}-${prerelease}+${WERF_COMMIT_HASH::7}"
+        export CI_COMMIT_TAG=${new_version}
+    fi
   - cd /deckhouse
   # Generate hooks imports for particular edition
   - go generate ./tools/register.go
@@ -342,9 +356,8 @@ shell:
   # into separate phases.
   - go mod download
   - cd /deckhouse/deckhouse-controller
-  - D8_VERSION={{- env "CI_COMMIT_TAG" | env "CI_COMMIT_REF_SLUG" | default "dev" }} ./go-build.sh
+  - D8_VERSION=${CI_COMMIT_TAG} ./go-build.sh
   - mv deckhouse-controller /out
-
 ---
 artifact: dhctl
 fromImage: base-for-go
@@ -360,6 +373,14 @@ git:
     - Makefile
 - add: /go_lib/registry-packages-proxy
   to: /go_lib/registry-packages-proxy
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - "**/*.go"
+- add: /go_lib/dependency/k8s/drain
+  to: /go_lib/dependency/k8s/drain
   stageDependencies:
     install:
       - go.mod
@@ -405,15 +426,15 @@ dependencies:
   - type: ImageDigest
     targetEnv: deckhouseImageDigest
 import:
-- artifact: yq-artifact
+- artifact: yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
 shell:
   install:
   - |
-    version="{{ env "CI_COMMIT_REF_NAME" }}"
-    yq w /deckhouse/release.yaml version $version digest $deckhouseImageDigest | yq r - -j > version.json
+    export version="{{ env "CI_COMMIT_REF_NAME" }}"
+    yq eval '.version = env(version)' /deckhouse/release.yaml | yq eval -j > version.json
     # changelog exists only for tags, we have to skip it for branches
     {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
     {{ if $changelog }}
@@ -442,7 +463,7 @@ import:
 artifact: version-map-artifact
 from: {{ .Images.BASE_ALPINE }}
 import:
-- artifact: yq-artifact
+- artifact: yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
@@ -472,7 +493,7 @@ shell:
 
      {{- if $previousEditionFile }}
   - cp {{ $edition.versionMapFile }} {{ $tmpEditionFile }}
-  - yq m {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
+  - yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
 
       {{- else }}
 

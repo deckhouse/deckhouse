@@ -28,7 +28,7 @@ status:
   approved: false
   message: Release is postponed by canary process until 11 Nov 22 23:23 UTC
   phase: Pending
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null
 ---
 apiVersion: v1
 kind: Pod

@@ -129,7 +129,7 @@ EOF
         fi
         ;;
       HostPort|HostWithFailover)
-        if master_ip="$(kubectl get node -o json | jq -r '[ .items[] | select(.metadata.labels."node-role.kubernetes.io/master"!=null) | .status.addresses[] | select(.type=="ExternalIP") | .address ] | .[0]')"; then
+        if master_ip="$(kubectl get node -o json | jq -r '[ .items[] | select(.metadata.labels."node-role.kubernetes.io/master"!=null) | .status.addresses[] ] | map(select(.type == "ExternalIP").address) + map(select(.type == "InternalIP").address) | first')"; then
           if ingress_hp_code="$(d8-curl -o /dev/null -s -w "%{http_code}" "$master_ip")"; then
             if [[ "$ingress_hp_code" == "404" ]]; then
               ingress="ok"

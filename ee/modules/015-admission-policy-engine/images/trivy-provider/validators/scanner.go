@@ -21,16 +21,23 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func scanArtifact(ctx context.Context, imageName, remoteURL string, customHeaders http.Header, scanOpts types.ScanOptions) (types.Report, error) {
+func scanArtifact(ctx context.Context, imageName, remoteURL string, customHeaders http.Header, scanOpts types.ScanOptions, insecure bool) (types.Report, error) {
 	img, cleanup, err := image.NewContainerImage(ctx, imageName, ftypes.ImageOptions{
 		ImageSources: ftypes.ImageSources{ftypes.RemoteImageSource},
+		RegistryOptions: ftypes.RegistryOptions{
+			Insecure: insecure,
+		},
 	})
 	if err != nil {
 		return types.Report{}, err
 	}
 	defer cleanup()
 
-	artifactCache := cache.NewRemoteCache(remoteURL, customHeaders, false)
+	artifactCache := cache.NewRemoteCache(cache.RemoteOptions{
+		ServerAddr:    remoteURL,
+		CustomHeaders: customHeaders,
+		Insecure:      false,
+	})
 	artifact, err := fimage.NewArtifact(img, artifactCache, fartifact.Option{DisabledHandlers: []ftypes.HandlerType{ftypes.UnpackagedPostHandler}})
 	if err != nil {
 		return types.Report{}, err

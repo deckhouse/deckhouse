@@ -27,6 +27,7 @@ import (
 	"time"
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	"github.com/flant/shell-operator/pkg/metric_storage"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
@@ -46,10 +47,11 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
@@ -61,18 +63,12 @@ import (
 var (
 	mDelimiter = regexp.MustCompile("(?m)^---$")
 
-	embeddedMUP = &v1alpha1.ModuleUpdatePolicySpec{
-		Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+	embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
+		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 			Mode:    updater.ModeAuto.String(),
 			Windows: make(update.Windows, 0),
 		},
 		ReleaseChannel: "Stable",
-		ModuleReleaseSelector: v1alpha1.ModuleUpdatePolicySpecReleaseSelector{
-			LabelSelector: &metav1.LabelSelector{
-				// defined only for the purpose of schema validation
-				MatchLabels: map[string]string{"*": "true"},
-			},
-		},
 	}
 )
 
@@ -213,13 +209,12 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			return []v1.Layer{&utils.FakeLayer{}}, nil
 		}}, nil)
 
-		mup := &v1alpha1.ModuleUpdatePolicySpec{
-			Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+		mup := &v1alpha2.ModuleUpdatePolicySpec{
+			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 				Mode:    "Auto",
 				Windows: update.Windows{{From: update.MinTime, To: update.MaxTime, Days: []string{"Thu"}}},
 			},
-			ReleaseChannel:        "Stable",
-			ModuleReleaseSelector: embeddedMUP.ModuleReleaseSelector,
+			ReleaseChannel: "Stable",
 		}
 
 		testData := suite.fetchTestFileData("loop-canary.yaml")
@@ -236,13 +231,12 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("AutoPatch", func() {
 		suite.Run("patch update respect window", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode:    "AutoPatch",
 					Windows: update.Windows{{From: "10:00", To: "11:00", Days: update.Everyday()}},
 				},
-				ReleaseChannel:        "Stable",
-				ModuleReleaseSelector: embeddedMUP.ModuleReleaseSelector,
+				ReleaseChannel: "Stable",
 			}
 
 			testData := suite.fetchTestFileData("auto-patch-patch-update.yaml")
@@ -254,13 +248,12 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("minor update don't respect window", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode:    "AutoPatch",
 					Windows: update.Windows{{From: "10:00", To: "11:00", Days: update.Everyday()}},
 				},
-				ReleaseChannel:        "Stable",
-				ModuleReleaseSelector: embeddedMUP.ModuleReleaseSelector,
+				ReleaseChannel: "Stable",
 			}
 
 			testData := suite.fetchTestFileData("auto-patch-minor-update.yaml")
@@ -272,13 +265,12 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("Postponed release", func() {
-			mup := &v1alpha1.ModuleUpdatePolicySpec{
-				Update: v1alpha1.ModuleUpdatePolicySpecUpdate{
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode:    "AutoPatch",
 					Windows: update.Windows{{From: "10:00", To: "11:00", Days: update.Everyday()}},
 				},
-				ReleaseChannel:        "Stable",
-				ModuleReleaseSelector: embeddedMUP.ModuleReleaseSelector,
+				ReleaseChannel: "Stable",
 			}
 
 			testData := suite.fetchTestFileData("auto-mode.yaml")
@@ -345,7 +337,7 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 		dc.GetFakeClock().Advance(result.RequeueAfter)
 
 		dr := suite.getModuleRelease(releaseName)
-		if dr.Status.Phase == v1alpha1.PhaseDeployed {
+		if dr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
 			return
 		}
 
@@ -383,7 +375,7 @@ func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() error {
 
 type reconcilerOption func(*moduleReleaseReconciler)
 
-func withModuleUpdatePolicy(mup *v1alpha1.ModuleUpdatePolicySpec) reconcilerOption {
+func withModuleUpdatePolicy(mup *v1alpha2.ModuleUpdatePolicySpec) reconcilerOption {
 	return func(r *moduleReleaseReconciler) {
 		r.deckhouseEmbeddedPolicy = helpers.NewModuleUpdatePolicySpecContainer(mup)
 	}
@@ -430,15 +422,17 @@ type: Opaque
 
 	err := suite.Suite.SetupNoLock(initObjects)
 	require.NoError(suite.T(), err)
+	logger := log.NewNop()
 
 	rec := &moduleReleaseReconciler{
 		client:               suite.Suite.Client(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
-		logger:               log.NewNop(),
+		logger:               logger,
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		moduleManager:        stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
+		metricStorage:        metric_storage.NewMetricStorage(context.Background(), "", true, logger),
 
 		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 	}
@@ -448,12 +442,12 @@ type: Opaque
 	}
 
 	c := suite.Client()
-	mup := &v1alpha1.ModuleUpdatePolicy{
+	mup := &v1alpha2.ModuleUpdatePolicy{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       v1alpha1.ModuleUpdatePolicyGVK.Kind,
-			APIVersion: v1alpha1.ModuleUpdatePolicyGVK.GroupVersion().String(),
+			Kind:       v1alpha2.ModuleUpdatePolicyGVK.Kind,
+			APIVersion: v1alpha2.ModuleUpdatePolicyGVK.GroupVersion().String(),
 		},
-		Spec: ptr.Deref(rec.deckhouseEmbeddedPolicy.Get(), v1alpha1.ModuleUpdatePolicySpec{}),
+		Spec: ptr.Deref(rec.deckhouseEmbeddedPolicy.Get(), v1alpha2.ModuleUpdatePolicySpec{}),
 	}
 	result := c.Validator().Validate(mup)
 	if result != nil {
@@ -509,7 +503,7 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.O
 		suite.testMRName = mr.Name
 
 	case "ModuleUpdatePolicy":
-		var mup v1alpha1.ModuleUpdatePolicy
+		var mup v1alpha2.ModuleUpdatePolicy
 		err = yaml.Unmarshal([]byte(obj), &mup)
 		require.NoError(suite.T(), err)
 		res = &mup
@@ -607,7 +601,7 @@ func Test_validateModule(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			path := filepath.Join("./testdata", name)
 			err := validateModule(
-				models.DeckhouseModuleDefinition{
+				moduleloader.Definition{
 					Name:   name,
 					Weight: 900,
 					Path:   path,

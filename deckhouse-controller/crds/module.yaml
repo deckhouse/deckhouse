@@ -22,73 +22,128 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Shows basic information about the Deckhouse module.
+            The module representation.
 
-            This resource is intended **only for getting information** about the module and cannot be changed (read-only).
           properties:
             properties:
               type: object
               properties:
+                availableSources:
+                  type: array
+                  description: The module available sources.
+                  items:
+                    type: string
                 weight:
                   type: integer
-                  description: 'Module weight (priority).'
-                state:
-                  type: string
-                  description: 'Module state.'
-                  enum:
-                    - Enabled
-                    - Disabled
+                  description: The module weight (priority).
                 source:
                   type: string
-                  description: 'ModuleSource name of the module if provided by one (otherwise empty).'
+                  description: The source that the module uses.
                 stage:
                   type: string
-                  description: 'The current stage of the module life cycle.'
+                  description: The current stage of the module lifecycle.
                   enum:
                     - Sandbox
                     - Incubating
                     - Graduated
                     - Deprecated
+                version:
+                  type: string
+                  description: The module version.
+                releaseChannel:
+                  type: string
+                  description: The module release channel.
+                updatePolicy:
+                  type: string
+                  description: The module update policy.
                 description:
                   type: string
-                  description: 'Module description.'
+                  description: The module description.
+                requirements:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: The module requirements.
             status:
               type: object
               properties:
-                status:
+                phase:
                   type: string
-                  description: "Module state explanation, version warning or last error"
-                message:
-                  type: string
-                  description: "Additional information"
+                  description: The module phase.
+                  enum:
+                    - Available
+                    - Downloading
+                    - Reconciling
+                    - Installing
+                    - HooksDisabled
+                    - WaitSyncTasks
+                    - Downloaded
+                    - Conflict
+                    - Ready
+                    - Error
+                    #TODO(ipaqsa): delete it
+                    - Pending
+                    - Enqueued
+                    - NotInstalled
                 hooksState:
                   type: string
-                  description: "Hooks status report"
+                  description: The hooks status report.
+                conditions:
+                  x-kubernetes-patch-strategy: merge
+                  x-kubernetes-patch-merge-key: type
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      message:
+                        type: string
+                      reason:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
+                        type: string
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: weight
+        - name: Weight
           jsonPath: .properties.weight
           type: integer
-          description: 'Module weight (priority).'
-        - name: state
-          jsonPath: .properties.state
+          description: The module weight (priority).
+        - name: Release channel
+          jsonPath: .properties.releaseChannel
+          description: The release channel of the module.
           type: string
-          description: 'Module state. Enabled or Disabled.'
-        - name: source
+          priority: 1
+        - name: Source
           jsonPath: .properties.source
           type: string
-          description: 'ModuleSource name of the module if provided by one (otherwise empty).'
-        - name: stage
-          jsonPath: .properties.stage
+          description: The source of the module it provided by one.
+        - name: Version
+          jsonPath: .properties.version
           type: string
-          description: 'The current stage of the module life cycle'
-        - name: Status
-          type: string
-          description: "Module state explanation or last error"
-          jsonPath: .status.status
-        - name: Message
-          type: string
-          description: "Additional information"
-          jsonPath: .status.message
+          description: The module`s version.
           priority: 1
+        - name: Phase
+          jsonPath: .status.phase
+          type: string
+          description: The module phase.
+        - name: Enabled
+          jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].status
+          description: The module`s enabled status
+          type: string
+        - name: Disabled Message
+          jsonPath: .status.conditions[?(@.type=='EnabledByModuleManager')].message
+          description: The modules` enabled information.
+          type: string
+          priority: 1
+        - name: Ready
+          jsonPath: .status.conditions[?(@.type=='IsReady')].status
+          description: The module`s ready status.
+          type: string

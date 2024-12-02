@@ -202,6 +202,7 @@ jobs:
             const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
             const hasBE = pr.labels.some((l) => l.name === 'edition/be');
             const hasSE = pr.labels.some((l) => l.name === 'edition/se');
+            const hasSE_plus = pr.labels.some((l) => l.name === 'edition/se+');
             let edition = defaultEdition;
             if (hasCE) {
               edition = 'CE';
@@ -211,8 +212,10 @@ jobs:
               edition = 'BE';
             } else if (hasSE) {
               edition = 'SE';
+            } else if (hasSE_plus) {
+              edition = 'SE-plus';
             }
-            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}`);
+            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}, 'edition/se+':${hasSE_plus}`);
             core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
 
             // Construct head commit ref using pr number.
@@ -405,6 +408,16 @@ jobs:
   enable_se:
     if: ${{ needs.pull_request_info.outputs.edition == 'SE' }}
     name: Enable SE
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
+  enable_se_plus:
+    if: ${{ needs.pull_request_info.outputs.edition == 'SE-plus' }}
+    name: Enable SE-plus
     needs:
       - pull_request_info
     runs-on: ubuntu-latest
@@ -725,9 +738,13 @@ jobs:
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            # Add edition name for non-FE builds
+            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+              IMAGE_EDITION=${WERF_ENV,,}
+            fi
             # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
 

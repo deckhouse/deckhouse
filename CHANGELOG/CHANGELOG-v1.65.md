@@ -70,7 +70,12 @@
  - **[cni-cilium]** Fixed `excludedCIDRs` option in EgressGatewayPolicies [#10493](https://github.com/deckhouse/deckhouse/pull/10493)
  - **[cni-cilium]** Disable the metrics server in the "egress-gateway-agent" because we don't use it. [#10208](https://github.com/deckhouse/deckhouse/pull/10208)
     The pods of the egress-gateway-agent will be restarted.
+ - **[common]** Bump shell-operator image. [#10764](https://github.com/deckhouse/deckhouse/pull/10764)
+    Fix webhook-handler memory leak.
+ - **[common]** Bump shell-operator image. [#10761](https://github.com/deckhouse/deckhouse/pull/10761)
+    Fix webhook-handler memory leak.
  - **[common]** Add `/bin/true` to `init` image [#10372](https://github.com/deckhouse/deckhouse/pull/10372)
+ - **[control-plane-manager]** Fix kubeadm template when changing ServiceAcciount Issuer. [#10762](https://github.com/deckhouse/deckhouse/pull/10762)
  - **[control-plane-manager]** Fixed free space sufficiency detection for etcd-backup [#10426](https://github.com/deckhouse/deckhouse/pull/10426)
  - **[control-plane-manager]** Seamless change of clusterDomain. [#9739](https://github.com/deckhouse/deckhouse/pull/9739)
  - **[control-plane-manager]** Automatically regenerate kubeconfig for control plane components if validation fails, preventing crashes. [#9445](https://github.com/deckhouse/deckhouse/pull/9445)
@@ -83,6 +88,9 @@
  - **[deckhouse-controller]** Update the documentation about the list of data the `collect-debug-info` command collects. [#10028](https://github.com/deckhouse/deckhouse/pull/10028)
  - **[deckhouse-controller]** Clean up module documentation when deleting module [#9985](https://github.com/deckhouse/deckhouse/pull/9985)
  - **[deckhouse-tools]** Rebuild d8-cli images when used version changes [#10267](https://github.com/deckhouse/deckhouse/pull/10267)
+ - **[dhctl]** Skip remove labels if node was not found during converge. [#10658](https://github.com/deckhouse/deckhouse/pull/10658)
+ - **[dhctl]** Do not run converge second time. [#10658](https://github.com/deckhouse/deckhouse/pull/10658)
+ - **[dhctl]** Fix random sorting of master in the list. [#10441](https://github.com/deckhouse/deckhouse/pull/10441)
  - **[dhctl]** Deny use defaultCRI type as Docker [#10022](https://github.com/deckhouse/deckhouse/pull/10022)
  - **[dhctl]** Fix lease locking. [#9982](https://github.com/deckhouse/deckhouse/pull/9982)
  - **[dhctl]** Add validation for ClusterConfiguration.cloud.prefix [#9858](https://github.com/deckhouse/deckhouse/pull/9858)

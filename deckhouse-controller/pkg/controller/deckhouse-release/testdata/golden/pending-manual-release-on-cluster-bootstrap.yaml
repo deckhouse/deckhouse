@@ -27,7 +27,7 @@ status:
   approved: false
   message: 'Release is waiting for the ''release.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: "2023-05-20T10:10:10Z"
 ---
 apiVersion: v1
 kind: Pod

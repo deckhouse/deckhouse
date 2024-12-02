@@ -47,7 +47,7 @@ endif
 
 # Set testing path for tests-modules
 ifeq ($(FOCUS),)
-	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/...
+	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/... ./ee/se-plus/modules/...
 else
 	CE_MODULES = $(shell find ./modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(CE_MODULES),)
@@ -68,6 +68,10 @@ else
 	SE_MODULES = $(shell find ./ee/se/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(FE_MODULES),)
 		SE_MODULES_RECURSE = ${SE_MODULES}/...
+	endif
+	SE_PLUS_MODULES = $(shell find ./ee/se-plus/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
+	ifneq ($(FE_MODULES),)
+		SE_PLUS_MODULES_RECURSE = ${SE_PLUS_MODULES}/...
 	endif
 	TESTS_PATH = ${CE_MODULES_RECURSE} ${EE_MODULES_RECURSE} ${FE_MODULES_RECURSE} ${BE_MODULES_RECURSE} ${SE_MODULES_RECURSE}
 endif
@@ -181,6 +185,9 @@ lint-markdown: --lint-markdown-header ## Run markdown linter.
 lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 	@docker run --rm -v ${PWD}:/workdir ${MDLINTER_IMAGE} \
 		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md" --fix && (echo 'Fixed successfully.')
+
+lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
+	@werf config render | awk 'NR!=1 {print}' | go run ./tools/lint-src-artifact/lint-src-artifact.go
 
 ##@ Generate
 

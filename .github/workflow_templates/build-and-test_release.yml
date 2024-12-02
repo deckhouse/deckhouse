@@ -32,6 +32,10 @@ on:
       comment_id:
         description: 'Id of comment in issue where to put workflow run status'
         required: false
+      editions:
+        description: 'Comma-separated list of editions to build'
+        required: false
+        type: string
 
 env:
 {!{ tmpl.Exec "werf_envs"               | strings.Indent 2 }!}
@@ -96,7 +100,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'ee') }}
     env:
       WERF_ENV: "EE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -110,11 +114,25 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'se') }}
     env:
       WERF_ENV: "SE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_se) | strings.Indent 6 }!}
+
+{!{ $jobNames = coll.Merge $jobNames (dict "build_se_plus" "Build SE-plus") }!}
+  build_se_plus:
+    name: {!{ $jobNames.build_se_plus }!}
+    needs:
+      - git_info
+      - go_generate
+      - workflow_render
+      - build_fe
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'se-plus') }}
+    env:
+      WERF_ENV: "SE-plus"
+{!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.build_se_plus) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "build_be" "Build BE") }!}
   build_be:
@@ -124,7 +142,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'be') }}
     env:
       WERF_ENV: "BE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -138,7 +156,7 @@ jobs:
       - go_generate
       - workflow_render
       - build_fe
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || contains(github.event.inputs.editions, 'ce') }}
     env:
       WERF_ENV: "CE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -275,6 +293,7 @@ jobs:
       - build_ce
       - build_be
       - build_se
+      - build_se_plus
       - doc_web_build
       - main_web_build
       - deploy_latest_web_site_prod_sel

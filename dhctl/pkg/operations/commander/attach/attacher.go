@@ -299,7 +299,7 @@ func (i *Attacher) capture(
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(kubeClient, attachResources, checkers)
+		err = resources.CreateResourcesLoop(kubeClient, attachResources, checkers, nil)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}
