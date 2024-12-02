@@ -1,10 +1,10 @@
 На этом шаге кластер в минимальном исполнении развернут. Настройте хранилище, которое будет использоваться для создания хранения метрик компонент кластер и дисков виртуальных машин.
 
-Включите модуль программно-определяемого хранилища sds-replicated-volume:
+Включите модуль программно-определяемого хранилища sds-replicated-volume. Выполните на **master-узле** следующие команды:
 
 {% snippetcut %}
 ```shell
-kubectl create -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -29,7 +29,7 @@ EOF
 
 {% snippetcut %}
 ```sheel
-kubectl wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
+sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
 ```
 {% endsnippetcut %}
 
@@ -37,7 +37,7 @@ kubectl wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready
 
 {% snippetcut %}
 ```shell
-sudo d8 k get blockdevices.storage.deckhouse.io
+sudo -i d8 k get blockdevices.storage.deckhouse.io
 ```
 {% endsnippetcut %}
 
@@ -46,7 +46,7 @@ sudo d8 k get blockdevices.storage.deckhouse.io
 
 {% snippetcut %}
 ```shell
-sudo d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: LVMVolumeGroup
 metadata:
@@ -77,7 +77,7 @@ EOF
 
 {% snippetcut %}
 ```shell
-sudo d8 k get lvg vg-on-worker-0 -w
+sudo -i d8 k get lvg vg-on-worker-0 -w
 ```
 {% endsnippetcut %}
 
@@ -92,7 +92,7 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 
 {% snippetcut %}
 ```bash
-sudo d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
  apiVersion: storage.deckhouse.io/v1alpha1
  kind: ReplicatedStoragePool
  metadata:
@@ -109,7 +109,7 @@ EOF
 
 {% snippetcut %}
 ```shell
-sudo d8 k get rsp data -w
+sudo -i d8 k get rsp data -w
 ```
 {% endsnippetcut %}
 
@@ -124,7 +124,7 @@ sds-pool     Completed   LVM    87d
 
 {% snippetcut %}
 ```bash
-sudo d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
  ---
  apiVersion: storage.deckhouse.io/v1alpha1
  kind: ReplicatedStorageClass
@@ -139,11 +139,11 @@ EOF
 ```
 {% endsnippetcut %}
 
-Проверьте что StorageClass'ы создались:
+Проверьте, что ресурсы StorageClass появились в кластере:
 
 {% snippetcut %}
 ```bash
-sudo d8 k get storageclass
+sudo -i d8 k get storageclass
 ```
 {% endsnippetcut %}
 
@@ -152,6 +152,6 @@ sudo d8 k get storageclass
 {% snippetcut %}
 ```shell
 DEFAULT_STORAGE_CLASS=replicated-storage-class
-sudo d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
+sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
 ```
 {% endsnippetcut %}
