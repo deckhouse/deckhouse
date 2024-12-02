@@ -31,8 +31,7 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache make bash git mercurial patch rsync openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - apk add --no-cache make bash git mercurial patch rsync
   install:
   - git clone https://github.com/kubernetes/cloud-provider-vsphere.git /src
   - cd /src
