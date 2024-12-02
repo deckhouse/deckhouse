@@ -61,7 +61,7 @@ func (a *Agent) Start() error {
 	}
 
 	log.DebugLn("agent: run ssh-add for keys")
-	err = a.AddKeys()
+	err = a.AddKeys(a.AgentSettings.PrivateKeys)
 	if err != nil {
 		return fmt.Errorf("add keys: %v", err)
 	}
@@ -70,8 +70,8 @@ func (a *Agent) Start() error {
 }
 
 // TODO replace with x/crypto/ssh/agent ?
-func (a *Agent) AddKeys() error {
-	err := addKeys(a.AgentSettings.AuthSock, a.AgentSettings.PrivateKeys)
+func (a *Agent) AddKeys(keys []session.AgentPrivateKey) error {
+	err := addKeys(a.AgentSettings.AuthSock, keys)
 	if err != nil {
 		return fmt.Errorf("add keys: %w", err)
 	}

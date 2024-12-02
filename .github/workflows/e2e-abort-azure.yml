@@ -81,6 +81,7 @@ jobs:
       run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
       run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
     steps:
 

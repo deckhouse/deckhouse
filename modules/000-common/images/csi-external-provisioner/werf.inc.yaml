@@ -6,35 +6,46 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /csi-provisioner
-    to: /csi-provisioner
-    before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /csi-provisioner
+  to: /csi-provisioner
+  before: setup
 docker:
   ENTRYPOINT: ["/csi-provisioner"]
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+fromArtifact: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.csi.provisioner }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-provisioner.git /src
+  - cd /src
+  - test -d "/patches/{{ $value.csi.provisioner }}" && git apply /patches/{{ $value.csi.provisioner }}/*.patch --verbose
+  - rm -r vendor
+  - rm -r .git
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.30" $version }}
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-    {{- else }}
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
-    {{- end }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-    - git clone --depth 1 --branch {{ $value.csi.provisioner }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-provisioner.git /src
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache make bash git
   install:
-    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - cd /src
-    {{- if semverCompare "<1.29" $version }}
-    - go get golang.org/x/net@v0.17.0
-    - go get google.golang.org/grpc@v1.56.3
-    - go mod tidy
-    - go mod vendor
-    - go mod edit -dropreplace google.golang.org/grpc
-    {{- end }}
-    - make build
-    - cp bin/csi-provisioner /csi-provisioner
-    - chown 64535:64535 /csi-provisioner
-    - chmod 0755 /csi-provisioner
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - make build
+  - cp bin/csi-provisioner /csi-provisioner
+  - chown 64535:64535 /csi-provisioner
+  - chmod 0755 /csi-provisioner
   {{- end }}
 {{- end }}

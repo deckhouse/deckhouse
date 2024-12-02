@@ -172,6 +172,7 @@ jobs:
       run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
       run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
     steps:
 
@@ -216,9 +217,14 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.26"
       EVENT_LABEL: ${{ github.event.label.name }}
-      WERF_ENV: "${{ fromJson(inputs.test_config).edition || 'FE'}}"
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -708,9 +714,14 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.27"
       EVENT_LABEL: ${{ github.event.label.name }}
-      WERF_ENV: "${{ fromJson(inputs.test_config).edition || 'FE'}}"
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -1200,9 +1211,14 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.28"
       EVENT_LABEL: ${{ github.event.label.name }}
-      WERF_ENV: "${{ fromJson(inputs.test_config).edition || 'FE'}}"
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -1692,9 +1708,14 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
-      WERF_ENV: "${{ fromJson(inputs.test_config).edition || 'FE'}}"
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -2184,9 +2205,14 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
-      WERF_ENV: "${{ fromJson(inputs.test_config).edition || 'FE'}}"
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -2676,9 +2702,14 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
-      WERF_ENV: "${{ fromJson(inputs.test_config).edition || 'FE'}}"
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -3168,9 +3199,14 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-      WERF_ENV: "${{ fromJson(inputs.test_config).edition || 'FE'}}"
+      WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
+      - name: Print data
+        run: |
+          echo "WERF_ENV is ${WERF_ENV}"
+          echo "test_config is ${{ inputs.test_config }}"
+          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp

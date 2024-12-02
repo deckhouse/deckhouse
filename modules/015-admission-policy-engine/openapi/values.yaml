@@ -124,3 +124,9 @@ properties:
                     type: string
                   registrytoken:
                     type: string
+      trivyConfigData:
+        type: object
+        additionalProperties:
+          type: string
+        description: |
+          Configuration for trivy. Fetched from the trivy config map.
