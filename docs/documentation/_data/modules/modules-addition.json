@@ -13,6 +13,16 @@
     "editionRestrictionsComment": {"all": {"ru": "Ограничение на работу с BGP", "en": "Restriction on working with BGP"}},
     "edition": "ee"
   },
+  "cloud-provider-vsphere": {
+    "path": "modules/cloud-provider-vsphere/",
+    "editionFullyAvailable": ["se-plus", "ee"],
+    "edition": "ee"
+  },
+  "cloud-provider-zvirt": {
+    "path": "modules/cloud-provider-zvirt/",
+    "editionFullyAvailable": ["se-plus", "ee"],
+    "edition": "ee"
+  },
   "cni-cilium": {
     "path": "modules/cni-cilium/",
     "editionFullyAvailable": ["se-plus"],
