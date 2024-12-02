@@ -1,4 +1,4 @@
-name: prometheus
+name: observability
 weight: 304
 description: |
   Cluster observability module
