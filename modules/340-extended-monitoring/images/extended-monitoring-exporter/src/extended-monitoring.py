@@ -63,7 +63,8 @@ def parse_thresholds(labels, annotations, default_thresholds, namespace=None):
         for name, value in corev1.read_namespace(namespace).metadata.labels.items():
             if name.startswith(EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX):
                 unprefixed_name = name.replace(EXTENDED_MONITORING_LABEL_THRESHOLD_PREFIX, "")
-                thresholds[unprefixed_name] = value
+                if unprefixed_name in thresholds:
+                    thresholds[unprefixed_name] = value
     if annotations:
         for name, value in annotations.items():
             if name.startswith(DEPRECATED_EXTENDED_MONITORING_ANNOTATION_THRESHOLD_PREFIX):
