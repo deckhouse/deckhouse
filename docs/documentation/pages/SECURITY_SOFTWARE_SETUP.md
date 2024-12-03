@@ -13,7 +13,7 @@ Deckhouse Kubernetes Platform (DKP) uses the following directories when running 
 
 ### KESL
 
-The following are recommendations for configuring Kaspersky Endpoint Security for Linux (KESL) to ensure that it operates smoothly with Deckhouse Kubernetes Platform (whatever edition you choose).
+The following are recommendations for configuring Kaspersky Endpoint Security for Linux (KESL) to ensure that it operates smoothly with DKP (whatever edition you choose).
 
 To ensure compatibility with DKP, the following tasks must be disabled on the KESL side:
 
