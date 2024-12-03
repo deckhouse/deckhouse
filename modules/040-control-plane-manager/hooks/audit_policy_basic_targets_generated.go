@@ -106,6 +106,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-monitoring:alertmanager-internal",
 	"system:serviceaccount:d8-monitoring:alerts-receiver",
 	"system:serviceaccount:d8-monitoring:cert-exporter",
+	"system:serviceaccount:d8-monitoring:chrony-exporter",
 	"system:serviceaccount:d8-monitoring:control-plane-proxy",
 	"system:serviceaccount:d8-monitoring:ebpf-exporter",
 	"system:serviceaccount:d8-monitoring:events-exporter",
