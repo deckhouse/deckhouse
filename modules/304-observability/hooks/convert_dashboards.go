@@ -95,7 +95,8 @@ func convertDashboards(input *go_hook.HookInput) error {
 		dash := snap.(*LegacyDashboard)
 		input.PatchCollector.Create(
 			dashboardManifest(dash.Name, dashboardKindByName(dash.Name), dash.Definition),
-			object_patch.UpdateIfExists())
+			object_patch.UpdateIfExists(),
+		)
 
 		dashboards[dash.Name] = true
 	}
@@ -157,7 +158,7 @@ func dashboardKindByName(name string) string {
 	return ClusterDashboardKind
 }
 
-func dashboardManifest(name string, kind string, definition string) unstructured.Unstructured {
+func dashboardManifest(name string, kind string, definition string) *unstructured.Unstructured {
 	un := unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "observability.deckhouse.io/v1alpha1",
 		"kind":       kind,
@@ -173,5 +174,5 @@ func dashboardManifest(name string, kind string, definition string) unstructured
 		},
 	}}
 
-	return un
+	return &un
 }
