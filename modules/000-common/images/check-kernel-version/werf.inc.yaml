@@ -18,8 +18,8 @@ git:
     install:
     - '**/*'
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
