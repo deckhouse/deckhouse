@@ -34,8 +34,11 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   setup:
   - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $full_version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
   - cd /cri-tools
   - make install crictl

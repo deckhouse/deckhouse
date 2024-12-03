@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{ if ne .runType "ImageBuilding" -}}
 bb-event-on 'bb-sync-file-changed' '_on_rsyslog_config_changed'
 _on_rsyslog_config_changed() {
   systemctl restart rsyslog
 }
-{{- end }}
 
 if ! systemctl -q is-enabled rsyslog 2>/dev/null; then
   exit 0

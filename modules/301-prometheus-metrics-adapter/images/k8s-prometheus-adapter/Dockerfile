@@ -7,7 +7,9 @@ ENV SOURCE_REPO=${SOURCE_REPO}
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
 WORKDIR /src
-RUN git clone --depth 1 --branch v0.9.1 ${SOURCE_REPO}/kubernetes-sigs/prometheus-adapter.git .
+RUN apk add --no-cache openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --depth 1 --branch v0.9.1 ${SOURCE_REPO}/kubernetes-sigs/prometheus-adapter.git .
 
 RUN go get golang.org/x/net@v0.17.0 \
     && go get github.com/prometheus/client_golang@v1.11.1 \

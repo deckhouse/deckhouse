@@ -14,6 +14,11 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/be/modules/040-node-manager/openapi/values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/modules/140-user-authz/templates/webhook
   to: /deckhouse/modules/140-user-authz/templates/webhook
   excludePaths:
@@ -340,6 +345,29 @@
         - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/015-admission-policy-engine/templates/ratify
+  to: /deckhouse/modules/015-admission-policy-engine/templates/ratify
   excludePaths:
     - images
     - templates

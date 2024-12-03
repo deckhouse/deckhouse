@@ -35,7 +35,7 @@ apiVersions:
               type: string
       runType:
         type: string
-        enum: [ClusterBootstrap, ImageBuilding, Normal]
+        enum: [ClusterBootstrap, Normal]
       registry:
         type: object
         properties:
@@ -164,5 +164,5 @@ apiVersions:
           type: string
     - properties:
         runType:
-          enum: [ImageBuilding, Normal]
+          enum: [Normal]
           type: string

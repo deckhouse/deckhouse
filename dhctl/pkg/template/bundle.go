@@ -87,13 +87,6 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName string, da
 }
 
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider string, bundle string, dataDevices terraform.DataDevices) error {
-	dataWithoutNodeGroup := withoutNodeGroup(templateData)
-	getDataForStep := func(step string) map[string]interface{} {
-		if step != "node-group" {
-			return dataWithoutNodeGroup
-		}
-		return templateData
-	}
 
 	saveInfo := []saveFromTo{
 		{
@@ -106,35 +99,19 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 		},
 	}
 
-	for _, steps := range []string{"all", "cluster-bootstrap", "node-group"} {
+	for _, steps := range []string{"all", "cluster-bootstrap"} {
 		saveInfo = append(saveInfo, saveFromTo{
 			from: filepath.Join(candiBashibleDir, "common-steps", steps),
 			to:   stepsDir,
-			data: getDataForStep(steps),
-		})
-	}
-
-	for _, steps := range []string{"all", "cluster-bootstrap", "node-group"} {
-		saveInfo = append(saveInfo, saveFromTo{
-			from: filepath.Join(candiBashibleDir, "bundles", bundle, steps),
-			to:   stepsDir,
-			data: getDataForStep(steps),
-		})
-	}
-
-	for _, steps := range []string{"all", "cluster-bootstrap", "node-group"} {
-		saveInfo = append(saveInfo, saveFromTo{
-			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
-			to:   stepsDir,
-			data: getDataForStep(steps),
+			data: templateData,
 		})
 	}
 
 	for _, steps := range []string{"all", "cluster-bootstrap"} {
 		saveInfo = append(saveInfo, saveFromTo{
-			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "bundles", bundle, steps),
+			from: filepath.Join(candiDir, "cloud-providers", provider, "bashible", "common-steps", steps),
 			to:   stepsDir,
-			data: dataWithoutNodeGroup,
+			data: templateData,
 		})
 	}
 

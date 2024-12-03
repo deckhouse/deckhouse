@@ -32,7 +32,7 @@ const (
 
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security policies", func() {
 	f := HookExecutionConfigInit(
-		`{"admissionPolicyEngine": {"internal": {"bootstrapped": true} } }`,
+		`{"admissionPolicyEngine": {"internal": {"ratify": {}, "bootstrapped": true} } }`,
 		`{"admissionPolicyEngine":{}}`,
 	)
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
@@ -55,17 +55,50 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 		})
 		It("should have generated resources", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(1))
-			const expectedSpec = `{
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()).To(HaveLen(2))
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()[0].Get("spec").String()).To(MatchJSON(`
+			{
 				"enforcementAction": "Deny",
 				"match": {
 					"namespaceSelector": {
 						"labelSelector": {
 							"matchLabels": {
-								"operation-policy.deckhouse.io/enabled": "true"
+								"security-policy.deckhouse.io/enabled": "true"
 							}
 						}
-					}
+					},
+					"labelSelector": {}
+				},
+				"policies": {
+					"automountServiceAccountToken": true,
+ 					"seccompProfiles": {},
+					"verifyImageSignatures": [
+						{
+							"dockerCfg": "zxc=",
+							"reference": "ghcr.io/*",
+							"publicKeys": ["someKey1", "someKey2"]
+						},
+						{
+							"dockerCfg": "",
+							"reference": "*",
+							"publicKeys": ["someKey3"]
+						}
+					]
+				}
+			}`))
+
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()[1].Get("spec").String()).To(MatchJSON(`
+			{
+				"enforcementAction": "Deny",
+				"match": {
+					"namespaceSelector": {
+						"labelSelector": {
+							"matchLabels": {
+								"security-policy.deckhouse.io/enabled": "true"
+							}
+						}
+					},
+					"labelSelector": {}
 				},
 				"policies": {
 					"allowedAppArmor": [
@@ -140,12 +173,18 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 							}
 						],
 						"rule": "MustRunAs"
-					}
+					},
+					"verifyImageSignatures": [
+						{
+							"dockerCfg": "zxc=",
+							"reference": "ghcr.io/*",
+							"publicKeys": ["someKey2"]
+						}
+					]
 				}
-			}
-			`
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()[0].Get("spec").String()).To(MatchJSON(expectedSpec))
-			const expectedStatus = `{
+			}`))
+			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("status").String()).To(MatchJSON(`
+			{
 				"deckhouse": {
 					"observed": {
 						"checkSum": "123123123123123",
@@ -153,13 +192,52 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 					},
 					"synced": "False"
 				}
-			}`
-			Expect(f.KubernetesGlobalResource("SecurityPolicy", "foo").Field("status").String()).To(MatchJSON(expectedStatus))
+			}`))
+
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.ratify.imageReferences").String()).To(MatchJSON(`
+			[
+				{
+					"publicKeys": [
+						"someKey1",
+						"someKey2"
+					],
+					"reference": "ghcr.io/*"
+				},
+				{
+					"publicKeys": [
+						"someKey3"
+					],
+					"reference": "*"
+				}
+			]
+			`))
 		})
 	})
 })
 
 var testSecurityPolicy = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: bar
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          security-policy.deckhouse.io/enabled: "true"
+  policies:
+    verifyImageSignatures:
+    - dockerCfg: zxc=
+      reference: ghcr.io/*
+      publicKeys:
+      - someKey1
+      - someKey2
+    - reference: "*"
+      publicKeys:
+      - someKey3
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
@@ -171,7 +249,7 @@ spec:
     namespaceSelector:
       labelSelector:
         matchLabels:
-          operation-policy.deckhouse.io/enabled: "true"
+          security-policy.deckhouse.io/enabled: "true"
   policies:
     allowHostNetwork: false
     allowPrivilegeEscalation: false
@@ -231,5 +309,9 @@ spec:
       - Localhost
       allowedLocalhostFiles:
       - '*'
-
+    verifyImageSignatures:
+    - dockerCfg: zxc=
+      reference: ghcr.io/*
+      publicKeys:
+      - someKey2
 `

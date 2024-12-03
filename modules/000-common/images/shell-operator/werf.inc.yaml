@@ -38,9 +38,10 @@ from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 shell:
   beforeInstall:
   - apk update
-  - apk add --no-cache automake autoconf libtool build-base git
+  - apk add --no-cache automake autoconf libtool build-base git openssh-client
   install:
   - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=1 GOOS=linux
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ .SOURCE_REPO }}/flant/jq.git
   - cd /jq
   - git reset --hard {{ $jqVersion }}

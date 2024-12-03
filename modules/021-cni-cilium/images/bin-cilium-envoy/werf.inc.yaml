@@ -38,6 +38,7 @@ shell:
   - chmod -R a+w /tmp
   #
   - mkdir -p /cilium/proxy
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ $.SOURCE_REPO }}/cilium/proxy.git /cilium/proxy
   - cd /cilium/proxy
   - git checkout {{ $ciliumProxyRev }}

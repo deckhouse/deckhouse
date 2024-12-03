@@ -29,6 +29,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GOPROXY={{ .GOPROXY }}
   - git clone {{ .SOURCE_REPO }}/mikefarah/yq --branch "v4.9.6"
@@ -39,6 +42,9 @@ shell:
 artifact: semver-artifact
 from: {{ $.Images.BASE_ALPINE_DEV }}
 shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - git clone {{ .SOURCE_REPO }}/fsaintjacques/semver-tool --branch 2.1.0
   - cd /semver-tool/
@@ -48,6 +54,9 @@ shell:
 artifact: tini-artifact
 from: {{ $.Images.BASE_ALPINE_DEV }}
 shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - git clone {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0
   - cd /tini/

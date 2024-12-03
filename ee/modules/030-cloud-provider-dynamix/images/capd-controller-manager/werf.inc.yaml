@@ -15,6 +15,9 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - export VERSION=v0.2.0
     - export COMMON_VERSION=v0.2.0
