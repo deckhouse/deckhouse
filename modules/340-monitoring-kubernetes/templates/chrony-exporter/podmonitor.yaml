@@ -14,8 +14,8 @@ spec:
     matchNames:
     - d8-monitoring
   podMetricsEndpoints:
-  - port: http-metrics
-    scheme: http
+  - port: https-metrics
+    scheme: https
     scrapeTimeout: {{ include "helm_lib_prometheus_target_scrape_timeout_seconds" (list . 20) }}
     bearerTokenSecret:
       name: "prometheus-token"
