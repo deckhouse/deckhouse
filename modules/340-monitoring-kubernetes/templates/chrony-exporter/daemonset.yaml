@@ -70,7 +70,6 @@ spec:
         - '--collector.tracking'
         - '--collector.sources'
         - '--collector.serverstats'
-        - '--web.telemetry-path="/metrics"'
         - '--log.level=info'
         env:
         - name: HOST_IP
