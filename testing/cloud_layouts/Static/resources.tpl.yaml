@@ -189,6 +189,9 @@ spec:
   nodeGroups:
   - "system"
   content: |
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
+
     export DEBIAN_FRONTEND=noninteractive
     bb-flag? apt-rpm-updated && return 0
     bb-log-info 'Updating apt cache'
