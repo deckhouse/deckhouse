@@ -195,7 +195,7 @@ function main() {
 {{- else }}
   export D8_NODE_HOSTNAME=$(hostname)
 {{- end }}
-{{- if and ( eq .runType "ClusterBootstrap") }}
+{{- if eq .runType "ClusterBootstrap" }}
 {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
   export IGNITER_DIR="/opt/deckhouse/tmp/system_registry_igniter"
 {{- end }}
