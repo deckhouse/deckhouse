@@ -1089,7 +1089,7 @@ alerts:
       description: |
         There is deprecated istio version `{{$labels.version}}` installed.
         Impact — version support will be removed in future deckhouse releases. The higher alert severity — the higher probability of support cancelling.
-        Upgrading instructions — https://deckhouse.io/documentation//modules/110-istio/examples.html#upgrading-istio.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio) on upgrading Istio.
       summary: |
         There is deprecated istio version installed
       severity: undefined
@@ -1230,7 +1230,7 @@ alerts:
       description: |
         The current istio version `{{$labels.istio_version}}` may not work properly with the current k8s version `{{$labels.k8s_version}}`, because it is unsupported officially.
         Please upgrade istio as soon as possible.
-        Upgrading instructions — https://deckhouse.io/documentation//modules/110-istio/examples.html#upgrading-istio.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio) on upgrading Istio.
       summary: |
         The installed istio version is incompatible with the k8s version
       severity: "3"
@@ -1630,10 +1630,10 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node is not managed by the [node-manager](http://documentation.example.com/modules/040-node-manager/) module.
+        The {{ $labels.node }} Node is not managed by the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module.
 
         The recommended actions are as follows:
-        - Follow these instructions to clean up the node and add it to the cluster: http://documentation.example.com/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
+        - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -1808,7 +1808,7 @@ alerts:
         - reserved `metadata.labels` *node-role.deckhouse.io/* with ending not in `(system|frontend|monitoring|_deckhouse_module_name_)`
         - or reserved `spec.taints` *dedicated.deckhouse.io* with values not in `(system|frontend|monitoring|_deckhouse_module_name_)`
 
-        [Get instructions on how to fix it here](http://documentation.example.com/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        [Get instructions on how to fix it here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} needs fixing up
       severity: "6"
@@ -2673,7 +2673,7 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](http://documentation.example.com/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
+        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
         Use the following command to get the list of the IngressNginxControllers that contain GeoIPv1 variables:
         `kubectl  get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'`
 
@@ -4498,9 +4498,6 @@ alerts:
       description: |-
         StorageClass having a cloud-provider provisioner shouldn't be deployed manually.
         They are managed by the cloud-provider module, you only need to change the module configuration to fit your needs.
-
-
-        [Find storage configuration documentation for your cloud-provider here](http://documentation.example.com/kubernetes.html).
       summary: |
         Manually deployed StorageClass {{ $labels.name }} found in the cluster
       severity: "6"
@@ -4513,9 +4510,6 @@ alerts:
       description: |-
         More than one StorageClass in the cluster annotated as a default.
         Probably manually deployed StorageClass exists, that overlaps with cloud-provider module default Storage configuration.
-
-
-        [Find storage configuration documentation for your cloud-provider here](http://documentation.example.com/kubernetes.html).
       summary: |
         Multiple default StorageClasses found in the cluster
       severity: "6"

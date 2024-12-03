@@ -1,6 +1,6 @@
 global:
   modules:
-    publicDomainTemplate: "%s.example.com"
+    publicDomainTemplate: ""
     https:
       mode: Disabled
 

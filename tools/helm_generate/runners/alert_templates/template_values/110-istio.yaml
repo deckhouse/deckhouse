@@ -3,3 +3,4 @@ global:
     publicDomainTemplate: ""
     https:
       mode: Disabled
+  deckhouseVersion: v1
