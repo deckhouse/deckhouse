@@ -79,6 +79,12 @@ jobs:
       - git_info
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
 
+  tests_python_webhooks:
+    name: Tests python webhooks
+    needs:
+      - git_info
+{!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
+
   matrix_tests:
     name: Matrix tests
     needs:

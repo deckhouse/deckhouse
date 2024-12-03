@@ -2,10 +2,12 @@
 artifact: {{ .ModuleName }}/metallb-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE }}
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client git
   install:
-    - apk add --no-cache git
     - mkdir -p /src
     - cd /src
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b v0.13.12 {{ $.SOURCE_REPO }}/metallb/metallb.git .
     - git config --global user.email "builder@deckhouse.io"
     # https://github.com/metallb/metallb/pull/2004

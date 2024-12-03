@@ -3,6 +3,9 @@
 artifact: {{ .ModuleName }}/build-chrony-static-artifact
 from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - mkdir /src
     - cd /src

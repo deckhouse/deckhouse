@@ -108,10 +108,9 @@ spec:
                     - ["*"]
                   description: |
                     Bundles for step execution. You can set `'*'` for selecting all bundles.
-
-                    See the list of possible bundles in the [allowedBundles](configuration.html#parameters-allowedbundles) module parameter.
                   items:
                     type: string
+                    enum: [ 'ubuntu-lts', 'centos', 'debian', 'redos', 'rosa', 'astra', 'altlinux', 'opensuse', '*' ]
       additionalPrinterColumns:
         - name: Weight
           jsonPath: .spec.weight

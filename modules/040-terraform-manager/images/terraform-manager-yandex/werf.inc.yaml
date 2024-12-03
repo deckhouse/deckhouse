@@ -16,10 +16,11 @@ mount:
     to: /go/pkg
 shell:
   beforeInstall:
-    - apk add --no-cache make patch git bash
+    - apk add --no-cache make patch git bash openssh-client
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.yandex.version }} {{ $.SOURCE_REPO }}/yandex-cloud/terraform-provider-yandex.git /src
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}"

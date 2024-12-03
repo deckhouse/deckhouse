@@ -114,6 +114,10 @@ TESTS_TIMEOUT="15m"
 
 deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf bin/gh ## Install dev dependencies.
 
+##@ Security
+bin:
+	mkdir -p bin
+
 ##@ Tests
 
 bin/promtool-${PROMTOOL_VERSION}/promtool:
@@ -134,7 +138,11 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
-.PHONY: tests-modules tests-matrix tests-openapi tests-controller
+.PHONY: bin/yq
+bin/yq: bin ## Install yq deps for update-patchversion script.
+	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
+
+.PHONY: tests-modules tests-matrix tests-openapi tests-controller tests-webhooks
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
@@ -148,6 +156,9 @@ tests-openapi: ## Run tests against modules openapi values schemas.
 
 tests-controller: ## Run deckhouse-controller unit tests.
 	go test ./deckhouse-controller/... -v
+
+tests-webhooks: bin/yq ## Run python webhooks unit tests.
+	./testing/webhooks/run.sh
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
@@ -197,10 +208,6 @@ generate: bin/werf ## Run all generate-* jobs in bulk.
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
-
-##@ Security
-bin:
-	mkdir -p bin
 
 bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 	cd tools/regcopy; go build -o bin/regcopy
@@ -285,9 +292,6 @@ bin/jq-$(JQ_VERSION)/jq:
 bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion script.
 	rm -f bin/jq
 	ln -s jq-$(JQ_VERSION)/jq bin/jq
-
-bin/yq: bin ## Install yq deps for update-patchversion script.
-	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
 
 bin/crane: bin ## Install crane deps for update-patchversion script.
 	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane

@@ -42,6 +42,7 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
   - cd /src
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git
   - cd containerd
   - git config --global user.email "builder@deckhouse.io"

@@ -11,7 +11,9 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 WORKDIR /src
-RUN git clone --depth 1 --branch v0.22.0 ${SOURCE_REPO}/aquasecurity/trivy-operator.git .
+RUN apk add --no-cache openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --depth 1 --branch v0.22.0 ${SOURCE_REPO}/aquasecurity/trivy-operator.git .
 
 COPY patches/001-add-registry-secret-as-dockerconfigjson.patch /src
 COPY patches/002-skip-some-checks.patch /src

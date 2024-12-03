@@ -190,6 +190,14 @@ jobs:
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests) | strings.Indent 6 }!}
 
+{!{ $jobNames = coll.Merge $jobNames (dict "tests_python_webhooks" "Tests python webhooks") }!}
+  tests_python_webhooks:
+    name: {!{ $jobNames.tests_python_webhooks }!}
+    needs:
+      - git_info
+{!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
+{!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests_python_webhooks) | strings.Indent 6 }!}
+
 {!{ $jobNames = coll.Merge $jobNames (dict "matrix_tests" "Matrix tests") }!}
   matrix_tests:
     name: {!{ $jobNames.matrix_tests }!}
