@@ -106,8 +106,8 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	return IstioMulticlusterMergeCrdInfo{
 		Name:                 multicluster.GetName(),
 		SpiffeEndpoint:       me + "/public/spiffe-bundle-endpoint",
-		MetadataCA:           multicluster.Spec.Metadata.CA,
-		MetadataInsecure:     multicluster.Spec.Metadata.Insecure,
+		MetadataCA:           multicluster.Spec.Metadata.ClusterCA,
+		MetadataInsecure:     multicluster.Spec.Metadata.EnableInsecureConnection,
 		EnableIngressGateway: multicluster.Spec.EnableIngressGateway,
 		APIHost:              apiHost,
 		NetworkName:          networkName,

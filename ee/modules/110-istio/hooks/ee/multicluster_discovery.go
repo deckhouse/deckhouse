@@ -7,6 +7,7 @@ package ee
 
 import (
 	"encoding/json"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"strings"
 	"time"
 
@@ -28,11 +29,13 @@ var (
 )
 
 type IstioMulticlusterDiscoveryCrdInfo struct {
-	Name                    string
-	ClusterUUID             string
-	EnableIngressGateway    bool
-	PublicMetadataEndpoint  string
-	PrivateMetadataEndpoint string
+	Name                     string
+	ClusterUUID              string
+	EnableIngressGateway     bool
+	ClusterCA                string
+	EnableInsecureConnection bool
+	PublicMetadataEndpoint   string
+	PrivateMetadataEndpoint  string
 }
 
 func (i *IstioMulticlusterDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_hook.MetricsCollector, endpoint string, isError float64) {
@@ -75,11 +78,13 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	me = strings.TrimSuffix(me, "/")
 
 	return IstioMulticlusterDiscoveryCrdInfo{
-		Name:                    multicluster.GetName(),
-		EnableIngressGateway:    multicluster.Spec.EnableIngressGateway,
-		ClusterUUID:             clusterUUID,
-		PublicMetadataEndpoint:  me + "/public/public.json",
-		PrivateMetadataEndpoint: me + "/private/multicluster.json",
+		Name:                     multicluster.GetName(),
+		EnableIngressGateway:     multicluster.Spec.EnableIngressGateway,
+		ClusterCA:                multicluster.Spec.Metadata.ClusterCA,
+		EnableInsecureConnection: multicluster.Spec.Metadata.EnableInsecureConnection,
+		ClusterUUID:              clusterUUID,
+		PublicMetadataEndpoint:   me + "/public/public.json",
+		PrivateMetadataEndpoint:  me + "/private/multicluster.json",
 	}, nil
 }
 
@@ -115,7 +120,19 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.MulticlusterPrivateMetadata
 
-		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(), multiclusterInfo.PublicMetadataEndpoint, "")
+		httpClientOption := []http.Option{
+			http.WithTimeout(10 * time.Second),
+		}
+		if multiclusterInfo.EnableInsecureConnection {
+			httpClientOption = append(httpClientOption, http.WithInsecureSkipVerify())
+		}
+		if multiclusterInfo.ClusterCA != "" {
+			caCerts := [][]byte{[]byte(multiclusterInfo.ClusterCA)}
+			httpClientOption = append(httpClientOption, http.WithAdditionalCACerts(caCerts))
+		}
+		httpClient := dc.GetHTTPClient(httpClientOption...)
+
+		bodyBytes, statusCode, err := lib.HTTPGet(httpClient, multiclusterInfo.PublicMetadataEndpoint, "")
 		if err != nil {
 			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioMulticluster %s, error: %s", multiclusterInfo.PublicMetadataEndpoint, multiclusterInfo.Name, err.Error())
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
