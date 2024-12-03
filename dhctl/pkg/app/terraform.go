@@ -85,7 +85,7 @@ func DefineDropCacheFlags(cmd *kingpin.CmdClause) {
 }
 
 func DefineTFResourceManagementTimeout(cmd *kingpin.CmdClause) {
-	cmd.Flag("tf-resource-managment-timeout", "Redefine terraform resource management timeouts").
-		Envar(configEnvName("DHCTL_TF_RESOURCE_MANAGMENT_TIMEOUT")).
+	cmd.Flag("tf-resource-management-timeout", "Redefine terraform resource management timeouts").
+		Envar(configEnvName("DHCTL_TF_RESOURCE_MANAGEMENT_TIMEOUT")).
 		StringVar(&ResourceManagementTimeout)
 }
