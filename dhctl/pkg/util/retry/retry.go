@@ -130,7 +130,7 @@ func (l *Loop) Run(task func() error) error {
 				return err
 			}
 
-			l.logger.LogFail(fmt.Sprintf(attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
+			l.logger.LogFailRetry(fmt.Sprintf(attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
 			errorMsg := "\t%v\n\n"
 			if l.showError {
 				errorMsg = "\tError: %v\n\n"

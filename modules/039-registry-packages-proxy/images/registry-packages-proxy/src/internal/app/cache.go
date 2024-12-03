@@ -15,12 +15,12 @@
 package app
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"registry-packages-proxy/internal/cache"
 )
 
-func NewCache(logger *log.Entry, config *Config, metrics *cache.Metrics) *cache.Cache {
+func NewCache(logger *log.Logger, config *Config, metrics *cache.Metrics) *cache.Cache {
 	if config.DisableCache {
 		logger.Info("Cache is disabled")
 		return nil
