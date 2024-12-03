@@ -15,7 +15,6 @@
 package mirror
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -49,7 +48,7 @@ type imageBundleUnpackInfo struct {
 	err  error
 }
 
-func UnpackAndValidateImgBundle(ctx context.Context, imgBundlePath string) (string, error) {
+func UnpackAndValidateImgBundle(imgBundlePath string) (string, error) {
 	logger := Logger{}
 
 	imgBundleUnpackMu.Lock()
@@ -60,7 +59,7 @@ func UnpackAndValidateImgBundle(ctx context.Context, imgBundlePath string) (stri
 		return unpackInfo.path, unpackInfo.err
 	}
 
-	unpackPath, unpackErr := unpackAndValidateImgBundle(ctx, imgBundlePath)
+	unpackPath, unpackErr := unpackAndValidateImgBundle(imgBundlePath)
 	imgBundleUnpackInfo[imgBundlePath] = imageBundleUnpackInfo{
 		path: unpackPath,
 		err:  unpackErr,
@@ -69,10 +68,10 @@ func UnpackAndValidateImgBundle(ctx context.Context, imgBundlePath string) (stri
 	return unpackPath, unpackErr
 }
 
-func unpackAndValidateImgBundle(ctx context.Context, imgBundlePath string) (string, error) {
+func unpackAndValidateImgBundle(imgBundlePath string) (string, error) {
 	logger := Logger{}
 
-	unpackPath, err := unpackImgBundle(ctx, imgBundlePath)
+	unpackPath, err := unpackImgBundle(imgBundlePath)
 	if err != nil {
 		return unpackPath, fmt.Errorf("failed to unpack img bundle: %w", err)
 	}
@@ -95,7 +94,7 @@ func unpackAndValidateImgBundle(ctx context.Context, imgBundlePath string) (stri
 	return unpackPath, nil
 }
 
-func unpackImgBundle(ctx context.Context, imgBundlePath string) (string, error) {
+func unpackImgBundle(imgBundlePath string) (string, error) {
 	logger := Logger{}
 
 	if filepath.Ext(imgBundlePath) != imgBundleExt {
@@ -105,8 +104,7 @@ func unpackImgBundle(ctx context.Context, imgBundlePath string) (string, error) 
 	unpackedImagesPath := filepath.Join(app.TmpDirName, "img_bundles", time.Now().Format(imgBundleUnpackFormat))
 
 	err := logger.Process("Unpacking Deckhouse bundle", func() error {
-		return libmirrorBundle.UnpackContext(
-			ctx,
+		return libmirrorBundle.Unpack(
 			&libmirrorCtx.BaseContext{
 				BundlePath:         imgBundlePath,
 				UnpackedImagesPath: unpackedImagesPath,
