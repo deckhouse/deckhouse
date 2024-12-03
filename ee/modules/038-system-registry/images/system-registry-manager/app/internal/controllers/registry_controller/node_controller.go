@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 
 	"embeded-registry-manager/internal/state"
 	"embeded-registry-manager/internal/staticpod"
@@ -528,24 +527,6 @@ func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddre
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsureNodePKI")
 
-	secret := corev1.Secret{}
-	key := types.NamespacedName{
-		Name:      state.NodePKISecretName(nodeName),
-		Namespace: nc.Namespace,
-	}
-
-	err = nc.Client.Get(ctx, key, &secret)
-	if client.IgnoreNotFound(err) != nil {
-		err = fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
-		return
-	}
-
-	// Making a copy unconditionally is a bit wasteful, since we don't
-	// always need to update the service. But, making an unconditional
-	// copy makes the code much easier to follow, and we have a GC for
-	// a reason.
-	secretOrig := secret.DeepCopy()
-
 	hosts := []string{
 		"127.0.0.1",
 		"localhost",
@@ -553,147 +534,63 @@ func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddre
 		fmt.Sprintf("%s.%s.svc", state.RegistrySvcName, state.RegistryNamespace),
 	}
 
-	notFound := false
-	isValid := true
-	if err != nil {
-		notFound = true
-	} else {
-		ret, isValid = nc.loadNodePKIFromSecret(log, &secret, &globalPKI, hosts)
-	}
-
-	if notFound || !isValid {
-		if notFound {
-			nc.logModuleWarning(
-				&log,
-				"NodePKINotfound",
-				"NodePKI secret not found, will generate new",
-			)
-		} else {
-			nc.logModuleWarning(
-				&log,
-				"NodePKIInvalid",
-				"NodePKI secret invalid, will generate new",
-			)
-		}
-
-		var generatedPKI pki.CertKey
-
-		generatedPKI, err = pki.GenerateCertificate(state.NodeAuthCertCN, hosts, *globalPKI.CA)
-		if err != nil {
-			err = fmt.Errorf("cannot generate Auth PKI: %w", err)
-			return
-		}
-		ret.Auth = &generatedPKI
-
-		generatedPKI, err = pki.GenerateCertificate(state.NodeDistributionCertCN, hosts, *globalPKI.CA)
-		if err != nil {
-			err = fmt.Errorf("cannot generate Distribution PKI: %w", err)
-			return
-		}
-		ret.Distribution = &generatedPKI
-	}
-
-	// Set labels
-	if secret.Labels == nil {
-		secret.Labels = make(map[string]string)
-	}
-
-	secret.Labels[state.LabelModuleKey] = state.RegistryModuleName
-	secret.Labels[state.LabelHeritageKey] = state.LabelHeritageValue
-	secret.Labels[state.LabelManagedBy] = state.RegistryModuleName
-	secret.Labels[state.LabelTypeKey] = state.NodePKISecretTypeLabel
-
-	secret.Data = make(map[string][]byte)
-	if err = state.EncodeCertKeyToSecret(
-		*ret.Auth,
-		state.NodeAuthCertSecretField,
-		state.NodeAuthKeySecretField,
-		&secret,
-	); err != nil {
-		err = fmt.Errorf("cannot encode Auth NodePKI to secret: %w", err)
-		return
-	}
-
-	if err = state.EncodeCertKeyToSecret(
-		*ret.Distribution,
-		state.NodeDistributionCertSecretField,
-		state.NodeDistributionKeySecretField,
-		&secret,
-	); err != nil {
-		err = fmt.Errorf("cannot encode Distribution NodePKI to secret: %w", err)
-		return
-	}
-
-	if notFound {
-		secret.Name = key.Name
-		secret.Namespace = key.Namespace
-		secret.Type = state.NodePKISecretType
-
-		if err = nc.Client.Create(ctx, &secret); err != nil {
-			err = fmt.Errorf("cannot create k8s object: %w", err)
-			return
-		}
-
-		log.Info("New secret was created")
-	} else {
-		// Check than we're need to update secret
-		if !reflect.DeepEqual(secretOrig, secret) {
-			if err = nc.Client.Update(ctx, &secret); err != nil {
-				err = fmt.Errorf("cannot update k8s object: %w", err)
-				return
+	updated, err := ensureSecret(
+		ctx,
+		nc.Client,
+		state.NodePKISecretName(nodeName),
+		nc.Namespace,
+		func(ctx context.Context, secret *corev1.Secret, found bool) error {
+			valid := true
+			if found {
+				ret, valid = nc.loadNodePKIFromSecret(log, secret, &globalPKI, hosts)
 			}
 
-			if secretOrig.ResourceVersion != secret.ResourceVersion {
-				log.Info("Secret was updated")
+			if !found || !valid {
+				nc.logModuleWarning(
+					&log,
+					fmt.Sprintf("NodePKIGenerateNew: %v", nodeName),
+					"NodePKI secret is invalid, generating new",
+				)
+
+				ret, err = state.GenerateNodePKI(*globalPKI.CA, hosts)
+				if err != nil {
+					return fmt.Errorf("cannot generate new PKI: %w", err)
+				}
 			}
 
-		}
-	}
+			err = ret.EncodeSecret(secret)
+			if err != nil {
+				return fmt.Errorf("cannot encode NodePKI to secret: %w", err)
+			}
 
-	return
-}
-
-func (nc *nodeController) loadGlobalSecrets(ctx context.Context) (ret state.GlobalSecrets, err error) {
-	secret := corev1.Secret{}
-	key := types.NamespacedName{
-		Name:      state.GlobalSecretsName,
-		Namespace: nc.Namespace,
-	}
-
-	if err = nc.Client.Get(ctx, key, &secret); err != nil {
-		err = fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
-		return
-	}
-
-	ret.HttpSecret = string(secret.Data["http"])
-
-	if !ret.IsValid() {
-		err = fmt.Errorf("data is invalid")
-		return
-	}
-
-	return
-}
-
-func (nc *nodeController) loadNodePKIFromSecret(log logr.Logger, secret *corev1.Secret, globalPKI *state.GlobalPKI, hosts []string) (ret state.NodePKI, isValid bool) {
-	authPKI, err := state.DecodeCertKeyFromSecret(
-		state.NodeAuthCertSecretField,
-		state.NodeAuthKeySecretField,
-		secret,
+			return nil
+		},
 	)
 
 	if err != nil {
-		log.Error(err, "Cannot decode auth PKI")
+		err = fmt.Errorf("cannot ensure secret: %w", err)
+		return
+	}
+	if updated {
+		log.Info("Secret was updated")
+	}
+
+	return
+}
+
+func (nc *nodeController) loadNodePKIFromSecret(log logr.Logger, secret *corev1.Secret, globalPKI *state.GlobalPKI, hosts []string) (ret state.NodePKI, valid bool) {
+	err := ret.DecodeSecret(secret)
+	if err != nil {
+		log.Error(err, "Cannot decode Node PKI from secret")
 
 		nc.logModuleWarning(
 			&log,
-			"NodePKIAuthDecodeError",
-			fmt.Sprintf("NodePKI Auth decode error: %v", err),
+			"NodePKIDecodeError",
+			fmt.Sprintf("NodePKI decode error: %v", err),
 		)
 
 		return
 	}
-	ret.Auth = &authPKI
 
 	err = pki.ValidateCertWithCAChain(ret.Auth.Cert, globalPKI.CA.Cert)
 	if err != nil {
@@ -707,40 +604,6 @@ func (nc *nodeController) loadNodePKIFromSecret(log logr.Logger, secret *corev1.
 
 		return
 	}
-
-	for _, host := range hosts {
-		err = ret.Auth.Cert.VerifyHostname(host)
-		if err != nil {
-			log.Error(err, "Hostname not supported by Auth certificate", "hostName", host)
-
-			nc.logModuleWarning(
-				&log,
-				"NodePKIAuthCertHostUnsupported",
-				fmt.Sprintf("NodePKI Auth certificate not support hostname %v: %v", host, err),
-			)
-
-			return
-		}
-	}
-
-	distributionPKI, err := state.DecodeCertKeyFromSecret(
-		state.NodeDistributionCertSecretField,
-		state.NodeDistributionKeySecretField,
-		secret,
-	)
-
-	if err != nil {
-		log.Error(err, "Cannot decode Distribution PKI")
-
-		nc.logModuleWarning(
-			&log,
-			"NodePKIDistributionDecodeError",
-			fmt.Sprintf("NodePKI Distribution decode error: %v", err),
-		)
-
-		return
-	}
-	ret.Distribution = &distributionPKI
 
 	err = pki.ValidateCertWithCAChain(ret.Distribution.Cert, globalPKI.CA.Cert)
 	if err != nil {
@@ -756,10 +619,19 @@ func (nc *nodeController) loadNodePKIFromSecret(log logr.Logger, secret *corev1.
 	}
 
 	for _, host := range hosts {
+		err = ret.Auth.Cert.VerifyHostname(host)
+		if err != nil {
+			nc.logModuleWarning(
+				&log,
+				"NodePKIAuthCertHostUnsupported",
+				fmt.Sprintf("NodePKI Auth certificate not support hostname %v: %v", host, err),
+			)
+
+			return
+		}
+
 		err = ret.Distribution.Cert.VerifyHostname(host)
 		if err != nil {
-			log.Error(err, "Hostname not supported by distribution certificate", "hostName", host)
-
 			nc.logModuleWarning(
 				&log,
 				"NodePKIDistributionCertHostUnsupported",
@@ -770,7 +642,34 @@ func (nc *nodeController) loadNodePKIFromSecret(log logr.Logger, secret *corev1.
 		}
 	}
 
-	isValid = true
+	valid = true
+	return
+}
+
+func (nc *nodeController) loadGlobalSecrets(ctx context.Context) (ret state.GlobalSecrets, err error) {
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.GlobalSecretsName,
+		Namespace: nc.Namespace,
+	}
+
+	if err = nc.Client.Get(ctx, key, &secret); err != nil {
+		err = fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+		return
+	}
+
+	err = ret.DecodeSecret(&secret)
+	if err != nil {
+		err = fmt.Errorf("cannot decode from secret: %w", err)
+		return
+	}
+
+	err = ret.Validate()
+	if err != nil {
+		err = fmt.Errorf("valdiation error: %w", err)
+		return
+	}
+
 	return
 }
 
@@ -786,9 +685,11 @@ func (nc *nodeController) loadUserSecret(ctx context.Context, name string) (ret 
 		return
 	}
 
-	ret.UserName = string(secret.Data["name"])
-	ret.Password = string(secret.Data["password"])
-	ret.HashedPassword = string(secret.Data["passwordHash"])
+	err = ret.DecodeSecret(&secret)
+	if err != nil {
+		err = fmt.Errorf("cannot decode from secret: %w", err)
+		return
+	}
 
 	if !ret.IsValid() {
 		err = fmt.Errorf("user data is invalid")
@@ -815,32 +716,15 @@ func (nc *nodeController) loadGlobalPKI(ctx context.Context) (ret state.GlobalPK
 		return
 	}
 
-	caPKI, err := state.DecodeCertKeyFromSecret(
-		state.CACertSecretField,
-		state.CAKeySecretField,
-		&secret,
-	)
-
+	err = ret.DecodeSecret(&secret)
 	if err != nil {
-		err = fmt.Errorf("cannot decode CA PKI: %w", err)
+		err = fmt.Errorf("cannot decode PKI from secret: %w", err)
 		return
 	}
-	ret.CA = &caPKI
 
-	tokenPKI, err := state.DecodeCertKeyFromSecret(
-		state.TokenCertSecretField,
-		state.TokenKeySecretField,
-		&secret,
-	)
-
+	err = ret.Validate()
 	if err != nil {
-		err = fmt.Errorf("cannot decode Token PKI: %w", err)
-		return
-	}
-	ret.Token = &tokenPKI
-
-	if err = pki.ValidateCertWithCAChain(ret.Token.Cert, ret.CA.Cert); err != nil {
-		err = fmt.Errorf("certificate validation error for Token: %w", err)
+		err = fmt.Errorf("cannot validate PKI: %w", err)
 		return
 	}
 

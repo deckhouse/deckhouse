@@ -11,11 +11,9 @@ import (
 	"embeded-registry-manager/internal/utils/pki"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -173,371 +171,203 @@ func (sc *stateController) ensureGlobalSecrets(ctx context.Context) error {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsureGlobalSecrets")
 
-	secret := corev1.Secret{}
-	key := types.NamespacedName{
-		Name:      state.GlobalSecretsName,
-		Namespace: sc.Namespace,
-	}
-
-	err := sc.Client.Get(ctx, key, &secret)
-	if client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
-	}
-
-	// Making a copy unconditionally is a bit wasteful, since we don't
-	// always need to update the service. But, making an unconditional
-	// copy makes the code much easier to follow, and we have a GC for
-	// a reason.
-	secretOrig := secret.DeepCopy()
-
 	var actualValue state.GlobalSecrets
-	notFound := false
-	// Not found
+
+	updated, err := ensureSecret(
+		ctx,
+		sc.Client,
+		state.GlobalSecretsName,
+		sc.Namespace,
+		func(ctx context.Context, secret *corev1.Secret, found bool) error {
+			valid := true
+			if found {
+				if err := actualValue.DecodeSecret(secret); err != nil {
+					sc.logModuleWarning(
+						&log,
+						"GlobalSecretsDecodeError",
+						fmt.Sprintf("Cannot decode global secrets: %v", err),
+					)
+					valid = false
+				} else if err = actualValue.Validate(); err != nil {
+					sc.logModuleWarning(
+						&log,
+						"GlobalSecretsValidationError",
+						fmt.Sprintf("Global secrets validation error: %v", err),
+					)
+					valid = false
+				}
+			}
+
+			if !found || !valid {
+				sc.logModuleWarning(
+					&log,
+					"GlobalSecretsGenerateNew",
+					"Global secrets is invalid, generating new",
+				)
+
+				if randomValue, err := pki.GenerateRandomSecret(); err != nil {
+					return fmt.Errorf("cannot generate HTTP secret: %w", err)
+				} else {
+					actualValue.HttpSecret = randomValue
+				}
+			}
+
+			if err := actualValue.EncodeSecret(secret); err != nil {
+				return fmt.Errorf("cannot encode to secret: %w", err)
+			}
+			return nil
+		},
+	)
+
 	if err != nil {
-		notFound = true
-	} else {
-		actualValue.HttpSecret = string(secret.Data["http"])
+		return fmt.Errorf("cannot ensure secret: %w", err)
 	}
-
-	if notFound || !actualValue.IsValid() {
-		sc.logModuleWarning(
-			&log,
-			"NewGlobalSecretsGenerated",
-			"Global secrets is invalid, generating new",
-		)
-
-		actualValue.HttpSecret, err = pki.GenerateRandomSecret()
-		if err != nil {
-			return fmt.Errorf("cannot generate HTTP secret: %w", err)
-		}
-	}
-
-	// Set labels
-	if secret.Labels == nil {
-		secret.Labels = make(map[string]string)
-	}
-
-	secret.Labels[state.LabelModuleKey] = state.RegistryModuleName
-	secret.Labels[state.LabelHeritageKey] = state.LabelHeritageValue
-	secret.Labels[state.LabelManagedBy] = state.RegistryModuleName
-	secret.Labels[state.LabelTypeKey] = state.GlobalSecretsTypeLabel
-
-	// Set data
-	secret.Data = map[string][]byte{
-		"http": []byte(actualValue.HttpSecret),
-	}
-
-	if notFound {
-		secret.Name = key.Name
-		secret.Namespace = key.Namespace
-		secret.Type = state.GlobalSecretsType
-
-		if err = sc.Client.Create(ctx, &secret); err != nil {
-			return fmt.Errorf("cannot create k8s object: %w", err)
-		}
-
-		log.Info("New secret was created")
-	} else {
-		// Check than we're need to update secret
-		if !reflect.DeepEqual(secretOrig, secret) {
-			if err = sc.Client.Update(ctx, &secret); err != nil {
-				return fmt.Errorf("cannot update k8s object: %w", err)
-			}
-
-			if secretOrig.ResourceVersion != secret.ResourceVersion {
-				log.Info("Secret was updated")
-			}
-
-		}
+	if updated {
+		log.Info("Secret was updated")
 	}
 
 	return nil
 }
 
-func (sc *stateController) ensureUserSecret(ctx context.Context, name string, currentUser **state.User) error {
+func (sc *stateController) ensureUserSecret(ctx context.Context, name string, currentValue **state.User) error {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsureUserSecret", "name", name)
 
-	secret := corev1.Secret{}
-	key := types.NamespacedName{
-		Name:      name,
-		Namespace: sc.Namespace,
-	}
+	var actualValue state.User
 
-	err := sc.Client.Get(ctx, key, &secret)
-	if client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
-	}
+	updated, err := ensureSecret(
+		ctx,
+		sc.Client,
+		name,
+		sc.Namespace,
+		func(ctx context.Context, secret *corev1.Secret, found bool) error {
+			valid := true
+			if found {
+				if err := actualValue.DecodeSecret(secret); err != nil {
+					sc.logModuleWarning(
+						&log,
+						fmt.Sprintf("UserDecodeError: %v", name),
+						fmt.Sprintf("Cannot decode user data from secret: %v", err),
+					)
 
-	// Making a copy unconditionally is a bit wasteful, since we don't
-	// always need to update the service. But, making an unconditional
-	// copy makes the code much easier to follow, and we have a GC for
-	// a reason.
-	secretOrig := secret.DeepCopy()
+					valid = false
+				} else {
+					valid = actualValue.IsValid()
+				}
+			}
 
-	var actualUser state.User
-	notFound := false
+			if !found || !valid {
+				if currentValue != nil && *currentValue != nil {
+					sc.logModuleWarning(
+						&log,
+						fmt.Sprintf("UserSecretRestored: %v", name),
+						"Secret for user is invalid, restoring from controller's internal state",
+					)
 
-	// Not found
+					actualValue = **currentValue
+				} else {
+					sc.logModuleWarning(
+						&log,
+						fmt.Sprintf("UserSecretGenerateNew: %v", name),
+						"User is invalid, generating new",
+					)
+
+					actualValue.UserName = name
+					actualValue.GenerateNewPassword()
+				}
+			}
+
+			if !actualValue.IsPasswordHashValid() {
+				actualValue.UpdatePasswordHash()
+
+				sc.logModuleWarning(
+					&log,
+					fmt.Sprintf("UserPasswordHashUpdated: %v", name),
+					"Password hash updated to correspond password",
+				)
+			}
+
+			if err := actualValue.EncodeSecret(secret); err != nil {
+				return fmt.Errorf("cannot encode to secret: %w", err)
+			}
+			return nil
+		},
+	)
+
 	if err != nil {
-		notFound = true
-	} else {
-		actualUser.UserName = string(secret.Data["name"])
-		actualUser.Password = string(secret.Data["password"])
-		actualUser.HashedPassword = string(secret.Data["passwordHash"])
+		return fmt.Errorf("cannot ensure secret: %w", err)
 	}
-
-	if notFound || !actualUser.IsValid() {
-		if currentUser != nil && *currentUser != nil && (*currentUser).IsValid() {
-			if notFound {
-				sc.logModuleWarning(
-					&log,
-					fmt.Sprintf("NotFoundUserSecretRestored: %v", name),
-					"Secret for user not found, will restore from controller's internal state",
-				)
-			} else {
-				sc.logModuleWarning(
-					&log,
-					fmt.Sprintf("InvidUserSecretRestored: %v", name),
-					"Secret for user invalid, will restore from controller's internal state",
-				)
-			}
-
-			actualUser = **currentUser
-		} else {
-			sc.logModuleWarning(
-				&log,
-				fmt.Sprintf("NewUserSecretGenerated: %v", name),
-				"User is invalid, generating new",
-			)
-
-			actualUser.UserName = name
-			actualUser.GenerateNewPassword()
-		}
-	}
-
-	if !actualUser.IsPasswordHashValid() {
-		actualUser.UpdatePasswordHash()
-
-		sc.logModuleWarning(
-			&log,
-			fmt.Sprintf("UserPasswordHashUpdated: %v", name),
-			"Password hash updated to correspond password",
-		)
-	}
-
-	// Set labels
-	if secret.Labels == nil {
-		secret.Labels = make(map[string]string)
-	}
-
-	secret.Labels[state.LabelModuleKey] = state.RegistryModuleName
-	secret.Labels[state.LabelHeritageKey] = state.LabelHeritageValue
-	secret.Labels[state.LabelManagedBy] = state.RegistryModuleName
-	secret.Labels[state.LabelTypeKey] = state.UserSecretTypeLabel
-
-	// Set data
-	secret.Data = map[string][]byte{
-		"name":         []byte(actualUser.UserName),
-		"password":     []byte(actualUser.Password),
-		"passwordHash": []byte(actualUser.HashedPassword),
-	}
-
-	if notFound {
-		secret.Name = key.Name
-		secret.Namespace = key.Namespace
-		secret.Type = state.UserSecretType
-
-		if err = sc.Client.Create(ctx, &secret); err != nil {
-			return fmt.Errorf("cannot create k8s object: %w", err)
-		}
-
-		log.Info("New secret was created")
-	} else {
-		// Check than we're need to update secret
-		if !reflect.DeepEqual(secretOrig, secret) {
-			if err = sc.Client.Update(ctx, &secret); err != nil {
-				return fmt.Errorf("cannot update k8s object: %w", err)
-			}
-
-			if secretOrig.ResourceVersion != secret.ResourceVersion {
-				log.Info("Secret was updated")
-			}
-
-		}
+	if updated {
+		log.Info("Secret was updated")
 	}
 
 	// Save actual value
-	*currentUser = &actualUser
-
+	*currentValue = &actualValue
 	return nil
 }
 
-func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.GlobalPKI) error {
+func (sc *stateController) ensurePKI(ctx context.Context, currentValue **state.GlobalPKI) error {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsurePKI")
 
-	secret := corev1.Secret{}
-	key := types.NamespacedName{
-		Name:      state.PKISecretName,
-		Namespace: sc.Namespace,
-	}
+	var actualValue state.GlobalPKI
 
-	err := sc.Client.Get(ctx, key, &secret)
-	if client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
-	}
+	updated, err := ensureSecret(
+		ctx,
+		sc.Client,
+		state.PKISecretName,
+		sc.Namespace,
+		func(ctx context.Context, secret *corev1.Secret, found bool) error {
+			valid := true
+			if found {
+				if err := actualValue.DecodeSecret(secret); err != nil {
+					sc.logModuleWarning(
+						&log,
+						"PKIDecodeError",
+						fmt.Sprintf("PKI decode error: %v", err),
+					)
+					valid = false
+				} else if err = actualValue.Validate(); err != nil {
+					sc.logModuleWarning(
+						&log,
+						"PKIValidationError",
+						fmt.Sprintf("PKI validation error: %v", err),
+					)
+					valid = false
+				}
+			}
 
-	// Making a copy unconditionally is a bit wasteful, since we don't
-	// always need to update the service. But, making an unconditional
-	// copy makes the code much easier to follow, and we have a GC for
-	// a reason.
-	secretOrig := secret.DeepCopy()
+			if !found || !valid {
+				if currentValue != nil && *currentValue != nil {
+					sc.logModuleWarning(
+						&log,
+						"PKIInvalidRestored",
+						"PKI secret is invalid, restoring from controller's internal state",
+					)
 
-	var actualState state.GlobalPKI
-	notFound := false
-	isValid := true
+					actualValue = **currentValue
+				} else {
+					// PKI is invalid and we don't have some to restore
+					return errorPKIInvalid
+				}
+			}
+
+			if err := actualValue.EncodeSecret(secret); err != nil {
+				return fmt.Errorf("cannot encode to secret: %w", err)
+			}
+			return nil
+		},
+	)
 
 	if err != nil {
-		notFound = true
-	} else {
-		caPKI, err := state.DecodeCertKeyFromSecret(
-			state.CACertSecretField,
-			state.CAKeySecretField,
-			&secret,
-		)
-
-		if err != nil {
-			log.Error(err, "Cannot decode CA PKI")
-
-			sc.logModuleWarning(
-				&log,
-				"PKICADecodeError",
-				fmt.Sprintf("PKI CA decode error: %v", err),
-			)
-
-			isValid = false
-		} else {
-			actualState.CA = &caPKI
-		}
-
-		if isValid {
-			tokenPKI, err := state.DecodeCertKeyFromSecret(
-				state.TokenCertSecretField,
-				state.TokenKeySecretField,
-				&secret,
-			)
-
-			if err != nil {
-				log.Error(err, "Cannot decode Token PKI")
-
-				sc.logModuleWarning(
-					&log,
-					"PKITokenDecodeError",
-					fmt.Sprintf("PKI Token decode error: %v", err),
-				)
-
-				isValid = false
-			} else {
-				actualState.Token = &tokenPKI
-			}
-		}
-
-		if isValid {
-			err = pki.ValidateCertWithCAChain(actualState.Token.Cert, actualState.CA.Cert)
-			if err != nil {
-				log.Error(err, "Token certificate validation error")
-
-				sc.logModuleWarning(
-					&log,
-					"PKITokenCertValidationError",
-					fmt.Sprintf("PKI Token certificate validation error: %v", err),
-				)
-
-				isValid = false
-			}
-		}
+		return fmt.Errorf("cannot ensure secret: %w", err)
 	}
-
-	if notFound || !isValid {
-		if currentState != nil && *currentState != nil {
-			if notFound {
-				sc.logModuleWarning(
-					&log,
-					"PKINotfoundRestored",
-					"PKI secret not found, will restore from controller's internal state",
-				)
-			} else {
-				sc.logModuleWarning(
-					&log,
-					"PKIInvalidRestored",
-					"PKI secret invalid, so restored from controller's internal state",
-				)
-			}
-
-			actualState = **currentState
-		} else {
-			// PKI is invalid and we don't have some to restore
-			return errorPKIInvalid
-		}
-	}
-
-	// Set labels
-	if secret.Labels == nil {
-		secret.Labels = make(map[string]string)
-	}
-
-	secret.Labels[state.LabelModuleKey] = state.RegistryModuleName
-	secret.Labels[state.LabelHeritageKey] = state.LabelHeritageValue
-	secret.Labels[state.LabelManagedBy] = state.RegistryModuleName
-	secret.Labels[state.LabelTypeKey] = state.CASecretTypeLabel
-
-	secret.Data = make(map[string][]byte)
-	if err = state.EncodeCertKeyToSecret(
-		*actualState.CA,
-		state.CACertSecretField,
-		state.CAKeySecretField,
-		&secret,
-	); err != nil {
-		return fmt.Errorf("cannot encode CA PKI to secret: %w", err)
-	}
-
-	if err = state.EncodeCertKeyToSecret(
-		*actualState.Token,
-		state.TokenCertSecretField,
-		state.TokenKeySecretField,
-		&secret,
-	); err != nil {
-		return fmt.Errorf("cannot encode Token PKI to secret: %w", err)
-	}
-
-	if notFound {
-		secret.Name = key.Name
-		secret.Namespace = key.Namespace
-		secret.Type = state.CASecretType
-
-		if err = sc.Client.Create(ctx, &secret); err != nil {
-			return fmt.Errorf("cannot create k8s object: %w", err)
-		}
-
-		log.Info("New secret was created")
-	} else {
-		// Check than we're need to update secret
-		if !reflect.DeepEqual(secretOrig, secret) {
-			if err = sc.Client.Update(ctx, &secret); err != nil {
-				return fmt.Errorf("cannot update k8s object: %w", err)
-			}
-
-			if secretOrig.ResourceVersion != secret.ResourceVersion {
-				log.Info("Secret was updated")
-			}
-
-		}
+	if updated {
+		log.Info("Secret was updated")
 	}
 
 	// Save actual value
-	*currentState = &actualState
-
+	*currentValue = &actualValue
 	return nil
 }
 

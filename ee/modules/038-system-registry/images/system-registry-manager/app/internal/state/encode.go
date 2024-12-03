@@ -6,13 +6,19 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package state
 
 import (
-	"embeded-registry-manager/internal/utils/pki"
 	"fmt"
+
+	"embeded-registry-manager/internal/utils/pki"
 
 	corev1 "k8s.io/api/core/v1"
 )
 
-func DecodeCertKeyFromSecret(certField, keyField string, secret *corev1.Secret) (ret pki.CertKey, err error) {
+type encodeDecodeSecret interface {
+	DecodeSecret(secret *corev1.Secret) error
+	EncodeSecret(secret *corev1.Secret) error
+}
+
+func decodeCertKeyFromSecret(certField, keyField string, secret *corev1.Secret) (ret pki.CertKey, err error) {
 	if ret.Cert, err = pki.DecodeCertificate(secret.Data[certField]); err != nil {
 		err = fmt.Errorf("cannot decode certificate: %w", err)
 		return
@@ -33,7 +39,7 @@ func DecodeCertKeyFromSecret(certField, keyField string, secret *corev1.Secret) 
 	return
 }
 
-func EncodeCertKeyToSecret(value pki.CertKey, certField, keyField string, secret *corev1.Secret) error {
+func encodeCertKeyToSecret(value pki.CertKey, certField, keyField string, secret *corev1.Secret) error {
 	if secret == nil {
 		return fmt.Errorf("invalid secret")
 	}
@@ -49,4 +55,15 @@ func EncodeCertKeyToSecret(value pki.CertKey, certField, keyField string, secret
 	secret.Data[keyField] = keyBytes
 
 	return nil
+}
+
+func initSecretLabels(secret *corev1.Secret) {
+	// Set labels
+	if secret.Labels == nil {
+		secret.Labels = make(map[string]string)
+	}
+
+	secret.Labels[LabelModuleKey] = RegistryModuleName
+	secret.Labels[LabelHeritageKey] = LabelHeritageValue
+	secret.Labels[LabelManagedBy] = RegistryModuleName
 }

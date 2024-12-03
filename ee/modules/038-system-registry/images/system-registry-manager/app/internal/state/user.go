@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
+	corev1 "k8s.io/api/core/v1"
 
 	"embeded-registry-manager/internal/utils/pki"
 )
@@ -18,9 +19,11 @@ const (
 	UserROSecretName = "registry-user-ro"
 	UserRWSecretName = "registry-user-rw"
 
-	UserSecretType      = "system-registry/user"
-	UserSecretTypeLabel = "system-registry-user"
+	userSecretType      = "system-registry/user"
+	userSecretTypeLabel = "system-registry-user"
 )
+
+var _ encodeDecodeSecret = &User{}
 
 type User struct {
 	UserName       string
@@ -92,6 +95,37 @@ func (u *User) GenerateNewPassword() error {
 
 	u.Password = password
 	u.UpdatePasswordHash()
+
+	return nil
+}
+
+func (u *User) DecodeSecret(secret *corev1.Secret) error {
+	if secret == nil {
+		return ErrSecretIsNil
+	}
+
+	u.UserName = string(secret.Data["name"])
+	u.Password = string(secret.Data["password"])
+	u.HashedPassword = string(secret.Data["passwordHash"])
+
+	return nil
+}
+
+func (u *User) EncodeSecret(secret *corev1.Secret) error {
+	if secret == nil {
+		return ErrSecretIsNil
+	}
+
+	secret.Type = userSecretType
+
+	initSecretLabels(secret)
+	secret.Labels[LabelTypeKey] = userSecretTypeLabel
+
+	secret.Data = map[string][]byte{
+		"name":         []byte(u.UserName),
+		"password":     []byte(u.Password),
+		"passwordHash": []byte(u.HashedPassword),
+	}
 
 	return nil
 }

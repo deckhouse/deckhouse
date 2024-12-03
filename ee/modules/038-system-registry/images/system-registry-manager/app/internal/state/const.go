@@ -5,6 +5,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package state
 
+import "errors"
+
 const (
 	RegistryNamespace = "d8-system"
 
@@ -18,4 +20,10 @@ const (
 	LabelHeritageValue   = "deckhouse"
 	LabelNodeIsMasterKey = "node-role.kubernetes.io/master"
 	LabelManagedBy       = "app.kubernetes.io/managed-by"
+)
+
+var (
+	ErrSecretIsNil = errors.New("secret is nil")
+	ErrInvalid     = errors.New("data is invalid")
+	ErrIsNil       = errors.New("data is nil")
 )
