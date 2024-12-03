@@ -361,6 +361,23 @@ dhctl bootstrap \
 - Проверки для установки облачного кластера:
   - Конфигурация виртуальной машины мастер-узла удовлетворяет минимальным требованиям.
 
+{% offtopic title="Флаги пропусков проверок" %}
+  - preflight-skip-all-checks -- пропуск всех проверок.
+  - preflight-skip-ssh-forward-check -- пропуск проверки проброса по ssh.
+  - preflight-skip-availability-ports-check -- пропускает проверку доступности необходимых портов.
+  - preflight-skip-resolving-localhost-check -- пропуск проверки локального хоста.
+  - preflight-skip-deckhouse-version-check -- пропуск проверки версии Deckhouse.
+  - preflight-skip-registry-through-proxy -- пропуск проверки доступа к registry через прокси-сервер.
+  - preflight-skip-public-domain-template-check -- пропускает проверку шаблона public domain.
+  - preflight-skip-ssh-credentials-check  -- пропускает проверку учетных данных ssh-пользователя.
+  - preflight-skip-registry-credential -- пропускает проверку учетных данных registry.
+  - preflight-skip-containerd-exist -- пропускает проверку наличия containerd.
+  - preflight-skip-python-checks -- пропуск проверки установки Python.
+  - preflight-skip-sudo-allowed -- пропуск проверки наличия прав. 
+  - preflight-skip-system-requirements-check -- пропуск проверки системных требований.
+  - preflight-skip-one-ssh-host -- пропуск проверки количества ssh-host.
+{% endofftopic %}
+
 ### Откат установки
 
 При установке в поддерживаемом облаке в случае прерывания установки или возникновения проблем во время установки в облаке могут остаться созданные ресурсы. Для их удаления используйте команду `dhctl bootstrap-phase abort`, выполнив ее в контейнере инсталлятора.

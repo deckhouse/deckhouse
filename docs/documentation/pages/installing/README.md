@@ -360,6 +360,23 @@ List of checks performed by the installer before starting the installation of De
 - Checks for cloud cluster installation:
   - The master node virtual machine configuration meets the minimum requirements.
 
+{% offtopic title="Флаги пропусков проверок" %}
+  - preflight-skip-all-checks -- skip all preflight checks.
+  - preflight-skip-ssh-forward-check -- skip SSH forward preflight check.
+  - preflight-skip-availability-ports-check -- skip availability ports preflight check.
+  - preflight-skip-resolving-localhost-check -- skip resolving the localhost domain.
+  - preflight-skip-deckhouse-version-check -- skip verifying deckhouse version.
+  - preflight-skip-registry-through-proxy -- skipping the registry access check via a proxy server.
+  - preflight-skip-public-domain-template-check -- skip verifying PublicDomainTemplate check.
+  - preflight-skip-ssh-credentials-check  -- skip verifying ssh user credentials.
+  - preflight-skip-registry-credential -- skip verifying registry credentials.
+  - preflight-skip-containerd-exist -- skip verifying contanerd exist.
+  - preflight-skip-python-checks -- skip verifying python installation.
+  - preflight-skip-sudo-allowed -- skip verifying sudo is allowed for user.
+  - preflight-skip-system-requirements-check -- skip verifying system requirements.
+  - preflight-skip-one-ssh-host -- skip verifying one ssh-host parameters.
+{% endofftopic %}
+
 ### Aborting the installation
 
 If the installation was carried out in a supported cloud and was interrupted for any reason, or if problems occurred during the installation, resources that were created during the installation may end up residing in the cloud. To purge them, run the `dhctl bootstrap-phase abort` command in the installer container.
