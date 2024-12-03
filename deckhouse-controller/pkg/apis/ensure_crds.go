@@ -18,28 +18,24 @@ import (
 	"context"
 
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-var (
-	deprecatedCRDs = []string{
-		"externalmodulesources.deckhouse.io",
-		"externalmodulereleases.deckhouse.io",
-	}
-)
+var deprecatedCRDs = []string{
+	"externalmodulesources.deckhouse.io",
+	"externalmodulereleases.deckhouse.io",
+}
 
 type kubeClient interface {
-	kubernetes.Interface
 	Dynamic() dynamic.Interface
 	InvalidateDiscoveryCache()
 }
 
 // EnsureCRDs installs or update primary CRDs for deckhouse-controller
 func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
-	inst, err := ensure_crds.NewCRDsInstaller(client, crdsGlob)
+	inst, err := ensure_crds.NewCRDsInstaller(client.Dynamic(), crdsGlob)
 	if err != nil {
 		return err
 	}
