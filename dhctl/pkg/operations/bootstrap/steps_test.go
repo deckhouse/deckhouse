@@ -76,7 +76,7 @@ func TestNewRegistryClientConfigGetter(t *testing.T) {
 }
 
 func TestBootstrapGetNodesFromCache(t *testing.T) {
-	log.InitLogger("simple")
+	log.InitLogger("json")
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-bootstrap-*")
 	defer os.RemoveAll(dir)
 

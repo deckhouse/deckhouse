@@ -28,7 +28,7 @@ import (
 )
 
 func TestDeleteMachinesIfResourcesExist(t *testing.T) {
-	log.InitLogger("simple")
+	log.InitLogger("json")
 
 	t.Run("Without sap API registration", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
@@ -104,7 +104,7 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 }
 
 func TestDeletePods(t *testing.T) {
-	log.InitLogger("simple")
+	log.InitLogger("json")
 
 	t.Run("Without pods", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
