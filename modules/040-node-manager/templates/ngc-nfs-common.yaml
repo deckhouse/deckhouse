@@ -28,3 +28,4 @@ spec:
       altlinux)                 bb-apt-rpm-install nfs-utils ;;
       centos|redos|rosa)        bb-yum-install nfs-utils ;;
     esac
+

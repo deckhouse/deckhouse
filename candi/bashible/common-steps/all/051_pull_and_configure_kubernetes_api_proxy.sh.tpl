@@ -14,6 +14,8 @@
 
 mkdir -p /etc/kubernetes/manifests
 
+bb-set-proxy
+
 if crictl version >/dev/null 2>/dev/null; then
   crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubernetesApiProxy") }}
 fi
@@ -65,3 +67,5 @@ spec:
   - name: tmp
     emptyDir: {}
 EOF
+
+bb-unset-proxy
