@@ -1,5 +1,5 @@
 module: observability 
-namespace: d8-monitoring
+namespace: d8-observability
 scopes:
   - observability
 crds:

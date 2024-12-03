@@ -18,7 +18,7 @@ shell:
   install:
     - cd /src/images/label-proxy
     - go mod download
-  setup:
+  beforeSetup:
     - cd /src/images/label-proxy
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o label-proxy ./cmd/label-proxy
 ---
