@@ -28,8 +28,9 @@ git:
       - '**/*'
 shell:
   install:
-    - apk update && apk add gettext-dev
+    - apk update && apk add --no-cache openssh-client gettext-dev
   setup:
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/util-linux/util-linux.git  /src
     - cd /src
     - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s" 

@@ -16,6 +16,7 @@ artifact: {{ $.ModuleName }}/llvm-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 shell:
   beforeInstall:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - cd /src/llvm
   - git config --global user.email "builder@deckhouse.io"

@@ -14,11 +14,14 @@ git:
     install:
     - '**/*.patch'
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - mkdir -p /usr/src/app
   - cd /usr/src/app
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana.git .
-  - find /patches -name '*.patch' -exec git apply {} \;
+  - git apply /patches/*.patch --verbose
   - git clone --depth 1 --branch v{{ $grafanaVersion }} {{ $.SOURCE_REPO }}/grafana/grafana-deps.git /grafana-deps
   - rm -rf .yarn
   - mv /grafana-deps/.yarn .
@@ -133,6 +136,10 @@ git:
     install:
     - '**/*'
 shell:
+  beforeInstall:
+  - apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - git clone --depth 1 {{ $.SOURCE_REPO }}/grafana/grafana-plugins.git /grafana-plugins
   - |

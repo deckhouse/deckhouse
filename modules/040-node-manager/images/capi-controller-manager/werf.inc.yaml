@@ -14,9 +14,12 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - mkdir /src
   - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cluster-api.git /src
   - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make managers LDFLAGS="-s -w -extldflags \"-static\""

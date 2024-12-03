@@ -130,7 +130,7 @@ spec:
   version: 1
   enabled: true
   settings:
-    allowedBundles: ["ubuntu-lts"]
+    earlyOomEnabled: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

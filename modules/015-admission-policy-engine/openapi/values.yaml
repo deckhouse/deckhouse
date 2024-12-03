@@ -130,3 +130,31 @@ properties:
           type: string
         description: |
           Configuration for trivy. Fetched from the trivy config map.
+      ratify:
+        type: object
+        default: {}
+        properties:
+          imageReferences:
+            type: array
+            items:
+              type: object
+              properties:
+                reference:
+                  type: string
+                publicKeys:
+                  type: array
+                  items:
+                    type: string
+          webhook:
+            type: object
+            default: {}
+            properties:
+              crt:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+              key:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+              ca:
+                type: string
+                x-examples: ["YjY0ZW5jX3N0cmluZwo="]

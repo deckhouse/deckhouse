@@ -29,6 +29,7 @@ git:
 shell:
   setup:
     - apt-get update && apt-get install yodl -y
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b tag-{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/socat.git src
     - cd /src
     - autoconf

@@ -13,6 +13,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
@@ -20,7 +23,7 @@ shell:
   - mkdir -p /go/src/github.com/cilium/cilium
   - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   - cd /go/src/github.com/cilium/cilium
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - git apply /patches/*.patch --verbose
   - go mod tidy && go mod vendor && go mod verify
   - cd /go/src/github.com/cilium/cilium/hubble-relay
   - make
