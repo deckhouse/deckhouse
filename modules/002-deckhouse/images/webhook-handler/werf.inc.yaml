@@ -44,12 +44,26 @@ git:
   - 'modules/*/webhooks/'
   - 'ee/modules/*/webhooks/'
 # - 'ee/fe/modules/*/webhooks/'
+  excludePaths:
+    - '**/*_test.py'
+  stageDependencies:
+    install:
+      - '**/*'
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/entrypoint.sh
   to: /entrypoint.sh
+  stageDependencies:
+    install:
+      - '**/*'
 - add: /{{ .ModulePath }}shell_lib/semver.sh
   to: /{{ .ModulePath }}frameworks/shell/semver.sh
+  stageDependencies:
+    install:
+      - '**/*'
 - add: /{{ .ModulePath }}python_lib
   to: /frameworks/python
+  stageDependencies:
+    install:
+      - '**/*'
 docker:
   ENV:
     PYTHONPATH: /frameworks/python
@@ -87,7 +101,14 @@ shell:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_P11 }}
+git:
+- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/requirements.txt
+  to: /requirements.txt
+  stageDependencies:
+    install:
+      - '**/*'
 shell:
-  beforeInstall:
+  install:
     - apt-get update
-    - apt-get install -y python3
+    - apt-get install -y python3 python3-module-pip-run
+    - pip3 install -r /requirements.txt
