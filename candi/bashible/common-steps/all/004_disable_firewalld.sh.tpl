@@ -12,21 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-event-on 'bb-sync-file-changed' '_on_rsyslog_config_changed'
-_on_rsyslog_config_changed() {
-  systemctl restart rsyslog
-}
-
-if ! systemctl -q is-enabled rsyslog 2>/dev/null; then
+# exit if unit doesn't exist
+if ! systemctl list-unit-files firewalld  > /dev/null 2>&1; then
   exit 0
 fi
 
-if [ -d /etc/rsyslog.d ]; then
-  bb-sync-file /etc/rsyslog.d/10-kubelet.conf - <<END
-:programname,isequal, "kubelet" ~
-END
+if systemctl is-active -q firewalld; then
+  systemctl stop firewalld
+fi
 
-  bb-sync-file /etc/rsyslog.d/10-dockerd.conf - <<END
-:programname,isequal, "dockerd" ~
-END
+if systemctl is-enabled -q firewalld; then
+  systemctl disable firewalld
+  systemctl mask firewalld
 fi

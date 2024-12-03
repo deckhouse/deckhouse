@@ -381,6 +381,10 @@ properties:
           - "ubuntu-lts"
           - "centos"
           - "debian"
+          - "redos"
+          - "rosa"
+          - "astra"
+          - "altlinux"
           - "opensuse"
         items:
           type: string

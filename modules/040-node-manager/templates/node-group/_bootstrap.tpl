@@ -54,7 +54,7 @@ EOF
 }
 
 function get_phase2() {
-  bootstrap_ng_name="common.{{ $ng.name }}"
+  bootstrap_ng_name="{{ $ng.name }}"
   token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   check_python
   while true; do

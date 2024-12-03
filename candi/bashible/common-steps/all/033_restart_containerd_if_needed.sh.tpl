@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,21 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-event-on 'bb-sync-file-changed' '_on_rsyslog_config_changed'
-_on_rsyslog_config_changed() {
-  systemctl restart rsyslog
-}
-
-if ! systemctl -q is-enabled rsyslog 2>/dev/null; then
-  exit 0
+{{- if eq .cri "Containerd" }}
+if bb-flag? containerd-need-restart; then
+  bb-log-warning "'containerd-need-restart' flag was set, restarting containerd."
+  if out=$(containerd config dump 2>&1); then
+      systemctl restart containerd-deckhouse.service
+  else
+      bb-log-error "'containerd config dump' return error: $out"
+      exit 1
+  fi
+  bb-flag-set kubelet-need-restart
+  bb-flag-unset containerd-need-restart
 fi
-
-if [ -d /etc/rsyslog.d ]; then
-  bb-sync-file /etc/rsyslog.d/10-kubelet.conf - <<END
-:programname,isequal, "kubelet" ~
-END
-
-  bb-sync-file /etc/rsyslog.d/10-dockerd.conf - <<END
-:programname,isequal, "dockerd" ~
-END
-fi
+{{- end }}
