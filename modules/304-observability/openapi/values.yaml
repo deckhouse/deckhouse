@@ -1,3 +1,14 @@
 x-extend:
   schema: config-values.yaml
 type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      prometheus:
+        type: object
+        default: {}
+        properties:
+          token:
+            type: string
