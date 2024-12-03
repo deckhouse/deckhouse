@@ -1,4 +1,4 @@
-{{- define "node_exporter_resources" }}
+{{- define "chrony_exporter_resources" }}
 cpu: 10m
 memory: 25Mi
 {{- end }}
@@ -26,7 +26,7 @@ spec:
     containerPolicies:
     - containerName: chrony-exporter
       minAllowed:
-        {{- include "node_exporter_resources" . | nindent 8 }}
+        {{- include "chrony_exporter_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 20m
         memory: 50Mi
@@ -52,8 +52,6 @@ spec:
       labels:
         app: chrony-exporter
       name: chrony-exporter
-      annotations:
-        container.apparmor.security.beta.kubernetes.io/chrony-exporter: "unconfined"
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -61,11 +59,11 @@ spec:
       serviceAccountName: chrony-exporter
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list . "chronyExporter") }}
         name: chrony-exporter
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "SYS_TIME")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         args:
         - '--web.listen-address=127.0.0.1:9123'
         - '--chrony.address=$(HOST_IP):4234'
@@ -83,7 +81,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "node_exporter_resources" . | nindent 12 }}
+            {{- include "chrony_exporter_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
