@@ -15,6 +15,7 @@
 package mirror
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,7 +49,7 @@ type imageBundleUnpackInfo struct {
 	err  error
 }
 
-func UnpackAndValidateImgBundle(imgBundlePath string) (string, error) {
+func UnpackAndValidateImgBundle(ctx context.Context, imgBundlePath string) (string, error) {
 	logger := Logger{}
 
 	imgBundleUnpackMu.Lock()
@@ -59,7 +60,7 @@ func UnpackAndValidateImgBundle(imgBundlePath string) (string, error) {
 		return unpackInfo.path, unpackInfo.err
 	}
 
-	unpackPath, unpackErr := unpackAndValidateImgBundle(imgBundlePath)
+	unpackPath, unpackErr := unpackAndValidateImgBundle(ctx, imgBundlePath)
 	imgBundleUnpackInfo[imgBundlePath] = imageBundleUnpackInfo{
 		path: unpackPath,
 		err:  unpackErr,
@@ -68,10 +69,10 @@ func UnpackAndValidateImgBundle(imgBundlePath string) (string, error) {
 	return unpackPath, unpackErr
 }
 
-func unpackAndValidateImgBundle(imgBundlePath string) (string, error) {
+func unpackAndValidateImgBundle(ctx context.Context, imgBundlePath string) (string, error) {
 	logger := Logger{}
 
-	unpackPath, err := unpackImgBundle(imgBundlePath)
+	unpackPath, err := unpackImgBundle(ctx, imgBundlePath)
 	if err != nil {
 		return unpackPath, fmt.Errorf("failed to unpack img bundle: %w", err)
 	}
@@ -94,7 +95,7 @@ func unpackAndValidateImgBundle(imgBundlePath string) (string, error) {
 	return unpackPath, nil
 }
 
-func unpackImgBundle(imgBundlePath string) (string, error) {
+func unpackImgBundle(ctx context.Context, imgBundlePath string) (string, error) {
 	logger := Logger{}
 
 	if filepath.Ext(imgBundlePath) != imgBundleExt {
@@ -104,7 +105,8 @@ func unpackImgBundle(imgBundlePath string) (string, error) {
 	unpackedImagesPath := filepath.Join(app.TmpDirName, "img_bundles", time.Now().Format(imgBundleUnpackFormat))
 
 	err := logger.Process("Unpacking Deckhouse bundle", func() error {
-		return libmirrorBundle.Unpack(
+		return libmirrorBundle.UnpackContext(
+			ctx,
 			&libmirrorCtx.BaseContext{
 				BundlePath:         imgBundlePath,
 				UnpackedImagesPath: unpackedImagesPath,

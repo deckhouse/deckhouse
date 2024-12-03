@@ -416,24 +416,12 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 		}
 	}
 
-	// TODO: Debug code, remove before release
-	// for i := 0; i < 30; i += 5 {
-	// 	log.WarnF("Sleeping before images push: %v/30\n", i+5)
-
-	// 	select {
-	// 	case <-ctx.Done():
-	// 		return context.Cause(ctx)
-	// 	case <-time.After(5 * time.Second):
-	// 	}
-	// }
-	// TODO: End of debug code
-
 	if err := context.Cause(ctx); err != nil {
 		return err
 	}
 
 	log.InfoLn("Unpacking and validating images bundle")
-	unpackedBundlePath, err := mirror.UnpackAndValidateImgBundle(registryData.ImagesBundlePath)
+	unpackedBundlePath, err := mirror.UnpackAndValidateImgBundle(ctx, registryData.ImagesBundlePath)
 	if err != nil {
 		return fmt.Errorf("cannot unpack and validate images bundle: %w", err)
 	}
@@ -459,13 +447,7 @@ func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.In
 	}
 
 	log.InfoLn("Pushing images to registry")
-
-	// TODO: Debug code, remove before release
-	// log.WarnLn("Not really pushing will made, just crash")
-	// return errors.New("image push error for debugging")
-	// TODO: End of debug code
-
-	return mirror.Push(&pushCtx)
+	return mirror.Push(ctx, &pushCtx)
 }
 
 func removeSystemRegistryLockFile(ctx context.Context, nodeInterface node.Interface) error {
@@ -580,6 +562,7 @@ func StartRegistryPackagesProxy(registryCfg config.Registry, clusterDomain strin
 		}
 	case config.DetachedModeRegistryData:
 		unpackedImagesPath, err := mirror.UnpackAndValidateImgBundle(
+			context.Background(),
 			registryCfg.ModeSpecificFields.(config.DetachedModeRegistryData).ImagesBundlePath,
 		)
 		if err != nil {

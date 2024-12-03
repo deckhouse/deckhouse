@@ -15,14 +15,16 @@
 package mirror
 
 import (
+	"context"
+
 	libmirrorCtx "github.com/deckhouse/deckhouse-cli/pkg/libmirror/contexts"
 	libmirrorOperations "github.com/deckhouse/deckhouse-cli/pkg/libmirror/operations"
 )
 
-func Push(mirrorCtx *libmirrorCtx.PushContext) error {
+func Push(ctx context.Context, mirrorCtx *libmirrorCtx.PushContext) error {
 	logger := Logger{}
 
 	return logger.Process("Push Deckhouse images to registry", func() error {
-		return libmirrorOperations.PushDeckhouseToRegistry(mirrorCtx)
+		return libmirrorOperations.PushDeckhouseToRegistryContext(ctx, mirrorCtx)
 	})
 }
