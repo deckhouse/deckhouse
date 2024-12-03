@@ -40,7 +40,8 @@ type stateController struct {
 	userRO    *state.User
 	userRW    *state.User
 	globalPKI *state.GlobalPKI
-	stateOK   bool
+
+	stateOK bool
 }
 
 func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
@@ -60,8 +61,8 @@ func (sc *stateController) SetupWithManager(ctx context.Context, mgr ctrl.Manage
 		}
 
 		name := obj.GetName()
-
-		return name == state.PKISecretName || name == state.UserROSecretName || name == state.UserRWSecretName
+		return name == state.PKISecretName || name == state.GlobalSecretsName ||
+			name == state.UserROSecretName || name == state.UserRWSecretName
 	})
 
 	secretsHandler := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -150,6 +151,11 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		return
 	}
 
+	if err = sc.ensureGlobalSecrets(ctx); err != nil {
+		err = fmt.Errorf("cannot ensure global secrets: %w", err)
+		return
+	}
+
 	if !sc.stateOK {
 		sc.stateOK = true
 
@@ -163,6 +169,91 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 	return
 }
 
+func (sc *stateController) ensureGlobalSecrets(ctx context.Context) error {
+	log := ctrl.LoggerFrom(ctx).
+		WithValues("action", "EnsureGlobalSecrets")
+
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.GlobalSecretsName,
+		Namespace: sc.Namespace,
+	}
+
+	err := sc.Client.Get(ctx, key, &secret)
+	if client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+	}
+
+	// Making a copy unconditionally is a bit wasteful, since we don't
+	// always need to update the service. But, making an unconditional
+	// copy makes the code much easier to follow, and we have a GC for
+	// a reason.
+	secretOrig := secret.DeepCopy()
+
+	var actualValue state.GlobalSecrets
+	notFound := false
+	// Not found
+	if err != nil {
+		notFound = true
+	} else {
+		actualValue.HttpSecret = string(secret.Data["http"])
+	}
+
+	if notFound || !actualValue.IsValid() {
+		sc.logModuleWarning(
+			&log,
+			"NewGlobalSecretsGenerated",
+			"Global secrets is invalid, generating new",
+		)
+
+		actualValue.HttpSecret, err = pki.GenerateRandomSecret()
+		if err != nil {
+			return fmt.Errorf("cannot generate HTTP secret: %w", err)
+		}
+	}
+
+	// Set labels
+	if secret.Labels == nil {
+		secret.Labels = make(map[string]string)
+	}
+
+	secret.Labels[state.LabelModuleKey] = state.RegistryModuleName
+	secret.Labels[state.LabelHeritageKey] = state.LabelHeritageValue
+	secret.Labels[state.LabelManagedBy] = state.RegistryModuleName
+	secret.Labels[state.LabelTypeKey] = state.GlobalSecretsTypeLabel
+
+	// Set data
+	secret.Data = map[string][]byte{
+		"http": []byte(actualValue.HttpSecret),
+	}
+
+	if notFound {
+		secret.Name = key.Name
+		secret.Namespace = key.Namespace
+		secret.Type = state.GlobalSecretsType
+
+		if err = sc.Client.Create(ctx, &secret); err != nil {
+			return fmt.Errorf("cannot create k8s object: %w", err)
+		}
+
+		log.Info("New secret was created")
+	} else {
+		// Check than we're need to update secret
+		if !reflect.DeepEqual(secretOrig, secret) {
+			if err = sc.Client.Update(ctx, &secret); err != nil {
+				return fmt.Errorf("cannot update k8s object: %w", err)
+			}
+
+			if secretOrig.ResourceVersion != secret.ResourceVersion {
+				log.Info("Secret was updated")
+			}
+
+		}
+	}
+
+	return nil
+}
+
 func (sc *stateController) ensureUserSecret(ctx context.Context, name string, currentUser **state.User) error {
 	log := ctrl.LoggerFrom(ctx).
 		WithValues("action", "EnsureUserSecret", "name", name)
@@ -174,9 +265,8 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 	}
 
 	err := sc.Client.Get(ctx, key, &secret)
-
 	if client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("cannot get secret %v k8s object: %w", name, err)
+		return fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
 	}
 
 	// Making a copy unconditionally is a bit wasteful, since we don't
@@ -198,7 +288,7 @@ func (sc *stateController) ensureUserSecret(ctx context.Context, name string, cu
 	}
 
 	if notFound || !actualUser.IsValid() {
-		if *currentUser != nil && (*currentUser).IsValid() {
+		if currentUser != nil && *currentUser != nil && (*currentUser).IsValid() {
 			if notFound {
 				sc.logModuleWarning(
 					&log,
@@ -294,7 +384,6 @@ func (sc *stateController) ensurePKI(ctx context.Context, currentState **state.G
 	}
 
 	err := sc.Client.Get(ctx, key, &secret)
-
 	if client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
 	}

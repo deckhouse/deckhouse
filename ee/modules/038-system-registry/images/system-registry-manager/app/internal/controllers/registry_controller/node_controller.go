@@ -36,7 +36,6 @@ import (
 
 const (
 	staticPodURLFormat = "https://%s:4577/staticpod"
-	registryHttpSecret = "http-secret"
 )
 
 var (
@@ -149,7 +148,8 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 		}
 
 		name := obj.GetName()
-		return name == state.PKISecretName || name == state.UserROSecretName || name == state.UserRWSecretName
+		return name == state.PKISecretName || name == state.GlobalSecretsName ||
+			name == state.UserROSecretName || name == state.UserRWSecretName
 	})
 
 	staticPodManagerPredicate := predicate.NewPredicateFuncs(func(obj client.Object) bool {
@@ -317,6 +317,12 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
+	globalSecrets, err := nc.loadGlobalSecrets(ctx)
+	if err != nil {
+		err = fmt.Errorf("cannot load global secrets: %w", err)
+		return
+	}
+
 	globalPKI, err := nc.loadGlobalPKI(ctx)
 	if err != nil {
 		err = fmt.Errorf("cannot load global PKI: %w", err)
@@ -344,6 +350,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		userRO,
 		userRW,
 		globalPKI,
+		globalSecrets,
 		nodePKI,
 	)
 
@@ -392,7 +399,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 	return
 }
 
-func (nc *nodeController) contructStaticPodConfig(moduleConfig state.ModuleConfig, userRO, userRW state.User, globalPKI state.GlobalPKI, nodePKI state.NodePKI) (config staticpod.Config, err error) {
+func (nc *nodeController) contructStaticPodConfig(moduleConfig state.ModuleConfig, userRO, userRW state.User, globalPKI state.GlobalPKI, globalSecrets state.GlobalSecrets, nodePKI state.NodePKI) (config staticpod.Config, err error) {
 	tokenKey, err := pki.EncodePrivateKey(globalPKI.Token.Key)
 	if err != nil {
 		err = fmt.Errorf("cannot encode Token key: %w", err)
@@ -420,7 +427,7 @@ func (nc *nodeController) contructStaticPodConfig(moduleConfig state.ModuleConfi
 		},
 		Registry: staticpod.RegistryConfig{
 			Mode:       staticpod.RegistryMode(moduleConfig.Settings.Mode),
-			HttpSecret: registryHttpSecret,
+			HttpSecret: globalSecrets.HttpSecret,
 			UserRO: staticpod.User{
 				Name:         userRO.UserName,
 				PasswordHash: userRO.HashedPassword,
@@ -641,6 +648,28 @@ func (nc *nodeController) ensureNodePKI(ctx context.Context, nodeName, nodeAddre
 			}
 
 		}
+	}
+
+	return
+}
+
+func (nc *nodeController) loadGlobalSecrets(ctx context.Context) (ret state.GlobalSecrets, err error) {
+	secret := corev1.Secret{}
+	key := types.NamespacedName{
+		Name:      state.GlobalSecretsName,
+		Namespace: nc.Namespace,
+	}
+
+	if err = nc.Client.Get(ctx, key, &secret); err != nil {
+		err = fmt.Errorf("cannot get secret %v k8s object: %w", key.Name, err)
+		return
+	}
+
+	ret.HttpSecret = string(secret.Data["http"])
+
+	if !ret.IsValid() {
+		err = fmt.Errorf("data is invalid")
+		return
 	}
 
 	return

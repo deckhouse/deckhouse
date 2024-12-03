@@ -6,18 +6,15 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package state
 
 import (
-	"crypto/rand"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"embeded-registry-manager/internal/utils/pki"
 )
 
 const (
-	userPasswordLength  = 16
-	userPasswordCharset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
 	UserROSecretName = "registry-user-ro"
 	UserRWSecretName = "registry-user-rw"
 
@@ -88,19 +85,12 @@ func (u *User) UpdatePasswordHash() error {
 }
 
 func (u *User) GenerateNewPassword() error {
-	password := make([]byte, userPasswordLength)
-	charsetLength := big.NewInt(int64(len(userPasswordCharset)))
-
-	for i := range password {
-		index, err := rand.Int(rand.Reader, charsetLength)
-		if err != nil {
-			return fmt.Errorf("random error: %w", err)
-		}
-		password[i] = userPasswordCharset[index.Int64()]
+	password, err := pki.GenerateUserPassword()
+	if err != nil {
+		return err
 	}
 
-	u.Password = string(password)
-
+	u.Password = password
 	u.UpdatePasswordHash()
 
 	return nil
