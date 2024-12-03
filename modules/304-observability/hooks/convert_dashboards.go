@@ -92,11 +92,12 @@ func convertDashboards(input *go_hook.HookInput) error {
 	legacyDashboardsSnap := input.Snapshots["legacy_dashboards"]
 
 	for _, snap := range legacyDashboardsSnap {
-		legacyDasboard := snap.(*LegacyDashboard)
-		newDashboard := createDashboard(legacyDasboard.Name, dashboardKindByName(legacyDasboard.Name), legacyDasboard.Definition)
-		input.PatchCollector.Create(&newDashboard, object_patch.UpdateIfExists())
+		dash := snap.(*LegacyDashboard)
+		input.PatchCollector.Create(
+			dashboardManifest(dash.Name, dashboardKindByName(dash.Name), dash.Definition),
+			object_patch.UpdateIfExists())
 
-		dashboards[legacyDasboard.Name] = true
+		dashboards[dash.Name] = true
 	}
 
 	clusterObservabilityDashboardsSnap := input.Snapshots["cluster_observability_dashboards"]
@@ -156,7 +157,7 @@ func dashboardKindByName(name string) string {
 	return ClusterDashboardKind
 }
 
-func createDashboard(name string, kind string, definition string) unstructured.Unstructured {
+func dashboardManifest(name string, kind string, definition string) unstructured.Unstructured {
 	un := unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "observability.deckhouse.io/v1alpha1",
 		"kind":       kind,

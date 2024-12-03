@@ -1,0 +1,34 @@
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+from: {{ $.Images.BASE_GOLANG_21_BULLSEYE_DEV }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+git:
+  - url: {{ $.OBSERVABILITY_SOURCE_REPO }}/observability.git
+    to: /src
+    commit: e3622cc8d3d23a25473562910b6b7215e8bbb4e8
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+      beforeSetup:
+        - '**/*.go'
+shell:
+  install:
+    - cd /src/images/label-proxy
+    - go mod download
+  setup:
+    - cd /src/images/label-proxy
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o label-proxy ./cmd/label-proxy
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-builder
+    add: /src/images/label-proxy/label-proxy
+    to: /usr/bin/label-proxy
+    before: install
+docker:
+  ENTRYPOINT:
+    - /usr/bin/label-proxy
