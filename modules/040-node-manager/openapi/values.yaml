@@ -63,9 +63,7 @@ properties:
 
       systemRegistry:
         type: object
-        default:
-          dataDevices: []
-          addresses: []
+        default: { }
         properties:
           dataDevices:
             type: array
