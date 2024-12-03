@@ -192,6 +192,9 @@ spec:
                           publicKeys:
                             description: |
                               Список публичных ключей Cosign.
+                          registryCAs:
+                            description: |
+                              Список пользовательских сертификатов `certificate authority` для подключения к хранилищу образов контейнеров.
                           reference:
                             description: |
                               Адрес или шаблон адресов образов контейнеров.
