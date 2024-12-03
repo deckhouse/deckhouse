@@ -28,4 +28,4 @@ Note that the task list may be different in future KESL versions.
 
 Ensure that your Kubernetes nodes meet the minimum resource requirements specified for [DKP](https://deckhouse.io/products/kubernetes-platform/guides/production.html#resource-requirements) and [KESL](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/197642.htm).
 
-If KESL and Deckhouse are run together, you may be required to do some performance tuning as per [Kaspersky recommendations](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/206054.htm).
+If KESL and DKP are run together, you may be required to do some performance tuning as per [Kaspersky recommendations](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/206054.htm).
