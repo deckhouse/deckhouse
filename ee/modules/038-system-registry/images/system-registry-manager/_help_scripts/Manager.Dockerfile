@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.22-bookworm AS builder
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS builder
 
 ARG BUILD_TAGS=log_plain
 
@@ -48,8 +48,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 # Copy binary and dlv into new container
 #FROM --platform=linux/amd64 scratch
-FROM --platform=linux/amd64 ubuntu:22.04
-RUN apt-get -y update && apt-get -y install iproute2 curl vim
+FROM --platform=linux/amd64 alpine:3.20
+RUN apk add --no-cache iproute2 curl vim bash
 ENV MANAGER_PATH_FROM=./ee/modules/038-system-registry/images/system-registry-manager
 COPY --from=builder /tmp-tmp /tmp
 COPY --from=builder /manager /manager
