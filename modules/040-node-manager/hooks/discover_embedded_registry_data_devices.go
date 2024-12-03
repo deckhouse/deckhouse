@@ -70,13 +70,15 @@ func filterRegistryDataDevicesSecret(obj *unstructured.Unstructured) (go_hook.Fi
 func handleRegistryDataDevicesSecret(input *go_hook.HookInput) error {
 	secretData := input.Snapshots["embedded_registry_data_devices_secret"]
 	if len(secretData) == 0 {
-		if input.Values.Exists("nodeManager.internal.systemRegistry.dataDevices") {
-			input.Values.Remove("nodeManager.internal.systemRegistry.dataDevices")
-		}
+		input.Values.Set("nodeManager.internal.systemRegistry.dataDevices", []EmbeddedRegistryDataDevice{})
 		return nil
 	}
 
 	secretDataStructured := secretData[0].(map[string][]byte)
+	if len(secretDataStructured) == 0 {
+		input.Values.Set("nodeManager.internal.systemRegistry.dataDevices", []EmbeddedRegistryDataDevice{})
+		return nil
+	}
 
 	dataDevices := make([]EmbeddedRegistryDataDevice, 0, len(secretDataStructured))
 
