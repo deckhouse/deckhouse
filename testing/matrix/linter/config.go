@@ -43,7 +43,7 @@ type FileController struct {
 	Module utils.Module
 	Prefix string
 	TmpDir string
-	Queue  *deque.Deque
+	Queue  *deque.Deque[any]
 }
 
 type Node struct {
@@ -73,7 +73,7 @@ func LoadConfiguration(m utils.Module, path, prefix, dir string) (FileController
 		return FileController{}, fmt.Errorf("configuration unmarshalling error: %v", err)
 	}
 
-	filesQueue := deque.Deque{}
+	filesQueue := deque.Deque[any]{}
 	filesQueue.PushBack(result)
 
 	if prefix == "" {
@@ -99,7 +99,7 @@ func LoadConfiguration(m utils.Module, path, prefix, dir string) (FileController
 }
 
 func findVariations(nodeData interface{}) ([]interface{}, []interface{}) {
-	queue := deque.Deque{}
+	queue := deque.Deque[any]{}
 	queue.PushBack(NewNode(nodeData))
 
 	for queue.Len() > 0 {
