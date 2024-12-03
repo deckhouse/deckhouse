@@ -19,7 +19,10 @@
   to: /deckhouse/candi/cloud-providers/vcd
 - add: /ee/candi/cloud-providers/dynamix
   to: /deckhouse/candi/cloud-providers/dynamix
-- add: /ee/fe/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl
-  to: /deckhouse/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl
 - add: /ee/candi/cloud-providers/huaweicloud
   to: /deckhouse/candi/cloud-providers/huaweicloud
+- add: /ee/fe/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl
+  to: /deckhouse/candi/bashible/common-steps/all/098_upd_tfadm.sh.tpl
+  stageDependencies:
+    setup:
+        - '**/*'
