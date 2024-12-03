@@ -56,6 +56,7 @@
 ## Chore
 
 
+ - **[admission-policy-engine]** Fix security-policy validation hook. [#10899](https://github.com/deckhouse/deckhouse/pull/10899)
  - **[candi]** Update D8 CLI to 0.4.0 [#10571](https://github.com/deckhouse/deckhouse/pull/10571)
  - **[deckhouse-controller]** Fix image flattening procedure on downloading an image. [#10474](https://github.com/deckhouse/deckhouse/pull/10474)
  - **[istio]** Got rid of self-made IP address allocation for public service's ServiceEntries in Federation. [#10218](https://github.com/deckhouse/deckhouse/pull/10218)
