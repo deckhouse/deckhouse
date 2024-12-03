@@ -12,21 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-event-on 'bb-sync-file-changed' '_on_rsyslog_config_changed'
-_on_rsyslog_config_changed() {
-  systemctl restart rsyslog
-}
-
-if ! systemctl -q is-enabled rsyslog 2>/dev/null; then
+if ! systemctl list-unit-files unattended-upgrades  > /dev/null 2>&1; then
   exit 0
 fi
 
-if [ -d /etc/rsyslog.d ]; then
-  bb-sync-file /etc/rsyslog.d/10-kubelet.conf - <<END
-:programname,isequal, "kubelet" ~
-END
-
-  bb-sync-file /etc/rsyslog.d/10-dockerd.conf - <<END
-:programname,isequal, "dockerd" ~
-END
+if systemctl is-enabled --quiet unattended-upgrades ; then
+  systemctl disable --now unattended-upgrades
 fi
+
+bb-apt-remove unattended-upgrades

@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2023 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,21 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-event-on 'bb-sync-file-changed' '_on_rsyslog_config_changed'
-_on_rsyslog_config_changed() {
-  systemctl restart rsyslog
-}
-
-if ! systemctl -q is-enabled rsyslog 2>/dev/null; then
-  exit 0
-fi
-
-if [ -d /etc/rsyslog.d ]; then
-  bb-sync-file /etc/rsyslog.d/10-kubelet.conf - <<END
-:programname,isequal, "kubelet" ~
-END
-
-  bb-sync-file /etc/rsyslog.d/10-dockerd.conf - <<END
-:programname,isequal, "dockerd" ~
-END
+if [[ -d /etc/apt/apt.conf.d ]]; then
+  if [[ -f /etc/apt/apt.conf.d/99timeout ]]; then
+    exit 0
+  fi
+  echo 'Acquire::http::Timeout "120";' > /etc/apt/apt.conf.d/99timeout
 fi
