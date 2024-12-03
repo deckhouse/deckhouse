@@ -1,0 +1,73 @@
+{{- define "label_proxy_resources" }}
+cpu: 25m
+memory: 128Mi
+{{- end }}
+
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: label-proxy
+  namespace: {{ .Values.observability.internal.namespace }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "label-proxy")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: label-proxy
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: label-proxy
+      minAllowed:
+        {{- include "label_proxy_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 100m
+        memory: 512Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: label-proxy
+  namespace: {{ .Values.observability.internal.namespace }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "label-proxy")) | nindent 2 }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: label-proxy
+  template:
+    metadata:
+      labels:
+        app: label-proxy
+    spec:
+      {{- include "helm_lib_node_selector" (tuple $ "monitoring") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $ "monitoring") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple $ "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ | nindent 6 }}
+      containers:
+      - name: label-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "labelProxy") }}
+        env:
+        - name: BACKEND_ADDRESS
+          value: https://aggregating-proxy.d8-monitoring.svc
+        - name: BACKEND_BEARER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: prometheus-token
+              key: token
+              optional: false
+        ports:
+        - name: http
+          containerPort: 9091
+  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "label_proxy_resources" . | nindent 12 }}
+  {{- end }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      serviceAccountName: label-proxy

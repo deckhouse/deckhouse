@@ -6,6 +6,9 @@ properties:
     type: object
     default: {}
     properties:
+      namespace:
+        type: string
+        default: d8-observability
       prometheus:
         type: object
         default: {}
