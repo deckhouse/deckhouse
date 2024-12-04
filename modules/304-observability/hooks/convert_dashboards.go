@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
 	"errors"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -32,9 +34,67 @@ const (
 	LegacyDashboardDefinition = "GrafanaDashboardDefinition"
 )
 
+var propagatedDashboards = map[string]bool{
+	"d8-admission-policy-engine-security-admission-policy-engine": true,
+	"d8-applications-elasticsearch":                               true,
+	"d8-applications-etcd3":                                       true,
+	"d8-applications-loki":                                        true,
+	"d8-applications-memcached":                                   true,
+	"d8-applications-mongodb":                                     true,
+	"d8-applications-nats":                                        true,
+	"d8-applications-nats-legacy":                                 true,
+	"d8-applications-pgbouncer":                                   true,
+	"d8-applications-php-fpm":                                     true,
+	"d8-applications-prometheus":                                  true,
+	"d8-applications-rabbitmq":                                    true,
+	"d8-applications-rabbitmq-legacy":                             true,
+	"d8-applications-redis":                                       true,
+	"d8-applications-sidekiq":                                     true,
+	"d8-applications-uwsgi":                                       true,
+	"d8-monitoring-kubernetes-main-controller":                    true,
+	"d8-monitoring-kubernetes-main-namespace-namespace":           true,
+	"d8-monitoring-kubernetes-main-namespace-namespaces":          true,
+	"d8-monitoring-kubernetes-main-pod":                           true,
+	"d8-ingress-nginx-ingress-nginx-namespace-namespace-detail":   true,
+	"d8-ingress-nginx-ingress-nginx-namespace-namespaces":         true,
+	"d8-ingress-nginx-ingress-nginx-vhost-vhost-detail":           true,
+	"d8-ingress-nginx-ingress-nginx-vhost-vhosts":                 true,
+	"d8-loki-applications-loki-search":                            true,
+}
+
 type LegacyDashboard struct {
 	Name       string
+	Folder     string
 	Definition string
+}
+
+func (d *LegacyDashboard) PrefixUid(prefix string) error {
+	var dashboard map[string]interface{}
+
+	if err := json.Unmarshal([]byte(d.Definition), &dashboard); err != nil {
+		return err
+	}
+
+	uid, ok := dashboard["uid"]
+	if !ok {
+		return errors.New("dashboard definition contains no uid field")
+	}
+
+	dashboardUID, ok := uid.(string)
+	if !ok {
+		return errors.New("dashboard definition uid field is not a string")
+	}
+
+	dashboard["uid"] = prefix + dashboardUID
+
+	ret, err := json.Marshal(dashboard)
+	if err != nil {
+		return err
+	}
+
+	d.Definition = string(ret)
+
+	return nil
 }
 
 func filterLegacyDashboard(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -93,8 +153,16 @@ func convertDashboards(input *go_hook.HookInput) error {
 
 	for _, snap := range legacyDashboardsSnap {
 		dash := snap.(*LegacyDashboard)
+		kind := dashboardKindByName(dash.Name)
+		prefix := dashboardPrefixByKind(kind)
+
+		if err := dash.PrefixUid(prefix); err != nil {
+			log.Error("Failed to prefix uid for dashboard", dash.Name, err)
+			continue
+		}
+
 		input.PatchCollector.Create(
-			dashboardManifest(dash.Name, dashboardKindByName(dash.Name), dash.Definition),
+			dashboardManifest(dash.Name, dash.Folder, kind, dash.Definition),
 			object_patch.UpdateIfExists(),
 		)
 
@@ -123,34 +191,6 @@ func convertDashboards(input *go_hook.HookInput) error {
 }
 
 func dashboardKindByName(name string) string {
-	propagatedDashboards := map[string]bool{
-		"d8-admission-policy-engine-security-admission-policy-engine": true,
-		"d8-applications-elasticsearch":                               true,
-		"d8-applications-etcd3":                                       true,
-		"d8-applications-loki":                                        true,
-		"d8-applications-memcached":                                   true,
-		"d8-applications-mongodb":                                     true,
-		"d8-applications-nats":                                        true,
-		"d8-applications-nats-legacy":                                 true,
-		"d8-applications-pgbouncer":                                   true,
-		"d8-applications-php-fpm":                                     true,
-		"d8-applications-prometheus":                                  true,
-		"d8-applications-rabbitmq":                                    true,
-		"d8-applications-rabbitmq-legacy":                             true,
-		"d8-applications-redis":                                       true,
-		"d8-applications-sidekiq":                                     true,
-		"d8-applications-uwsgi":                                       true,
-		"d8-monitoring-kubernetes-main-controller":                    true,
-		"d8-monitoring-kubernetes-main-namespace-namespace":           true,
-		"d8-monitoring-kubernetes-main-namespace-namespaces":          true,
-		"d8-monitoring-kubernetes-main-pod":                           true,
-		"d8-ingress-nginx-ingress-nginx-namespace-namespace-detail":   true,
-		"d8-ingress-nginx-ingress-nginx-namespace-namespaces":         true,
-		"d8-ingress-nginx-ingress-nginx-vhost-vhost-detail":           true,
-		"d8-ingress-nginx-ingress-nginx-vhost-vhosts":                 true,
-		"d8-loki-applications-loki-search":                            true,
-	}
-
 	if _, ok := propagatedDashboards[name]; ok {
 		return PropagatedDashboardKind
 	}
@@ -158,12 +198,23 @@ func dashboardKindByName(name string) string {
 	return ClusterDashboardKind
 }
 
-func dashboardManifest(name string, kind string, definition string) *unstructured.Unstructured {
+func dashboardPrefixByKind(kind string) string {
+	if kind == PropagatedDashboardKind {
+		return "propagated-"
+	}
+
+	return "cluster-"
+}
+
+func dashboardManifest(name, category, kind, definition string) *unstructured.Unstructured {
 	un := unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "observability.deckhouse.io/v1alpha1",
 		"kind":       kind,
 		"metadata": map[string]interface{}{
 			"name": name,
+			"annotations": map[string]interface{}{
+				"observability.deckhouse.io/category": category,
+			},
 			"labels": map[string]interface{}{
 				"module":   "observability",
 				"heritage": "deckhouse",
