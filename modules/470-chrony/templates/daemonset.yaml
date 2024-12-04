@@ -313,6 +313,40 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+        ports:
+        - containerPort: 4228
+          name: https-metrics
+        - name: ntp
+          containerPort: 4234
+          protocol: UDP
+        livenessProbe:
+          exec:
+            command:
+            - /opt/chrony-static/bin/chronyc
+            - tracking
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 15
+        volumeMounts:
+        - name: tz-config
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: tzdata-config
+          mountPath: /etc/timezone
+          readOnly: true
+        - name: etc-chrony
+          mountPath: /etc/chrony
+        - name: config
+          mountPath: /etc/chrony/chrony.conf.tpl
+          subPath: chrony.conf.tpl
+        - name: var-run
+          mountPath: /var/run
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "chrony_resources" . | nindent 12 }}
+  {{- end }}
       - image: {{ include "helm_lib_module_image" (list . "chronyExporter") }}
         name: chrony-exporter
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
@@ -358,46 +392,15 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-metrics
                   name: chrony-exporter
+        ports:
+        - containerPort: 4228
+          name: https-metrics
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
-        ports:
-        - containerPort: 4228
-          name: https-metrics
-        - name: ntp
-          containerPort: 4234
-          protocol: UDP
-        livenessProbe:
-          exec:
-            command:
-            - /opt/chrony-static/bin/chronyc
-            - tracking
-          initialDelaySeconds: 30
-          periodSeconds: 60
-          timeoutSeconds: 15
-        volumeMounts:
-        - name: tz-config
-          mountPath: /etc/localtime
-          readOnly: true
-        - name: tzdata-config
-          mountPath: /etc/timezone
-          readOnly: true
-        - name: etc-chrony
-          mountPath: /etc/chrony
-        - name: config
-          mountPath: /etc/chrony/chrony.conf.tpl
-          subPath: chrony.conf.tpl
-        - name: var-run
-          mountPath: /var/run
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "chrony_resources" . | nindent 12 }}
-  {{- end }}
       volumes:
       - name: tz-config
         hostPath:
