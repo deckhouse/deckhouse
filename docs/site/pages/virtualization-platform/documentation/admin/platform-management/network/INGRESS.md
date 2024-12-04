@@ -4,9 +4,9 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/ne
 lang: en
 ---
 
-To provide external access to virtual machines—for example, for service publishing or remote administration—you can use Ingress resources managed by the ingress-nginx module.
+To provide external access to virtual machines, for example, for service publishing or remote administration, you can use `Ingress`resources, which are managed by the ingress-nginx module.
 
-These Ingress resources use NGINX as a reverse proxy and load balancer.
+These created `Ingress` resources use Nginx as a reverse proxy and load balancer.
 If multiple nodes are available in a cluster to host an Ingress controller, it's deployed in fault-tolerant mode,
 enhancing access reliability and resilience to failures.
 
