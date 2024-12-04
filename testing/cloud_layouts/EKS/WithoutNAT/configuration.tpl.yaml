@@ -5,7 +5,17 @@ deckhouse:
   imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
   registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
   devBranch: '${DEV_BRANCH}'
-  bundle: Minimal
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  version: 1
+  settings:
+    bundle: Minimal
+    logLevel: Info
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

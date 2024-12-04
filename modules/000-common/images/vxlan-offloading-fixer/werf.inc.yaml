@@ -7,7 +7,9 @@ shell:
   install:
   - cd /src
   - git clone -b libmnl-1.0.5 --depth 1 {{ $.SOURCE_REPO }}/netfilter/libmnl ./src-libmnl
+  - rm -r src-libmnl/.git
   - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/ethtool/ethtool.git ./src-ethtool
+  - rm -r src-ethtool/.git
 ---
 artifact: {{ $.ModuleName }}/ethtool-artifact
 from: {{ $.Images.BASE_ALPINE }}
