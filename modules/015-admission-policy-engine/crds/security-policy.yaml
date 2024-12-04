@@ -458,6 +458,10 @@ spec:
                             description: The list of Cosign compliant public keys.
                             items:
                               type: string
+                          ca:
+                            type: string
+                            description: |
+                              A custom certificate authority to use when connecting to the container image repository.
                           reference:
                             type: string
                             description: |
