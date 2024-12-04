@@ -458,12 +458,10 @@ spec:
                             description: The list of Cosign compliant public keys.
                             items:
                               type: string
-                          registryCAs:
-                            type: array
+                          registryCA:
+                            type: string
                             description: |
-                              The list of custom certificate authority certificates to use when connecting to the container image repository.
-                            items:
-                              type: string
+                              A custom certificate authority certificate to use when connecting to the container image repository.
                           reference:
                             type: string
                             description: |

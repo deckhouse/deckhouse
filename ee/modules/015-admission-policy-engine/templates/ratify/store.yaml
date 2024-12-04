@@ -39,7 +39,7 @@ spec:
 {{- $caList := list }}
 {{- range $sp := .Values.admissionPolicyEngine.internal.securityPolicies }}
   {{- range $vfs := $sp.spec.policies.verifyImageSignatures }}
-    {{- range $ca := $vfs.registryCAs }}
+    {{- if $vfs.registryCA }}
       {{- $caList = append $caList $ca }}
     {{- end }}
   {{- end }}
