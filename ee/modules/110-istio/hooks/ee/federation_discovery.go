@@ -44,7 +44,7 @@ func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_h
 	mc.Set(federationMetricName, isError, labels, metrics.WithGroup(federationMetricsGroup))
 }
 
-func (i *IstioFederationDiscoveryCrdInfo) PatchMetadataCache(pc *object_patch.PatchCollector, scope string, meta interface{}) error {
+func (i *IstioFederationDiscoveryCrdInfo) PatchMetadataCache(pc go_hook.PatchCollector, scope string, meta interface{}) error {
 	patch := map[string]interface{}{
 		"status": map[string]interface{}{
 			"metadataCache": map[string]interface{}{
