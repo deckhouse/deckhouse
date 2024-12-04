@@ -100,7 +100,7 @@ func (d *LegacyDashboard) PrefixUid(prefix string) error {
 func filterLegacyDashboard(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	cr := &LegacyDashboard{}
 	cr.Name = obj.GetName()
-	definition, ok, err := unstructured.NestedString(obj.Object, "spec", "definition")
+	spec, ok, err := unstructured.NestedStringMap(obj.Object, "spec")
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,8 @@ func filterLegacyDashboard(obj *unstructured.Unstructured) (go_hook.FilterResult
 		return nil, errors.New("no spec.definition field")
 	}
 
-	cr.Definition = definition
+	cr.Definition = spec["definition"]
+	cr.Folder = spec["folder"]
 	return cr, nil
 }
 
