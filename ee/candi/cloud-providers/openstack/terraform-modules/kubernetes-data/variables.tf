@@ -28,3 +28,8 @@ variable "volume_zone" {
 variable "tags" {
   type = map(string)
 }
+
+variable "resourceManagementTimeout" {
+  type = string
+  default = "20m"
+}

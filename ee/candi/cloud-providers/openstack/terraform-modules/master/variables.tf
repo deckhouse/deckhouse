@@ -70,3 +70,8 @@ variable "zone" {
 variable "server_group" {
   type = any
 }
+
+variable "resourceManagementTimeout" {
+  type = string
+  default = "20m"
+}
