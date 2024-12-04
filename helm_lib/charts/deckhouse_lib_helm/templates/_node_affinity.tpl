@@ -241,6 +241,9 @@ tolerations:
 {{- /* Additional strategy "no-csi" - used for any node with no CSI: any node, which was initialized by deckhouse, but have no csi-node driver registered on it. */ -}}
 {{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-no-csi") }} */ -}}
 {{- define "_helm_lib_additional_tolerations_no_csi" }}
+- key: ToBeDeletedTaint
+  operator: "Exists"
+  effect: "NoSchedule"
 - key: node.deckhouse.io/csi-not-bootstrapped
   operator: "Exists"
   effect: "NoSchedule"
