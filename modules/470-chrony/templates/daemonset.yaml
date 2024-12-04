@@ -314,8 +314,6 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         ports:
-        - containerPort: 4228
-          name: https-metrics
         - name: ntp
           containerPort: 4234
           protocol: UDP
