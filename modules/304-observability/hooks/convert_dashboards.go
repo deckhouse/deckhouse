@@ -19,6 +19,7 @@ package hooks
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -87,7 +88,7 @@ func (d *LegacyDashboard) PrefixUid(prefix string) error {
 
 	dashboard["uid"] = prefix + dashboardUID
 
-	ret, err := json.Marshal(dashboard)
+	ret, err := json.MarshalIndent(dashboard, "", strings.Repeat(" ", 4))
 	if err != nil {
 		return err
 	}
