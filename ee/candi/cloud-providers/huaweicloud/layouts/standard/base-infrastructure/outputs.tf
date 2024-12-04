@@ -8,6 +8,7 @@ output "cloud_discovery_data" {
     "layout"     = var.providerClusterConfiguration.layout
     "instances" = {
       "vpcSubnetId"     = huaweicloud_vpc_subnet.subnet.id
+      "vpcIPv4SubnetId" = huaweicloud_vpc_subnet.subnet.ipv4_subnet_id
       "securityGroupId" = module.network_security.security_group_id
     }
     "zones" = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.huaweicloud_availability_zones.zones.names, var.providerClusterConfiguration.zones)) : data.huaweicloud_availability_zones.zones.names
