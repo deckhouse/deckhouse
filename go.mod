@@ -11,7 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
-	github.com/flant/addon-operator v0.0.0-20241204152722-b6e8ee231d60
+	github.com/flant/addon-operator v0.0.0-20241204161926-6474f573d6fd
 	github.com/flant/kube-client v1.2.2
 	github.com/flant/shell-operator v1.5.2
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
