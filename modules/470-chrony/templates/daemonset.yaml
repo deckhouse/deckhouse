@@ -87,6 +87,7 @@ spec:
                 values:
                 - master
       dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: chrony-exporter
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
@@ -165,6 +166,60 @@ spec:
   {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "chrony_resources" . | nindent 12 }}
   {{- end }}
+      - image: {{ include "helm_lib_module_image" (list . "chronyExporter") }}
+        name: chrony-exporter
+        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
+        args:
+        - '--web.listen-address=127.0.0.1:9123'
+        - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
+        - '--collector.tracking'
+        - '--collector.sources'
+        - '--collector.serverstats'
+        - '--log.level=info'
+        volumeMounts:
+        - name: var-run
+          mountPath: /var/run
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "chrony_exporter_resources" . | nindent 12 }}
+{{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4228"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:9123/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: chrony-exporter
+        ports:
+        - containerPort: 4228
+          name: https-metrics
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
       volumes:
       - name: tz-config
         hostPath:
@@ -208,6 +263,7 @@ spec:
                 values:
                 - master
       dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: chrony-exporter
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
@@ -252,7 +308,60 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.hostIP
+      - image: {{ include "helm_lib_module_image" (list . "chronyExporter") }}
+        name: chrony-exporter
+        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
+        args:
+        - '--web.listen-address=127.0.0.1:9123'
+        - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
+        - '--collector.tracking'
+        - '--collector.sources'
+        - '--collector.serverstats'
+        - '--log.level=info'
+        volumeMounts:
+        - name: var-run
+          mountPath: /var/run
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "chrony_exporter_resources" . | nindent 12 }}
+{{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4228"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:9123/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-monitoring
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: chrony-exporter
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
         ports:
+        - containerPort: 4228
+          name: https-metrics
         - name: ntp
           containerPort: 4234
           protocol: UDP

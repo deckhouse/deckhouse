@@ -3,16 +3,16 @@ apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
   name: chrony-exporter
-  namespace: d8-monitoring
+  namespace: d8-chrony
   {{- include "helm_lib_module_labels" (list . (dict "app" "chrony-exporter" "prometheus" "main")) | nindent 2 }}
 spec:
   jobLabel: app
   selector:
     matchLabels:
-      app: chrony-exporter
+      app: chrony
   namespaceSelector:
     matchNames:
-    - d8-monitoring
+    - d8-chrony
   podMetricsEndpoints:
   - port: https-metrics
     scheme: https

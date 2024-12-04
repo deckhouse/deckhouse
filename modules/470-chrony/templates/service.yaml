@@ -13,3 +13,6 @@ spec:
       port: 4234
       name: ntp
       targetPort: ntp
+    - protocol: TCP
+      port: 4228
+      targetPort: https-metrics
