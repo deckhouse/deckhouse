@@ -364,9 +364,9 @@ spec:
 
                     Enables the following TLS protocol versions: `TLSv1`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`.
 
-                    Enables the following combinations of cipher suites: `DHE-RSA-AES256-GCM-SHA384`, `DHE-RSA-AES128-GCM-SHA256`, `ECDHE-RSA-AES256-GCM-SHA384`, `ECDHE-RSA-AES128-GCM-SHA256`, `DHE-RSA-AES256-SHA256`, `DHE-RSA-AES128-SHA256`, `ECDHE-RSA-AES256-SHA384`, `ECDHE-RSA-AES128-SHA256`, `ECDHE-RSA-AES256-SHA`, `ECDHE-RSA-AES128-SHA`, `AES256-GCM-SHA384`, `AES128-GCM-SHA256`, `AES256-SHA256`, `AES128-SHA256`, `AES256-SHA`, `AES128-SHA`, `DHE-RSA-AES256-SHA`, `DHE-RSA-AES128-SHA`.
+                    Enables the following combinations of cipher suites in following order: `ECDHE-ECDSA-AES256-GCM-SHA384`, `ECDHE-RSA-AES256-GCM-SHA384`, `ECDHE-ECDSA-CHACHA20-POLY1305`, `ECDHE-RSA-CHACHA20-POLY1305`, `ECDHE-ECDSA-AES128-GCM-SHA256`, `ECDHE-RSA-AES128-GCM-SHA256`, `ECDHE-ECDSA-AES256-SHA384`, `ECDHE-RSA-AES256-SHA384`, `ECDHE-ECDSA-AES128-SHA256`, `ECDHE-RSA-AES128-SHA256`, `ECDHE-ECDSA-AES256-SHA`, `ECDHE-RSA-AES256-SHA`, `ECDHE-ECDSA-AES128-SHA`, `ECDHE-RSA-AES128-SHA`, `AES256-GCM-SHA384`, `AES128-GCM-SHA256`, `AES256-SHA256`, `AES128-SHA256`, `AES256-SHA`, `AES128-SHA`.
 
-                    **By default**, only TLSv1.2, TLSv1.3, and the newest cipher suites are enabled.
+                    **By default**, only `TLSv1.2`, `TLSv1.3` with newest cipher suites are enabled.
                 disableHTTP2:
                   type: boolean
                   description: |
