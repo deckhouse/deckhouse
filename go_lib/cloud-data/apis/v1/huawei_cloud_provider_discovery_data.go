@@ -25,6 +25,7 @@ type HuaweiCloudProviderDiscoveryData struct {
 
 type HuaweiCloudInstances struct {
 	VPCSubnetID     string `json:"vpcSubnetId,omitempty"`
+	VPCIPv4SubnetID string `json:"vpcIPv4SubnetId,omitempty"`
 	SecurityGroupID string `json:"securityGroupId,omitempty"`
 }
 
