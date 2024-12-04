@@ -888,8 +888,8 @@ When using the `failurePolicy: Fail` option, in case of an error in the webhook'
 
 There is 3 pre-defined scheduler profiles:
 
-* default-scheduler: schedule pod to least resource utilization 
-* high-node-utilization: schedule pod to most resource utilization 
+* default-scheduler: schedule pod to least resource utilization
+* high-node-utilization: schedule pod to most resource utilization
 * no-scoring: disable `Scoring` to faster scheduling process
 
 To use scheduler profile in pod, specify `spec.schedulerName` like this:
