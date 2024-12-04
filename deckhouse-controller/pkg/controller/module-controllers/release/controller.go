@@ -31,10 +31,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	shapp "github.com/flant/shell-operator/pkg/app"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	openapierrors "github.com/go-openapi/errors"
 	"github.com/gofrs/uuid/v5"
@@ -958,7 +956,7 @@ func validateModule(def moduleloader.Definition, values addonutils.Values, logge
 	if err != nil {
 		return fmt.Errorf("read open API files: %w", err)
 	}
-	dm, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, nil, cb, vb, app.CRDsFilters, shapp.DebugKeepTmpFiles, logger.Named("basic-module"))
+	dm, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, nil, cb, vb, logger.Named("basic-module"))
 	if err != nil {
 		return fmt.Errorf("new deckhouse module: %w", err)
 	}

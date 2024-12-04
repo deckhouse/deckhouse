@@ -26,7 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -569,7 +568,7 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 }
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
-	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, app.CRDsFilters, false, log.NewNop())
+	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, log.NewNop())
 	return bm
 }
 
