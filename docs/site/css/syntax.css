@@ -19,11 +19,12 @@
 .highlight .cs {
   color: #CC00A3;
 }
-.highlight .c, .highlight .ch, .highlight .cd, .highlight .cm, .highlight .cpf {
+.highlight .ch, .highlight .cd, .highlight .cm, .highlight .cpf {
   color: #FF0000;
 }
-.highlight .c1 {
+.highlight .c, .highlight .c1 {
   color: #939393;
+  font-weight: 400;
 }
 .highlight .ge {
   font-style: italic;
@@ -36,7 +37,7 @@
   font-weight: bold;
 }
 .highlight .kc {
-  color: #C34E00;
+  color: #22577f;
 }
 .highlight .kd {
   color: #0000FF;
@@ -54,5 +55,5 @@
   color: #0000FF;
 }
 .highlight .nb, .highlight .bp {
-  color: #C34E00;
+  color: #22577f;
 }
