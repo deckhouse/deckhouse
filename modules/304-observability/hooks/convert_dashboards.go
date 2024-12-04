@@ -33,6 +33,7 @@ const (
 	ClusterDashboardKind      = "ClusterObservabilityDashboard"
 	PropagatedDashboardKind   = "ClusterObservabilityPropagatedDashboard"
 	LegacyDashboardDefinition = "GrafanaDashboardDefinition"
+	JsonIndentCharacter       = " "
 )
 
 var propagatedDashboards = map[string]bool{
@@ -88,7 +89,7 @@ func (d *LegacyDashboard) PrefixUid(prefix string) error {
 
 	dashboard["uid"] = prefix + dashboardUID
 
-	ret, err := json.MarshalIndent(dashboard, "", strings.Repeat(" ", 4))
+	ret, err := json.MarshalIndent(dashboard, "", strings.Repeat(JsonIndentCharacter, 4))
 	if err != nil {
 		return err
 	}
