@@ -46,6 +46,7 @@ const (
 	minVersionValuesKey     = "ingressNginx:minimalControllerVersion"
 	incompatibleVersionsKey = "ingressNginx:hasIncompatibleIngressClass"
 	disruptionKey           = "ingressNginx:hasDisruption"
+	moduleConfigVersionKey  = "ingressNginx:moduleConfigVersion"
 )
 
 func applySpecControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -76,6 +77,11 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 	classVersionMap := make(map[string]*semver.Version)
 	var isDisruptionUpdate bool
 
+	moduleConfigVersion := input.Values.Get("ingressNginx.defaultControllerVersion").String()
+	if moduleConfigVersion != "" {
+		requirements.SaveValue(moduleConfigVersionKey, moduleConfigVersion)
+	}
+
 	for _, s := range snap {
 		if s == nil {
 			continue
@@ -83,7 +89,7 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 
 		ctrl := s.(ingressNginxController)
 		if ctrl.Version == "" {
-			ctrl.Version = input.Values.Get("ingressNginx.defaultControllerVersion").String()
+			ctrl.Version = moduleConfigVersion
 			if ctrl.Version == "0.33" {
 				isDisruptionUpdate = true
 			}
