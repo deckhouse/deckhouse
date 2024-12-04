@@ -23,16 +23,6 @@ rules:
       - patch
       - update
   - apiGroups:
-      - networking.k8s.io
-    resources:
-      - networkpolicies
-    verbs:
-      - create
-      - delete
-      - deletecollection
-      - patch
-      - update
-  - apiGroups:
       - ""
     resources:
       - serviceaccounts
