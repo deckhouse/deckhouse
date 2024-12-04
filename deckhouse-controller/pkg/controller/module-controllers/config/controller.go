@@ -165,6 +165,10 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha1.Module) (ctrl.Result, error) {
 	defer r.log.Debugf("the '%s' module config reconciled", moduleConfig.Name)
 
+	// clear conflict metrics
+	metricGroup := fmt.Sprintf("module_%s_at_conflict", module.Name)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
 	enabled := module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)
 
 	if !moduleConfig.IsEnabled() {
@@ -269,6 +273,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 				r.log.Errorf("failed to set conlflict to the '%s' module: %v", module.Name, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
+			// fire alert at Conflict
+			r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_at_conflict", 1.0, map[string]string{
+				"moduleName": module.Name,
+			})
 		}
 	}
 
