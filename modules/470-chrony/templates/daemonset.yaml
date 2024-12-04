@@ -1,3 +1,8 @@
+{{- define "chrony_exporter_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- define "chrony_resources" }}
 cpu: 10m
 memory: 10Mi
