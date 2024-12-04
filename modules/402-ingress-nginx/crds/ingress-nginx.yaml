@@ -362,9 +362,9 @@ spec:
                   description: |
                     Enable old TLS protocol versions.
 
-                    Also, this options enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C'](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html). Learn more [here](https://github.com/deckhouse/deckhouse/blob/main/modules/402-ingress-nginx/templates/controller/configmap.yaml).
+                    Also, this option enables legacy cipher suites to support legacy libraries and software: [OWASP Cipher String 'C'](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html). Learn more in the [ConfigMap template](https://github.com/deckhouse/deckhouse/blob/main/modules/402-ingress-nginx/templates/controller/configmap.yaml).
 
-                    **By default**, only TLSv1.2, TLSv1.3 and the newest cipher suites are enabled.
+                    **By default**, only TLSv1.2, TLSv1.3, and the newest cipher suites are enabled.
                 disableHTTP2:
                   type: boolean
                   description: |
