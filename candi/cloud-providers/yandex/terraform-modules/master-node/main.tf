@@ -162,7 +162,8 @@ resource "yandex_compute_instance" "master" {
   lifecycle {
     ignore_changes = [
       metadata,
-      secondary_disk,
+      secondary_disk[0], # ignore changes for kubernetes_data device
+      secondary_disk[1], # ignore changes for system_registry_data device
     ]
   }
 
