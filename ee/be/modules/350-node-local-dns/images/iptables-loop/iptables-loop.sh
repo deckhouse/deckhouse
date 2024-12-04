@@ -53,7 +53,7 @@ until [[ $(< "$readiness_file_path") == "$ready_state" ]]; do
   sleep 1
 done
 
-echo "first run" >&3
+echo "First run."
 
 while true; do
 	inotifywait -q -e modify "$readiness_file_path" &> /dev/null
