@@ -883,3 +883,27 @@ You can connect an `extender` using [KubeSchedulerWebhookConfiguration](cr.html#
 {% alert level="danger" %}
 When using the `failurePolicy: Fail` option, in case of an error in the webhook's operation, the scheduler will stop working and new pods will not be able to start.
 {% endalert %}
+
+### Scheduler profiles
+
+There is 3 pre-defined scheduler profiles:
+
+* default-scheduler: schedule pod to least resource utilization 
+* high-node-utilization: schedule pod to most resource utilization 
+* no-scoring: disable `Scoring` to faster scheduling process
+
+To use scheduler profile in pod, specify `spec.schedulerName` like this:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: scheduler-example
+  labels:
+    name: scheduler-example
+spec:
+  schedulerName: high-node-utilization
+  containers:
+  - name: example-pod
+    image: registry.k8s.io/pause:2.0  
+```

@@ -8,6 +8,21 @@ kind: KubeSchedulerConfiguration
 clientConnection:
   kubeconfig: /etc/kubernetes/scheduler.conf
 profiles:
+- schedulerName: high-node-utilization
+  plugins:
+    score:
+      disabled:
+      - name: "NodeResourcesLeastAllocated"
+      enabled:
+      - name: "NodeResourcesMostAllocated"
+- schedulerName: no-scoring
+  plugins:
+    preScore:
+      disabled:
+      - name: "*"
+    score:
+      disabled:
+      - name: "*"
 - pluginConfig:
   - name: PodTopologySpread
     args:

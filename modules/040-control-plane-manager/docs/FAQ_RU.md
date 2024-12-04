@@ -886,3 +886,27 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 {% alert level="danger" %}
 При использовании опции `failurePolicy: Fail`, в случае ошибки в работе вебхука планировщик Kubernetes прекратит свою работу, и новые поды не смогут быть запущены.
 {% endalert %}
+
+### Профили планировщика
+
+Есть 3 предопределенных профиля планировщика:
+
+* default-scheduler: для пода выбирается наименее загруженный узел
+* high-node-utilization: для пода выбирается наиболее загруженный узел
+* no-scoring: выключение `Scoring` для ускорения работы планировщика
+
+Для использования профилей планировщика, укажите `spec.schedulerName`, например:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: scheduler-example
+  labels:
+    name: scheduler-example
+spec:
+  schedulerName: high-node-utilization
+  containers:
+  - name: example-pod
+    image: registry.k8s.io/pause:2.0  
+```
