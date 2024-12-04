@@ -7,6 +7,8 @@ mount:
 shell:
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - apk update && apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.14.0 {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
   - cd /promu
   - go build -ldflags="-s -w" -o promu ./main.go
@@ -23,7 +25,8 @@ import:
   before: install
 shell:
   install:
-  - apk update && apk add --no-cache gcc g++
+  - apk update && apk add --no-cache gcc g++ openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 EXPORTER_VERSION=v0.11.0
   - git clone -b "${EXPORTER_VERSION}" --single-branch {{ $.SOURCE_REPO }}/chrony/chrony_exporter /src
   - cd /src
