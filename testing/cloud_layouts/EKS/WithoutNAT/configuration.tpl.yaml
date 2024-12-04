@@ -71,7 +71,7 @@ spec:
   settings:
     modules:
       publicDomainTemplate: "%s.k8s.smoke.flant.com"
-    storageClass: localpath-all
+      storageClass: localpath-all
   version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
