@@ -134,11 +134,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/021-cni-cilium
-  to: /deckhouse/modules/021-cni-cilium
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/025-static-routing-manager
   to: /deckhouse/modules/025-static-routing-manager
   stageDependencies:
