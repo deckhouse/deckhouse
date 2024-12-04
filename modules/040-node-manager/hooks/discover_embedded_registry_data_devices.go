@@ -33,8 +33,10 @@ type EmbeddedRegistryDataDevice struct {
 }
 
 const (
-	embeddedRegistryDataDevicesSecretName      = "d8-masters-system-registry-data-device-path"
-	embeddedRegistryDataDevicesSecretNamespace = "d8-system"
+	embeddedRegistryDataDevicesSecretName         = "d8-masters-system-registry-data-device-path"
+	embeddedRegistryDataDevicesSecretNamespace    = "d8-system"
+	embeddedRegistryDataDevicesInternalValuesPath = "nodeManager.internal.systemRegistry.dataDevices"
+	embeddedRegistryDataDevicesSnapshotName       = "embedded_registry_data_devices_secret"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -42,7 +44,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/node-manager/discover-embedded-registry-data-devices",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "embedded_registry_data_devices_secret",
+			Name:       embeddedRegistryDataDevicesSnapshotName,
 			ApiVersion: "v1",
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -68,15 +70,19 @@ func filterRegistryDataDevicesSecret(obj *unstructured.Unstructured) (go_hook.Fi
 }
 
 func handleRegistryDataDevicesSecret(input *go_hook.HookInput) error {
-	secretData := input.Snapshots["embedded_registry_data_devices_secret"]
+	if !input.Values.Exists(embeddedRegistryDataDevicesInternalValuesPath) {
+		input.Values.Set(embeddedRegistryDataDevicesInternalValuesPath, []interface{}{})
+	}
+
+	secretData := input.Snapshots[embeddedRegistryDataDevicesSnapshotName]
 	if len(secretData) == 0 {
-		input.Values.Set("nodeManager.internal.systemRegistry.dataDevices", []EmbeddedRegistryDataDevice{})
+		input.Values.Set(embeddedRegistryDataDevicesInternalValuesPath, []interface{}{})
 		return nil
 	}
 
 	secretDataStructured := secretData[0].(map[string][]byte)
 	if len(secretDataStructured) == 0 {
-		input.Values.Set("nodeManager.internal.systemRegistry.dataDevices", []EmbeddedRegistryDataDevice{})
+		input.Values.Set(embeddedRegistryDataDevicesInternalValuesPath, []interface{}{})
 		return nil
 	}
 
@@ -96,6 +102,6 @@ func handleRegistryDataDevicesSecret(input *go_hook.HookInput) error {
 		})
 	}
 
-	input.Values.Set("nodeManager.internal.systemRegistry.dataDevices", dataDevices)
+	input.Values.Set(embeddedRegistryDataDevicesInternalValuesPath, dataDevices)
 	return nil
 }

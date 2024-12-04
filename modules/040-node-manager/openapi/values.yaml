@@ -63,7 +63,7 @@ properties:
 
       systemRegistry:
         type: object
-        default: { }
+        default: {}
         properties:
           dataDevices:
             type: array
