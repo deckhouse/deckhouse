@@ -292,7 +292,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"kubeDns": map[string]interface{}{
 		"coredns":                           "imageHash-kubeDns-coredns",
-		"resolvWatcher":                     "imageHash-kubeDns-resolvWatcher",
 		"stsPodsHostsAppenderInitContainer": "imageHash-kubeDns-stsPodsHostsAppenderInitContainer",
 		"stsPodsHostsAppenderWebhook":       "imageHash-kubeDns-stsPodsHostsAppenderWebhook",
 	},
