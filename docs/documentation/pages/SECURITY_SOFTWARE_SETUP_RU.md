@@ -29,4 +29,4 @@ Deckhouse Kubernetes Platform (DKP) использует следующие ди
 
 Убедитесь, что узлы Kubernetes соответствуют минимальным требованиям к ресурсам, указанным для [DKP](https://deckhouse.ru/products/kubernetes-platform/guides/production.html#требования-к-ресурсам) и [KESL](https://support.kaspersky.com/KES4Linux/12.1.0/ru-RU/197642.htm).
 
-При совместной эксплуатации KESL и Deckhouse может потребоваться оптимизация производительности согласно [рекомендациям Kaspersky](https://support.kaspersky.com/KES4Linux/12.1.0/ru-RU/206054.htm).
+При совместной эксплуатации KESL и DKP может потребоваться оптимизация производительности согласно [рекомендациям Kaspersky](https://support.kaspersky.com/KES4Linux/12.1.0/ru-RU/206054.htm).

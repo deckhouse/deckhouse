@@ -19,6 +19,8 @@ REGISTRY_CA_EXISTS={{ if and $.registry.ca (ne $.registry.ca "") }}true{{ else }
 
 mkdir -p /etc/kubernetes/manifests
 
+bb-set-proxy
+
 pull_and_re_tag_image() {
     local PROXY_IMG_ADDRESS=$1
     local ACTUAL_IMAGE_ADDRESS=$2
@@ -128,3 +130,5 @@ spec:
   - name: tmp
     emptyDir: {}
 EOF
+
+bb-unset-proxy

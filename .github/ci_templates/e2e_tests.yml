@@ -351,11 +351,6 @@ check_e2e_labels:
 {!{- end }!}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
-    - name: Print data
-      run: |
-        echo "WERF_ENV is ${WERF_ENV}"
-        echo "test_config is ${{ inputs.test_config }}"
-        echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
 
