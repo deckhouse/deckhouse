@@ -36,7 +36,7 @@ spec:
                 type:
                   type: string
                   x-kubernetes-immutable: true
-                  x-doc-examples: "L2"
+                  x-doc-examples: ["L2"]
                   description: |-
                     Selecting the load balancer operating mode.
                 l2:
