@@ -39,6 +39,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - export VERSION="evs-0.1.11"
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - mkdir -p /src
   - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/huaweicloud/huaweicloud-csi-driver /src
   - cd /src
