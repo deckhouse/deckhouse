@@ -104,17 +104,9 @@ func discoveryServicesForMigrate(input *go_hook.HookInput, dc dependency.Contain
 		}
 		stringIPs := strings.Join(sliceIPs, ",")
 
-		patch := map[string]any{
-			"metadata": map[string]any{
-				"annotations": map[string]any{
-					"network.deckhouse.io/load-balancer-ips": stringIPs,
-				},
-				"finalizers": []string{},
-			},
+		annotations := map[string]any{
+			"network.deckhouse.io/load-balancer-ips": stringIPs,
 		}
-
-		metadata := patch["metadata"].(map[string]any)
-		annotations := metadata["annotations"].(map[string]any)
 		annotationKeys := []string{
 			"metallb.universe.tf/ip-allocated-from-pool",
 			"metallb.universe.tf/address-pool",
@@ -127,6 +119,13 @@ func discoveryServicesForMigrate(input *go_hook.HookInput, dc dependency.Contain
 					}
 				}
 			}
+		}
+
+		patch := map[string]any{
+			"metadata": map[string]any{
+				"annotations": annotations,
+				"finalizers":  []string{},
+			},
 		}
 
 		data, err := json.Marshal(patch)
