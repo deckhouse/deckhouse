@@ -125,6 +125,10 @@ func (u *Updater[R]) checkPatchReleaseConditions(release R, metricLabels MetricL
 	if u.settings.NotificationConfig != (NotificationConfig{}) && u.settings.NotificationConfig.ReleaseType == ReleaseTypeAll {
 		err = u.sendReleaseNotification(release, applyTime)
 		if err != nil {
+			metricLabels[NotificationNotSent] = "true"
+			if err := u.updateStatus(release, "Failed to send release notification", PhasePending); err != nil {
+				return fmt.Errorf("update status: %w", err)
+			}
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
@@ -191,6 +195,10 @@ func (u *Updater[R]) checkMinorReleaseConditions(release R, metricLabels MetricL
 	if u.settings.NotificationConfig != (NotificationConfig{}) {
 		err = u.sendReleaseNotification(release, resultDeployTime)
 		if err != nil {
+			metricLabels[NotificationNotSent] = "true"
+			if err := u.updateStatus(release, "Failed to send release notification", PhasePending); err != nil {
+				return fmt.Errorf("update status: %w", err)
+			}
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}

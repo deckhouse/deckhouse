@@ -117,6 +117,22 @@
         Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
       summary: |
         Module release is waiting for manual approval.
+  - alert: DeckhouseReleaseNotificationNotSent
+    expr: sum by (name) (d8_release_info{notificationNotSent="true"})
+    labels:
+      severity_level: "4"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        Failed to send Deckhouse release notification webhook.
+        
+        Check the notification webhook address by running `kubectl get mc deckhouse -o yaml`.
+      summary: |
+        Deckhouse release notification webhook not sent.
   - alert: ModuleReleaseIsBlockedByRequirements
     expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) d8_module_release_info{requirementsNotMet="true"}) by (name, moduleName)
     labels:
