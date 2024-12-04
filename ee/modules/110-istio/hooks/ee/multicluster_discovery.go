@@ -120,19 +120,16 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.MulticlusterPrivateMetadata
 
-		httpClientOption := []http.Option{
-			http.WithTimeout(10 * time.Second),
-		}
+		options := []http.Option{}
 		if multiclusterInfo.EnableInsecureConnection {
-			httpClientOption = append(httpClientOption, http.WithInsecureSkipVerify())
+			options = append(options, http.WithInsecureSkipVerify())
 		}
 		if multiclusterInfo.ClusterCA != "" {
 			caCerts := [][]byte{[]byte(multiclusterInfo.ClusterCA)}
-			httpClientOption = append(httpClientOption, http.WithAdditionalCACerts(caCerts))
+			options = append(options, http.WithAdditionalCACerts(caCerts))
 		}
-		httpClient := dc.GetHTTPClient(httpClientOption...)
 
-		bodyBytes, statusCode, err := lib.HTTPGet(httpClient, multiclusterInfo.PublicMetadataEndpoint, "")
+		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(options...), multiclusterInfo.PublicMetadataEndpoint, "")
 		if err != nil {
 			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioMulticluster %s, error: %s", multiclusterInfo.PublicMetadataEndpoint, multiclusterInfo.Name, err.Error())
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
