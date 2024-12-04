@@ -54,7 +54,7 @@ The project is based on the `Namespace` resource mechanism. Namespaces group pod
 
 - Access control resources (`AuthorizationRule` / `RoleBinding`) — manage interaction with objects within a `Namespace`. Define rules and assign roles to precisely control who can perform actions in your project.
 - Resource quotas (`ResourceQuota`) — set limits on resource usage, such as CPU time, RAM, and object counts within a `Namespace`. These quotas help prevent excessive load and maintain control over applications within the project.
-- Network connectivity control resources  (`NetworkPolicy`) — сontrol incoming and outgoing network traffic within a Namespace. Configure allowed connections between pods to enhance security and manage network interactions effectively.
+- Network connectivity control resources  (`NetworkPolicy`) — control incoming and outgoing network traffic within a `Namespace`. Configure allowed connections between pods to enhance security and manage network interactions effectively.
 
 These tools can be combined to configure the project according to the requirements of your application.
 
