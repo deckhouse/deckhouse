@@ -43,9 +43,6 @@ spec:
       app.kubernetes.io/part-of: gatekeeper
   template:
     metadata:
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/ratify/configmap.yaml") . | sha256sum }}
-        checksum/config-store: {{ include (print $.Template.BasePath "/ratify/store.yaml") . | sha256sum }}
       labels:
         app: ratify
         app.kubernetes.io/part-of: gatekeeper

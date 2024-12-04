@@ -81,7 +81,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 						{
 							"reference": "*",
 							"publicKeys": ["someKey3"],
-							"registryCA": "someCA1"
+							"ca": "someCA1"
 						}
 					]
 				}
@@ -179,7 +179,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 							"dockerCfg": "zxc=",
 							"reference": "ghcr.io/*",
 							"publicKeys": ["someKey2"],
-							"registryCA": "someCA2"
+							"ca": "someCA2"
 						}
 					]
 				}
@@ -239,7 +239,7 @@ spec:
     - reference: "*"
       publicKeys:
       - someKey3
-      registryCA: someCA1
+      ca: someCA1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicy
@@ -316,5 +316,5 @@ spec:
       reference: ghcr.io/*
       publicKeys:
       - someKey2
-      registryCA: someCA2
+      ca: someCA2
 `

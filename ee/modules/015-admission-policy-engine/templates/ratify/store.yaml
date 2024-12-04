@@ -39,14 +39,14 @@ spec:
 {{- $caList := list }}
 {{- range $sp := .Values.admissionPolicyEngine.internal.securityPolicies }}
   {{- range $vfs := $sp.spec.policies.verifyImageSignatures }}
-    {{- if $vfs.registryCA }}
-      {{- $caList = append $caList $vfs.registryCA }}
+    {{- if $vfs.ca }}
+      {{- $caList = append $caList $vfs.ca }}
     {{- end }}
   {{- end }}
 {{- end }}
 {{- $caList = $caList | uniq }}
 {{- if gt (len $caList) 0 }}
-    registryCAs:
+    ca:
   {{- range $ca := $caList }}
     - |
 {{ $ca | indent 6 }}
