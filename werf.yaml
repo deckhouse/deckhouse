@@ -131,6 +131,20 @@ cleanup:
 {{ tpl $content $ }}
 {{ end }}
 ---
+image: test-scratch
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+  - image: ubuntu-some
+    add: /txt.txt
+    to: /txt.txt
+    after: setup
+---
+image: ubuntu-some
+from: ubuntu:22.04
+shell:
+  install:
+  - touch /txt.txt
+---
 {{- define "base components imports" }}
 - artifact: tini-artifact
   add: /tini/tini-static
