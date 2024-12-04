@@ -35,8 +35,7 @@ spec:
                     Whether MetalLoadBalancerClass is selected for all services by default.
                 type:
                   type: string
-                  enum:
-                    - L2
+                  x-kubernetes-immutable: true
                   x-doc-examples: "L2"
                   description: |-
                     Selecting the load balancer operating mode.
