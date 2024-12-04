@@ -107,7 +107,6 @@ resource "openstack_blockstorage_volume_v3" "root" {
   timeouts {
     create = var.resourceManagementTimeout
     delete = var.resourceManagementTimeout
-    update = var.resourceManagementTimeout
   }
 }
 
