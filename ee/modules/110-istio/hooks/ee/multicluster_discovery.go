@@ -7,7 +7,6 @@ package ee
 
 import (
 	"encoding/json"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"strings"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
