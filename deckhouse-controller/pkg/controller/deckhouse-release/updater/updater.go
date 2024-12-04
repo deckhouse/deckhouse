@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +50,7 @@ func NewDeckhouseUpdater(
 	dc dependency.Container,
 	updateSettings *updater.Settings,
 	releaseData updater.DeckhouseReleaseData,
-	metricStorage *metric_storage.MetricStorage,
+	metricStorage *metricstorage.MetricStorage,
 	podIsReady,
 	clusterBootstrapping bool,
 	imagesRegistry string,
