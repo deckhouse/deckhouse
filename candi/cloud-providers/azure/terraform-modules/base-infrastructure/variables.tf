@@ -50,5 +50,5 @@ locals {
   nat_gateway_public_ip_count = contains(keys(var.providerClusterConfiguration), "standard") ? lookup(var.providerClusterConfiguration.standard, "natGatewayPublicIpCount", 0) : 0
   ssh_allow_list              = lookup(var.providerClusterConfiguration, "sshAllowList", null)
   service_endpoints           = lookup(var.providerClusterConfiguration, "serviceEndpoints", [])
-  nameservers                 = lookup(var.providerClusterConfiguration.nameservers, "addresses", null)
+  nameservers                 = try(var.providerClusterConfiguration.nameservers, "addresses", null)
 }
