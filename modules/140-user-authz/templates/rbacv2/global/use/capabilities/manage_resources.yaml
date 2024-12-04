@@ -6,7 +6,7 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: use
-    rbac.deckhouse.io/aggregate-to-role: manager
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
 rules:
   - apiGroups:
       - ""
