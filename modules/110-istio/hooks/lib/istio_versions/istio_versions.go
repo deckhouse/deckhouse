@@ -82,7 +82,7 @@ func (vm IstioVersionsMap) GetFullVersionByRevision(rev string) string {
 }
 
 func (vm IstioVersionsMap) GetAllVersions() []string {
-	versions := make([]string, len(vm))
+	versions := make([]string, 0, len(vm))
 	for ver := range vm {
 		versions = append(versions, ver)
 	}
