@@ -20,6 +20,7 @@ metadata:
   namespace: d8-system
 data:
   .file: "content"
+  .file2: "content2"
 ---
 # testing creating multiple resources for one non exists resource
 apiVersion: v1
