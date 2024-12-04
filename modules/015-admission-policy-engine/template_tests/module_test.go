@@ -348,7 +348,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			})
 
 			It("Registry secret stores data from values", func() {
-				ratifyRegSecret := f.KubernetesResource("Secret", nsName, "ratify-foo-0")
+				ratifyRegSecret := f.KubernetesResource("Secret", nsName, "ratify-dockercfg-0")
 				Expect(ratifyRegSecret.Exists()).To(BeTrue())
 				Expect(ratifyRegSecret.Field(`data.\.dockerconfigjson`).String()).To(Equal("zxc="))
 			})

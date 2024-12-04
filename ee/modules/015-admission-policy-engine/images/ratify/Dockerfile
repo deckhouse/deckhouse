@@ -13,9 +13,11 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 WORKDIR /src
+COPY patches/01-add-custom-ca.patch /
 
-RUN git clone --depth 1 --branch v1.3.1 https://github.com/ratify-project/ratify .
-RUN go build -ldflags="-s -w" -o ratify cmd/ratify/main.go
+RUN git clone --depth 1 --branch v1.3.1 https://github.com/ratify-project/ratify . && \
+patch -p1 < /01-add-custom-ca.patch && \
+go build -ldflags="-s -w" -o ratify cmd/ratify/main.go
 
 RUN chown 64535:64535 ratify
 RUN chmod 0700 ratify
