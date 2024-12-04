@@ -1,3 +1,14 @@
+{{- define "capcd_controller_manager_args" }}
+- "--leader-elect"
+{{- if semverCompare "<37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion }}
+- "--metrics-bind-address=127.0.0.1:9446"
+{{- else }}
+- "--diagnostics-address=127.0.0.1:9446"
+- "--insecure-diagnostics"
+{{- end }}
+- "--health-probe-bind-address=:9445"
+{{- end }}
+
 {{- define "capcd_controller_manager_resources" }}
 cpu: 25m
 memory: 50Mi
@@ -107,10 +118,10 @@ spec:
           - mountPath: /tmp/k8s-webhook-server/serving-certs
             name: cert
             readOnly: true
+        webhook:
+          port: 4201
         args:
-          - "--leader-elect"
-          - "--metrics-bind-address=127.0.0.1:9446"
-          - "--health-probe-bind-address=:9445"
+          {{- include "capcd_controller_manager_args" . | nindent 10 }}
         livenessProbe:
           httpGet:
             path: /healthz

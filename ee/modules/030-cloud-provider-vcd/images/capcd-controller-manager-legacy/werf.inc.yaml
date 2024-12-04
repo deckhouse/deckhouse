@@ -28,12 +28,12 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
-    - export VERSION="1.4.1"
+    - export VERSION="v1.2.0"
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
     - cd /src
     - git apply /patches/*.patch --verbose
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version=${VERSION}" -o /cluster-api-provider-cloud-director
     - chown 64535:64535 /cluster-api-provider-cloud-director
     - chmod 0755 /cluster-api-provider-cloud-director
-  {{- end }}
 {{- end }}

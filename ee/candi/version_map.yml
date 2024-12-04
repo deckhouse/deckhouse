@@ -1,26 +1,26 @@
 k8s:
   '1.27':
     clusterApi:
-      vcd: 1.6.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1
   '1.28':
     clusterApi:
-      vcd: 1.6.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1
   '1.29':
     clusterApi:
-      vcd: 1.6.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1
   '1.30':
     clusterApi:
-      vcd: 1.6.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1
   '1.31':
     clusterApi:
-      vcd: 1.6.0
+      vcd: v1.3.2
     ccm:
       vcd: 1.4.1      
