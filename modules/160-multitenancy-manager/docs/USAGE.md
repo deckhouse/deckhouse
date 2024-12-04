@@ -2,6 +2,7 @@
 title: "The multitenancy-manager module: usage examples"
 ---
 {% raw %}
+
 ## Default project templates
 
 The following project templates are included in the Deckhouse Kubernetes Platform:
