@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	appsv1 "k8s.io/api/apps/v1"
@@ -66,7 +66,7 @@ type deckhouseReleaseReconciler struct {
 	moduleManager moduleManager
 
 	updateSettings *helpers.DeckhouseSettingsContainer
-	metricStorage  *metric_storage.MetricStorage
+	metricStorage  *metricstorage.MetricStorage
 
 	preflightCountDown      *sync.WaitGroup
 	clusterUUID             string
@@ -74,7 +74,7 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage,
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metricstorage.MetricStorage,
 	preflightCountDown *sync.WaitGroup, logger *log.Logger,
 ) error {
 	r := &deckhouseReleaseReconciler{

@@ -17,7 +17,7 @@ limitations under the License.
 package release
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -25,10 +25,10 @@ import (
 const moduleReleaseBlockedMetricName = "d8_module_release_info"
 
 type metricsUpdater struct {
-	metricStorage *metric_storage.MetricStorage
+	metricStorage *metricstorage.MetricStorage
 }
 
-func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpdater {
+func newMetricsUpdater(metricStorage *metricstorage.MetricStorage) *metricsUpdater {
 	return &metricsUpdater{
 		metricStorage: metricStorage,
 	}

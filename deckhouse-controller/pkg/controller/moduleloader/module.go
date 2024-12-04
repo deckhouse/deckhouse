@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/utils"
+	shapp "github.com/flant/shell-operator/pkg/app"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -36,7 +38,7 @@ type Module struct {
 }
 
 func newModule(def *Definition, staticValues utils.Values, configBytes, valuesBytes []byte, logger *log.Logger) (*Module, error) {
-	basic, err := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, configBytes, valuesBytes, logger)
+	basic, err := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, configBytes, valuesBytes, app.CRDsFilters, shapp.DebugKeepTmpFiles, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build the '%s' basic module: %w", def.Name, err)
 	}

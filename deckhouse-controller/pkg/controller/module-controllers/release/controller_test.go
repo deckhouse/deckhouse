@@ -26,8 +26,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/flant/addon-operator/pkg/app"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
@@ -432,7 +433,7 @@ type: Opaque
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		moduleManager:        stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
-		metricStorage:        metric_storage.NewMetricStorage(context.Background(), "", true, logger),
+		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, logger),
 
 		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 	}
@@ -568,7 +569,7 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 }
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
-	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, log.NewNop())
+	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, app.CRDsFilters, false, log.NewNop())
 	return bm
 }
 

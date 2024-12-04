@@ -375,7 +375,7 @@ func (ua unsupportedAPIVersions) isUnsupportedByAPIAndKind(resourceAPI, resource
 type helmDeprecatedAPIsProcessor struct {
 	totalHelm3Releases uint32
 	totalHelm2Releases uint32
-	logger             go_hook.ILogger
+	logger             go_hook.Logger
 
 	ctx    context.Context
 	cancel context.CancelCauseFunc
