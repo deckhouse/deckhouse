@@ -51,26 +51,15 @@ func setupTestStorage(p *testStorageParams) *testStorageFixture {
 	}
 }
 
-var _ = Describe("Module :: node-manager :: bashible-apiserver :: ng bundles storage", func() {
-	Context("internal methods", func() {
-		It("returns valid k8s bundle name", func() {
-			fixtures := setupTestStorage(&testStorageParams{
-				k8sVer: "1.19",
-			})
-
-			name, err := fixtures.storage.getK8sBundleName("ubuntu-lts.master")
-
-			Expect(err).To(BeNil())
-			Expect(name).To(BeEquivalentTo("ubuntu-lts.1-19"))
-		})
-	})
-})
-
 type testTemplateContext struct {
 	returnedVal map[string]interface{}
 	errVal      error
 }
 
 func (c *testTemplateContext) Get(_ string) (map[string]interface{}, error) {
+	return c.returnedVal, c.errVal
+}
+
+func (c *testTemplateContext) GetBootstrapContext(string) (map[string]interface{}, error) {
 	return c.returnedVal, c.errVal
 }

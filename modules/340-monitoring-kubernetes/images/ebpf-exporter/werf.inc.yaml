@@ -33,6 +33,7 @@ shell:
   install:
   - export BUILD_DIR="/build/ebpf-exporter"
   - mkdir -p ${BUILD_DIR}
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --branch=v2.3.0 --depth=1 {{ $.SOURCE_REPO }}/cloudflare/ebpf_exporter.git ${BUILD_DIR}
   - rm -rf ${BUILD_DIR}/libbpf
   - git clone --branch v1.2.2 --depth=1 {{ $.SOURCE_REPO }}/libbpf/libbpf.git ${BUILD_DIR}/libbpf

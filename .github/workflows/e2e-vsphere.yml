@@ -59,6 +59,9 @@ env:
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
+  # Need for ssh: default.
+  DOCKER_BUILDKIT: "1"
+  WERF_LOG_TERMINAL_WIDTH: "200"
   # </template: werf_envs>
 
 # Note: no concurrency section for e2e workflows.
@@ -220,11 +223,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -717,11 +715,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -1214,11 +1207,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -1711,11 +1699,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -2208,11 +2191,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -2705,11 +2683,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -3202,11 +3175,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp

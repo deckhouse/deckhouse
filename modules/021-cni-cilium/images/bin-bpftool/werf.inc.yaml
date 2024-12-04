@@ -18,6 +18,7 @@ artifact: {{ $.ModuleName }}/bpftool-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 shell:
   beforeInstall:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone {{ $.SOURCE_REPO }}/bpf/bpf-next.git /src/linux
   - cd /src/linux
   - git checkout {{ $bpftoolRev }}

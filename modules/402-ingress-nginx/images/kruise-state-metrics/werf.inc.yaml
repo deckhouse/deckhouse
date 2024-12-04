@@ -12,12 +12,15 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client
   setup:
     - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone {{ $.SOURCE_REPO }}/openkruise/kruise-state-metrics.git
     - cd kruise-state-metrics
     - git checkout {{ $commit }}
-    - find /patches -name '*.patch' -exec git apply {} \;
+    - git apply /patches/*.patch --verbose
     - go mod tidy
     - go mod vendor
     - go build -mod=vendor -a -o /tmp/kruise-state-metrics main.go

@@ -422,6 +422,52 @@ spec:
                           - secret
                           - storageos
                           - vsphereVolume
+                    verifyImageSignatures:
+                      type: array
+                      x-doc-d8Revision: ee
+                      x-doc-examples:
+                        - - reference: docker.io/myrepo/*
+                            publicKeys:
+                                - |-
+                                  -----BEGIN PUBLIC KEY-----
+                                  .....
+                                  -----END PUBLIC KEY-----
+                          - reference: company.registry.com/*
+                            dockerCfg: <Base64_dockerCfg>
+                            publicKeys:
+                                - |-
+                                  -----BEGIN PUBLIC KEY-----
+                                  .....
+                                  -----END PUBLIC KEY-----
+                      description: |
+                        List of policies to verify container images signatures.
+
+                        Container images must be signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys).
+                      items:
+                        type: object
+                        required: ["publicKeys", "reference"]
+                        properties:
+                          dockerCfg:
+                            type: string
+                            description: |
+                              A string in Base64 with authentication data for the container image repository.
+
+                              If the container images are available anonymously, it is not specified.
+                          publicKeys:
+                            type: array
+                            description: The list of Cosign compliant public keys.
+                            items:
+                              type: string
+                          reference:
+                            type: string
+                            description: |
+                              Absolute address or template for container images.
+
+                              If it contains the `*` symbol, it is considered a template for container image addresses. The `*` symbol can only appear once and only at the end. For example, for the value `company.registry.com/*`, any container images from the repository `company.registry.com` will be checked with the specified keys and access parameters.
+
+                              If it does not contain the `*` symbol, it is considered an absolute address for a container image. For example, for the value `company.registry.com/nginx`, only the nginx image from the repository `company.registry.com` will be checked with the specified keys and access parameters.
+                            x-doc-examples: ["docker.io/myuser/*", "*"]
+                            pattern: '^[a-z0-9\.\-:@\/]*\*?$'
                 match:
                   type: object
                   description: Container filtering rules. Use selectors to specify the pods and containers to which you want to apply the policy.

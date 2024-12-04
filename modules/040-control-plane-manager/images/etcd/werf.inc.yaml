@@ -28,10 +28,13 @@ git:
     install:
     - '**/*'
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
     - mkdir /src && cd /src
     - git clone -b v3.5.16 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git .
-    - git apply /patches/*.patch
+    - git apply /patches/*.patch --verbose
     - cd server && go build -ldflags="-s -w" -o /etcd . && cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..

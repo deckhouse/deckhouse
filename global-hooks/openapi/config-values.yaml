@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 default: {}
 additionalProperties: false
@@ -5,7 +6,11 @@ properties:
   storageClass:
     type: string
     default: null
-    description: |-
+    deprecated: true
+    x-doc-deprecated: true
+    description: |
+      > **DEPRECATED**. Moved to [global.modules.storageClass](#parameters-modules-storageclass).
+
       The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
 
         * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
@@ -24,7 +29,7 @@ properties:
        * A StorageClass in the cluster that has the default annotation (`storageclass.kubernetes.io/is-default-class='true'`);
        * The first (alphabetically) StorageClass created by the cloud provider module (if any cloud provider module is used).
 
-      Use this parameter to change the default StorageClass in the cluster, as manually adding the default annotation to a StorageClass is not allowed. 
+      Use this parameter to change the default StorageClass in the cluster, as manually adding the default annotation to a StorageClass is not allowed.
   highAvailability:
     type: boolean
     description: |
@@ -224,6 +229,16 @@ properties:
                     * For a managed cluster, the default value is `1Gi` minus `everyNode.memory`.
                 type: string
                 pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+      storageClass:
+        type: string
+        default: null
+        description: |
+          The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
+
+            * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+            * Use this parameter only in exceptional circumstances.
+            * This parameter is applied during module activation.
+
 # TODO remove after 1.42 release
       proxy:
         deprecated: true
