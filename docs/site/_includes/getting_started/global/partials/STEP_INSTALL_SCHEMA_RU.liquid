@@ -1,5 +1,11 @@
 {%- include getting_started/global/partials/NOTICES.liquid %}
 
+{% if page.platform_code == "bm-private" and page.lang == "ru" %}
+{% alert level="info" %}
+В [Deckhouse Академии](https://deckhouse.ru/academy/) доступен для прохождения курс обучения [«Установка Deckhouse Kubernetes Platform в закрытом окружении»](https://education.flant.ru/course/ustanovka-deckhouse-kubernetes-platform-v-zakrytom-okruzhenii/).
+{% endalert %}
+{% endif %}
+
 {%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' or page.platform_code == 'dynamix' %}
 
 Для развертывания будет использован минимальный набор узлов:
