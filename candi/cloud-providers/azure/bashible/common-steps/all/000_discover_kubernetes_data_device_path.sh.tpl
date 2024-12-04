@@ -1,4 +1,6 @@
-{{- if eq .nodeGroup.name "master" }}
+{{- $nodeTypeList := list "CloudPermanent" }}
+{{- if has .nodeGroup.nodeType $nodeTypeList }}
+  {{- if eq .nodeGroup.name "master" }}
 
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
   return 0
@@ -24,4 +26,6 @@ fi
 echo "kubernetes_data_device: $kubernetes_data_device_path"
 blkid
 echo "$kubernetes_data_device_path" > /var/lib/bashible/kubernetes_data_device_path
-{{- end }}
+
+  {{- end  }}
+{{- end  }}

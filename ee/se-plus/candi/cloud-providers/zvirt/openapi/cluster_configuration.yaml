@@ -105,6 +105,12 @@ apiVersions:
                 example: 10
                 default: 10
                 type: integer
+              systemRegistryDiskSizeGb:
+                description: |
+                  System registry disk size in GiB.
+                example: 100
+                default: 100
+                type: integer
               template:
                 type: string
                 description: |

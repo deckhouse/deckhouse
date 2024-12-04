@@ -25,4 +25,5 @@ module "master-node" {
   zones = local.zones
   tags = local.tags
   associate_ssh_accessible_sg = local.bastion_instance != {} ? false : true
+  systemRegistryEnable = var.systemRegistryEnable
 }

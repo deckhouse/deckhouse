@@ -53,7 +53,7 @@ spec:
 )
 
 type DeckhouseInstaller struct {
-	Registry              RegistryData
+	Registry              Registry
 	LogLevel              string
 	Bundle                string
 	DevBranch             string
@@ -62,8 +62,10 @@ type DeckhouseInstaller struct {
 	ClusterConfig         []byte
 	ProviderClusterConfig []byte
 	StaticClusterConfig   []byte
+	SystemRegistryConfig  []byte
 	TerraformState        []byte
 	NodesTerraformState   map[string][]byte
+	NodesDataDevices      map[string]NodeDataDevices
 	CloudDiscovery        []byte
 	ModuleConfigs         []*ModuleConfig
 
@@ -76,10 +78,15 @@ type DeckhouseInstaller struct {
 	CommanderUUID uuid.UUID
 }
 
+type NodeDataDevices struct {
+	KubeDataDevicePath           string
+	SystemRegistryDataDevicePath string
+}
+
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	registryNameTemplate := "%s%s:%s"
 	if tag, ok := os.LookupEnv("DHCTL_TEST_VERSION_TAG"); ok {
-		return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
+		return fmt.Sprintf(registryNameTemplate, c.Registry.Data.Address, c.Registry.Data.Path, tag)
 	}
 	tag := c.DevBranch
 	if forceVersionTag {
@@ -93,11 +100,11 @@ func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 		panic("You are probably using a development image. please use devBranch")
 	}
 
-	return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
+	return fmt.Sprintf(registryNameTemplate, c.Registry.Data.Address, c.Registry.Data.Path, tag)
 }
 
 func (c *DeckhouseInstaller) IsRegistryAccessRequired() bool {
-	return c.Registry.DockerCfg != ""
+	return c.Registry.Data.DockerCfg != ""
 }
 
 func ReadVersionTagFromInstallerContainer() (string, bool) {
@@ -142,6 +149,11 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		return nil, fmt.Errorf("Marshal static config failed: %v", err)
 	}
 
+	systemRegistryConfig, err := metaConfig.SystemRegistryConfig.ToYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Marshal system registry config failed: %v", err)
+	}
+
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
 
@@ -180,6 +192,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	installConfig := DeckhouseInstaller{
 		UUID:                  metaConfig.UUID,
 		Registry:              metaConfig.Registry,
+		SystemRegistryConfig:  systemRegistryConfig,
 		DevBranch:             metaConfig.DeckhouseConfig.DevBranch,
 		Bundle:                bundle,
 		LogLevel:              logLevel,

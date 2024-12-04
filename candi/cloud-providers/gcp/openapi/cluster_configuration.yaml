@@ -159,6 +159,11 @@ apiVersions:
                 example: 20
                 default: 20
                 type: integer
+              systemRegistryDiskSizeGb:
+                description: System registry disk size in gibibytes.
+                example: 100
+                default: 100
+                type: integer
               disableExternalIP: &instanceClassDisableExternalIP
                 type: boolean
                 enum: [true, false]

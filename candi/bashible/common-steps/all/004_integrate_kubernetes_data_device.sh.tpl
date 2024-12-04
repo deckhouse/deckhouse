@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $nodeTypeList := list "CloudEphemeral" "CloudPermanent" "CloudStatic" }}
+{{- $nodeTypeList := list "CloudPermanent" }}
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
+
 function get_data_device_secret() {
   secret="d8-masters-kubernetes-data-device-path"
 
@@ -87,7 +88,7 @@ fi
 */}}
 if ! [ -b "$DATA_DEVICE" ]; then
   >&2 echo "failed to find $DATA_DEVICE disk. Trying to detect the correct one"
-  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '.blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path')
+  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '[ .blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path ] | sort | first')
 fi
 
 if [ $(wc -l <<< $DATA_DEVICE) -ne 1 ]; then
@@ -128,5 +129,6 @@ if [[ "$(find /var/lib/etcd/ -type f 2>/dev/null | wc -l)" == "0" ]]; then
 fi
 
 touch /var/lib/bashible/kubernetes-data-device-installed
+
   {{- end  }}
 {{- end  }}
