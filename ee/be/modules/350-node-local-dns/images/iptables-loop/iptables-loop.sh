@@ -13,14 +13,14 @@ latest_state=""
 function add_rule() {
   if ! iptables -w 60 -W 100000 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
     iptables -w 60 -W 100000 -t raw -A PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK
-    echo "The state of the rule in iptables has changed to \"$latest_state\""
+    echo "Added rule to iptables."
   fi
 }
 
 function delete_rule() {
   if iptables -w 60 -W 100000 -t raw -C PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK >/dev/null 2>&1 ; then
     iptables -w 60 -W 100000 -t raw -D PREROUTING -d "${KUBE_DNS_SVC_IP}/32" -m socket --nowildcard -j NOTRACK
-    echo "The state of the rule in iptables has changed to \"$latest_state\""
+    echo "Deleted rule from iptables."
   fi
 }
 
@@ -53,14 +53,9 @@ until [[ $(< "$readiness_file_path") == "$ready_state" ]]; do
   sleep 1
 done
 
-pipe=$(mktemp -u)
-mkfifo "$pipe"
-exec 3<>"$pipe"
-rm "$pipe"
+echo "First run."
 
-echo "first run" >&3
-
-inotifywait -q -m -e modify "$readiness_file_path" >&3 |
-while read -r <&3; do
-  check_readiness
+while true; do
+	inotifywait -q -e modify "$readiness_file_path" &> /dev/null
+	check_readiness
 done
