@@ -25,10 +25,14 @@ import sys
 import os
 import json
 
+system_lables = {"beta.kubernetes.io/arch", "beta.kubernetes.io/os", "failure-domain.beta.kubernetes.io/region", "failure-domain.beta.kubernetes.io/zone", "kubernetes.io/arch", "kubernetes.io/hostname", "kubernetes.io/os", "node.deckhouse.io/group", "node.deckhouse.io/type", "topology.kubernetes.io/region", "topology.kubernetes.io/zone"}
+
 def validate(string, is_key = True):
     if len(string) > 63:
         return False
     if is_key:
+        if string in system_lables:
+            return False
         pattern = re.compile("^(?:(?:(?:[a-z0-9][a-z0-9-]+)\.)+[a-z0-9]+/)*[A-Za-z0-9][A-Za-z0-9-._]*$")
     else:
         pattern = re.compile("^[A-Za-z0-9][A-Za-z0-9-._]*$")
@@ -49,6 +53,8 @@ def fetch_labels(fileglob, valid = True):
                         if valid:
                             if validate(label[0]) and validate(label[1], False):
                                 labels[label[0]] = label[1]
+                            else:
+                                sys.stderr.write("Validation failed for label key " + label[0] + "\n")
                         else:
                             labels[label[0]] = label[1]
     return labels
