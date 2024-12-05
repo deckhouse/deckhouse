@@ -160,6 +160,9 @@ type CloudInstances struct {
 	// Quick shutdown results in faster drain. Optional
 	QuickShutdown *bool `json:"quickShutdown,omitempty"`
 
+	// Maximum drain time of CloudEphemeral machines in seconds
+	DrainTimeout *int32 `json:"drainTimeoutSec,omitempty"`
+
 	// List of availability zones to create instances in.
 	Zones []string `json:"zones"`
 

@@ -546,6 +546,8 @@ spec:
                   properties:
                     quickShutdown:
                       description: Снижает время drain'а CloudEphemeral-машин до 5 минут.
+                    drainTimeoutSec:
+                      description: Максимальное время drain'а CloudEphemeral-машин в секунда
                     zones:
                       description: |
                         Переопределение перечня зон, в которых создаются инстансы.
