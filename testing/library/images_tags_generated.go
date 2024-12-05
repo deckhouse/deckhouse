@@ -22,7 +22,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"certManagerWebhook":    "imageHash-certManager-certManagerWebhook",
 	},
 	"chrony": map[string]interface{}{
-		"chrony": "imageHash-chrony-chrony",
+		"chrony":         "imageHash-chrony-chrony",
+		"chronyExporter": "imageHash-chrony-chronyExporter",
 	},
 	"ciliumHubble": map[string]interface{}{
 		"relay":      "imageHash-ciliumHubble-relay",
