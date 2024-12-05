@@ -171,7 +171,7 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 
 			// skip overridden modules
 			if filepath.Base(dstDir) == downloader.DefaultDevVersion {
-				l.log.Warnf("the '%s' module symlink is overriden, skip it", release.Spec.ModuleName)
+				l.log.Warnf("the '%s' module symlink is overridden, skip it", release.Spec.ModuleName)
 				continue
 			}
 
