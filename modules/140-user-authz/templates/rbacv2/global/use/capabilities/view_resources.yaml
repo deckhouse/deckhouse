@@ -23,6 +23,7 @@ rules:
       - replicationcontrollers/status
       - resourcequotas
       - resourcequotas/status
+      - persistentvolumeclaims
     verbs:
       - get
       - list
