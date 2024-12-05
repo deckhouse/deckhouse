@@ -9,12 +9,6 @@ clientConnection:
   kubeconfig: /etc/kubernetes/scheduler.conf
 profiles:
 - schedulerName: high-node-utilization
-  plugins:
-    score:
-      disabled:
-      - name: "NodeResourcesFit"
-      enabled:
-      - name: "NodeResourcesFit"
   pluginConfig:
   - args:
       scoringStrategy:
@@ -23,14 +17,8 @@ profiles:
           weight: 1
         - name: memory
           weight: 1
-- schedulerName: no-scoring
-  plugins:
-    preScore:
-      disabled:
-      - name: "*"
-    score:
-      disabled:
-      - name: "*"
+        type: MostAllocated
+    name: NodeResourcesFit
 - schedulerName: default-scheduler
   pluginConfig:
   - name: PodTopologySpread
