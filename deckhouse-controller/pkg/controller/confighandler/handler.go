@@ -17,7 +17,6 @@ package confighandler
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
