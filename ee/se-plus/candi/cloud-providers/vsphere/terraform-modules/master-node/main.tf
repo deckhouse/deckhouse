@@ -202,11 +202,5 @@ resource "vsphere_virtual_machine" "master" {
     ]
   }
 
-  timeouts {
-    create = var.resourceManagementTimeout
-    delete = var.resourceManagementTimeout
-    update = var.resourceManagementTimeout
-  }
-
   wait_for_guest_net_routable = false
 }
