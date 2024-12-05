@@ -43,20 +43,20 @@ func SetDefaultLevel(l Level) {
 
 func Default() *Logger { return defaultLogger.Load() }
 
-func Log(ctx context.Context, level Level, msg string, args ...any) {
+func Log(ctx context.Context, level slog.Level, msg string, args ...any) {
 	ctx = logContext.SetCustomKeyContext(ctx)
-	Default().Log(ctx, level.Level(), msg, args...)
+	Default().Log(ctx, level, msg, args...)
 }
 
 // Deprecated: use Log instead
-func Logf(ctx context.Context, level Level, format string, args ...any) {
+func Logf(ctx context.Context, level slog.Level, format string, args ...any) {
 	ctx = logContext.SetCustomKeyContext(ctx)
-	Default().Log(ctx, level.Level(), fmt.Sprintf(format, args...))
+	Default().Log(ctx, level, fmt.Sprintf(format, args...))
 }
 
-func LogAttrs(ctx context.Context, level Level, msg string, attrs ...slog.Attr) {
+func LogAttrs(ctx context.Context, level slog.Level, msg string, attrs ...slog.Attr) {
 	ctx = logContext.SetCustomKeyContext(ctx)
-	Default().LogAttrs(ctx, level.Level(), msg, attrs...)
+	Default().LogAttrs(ctx, level, msg, attrs...)
 }
 
 func Debug(msg string, args ...any) {
