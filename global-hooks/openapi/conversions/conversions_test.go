@@ -32,6 +32,21 @@ func TestStorageClassConversions(t *testing.T) {
 		expectedVersion int
 	}{
 		{
+			name: "should move `global.storageClass` to `global.modules.storageClass` even if no global.modules section",
+			settings: `
+global:
+  storageClass: some-storage-class
+`,
+			expected: `
+global:
+  modules:
+    storageClass: some-storage-class
+`,
+			currentVersion:  1,
+			expectedVersion: 2,
+		},
+
+		{
 			name: "should move `global.storageClass` to `global.modules.storageClass`",
 			settings: `
 global:

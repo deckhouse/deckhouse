@@ -1,4 +1,4 @@
 version: 2
 conversions:
-  - if .global.storageClass and .global.modules.storageClass == null then .global.modules.storageClass = .global.storageClass end
+  - if .global.storageClass != null and .global.modules.storageClass == null then .global.modules.storageClass = .global.storageClass end
   - del(.global.storageClass)
