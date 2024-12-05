@@ -47,9 +47,11 @@ alerts:
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
-      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} expired
+      description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} is not provided.
       summary: |
-        Certificate expired
+        Certificate is not provided.
+        Check certificate details for more info.
+        `kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}`
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateExpiredSoon
