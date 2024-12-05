@@ -23,7 +23,14 @@ profiles:
     score:
       disabled:
       - name: "*"
-- pluginConfig:
+- schedulerName: default-scheduler
+  plugins:
+    score:
+      disabled:
+      - name: "NodeResourcesMostAllocated"
+      enabled:
+      - name: "NodeResourcesLeastAllocated"
+  pluginConfig:
   - name: PodTopologySpread
     args:
       defaultingType: List
