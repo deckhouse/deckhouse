@@ -195,7 +195,7 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 			break
 		}
 	}
-
+	//
 	if input.ConfigValues.Exists("global.modules.storageClass") {
 		effectiveStorageClass = input.ConfigValues.Get("global.modules.storageClass").String()
 	}
