@@ -52,11 +52,16 @@ spec:
     - name: 'exclude-kinds'
       expression: '!(has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
     - name: 'exclude-restartedAt'
-      expression: '!(oldObject.spec.template.metadata.annotations != null && object.spec.template.metadata.annotations != null) ||
-        (oldObject.spec.template.metadata.annotations == object.spec.template.metadata.annotations ||
-        (oldObject.spec.template.metadata.annotations != null && "kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations &&
-        object.spec.template.metadata.annotations != null && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations &&
-        oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"] == object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]))'
+      expression: '!((!has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+                    && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
+                    || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+                    && !("kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations)
+                    && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
+                    || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+                    && "kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations
+                    && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
+                    && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
+                    != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]))'
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
