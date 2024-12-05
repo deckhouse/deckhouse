@@ -13,7 +13,7 @@ lang: ru
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
 - [InitConfiguration](../../../../reference/cr/initconfiguration.html) — начальные параметры [конфигурации платформы](../#конфигурация-deckhouse). С этой конфигурацией платформа запустится после установки.
 
-  В этом ресурсе, в частности, указываются параметры, без которых платформа не запустится или будет работать некорректно. Например, параметры [размещения компонентов платформы](../../../../reference/cr/deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](/products/virtualization-platform/reference/mc.html#global-parameters-modules-publicdomaintemplate) и другие.
+  В этом ресурсе, в частности, указываются параметры, без которых платформа не запустится или будет работать некорректно. Например, параметры [размещения компонентов платформы](../../../../reference/mc.html#global-parameters-modules-placement-customtolerationkeys), используемый [storageClass](../deckhouse-configure-global.html#parameters-storageclass), параметры доступа к [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg), [шаблон используемых DNS-имен](/../../../../reference/mc.html#global-parameters-modules-publicdomaintemplate) и другие.
 
 - [ClusterConfiguration](../../../../reference/cr/clusterconfiguration.html) — общие параметры кластера, такие как версия control plane, сетевые параметры, параметры CRI и т.д.
 
@@ -202,7 +202,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
   - SSH-ключи доступа;
   - файл конфигурации;
   - файл ресурсов и т. д.
-- `<RELEASE_CHANNEL>` — [канал обновлений](../update_channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`:
+- `<RELEASE_CHANNEL>` — [канал обновлений](../../update_channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`:
   - `alpha` — для канала обновлений *Alpha*;
   - `beta` — для канала обновлений *Beta*;
   - `early-access` — для канала обновлений *Early Access*;
@@ -296,11 +296,11 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 - постоянного хранения системных данных платформы (метрики, логи, образы);
 - хранения дисков и образов виртуальных машин.
 
-Описание поддерживаемых систем хранения и инструкция по их подключению приведены в разделе [настройка хранилищ](../../platform-management/storage/supported-storage.html).
+Описание поддерживаемых систем хранения и инструкция по их подключению приведены в разделе [Настройка хранилищ](../../platform-management/storage/supported-storage.html).
 
 ## Установка модуля Сilium
 
-Для получения информации по установке и настройке модуля, обратитесь к разделу [настройки Cilium](/products/virtualization-platform/reference/mc.html#cni-cilium).
+Для получения информации по установке и настройке модуля, обратитесь к разделу [Настройки Cilium](/products/virtualization-platform/reference/mc.html#cni-cilium).
 
 ## Установка модуля виртуализации
 
