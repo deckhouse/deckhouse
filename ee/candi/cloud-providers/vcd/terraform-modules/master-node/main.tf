@@ -100,12 +100,6 @@ resource "vcd_vapp_vm" "master" {
     ]
   }
 
-  timeouts {
-    create = var.resourceManagementTimeout
-    delete = var.resourceManagementTimeout
-    update = var.resourceManagementTimeout
-  }
-
   guest_properties = merge({
     "instance-id"         = join("-", [local.prefix, "master", var.nodeIndex])
     "local-hostname"      = join("-", [local.prefix, "master", var.nodeIndex])
