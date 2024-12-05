@@ -20,3 +20,5 @@ set -Eeo pipefail
 cat /etc/rosa-release | grep -q "ROSA Enterprise Linux Server release 7.9 (Cobalt)"
 EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped
+
+echo 'umask 027' > /etc/profile.d/umask.sh

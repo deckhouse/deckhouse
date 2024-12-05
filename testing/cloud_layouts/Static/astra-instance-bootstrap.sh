@@ -29,3 +29,5 @@ chmod +x /usr/local/bin/is-instance-bootstrapped
 #   apt install --allow-change-held-packages --allow-downgrades -y linux-latest-hardened && \
 #   reboot
 # fi
+
+echo 'umask 027' > /etc/profile.d/umask.sh

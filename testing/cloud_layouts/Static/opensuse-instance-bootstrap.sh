@@ -20,3 +20,5 @@ set -Eeo pipefail
 cat /etc/os-release | grep -q "openSUSE Leap 15"
 EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped
+
+echo 'umask 027' > /etc/profile.d/umask.sh
