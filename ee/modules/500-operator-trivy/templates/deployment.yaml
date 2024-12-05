@@ -105,7 +105,11 @@ spec:
           - name: OPERATOR_VULNERABILITY_SCANNER_ENABLED
             value: "true"
           - name: OPERATOR_SBOM_GENERATION_ENABLED
+          {{- if .Values.operatorTrivy.disableSBOMGeneration }}
+            value: "false"
+          {{- else }}
             value: "true"
+          {{- end }}
           - name: OPERATOR_CLUSTER_SBOM_CACHE_ENABLED
             value: "false"
           - name: OPERATOR_VULNERABILITY_SCANNER_SCAN_ONLY_CURRENT_REVISIONS
