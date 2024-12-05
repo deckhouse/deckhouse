@@ -124,7 +124,7 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса `LVMVolumeGroup` описаны в разделе [«Справка»](../../../../reference/cr.html#lvmvolumegroup).
+Подробности о возможностях конфигурации ресурса `LVMVolumeGroup` описаны в разделе [«Справка»](../../../reference/cr/lvmvolumegroup.html).
 
 Дождитесь, когда созданный ресурс `LVMVolumeGroup` перейдет в состояние `Ready`.
 

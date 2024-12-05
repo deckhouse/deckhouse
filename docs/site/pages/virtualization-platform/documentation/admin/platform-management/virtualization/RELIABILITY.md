@@ -25,7 +25,7 @@ d8 k get vm
 
 As seen, the virtual machine is currently running on the `virtlab-pt-1` node.
 
-To migrate the virtual machine from one node to another, taking into account placement requirements, use the [VirtualMachineOperations](../../../../reference/cr.html#virtualmachineoperations) (`vmop`) resource with the `Evict` type:
+To migrate the virtual machine from one node to another, taking into account placement requirements, use the [VirtualMachineOperations](../../../reference/cr/virtualmachineoperations.html) (`vmop`) resource with the `Evict` type:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -87,7 +87,7 @@ ColdStandby provides a mechanism to restore a virtual machine's operation in cas
 To make this mechanism work, the following requirements must be met:
 
 - The virtual machine's launch policy (`.spec.runPolicy`) must be set to one of the following values: `AlwaysOnUnlessStoppedManually`, `AlwaysOn`.
-- The fencing mechanism should be enabled on the nodes where virtual machines are running [fencing](../../../../reference/cr.html#nodegroup-v1-spec-fencing-mode).
+- The fencing mechanism should be enabled on the nodes where virtual machines are running [fencing](../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode).
 
 How the ColdStandby mechanism works with an example:
 

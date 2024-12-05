@@ -6,7 +6,7 @@ lang: ru
 
 ## Пользовательские настройки на узлах
 
-Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](../../../reference/cr.html#nodegroupconfiguration). Ресурс позволяет выполнять на узлах bash-скрипты, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
+Для автоматизации действий на узлах группы предусмотрен ресурс [NodeGroupConfiguration](../../../../reference/cr/nodegroup.html#nodegroupconfiguration). Ресурс позволяет выполнять на узлах bash-скрипты, в которых можно пользоваться набором команд [bashbooster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster), а также позволяет использовать шаблонизатор [Go Template](https://pkg.go.dev/text/template). Это удобно для автоматизации таких операций, как:
 
 - Установка и настройки дополнительных пакетов ОС.
 
@@ -35,9 +35,9 @@ lang: ru
 
 ## Настройки NodeGroupConfiguration
 
-Ресурс NodeGroupConfiguration позволяет указывать [приоритет](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+Ресурс NodeGroupConfiguration позволяет указывать [приоритет](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-weight) выполняемым скриптам, ограничивать их выполнение определенными [группами узлов](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-nodegroups) и [типами ОС](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-bundles).
 
-Код скрипта указывается в параметре [content](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-content) ресурса. При создании скрипта на узле содержимое параметра `content` проходит через шаблонизатор [Go Template](https://pkg.go.dev/text/template), который позволят встроить дополнительный уровень логики при генерации скрипта. При прохождении через шаблонизатор становится доступным контекст с набором динамических переменных.
+Код скрипта указывается в параметре [content](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-content) ресурса. При создании скрипта на узле содержимое параметра `content` проходит через шаблонизатор [Go Template](https://pkg.go.dev/text/template), который позволят встроить дополнительный уровень логики при генерации скрипта. При прохождении через шаблонизатор становится доступным контекст с набором динамических переменных.
 
 Переменные, которые доступны для использования в шаблонизаторе:
 <ul>
@@ -170,4 +170,4 @@ rm /var/lib/bashible/configuration_checksum
 При написании скриптов важно учитывать следующие особенности их использования в Deckhouse:
 
 1. Скрипты в deckhouse выполняются раз в 4 часа или на основании внешних триггеров. Поэтому важно писать скрипты таким образом, чтобы они производили проверку необходимости своих изменений в системе перед выполнением действий, а не производили изменения каждый раз при запуске.
-1. При выборе [приоритета](../../../reference/cr.html#nodegroupconfiguration-v1alpha1-spec-weight) пользовательских скриптов важно учитывать [встроенные скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/node-group) которые производят различные действия в т.ч. установку и настройку сервисов. Например, если в скрипте планируется произвести перезапуск сервиса, а сервис устанавливается встроенным скриптом с приоритетом N, то приоритет пользовательского скрипта должен быть как минимум N+1, иначе, при развертывании нового узла пользовательский скрипт выйдет с ошибкой.
+1. При выборе [приоритета](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-weight) пользовательских скриптов важно учитывать [встроенные скрипты](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/node-group) которые производят различные действия в т.ч. установку и настройку сервисов. Например, если в скрипте планируется произвести перезапуск сервиса, а сервис устанавливается встроенным скриптом с приоритетом N, то приоритет пользовательского скрипта должен быть как минимум N+1, иначе, при развертывании нового узла пользовательский скрипт выйдет с ошибкой.

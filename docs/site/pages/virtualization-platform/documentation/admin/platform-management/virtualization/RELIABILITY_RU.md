@@ -26,7 +26,7 @@ d8 k get vm
 
 Как видно, виртуальная машина в данный момент работает на узле `virtlab-pt-1`.
 
-Для выполнения миграции виртуальной машины с одного узла на другой, с учетом требований по размещению, используется ресурс [VirtualMachineOperations](../../../../reference/cr.html/virtualmachineoperations.html) (`vmop`) с типом `Evict`.
+Для выполнения миграции виртуальной машины с одного узла на другой, с учетом требований по размещению, используется ресурс [VirtualMachineOperations](../../../reference/cr/virtualmachineoperations.html) (`vmop`) с типом `Evict`.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -94,7 +94,7 @@ ColdStandby обеспечивает механизм восстановлени
 Для работы данного механизма необходимо выполнить следующие требования:
 
 - Политика запуска виртуальной машины (`.spec.runPolicy`) должна быть установлена в одно из следующих значений: `AlwaysOnUnlessStoppedManually`, `AlwaysOn`.
-- На узлах, где запускаются виртуальные машины, должен быть активирован механизм [fencing](../../../../reference/cr/nodegroup-v1-spec-fencing-mode.html).
+- На узлах, где запускаются виртуальные машины, должен быть активирован механизм [fencing](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode).
 
 Рассмотрим, как работает механизм ColdStandby на примере:
 

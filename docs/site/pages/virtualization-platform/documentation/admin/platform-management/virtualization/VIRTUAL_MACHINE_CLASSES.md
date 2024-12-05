@@ -3,7 +3,7 @@ title: "Virtual Machine Classes"
 permalink: en/virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html
 ---
 
-The [`VirtualMachineClass`](../../reference/cr.html#virtualmachineclass) resource is intended for centralized configuration of preferred virtual machine parameters. It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources. Additionally, [VirtualMachineClass](../../reference/cr.html#virtualmachineclass) manages the placement of virtual machines across the platform nodes, helping administrators efficiently distribute resources and optimally place virtual machines.
+The [`VirtualMachineClass`](../../../reference/cr/virtualmachineclass.html) resource is intended for centralized configuration of preferred virtual machine parameters. It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources. Additionally, [VirtualMachineClass](../../../reference/cr/virtualmachineclass.html) manages the placement of virtual machines across the platform nodes, helping administrators efficiently distribute resources and optimally place virtual machines.
 
 The virtualization platform provides 3 preconfigured `VirtualMachineClass` resources:
 
@@ -19,7 +19,7 @@ generic            Ready   6d1h
 - `host-passthrough` — in this class, the physical CPU of the platform node is used without modification. A virtual machine using this class can only be migrated to a node with a CPU that exactly matches the CPU of the original node.
 - `generic` — a universal CPU class using the Nehalem model, which is quite old but supported by most modern processors. This allows virtual machines to run on any node in the cluster with live migration capabilities.
 
-The [`VirtualMachineClass`](../../reference/cr.html#virtualmachineclass) is a mandatory parameter in the virtual machine configuration. Here's an example of how to specify the virtual machine class in the specification:
+The [`VirtualMachineClass`](../../../reference/cr/virtualmachineclass.html) is a mandatory parameter in the virtual machine configuration. Here's an example of how to specify the virtual machine class in the specification:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -32,7 +32,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-It is recommended to create at least one [`VirtualMachineClass`](../../reference/cr.html#virtualmachineclass) resource in the cluster with the Discovery type as soon as all nodes are configured and added to the cluster. This will allow virtual machines to use a universal processor with the maximum possible characteristics considering the CPUs on the cluster nodes, ensuring that virtual machines can fully utilize CPU capabilities and, if necessary, migrate seamlessly between cluster nodes. Examples and descriptions of classes with the Discovery type are provided below.
+It is recommended to create at least one [`VirtualMachineClass`](../../../../reference/cr/virtualmachineclass.html) resource in the cluster with the Discovery type as soon as all nodes are configured and added to the cluster. This will allow virtual machines to use a universal processor with the maximum possible characteristics considering the CPUs on the cluster nodes, ensuring that virtual machines can fully utilize CPU capabilities and, if necessary, migrate seamlessly between cluster nodes. Examples and descriptions of classes with the Discovery type are provided below.
 {% endalert %}
 
 Platform administrators can create virtual machine classes according to their needs, but it is recommended to minimize the number of them to simplify management. Below is an example of the configuration.
@@ -223,4 +223,3 @@ Here are fragments of `VirtualMachineClass` configurations for solving various t
       model: IvyBridge
       type: Model
   ```
-  
