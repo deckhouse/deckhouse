@@ -229,7 +229,7 @@ spec:
                   apiVersion: v1
                   resource: daemonsets
                   subresource: prometheus-metrics
-                  name: chrony-exporter
+                  name: chrony
         ports:
         - containerPort: 4228
           name: https-metrics
@@ -403,7 +403,7 @@ spec:
                   apiVersion: v1
                   resource: daemonsets
                   subresource: prometheus-metrics
-                  name: chrony-exporter
+                  name: chrony-master
         ports:
         - containerPort: 4228
           name: https-metrics
