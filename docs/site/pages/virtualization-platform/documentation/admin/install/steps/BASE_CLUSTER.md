@@ -1,7 +1,9 @@
 ---
-title: "Platform installation"
+title: "Base platform installation"
 permalink: en/virtualization-platform/documentation/admin/install/steps/install.html
 ---
+
+Needs syncing.
 
 ## Configuration Preparation
 
