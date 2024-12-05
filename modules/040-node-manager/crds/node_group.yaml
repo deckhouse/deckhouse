@@ -1640,21 +1640,11 @@ spec:
                     - classReference
                     - minPerZone
                     - maxPerZone
-                  oneOf:
-                    - required: [quickShutdown]
-                      properties:
-                        quickShutdown:
-                          type: boolean
-                          deprecated: true
-                      not:
-                        required: [drainTimeoutSec]
-                    - required: [drainTimeoutSec]
-                      properties:
-                        drainTimeoutSec:
-                          type: integer
-                          default: 600
-                      not:
-                        required: [quickShutdown]
+                  allOf:
+                    - not:
+                        allOf:
+                          - required: ["quickShutdown"]
+                          - required: ["drainTimeoutSec"]
                   properties:
                     quickShutdown:
                       type: boolean
@@ -1665,7 +1655,6 @@ spec:
                       type: integer
                       description: |
                         Maximum drain time of CloudEphemeral machines in seconds
-                      default: 600
                     zones:
                       description: |
                         List of availability zones to create instances in.
