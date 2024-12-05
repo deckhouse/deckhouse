@@ -812,6 +812,10 @@ proxy:
 
 ## Changing the configuration
 
+{% alert level="warning" %}
+To apply node configuration changes, you need to run the `dhctl converge` using the Deckhouse installer. This command synchronizes the state of the nodes with the specified configuration.
+{% endalert %}
+
 ### How do I change the configuration of a cluster?
 
 The general cluster parameters are stored in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure.
