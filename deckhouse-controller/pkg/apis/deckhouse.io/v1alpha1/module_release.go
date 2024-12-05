@@ -42,6 +42,9 @@ const (
 
 	ModuleReleaseLabelUpdatePolicy = "modules.deckhouse.io/update-policy"
 
+	ModuleReleaseFinalizerExistOnFs = "modules.deckhouse.io/exist-on-fs"
+
+	ModuleReleaseLabelStatus          = "status"
 	ModuleReleaseLabelSource          = "source"
 	ModuleReleaseLabelModule          = "module"
 	ModuleReleaseLabelReleaseChecksum = "release-checksum"
@@ -60,6 +63,8 @@ var (
 	}
 )
 
+var _ runtime.Object = (*ModuleRelease)(nil)
+
 // +k8s:deepcopy-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -70,8 +75,6 @@ type ModuleReleaseList struct {
 
 	Items []ModuleRelease `json:"items"`
 }
-
-var _ runtime.Object = (*ModuleRelease)(nil)
 
 // +genclient
 // +genclient:nonNamespaced

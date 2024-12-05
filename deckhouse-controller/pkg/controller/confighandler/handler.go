@@ -50,7 +50,8 @@ func New(client client.Client, deckhouseConfigCh chan<- utils.Values, logger *lo
 	}
 }
 
-func (h *Handler) HandleEvent(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, op config.Op) {
+// HandleEvent sends event to addon-operator
+func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op) {
 	kubeConfig := config.NewConfig()
 
 	values, err := h.valuesByModuleConfig(moduleConfig)
@@ -72,15 +73,7 @@ func (h *Handler) HandleEvent(ctx context.Context, moduleConfig *v1alpha1.Module
 			Checksum:     addonOperatorModuleConfig.Checksum(),
 		}
 
-		// remove annotation if module disabled
-		if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok && !*moduleConfig.Spec.Enabled {
-			delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
-			if err = h.client.Update(ctx, moduleConfig); err != nil {
-				h.configEventCh <- config.Event{Key: moduleConfig.Name, Config: kubeConfig, Err: err}
-				return
-			}
-		}
-
+		// update deckhouse settings
 		if moduleConfig.Name == moduleDeckhouse {
 			h.deckhouseConfigCh <- values
 		}
@@ -115,6 +108,7 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 			}
 			continue
 		}
+
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
 
@@ -123,6 +117,7 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 			Checksum:     addonOperatorModuleConfig.Checksum(),
 		}
 
+		// update deckhouse settings
 		if moduleConfig.Name == moduleDeckhouse {
 			h.deckhouseConfigCh <- values
 		}

@@ -74,7 +74,7 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 
 	// add preflight to set the cluster UUID
 	if err := runtimeManager.Add(manager.RunnableFunc(r.preflight)); err != nil {
-		return err
+		return fmt.Errorf("add preflight: %w", err)
 	}
 
 	sourceController, err := controller.New(controllerName, runtimeManager, controller.Options{
@@ -84,7 +84,7 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 		Reconciler:              r,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("create controller: %w", err)
 	}
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
@@ -146,11 +146,12 @@ func (r *reconciler) preflight(ctx context.Context) error {
 	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
 		return r.moduleManager.AreModulesInited(), nil
 	}); err != nil {
-		r.log.Errorf("failed to init module manager: %v", err)
-		return err
+		return fmt.Errorf("init module manager: %w", err)
 	}
 
 	r.clusterUUID = utils.GetClusterUUID(ctx, r.client)
+
+	r.log.Debug("controller is ready")
 
 	return nil
 }

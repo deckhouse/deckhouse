@@ -18,7 +18,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,7 +35,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	moduletools "github.com/deckhouse/deckhouse/go_lib/module"
@@ -69,14 +69,14 @@ type ModuleDownloadResult struct {
 	ModuleVersion string
 	ModuleWeight  uint32
 
-	ModuleDefinition *moduleloader.Definition
+	ModuleDefinition *moduletypes.Definition
 	Changelog        map[string]any
 }
 
 // DownloadDevImageTag downloads image tag and store it in the .../<moduleName>/dev fs path
 // if checksum is equal to a module image digest - do nothing
 // otherwise return new digest
-func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *moduleloader.Definition, error) {
+func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *moduletypes.Definition, error) {
 	moduleStorePath := path.Join(md.downloadedModulesDir, moduleName, DefaultDevVersion)
 
 	img, err := md.fetchImage(moduleName, imageTag)
@@ -149,7 +149,7 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, relea
 }
 
 // DownloadModuleDefinitionByVersion returns a module definition from the repo by the module's name and version(tag)
-func (md *ModuleDownloader) DownloadModuleDefinitionByVersion(moduleName, moduleVersion string) (*moduleloader.Definition, error) {
+func (md *ModuleDownloader) DownloadModuleDefinitionByVersion(moduleName, moduleVersion string) (*moduletypes.Definition, error) {
 	img, err := md.fetchImage(moduleName, moduleVersion)
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) (*
 	}
 
 	// inject registry to values
-	err = InjectRegistryToModuleValues(moduleStorePath, md.ms)
+	err = reginjector.InjectRegistryToModuleValues(moduleStorePath, md.ms)
 	if err != nil {
 		return nil, fmt.Errorf("inject registry error: %v", err)
 	}
@@ -327,14 +327,14 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleN
 	return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersionPath string) *moduleloader.Definition {
-	def := &moduleloader.Definition{
+func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersionPath string) *moduletypes.Definition {
+	def := &moduletypes.Definition{
 		Name:   moduleName,
 		Weight: defaultModuleWeight,
 		Path:   moduleVersionPath,
 	}
 
-	moduleDefFile := path.Join(moduleVersionPath, moduleloader.DefinitionFile)
+	moduleDefFile := path.Join(moduleVersionPath, moduletypes.DefinitionFile)
 
 	if _, err := os.Stat(moduleDefFile); err != nil {
 		return def
@@ -353,8 +353,8 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersio
 	return def
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img v1.Image) (*moduleloader.Definition, error) {
-	def := &moduleloader.Definition{
+func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img v1.Image) (*moduletypes.Definition, error) {
+	def := &moduletypes.Definition{
 		Name:   moduleName,
 		Weight: defaultModuleWeight,
 	}
@@ -467,130 +467,4 @@ type ModuleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
 
 	Changelog map[string]any
-}
-
-func InjectRegistryToModuleValues(moduleVersionPath string, moduleSource *v1alpha1.ModuleSource) error {
-	valuesFile := path.Join(moduleVersionPath, "openapi", "values.yaml")
-
-	valuesData, err := os.ReadFile(valuesFile)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-		_ = os.MkdirAll(filepath.Dir(valuesFile), 0o775)
-		valuesData = bytes.TrimSpace([]byte("type: object"))
-	}
-
-	valuesData, err = mutateOpenapiSchema(valuesData, moduleSource)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(valuesFile, valuesData, 0o666)
-}
-
-func mutateOpenapiSchema(sourceValuesData []byte, moduleSource *v1alpha1.ModuleSource) ([]byte, error) {
-	reg := new(registrySchemaForValues)
-	reg.SetBase(moduleSource.Spec.Registry.Repo)
-	reg.SetDockercfg(moduleSource.Spec.Registry.DockerCFG)
-	reg.SetScheme(moduleSource.Spec.Registry.Scheme)
-	reg.SetCA(moduleSource.Spec.Registry.CA)
-
-	var yamlData injectedValues
-
-	err := yaml.Unmarshal(sourceValuesData, &yamlData)
-	if err != nil {
-		return nil, err
-	}
-
-	yamlData.Properties.Registry = reg
-
-	buf := bytes.NewBuffer(nil)
-
-	yamlEncoder := yaml.NewEncoder(buf)
-	yamlEncoder.SetIndent(2)
-	err = yamlEncoder.Encode(yamlData)
-
-	return buf.Bytes(), err
-}
-
-// part of openapi schema for injecting registry values
-type registrySchemaForValues struct {
-	Type       string   `yaml:"type"`
-	Default    struct{} `yaml:"default"`
-	Properties struct {
-		Base struct {
-			Type    string `yaml:"type"`
-			Default string `yaml:"default"`
-		} `yaml:"base"`
-		Dockercfg struct {
-			Type    string `yaml:"type"`
-			Default string `yaml:"default,omitempty"`
-		} `yaml:"dockercfg"`
-		Scheme struct {
-			Type    string `yaml:"type"`
-			Default string `yaml:"default"`
-		} `yaml:"scheme"`
-		CA struct {
-			Type    string `yaml:"type"`
-			Default string `yaml:"default,omitempty"`
-		} `yaml:"ca"`
-	} `yaml:"properties"`
-}
-
-func (rsv *registrySchemaForValues) fillTypes() {
-	rsv.Properties.Base.Type = "string"
-	rsv.Properties.Dockercfg.Type = "string"
-	rsv.Properties.Scheme.Type = "string"
-	rsv.Properties.CA.Type = "string"
-	rsv.Type = "object"
-}
-
-func (rsv *registrySchemaForValues) SetBase(registryBase string) {
-	rsv.fillTypes()
-
-	rsv.Properties.Base.Default = registryBase
-}
-
-func (rsv *registrySchemaForValues) SetDockercfg(dockercfg string) {
-	rsv.Properties.Dockercfg.Default = DockerCFGForModules(rsv.Properties.Base.Default, dockercfg)
-}
-
-func (rsv *registrySchemaForValues) SetScheme(scheme string) {
-	rsv.Properties.Scheme.Default = scheme
-}
-
-func (rsv *registrySchemaForValues) SetCA(ca string) {
-	rsv.Properties.CA.Default = ca
-}
-
-// DockerCFGForModules
-// according to the deckhouse docs, for anonymous registry access we must have the value:
-// {"auths": { "<PROXY_REGISTRY>": {}}}
-// but it could be empty for a ModuleSource.
-// modules are not ready to catch empty string, so we have to fill it with the default value
-func DockerCFGForModules(repo, dockercfg string) string {
-	if len(dockercfg) != 0 {
-		return dockercfg
-	}
-
-	index := strings.Index(repo, "/")
-	var registry string
-	if index != -1 {
-		registry = repo[:index]
-	} else {
-		registry = repo
-	}
-
-	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"auths": {"%s": {}}}`, registry)))
-}
-
-type injectedValues struct {
-	Type       string                 `json:"type" yaml:"type"`
-	Xextend    map[string]interface{} `json:"x-extend" yaml:"x-extend"`
-	Properties struct {
-		YYY      map[string]interface{}   `json:",inline" yaml:",inline"`
-		Registry *registrySchemaForValues `json:"registry" yaml:"registry"`
-	} `json:"properties" yaml:"properties"`
-	XXX map[string]interface{} `json:",inline" yaml:",inline"`
 }
