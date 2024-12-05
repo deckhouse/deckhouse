@@ -29,7 +29,10 @@ type nodeGroupwithSpec struct {
 	Spec ngv1.NodeGroupSpec
 }
 
-var defaultDrainTimeoutSec int32 = 600
+var (
+	defaultDrainTimeoutSec     int32 = 300
+	defaultQuicDrainTimeoutSec int32 = 600
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
@@ -69,7 +72,7 @@ func migrateDrainTimeout(input *go_hook.HookInput) error {
 		if ng.Spec.CloudInstances.DrainTimeout != nil {
 			drainTimeoutSec = *ng.Spec.CloudInstances.DrainTimeout
 		} else {
-			drainTimeoutSec = int32(defaultDrainTimeoutSec)
+			drainTimeoutSec = int32(defaultQuicDrainTimeoutSec)
 		}
 
 		drainTimeoutPatch := map[string]interface{}{
