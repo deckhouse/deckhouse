@@ -6,32 +6,32 @@ description: Recommendations on preparing Deckhouse Virtualization Platform for 
 lang: en
 ---
 
-The following recommendations are important for a production cluster but may not be relevant for a testing or development cluster.
+The following recommendations are essential for a production cluster, but may be irrelevant for a testing or development one.
 
 ## Release channel and update mode
 
 {% alert %}
 Use `Early Access` or `Stable` release channel.
-Configure [auto-update window](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/usage.html#update-windows-configuration) or select [manual mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/usage.html#manual-update-confirmation).
+Configure the [auto-update window](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/usage.html#update-windows-configuration) or select [manual mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/usage.html#manual-update-confirmation).
 {% endalert %}
 
 Select the [release channel](../documentation/admin/update-channels.html) and [update mode](../documentation/admin/update/update.html) that suit your needs.
-The more stable the release channel is, the later you will have the chance to use the new features.
+The more stable the release channel is, the longer you will have to wait before you can use new features.
 
 If possible, use separate release channels for clusters.
-Use a less stable release channel for a development cluster than for a testing cluster or stage (pre-production) cluster.
+For a development cluster, you may want to use a less stable release channel than for a testing or stage (pre-production) cluster.
 
 We recommend using the `Early Access` or `Stable` release channel for production clusters.
 If you have more than one cluster in a production environment, consider using separate release channels for them.
-For example, `Early Access` for one, and `Stable` for another.
+For example, you can use `Early Access` for the first cluster and `Stable` for the second.
 If you can't use separate release channels, we recommend setting update windows so that they don't overlap.  
 
 {% alert level="warning" %}
 Even in very busy and critical clusters, it's recommended that you don't disable the release channel.
 The best strategy is to configure scheduled updates.
 If you are using a Deckhouse release in your cluster that hasn't been updated in over six months,
-it may contain bugs that have long been eliminated in new versions.
-In this case, it will be difficult to solve an issue promptly.
+it may contain bugs that have long been eliminated in newer versions.
+In such a case, you make it difficult, if not impossible, to address issues promptly.
 {% endalert %}
 
 The [update windows](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html#parameters-update-windows) management lets you schedule automatic Deckhouse release updates during periods of low cluster activity.
@@ -49,9 +49,9 @@ Upgrading the Kubernetes version in the cluster has no effect on applications an
 If the automatic Kubernetes version selection is enabled,
 Deckhouse can upgrade the Kubernetes version in the cluster together with the Deckhouse update (when upgrading a minor version).
 If the Kubernetes version in the [kubernetesVersion](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter is set explicitly,
-Deckhouse may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
+Deckhouse may refuse to upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
 
-If your application uses outdated versions of resources or depends on a particular version of Kubernetes for some other reason,
+If your application uses outdated resource versions or depends on a particular version of Kubernetes for some other reason,
 check whether it's [supported](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html) and [set it explicitly](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).
 
 ## Resource requirements
@@ -62,7 +62,7 @@ For master and monitoring nodes, fast disks are recommended.
 Note that when using software-defined storage, additional disks will be required to store data on the nodes.
 {% endalert %}
 
-The following resource minimums are recommended for infrastructure nodes, depending on their role in the cluster:
+The following resource minimums are recommended for infrastructure nodes, depending on their cluster role:
 
 - **Master node**: 4 CPU, 8 GB RAM, 60 GB of disk space on a fast disk (400+ IOPS)
 - **Frontend node**: 2 CPU, 4 GB RAM, 50 GB of disk space
@@ -71,15 +71,15 @@ The following resource minimums are recommended for infrastructure nodes, depend
   - 2 CPU, 4 GB RAM, 50 GB of disk space — if there are dedicated monitoring nodes in the cluster
   - 4 CPU, 8 GB RAM, 60 GB of disk space on a fast disk (400+ IOPS) — if there are no dedicated monitoring nodes in the cluster.
 - **Worker node**: The requirements are similar to those for the master node,
-  but largely depend on the nature of the load running on a node.
+  but largely depend on the nature of the workload running on a node.
 
 Estimates of the resources required for the clusters to run:
 
 - **Regular cluster**: 3 master nodes, 2 frontend nodes, and 2 system nodes.
-  Such a configuration requires **at least 24 CPUs and 48 GB RAM** along with fast 400+ IOPS disks for the master nodes.
+  Such a configuration requires **at least 24 CPUs and 48 GB of RAM** along with fast 400+ IOPS disks for the master nodes.
 - **High-load cluster** (with dedicated monitoring nodes): 3 master nodes, 2 frontend nodes, 2 system nodes, and 2 monitoring nodes.
-  Such a configuration requires **at least 28 CPUs and 64 GB RAM** along with fast 400+ IOPS disks for the master and monitoring nodes.
-- We recommend setting up a dedicated [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) on fast disks for Deckhouse components.
+  Such a configuration requires **at least 28 CPUs and 64 GB of RAM** along with fast 400+ IOPS disks for the master and monitoring nodes.
+- We recommend setting up a dedicated [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) on fast disks for the Deckhouse components.
 - Add worker nodes to this, taking into account the workload conditions.
 
 ## Things to consider
@@ -91,7 +91,7 @@ A cluster must include three master nodes with fast 400+ IOPS disks.
 {% endalert %}
 
 Always use three master nodes to ensure fault tolerance and safe updates.
-Any extra master nodes aren't necessary, and using 2 nodes (or any even number) prevents achieving quorum.
+Any extra master nodes aren't necessary, and using 2 nodes (or any other even number) prevents achieving quorum.
 
 Related guides:
 
@@ -111,7 +111,7 @@ The NodeGroup of the frontend nodes has the `node-role.deckhouse.io/frontend` la
 For details on allocating nodes for specific load types, refer to [Advanced scheduling](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
 Use more than one frontend node.
-Frontend nodes must be able to handle traffic even if one of them fails.
+Frontend nodes must be able to continue handling traffic even if one of them fails.
 
 For example, if the cluster has two frontend nodes,
 each of them must be able to handle the entire cluster load in case the second frontend node fails.
@@ -123,12 +123,12 @@ The Deckhouse platform supports three sources of incoming traffic:
 - `HostPort`: Installs an Ingress controller accessible on node ports via `hostPort`.
 - `HostPortWithProxyProtocol`: Installs an Ingress controller accessible on node ports via `hostPort`.
   It uses the proxy protocol to obtain the client's real IP address.
-- `HostWithFailover`: Installs two Ingress controllers: a primary one and a standby.
+- `HostWithFailover`: Installs two Ingress controllers, a primary one and a standby.
 
 {% alert level="warning" %}
 The `HostWithFailover` inlet is suitable for clusters with a single frontend node.
 It reduces downtime for the Ingress controller during updates.
-This type of inlet is suitable for important development environments, but **not recommended for production**.
+This inlet type is suitable for important development environments, however, it is **not recommended for production**.
 {% endalert %}
 
 For details on network configuration, refer to [VM Network](/products/virtualization-platform/documentation/admin/platform-management/network/vm-network.html).
@@ -147,7 +147,7 @@ we recommend allocating dedicated nodes for monitoring.
 Otherwise, monitoring components will be deployed to [system nodes](#system-nodes).
 
 When allocating monitoring nodes, it's important to equip them with fast disks.
-You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (global parameter [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass))
+You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (the [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) global parameter)
 or allocating a dedicated `storageClass` to monitoring components only
 ([storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
 
@@ -168,18 +168,18 @@ Allocate two system nodes.
 This way, Deckhouse modules will run on them without interfering with user applications in the cluster.
 For details on allocating nodes for specific load types, refer to [Advanced scheduling](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
-We recommended that you provide the Deckhouse components with fast disks (the [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) global parameter).
+Note that fast disks are recommended for the Deckhouse components (the [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) global parameter).
 
 ## Monitoring alerts
 
 {% alert %}
-You can configure alerts using the [internal Alertmanager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) or connecting the [external one](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager).
+You can configure alerts using the [internal Alertmanager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) or connect the [external one](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager).
 {% endalert %}
 
 Monitoring will work out of the box once Deckhouse is installed, but it's not enough for production clusters.
-To receive alerts about incidents, configure the Alertmanager [built in](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Deckhouse  or [connect your own](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) Alertmanager.
+To receive alerts about incidents, configure the [built-in](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alertmanager) Deckhouse Alertmanager or [connect your own](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-an-additional-alertmanager) Alertmanager.
 
-Using the [CustomAlertmanager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager) custom resource, you can configure alerting to an [e-mail](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/usage.html#sending-alerts-to-telegram), via the [webhook](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
+Using the [CustomAlertmanager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager) custom resource, you can set up alerts to be sent to [e-mail](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/usage.html#sending-alerts-to-telegram), via [webhooks](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
 
 <!-- ## Logging
 
@@ -223,7 +223,7 @@ Follow the project channel on [Telegram](https://t.me/deckhouse) for news and up
 {% endalert %}
 
 To keep up with important news and updates, join the [community](https://deckhouse.io/community/about.html).
-This will help you share experience with people who are doing the same thing as you are and avoid typical problems.
+This will help you share experience with people who are doing the same thing as you are and avoid typical mistakes.
 
 The Deckhouse team understands the challenges of managing a production cluster in Kubernetes.
 We'd love to see you succeed with Deckhouse.
