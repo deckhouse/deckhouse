@@ -20,7 +20,6 @@ resource "openstack_blockstorage_volume_v3" "kubernetes_data" {
   timeouts {
     create = var.resourceManagementTimeout
     delete = var.resourceManagementTimeout
-    update = var.resourceManagementTimeout
   }
 }
 
