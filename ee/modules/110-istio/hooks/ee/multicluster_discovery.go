@@ -129,7 +129,7 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 			options = append(options, http.WithAdditionalCACerts(caCerts))
 		}
 
-		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(options...), multiclusterInfo.PublicMetadataEndpoint, "")
+		bodyBytes, statusCode, err := lib.HTTPGet(http.NewClient(options...), multiclusterInfo.PublicMetadataEndpoint, "")
 		if err != nil {
 			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioMulticluster %s, error: %s", multiclusterInfo.PublicMetadataEndpoint, multiclusterInfo.Name, err.Error())
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
