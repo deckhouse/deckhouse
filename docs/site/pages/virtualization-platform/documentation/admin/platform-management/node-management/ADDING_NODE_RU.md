@@ -14,7 +14,7 @@ lang: ru
 
 Чтобы добавить bare-metal сервер в кластер как статический узел, выполните следующие шаги:
 
-1. Используйте существующий или создайте новый Custom Resource [NodeGroup](../../../../reference/cr/nodegroup.html) ([пример](#статические-узлы) `NodeGroup` с именем `worker`). Параметр [nodeType](..../../../reference/cr/nodegroup.html#nodegroup-v1-spec-nodetype) в Custom Resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
+1. Используйте существующий или создайте новый Custom Resource [NodeGroup](../../../../reference/cr/nodegroup.html) ([пример](#статические-узлы) `NodeGroup` с именем `worker`). Параметр [nodeType](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-nodetype) в Custom Resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
