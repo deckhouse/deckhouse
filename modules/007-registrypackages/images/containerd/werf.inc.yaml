@@ -1,6 +1,6 @@
-{{- $containerd_version := "1.7.20" }}
+{{- $containerd_version := "1.7.24" }}
 {{- $image_version := $containerd_version | replace "." "-" }}
-{{- $runc_version := "1.1.13" }}
+{{- $runc_version := "1.2.2" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
