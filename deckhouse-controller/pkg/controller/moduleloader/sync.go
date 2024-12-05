@@ -65,8 +65,6 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 				return fmt.Errorf("get the '%s' module definition from repository: %w", mpo.Name, err)
 			}
 
-			mpo.Status.Weight = def.Weight
-
 			mpo.Status.UpdatedAt = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
 			mpo.Status.Weight = def.Weight
 			// we don`t need to be bothered - even if the update fails, the weight will be set one way or another
@@ -244,7 +242,7 @@ func (l *Loader) createModuleSymlink(moduleName, moduleVersion string, moduleSou
 
 	// remove possible symlink doubles
 	if err := deleteModuleSymlinks(l.symlinksDir, moduleName); err != nil {
-		return fmt.Errorf("delete module symlinks: %w", err)
+		return fmt.Errorf("delete the '%s' module symlinks: %w", moduleName, err)
 	}
 
 	var moduleTag string
@@ -256,7 +254,7 @@ func (l *Loader) createModuleSymlink(moduleName, moduleVersion string, moduleSou
 	// check if module's directory exists on fs
 	info, err := os.Stat(filepath.Join(l.downloadedModulesDir, moduleName, moduleVersion))
 	if err != nil || !info.IsDir() {
-		l.log.Infof("downloading the '%s' module from the registry", moduleName)
+		l.log.Infof("downloading the '%s:%s' module from the registry", moduleName, moduleVersion)
 		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, l.clusterUUID, l.log)
 		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, options)
 
@@ -275,7 +273,7 @@ func (l *Loader) createModuleSymlink(moduleName, moduleVersion string, moduleSou
 	if err = restoreModuleSymlink(l.downloadedModulesDir, symlinkPath, moduleRelativePath); err != nil {
 		return fmt.Errorf("restore the '%s' module symlink: %w", moduleName, err)
 	}
-	l.log.Infof("the '%s/%s' module restored to %s", moduleName, moduleVersion, moduleRelativePath)
+	l.log.Infof("the '%s:%s' module restored to %s", moduleName, moduleVersion, moduleRelativePath)
 
 	return nil
 }
@@ -285,7 +283,7 @@ func restoreModuleSymlink(downloadedModulesDir, symlinkPath, moduleRelativePath 
 	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(moduleRelativePath, "../"))
 	// check that module exists on a disk
 	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
-		return err
+		return fmt.Errorf("get stat of the '%s': %v", moduleRelativePath, err)
 	}
 
 	return os.Symlink(moduleRelativePath, symlinkPath)
@@ -302,7 +300,7 @@ func deleteModuleSymlinks(symlinksDir, moduleName string) error {
 
 		if len(anotherModuleSymlink) > 0 {
 			if err = os.Remove(anotherModuleSymlink); err != nil {
-				return fmt.Errorf("delete stale symlink %v for the '%s' module: %w", anotherModuleSymlink, moduleName, err)
+				return fmt.Errorf("delete the '%s' stale symlink for the '%s' module: %w", anotherModuleSymlink, moduleName, err)
 			}
 			// go for another spin
 			continue
