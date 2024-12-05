@@ -3,7 +3,7 @@ ARG BASE_GOLANG_22_BULLSEYE
 
 FROM $BASE_GOLANG_22_BULLSEYE AS build
 # Also check operator image version and admission-policy-engine module trivy-provider image "github.com/aquasecurity/trivy" library version
-ARG TRIVY_VERSION=v0.55.0-flant
+ARG TRIVY_VERSION=v0.55.0-flant-1
 ARG TRIVY_DB_VERSION=flant-v2
 ARG GOPROXY
 ARG SOURCE_REPO
