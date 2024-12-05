@@ -50,7 +50,7 @@ lang: ru
 
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
 
-1. [InitConfiguration](configuration.html#initconfiguration) — начальные параметры [конфигурации Deckhouse](../#конфигурация-deckhouse), необходимые для корректного запуска Deckhouse после установки.
+**[InitConfiguration](configuration.html#initconfiguration)** — начальные параметры [конфигурации Deckhouse](../#конфигурация-deckhouse), необходимые для корректного запуска Deckhouse после установки.
 
    Основные настройки, задаваемые в этом ресурсе:
 
