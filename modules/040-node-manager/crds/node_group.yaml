@@ -1654,7 +1654,8 @@ spec:
                     drainTimeoutSec:
                       type: integer
                       description: |
-                        Maximum drain time of CloudEphemeral machines in seconds
+                        Maximum drain time of CloudEphemeral machines in seconds.
+                        This parameter specifies the maximum time the controller will attempt to migrate pods to a new node during a machine rollout. If this time expires, the machine will be forcibly deleted.
                     zones:
                       description: |
                         List of availability zones to create instances in.
