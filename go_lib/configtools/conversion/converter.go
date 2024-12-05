@@ -102,6 +102,7 @@ func (c *Converter) ConvertToLatest(currentVersion int, settings map[string]inte
 
 func (c *Converter) ConvertTo(currentVersion, version int, settings map[string]interface{}) (int, map[string]interface{}, error) {
 	if currentVersion == c.latest || settings == nil || c.conversions == nil {
+		fmt.Print("!!! something nil")
 		return currentVersion, settings, nil
 	}
 	if version == 0 {

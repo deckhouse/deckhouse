@@ -147,6 +147,10 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 	}
 
 	converter := conversion.Store().Get(moduleConfig.Name)
+	if moduleConfig.Name == moduleGlobal {
+		h.log.Info(fmt.Sprintf("!!! latest version of global: %d", converter.LatestVersion()))
+	}
+
 	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, moduleConfig.Spec.Settings)
 	if err != nil {
 		return utils.Values{}, err
