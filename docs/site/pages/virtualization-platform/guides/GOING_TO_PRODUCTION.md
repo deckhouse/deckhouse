@@ -27,7 +27,7 @@ For example, `Early Access` for one, and `Stable` for another.
 If you can't use separate release channels, we recommend setting update windows so that they don't overlap.  
 
 {% alert level="warning" %}
-Even in very busy and critical clusters, it's not a good idea to disable the release channel.
+Even in very busy and critical clusters, it's recommended that you don't disable the release channel.
 The best strategy is to configure scheduled updates.
 If you are using a Deckhouse release in your cluster that hasn't been updated in over six months,
 it may contain bugs that have long been eliminated in new versions.
@@ -44,7 +44,7 @@ Use the automatic [Kubernetes version selection](https://deckhouse.io/products/k
 
 In most cases, we recommend opting for the automatic selection of the Kubernetes version.
 In Deckhouse, this behavior is set by default, but it can be changed with the [kubernetesVersion](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter.
-Upgrading the Kubernetes version in the cluster has no effect on applications and is done in a [consistent and secure fashion](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/#version-control).
+Upgrading the Kubernetes version in the cluster has no effect on applications and is done [consistently and securely](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/#version-control).
 
 If the automatic Kubernetes version selection is enabled,
 Deckhouse can upgrade the Kubernetes version in the cluster together with the Deckhouse update (when upgrading a minor version).
@@ -80,7 +80,7 @@ Estimates of the resources required for the clusters to run:
 - **High-load cluster** (with dedicated monitoring nodes): 3 master nodes, 2 frontend nodes, 2 system nodes, and 2 monitoring nodes.
   Such a configuration requires **at least 28 CPUs and 64 GB RAM** along with fast 400+ IOPS disks for the master and monitoring nodes.
 - We recommend setting up a dedicated [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) on fast disks for Deckhouse components.
-- Add worker nodes to this, taking into account the nature of the workloads.
+- Add worker nodes to this, taking into account the workload conditions.
 
 ## Things to consider
 
@@ -202,11 +202,11 @@ Related guides:
 ## Backups
 
 {% alert %}
-Set up [etcd backups](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/faq.html#how-to-manually-backup-etcd).
+Set up [etcd backups](https://deckhouse.io/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html).
 Write up a recovery plan.
 {% endalert %}
 
-We strongly recommend that you set up [etcd backups](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/faq.html#how-to-manually-backup-etcd).
+We strongly recommend that you set up [etcd backups](https://deckhouse.io/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html).
 This will be your last chance to restore the cluster should things go awry.
 Keep these backups as *far away* from your cluster as possible.
 
