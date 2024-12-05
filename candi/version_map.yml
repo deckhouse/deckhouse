@@ -35,7 +35,7 @@ k8s:
       azure: v1.17.0
       gcp: v1.3.3
       yandex: v0.12.0
-      vcd: v1.3.2
+      vcd: 1.6.0
       zvirt: release-4.17
       vsphere: v3.0.3
       openstack: v1.27.1
@@ -63,7 +63,7 @@ k8s:
       azure: v1.17.0
       gcp: v1.3.3
       yandex: v0.12.0
-      vcd: v1.3.2
+      vcd: 1.6.0
       zvirt: release-4.17
       vsphere: v3.0.3
       openstack: v1.28.0
@@ -91,7 +91,7 @@ k8s:
       azure: v1.17.0
       gcp: v1.3.3
       yandex: v0.12.0
-      vcd: v1.3.2
+      vcd: 1.6.0
       zvirt: release-4.17
       vsphere: v3.0.3
       openstack: v1.29.0
@@ -119,7 +119,7 @@ k8s:
       azure: v1.17.0
       gcp: v1.3.3
       yandex: v0.12.0
-      vcd: v1.3.2
+      vcd: 1.6.0
       zvirt: release-4.17
       vsphere: v3.0.3
       openstack: v1.30.0
@@ -147,7 +147,7 @@ k8s:
       azure: v1.30.4
       gcp: v1.15.1
       yandex: v0.13.0
-      vcd: v1.3.2
+      vcd: 1.6.0
       zvirt: release-4.19
       vsphere: v3.0.3
       openstack: v1.31.0
