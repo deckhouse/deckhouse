@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -41,6 +40,10 @@ import (
 const (
 	IsUpdatingAnnotation = "release.deckhouse.io/isUpdating"
 	NotifiedAnnotation   = "release.deckhouse.io/notified"
+
+	deckhouseClusterConfigurationConfig = "d8-cluster-configuration"
+	systemNamespace                     = "kube-system"
+	k8sAutomaticVersion                 = "Automatic"
 )
 
 func NewDeckhouseUpdater(
@@ -186,7 +189,7 @@ func (api *KubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.Deckh
 }
 
 func (api *KubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, error) {
-	key := client.ObjectKey{Namespace: d8config.APINamespaceName, Name: d8config.DeckhouseClusterConfigurationConfigMapName}
+	key := client.ObjectKey{Namespace: systemNamespace, Name: deckhouseClusterConfigurationConfig}
 	secret := new(corev1.Secret)
 	if err := api.client.Get(ctx, key, secret); err != nil {
 		return false, fmt.Errorf("check kubernetes version: failed to get secret: %w", err)
@@ -202,5 +205,5 @@ func (api *KubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, err
 	if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
 		return false, fmt.Errorf("check kubernetes version: failed to unmarshal cluster configuration: %w", err)
 	}
-	return clusterConf.KubernetesVersion == d8config.K8sAutomaticVersion, nil
+	return clusterConf.KubernetesVersion == k8sAutomaticVersion, nil
 }

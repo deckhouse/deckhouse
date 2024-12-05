@@ -19,7 +19,6 @@ spec:
   releaseChannel: alpha
 status:
   message: ""
-  moduleErrors: []
   modules:
   - name: echo
     overridden: true
@@ -29,12 +28,7 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePullOverride
 metadata:
-  annotations:
-    modules.deckhouse.io/deployed-on: dev-master-0
   creationTimestamp: "2024-05-22T10:05:44Z"
-  deletionTimestamp: "2024-05-22T10:05:44Z"
-  finalizers:
-  - kubernetes
   generation: 1
   labels:
     module: echo
@@ -50,4 +44,4 @@ status:
   imageDigest: sha256:379b341598e85104ffe01643af6eeff5e1022ca60b4cc90be639b8ec59c61a47
   message: ""
   updatedAt: "2024-05-22T10:05:45Z"
-  weight: 910
+  weight: 900

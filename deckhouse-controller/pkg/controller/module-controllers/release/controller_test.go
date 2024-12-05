@@ -49,7 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -80,7 +80,7 @@ type ReleaseControllerTestSuite struct {
 	controllersuite.Suite
 
 	kubeClient client.Client
-	ctr        *moduleReleaseReconciler
+	ctr        *reconciler
 
 	testDataFileName string
 	testMRName       string
@@ -144,62 +144,62 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	suite.Run("simple", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("simple.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
-		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("with annotation", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("with-annotation.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
-		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("deckhouse suitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("dVersion-suitable.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
-		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("deckhouse unsuitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("dVersion-suitable.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
-		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("kubernetes suitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("kVersion-suitable.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
-		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("kubernetes unsuitable version", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("kVersion-suitable.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
-		_, err := suite.ctr.createOrUpdateReconcile(context.TODO(), mr)
+		_, err = suite.ctr.handleRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("deploy with outdated module releases", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml"))
-		err := suite.updateModuleReleasesStatuses()
+		err = suite.updateModuleReleasesStatuses()
 		require.NoError(suite.T(), err)
 		mr := suite.getModuleRelease("echo-v0.4.54")
-		_, err = suite.ctr.reconcilePendingRelease(context.TODO(), mr)
+		_, err = suite.ctr.handlePendingRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("clean up for a deployed module release with outdated module releases", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml"))
-		err := suite.updateModuleReleasesStatuses()
+		err = suite.updateModuleReleasesStatuses()
 		require.NoError(suite.T(), err)
 		mr := suite.getModuleRelease("echo-v0.4.54")
-		_, err = suite.ctr.reconcileDeployedRelease(context.TODO(), mr)
+		_, err = suite.ctr.handleDeployedRelease(context.TODO(), mr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -225,7 +225,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	suite.Run("install new module in manual mode with deckhouse release approval annotation", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("new-module-manual-mode.yaml"))
 		mr := suite.getModuleRelease(suite.testMRName)
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+		_, err = suite.ctr.handleRelease(ctx, mr)
 		require.NoError(suite.T(), err)
 	})
 
@@ -243,7 +243,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
 			mr := suite.getModuleRelease("parca-1.26.3")
-			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
 
@@ -260,7 +260,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
 			mr := suite.getModuleRelease("parca-1.27.0")
-			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
 
@@ -277,7 +277,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
 			mr := suite.getModuleRelease("parca-1.27.0")
-			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
 
@@ -289,7 +289,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
 			mr := suite.getModuleRelease("parca-1.26.3")
-			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
 
@@ -301,7 +301,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
 			mr := suite.getModuleRelease("parca-1.27.0")
-			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
 
@@ -313,7 +313,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
 			mr := suite.getModuleRelease("parca-1.27.0")
-			_, err := suite.ctr.createOrUpdateReconcile(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, mr)
 			require.NoError(suite.T(), err)
 		})
 	})
@@ -341,14 +341,14 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 			return
 		}
 
-		result, err = suite.ctr.createOrUpdateReconcile(context.TODO(), dr)
+		result, err = suite.ctr.handleRelease(context.TODO(), dr)
 		require.NoError(suite.T(), err)
 
 		i++
 		if i > maxIterations {
 			suite.T().Fatal("Too many iterations")
 		}
-		suite.ctr.logger.Infof("Iteration %d result: %+v\n", i, result)
+		suite.ctr.log.Infof("Iteration %d result: %+v\n", i, result)
 	}
 
 	suite.T().Fatal("Loop was broken")
@@ -373,17 +373,17 @@ func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() error {
 	return nil
 }
 
-type reconcilerOption func(*moduleReleaseReconciler)
+type reconcilerOption func(*reconciler)
 
 func withModuleUpdatePolicy(mup *v1alpha2.ModuleUpdatePolicySpec) reconcilerOption {
-	return func(r *moduleReleaseReconciler) {
-		r.deckhouseEmbeddedPolicy = helpers.NewModuleUpdatePolicySpecContainer(mup)
+	return func(r *reconciler) {
+		r.embeddedPolicy = helpers.NewModuleUpdatePolicySpecContainer(mup)
 	}
 }
 
 func withDependencyContainer(dc dependency.Container) reconcilerOption {
-	return func(r *moduleReleaseReconciler) {
-		r.dc = dc
+	return func(r *reconciler) {
+		r.dependencyContainer = dc
 	}
 }
 
@@ -424,17 +424,17 @@ type: Opaque
 	require.NoError(suite.T(), err)
 	logger := log.NewNop()
 
-	rec := &moduleReleaseReconciler{
+	rec := &reconciler{
 		client:               suite.Suite.Client(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		dc:                   dependency.NewDependencyContainer(),
-		logger:               logger,
+		dependencyContainer:  dependency.NewDependencyContainer(),
+		log:                  logger,
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		moduleManager:        stubModulesManager{},
 		delayTimer:           time.NewTimer(3 * time.Second),
 		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, logger),
 
-		deckhouseEmbeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
+		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 	}
 
 	for _, option := range options {
@@ -447,7 +447,7 @@ type: Opaque
 			Kind:       v1alpha2.ModuleUpdatePolicyGVK.Kind,
 			APIVersion: v1alpha2.ModuleUpdatePolicyGVK.GroupVersion().String(),
 		},
-		Spec: ptr.Deref(rec.deckhouseEmbeddedPolicy.Get(), v1alpha2.ModuleUpdatePolicySpec{}),
+		Spec: ptr.Deref(rec.embeddedPolicy.Get(), v1alpha2.ModuleUpdatePolicySpec{}),
 	}
 	result := c.Validator().Validate(mup)
 	if result != nil {
@@ -564,6 +564,10 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 
 type stubModulesManager struct{}
 
+func (s stubModulesManager) AreModulesInited() bool {
+	return true
+}
+
 func (s stubModulesManager) DisableModuleHooks(_ string) {
 }
 
@@ -595,21 +599,16 @@ func singleDocToManifests(doc []byte) (result []string) {
 	return
 }
 
-func Test_validateModule(t *testing.T) {
+func TestValidateModule(t *testing.T) {
 	check := func(name string, failed bool) {
 		t.Helper()
 		t.Run(name, func(t *testing.T) {
-			path := filepath.Join("./testdata", name)
-			err := validateModule(
-				moduleloader.Definition{
-					Name:   name,
-					Weight: 900,
-					Path:   path,
-				},
-				nil,
-				log.NewNop(),
-			)
-
+			def := moduletypes.Definition{
+				Name:   name,
+				Weight: 900,
+				Path:   filepath.Join("./testdata", name),
+			}
+			err := def.Validate(nil, log.NewNop())
 			if !failed {
 				require.NoError(t, err, "%s: unexpected error: %v", name, err)
 			}
@@ -620,9 +619,9 @@ func Test_validateModule(t *testing.T) {
 		})
 	}
 
-	check("module", false)
-	check("module-not-valid", true)
-	check("module-failed", true)
-	check("module-values-failed", true)
-	check("virtualization", false)
+	check("validation/module", false)
+	check("validation/module-not-valid", true)
+	check("validation/module-failed", true)
+	check("validation/module-values-failed", true)
+	check("validation/virtualization", false)
 }

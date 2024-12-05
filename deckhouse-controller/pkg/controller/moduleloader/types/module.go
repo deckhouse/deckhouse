@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package moduleloader
+package types
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ type Module struct {
 	needConfirmDisableMessage string
 }
 
-func newModule(def *Definition, staticValues utils.Values, configBytes, valuesBytes []byte, logger *log.Logger) (*Module, error) {
+func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBytes []byte, logger *log.Logger) (*Module, error) {
 	basic, err := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, configBytes, valuesBytes, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build the '%s' basic module: %w", def.Name, err)

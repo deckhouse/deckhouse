@@ -35,37 +35,25 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func newModuleUpdater(
-	ctx context.Context,
-	dc dependency.Container,
-	logger *log.Logger,
-	settings *updater.Settings,
-	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease],
-	enabledModules []string,
-	metricStorage *metricstorage.MetricStorage,
-) *updater.Updater[*v1alpha1.ModuleRelease] {
-	return updater.NewUpdater[*v1alpha1.ModuleRelease](
-		ctx,
-		dc,
-		logger, settings,
-		updater.DeckhouseReleaseData{},
-		true,
-		false,
-		kubeAPI,
-		newMetricsUpdater(metricStorage),
-		newWebhookDataSource(logger),
-		enabledModules,
-	)
+const moduleReleaseBlockedMetricName = "d8_module_release_info"
+
+type metricsUpdater struct {
+	metricStorage *metricstorage.MetricStorage
 }
 
-func newWebhookDataSource(logger *log.Logger) *webhookDataSource {
-	return &webhookDataSource{logger: logger}
+func (m *metricsUpdater) UpdateReleaseMetric(name string, metricLabels updater.MetricLabels) {
+	m.PurgeReleaseMetric(name)
+	m.metricStorage.Grouped().GaugeSet(name, moduleReleaseBlockedMetricName, 1, metricLabels)
+}
+
+func (m *metricsUpdater) PurgeReleaseMetric(name string) {
+	m.metricStorage.Grouped().ExpireGroupMetricByName(name, moduleReleaseBlockedMetricName)
 }
 
 type webhookDataSource struct {
@@ -84,36 +72,30 @@ func (s *webhookDataSource) Fill(output *updater.WebhookData, release *v1alpha1.
 	}
 
 	output.Subject = updater.SubjectModule
-	output.Message = fmt.Sprintf("New module %s release %s is available. Release will be applied at: %s",
-		release.Spec.ModuleName, output.Version, applyTime.Format(time.RFC850))
+	output.Message = fmt.Sprintf("New module %s release %s is available. Release will be applied at: %s", release.Spec.ModuleName, output.Version, applyTime.Format(time.RFC850))
 	output.ModuleName = release.GetModuleName()
 }
 
-func newKubeAPI(ctx context.Context, logger *log.Logger, client client.Client, downloadedModulesDir string, symlinksDir string,
-	moduleManager moduleManager, dc dependency.Container, clusterUUID string,
-) *kubeAPI {
+func newKubeAPI(logger *log.Logger, client client.Client, downloadedModulesDir, symlinksDir, clusterUUID string, mm moduleManager, dc dependency.Container) *kubeAPI {
 	return &kubeAPI{
-		ctx:                  ctx,
-		logger:               logger,
 		client:               client,
+		log:                  logger,
+		moduleManager:        mm,
 		downloadedModulesDir: downloadedModulesDir,
 		symlinksDir:          symlinksDir,
-		moduleManager:        moduleManager,
-		dc:                   dc,
 		clusterUUID:          clusterUUID,
+		dc:                   dc,
 	}
 }
 
 type kubeAPI struct {
-	// TODO: move context from struct field to arguments
-	ctx                  context.Context
-	logger               *log.Logger
 	client               client.Client
+	log                  *log.Logger
+	moduleManager        moduleManager
 	downloadedModulesDir string
 	symlinksDir          string
-	moduleManager        moduleManager
-	dc                   dependency.Container
 	clusterUUID          string
+	dc                   dependency.Container
 }
 
 func (k *kubeAPI) UpdateReleaseStatus(ctx context.Context, release *v1alpha1.ModuleRelease, msg, phase string) error {
@@ -125,21 +107,21 @@ func (k *kubeAPI) UpdateReleaseStatus(ctx context.Context, release *v1alpha1.Mod
 	release.Status.Message = msg
 
 	if err := k.client.Status().Update(ctx, release); err != nil {
-		return fmt.Errorf("update release %s status: %w", release.Name, err)
+		return fmt.Errorf("update the '%s' release status: %w", release.Name, err)
 	}
 
 	return nil
 }
 
 func (k *kubeAPI) PatchReleaseAnnotations(ctx context.Context, release *v1alpha1.ModuleRelease, annotations map[string]any) error {
-	patch, _ := json.Marshal(map[string]any{
+	marshalledPatch, _ := json.Marshal(map[string]any{
 		"metadata": map[string]any{
 			"annotations": annotations,
 		},
 	})
-	p := client.RawPatch(types.MergePatchType, patch)
+	patch := client.RawPatch(types.MergePatchType, marshalledPatch)
 
-	return k.client.Patch(ctx, release, p)
+	return k.client.Patch(ctx, release, patch)
 }
 
 func (k *kubeAPI) PatchReleaseApplyAfter(release *v1alpha1.ModuleRelease, applyTime time.Time) error {
@@ -150,84 +132,84 @@ func (k *kubeAPI) PatchReleaseApplyAfter(release *v1alpha1.ModuleRelease, applyT
 }
 
 func (k *kubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.ModuleRelease) error {
-	moduleName := release.Spec.ModuleName
-
 	// download desired module version
-	var ms v1alpha1.ModuleSource
-	err := k.client.Get(ctx, types.NamespacedName{Name: release.GetModuleSource()}, &ms)
-	if err != nil {
-		return fmt.Errorf("get module source: %w", err)
+	source := new(v1alpha1.ModuleSource)
+	if err := k.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
+		return fmt.Errorf("get the '%s' module source: %w", release.GetModuleSource(), err)
 	}
 
 	tmpDir, err := os.MkdirTemp("", "module*")
 	if err != nil {
-		return fmt.Errorf("cannot create tmp directory: %w", err)
+		return fmt.Errorf("create tmp directory: %w", err)
 	}
+
+	// clear tmp dir
 	defer func() {
 		if err = os.RemoveAll(tmpDir); err != nil {
-			k.logger.Errorf("cannot remove old module dir %q: %s", tmpDir, err.Error())
+			k.log.Errorf("failed to remove the '%s' old module dir: %v", tmpDir, err)
 		}
 	}()
 
-	options := utils.GenerateRegistryOptionsFromModuleSource(&ms, k.clusterUUID, k.logger)
-	md := downloader.NewModuleDownloader(k.dc, tmpDir, &ms, options)
-	ds, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
+	options := utils.GenerateRegistryOptionsFromModuleSource(source, k.clusterUUID, k.log)
+	md := downloader.NewModuleDownloader(k.dc, tmpDir, source, options)
+
+	downloadStatistic, err := md.DownloadByModuleVersion(release.Spec.ModuleName, release.Spec.Version.String())
 	if err != nil {
-		return fmt.Errorf("download module: %w", err)
+		return fmt.Errorf("download the '%s/%s' module: %w", release.Spec.ModuleName, release.Spec.Version.String(), err)
 	}
 
-	err = k.updateModuleReleaseDownloadStatistic(context.Background(), release, ds)
-	if err != nil {
-		return fmt.Errorf("update module release download statistic: %w", err)
+	if err = k.updateModuleReleaseDownloadStatistic(context.Background(), release, downloadStatistic); err != nil {
+		return fmt.Errorf("updatethe '%s' module release download statistic: %w", release.Name, err)
 	}
 
-	tmpModuleVersionPath := path.Join(tmpDir, moduleName, "v"+release.Spec.Version.String())
-	relativeModulePath := generateModulePath(moduleName, release.Spec.Version.String())
-
-	def := moduleloader.Definition{
-		Name:   moduleName,
+	def := &moduletypes.Definition{
+		Name:   release.Spec.ModuleName,
 		Weight: release.Spec.Weight,
-		Path:   tmpModuleVersionPath,
+		Path:   path.Join(tmpDir, release.Spec.ModuleName, "v"+release.Spec.Version.String()),
 	}
+
 	values := make(addonutils.Values)
-	if module := k.moduleManager.GetModule(moduleName); module != nil {
+	if module := k.moduleManager.GetModule(release.Spec.ModuleName); module != nil {
 		values = module.GetConfigValues(false)
 	}
-	err = validateModule(def, values, k.logger)
-	if err != nil {
+
+	if err = def.Validate(values, k.log); err != nil {
 		release.Status.Phase = v1alpha1.ModuleReleasePhaseSuspended
 		if statusErr := k.UpdateReleaseStatus(ctx, release, "validation failed: "+err.Error(), release.Status.Phase); statusErr != nil {
-			k.logger.Errorf("update the '%s' release status: %s", release.Name, statusErr.Error())
+			k.log.Errorf("update the '%s' release status: %v", release.Name, statusErr)
 		}
-		return fmt.Errorf("module '%s:v%s' validation failed: %s", moduleName, release.Spec.Version.String(), err)
+		return fmt.Errorf("the '%s:v%s' module validation: %w", release.Spec.ModuleName, release.Spec.Version.String(), err)
 	}
 
-	moduleVersionPath := path.Join(k.downloadedModulesDir, moduleName, "v"+release.Spec.Version.String())
+	moduleVersionPath := path.Join(k.downloadedModulesDir, release.Spec.ModuleName, "v"+release.Spec.Version.String())
 	if err = os.RemoveAll(moduleVersionPath); err != nil {
-		return fmt.Errorf("cannot remove old module dir %q: %w", moduleVersionPath, err)
+		return fmt.Errorf("remove the '%s' old module dir: %w", moduleVersionPath, err)
 	}
 
-	if err = cp.Copy(tmpModuleVersionPath, moduleVersionPath); err != nil {
+	if err = cp.Copy(def.Path, moduleVersionPath); err != nil {
 		return fmt.Errorf("copy module dir: %w", err)
 	}
-	def.Path = moduleVersionPath
 
 	// search symlink for module by regexp
 	// module weight for a new version of the module may be different from the old one,
 	// we need to find a symlink that contains the module name without looking at the weight prefix.
-	currentModuleSymlink, err := findExistingModuleSymlink(k.symlinksDir, moduleName)
-	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", def.Weight, moduleName))
+	currentModuleSymlink, err := utils.GetModuleSymlink(k.symlinksDir, release.Spec.ModuleName)
 	if err != nil {
-		currentModuleSymlink = "900-" + moduleName // fallback
+		k.log.Warnf("failed to find the current module symlink for the '%s' module: %v", release.Spec.ModuleName, err)
+		currentModuleSymlink = "900-" + release.Spec.ModuleName // fallback
 	}
-	err = enableModule(k.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath)
-	if err != nil {
-		return fmt.Errorf("module deploy failed: %w", err)
+
+	newModuleSymlink := path.Join(k.symlinksDir, fmt.Sprintf("%d-%s", def.Weight, release.Spec.ModuleName))
+
+	relativeModulePath := path.Join("../", release.Spec.ModuleName, "v"+release.Spec.Version.String())
+
+	if err = utils.EnableModule(k.downloadedModulesDir, currentModuleSymlink, newModuleSymlink, relativeModulePath); err != nil {
+		return fmt.Errorf("enable the '%s' module: %w", release.Spec.ModuleName, err)
 	}
 
 	// disable target module hooks so as not to invoke them before restart
-	if k.moduleManager.GetModule(moduleName) != nil {
-		k.moduleManager.DisableModuleHooks(moduleName)
+	if k.moduleManager.GetModule(release.Spec.ModuleName) != nil {
+		k.moduleManager.DisableModuleHooks(release.Spec.ModuleName)
 	}
 
 	return nil
@@ -244,9 +226,7 @@ func (k *kubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.ModuleR
 	})
 }
 
-func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease,
-	ds *downloader.DownloadStatistic,
-) error {
+func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, release *v1alpha1.ModuleRelease, ds *downloader.DownloadStatistic) error {
 	release.Status.Size = ds.Size
 	release.Status.PullDuration = metav1.Duration{Duration: ds.PullDuration}
 

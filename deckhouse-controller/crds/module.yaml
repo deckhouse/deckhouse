@@ -81,10 +81,6 @@ spec:
                     - Conflict
                     - Ready
                     - Error
-                    #TODO(ipaqsa): delete it
-                    - Pending
-                    - Enqueued
-                    - NotInstalled
                 hooksState:
                   type: string
                   description: The hooks status report.

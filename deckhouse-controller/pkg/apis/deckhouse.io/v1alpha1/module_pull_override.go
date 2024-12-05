@@ -18,9 +18,14 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
+)
+
+const (
+	ModulePullOverrideAnnotationDeployedOn = "modules.deckhouse.io/deployed-on"
 )
 
 var (
@@ -35,6 +40,19 @@ var (
 		Kind:    "ModulePullOverride",
 	}
 )
+
+var _ runtime.Object = (*ModulePullOverride)(nil)
+
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModulePullOverrideList is a list of ModulePullOverride resources
+type ModulePullOverrideList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModulePullOverride `json:"items"`
+}
 
 // +genclient
 // +genclient:nonNamespaced
@@ -67,28 +85,6 @@ type ModulePullOverrideStatus struct {
 	Message     string      `json:"message"`
 	ImageDigest string      `json:"imageDigest"`
 	Weight      uint32      `json:"weight,omitempty"`
-}
-
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModulePullOverrideList is a list of ModulePullOverride resources
-type ModulePullOverrideList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModulePullOverride `json:"items"`
-}
-
-type ModulePullOverrideKind struct{}
-
-func (in *ModulePullOverrideStatus) GetObjectKind() schema.ObjectKind {
-	return &ModulePullOverrideKind{}
-}
-
-func (f *ModulePullOverrideKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *ModulePullOverrideKind) GroupVersionKind() schema.GroupVersionKind {
-	return ModulePullOverrideGVK
 }
 
 // GetModuleSource returns the module source of the related module
