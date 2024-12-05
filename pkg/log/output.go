@@ -14,7 +14,15 @@
 
 package log
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"log/slog"
+)
+
+const (
+	LoggerNameKey = "logger"
+	StacktraceKey = "stacktrace"
+)
 
 type LogOutput struct {
 	Level      string `json:"level"`
@@ -30,20 +38,20 @@ func (lo *LogOutput) MarshalJSON() ([]byte, error) {
 	render := Render{}
 	render.buf = append(render.buf, '{')
 
-	render.JSONKeyValue("level", lo.Level)
+	render.JSONKeyValue(slog.LevelKey, lo.Level)
 
 	render.buf = append(render.buf, ',')
 
 	if lo.Name != "" {
-		render.JSONKeyValue("logger", lo.Name)
+		render.JSONKeyValue(LoggerNameKey, lo.Name)
 		render.buf = append(render.buf, ',')
 	}
 
-	render.JSONKeyValue("msg", lo.Message)
+	render.JSONKeyValue(slog.MessageKey, lo.Message)
 	render.buf = append(render.buf, ',')
 
 	if lo.Source != "" {
-		render.JSONKeyValue("source", lo.Source)
+		render.JSONKeyValue(slog.SourceKey, lo.Source)
 		render.buf = append(render.buf, ',')
 	}
 
@@ -54,15 +62,15 @@ func (lo *LogOutput) MarshalJSON() ([]byte, error) {
 
 	if lo.Stacktrace != "" {
 		if json.Valid([]byte(lo.Stacktrace)) {
-			render.RawJsonKeyValue("stacktrace", lo.Stacktrace)
+			render.RawJsonKeyValue(StacktraceKey, lo.Stacktrace)
 		} else {
-			render.JSONKeyValue("stacktrace", lo.Stacktrace)
+			render.JSONKeyValue(StacktraceKey, lo.Stacktrace)
 		}
 
 		render.buf = append(render.buf, ',')
 	}
 
-	render.JSONKeyValue("time", lo.Time)
+	render.JSONKeyValue(slog.TimeKey, lo.Time)
 
 	render.buf = append(render.buf, '}')
 
