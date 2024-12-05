@@ -50,7 +50,7 @@ shell:
   - git checkout {{ $gitCommit }}
   - git apply /patches/*.patch --verbose
   - echo {{ $gitCommit }} > version
-  - rm -r .git
+  - rm -rf .git
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
