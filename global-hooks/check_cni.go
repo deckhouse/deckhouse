@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	cniConfigurationSettledKey = "cniConfigurationSettled"
+	cniConfigurationSettledKey1 = "cniConfigurationSettled"
 )
 
 type FlannelConfig struct {
@@ -142,12 +142,13 @@ func applyCNIMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 	return mc, nil
 }
+
 func checkCni(input *go_hook.HookInput) error {
 	// Clear a metrics and reqKey
 	input.MetricsCollector.Expire("enabledCNI")
 	input.MetricsCollector.Expire("CNIMisconfigured")
-	// requirements.SaveValue(cniConfigurationSettledKey, "false")
-	requirements.RemoveValue(cniConfigurationSettledKey)
+	// requirements.SaveValue(cniConfigurationSettledKey1, "false")
+	requirements.RemoveValue(cniConfigurationSettledKey1)
 
 	// Secret d8-cni-configuration does not exist
 	// or exist but key cni does not exist
@@ -178,42 +179,42 @@ func checkCni(input *go_hook.HookInput) error {
 	var ururu int
 	switch ururu {
 	case 11:
-		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		requirements.SaveValue(cniConfigurationSettledKey1, "false")
 		input.MetricsCollector.Set("enabledCNI", 0,
 			map[string]string{
 				"secret": "",
 				"mc":     "",
 			}, metrics.WithGroup("D8CheckCNI"))
 	case 12:
-		requirements.SaveValue(cniConfigurationSettledKey, "true")
+		requirements.SaveValue(cniConfigurationSettledKey1, "true")
 		input.MetricsCollector.Set("enabledCNI", 1,
 			map[string]string{
 				"secret": "",
 				"mc":     cniMCs[0].Name,
 			}, metrics.WithGroup("D8CheckCNI"))
 	case 13:
-		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		requirements.SaveValue(cniConfigurationSettledKey1, "false")
 		input.MetricsCollector.Set("enabledCNI", float64(cniCount),
 			map[string]string{
 				"secret": "",
 				"mc":     strings.Join(cniNamesFromMCs, ","),
 			}, metrics.WithGroup("D8CheckCNI"))
 	case 21:
-		requirements.SaveValue(cniConfigurationSettledKey, "true")
+		requirements.SaveValue(cniConfigurationSettledKey1, "true")
 		input.MetricsCollector.Set("enabledCNI", 1,
 			map[string]string{
 				"secret": cniSecret.cni,
 				"mc":     "",
 			}, metrics.WithGroup("D8CheckCNI"))
 	case 22:
-		requirements.SaveValue(cniConfigurationSettledKey, "true")
+		requirements.SaveValue(cniConfigurationSettledKey1, "true")
 		input.MetricsCollector.Set("enabledCNI", 1,
 			map[string]string{
 				"secret": cniSecret.cni,
 				"mc":     cniMCs[0].Name,
 			}, metrics.WithGroup("D8CheckCNI"))
 	case 23:
-		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		requirements.SaveValue(cniConfigurationSettledKey1, "false")
 		input.MetricsCollector.Set("enabledCNI", 1,
 			map[string]string{
 				"secret":        cniSecret.cni,
@@ -225,24 +226,24 @@ func checkCni(input *go_hook.HookInput) error {
 		//
 
 	case 24:
-		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		requirements.SaveValue(cniConfigurationSettledKey1, "false")
 		if !slices.Contains(cniNamesFromMCs, cniSecret.cni) {
 			cniCount++
 		}
 		input.MetricsCollector.Set("enabledCNI", 2,
 			map[string]string{
-				"secret":        "cniSecret.cni",
+				"secret":        cniSecret.cni,
 				"mc":            cniMCs[0].Name,
 				"misconfigured": "true",
 			}, metrics.WithGroup("D8CheckCNI"))
 	case 25:
-		requirements.SaveValue(cniConfigurationSettledKey, "false")
+		requirements.SaveValue(cniConfigurationSettledKey1, "false")
 		if !slices.Contains(cniNamesFromMCs, cniSecret.cni) {
 			cniCount++
 		}
 		input.MetricsCollector.Set("enabledCNI", float64(cniCount),
 			map[string]string{
-				"secret": "cniSecret.cni",
+				"secret": cniSecret.cni,
 				"mc":     strings.Join(cniNamesFromMCs, ","),
 			}, metrics.WithGroup("D8CheckCNI"))
 
