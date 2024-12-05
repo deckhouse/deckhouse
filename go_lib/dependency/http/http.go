@@ -41,7 +41,8 @@ func NewClient(options ...Option) Client {
 	for _, opt := range options {
 		opt(opts)
 	}
-
+	fmt.Printf("Options applied: InsecureSkipVerify=%v, AdditionalCACerts=%d\n",
+		opts.insecure, len(opts.additionalTLSCA))
 	dialer := &net.Dialer{
 		Timeout: opts.timeout,
 	}
