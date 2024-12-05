@@ -7,6 +7,7 @@ clusters:
 - cluster:
     server: https://{{ $multicluster.apiHost }}
     certificate-authority-data: {{ $multicluster.metadataCA }}
+    insecure-skip-tls-verify: true
   name: {{ $multicluster.name }}
 contexts:
 - context:
