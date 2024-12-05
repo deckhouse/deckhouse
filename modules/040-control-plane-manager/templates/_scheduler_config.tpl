@@ -12,9 +12,17 @@ profiles:
   plugins:
     score:
       disabled:
-      - name: "NodeResourcesLeastAllocated"
+      - name: "NodeResourcesFit"
       enabled:
-      - name: "NodeResourcesMostAllocated"
+      - name: "NodeResourcesFit"
+  pluginConfig:
+  - args:
+      scoringStrategy:
+        resources:
+        - name: cpu
+          weight: 1
+        - name: memory
+          weight: 1
 - schedulerName: no-scoring
   plugins:
     preScore:
@@ -24,12 +32,6 @@ profiles:
       disabled:
       - name: "*"
 - schedulerName: default-scheduler
-  plugins:
-    score:
-      disabled:
-      - name: "NodeResourcesMostAllocated"
-      enabled:
-      - name: "NodeResourcesLeastAllocated"
   pluginConfig:
   - name: PodTopologySpread
     args:
