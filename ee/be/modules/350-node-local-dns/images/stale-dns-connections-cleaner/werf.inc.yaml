@@ -1,38 +1,46 @@
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE }}
-git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /src
-  excludePaths:
-  - "**/*.md"
-  - "**/*.yaml"
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-    setup:
-    - "**/*.go"
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  install:
-  - cd /src
-  - go mod download
-  setup:
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
-  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /src
-  - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .
-  - chmod +x /src/stale-dns-connections-cleaner
----
-image: {{ $.ModuleName }}/{{ .ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/stale-dns-connections-cleaner
   to: /stale-dns-connections-cleaner
   before: install
 docker:
   ENTRYPOINT: ["/stale-dns-connections-cleaner"]
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+shell:
+  install:
+  - cd /src
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GOPROXY={{ .GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src
+  - go test ./... -v
+  - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .
+  - chmod +x /src/stale-dns-connections-cleaner
