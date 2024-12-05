@@ -72,20 +72,18 @@ func handleSP(input *go_hook.HookInput) error {
 
 	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", result)
 
-	if len(refs) > 0 {
-		imageReferences := make([]ratifyReference, 0, len(refs))
-		for k, v := range refs {
-			imageReferences = append(imageReferences, ratifyReference{
-				Reference:  k,
-				PublicKeys: v.Slice(),
-			})
-		}
-
-		sort.Slice(imageReferences, func(i, j int) bool {
-			return imageReferences[i].Reference > imageReferences[j].Reference
+	imageReferences := make([]ratifyReference, 0, len(refs))
+	for k, v := range refs {
+		imageReferences = append(imageReferences, ratifyReference{
+			Reference:  k,
+			PublicKeys: v.Slice(),
 		})
-		input.Values.Set("admissionPolicyEngine.internal.ratify.imageReferences", imageReferences)
 	}
+
+	sort.Slice(imageReferences, func(i, j int) bool {
+		return imageReferences[i].Reference > imageReferences[j].Reference
+	})
+	input.Values.Set("admissionPolicyEngine.internal.ratify.imageReferences", imageReferences)
 
 	return nil
 }
