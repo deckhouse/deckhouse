@@ -189,7 +189,7 @@ spec:
         name: chrony-exporter
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         args:
-        - '--web.listen-address=127.0.0.1:9123'
+        - '--web.listen-address=127.0.0.1:4228'
         - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
         - '--collector.tracking'
         - '--collector.sources'
@@ -220,7 +220,7 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
-            - upstream: http://127.0.0.1:9123/metrics
+            - upstream: http://127.0.0.1:4228/metrics
               path: /metrics
               authorization:
                 resourceAttributes:
@@ -363,7 +363,7 @@ spec:
         name: chrony-exporter
         {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         args:
-        - '--web.listen-address=127.0.0.1:9123'
+        - '--web.listen-address=127.0.0.1:4228'
         - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
         - '--collector.tracking'
         - '--collector.sources'
@@ -394,7 +394,7 @@ spec:
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             upstreams:
-            - upstream: http://127.0.0.1:9123/metrics
+            - upstream: http://127.0.0.1:4228/metrics
               path: /metrics
               authorization:
                 resourceAttributes:
