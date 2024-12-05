@@ -7,12 +7,12 @@ lang: en
 To provide external access to virtual machines, for example, for service publishing or remote administration, you can use `Ingress`resources, which are managed by the ingress-nginx module.
 
 These created `Ingress` resources use Nginx as a reverse proxy and load balancer.
-If multiple nodes are available in a cluster to host an Ingress controller, it's deployed in fault-tolerant mode,
+If the cluster includes multiple nodes for hosting the Ingress controller, it will be deployed in failover mode,
 enhancing access reliability and resilience to failures.
 
 Multiple instances of the NGINX Ingress controller can run with separate configurations:
 one primary controller and any number of additional controllers.
-This approach lets you separate processing of Ingress resources for external and internal (intranet) applications,
+This approach lets you separate handling of `Ingress` resources for external and internal (intranet) applications,
 ensuring their isolation and more flexible access control.
 
 ## Create a controller
@@ -52,21 +52,21 @@ which can be used for automatic ordering of SSL certificates and their use by th
 ### Monitoring and statistics
 
 The DVP `ingress-nginx` implementation includes a statistics collection system in Prometheus,
-providing various metrics such as:
+providing various metrics:
 
 - Overall response time and upstream time
 - Response codes
 - Number of request retries
 - Request and response sizes
 - Request methods
-- `content-type`
+- `content-type` types
 - Geographic distribution of requests
 
 Data is displayed in multiple views:
 
 - By namespace
 - By `vhost`
-- By `ingress-resource`
+- By Ingress resource
 - By `location` (in NGINX)
 
 All graphs are available on user-friendly dashboards in Grafana.
