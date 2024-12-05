@@ -16,3 +16,4 @@ spec:
     - protocol: TCP
       port: 4228
       targetPort: https-metrics
+      name: https-metrics
