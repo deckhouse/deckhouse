@@ -2,16 +2,21 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: chrony-exporter
+  name: chrony-exporter-master
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony-exporter" "prometheus" "main")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony-exporter-master" "prometheus" "main")) | nindent 2 }}
 spec:
   jobLabel: app
   sampleLimit: 1500
   endpoints:
     - port: https-metrics
       scheme: https
-      honorLabels: true
+      path: /metrics
+      tlsConfig:
+        insecureSkipVerify: true
+      bearerTokenSecret:
+        name: "prometheus-token"
+        key: "token"
       relabelings:
       - regex: endpoint|namespace|pod|service
         action: labeldrop
