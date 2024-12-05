@@ -8,8 +8,13 @@ git:
     install:
     - '**/*'
 shell:
+  beforeInstall:
+  - apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export PYTHON_VERSION=3.11.6 BUILD_THREADS=4 PYTHON_PREFIX=/opt/python-static
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -b v${PYTHON_VERSION} --single-branch --depth=1 {{ $.SOURCE_REPO }}/python/cpython.git /build/src
   - cp /build/Setup.local /build/src/Modules/Setup.local
   - cd /build/src

@@ -26,6 +26,9 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
@@ -35,6 +38,6 @@ shell:
         {{ $.SOURCE_REPO }}/kubernetes-csi/external-snapshotter.git \
         /go/src/github.com/kubernetes-csi/external-snapshotter
     - cd /go/src/github.com/kubernetes-csi/external-snapshotter/
-    - for patchfile in /patches/*.patch ; do echo -n "Apply ${patchfile} ... "; git apply ${patchfile}; done
+    - git apply /patches/*.patch --verbose
     - cd /go/src/github.com/kubernetes-csi/external-snapshotter/cmd/snapshot-validation-webhook
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /snapshot-validation-webhook

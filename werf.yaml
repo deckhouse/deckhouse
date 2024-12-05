@@ -265,7 +265,8 @@ artifact: golangci-lint-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 shell:
   beforeInstall:
-  - apk add --no-cache git
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   # Use v1.60.1 for go1.23 - https://github.com/golangci/golangci-lint/issues/4837
   - export GOPROXY={{ .GOPROXY }}
@@ -412,6 +413,9 @@ shell:
 artifact: ssh-static
 from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - mkdir /src
   - cd /src

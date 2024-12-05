@@ -26,10 +26,13 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /go/src/app
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch {{ $value.csi.yandex }} {{ $.SOURCE_REPO }}/deckhouse/yandex-csi-driver.git /go/src/app
   - cd /go/src/app
   - |
