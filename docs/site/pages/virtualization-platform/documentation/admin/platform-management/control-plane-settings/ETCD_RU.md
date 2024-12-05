@@ -18,8 +18,8 @@ Deckhouse создаёт CronJob `kube-system/d8-etcd-backup-*`, который 
 d8 backup etcd --kubeconfig $KUBECONFIG ./etcd.db
 ```
 
-TODO что в файле etcd.db? В варианте с etcdctl поясняется что за файл создаётся, а тут нет.
-TODO где это запускать, на каждом master-узле или нет?
+<!-- TODO что в файле etcd.db? В варианте с etcdctl поясняется что за файл создаётся, а тут нет.
+TODO где это запускать, на каждом master-узле или нет? -->
 
 ### Резервное копирование вручную с помощью etcdctl
 
