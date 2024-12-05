@@ -1,0 +1,5 @@
+openvpn:
+  fixes:
+    - summary: Fix .git removal in ovpn-admin image
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10826
+
