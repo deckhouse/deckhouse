@@ -224,7 +224,7 @@ spec:
               path: /metrics
               authorization:
                 resourceAttributes:
-                  namespace: d8-monitoring
+                  namespace: d8-chrony
                   apiGroup: apps
                   apiVersion: v1
                   resource: daemonsets
@@ -282,7 +282,7 @@ spec:
                 values:
                 - master
       dnsPolicy: ClusterFirstWithHostNet
-      serviceAccountName: chrony-exporter
+      serviceAccountName: chrony-exporter-master
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
@@ -398,7 +398,7 @@ spec:
               path: /metrics
               authorization:
                 resourceAttributes:
-                  namespace: d8-monitoring
+                  namespace: d8-chrony
                   apiGroup: apps
                   apiVersion: v1
                   resource: daemonsets
