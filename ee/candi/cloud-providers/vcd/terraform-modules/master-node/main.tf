@@ -51,12 +51,6 @@ resource "vcd_vm_internal_disk" "kubernetes_data"{
   bus_number      = 0
   unit_number     = 1
   bus_type        = "paravirtual"
-
-  timeouts {
-    create = var.resourceManagementTimeout
-    delete = var.resourceManagementTimeout
-    update = var.resourceManagementTimeout
-  }
 }
 
 resource "vcd_vapp_vm" "master" {

@@ -165,12 +165,6 @@ resource "vsphere_virtual_machine" "node" {
     client_device = true
   }
 
-  timeouts {
-    create = var.resourceManagementTimeout
-    delete = var.resourceManagementTimeout
-    update = var.resourceManagementTimeout
-  }
-
   lifecycle {
     ignore_changes = [
       extra_config,
