@@ -116,6 +116,10 @@ fi
 if [[ -z $LABELS ]]
   then
     # No labels to apply, exit 0
+    if [[ $LABELS_FROM_ANNOTATION ]]
+      then
+        kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "${D8_NODE_HOSTNAME}" node.deckhouse.io/last-applied-local-labels-
+    fi
     exit 0
   else
     # Apply labels to node
