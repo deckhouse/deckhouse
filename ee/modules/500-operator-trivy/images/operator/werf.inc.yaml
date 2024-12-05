@@ -6,6 +6,10 @@ import:
   add: /operator-trivy
   to: /operator-trivy
   before: install
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/local
+  to: /local
+  before: install
 docker:
   ENTRYPOINT: ["/operator-trivy"]
 ---
