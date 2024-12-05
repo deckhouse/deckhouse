@@ -46,6 +46,7 @@ spec:
       maxAllowed:
         cpu: 25m
         memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -74,6 +75,7 @@ spec:
       maxAllowed:
         cpu: 25m
         memory: 50Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: apps/v1
