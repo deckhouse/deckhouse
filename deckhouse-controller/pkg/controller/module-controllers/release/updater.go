@@ -24,7 +24,7 @@ import (
 	"time"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	cp "github.com/otiai10/copy"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +48,7 @@ func newModuleUpdater(
 	settings *updater.Settings,
 	kubeAPI updater.KubeAPI[*v1alpha1.ModuleRelease],
 	enabledModules []string,
-	metricStorage *metric_storage.MetricStorage,
+	metricStorage *metricstorage.MetricStorage,
 ) *updater.Updater[*v1alpha1.ModuleRelease] {
 	return updater.NewUpdater[*v1alpha1.ModuleRelease](
 		ctx,

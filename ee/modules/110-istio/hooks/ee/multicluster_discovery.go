@@ -44,7 +44,7 @@ func (i *IstioMulticlusterDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go
 	mc.Set(multiclusterMetricName, isError, labels, metrics.WithGroup(multiclusterMetricsGroup))
 }
 
-func (i *IstioMulticlusterDiscoveryCrdInfo) PatchMetadataCache(pc *object_patch.PatchCollector, scope string, meta interface{}) error {
+func (i *IstioMulticlusterDiscoveryCrdInfo) PatchMetadataCache(pc go_hook.PatchCollector, scope string, meta interface{}) error {
 	patch := map[string]interface{}{
 		"status": map[string]interface{}{
 			"metadataCache": map[string]interface{}{
