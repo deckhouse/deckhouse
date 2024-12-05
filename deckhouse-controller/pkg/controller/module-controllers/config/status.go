@@ -58,7 +58,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 	r.log.Debugf("refresh the %q module config status", configName)
 
 	// clear metrics
-	metricGroup := fmt.Sprintf("%s_%s", "obsoleteVersion", configName)
+	metricGroup := fmt.Sprintf("obsoleteVersion_%s", configName)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
@@ -80,7 +80,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 			// update metrics
 			converter := conversion.Store().Get(moduleConfig.Name)
 			if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
-				r.metricStorage.Grouped().GaugeSet(metricGroup, "module_config_obsolete_version", 1.0, map[string]string{
+				r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_config_obsolete_version", 1.0, map[string]string{
 					"name":    moduleConfig.Name,
 					"version": strconv.Itoa(moduleConfig.Spec.Version),
 					"latest":  strconv.Itoa(converter.LatestVersion()),
