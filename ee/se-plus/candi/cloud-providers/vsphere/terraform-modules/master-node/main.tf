@@ -127,12 +127,6 @@ resource "vsphere_virtual_disk" "kubernetes_data" {
   type               = "eagerZeroedThick"
   vmdk_path          = "deckhouse/${join("-", [var.clusterUUID, "kubernetes-data", var.nodeIndex])}.vmdk"
   create_directories = true
-
-  timeouts {
-    create = var.resourceManagementTimeout
-    delete = var.resourceManagementTimeout
-    update = var.resourceManagementTimeout
-  }
 }
 
 resource "vsphere_virtual_machine" "master" {
