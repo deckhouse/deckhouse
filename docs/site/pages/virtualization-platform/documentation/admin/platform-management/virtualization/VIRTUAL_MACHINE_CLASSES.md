@@ -223,4 +223,3 @@ Here are fragments of `VirtualMachineClass` configurations for solving various t
       model: IvyBridge
       type: Model
   ```
-  
