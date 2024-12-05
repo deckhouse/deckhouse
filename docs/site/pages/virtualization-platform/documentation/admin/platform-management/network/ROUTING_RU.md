@@ -28,109 +28,129 @@ EOF
 
 Ресурс `RoutingTable` описывает желаемую таблицу маршрутизации и содержащиеся в ней маршруты.
 
-Чтобы создать маршрут в основной таблице маршрутизации main, примените ресурс `RoutingTable`:
+Чтобы создать маршрут в основной таблице маршрутизации main, выполните следующее:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: network.deckhouse.io/v1alpha1
-kind: RoutingTable
-metadata:
-name: myrt-main
-spec:
-  ipRoutingTableID: 254 # main routing table id is 254
-  routes:
-  - destination: 10.0.0.0/8
-    gateway: 192.168.0.1
-  nodeSelector:
-    node-role.deckhouse.io: load-balancer
-EOF
-```
+1. Примените ресурс `RoutingTable`, согласно которому на узлах, подпадающих под nodeSelector, будет создан маршрут `10.0.0.0/8 via 192.168.0.1`:
 
-Согласно этому ресурсу на узлах, попадающих под nodeSelector, будет создан маршрут `10.0.0.0/8 via 192.168.0.1`:
+    ```yaml
+    d8 k apply -f - <<EOF
+    apiVersion: network.deckhouse.io/v1alpha1
+    kind: RoutingTable
+    metadata:
+    name: myrt-main
+    spec:
+      ipRoutingTableID: 254 # ID основной таблицы маршрутизации – 254
+      routes:
+      - destination: 10.0.0.0/8
+        gateway: 192.168.0.1
+      nodeSelector:
+        node-role.deckhouse.io: load-balancer
+    EOF
+    ```
 
-```shell
-ip -4 route ls
+1. Чтобы проверить созданный маршрут в основной таблице, выполните следующую команду:
 
-# ...
-# 10.0.0.0/8 via 192.168.0.1 dev eth0 realm 216
-# ...
-# Инструкция realm 216 в маршруте используется как маркер для идентификации маршрута под управлением модуля (d8 hex = 216 dec).
-```
+    ```shell
+    ip -4 route ls
+    ```
 
-Чтобы создать маршрут в дополнительной таблице, примените ресурс `RoutingTable`:
+    В результате будет выведен список маршрутов, включая созданный `10.0.0.0/8 via 192.168.0.1`:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: network.deckhouse.io/v1alpha1
-kind: RoutingTable
-metadata:
-name: myrt-extra
-spec:
-  routes:
-    - destination: 0.0.0.0/0
-      gateway: 192.168.0.1
-  nodeSelector:
-    node-role.deckhouse.io: load-balancer
-status:
-  ipRoutingTableID: 10000 # если spec.ipRoutingTableID не указан, он будет сгенерирован автоматически и размещён в status
+    ```console
     ...
-EOF
-```
+    10.0.0.0/8 via 192.168.0.1 dev eth0 realm 216
+    ...
+    # Инструкция realm 216 в маршруте используется как маркер для идентификации маршрута под управлением модуля (d8 hex = 216 dec).
+    ```
 
-Согласно данному ресурсу на узлах, попадающих под nodeSelector, будет создан маршрут `0.0.0.0/0 via 192.168.0.1` в таблице 10000:
+Чтобы создать маршрут в дополнительной таблице, выполните следующее:
 
-```shell
-ip -4 route ls table 10000
+1. Примените ресурс `RoutingTable`, согласно которому на узлах, подпадающих под nodeSelector, будет создан маршрут `0.0.0.0/0 via 192.168.0.1` в таблице 10000:
 
-# default via 192.168.0.1 dev eth0 realm 216
-```
+    ```yaml
+    d8 k apply -f - <<EOF
+    apiVersion: network.deckhouse.io/v1alpha1
+    kind: RoutingTable
+    metadata:
+    name: myrt-extra
+    spec:
+      routes:
+        - destination: 0.0.0.0/0
+          gateway: 192.168.0.1
+      nodeSelector:
+        node-role.deckhouse.io: load-balancer
+    status:
+      ipRoutingTableID: 10000 # Если spec.ipRoutingTableID не указан, он будет сгенерирован автоматически и размещён в status
+        ...
+    EOF
+    ```
+
+1. Чтобы проверить созданный маршрут в дополнительной таблице, выполните следующую команду:
+
+    ```shell
+    ip -4 route ls table 10000
+    ```
+
+    В результате будет выведен список маршрутов из таблицы 10000, включая созданный `default via 192.168.0.1`:
+
+    ```console
+    ...
+    default via 192.168.0.1 dev eth0 realm 216
+    ...
+    ```
 
 ## Правила маршрутизации
 
 Ресурс `IPRuleSet` описывает набор правил (IP-rule), которые будут созданы на узлах с соответствующими метками.
 
-Чтобы применить правило, создайте ресурс IPRuleSet:
+Чтобы применить правило, выполните следующее:
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: network.deckhouse.io/v1alpha1
-kind: IPRuleSet
-metadata:
-  name: myiprule
-spec:
-  rules:
-    - selectors:
-        from:
-          - 192.168.111.0/24
-          - 192.168.222.0/24
-        to:
-          - 8.8.8.8/32
-          - 172.16.8.0/21
-        sportRange:
-          start: 100
-          end: 200
-        dportRange:
-          start: 300
-          end: 400
-        ipProto: 6
-      actions:
-        lookup:
-          routingTableName: myrt-extra
-      priority: 50
-  nodeSelector:
-    node-role.deckhouse.io: load-balancer
-EOF
-```
+1. Создайте ресурс IPRuleSet, согласно которому на узлах, подпадающих под nodeSelector, будет создан IP-rule:
 
-Согласно этому ресурсу, на узлах, попадающих под nodeSelector, будет создан IP-rule:
+    ```yaml
+    d8 k apply -f - <<EOF
+    apiVersion: network.deckhouse.io/v1alpha1
+    kind: IPRuleSet
+    metadata:
+      name: myiprule
+    spec:
+      rules:
+        - selectors:
+            from:
+              - 192.168.111.0/24
+              - 192.168.222.0/24
+            to:
+              - 8.8.8.8/32
+              - 172.16.8.0/21
+            sportRange:
+              start: 100
+              end: 200
+            dportRange:
+              start: 300
+              end: 400
+            ipProto: 6
+          actions:
+            lookup:
+              routingTableName: myrt-extra
+          priority: 50
+      nodeSelector:
+        node-role.deckhouse.io: load-balancer
+    EOF
+    ```
 
-```shell
-ip rule list
+1. Чтобы убедиться в том, что правило было применено, выполните следующую команду:
 
-# ...
-# 50: from 192.168.111.0/24 to 172.16.8.0/21 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
-# 50: from 192.168.222.0/24 to 8.8.8.8 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
-# 50: from 192.168.222.0/24 to 172.16.8.0/21 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
-# 50: from 192.168.111.0/24 to 8.8.8.8 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
-# ...
-```
+    ```shell
+    ip rule list
+    ```
+
+    В результате будет выведен список настроенных правил:
+
+    ```console
+    ...
+    50: from 192.168.111.0/24 to 172.16.8.0/21 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
+    50: from 192.168.222.0/24 to 8.8.8.8 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
+    50: from 192.168.222.0/24 to 172.16.8.0/21 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
+    50: from 192.168.111.0/24 to 8.8.8.8 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
+    ...
+    ```
