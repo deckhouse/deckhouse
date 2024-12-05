@@ -100,7 +100,7 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
 	for key := range annotations {
-		if strings.Contains(key, "werf.io/") || strings.Contains(key, "meta.helm.sh/") {
+		if strings.Contains(key, "werf.io/") || strings.Contains(key, "helm.sh/") {
 			delete(annotations, key)
 		}
 	}
