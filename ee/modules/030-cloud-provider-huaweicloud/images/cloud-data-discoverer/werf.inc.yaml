@@ -19,7 +19,7 @@ shell:
   install:
     - export GOPROXY={{ $.GOPROXY }}
     - export VERSION="v0.1.0"
-    - export VERSION_COMMON="v0.1.0"
+    - export VERSION_COMMON="v0.3.0"
     - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/huaweicloud/cloud-data-discoverer.git /deckhouse/ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer
     - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/huaweicloud/huaweicloud-common.git /deckhouse/ee/modules/030-cloud-provider-huaweicloud/images/huaweicloud-common
     - cd /deckhouse/ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer

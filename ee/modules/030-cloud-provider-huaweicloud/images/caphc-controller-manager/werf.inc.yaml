@@ -19,7 +19,7 @@ shell:
   - apk add --no-cache git openssh-client
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-    - export COMMON_VERSION="v0.2.0"
+    - export COMMON_VERSION="v0.3.0"
     - export VERSION="v0.1.0"
     - git clone --depth 1 --branch ${COMMON_VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/huaweicloud/huaweicloud-common.git /huaweicloud-common
     - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/huaweicloud/caphc-controller-manager.git /src
