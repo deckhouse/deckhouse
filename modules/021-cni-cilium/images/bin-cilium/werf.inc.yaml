@@ -41,6 +41,7 @@ shell:
   beforeInstall:
   - mkdir -p /go/src/github.com/cilium/cilium
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  ## test
   - git clone --depth 1 --branch roman-chechnev {{ $.SOURCE_REPO }}/cilium/cilium-rnd.git /go/src/github.com/cilium/cilium
   setup:
   - export GOROOT=/usr/local/go GOPATH=/go
