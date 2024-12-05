@@ -30,7 +30,6 @@ resource "openstack_blockstorage_volume_v3" "master" {
   timeouts {
     create = var.resourceManagementTimeout
     delete = var.resourceManagementTimeout
-    update = var.resourceManagementTimeout
   }
 }
 
