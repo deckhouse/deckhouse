@@ -61,9 +61,23 @@ spec:
                   description: The module description.
                 requirements:
                   type: object
-                  additionalProperties:
-                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
                   description: The module requirements.
+                  properties:
+                    deckhouse:
+                      type: string
+                      description: The cluster Deckhouse version requirement.
+                    kubernetes:
+                      type: string
+                      description: The cluster Kubernetes version requirement.
+                    bootstrapped:
+                      type: string
+                      description: The cluster bootstrap state requirement.
+                    modules:
+                      type: object
+                      description: The module dependency requirements.
+                      additionalProperties:
+                        type: string
             status:
               type: object
               properties:

@@ -20,6 +20,13 @@ spec:
                   description: Время, до которого отложено обновление.
                 requirements:
                   description: Структура содержащая требования, необходимые для применения релиза.
+                  properties:
+                    deckhouse:
+                      description: Требование к версии Deckhouse.
+                    kubernetes:
+                      description: Требование к версии Kubernetes.
+                    modules:
+                      description: Требования к наличию других модулей.
                 changelog:
                   description: Список изменений модуля в данном релизе.
             status:

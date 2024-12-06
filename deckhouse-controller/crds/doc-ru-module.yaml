@@ -25,6 +25,15 @@ spec:
                 version:
                   description: Версия модуля.
                 requirements:
-                   description: Зависимости модуля.
+                  description: Структура содержащая требования, необходимые для включения модуля.
+                  properties:
+                    deckhouse:
+                      description: Требование к версии Deckhouse.
+                    kubernetes:
+                      description: Требование к версии Kubernetes.
+                    bootstrapped:
+                      description: Требование к bootstrap-статусу кластера.
+                    modules:
+                      description: Требования к наличию других модулей.
                 description:
                   description: Описание модуля.
