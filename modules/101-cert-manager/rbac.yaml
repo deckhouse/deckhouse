@@ -1,5 +1,5 @@
 module: cert-manager
-scopes:
+subsystems:
   - security
 allowedResources:
   - group: cert-manager.io

@@ -7,8 +7,8 @@ metadata:
     module: user-authz
     rbac.deckhouse.io/use-role: viewer
     rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: scope
-    rbac.deckhouse.io/scope: infrastructure
+    rbac.deckhouse.io/level: subsystem
+    rbac.deckhouse.io/subsystem: infrastructure
     rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
     rbac.deckhouse.io/aggregate-to-all-as: viewer
 aggregationRule:

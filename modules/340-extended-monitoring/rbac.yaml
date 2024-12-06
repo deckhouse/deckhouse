@@ -1,4 +1,4 @@
 module: extended-monitoring
 namespace: d8-monitoring
-scopes:
+subsystems:
   - observability

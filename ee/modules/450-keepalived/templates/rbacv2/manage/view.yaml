@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-keepalived
-  name: d8:manage:capability:module:keepalived:view
+  name: d8:manage:permission:module:keepalived:view
 rules:
 - apiGroups:
   - deckhouse.io
