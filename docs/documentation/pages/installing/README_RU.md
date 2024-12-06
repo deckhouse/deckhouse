@@ -329,7 +329,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 
 Где:
 
-1. `<DECKHOUSE_REVISION>` — [редакция Deckhouse](../revision-comparison.html), например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+1. `<DECKHOUSE_REVISION>` — [редакция Deckhouse](../revision-comparison.html), например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.
 1. `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, такие как:
    - SSH-ключи доступа;
    - Файл конфигурации;
