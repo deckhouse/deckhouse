@@ -26,6 +26,9 @@ const (
 	ModuleSourceResource = "modulesources"
 	ModuleSourceKind     = "ModuleSource"
 
+	ModuleSourceMessageReady      = "Ready"
+	ModuleSourceMessagePullErrors = "Some errors occurred. Inspect status for details"
+
 	ModuleSourceFinalizerReleaseExists = "modules.deckhouse.io/release-exists"
 	ModuleSourceFinalizerModuleExists  = "modules.deckhouse.io/module-exists"
 

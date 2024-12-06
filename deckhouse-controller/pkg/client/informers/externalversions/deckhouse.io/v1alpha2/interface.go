@@ -24,6 +24,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// ModulePullOverrides returns a ModulePullOverrideInformer.
+	ModulePullOverrides() ModulePullOverrideInformer
 	// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
 	ModuleUpdatePolicies() ModuleUpdatePolicyInformer
 }
@@ -37,6 +39,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// ModulePullOverrides returns a ModulePullOverrideInformer.
+func (v *version) ModulePullOverrides() ModulePullOverrideInformer {
+	return &modulePullOverrideInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.

@@ -152,7 +152,7 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 		return false, nil
 	}
 
-	r.log.Debugf("the module release with '%s' checksum exist for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
+	r.log.Debugf("the module release with '%s' checksum exists for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
 	return true, nil
 }
 
