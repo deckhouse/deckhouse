@@ -82,7 +82,7 @@ YAML-файл конфигурации установки содержит па�
    * [VsphereClusterConfiguration](../modules/030-cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
    * [VCDClusterConfiguration](../modules/030-cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
    * [YandexClusterConfiguration](../modules/030-cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
-   * [ZvirtClusterConfiguration](../modules/030-cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) - zVirt.
+   * [ZvirtClusterConfiguration](../modules/030-cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
 1. `ModuleConfig` — набор ресурсов, содержащих параметры конфигурации [встроенных модулей Deckhouse](../).
 
