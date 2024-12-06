@@ -18,6 +18,7 @@ import (
 
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
@@ -28,11 +29,13 @@ var (
 )
 
 type IstioFederationDiscoveryCrdInfo struct {
-	Name                    string
-	ClusterUUID             string
-	TrustDomain             string
-	PublicMetadataEndpoint  string
-	PrivateMetadataEndpoint string
+	Name                     string
+	ClusterUUID              string
+	TrustDomain              string
+	ClusterCA                string
+	EnableInsecureConnection bool
+	PublicMetadataEndpoint   string
+	PrivateMetadataEndpoint  string
 }
 
 func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_hook.MetricsCollector, endpoint string, isError float64) {
@@ -71,15 +74,17 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		clusterUUID = federation.Status.MetadataCache.Public.ClusterUUID
 	}
 
-	me := federation.Spec.MetadataEndpoint
+	me := federation.Spec.Metadata.Endpoint
 	me = strings.TrimSuffix(me, "/")
 
 	return IstioFederationDiscoveryCrdInfo{
-		Name:                    federation.GetName(),
-		TrustDomain:             federation.Spec.TrustDomain,
-		ClusterUUID:             clusterUUID,
-		PublicMetadataEndpoint:  me + "/public/public.json",
-		PrivateMetadataEndpoint: me + "/private/federation.json",
+		Name:                     federation.GetName(),
+		TrustDomain:              federation.Spec.TrustDomain,
+		ClusterCA:                federation.Spec.Metadata.ClusterCA,
+		EnableInsecureConnection: federation.Spec.Metadata.EnableInsecureConnection,
+		ClusterUUID:              clusterUUID,
+		PublicMetadataEndpoint:   me + "/public/public.json",
+		PrivateMetadataEndpoint:  me + "/private/federation.json",
 	}, nil
 }
 
@@ -127,7 +132,16 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.FederationPrivateMetadata
 
-		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(), federationInfo.PublicMetadataEndpoint, "")
+		options := []http.Option{}
+		if federationInfo.EnableInsecureConnection {
+			options = append(options, http.WithInsecureSkipVerify())
+		}
+		if federationInfo.ClusterCA != "" {
+			caCerts := [][]byte{[]byte(federationInfo.ClusterCA)}
+			options = append(options, http.WithAdditionalCACerts(caCerts))
+		}
+
+		bodyBytes, statusCode, err := lib.HTTPGet(http.NewClient(options...), federationInfo.PublicMetadataEndpoint, "")
 		if err != nil {
 			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
@@ -169,7 +183,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
-		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(), federationInfo.PrivateMetadataEndpoint, bearerToken)
+		bodyBytes, statusCode, err = lib.HTTPGet(http.NewClient(options...), federationInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
 			input.Logger.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
