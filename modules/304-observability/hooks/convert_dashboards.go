@@ -197,10 +197,10 @@ func dashboardKindByName(name string) string {
 
 func dashboardPrefixByKind(kind string) string {
 	if kind == PropagatedDashboardKind {
-		return "propagated-"
+		return "propagated_"
 	}
 
-	return "cluster-"
+	return "cluster_"
 }
 
 func dashboardManifest(name, category, kind, definition string) *unstructured.Unstructured {
