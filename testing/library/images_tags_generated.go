@@ -361,6 +361,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
 	},
+	"observability": map[string]interface{}{
+		"labelProxy": "imageHash-observability-labelProxy",
+	},
 	"openvpn": map[string]interface{}{
 		"easyrsaMigrator": "imageHash-openvpn-easyrsaMigrator",
 		"openvpn":         "imageHash-openvpn-openvpn",
