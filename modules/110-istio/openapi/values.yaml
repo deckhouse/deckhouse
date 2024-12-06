@@ -78,10 +78,6 @@ properties:
               type: string
             spiffeEndpoint:
               type: string
-            ca:
-              type: string
-            insecureSkipVerify:
-              type: bool
             enableIngressGateway:
               type: bool
             apiHost:
