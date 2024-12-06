@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+# Copyright 2024 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license.
+#See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: multipledefaultmlbchandler-policy.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["network.deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["metalloadbalancerclasses"]
+    scope:       "Cluster"
+kubernetes:
+- name: mlbc_default
+  group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  apiVersion: network.deckhouse.io/v1alpha1
+  kind: MetalLoadBalancerClass
+  jqFilter: |
+    {
+      "isDefault": .spec.isDefault,
+      "name": .metadata.name,
+    }
+EOF
+}
+
+function forbid() {
+  jq -nc --arg message "$1" '
+    {
+      "allowed": false,
+      "message": $message
+    }
+    ' >"$VALIDATING_RESPONSE_PATH"
+}
+
+function __main__() {
+  mclc_name=$(context::jq -r '.review.request.name')
+  old_isdefault_field=$(context::jq -r '.review.request.oldObject.spec.isDefault')
+  new_isdefault_field=$(context::jq -r '.review.request.object.spec.isDefault')
+  if [ "$old_isdefault_field" != "$new_isdefault_field" ] && [ "$new_isdefault_field" == "true" ]; then
+    # The field "isDefault" was changed to "true"
+    default_mlbc_names=$(context::jq -r --arg mclc_name "$mclc_name" '.snapshots.mlbc_default[] | select(.filterResult.isDefault == true) | select(.filterResult.name != $mclc_name) | .filterResult.name')
+    if [[ $default_mlbc_names != "" ]]; then
+      forbid "there is another default MetalLoadBalancerClass; set its \"isDefault\" flag to \"false\"."
+      exit 0
+    fi
+  fi
+
+  # Allowed response.
+  jq -nc '{"allowed": true}' >"$VALIDATING_RESPONSE_PATH"
+}
+
+hook::run "$@"
