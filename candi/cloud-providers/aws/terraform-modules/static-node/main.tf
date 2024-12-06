@@ -80,6 +80,12 @@ resource "aws_instance" "node" {
       volume_tags
     ]
   }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "aws_eip" "eip" {
