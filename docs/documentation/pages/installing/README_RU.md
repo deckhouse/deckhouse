@@ -331,7 +331,7 @@ docker login -u license-token registry.deckhouse.ru
 Запуск контейнера инсталлятора Deckhouse из публичного container registry выглядит следующим образом:
 
 ```shell
-docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
 ```
 
 Где:
