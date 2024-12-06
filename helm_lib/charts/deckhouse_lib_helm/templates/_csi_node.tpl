@@ -23,9 +23,7 @@ memory: 25Mi
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
   {{- $additionalNodeLivenessProbesCmd := $config.additionalNodeLivenessProbesCmd }}
   {{- $additionalNodeSelectorTerms := $config.additionalNodeSelectorTerms }}
-  {{- $initContainerCommand := $config.initContainerCommand }}
-  {{- $initContainerImage := $config.initContainerImage }}
-  {{- $initContainerVolumeMounts := $config.initContainerVolumeMounts }}
+  {{- $initContainers := $config.initContainers }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
@@ -168,21 +166,17 @@ spec:
   {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "node_resources" $context | nindent 12 }}
   {{- end }}
-  {{- if $initContainerCommand }}
+
+  {{- if $initContainers }}
       initContainers:
-      - command:
-        {{- $initContainerCommand | toYaml | nindent 8 }}
-        image: {{ $initContainerImage }}
-        imagePullPolicy: IfNotPresent
-        name: csi-node-init-container
-        {{- if $initContainerVolumeMounts }}
-        volumeMounts:
-        {{- $initContainerVolumeMounts | toYaml | nindent 8 }}
-        {{- end }}
-        resources:
+    {{- range $initContainer := $initContainers }}
+      - resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+        {{- $initContainer | toYaml | nindent 8 }}
+    {{- end }}
   {{- end }}
+
       serviceAccount: {{ $serviceAccount | quote }}
       serviceAccountName: {{ $serviceAccount | quote }}
       volumes:
