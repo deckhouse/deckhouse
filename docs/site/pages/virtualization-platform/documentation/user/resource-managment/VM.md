@@ -83,7 +83,11 @@ Check the state of the virtual machine after creation:
 
 ```shell
 d8 k get vm linux-vm
+```
 
+Example output:
+
+```console
 # NAME       PHASE     NODE           IPADDRESS     AGE
 # linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
@@ -102,7 +106,11 @@ Example of connecting to a virtual machine using the serial console:
 
 ```shell
 d8 v console linux-vm
+```
 
+Example output:
+
+```console
 # Successfully connected to linux-vm console. The escape sequence is ^]
 #
 # linux-vm login: cloud
@@ -212,6 +220,11 @@ Apply the following patch to the virtual machine to change the number of CPU cor
 
 ```shell
 d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":2}}}'
+```
+
+Example output:
+
+```console
 # virtualmachine.virtualization.deckhouse.io/linux-vm patched
 ```
 
@@ -226,7 +239,11 @@ To apply this change, a restart of the virtual machine is required. Run the foll
 
 ```shell
 d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
+```
 
+Example output:
+
+```console
 # [
 #   {
 #     "currentValue": 1,
@@ -241,7 +258,11 @@ Run the following command:
 
 ```shell
 d8 k get vm linux-vm -o wide
+```
 
+Example output:
+
+```console
 # NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 # linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
@@ -483,7 +504,11 @@ Check the state of your resource:
 
 ```shell
 d8 k get vmbda attach-blank-disk
+```
 
+Example output:
+
+```console
 # NAME                PHASE      VIRTUAL MACHINE NAME   AGE
 # attach-blank-disk   Attached   linux-vm              3m7s
 ```
@@ -492,7 +517,11 @@ Connect to the virtual machine and verify that the disk is attached:
 
 ```shell
 d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
+```
 
+Example output:
+
+```console
 # NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
 # sda       8:0    0   10G  0 disk <--- statically attached disk linux-vm-root
 # |-sda1    8:1    0  9.9G  0 part /
@@ -524,6 +553,11 @@ Before starting the migration, check the current status of the virtual machine:
 
 ```shell
 d8 k get vm
+```
+
+Example output:
+
+```console
 # NAME       PHASE     NODE           IPADDRESS     AGE
 # linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
 ```
@@ -550,6 +584,11 @@ Immediately after creating the `vmop` resource, run the following command:
 
 ```shell
 d8 k get vm -w
+```
+
+Example output:
+
+```console
 # NAME       PHASE       NODE           IPADDRESS     AGE
 # linux-vm   Running     virtlab-pt-1   10.66.10.14   79m
 # linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
@@ -573,6 +612,11 @@ To view the list of temporarily allocated IP addresses (`vmipl`), use the follow
 
 ```shell
 d8 k get vmipl
+```
+
+Example output:
+
+```console
 # NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
 # ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
@@ -583,6 +627,11 @@ To view the list of `vmip`, use the following command:
 
 ```shell
 d8 k get vmipl
+```
+
+Example output:
+
+```console
 # NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
 # ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
@@ -591,6 +640,11 @@ To check the assigned IP address, you can use the following command:
 
 ```shell
 d8 k get vmip
+```
+
+Example output:
+
+```console
 # NAME             ADDRESS       STATUS     VM         AGE
 # linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
@@ -635,7 +689,11 @@ Obtain the `vmip` resource name for the specified virtual machine:
 
 ```shell
 d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
+```
 
+Example output:
+
+```console
 # linux-vm-7prpx
 ```
 

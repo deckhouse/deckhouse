@@ -28,6 +28,11 @@ To get a list of supported `VolumeSnapshotClass` resources, run the following co
 
 ```shell
 d8 k get volumesnapshotclasses
+```
+
+Example output:
+
+```console
 # NAME                     DRIVER                                DELETIONPOLICY   AGE
 # csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
 # sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
@@ -52,6 +57,11 @@ To view the list of disk snapshots, run the following command:
 
 ```shell
 d8 k get vdsnapshot
+```
+
+Example output:
+
+```console
 # NAME                   PHASE     CONSISTENT   AGE
 # linux-vm-root-snapshot Ready     true         3m2s
 ```
@@ -112,6 +122,11 @@ To get a list of supported `VolumeSnapshotClass` resources, run the following co
 
 ```shell
 d8 k get volumesnapshotclasses
+```
+
+Example output:
+
+```console
 # NAME                     DRIVER                                DELETIONPOLICY   AGE
 # csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
 # sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d

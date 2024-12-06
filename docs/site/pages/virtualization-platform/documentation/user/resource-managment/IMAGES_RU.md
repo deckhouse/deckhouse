@@ -61,7 +61,11 @@ EOF
 d8 k get virtualimage ubuntu-22.04
 # или более короткий вариант
 d8 k get vi ubuntu-22.04
+```
 
+Пример вывода:
+
+```console
 # NAME           PHASE   CDROM   PROGRESS   AGE
 # ubuntu-22.04   Ready   false   100%       23h
 ```
@@ -81,7 +85,11 @@ d8 k get vi ubuntu-22.04
 
 ```bash
 d8 k get vi ubuntu-22.04 -w
+```
 
+Пример вывода:
+
+```console
 # NAME           PHASE          CDROM   PROGRESS   AGE
 # ubuntu-22.04   Provisioning   false              4s
 # ubuntu-22.04   Provisioning   false   0.0%       4s
@@ -121,7 +129,11 @@ EOF
 
 ```bash
 d8 k get vi ubuntu-22.04-pvc
+```
 
+Пример вывода:
+
+```console
 # NAME              PHASE   CDROM   PROGRESS   AGE
 # ubuntu-22.04-pvc  Ready   false   100%       23h
 ```
@@ -222,6 +234,11 @@ curl https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm 
 
 ```bash
 d8 k get vi some-image
+```
+
+Пример вывода:
+
+```console
 # NAME         PHASE   CDROM   PROGRESS   AGE
 # some-image   Ready   false   100%       1m
 ```

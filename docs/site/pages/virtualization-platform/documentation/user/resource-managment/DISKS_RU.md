@@ -33,7 +33,11 @@ lang: ru
 
 ```bash
 kubectl get storageclass
+```
 
+Пример вывода команды:
+
+```console
 # NAME                          PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 # i-linstor-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
 # i-linstor-thin-r2             replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
@@ -81,6 +85,11 @@ EOF
 
 ```bash
 d8 k get vd blank-disk
+```
+
+Пример вывода:
+
+```console
 # NAME       PHASE   CAPACITY   AGE
 # blank-disk   Ready   100Mi      1m2s
 ```
@@ -95,7 +104,11 @@ d8 k get vd blank-disk
 
 ```bash
 d8 k get cvi ubuntu-22.04 -o wide
+```
 
+Пример вывода:
+
+```console
 # NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                       AGE
 # ubuntu-22.04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-22.04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
@@ -148,11 +161,15 @@ spec:
 EOF
 ```
 
-Проверьте состояние дисков после создания:
+Проверьте состояние дисков после создания командой:
 
 ```bash
 d8 k get vd
+```
 
+Пример вывода:
+
+```console
 # NAME           PHASE   CAPACITY   AGE
 # linux-vm-root    Ready   10Gi       7m52s
 # linux-vm-root-2  Ready   2590Mi     7m15s
@@ -162,11 +179,15 @@ d8 k get vd
 
 Размер дисков можно увеличивать, даже если они уже подключены к работающей виртуальной машине. Изменения вносятся в поле `spec.persistentVolumeClaim.size`:
 
-Проверьте размер до изменения:
+Проверьте размер до изменения командой:
 
 ```bash
 d8 k get vd linux-vm-root
+```
 
+Пример вывода:
+
+```console
 # NAME          PHASE   CAPACITY   AGE
 # linux-vm-root   Ready   10Gi       10m
 ```
@@ -181,7 +202,11 @@ kubectl patch vd linux-vm-root --type merge -p '{"spec":{"persistentVolumeClaim"
 
 ```bash
 d8 k get vd linux-vm-root
+```
 
+Пример вывода:
+
+```console
 # NAME          PHASE   CAPACITY   AGE
 # linux-vm-root   Ready   11Gi       12m
 ```

@@ -60,7 +60,11 @@ Verifying the creation of [VirtualImage](../../../reference/cr/virtualimage.html
 d8 k get virtualimage ubuntu-22.04
 # or use the shorter form
 d8 k get vi ubuntu-22.04
+```
 
+Example output:
+
+```console
 # NAME           PHASE   CDROM   PROGRESS   AGE
 # ubuntu-22.04   Ready   false   100%       23h
 ```
@@ -80,7 +84,11 @@ To monitor the image creation process, add the `-w` flag to the previous command
 
 ```bash
 d8 k get vi ubuntu-22.04 -w
+```
 
+Example output:
+
+```console
 # NAME           PHASE          CDROM   PROGRESS   AGE
 # ubuntu-22.04   Provisioning   false              4s
 # ubuntu-22.04   Provisioning   false   0.0%       4s
@@ -120,7 +128,11 @@ Check the result of creating the [VirtualImage](../../../reference/cr/virtualima
 
 ```bash
 d8 k get vi ubuntu-22.04-pvc
+```
 
+Example output:
+
+```console
 # NAME              PHASE   CDROM   PROGRESS   AGE
 # ubuntu-22.04-pvc  Ready   false   100%       23h
 ```
@@ -221,6 +233,11 @@ After the upload is complete, the image should be created and transition to the 
 
 ```bash
 d8 k get vi some-image
+```
+
+Example output:
+
+```console
 # NAME         PHASE   CDROM   PROGRESS   AGE
 # some-image   Ready   false   100%       1m
 ```

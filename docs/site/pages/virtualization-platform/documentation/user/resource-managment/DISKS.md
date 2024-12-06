@@ -33,7 +33,11 @@ To find the available storage options on the platform, run the following command
 
 ```bash
 kubectl get storageclass
+```
 
+Example output:
+
+```console
 # NAME                          PROVISIONER                           RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
 # i-linstor-thin-r1 (default)   replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
 # i-linstor-thin-r2             replicated.csi.storage.deckhouse.io   Delete          Immediate              true                   48d
@@ -81,6 +85,11 @@ Check the disk's status after creation:
 
 ```bash
 d8 k get vd blank-disk
+```
+
+Example output:
+
+```console
 # NAME         PHASE     CAPACITY   AGE
 # blank-disk   Ready     100Mi      1m2s
 ```
@@ -95,7 +104,11 @@ Using a previously created project image [VirtualImage](../../../reference/cr/vi
 
 ```bash
 d8 k get cvi ubuntu-22.04 -o wide
+```
 
+Example output:
+
+```console
 # NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                       AGE
 # ubuntu-22.04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-22.04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
@@ -152,7 +165,11 @@ Check the state of the disks after creation:
 
 ```bash
 d8 k get vd
+```
 
+Example output:
+
+```console
 # NAME           PHASE   CAPACITY   AGE
 # linux-vm-root    Ready   10Gi       7m52s
 # linux-vm-root-2  Ready   2590Mi     7m15s
@@ -166,7 +183,11 @@ Check the size before the change:
 
 ```bash
 d8 k get vd linux-vm-root
+```
 
+Example output:
+
+```console
 # NAME          PHASE   CAPACITY   AGE
 # linux-vm-root   Ready   10Gi       10m
 ```
@@ -181,7 +202,11 @@ Check the size after the change:
 
 ```bash
 d8 k get vd linux-vm-root
+```
 
+Example output:
+
+```console
 # NAME          PHASE   CAPACITY   AGE
 # linux-vm-root   Ready   11Gi       12m
 ```

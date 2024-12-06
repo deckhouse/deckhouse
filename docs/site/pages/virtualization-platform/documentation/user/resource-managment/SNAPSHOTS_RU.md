@@ -29,6 +29,11 @@ spec:
 
 ```shell
 d8 k get volumesnapshotclasses
+```
+
+Пример вывода:
+
+```console
 # NAME                     DRIVER                                DELETIONPOLICY   AGE
 # csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
 # sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
@@ -53,6 +58,11 @@ EOF
 
 ```shell
 d8 k get vdsnapshot
+```
+
+Пример вывода:
+
+```console
 # NAME                   PHASE     CONSISTENT   AGE
 # linux-vm-root-snapshot Ready     true         3m2s
 ```
@@ -113,6 +123,11 @@ spec:
 
 ```shell
 d8 k get volumesnapshotclasses
+```
+
+Пример вывода:
+
+```console
 # NAME                     DRIVER                                DELETIONPOLICY   AGE
 # csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
 # sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d

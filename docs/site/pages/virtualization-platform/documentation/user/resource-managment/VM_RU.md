@@ -84,7 +84,11 @@ EOF
 
 ```shell
 d8 k get vm linux-vm
+```
 
+Пример вывода:
+
+```console
 # NAME       PHASE     NODE           IPADDRESS     AGE
 # linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
@@ -103,7 +107,11 @@ d8 k get vm linux-vm
 
 ```shell
 d8 v console linux-vm
+```
 
+Пример вывода:
+
+```console
 # Successfully connected to linux-vm console. The escape sequence is ^]
 #
 # linux-vm login: cloud
@@ -213,6 +221,11 @@ d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 
 ```shell
 d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":2}}}'
+```
+
+Пример вывода:
+
+```console
 # virtualmachine.virtualization.deckhouse.io/linux-vm patched
 ```
 
@@ -227,7 +240,11 @@ d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 
 ```shell
 d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
+```
 
+Пример вывода:
+
+```console
 # [
 #   {
 #     "currentValue": 1,
@@ -242,7 +259,11 @@ d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
 
 ```shell
 d8 k get vm linux-vm -o wide
+```
 
+Пример вывода:
+
+```console
 # NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
 # linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
@@ -484,7 +505,11 @@ EOF
 
 ```shell
 d8 k get vmbda attach-blank-disk
+```
 
+Пример вывода:
+
+```console
 # NAME                PHASE      VIRTUAL MACHINE NAME   AGE
 # attach-blank-disk   Attached   linux-vm              3m7s
 ```
@@ -493,7 +518,11 @@ d8 k get vmbda attach-blank-disk
 
 ```shell
 d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
+```
 
+Пример вывода:
+
+```console
 # NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
 # sda       8:0    0   10G  0 disk <--- статично подключенный диск linux-vm-root
 # |-sda1    8:1    0  9.9G  0 part /
@@ -525,6 +554,11 @@ d8 k delete vmbda attach-blank-disk
 
 ```shell
 d8 k get vm
+```
+
+Пример вывода:
+
+```console
 # NAME       PHASE     NODE           IPADDRESS     AGE
 # linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
 ```
@@ -551,6 +585,11 @@ EOF
 
 ```shell
 d8 k get vm -w
+```
+
+Пример вывода:
+
+```console
 # NAME       PHASE       NODE           IPADDRESS     AGE
 # linux-vm   Running     virtlab-pt-1   10.66.10.14   79m
 # linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
@@ -574,6 +613,11 @@ d8 v evict <vm-name>
 
 ```shell
 d8 k get vmipl
+```
+
+Пример вывода:
+
+```console
 # NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
 # ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
@@ -584,6 +628,11 @@ d8 k get vmipl
 
 ```shell
 d8 k get vmipl
+```
+
+Пример вывода:
+
+```console
 # NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
 # ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
@@ -592,6 +641,11 @@ d8 k get vmipl
 
 ```shell
 d8 k get vmip
+```
+
+Пример вывода:
+
+```console
 # NAME             ADDRESS       STATUS     VM         AGE
 # linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
@@ -636,7 +690,11 @@ spec:
 
 ```shell
 d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
+```
 
+Пример вывода:
+
+```console
 # linux-vm-7prpx
 ```
 
