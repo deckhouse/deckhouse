@@ -113,7 +113,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 
 	if metaConfig.DeckhouseConfig.Bundle != "" {
-		return nil, fmt.Errorf("Support for 'bundle' was removed. Please use 'deckhouse' ModuleConfig's settings instead.")
+		return nil, fmt.Errorf("Support for 'bundle' in InitConfiguration was removed. Please use 'deckhouse' ModuleConfig's settings instead.")
 	}
 
 	if metaConfig.DeckhouseConfig.LogLevel != "" {
