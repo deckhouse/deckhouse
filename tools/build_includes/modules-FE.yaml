@@ -279,6 +279,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/610-service-with-healthchecks
+  to: /deckhouse/modules/610-service-with-healthchecks
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/650-runtime-audit-engine
   to: /deckhouse/modules/650-runtime-audit-engine
   stageDependencies:
