@@ -1,7 +1,7 @@
-# Based on https://github.com/istio/istio/blob/1.16.2/pilot/docker/Dockerfile.pilot
+# Based on https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.pilot
 ARG BASE_ALT
 
-FROM docker.io/istio/pilot:1.16.2@sha256:2ddeada2d45f0ce4b328381762612dcb21055ab251dc37993dbc9dcff10aea0e as artifact
+FROM docker.io/istio/pilot:1.21.6@sha256:c2aec3195dc7f50150c23d7dd891e6a15909f75db6fea9ddc954b63233c4406c as artifact
 
 FROM $BASE_ALT
 RUN apt-get update && \
