@@ -154,6 +154,8 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("get '%s' module: %w", release.Spec.ModuleName, err)
 			}
+		} else {
+			l.log.Infof("set the '%s' version for the '%s' module is restored", release.Spec.Version.String(), release.Spec.ModuleName)
 			err = utils.Update[*v1alpha1.Module](ctx, l.client, module, func(module *v1alpha1.Module) bool {
 				module.Properties.Version = release.Spec.Version.String()
 				return true
