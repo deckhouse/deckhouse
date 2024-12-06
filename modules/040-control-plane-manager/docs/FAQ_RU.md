@@ -838,6 +838,33 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 ### Логика работы
 
+#### Профили планировщика
+
+Есть 2 преднастроенных профиля планировщика:
+
+* `default-scheduler`: профиль по умолчанию, который распределяет поды на узлы с наименьшей загрузкой;
+* `high-node-utilization`: профиль, при котором поды размещаются на узлах с наибольшей загрузкой.
+
+> Чтобы задать профиль планировщика, используйте в манифесте пода параметр `spec.schedulerName`.
+
+Пример использования профиля:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: scheduler-example
+  labels:
+    name: scheduler-example
+spec:
+  schedulerName: high-node-utilization
+  containers:
+  - name: example-pod
+    image: registry.k8s.io/pause:2.0  
+```
+
+#### Этапы планирования подов
+
 На первой фазе — `Filtering` — активируются плагины фильтрации (filter-плагины), которые из всех доступных узлов выбирают те, которые удовлетворяют определенным условиям фильтрации (например, `taints`, `nodePorts`, `nodeName`, `unschedulable` и другие). Если узлы расположены в разных зонах, планировщик чередует выбор зон, чтобы избежать размещения всех подов в одной зоне.
 
 Предположим, что узлы распределяются по зонам следующим образом:
@@ -886,26 +913,3 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 {% alert level="danger" %}
 При использовании опции `failurePolicy: Fail`, в случае ошибки в работе вебхука планировщик Kubernetes прекратит свою работу, и новые поды не смогут быть запущены.
 {% endalert %}
-
-### Профили планировщика
-
-Есть 3 предопределенных профиля планировщика:
-
-* default-scheduler: для пода выбирается наименее загруженный узел
-* high-node-utilization: для пода выбирается наиболее загруженный узел
-
-Для использования профилей планировщика, укажите `spec.schedulerName`, например:
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: scheduler-example
-  labels:
-    name: scheduler-example
-spec:
-  schedulerName: high-node-utilization
-  containers:
-  - name: example-pod
-    image: registry.k8s.io/pause:2.0  
-```
