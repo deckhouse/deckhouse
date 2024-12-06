@@ -32,7 +32,7 @@ const (
 	ClusterDashboardKind      = "ClusterObservabilityDashboard"
 	PropagatedDashboardKind   = "ClusterObservabilityPropagatedDashboard"
 	LegacyDashboardDefinition = "GrafanaDashboardDefinition"
-	JsonIndentCharacter       = " "
+	JSONIndentCharacter       = " "
 )
 
 var propagatedDashboards = map[string]bool{
@@ -69,7 +69,7 @@ type LegacyDashboard struct {
 	Definition string
 }
 
-func (d *LegacyDashboard) PrefixUid(prefix string) error {
+func (d *LegacyDashboard) PrefixUID(prefix string) error {
 	var dashboard map[string]interface{}
 
 	if err := json.Unmarshal([]byte(d.Definition), &dashboard); err != nil {
@@ -88,7 +88,7 @@ func (d *LegacyDashboard) PrefixUid(prefix string) error {
 
 	dashboard["uid"] = prefix + dashboardUID
 
-	ret, err := json.MarshalIndent(dashboard, "", strings.Repeat(JsonIndentCharacter, 4))
+	ret, err := json.MarshalIndent(dashboard, "", strings.Repeat(JSONIndentCharacter, 4))
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func convertDashboards(input *go_hook.HookInput) error {
 		kind := dashboardKindByName(dash.Name)
 		prefix := dashboardPrefixByKind(kind)
 
-		if err := dash.PrefixUid(prefix); err != nil {
+		if err := dash.PrefixUID(prefix); err != nil {
 			log.Error("Failed to prefix uid for dashboard", dash.Name, err)
 			continue
 		}
