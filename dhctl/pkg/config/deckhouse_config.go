@@ -117,7 +117,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 
 	if metaConfig.DeckhouseConfig.LogLevel != "" {
-		return nil, fmt.Errorf("Support for 'logLevel' was removed. Please use 'deckhouse' ModuleConfig's settings instead.")
+		return nil, fmt.Errorf("Support for 'logLevel' in InitConfiguration was removed. Please use 'deckhouse' ModuleConfig's settings instead.")
 	}
 
 	clusterConfig, err := metaConfig.ClusterConfigYAML()
