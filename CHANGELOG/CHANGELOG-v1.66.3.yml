@@ -1,0 +1,23 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix values generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10971
+candi:
+  fixes:
+    - summary: Fix converge of Azure cluster without nameservers in config
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10931
+docs:
+  fixes:
+    - summary: Removed optional steps in "Tips for configuring Nexus" in Deckhouse FAQ.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10977
+    - summary: Add some fixes for priority-class in docs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10897
+log-shipper:
+  fixes:
+    - summary: Small docs fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10982
+user-authz:
+  fixes:
+    - summary: Small docs fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10982
+
