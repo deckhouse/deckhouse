@@ -6,8 +6,8 @@ kind: Config
 clusters:
 - cluster:
     server: https://{{ $multicluster.apiHost }}
-    certificate-authority-data: {{ $multicluster.metadataCA }}
-    insecure-skip-tls-verify: true
+    certificate-authority-data: {{ $multicluster.apiCA }}
+    insecure-skip-tls-verify: {{ $multicluster.apiInsecureSkipVerify }}
   name: {{ $multicluster.name }}
 contexts:
 - context:
