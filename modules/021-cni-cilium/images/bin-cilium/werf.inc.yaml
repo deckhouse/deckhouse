@@ -5,7 +5,7 @@
 # Based on https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (builder stage)
 ---
 artifact: {{ $.ModuleName }}/cilium-artifact
-fromCacheVersion: "2024-11-25.3"
+fromCacheVersion: "2024-12-06.0"
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
