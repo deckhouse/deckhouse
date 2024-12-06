@@ -56,6 +56,15 @@ func (m *Matcher) Has(name string) bool {
 	return ok
 }
 
+func (m *Matcher) GetConstraintNames() []string {
+	names := make([]string, 0, len(m.installed))
+	for name := range m.installed {
+		names = append(names, name)
+	}
+
+	return names
+}
+
 func (m *Matcher) Validate(name string) error {
 	if m.withBaseVersionLock {
 		m.mtx.Lock()

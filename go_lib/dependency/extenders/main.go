@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
 
 func IsExtendersField(field string) bool {
@@ -31,6 +32,7 @@ func IsExtendersField(field string) bool {
 		kubernetesversion.RequirementsField,
 		deckhouseversion.RequirementsField,
 		bootstrapped.RequirementsField,
+		moduledependency.RequirementsField,
 	}, field)
 }
 
@@ -39,10 +41,11 @@ func Extenders() []extenders.Extender {
 		kubernetesversion.Instance(),
 		deckhouseversion.Instance(),
 		bootstrapped.Instance(),
+		moduledependency.Instance(),
 	}
 }
 
-func AddConstraints(module string, requirements map[string]string) error {
+func AddConstraints(module string, requirements map[string]interface{}) error {
 	if len(requirements[deckhouseversion.RequirementsField]) > 0 {
 		if err := deckhouseversion.Instance().AddConstraint(module, requirements[deckhouseversion.RequirementsField]); err != nil {
 			return err
@@ -58,6 +61,12 @@ func AddConstraints(module string, requirements map[string]string) error {
 			return err
 		}
 	}
+	if len(requirements[moduledependency.RequirementsField]) > 0 {
+		if err := moduledependency.Instance().AddConstraint(module, requirements[moduledependency.RequirementsField]); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -65,9 +74,10 @@ func DeleteConstraints(module string) {
 	deckhouseversion.Instance().DeleteConstraint(module)
 	kubernetesversion.Instance().DeleteConstraint(module)
 	bootstrapped.Instance().DeleteConstraint(module)
+	moduledependency.Instance().DeleteConstraint(module)
 }
 
-func CheckModuleReleaseRequirements(moduleRelease string, requirements map[string]string) error {
+func CheckModuleReleaseRequirements(moduleRelease string, requirements map[string]interface{}) error {
 	if len(requirements[kubernetesversion.RequirementsField]) > 0 {
 		if err := kubernetesversion.Instance().ValidateRelease(moduleRelease, requirements[kubernetesversion.RequirementsField]); err != nil {
 			return err
@@ -78,5 +88,11 @@ func CheckModuleReleaseRequirements(moduleRelease string, requirements map[strin
 			return err
 		}
 	}
+	if len(requirements[moduledependency.RequirementsField]) > 0 {
+		if err := deckhouseversion.Instance().ValidateRelease(moduleRelease, requirements[moduledependency.RequirementsField]); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
