@@ -316,7 +316,7 @@ fi
 ## Installing Deckhouse
 
 {% alert level="info" %}
-When installing the Enterprise Edition of Deckhouse from the official container registry `registry.deckhouse.io`, you must first authenticate using a license key:
+When you install Deckhouse Enterprise Edition from the official container registry `registry.deckhouse.io`, you must first log in with your license key:
 
 ```shell
 docker login -u license-token registry.deckhouse.io
