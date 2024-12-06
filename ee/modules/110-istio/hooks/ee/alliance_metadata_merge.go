@@ -19,12 +19,14 @@ import (
 )
 
 type IstioFederationMergeCrdInfo struct {
-	Name            string                             `json:"name"`
-	TrustDomain     string                             `json:"trustDomain"`
-	SpiffeEndpoint  string                             `json:"spiffeEndpoint"`
-	IngressGateways *[]eeCrd.FederationIngressGateways `json:"ingressGateways"`
-	PublicServices  *[]eeCrd.FederationPublicServices  `json:"publicServices"`
-	Public          *eeCrd.AlliancePublicMetadata      `json:"public,omitempty"`
+	Name             string                             `json:"name"`
+	TrustDomain      string                             `json:"trustDomain"`
+	SpiffeEndpoint   string                             `json:"spiffeEndpoint"`
+	IngressGateways  *[]eeCrd.FederationIngressGateways `json:"ingressGateways"`
+	MetadataCA       string                             `json:"ca"`
+	MetadataInsecure bool                               `json:"insecureSkipVerify"`
+	PublicServices   *[]eeCrd.FederationPublicServices  `json:"publicServices"`
+	Public           *eeCrd.AlliancePublicMetadata      `json:"public,omitempty"`
 }
 
 type IstioMulticlusterMergeCrdInfo struct {
@@ -47,7 +49,7 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 		return nil, err
 	}
 
-	me := federation.Spec.MetadataEndpoint
+	me := federation.Spec.Metadata.Endpoint
 	me = strings.TrimSuffix(me, "/")
 
 	var igs *[]eeCrd.FederationIngressGateways
@@ -67,12 +69,14 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	}
 
 	return IstioFederationMergeCrdInfo{
-		Name:            federation.GetName(),
-		TrustDomain:     federation.Spec.TrustDomain,
-		SpiffeEndpoint:  me + "/public/spiffe-bundle-endpoint",
-		IngressGateways: igs,
-		PublicServices:  pss,
-		Public:          p,
+		Name:             federation.GetName(),
+		TrustDomain:      federation.Spec.TrustDomain,
+		SpiffeEndpoint:   me + "/public/spiffe-bundle-endpoint",
+		IngressGateways:  igs,
+		MetadataCA:       federation.Spec.Metadata.ClusterCA,
+		MetadataInsecure: federation.Spec.Metadata.EnableInsecureConnection,
+		PublicServices:   pss,
+		Public:           p,
 	}, nil
 }
 
