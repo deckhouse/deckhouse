@@ -20,6 +20,17 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  version: 1
+  settings:
+    bundle: Minimal
+    logLevel: Info
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
   name: cert-manager
 spec:
   enabled: true
@@ -78,13 +89,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: monitoring-kubernetes
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: vertical-pod-autoscaler
 spec:
   enabled: true
 ---
