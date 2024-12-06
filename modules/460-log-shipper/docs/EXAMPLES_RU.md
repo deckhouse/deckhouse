@@ -503,7 +503,7 @@ spec:
   kubernetesPods:
     namespaceSelector:
       labelSelector:
-        matchNames:
+        matchLabels:
           environment: production
   destinationRefs:
   - loki-storage
