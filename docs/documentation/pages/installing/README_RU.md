@@ -105,11 +105,6 @@ kubernetesVersion: "Automatic"
 clusterDomain: cluster.local
 ---
 apiVersion: deckhouse.io/v1
-kind: InitConfiguration
-deckhouse:
-  releaseChannel: Stable
----
-apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
 sshPublicKey: <SSH_PUBLIC_KEY>
@@ -134,6 +129,18 @@ metadata:
   name: cni-flannel
 spec:
   enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    releaseChannel: Stable
+    bundle: Default
+    logLevel: Info
+  version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
