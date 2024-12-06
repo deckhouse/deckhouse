@@ -1,6 +1,6 @@
-{{- define "dashboard_resources" }}
-cpu: 30m
-memory: 50Mi
+{{- define "auth_resources" }}
+cpu: 1m
+memory: 15Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -8,88 +8,69 @@ memory: 50Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: dashboard
+  name: auth
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "auth")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: dashboard
+    name: auth
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: dashboard
+    - containerName: auth
       minAllowed:
-        {{- include "dashboard_resources" . | nindent 8 }}
+        {{- include "auth_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 50m
-        memory: 100Mi
+        cpu: 250m
+        memory: 400Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: dashboard
+  name: auth
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "dashboard")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "auth")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: dashboard
+      app: auth
   template:
     metadata:
       labels:
-        app: dashboard
+        app: auth
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "dashboard")) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "auth")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
-      - name: dashboard
+      - name: auth
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "dashboard") }}
+        image: {{ include "helm_lib_module_image" (list . "auth") }}
         args:
-        - --port=8443
-        - --insecure-port=8080
-        - --insecure-bind-address=127.0.0.1
-        - --logtostderr
-        - --namespace=d8-{{ .Chart.Name }}
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication  }}
-        - --auto-generate-certificates
-        - --bind-address=0.0.0.0
-    {{- else }}
-        - --bind-address=127.0.0.1
-    {{- end }}
-        livenessProbe:
-          initialDelaySeconds: 30
-          timeoutSeconds: 30
-          httpGet:
-            path: /config
-            port: 8443
-            scheme: HTTPS
-        ports:
-    {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.dashboard.auth.externalAuthentication }}
-        - containerPort: 8443
-    {{- end }}
-        volumeMounts:
-        - mountPath: /tmp
-          name: tmp
+        - --address=127.0.0.1
+        env:
+        - name: CSRF_KEY
+          valueFrom:
+            secretKeyRef:
+              name: kubernetes-dashboard-csrf
+              key: private.key
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "dashboard_resources" . | nindent 12 }}
+            {{- include "auth_resources" . | nindent 12 }}
 {{- end }}
-    {{- if or (not .Values.dashboard.auth.externalAuthentication) (eq (include "helm_lib_module_https_mode" .) "Disabled") }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -107,10 +88,8 @@ spec:
               fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
-            excludePaths:
-            - /config
             upstreams:
-            - upstream: http://127.0.0.1:8080/
+            - upstream: http://127.0.0.1:8000/
               path: /
               authorization:
                 resourceAttributes:
@@ -119,7 +98,7 @@ spec:
                   apiVersion: v1
                   resource: deployments
                   subresource: http
-                  name: dashboard
+                  name: auth
         ports:
         - containerPort: 8443
           name: https
@@ -142,12 +121,9 @@ spec:
         volumeMounts:
         - name: kube-rbac-proxy-ca
           mountPath: /etc/kube-rbac-proxy
-    {{- end }}
-      serviceAccountName: dashboard
       volumes:
-      - name: tmp
-        emptyDir: {}
       - name: kube-rbac-proxy-ca
         configMap:
           defaultMode: 420
           name: kube-rbac-proxy-ca.crt
+      serviceAccountName: auth

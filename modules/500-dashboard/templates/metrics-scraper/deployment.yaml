@@ -1,6 +1,6 @@
 {{- define "metrics_scraper_resources" }}
-cpu: 20m
-memory: 50Mi
+cpu: 1m
+memory: 25Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -24,8 +24,8 @@ spec:
       minAllowed:
         {{- include "metrics_scraper_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 40m
-        memory: 100Mi
+        cpu: 250m
+        memory: 400Mi
 {{- end }}
 ---
 kind: Deployment
@@ -68,16 +68,17 @@ spec:
             port: 8000
           initialDelaySeconds: 30
           timeoutSeconds: 30
-        volumeMounts:
-        - mountPath: /tmp
-          name: tmp
+          periodSeconds: 60
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "metrics_scraper_resources" . | nindent 12 }}
 {{- end }}
-      serviceAccountName: dashboard
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+      serviceAccountName: metrics-scraper
       volumes:
-        - name: tmp
-          emptyDir: {}
+      - name: tmp
+        emptyDir: {}
