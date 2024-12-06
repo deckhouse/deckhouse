@@ -254,8 +254,8 @@ func (l *Loader) deleteModulesWithAbsentRelease(ctx context.Context) error {
 		delete(modulesLinks, release.Spec.ModuleName)
 	}
 
-	mpo := new(v1alpha2.ModulePullOverride)
 	for module, moduleLinkPath := range modulesLinks {
+		mpo := new(v1alpha2.ModulePullOverride)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err != nil && apierrors.IsNotFound(err) {
 			l.log.Warnf("the '%s' module has neither release nor override, purge it from fs", module)
 			_ = os.RemoveAll(moduleLinkPath)

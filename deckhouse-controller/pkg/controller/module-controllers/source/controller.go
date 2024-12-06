@@ -291,11 +291,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		exist, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
+		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
 		if err != nil {
 			return fmt.Errorf("get pull override for the '%s' module: %w", moduleName, err)
 		}
-		if exist {
+		if exists {
 			// skip overridden module
 			availableModule.Overridden = true
 			availableModules = append(availableModules, availableModule)
@@ -305,11 +305,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		var cachedChecksum = availableModule.Checksum
 
 		// check if release exists
-		exist, err = r.releaseExists(ctx, source.Name, moduleName, cachedChecksum)
+		exists, err = r.releaseExists(ctx, source.Name, moduleName, cachedChecksum)
 		if err != nil {
 			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
-		if !exist {
+		if !exists {
 			// if release does not exist, clear checksum to trigger meta downloading
 			cachedChecksum = ""
 		}
@@ -325,7 +325,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exist) {
+		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exists) {
 			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
 					module.Status.Phase = v1alpha1.ModulePhaseDownloading
