@@ -39,9 +39,9 @@ Before installation, ensure the following:
 
 Before starting the Deckhouse installation, you need to prepare the configuration files:
 
-1. [Installation configuration YAML file](#installation-configuration-file). This file contains the main parameters for setting up Deckhouse, including information about cluster components, network settings, and integrations.
+1. [Installation configuration YAML file](#installation-config). This file contains the main parameters for setting up Deckhouse, including information about cluster components, network settings, and integrations.
 
-1. [Additional resources YAML file](#additional-resources-file). This file is used to automatically create necessary resources after the successful installation of Deckhouse, such as custom modules, cluster node settings, or specific policies.
+1. [Additional resources YAML file](#additional-resource-config). This file is used to automatically create necessary resources after the successful installation of Deckhouse, such as custom modules, cluster node settings, or specific policies.
 
 Make sure that the configuration files meet the requirements of your infrastructure and include all the necessary parameters for a correct deployment.
 
@@ -167,9 +167,9 @@ spec:
 
 {% endofftopic %}
 
-### Installation resource config
+### Additional resource config
 
-The optional installation resources YAML file contains Kubernetes resource manifests that the installer applies immediately after the successful installation of Deckhouse.
+The additional resources YAML file contains Kubernetes resource manifests that the installer applies immediately after the successful installation of Deckhouse.
 
 This file is useful for performing additional cluster configurations, such as:
 
@@ -179,7 +179,7 @@ This file is useful for performing additional cluster configurations, such as:
 * Setting up roles and users.
 
 {% alert level="warning" %}
-The installation resources file cannot use [ModuleConfig](../) for **built-in** modules. To configure built-in modules, use the [installation configuration file](#installation-config).
+The additional resources file cannot use [ModuleConfig](../) for **built-in** modules. To configure built-in modules, use the [installation configuration file](#installation-config).
 {% endalert %}
 
 {% offtopic title="An example of the resource config... " %}
