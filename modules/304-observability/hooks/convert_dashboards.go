@@ -25,7 +25,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -139,11 +138,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "legacy_dashboards",
 			ApiVersion: "deckhouse.io/v1",
 			Kind:       LegacyDashboardDefinition,
-			LabelSelector: &v1.LabelSelector{
-				MatchLabels: map[string]string{
-					"module": "prometheus",
-				},
-			},
 			FilterFunc: filterLegacyDashboard,
 		},
 	},
