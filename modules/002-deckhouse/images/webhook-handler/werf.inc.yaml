@@ -1,6 +1,6 @@
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: src-artifact
+fromArtifact: common/src-artifact
 git:
 - add: /{{ .ModulePath }}
   to: /src/available_hooks
@@ -31,7 +31,7 @@ git:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-  - artifact: { { $.ModuleName } }/{{ $.ImageName }}-src-artifact
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /
     before: setup
