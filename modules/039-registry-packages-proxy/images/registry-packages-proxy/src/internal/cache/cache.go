@@ -17,13 +17,14 @@ package cache
 import (
 	"context"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 )
@@ -38,14 +39,14 @@ type CacheEntry struct {
 type Cache struct {
 	storage map[string]*CacheEntry
 	sync.RWMutex
-	logger        *log.Entry
+	logger        *log.Logger
 	root          string
 	retentionSize uint64
 
 	metrics *Metrics
 }
 
-func NewCache(logger *log.Entry, root string, retentionSize uint64, metrics *Metrics) *Cache {
+func NewCache(logger *log.Logger, root string, retentionSize uint64, metrics *Metrics) *Cache {
 	storage := make(map[string]*CacheEntry)
 	return &Cache{
 		storage:       storage,
@@ -161,7 +162,7 @@ func (c *Cache) Reconcile(ctx context.Context) {
 		case <-ticker.C:
 			err := c.ApplyRetentionPolicy()
 			if err != nil {
-				c.logger.Error(err)
+				c.logger.Error("reconcile loop failed", slog.String("error", err.Error()))
 				return
 			}
 		}
