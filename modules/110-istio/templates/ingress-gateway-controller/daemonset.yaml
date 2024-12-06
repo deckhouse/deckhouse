@@ -202,6 +202,16 @@ spec:
           httpGet:
             path: /healthz/ready
             port: 15021
+  {{- if ($.Values.global.enabledModules | has "admission-policy-engine") }}
+        livenessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 15021
+          initialDelaySeconds: 10
+          periodSeconds: 2
+          timeoutSeconds: 3
+          failureThreshold: 30
+  {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
