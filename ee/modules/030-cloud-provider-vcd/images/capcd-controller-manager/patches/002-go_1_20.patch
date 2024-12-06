@@ -1,0 +1,20 @@
+Subject: [PATCH] go 1.20
+---
+Index: go.mod
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.mod b/go.mod
+--- a/go.mod	(revision eeb28cbf94cac2e9a0cb0d29c7e756970672c26c)
++++ b/go.mod	(revision b2ab446e2df62a794bba2ecb12222b7b8e342c25)
+@@ -1,8 +1,6 @@
+ module github.com/vmware/cluster-api-provider-cloud-director
+ 
+-go 1.22
+-
+-toolchain go1.22.6
++go 1.20
+ 
+ require (
+ 	github.com/Masterminds/sprig/v3 v3.2.3
