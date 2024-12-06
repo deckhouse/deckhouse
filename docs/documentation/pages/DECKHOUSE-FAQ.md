@@ -399,9 +399,7 @@ Using the `URL` value from the Nexus repository options is **not acceptable**
 
 The following requirements must be met if the [Nexus](https://github.com/sonatype/nexus-public) repository manager is used:
 
-* `Docker Bearer Token Realm` must be enabled (*Administration* -> *Security* -> *Realms*).
 * Docker **proxy** repository must be pre-created (*Administration* -> *Repository* -> *Repositories*):
-  * `Allow anonymous docker pull` must be enabled. This option enables Bearer token authentication to work. Note that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless explicitly enabled in *Administration* -> *Security* -> *Anonymous Access*, and the `anonymous` user is not granted access rights to the created repository.
   * `Maximum metadata age` for the created repository must be set to `0`.
 * Access control must be configured as follows:
   * The **Nexus** role must be created (*Administration* -> *Security* -> *Roles*) with the following permissions:
@@ -411,16 +409,12 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 
 **Configuration**:
 
-* Enable `Docker Bearer Token Realm` (*Administration* -> *Security* -> *Realms*):
-  ![Enable `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
-
 * Create a docker **proxy** repository (*Administration* -> *Repository* -> *Repositories*) pointing to the [Deckhouse registry](https://registry.deckhouse.io/):
   ![Create docker proxy repository](images/registry/nexus/nexus-repository.png)
 
 * Fill in the fields on the Create page as follows:
   * `Name` must contain the name of the repository you created earlier, e.g., `d8-proxy`.
   * `Repository Connectors / HTTP` or `Repository Connectors / HTTPS` must contain a dedicated port for the created repository, e.g., `8123` or other.
-  * `Allow anonymous docker pull` must be enabled for the Bearer token authentication to work. Note that anonymous access [won't work](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories) unless explicitly enabled in *Administration* -> *Security* -> *Anonymous Access* and the `anonymous` user is not granted access rights to the created repository.
   * `Remote storage` must be set to `https://registry.deckhouse.io/`.
   * You can disable `Auto blocking enabled` and `Not found cache enabled` for debugging purposes, otherwise they must be enabled.
   * `Maximum Metadata Age` must be set to `0`.
