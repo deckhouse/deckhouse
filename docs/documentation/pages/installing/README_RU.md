@@ -355,7 +355,7 @@ docker run -it --pull=always \
   -v "$PWD/config.yaml:/config.yaml" \
   -v "$PWD/resources.yml:/resources.yml" \
   -v "$PWD/dhctl-tmp:/tmp/dhctl" \
-  -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
+  -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
 ```
 
 Установка Deckhouse осуществляется в контейнере инсталлятора с помощью утилиты `dhctl`:
