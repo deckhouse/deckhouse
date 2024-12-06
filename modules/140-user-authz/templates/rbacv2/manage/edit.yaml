@@ -8,7 +8,7 @@ metadata:
     rbac.deckhouse.io/aggregate-to-security-as: manager
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
-  name: d8:manage:capability:module:user-authz:edit
+  name: d8:manage:permission:module:user-authz:edit
 rules:
 - apiGroups:
   - deckhouse.io

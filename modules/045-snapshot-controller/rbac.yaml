@@ -1,4 +1,4 @@
 module: snapshot-controller
-scopes:
+subsystems:
   - storage
   - infrastructure

@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-cni-cilium
-  name: d8:manage:capability:module:cni-cilium:view
+  name: d8:manage:permission:module:cni-cilium:view
 rules:
 - apiGroups:
   - deckhouse.io

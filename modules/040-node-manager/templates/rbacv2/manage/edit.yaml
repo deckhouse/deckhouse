@@ -9,17 +9,18 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-cloud-instance-manager
-  name: d8:manage:capability:module:node-manager:edit
+  name: d8:manage:permission:module:node-manager:edit
 rules:
 - apiGroups:
   - deckhouse.io
   resources:
   - instances
+  - instancetypescatalogs
+  - nodegroups
   - nodegroupconfigurations
   - nodeusers
   - sshcredentials
   - staticinstances
-  - nodegroups
   verbs:
   - create
   - update

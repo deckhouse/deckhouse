@@ -1,4 +1,4 @@
 module: secret-copier
 namespace: none
-scopes:
+subsystems:
   - security

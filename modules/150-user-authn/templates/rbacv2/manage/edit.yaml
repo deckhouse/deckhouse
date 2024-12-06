@@ -9,20 +9,8 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-user-authn
-  name: d8:manage:capability:module:user-authn:edit
+  name: d8:manage:permission:module:user-authn:edit
 rules:
-- apiGroups:
-  - deckhouse.io
-  resources:
-  - dexproviders
-  - groups
-  - users
-  verbs:
-  - create
-  - update
-  - patch
-  - delete
-  - deletecollection
 - apiGroups:
   - deckhouse.io
   resourceNames:

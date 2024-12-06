@@ -1,5 +1,5 @@
 module: operator-trivy
-scopes:
+subsystems:
   - security
 crds:
   - ee/modules/500-operator-trivy/crds/native/*.yaml

@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-cert-manager
-  name: d8:manage:capability:module:cert-manager:edit
+  name: d8:manage:permission:module:cert-manager:edit
 rules:
 - apiGroups:
   - cert-manager.io
