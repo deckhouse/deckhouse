@@ -30,31 +30,31 @@ EOF
 
 1. To disable chrony and use custom NTP daemons on nodes, disable the module running the following command:
 
-    ```shell
-    d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable chrony
-    ```
+   ```shell
+   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable chrony
+   ```
 
-    If the command succeeds, you should see a message confirming that the module has been disabled:
+   If the command succeeds, you should see a message confirming that the module has been disabled:
 
-    ```console
-    Module chrony disabled
-    ```
+   ```console
+   Module chrony disabled
+   ```
 
 1. To enable NTP daemons on nodes, create [NodeGroupConfiguration](todo).
-    Below is an example configuration using systemd-timesyncd:
+   Below is an example configuration using systemd-timesyncd:
 
-    ```yaml
-    d8 k apply -f - <<EOF
-    apiVersion: deckhouse.io/v1alpha1
-    kind: NodeGroupConfiguration
-    metadata:
-      name: enable-ntp-on-node.sh
-    spec:
-      weight: 100
-      nodeGroups: ["*"]
-      bundles: ["*"]
-      content: |
-        systemctl enable systemd-timesyncd
-        systemctl start systemd-timesyncd
-    EOF
-    ```
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: enable-ntp-on-node.sh
+   spec:
+     weight: 100
+     nodeGroups: ["*"]
+     bundles: ["*"]
+     content: |
+       systemctl enable systemd-timesyncd
+       systemctl start systemd-timesyncd
+   EOF
+   ```

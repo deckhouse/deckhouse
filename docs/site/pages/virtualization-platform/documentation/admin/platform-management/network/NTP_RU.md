@@ -29,30 +29,30 @@ EOF
 
 1. Чтобы запретить использование chrony и использовать NTP-демоны на узлах, выключите модуль, выполнив следующую команду:
 
-    ```shell
-    d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable chrony
-    ```
+   ```shell
+   d8 k -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable chrony
+   ```
 
-    При успешном выполнении команды будет выведено сообщение о том, что модуль был отключён:
+   При успешном выполнении команды будет выведено сообщение о том, что модуль был отключён:
 
-    ```console
-    Module chrony disabled
-    ```
+   ```console
+   Module chrony disabled
+   ```
 
 1. Создайте [NodeGroupConfiguration](../../../../reference/cr/nodegroupconfiguration.html) custom step, чтобы включить NTP-демоны на узлах (пример для systemd-timesyncd):
 
-    ```yaml
-    d8 k apply -f - <<EOF
-    apiVersion: deckhouse.io/v1alpha1
-    kind: NodeGroupConfiguration
-    metadata:
-      name: enable-ntp-on-node.sh
-    spec:
-      weight: 100
-      nodeGroups: ["*"]
-      bundles: ["*"]
-      content: |
-        systemctl enable systemd-timesyncd
-        systemctl start systemd-timesyncd
-    EOF
-    ```
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: enable-ntp-on-node.sh
+   spec:
+     weight: 100
+     nodeGroups: ["*"]
+     bundles: ["*"]
+     content: |
+       systemctl enable systemd-timesyncd
+       systemctl start systemd-timesyncd
+   EOF
+   ```
