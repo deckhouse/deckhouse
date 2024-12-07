@@ -41,7 +41,15 @@ func (s *testState) SetCloudPreflightchecksWasRan() error {
 	return nil
 }
 
+func (s *testState) SetPostCloudPreflightchecksWasRan() error {
+	return nil
+}
+
 func (s *testState) CloudPreflightchecksWasRan() (bool, error) {
+	return false, nil
+}
+
+func (s *testState) PostCloudPreflightchecksWasRan() (bool, error) {
 	return false, nil
 }
 
@@ -142,32 +150,32 @@ func getProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s.Nil(noProxyList)
 }
 
-func TestTryToSkippingCheck(t *testing.T) {
+func TestshouldSkipProxyCheck(t *testing.T) {
 	s := require.New(t)
 
 	var tests = []struct {
-		registryAddress  string
+		registryAddress   string
 		registryDockerCfg string
-		noProxyAddresses []string
-		skipped          bool
+		noProxyAddresses  []string
+		skipped           bool
 	}{
 		{
-			registryAddress:  "192.168.199.129/d8/deckhouse/ee",
+			registryAddress:   "192.168.199.129/d8/deckhouse/ee",
 			registryDockerCfg: "registryDockerCfg: eyJhdXRocyI6eyIxOTIuMTY4LjE5OS4xMjkiOnsiYXV0aCI6ImEyOTJZV3hyYjNZNldHVnBiamxoWm1VPSJ9fX0K",
-			noProxyAddresses: []string{"127.0.0.1", "192.168.199.0/24"},
-			skipped:          true,
+			noProxyAddresses:  []string{"127.0.0.1", "192.168.199.0/24"},
+			skipped:           true,
 		},
 		{
-			registryAddress:  "registry.deckhouse.io/ce",
+			registryAddress:   "registry.deckhouse.io/ce",
 			registryDockerCfg: "",
-			noProxyAddresses: []string{"registry.deckhouse.io"},
-			skipped:          true,
+			noProxyAddresses:  []string{"registry.deckhouse.io"},
+			skipped:           true,
 		},
 		{
-			registryAddress:  "quay.io",
+			registryAddress:   "quay.io",
 			registryDockerCfg: "registryDockerCfg: eyJhdXRocyI6eyJxdWF5LmlvIjp7fX19",
-			noProxyAddresses: []string{"docker.io"},
-			skipped:          false,
+			noProxyAddresses:  []string{"docker.io"},
+			skipped:           false,
 		},
 	}
 
