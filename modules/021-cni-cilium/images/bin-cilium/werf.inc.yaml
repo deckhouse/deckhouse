@@ -5,7 +5,7 @@
 # Based on https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (builder stage)
 ---
 artifact: {{ $.ModuleName }}/cilium-artifact
-fromCacheVersion: "2024-11-21.0"
+fromCacheVersion: "2024-12-06.1"
 fromImage: {{ $.ModuleName }}/base-cilium-dev
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -41,7 +41,8 @@ shell:
   beforeInstall:
   - mkdir -p /go/src/github.com/cilium/cilium
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
+  ## test to trigger image build (branch roman-chechnev changed)
+  - git clone --depth 1 --branch roman-chechnev {{ $.SOURCE_REPO }}/cilium/cilium-rnd.git /go/src/github.com/cilium/cilium
   setup:
   - export GOROOT=/usr/local/go GOPATH=/go
   # When launching this container via CI, an unexpected path is inserted into the PATH variable.
