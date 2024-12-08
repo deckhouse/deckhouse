@@ -90,8 +90,8 @@ d8 k get vd blank-disk
 Example output:
 
 ```console
-# NAME         PHASE     CAPACITY   AGE
-# blank-disk   Ready     100Mi      1m2s
+NAME         PHASE     CAPACITY   AGE
+blank-disk   Ready     100Mi      1m2s
 ```
 
 ### Creating a disk from an image
@@ -109,8 +109,8 @@ d8 k get cvi ubuntu-22.04 -o wide
 Example output:
 
 ```console
-# NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                       AGE
-# ubuntu-22.04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-22.04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
+NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                       AGE
+ubuntu-22.04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-22.04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
 
 The required size is indicated in the UNPACKEDSIZE column and is 2.5Gi.
@@ -170,9 +170,9 @@ d8 k get vd
 Example output:
 
 ```console
-# NAME           PHASE   CAPACITY   AGE
-# linux-vm-root    Ready   10Gi       7m52s
-# linux-vm-root-2  Ready   2590Mi     7m15s
+NAME           PHASE   CAPACITY   AGE
+linux-vm-root    Ready   10Gi       7m52s
+linux-vm-root-2  Ready   2590Mi     7m15s
 ```
 
 ### Resizing a disk
@@ -188,8 +188,8 @@ d8 k get vd linux-vm-root
 Example output:
 
 ```console
-# NAME          PHASE   CAPACITY   AGE
-# linux-vm-root   Ready   10Gi       10m
+NAME          PHASE   CAPACITY   AGE
+linux-vm-root   Ready   10Gi       10m
 ```
 
 Apply the changes:
@@ -207,6 +207,6 @@ d8 k get vd linux-vm-root
 Example output:
 
 ```console
-# NAME          PHASE   CAPACITY   AGE
-# linux-vm-root   Ready   11Gi       12m
+NAME          PHASE   CAPACITY   AGE
+linux-vm-root   Ready   11Gi       12m
 ```
