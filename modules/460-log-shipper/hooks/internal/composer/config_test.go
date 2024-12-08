@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -143,7 +144,9 @@ func TestConfig(t *testing.T) {
 			name:          "Config 4",
 			mockToCompare: "config_4.json",
 			buildFile: func() (apis.LogSource, apis.LogDestination) {
-				src := source.NewKubernetes("testsource", v1alpha1.KubernetesPodsSpec{}, false)
+				src := source.NewKubernetes("testsource", v1alpha1.KubernetesPodsSpec{
+					KeepDeletedFilesOpenedFor: metav1.Duration{Duration: time.Hour},
+				}, false)
 
 				spec := v1alpha1.ClusterLogDestinationSpec{
 					Vector: v1alpha1.VectorSpec{
