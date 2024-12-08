@@ -192,8 +192,6 @@ spec:
         - '--web.listen-address=127.0.0.1:4228'
         - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
         - '--collector.tracking'
-        - '--collector.sources'
-        - '--collector.serverstats'
         - '--log.level=info'
         volumeMounts:
         - name: var-run
@@ -366,8 +364,6 @@ spec:
         - '--web.listen-address=127.0.0.1:4228'
         - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
         - '--collector.tracking'
-        - '--collector.sources'
-        - '--collector.serverstats'
         - '--log.level=info'
         volumeMounts:
         - name: var-run
