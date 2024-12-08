@@ -1,4 +1,12 @@
 ---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+shell:
+  install:
+    - git clone --depth 1 --branch v{{ .TF.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform.git /src
+    - cd /src
+    - rm -rf .git
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 docker:
@@ -28,14 +36,14 @@ from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
+import:
+  - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
 shell:
-  beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
-    - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch v{{ .TF.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform.git /src
     - cd /src
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
     - chmod 755 /terraform/terraform
