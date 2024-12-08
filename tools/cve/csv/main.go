@@ -11,9 +11,12 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/aquasecurity/trivy/pkg/types"
 )
+
+const db = "registry.deckhouse.io/deckhouse/ee/security/trivy-db:2"
 
 type images map[string]string
 
@@ -55,7 +58,7 @@ func getImagesDigests(deckhouseImage string) (imagesDigests, error) {
 }
 
 func scanImage(image string) (types.Report, error) {
-	stdout, err := execCommand("trivy", "image", "--scanners", "vuln", "--format", "json", image)
+	stdout, err := execCommand("trivy", "image", "--db-repository", db, "--scanners", "vuln", "--format", "json", image)
 	if err != nil {
 		return types.Report{}, err
 	}
@@ -63,6 +66,7 @@ func scanImage(image string) (types.Report, error) {
 	report := types.Report{}
 	err = json.Unmarshal(stdout, &report)
 	if err != nil {
+		slog.Error(fmt.Sprintf("Cannot unmarshal reports %s", err.Error()))
 		return types.Report{}, err
 	}
 
@@ -80,8 +84,8 @@ type module struct {
 	images []image
 }
 
-func extractModules(digests imagesDigests, repoPath string) ([]module, error) {
-	modules := make([]module, 0, len(digests))
+func extractModules(digests imagesDigests, repoPath string) ([]*module, error) {
+	modules := make([]*module, 0, len(digests))
 
 	extractImagesForModule := func(moduleName string, Images images) []image {
 		res := make([]image, 0, len(digests))
@@ -107,7 +111,7 @@ func extractModules(digests imagesDigests, repoPath string) ([]module, error) {
 			return fmt.Errorf("no `%s` found in digests", name)
 		}
 
-		modules = append(modules, module{
+		modules = append(modules, &module{
 			name:   name,
 			images: extractImagesForModule(name, Images),
 		})
@@ -126,7 +130,7 @@ func extractModules(digests imagesDigests, repoPath string) ([]module, error) {
 		return nil, err
 	}
 
-	otherModules := make([]module, 0, len(digests))
+	otherModules := make([]*module, 0, len(digests))
 
 	for name, Images := range digests {
 		m := module{
@@ -135,11 +139,11 @@ func extractModules(digests imagesDigests, repoPath string) ([]module, error) {
 		}
 
 		if strings.HasPrefix(name, "cloudProvider") {
-			modules = append(modules, m)
+			modules = append(modules, &m)
 			continue
 		}
 
-		otherModules = append(otherModules, m)
+		otherModules = append(otherModules, &m)
 	}
 
 	sort.Slice(otherModules, func(i, j int) bool {
@@ -160,7 +164,7 @@ func extractRepoAndTag(mainImage string) (string, string, error) {
 	return imageParts[0], imageParts[1], nil
 }
 
-func addMainImagesToDeckhouseModule(mainImage string, modules []module) error {
+func addMainImagesToDeckhouseModule(mainImage string, modules []*module) error {
 	const moduleName = "deckhouse"
 	repo, tag, err := extractRepoAndTag(mainImage)
 	if err != nil {
@@ -185,6 +189,8 @@ func addMainImagesToDeckhouseModule(mainImage string, modules []module) error {
 			path:       installerImage,
 			name:       "installer",
 		})
+
+		return nil
 	}
 
 	return nil
@@ -202,17 +208,26 @@ type vuln struct {
 }
 
 func scanImageWithLogs(Image image) (types.Report, error) {
-	slog.Debug(fmt.Sprintf("Start scan image %s/%s: %s", Image.moduleName, Image.name, Image.path))
+	slog.Info(fmt.Sprintf("Start scan image %s/%s: %s", Image.moduleName, Image.name, Image.path))
 
-	report, err := scanImage(Image.path)
-	if err != nil {
-		slog.Debug(fmt.Sprintf("Scan image %s/%s: %s finnished with error", Image.moduleName, Image.name, Image.path))
-		return types.Report{}, err
+	var err error
+
+	for i := 0; i < 3; i++ {
+		report, err1 := scanImage(Image.path)
+		if err1 == nil {
+			slog.Info(fmt.Sprintf("Scan image %s/%s: %s finnished", Image.moduleName, Image.name, Image.path))
+
+			return report, nil
+		}
+
+		err = err1
+
+		slog.Info(fmt.Sprintf("Scan image %s/%s: %s finnished with error %v; Retry %d", Image.moduleName, Image.name, Image.path, err1, i))
 	}
 
-	slog.Debug(fmt.Sprintf("Scan image %s/%s: %s finnished", Image.moduleName, Image.name, Image.path))
+	slog.Info(fmt.Sprintf("Scan image %s/%s: %s finnished with error %v", Image.moduleName, Image.name, Image.path, err))
 
-	return report, nil
+	return types.Report{}, err
 }
 
 func extractVulnFromReport(report types.Report, Image image) []vuln {
@@ -232,6 +247,8 @@ func extractVulnFromReport(report types.Report, Image image) []vuln {
 		}
 	}
 
+	slog.Info(fmt.Sprintf("Find vulnerabilities for %s: %d", Image.name, len(res)))
+
 	return res
 }
 
@@ -241,32 +258,57 @@ type vulnImage struct {
 }
 
 type moduleReport struct {
-	module module
+	module *module
 	images []vulnImage
 }
 
-func scanModule(m module) (moduleReport, error) {
+func scanModule(m *module) (moduleReport, error) {
 	res := moduleReport{
 		module: m,
 	}
+
+	wg := sync.WaitGroup{}
+	mtx := sync.Mutex{}
+
+	errors := make([]error, 0)
+
 	for _, img := range m.images {
-		report, err := scanImageWithLogs(img)
-		if err != nil {
-			return moduleReport{}, nil
-		}
-		vunls := extractVulnFromReport(report, img)
-		vunlImg := vulnImage{
-			Image: img,
-			vulns: vunls,
-		}
-		res.images = append(res.images, vunlImg)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			report, err := scanImageWithLogs(img)
+			if err != nil {
+				slog.Error(fmt.Sprintf("Failed to scan image %s/%s: %s", img.moduleName, img.name, err))
+
+				mtx.Lock()
+				errors = append(errors, err)
+				mtx.Unlock()
+			}
+			vunls := extractVulnFromReport(report, img)
+			vunlImg := vulnImage{
+				Image: img,
+				vulns: vunls,
+			}
+
+			mtx.Lock()
+			res.images = append(res.images, vunlImg)
+			mtx.Unlock()
+		}()
+
+	}
+
+	wg.Wait()
+
+	if len(errors) > 0 {
+		return res, errors[0]
 	}
 
 	return res, nil
 }
 
-func scanModules(modules []module) ([]moduleReport, error) {
-	res := make([]moduleReport, len(modules))
+func scanModules(modules []*module) ([]moduleReport, error) {
+	res := make([]moduleReport, 0, len(modules))
 
 	for _, m := range modules {
 		report, err := scanModule(m)
@@ -294,9 +336,13 @@ func buildCSVReport(reports []moduleReport, w io.Writer) error {
 		}
 	}
 
+	slog.Info(fmt.Sprintf("Got reports %d", len(reports)))
+
 	csvWriter := csv.NewWriter(w)
 
 	for _, report := range reports {
+		slog.Info(fmt.Sprintf("Write module %v; images %d", report.module, len(report.images)))
+
 		err := csvWriter.Write([]string{
 			report.module.name,
 		})
@@ -305,6 +351,11 @@ func buildCSVReport(reports []moduleReport, w io.Writer) error {
 		}
 
 		for _, img := range report.images {
+			if len(img.vulns) == 0 {
+				slog.Info(fmt.Sprintf("Not found vuln for %s", img.Image.name))
+				continue
+			}
+
 			for _, v := range img.vulns {
 				err := csvWriter.Write(vulnToStringSlice(v))
 				if err != nil {
@@ -326,14 +377,25 @@ func buildCSVReport(reports []moduleReport, w io.Writer) error {
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	slog.SetDefault(logger)
 
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		slog.Error("Deckhouse image was not passed as argument.")
 		os.Exit(1)
 	}
 
 	deckhouseImage := os.Args[1]
+	outFile := os.Args[2]
+
+	file, err := os.OpenFile(outFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Failed to open output file: %s", outFile))
+		os.Exit(1)
+	}
+
+	defer file.Close()
+
 	digests, err := getImagesDigests(deckhouseImage)
 	if err != nil {
 		slog.Error("Failed to get images digests: ", err)
@@ -364,7 +426,7 @@ func main() {
 		os.Exit(6)
 	}
 
-	err = buildCSVReport(reports, os.Stdout)
+	err = buildCSVReport(reports, file)
 	if err != nil {
 		slog.Error("Failed to build reports: ", err)
 		os.Exit(7)
