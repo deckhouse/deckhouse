@@ -25,7 +25,6 @@ allow_alerts=(
 "CertmanagerCertificateExpiredSoon" # Same as above
 "DeckhouseModuleUseEmptyDir" # TODO Need made split storage class
 "D8EtcdExcessiveDatabaseGrowth" # It may trigger during bootstrap due to a sudden increase in resource count
-"ModuleConfigObsoleteVersion" # Suppress false positive errors on old versions of modules
 )
 
 # In e2e tests with OS on older cores (AWS, Azure), ebpf_exporter does not initiliaze. Ignore this alerts
