@@ -2628,6 +2628,19 @@ alerts:
         Deckhouse release is waiting for manual approval.
       severity: "9"
       markupFormat: markdown
+    - name: DeckhouseReleaseNotificationNotSent
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Failed to send Deckhouse release notification webhook.
+
+        Check the notification webhook address by running `kubectl get mc deckhouse -o yaml`.
+      summary: |
+        Deckhouse release notification webhook not sent.
+      severity: "4"
+      markupFormat: markdown
     - name: DeckhouseUpdating
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
