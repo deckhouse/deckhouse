@@ -43,7 +43,6 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache openssh-client
   setup:
     - cd /src/e2fsprogs
     - CFLAGS='-static' LDFLAGS="-static" ./configure
