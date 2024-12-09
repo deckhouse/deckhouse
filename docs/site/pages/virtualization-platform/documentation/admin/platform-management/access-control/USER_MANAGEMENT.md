@@ -83,10 +83,15 @@ create a configuration file:
 
     ```shell
     d8 k get ingress -n d8-user-authn
-    # NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
-    # ...
-    # kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
-    # ...
+    ```
+
+    Example output:
+
+    ```console
+    NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
+    ...
+    kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
+    ...
     ```
 
 1. Go to the provided address and log in using the email and password you specified when creating a user.

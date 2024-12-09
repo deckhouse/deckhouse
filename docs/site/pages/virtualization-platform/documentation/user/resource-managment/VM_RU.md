@@ -84,9 +84,13 @@ EOF
 
 ```shell
 d8 k get vm linux-vm
+```
 
-# NAME       PHASE     NODE           IPADDRESS     AGE
-# linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
+Пример вывода:
+
+```console
+NAME       PHASE     NODE           IPADDRESS     AGE
+linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
 
 После создания виртуальная машина автоматически получит IP-адрес из диапазона, указанного в настройках модуля (блок `virtualMachineCIDRs`).
@@ -103,11 +107,15 @@ d8 k get vm linux-vm
 
 ```shell
 d8 v console linux-vm
+```
 
-# Successfully connected to linux-vm console. The escape sequence is ^]
-#
-# linux-vm login: cloud
-# Password: cloud
+Пример вывода:
+
+```console
+Successfully connected to linux-vm console. The escape sequence is ^]
+
+linux-vm login: cloud
+Password: cloud
 ```
 
 Для завершения работы с серийной консолью нажмите `Ctrl+]`.
@@ -128,10 +136,10 @@ d8 v ssh cloud@linux-vm --local-ssh
 
 Политика запуска виртуальной машины предназначена для автоматизированного управления состоянием виртуальной машины. Определяется она в виде параметра `.spec.runPolicy` в спецификации виртуальной машины. Поддерживаются следующие политики:
 
-- `AlwaysOnUnlessStoppedManually` - (по умолчанию) после создания ВМ всегда находится в рабочем состоянии. В случае сбоев работа ВМ восстанавливается автоматически. Остановка ВМ возможна только путем вызова команды `d8 v stop` или создания соответствующей операции.
-- `AlwaysOn` - после создания ВМ всегда находится в работающем состоянии, даже в случае ее выключения средствами ОС. В случае сбоев работа ВМ восстанавливается автоматически.
-- `Manual` - после создания состоянием ВМ управляет пользователь вручную с использованием команд или операций.
-- `AlwaysOff` - после создания ВМ всегда находится в выключенном состоянии. Возможность включения ВМ через команды\операции - отсутствует.
+- `AlwaysOnUnlessStoppedManually` — (по умолчанию) после создания ВМ всегда находится в рабочем состоянии. В случае сбоев работа ВМ восстанавливается автоматически. Остановка ВМ возможна только путем вызова команды `d8 v stop` или создания соответствующей операции.
+- `AlwaysOn` — после создания ВМ всегда находится в работающем состоянии, даже в случае ее выключения средствами ОС. В случае сбоев работа ВМ восстанавливается автоматически.
+- `Manual` — после создания состоянием ВМ управляет пользователь вручную с использованием команд или операций.
+- `AlwaysOff` — после создания ВМ всегда находится в выключенном состоянии. Возможность включения ВМ через команды\операции - отсутствует.
 
 Состоянием виртуальной машины можно управлять с помощью следующих методов:
 
@@ -213,7 +221,12 @@ d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 
 ```shell
 d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":2}}}'
-# virtualmachine.virtualization.deckhouse.io/linux-vm patched
+```
+
+Пример вывода:
+
+```console
+virtualmachine.virtualization.deckhouse.io/linux-vm patched
 ```
 
 Изменения в конфигурацию внесены, но ещё не применены к виртуальной машине. Проверьте это, повторно выполнив:
@@ -227,24 +240,32 @@ d8 v ssh cloud@linux-vm --local-ssh --command "nproc"
 
 ```shell
 d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
+```
 
-# [
-#   {
-#     "currentValue": 1,
-#     "desiredValue": 2,
-#     "operation": "replace",
-#     "path": "cpu.cores"
-#   }
-# ]
+Пример вывода:
+
+```console
+[
+  {
+    "currentValue": 1,
+    "desiredValue": 2,
+    "operation": "replace",
+    "path": "cpu.cores"
+  }
+]
 ```
 
 Выполните команду:
 
 ```shell
 d8 k get vm linux-vm -o wide
+```
 
-# NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
-# linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
+Пример вывода:
+
+```console
+NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
+linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
 
 В колонке `NEED RESTART` мы видим значение `True`, а это значит что для применения изменений требуется перезагрузка.
@@ -293,7 +314,7 @@ spec:
       ...
 ```
 
-При более длинных сценариях и/или наличии приватных данных, сценарий начальной инициализации виртуальной машины может быть создан в ресурсе `Secret`. Пример `Secret` со сценарием CloudInit приведен ниже:
+При более длинных сценариях и/или наличии приватных данных, сценарий начальной инициализации виртуальной машины может быть создан в ресурсе Secret. Пример Secret со сценарием CloudInit приведен ниже:
 
 ```yaml
 apiVersion: v1
@@ -305,7 +326,7 @@ data:
 type: provisioning.virtualization.deckhouse.io/cloud-init
 ```
 
-Фрагмент конфигурации виртуальной машины при использовании скрипта начальной инициализации CloudInit хранящегося в ресурсе `Secret`:
+Фрагмент конфигурации виртуальной машины при использовании скрипта начальной инициализации CloudInit хранящегося в ресурсе Secret:
 
 ```yaml
 spec:
@@ -320,7 +341,7 @@ spec:
 
 Для конфигурирования виртуальных машин под управлением ОС Windows с использованием Sysprep, поддерживается только вариант с Secret.
 
-Пример `Secret` с сценарием Sysprep:
+Пример Secret с сценарием Sysprep:
 
 ```yaml
 apiVersion: v1
@@ -334,7 +355,7 @@ type: provisioning.virtualization.deckhouse.io/sysprep
 
 Примечание: Значение поля `.data.unattend.xml` должно быть закодировано в формате Base64.
 
-Фрагмент конфигурации виртуальной машины с использованием скрипта начальной инициализации Sysprep в ресурсе `Secret`:
+Фрагмент конфигурации виртуальной машины с использованием скрипта начальной инициализации Sysprep в ресурсе Secret:
 
 ```yaml
 spec:
@@ -363,11 +384,11 @@ spec:
     disktype: ssd
 ```
 
-![nodeSelektor](/images/virtualization-platform/placement-node-affinity.ru.png)
+![nodeSelector](/images/virtualization-platform/placement-node-affinity.ru.png)
 
 В этом примере виртуальная машина будет размещена только на узлах, которые имеют метку `disktype` со значением `ssd`.
 
-### Предпочтительное связывание - Affinity
+### Предпочтительное связывание — Affinity
 
 `Affinity` предоставляет более гибкие и мощные инструменты по сравнению с `nodeSelector`. Он позволяет задавать предпочтения и обязательности для размещения виртуальных машин. `Affinity` поддерживает два вида: `nodeAffinity` и `virtualMachineAndPodAffinity`.
 
@@ -484,23 +505,31 @@ EOF
 
 ```shell
 d8 k get vmbda attach-blank-disk
+```
 
-# NAME                PHASE      VIRTUAL MACHINE NAME   AGE
-# attach-blank-disk   Attached   linux-vm              3m7s
+Пример вывода:
+
+```console
+NAME                PHASE      VIRTUAL MACHINE NAME   AGE
+attach-blank-disk   Attached   linux-vm              3m7s
 ```
 
 Подключитесь к виртуальной машине и удостоверьтесь, что диск подключен:
 
 ```shell
 d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
+```
 
-# NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
-# sda       8:0    0   10G  0 disk <--- статично подключенный диск linux-vm-root
-# |-sda1    8:1    0  9.9G  0 part /
-# |-sda14   8:14   0    4M  0 part
-# `-sda15   8:15   0  106M  0 part /boot/efi
-# sdb       8:16   0    1M  0 disk <--- cloudinit
-# sdc       8:32   0 95.9M  0 disk <--- динамически подключенный диск blank-disk
+Пример вывода:
+
+```console
+NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+sda       8:0    0   10G  0 disk <--- статично подключенный диск linux-vm-root
+|-sda1    8:1    0  9.9G  0 part /
+|-sda14   8:14   0    4M  0 part
+`-sda15   8:15   0  106M  0 part /boot/efi
+sdb       8:16   0    1M  0 disk <--- cloudinit
+sdc       8:32   0 95.9M  0 disk <--- динамически подключенный диск blank-disk
 ```
 
 Для отключения диска от виртуальной машины удалите ранее созданный ресурс:
@@ -525,8 +554,13 @@ d8 k delete vmbda attach-blank-disk
 
 ```shell
 d8 k get vm
-# NAME       PHASE     NODE           IPADDRESS     AGE
-# linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
+```
+
+Пример вывода:
+
+```console
+NAME       PHASE     NODE           IPADDRESS     AGE
+linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
 ```
 
 Виртуальная машина запущена на узле `virtlab-pt-1`.
@@ -551,11 +585,16 @@ EOF
 
 ```shell
 d8 k get vm -w
-# NAME       PHASE       NODE           IPADDRESS     AGE
-# linux-vm   Running     virtlab-pt-1   10.66.10.14   79m
-# linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm   Running     virtlab-pt-2   10.66.10.14   79m
+```
+
+Пример вывода:
+
+```console
+NAME       PHASE       NODE           IPADDRESS     AGE
+linux-vm   Running     virtlab-pt-1   10.66.10.14   79m
+linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
+linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
+linux-vm   Running     virtlab-pt-2   10.66.10.14   79m
 ```
 
 Также для выполнения миграции можно использовать команду:
@@ -574,8 +613,13 @@ d8 v evict <vm-name>
 
 ```shell
 d8 k get vmipl
-# NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
-# ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
+```
+
+Пример вывода:
+
+```console
+NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
+ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
 Ресурс [VirtualMachineIPAddress](../../../reference/cr/virtualmachineipaddress.html) (`vmip`) — это ресурс проекта или пространства имен, который отвечает за резервирование выделенных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по запросу.
@@ -584,16 +628,26 @@ d8 k get vmipl
 
 ```shell
 d8 k get vmipl
-# NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
-# ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
+```
+
+Пример вывода:
+
+```console
+NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
+ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
 Проверить назначенный IP-адрес можно с помощью команды:
 
 ```shell
 d8 k get vmip
-# NAME             ADDRESS       STATUS     VM         AGE
-# linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
+```
+
+Пример вывода:
+
+```console
+NAME             ADDRESS       STATUS     VM         AGE
+linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
 
 Алгоритм автоматического присвоения IP-адреса виртуальной машине выглядит следующим образом:
@@ -636,8 +690,12 @@ spec:
 
 ```shell
 d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
+```
 
-# linux-vm-7prpx
+Пример вывода:
+
+```console
+linux-vm-7prpx
 ```
 
 Удалите блоки `.metadata.ownerReferences` из найденного ресурса:
