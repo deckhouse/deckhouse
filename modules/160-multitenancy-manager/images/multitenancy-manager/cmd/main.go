@@ -56,8 +56,8 @@ var (
 	helmNamespace = "d8-multitenancy-manager"
 	// controller service account
 	serviceAccount = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
-	// deckhouse service account
-	deckhouseServiceAccount = "system:serviceaccount:d8-system:deckhouse"
+	// list of service accounts allowed to create namespaces when allowNamespacesWithoutProjects is set to false
+	nsCreateAllowedServiceAccounts = []string{serviceAccount, "system:serviceaccount:d8-system:deckhouse", "system:serviceaccount:d8-upmeter:upmeter"}
 )
 
 const (
@@ -106,7 +106,7 @@ func main() {
 
 	if !allowOrphanNamespaces {
 		// register namespace webhook
-		namespacewebhook.Register(runtimeManager, serviceAccount, deckhouseServiceAccount)
+		namespacewebhook.Register(runtimeManager, nsCreateAllowedServiceAccounts)
 	}
 
 	// start runtime manager
