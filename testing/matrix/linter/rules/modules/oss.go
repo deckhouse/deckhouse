@@ -165,6 +165,7 @@ var skipOssChecks = map[string]struct{}{
 	"030-cloud-provider-vcd":                  {},
 	"030-cloud-provider-yandex":               {},
 	"030-cloud-provider-zvirt":                {},
+	"030-cloud-provider-huaweicloud":          {},
 	"035-cni-simple-bridge":                   {},
 	"140-user-authz":                          {},
 	"160-multitenancy-manager":                {},
