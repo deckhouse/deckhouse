@@ -18,12 +18,12 @@
 ### DEMO1 TODO REMOVE
 
 {% capture table %}
-\`\`\`table
+```table
 | OMG, I span 3 columns! \      \      |
 |------------------------|------|------|
 | That's...              | very | nice |
 | ^^                     | pretty! | test |
-\`\`\`
+```
 {% endcapture %}
 
 <div markdown="0">{% include table_generation/fancy-tables.liquid markdown=table %}</div>
@@ -31,14 +31,14 @@
 ### DEMO2 TODO REMOVE
 
 {% capture table %}
-\`\`\`table
+```table
 | OMG, I span 3 columns! \      \      |
 |------------------------|------|------|
 {%- for destination in site.data.deckhouse-ports.groups[0].destinations %}
 | {{ destination.ports }} | {{ destination.protocol }} | {{ destination.description[page.lang] }} |
 {%- endfor %}
 | That's...              | very | nice |
-\`\`\`
+```
 {% endcapture %}
 
 <div markdown="0">{% include table_generation/fancy-tables.liquid markdown=table %}</div>
