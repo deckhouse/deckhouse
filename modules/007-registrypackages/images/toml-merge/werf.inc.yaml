@@ -41,5 +41,5 @@ import:
   before: install
 shell:
   setup:
-  - cd src && GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /toml-merge toml-merge.go
+  - cd /src/toml && GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /toml-merge toml-merge.go
   - mv /src/scripts/* /
