@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,89 +17,31 @@ limitations under the License.
 package requirements
 
 import (
-	"fmt"
-
-	"github.com/Masterminds/semver/v3"
+	"errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 const (
-	requirementIstioMinimalVersionKey = "istioMinimalVersion"
-	requirementDefaultK8sKey          = "k8s"
-	minVersionValuesKey               = "istio:minimalVersion"
-	isK8sVersionAutomaticKey          = "istio:isK8sVersionAutomatic"
-	istioToK8sCompatibilityMapKey     = "istio:istioToK8sCompatibilityMap"
+	cniConfigurationSettledKey             = "cniConfigurationSettled"
+	cniConfigurationSettledRequirementsKey = "cniConfigurationSettled"
 )
 
 func init() {
-	checkMinimalIstioVersionFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		minimalIstioVersion, err := semver.NewVersion(requirementValue)
-		if err != nil {
-			return false, err
-		}
-		currentVersionRaw, exists := getter.Get(minVersionValuesKey)
+	checkCNIConfigurationSettledFunc := func(_ string, getter requirements.ValueGetter) (bool, error) {
+		cniConfigurationSettledStatusRaw, exists := getter.Get(cniConfigurationSettledKey)
 		if !exists {
 			return true, nil
 		}
-		currentVersionStr := currentVersionRaw.(string)
-		currentVersion, err := semver.NewVersion(currentVersionStr)
-		if err != nil {
-			return false, err
-		}
 
-		if currentVersion.LessThan(minimalIstioVersion) {
-			return false, fmt.Errorf("installed Istio version '%s' is lower than required", currentVersionStr)
-		}
-
-		return true, nil
-	}
-
-	checkIstioAndK8sVersionsCompatibilityFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
-		comingDefaultK8sVersionSemver, err := semver.NewVersion(requirementValue)
-		if err != nil {
-			return false, err
-		}
-		comingDefaultK8sVersion := fmt.Sprintf("%d.%d", comingDefaultK8sVersionSemver.Major(), comingDefaultK8sVersionSemver.Minor())
-
-		currentMinIstioVersionRaw, exists := getter.Get(minVersionValuesKey)
-		if !exists {
-			return true, nil
-		}
-		currentMinIstioVersionStr := currentMinIstioVersionRaw.(string)
-
-		isAtomaticK8sVerRaw, exists := getter.Get(isK8sVersionAutomaticKey)
-		if !exists {
-			return true, nil
-		}
-		isAtomaticK8sVer := isAtomaticK8sVerRaw.(bool)
-		// Only if k8s version is set to Automatic in cluster
-		if !isAtomaticK8sVer {
-			return true, nil
-		}
-
-		compatibilityMapRaw, exists := getter.Get(istioToK8sCompatibilityMapKey)
-		if !exists {
-			return true, nil
-		}
-		compatibilityMap, ok := compatibilityMapRaw.(map[string][]string)
-		if !ok {
-			return false, fmt.Errorf("%s key format is incorrect", istioToK8sCompatibilityMapKey)
-		}
-
-		k8sVersions, ok := compatibilityMap[currentMinIstioVersionStr]
-		if !ok {
-			return false, fmt.Errorf("can't find compatible k8s versions for Istio v%s", currentMinIstioVersionStr)
-		}
-		for _, k8sVersion := range k8sVersions {
-			// If k8s version is in compatibility list
-			if comingDefaultK8sVersion == k8sVersion {
-				return true, nil
+		if cniConfigurationSettledStatus, ok := cniConfigurationSettledStatusRaw.(string); ok {
+			if cniConfigurationSettledStatus == "false" {
+				return false, errors.New(
+					"A problem has been found in the CNI configuration, see ClusterAlerts for details",
+				)
 			}
 		}
-		return false, fmt.Errorf("in coming release the default kubernetes version '%s' will be incompatible with Istio version '%s'", comingDefaultK8sVersion, currentMinIstioVersionStr)
+		return true, nil
 	}
-
-	requirements.RegisterCheck(requirementIstioMinimalVersionKey, checkMinimalIstioVersionFunc)
-	requirements.RegisterCheck(requirementDefaultK8sKey, checkIstioAndK8sVersionsCompatibilityFunc)
+	requirements.RegisterCheck(cniConfigurationSettledRequirementsKey, checkCNIConfigurationSettledFunc)
 }
