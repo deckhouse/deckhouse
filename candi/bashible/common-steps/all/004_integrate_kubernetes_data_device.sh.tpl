@@ -196,18 +196,17 @@ function get_kubernetes_data_device_from_file_or_from_secret() {
   echo "$data_device"
 }
 
-
-{{- /*
-# Function to find all unmounted data devices
-*/}}
 function find_all_unmounted_data_devices() {
-  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r \
-    '[ .blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path ] | sort'
+  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '
+    [
+      .blockdevices[] 
+      | select(.path | contains("zram") | not)  # Exclude zram devices
+      | select(.path | contains("fd") | not)   # Exclude floppy devices (fd)
+      | select(.type == "disk" and .mountpoint == null and .children == null)  # Filter disks with no mountpoint or children
+      | .path
+    ] | sort'
 }
 
-{{- /*
-# Function to find the first unmounted data device
-*/}}
 function find_first_unmounted_data_device() {
   local all_unmounted_data_devices="$(find_all_unmounted_data_devices)"
   echo "$all_unmounted_data_devices" | jq '. | first'
@@ -254,9 +253,6 @@ function get_system_registry_data_device() {
   echo "$system_registry_data_device"
 }
 
-{{- /*
-# Check the expected disk count
-*/}}
 function check_expected_disk_count() {
   local expected_disks_count=1  # For Kubernetes data
 

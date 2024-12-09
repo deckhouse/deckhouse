@@ -96,20 +96,39 @@ function remove_registry_data_device_file() {
   fi
 }
 
-function find_first_unmounted_data_device() {
-  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r \
-    '[ .blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path ] | sort | first'
+function find_all_unmounted_data_devices() {
+  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '
+    [
+      .blockdevices[] 
+      | select(.path | contains("zram") | not)  # Exclude zram devices
+      | select(.path | contains("fd") | not)   # Exclude floppy devices (fd)
+      | select(.type == "disk" and .mountpoint == null and .children == null)  # Filter disks with no mountpoint or children
+      | .path
+    ] | sort'
 }
 
 function find_mounted_registry_data_device() {
-  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r \
-    '[.blockdevices[] | select(.mountpoint == "/mnt/system-registry-data" ) | .path] | first'
+  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '
+    [
+      .blockdevices[] 
+      | select(.mountpoint == "/mnt/system-registry-data")  # Find devices mounted at /mnt/system-registry-data
+      | .path
+    ] | first'
 }
 
 function find_mountpoint_by_data_device() {
   local data_device="$1"
-  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r \
-    "[.blockdevices[] | select(.path == \"$data_device\") | .mountpoint] | first"
+  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r "
+    [
+      .blockdevices[] 
+      | select(.path == \"$data_device\")  # Match the specific device path
+      | .mountpoint
+    ] | first"
+}
+
+function find_first_unmounted_data_device() {
+  local all_unmounted_data_devices="$(find_all_unmounted_data_devices)"
+  echo "$all_unmounted_data_devices" | jq '. | first'
 }
 
 {{- /*
