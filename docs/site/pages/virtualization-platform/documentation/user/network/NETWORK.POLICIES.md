@@ -9,8 +9,8 @@ To manage incoming and outgoing traffic for virtual machines at OSI layer 3 or 4
 
 There are two primary types of traffic management:
 
-- `ingress` (incoming traffic);
-- `egress` (outgoing traffic).
+- Ingress – incoming traffic;
+- Egress – outgoing traffic.
 
 For controlling intra-cluster traffic, it is recommended to use `podSelector` and `namespaceSelector`. For network interactions outside the cluster, use `ipBlock`.  
 Network policy rules are applied simultaneously, following an additive principle, to all virtual machines that match the specified labels.
@@ -19,7 +19,7 @@ The following examples will demonstrate usage based on a project named `test-pro
 
 By default, incoming and outgoing traffic is unrestricted:
 
-```bash
+```shell
 d8 k get vm -n test-project
 ```
 
@@ -33,7 +33,7 @@ vm-b   Running   virtlab-1      10.66.20.71   5m
 
 Virtual machines have corresponding labels:
 
-```bash
+```shell
 d8 k get vm -n test-project -o yaml | less
 ```
 
@@ -74,9 +74,9 @@ spec:
     - Ingress
 ```
 
-The policy type `Ingress` indicates that the rules for incoming traffic will be applied. Since no `Ingress` rules are specified in the configuration, all incoming traffic will be restricted.
+The policy type Ingress indicates that the rules for incoming traffic will be applied. Since no Ingress rules are specified in the configuration, all incoming traffic will be restricted.
 
-Similarly, outgoing traffic can be restricted by adding `Egress` to the `spec.policyTypes` block.
+Similarly, outgoing traffic can be restricted by adding Egress to the `spec.policyTypes` block.
 
 ```yaml
 policyTypes:
@@ -107,7 +107,7 @@ spec:
     - Ingress
 ```
 
-With `spec.podSelector`, a network policy with type `Ingress` is applied to all virtual machines with the label `vm: a`. In the `spec.ingress` specification, a rule is defined that allows incoming traffic `from` virtual machines with the label `vm: b`.
+With `spec.podSelector`, a network policy with type Ingress is applied to all virtual machines with the label `vm: a`. In the `spec.ingress` specification, a rule is defined that allows incoming traffic `from` virtual machines with the label `vm: b`.
 
 ## Allowing outgoing traffic from a virtual machine to external addresses
 
@@ -134,7 +134,7 @@ spec:
     - Egress
 ```
 
-The `Egress` policy type indicates that outgoing traffic rules will be applied in the `spec.egress` specification. The `TCP` protocol and port `53` are specified, allowing traffic to that port.
+The Egress policy type indicates that outgoing traffic rules will be applied in the `spec.egress` specification. The `TCP` protocol and port `53` are specified, allowing traffic to that port.
 
 Ports can be specified as a range using the additional `endPort` field within the `ports` block.
 

@@ -248,37 +248,37 @@ To enable authentication through `Dex` for your application, follow these steps:
 
 1. Create a custom resource [DexAuthenticator](../../../reference/cr/dexauthenticator.html). This will create an instance of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) connected to `Dex`. After the `DexAuthenticator` custom resource is created, the required objects such as Deployment, Service, Ingress, and Secret will appear in the specified `namespace`.
 
-  Example of a `DexAuthenticator` resource:
+   Example of a `DexAuthenticator` resource:
 
-  ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: DexAuthenticator
-   metadata:
-     # Prefix for the Dex authenticator pod names.
-     # For example, if the name prefix is `app-name`, the Dex authenticator pods will have names like `app-name-dex-authenticator-7f698684c8-c5cjg`.
-     name: app-name
-     # Namespace where the Dex authenticator will be deployed.
-     namespace: app-ns
-   spec:
-     # The domain of your application. Requests to this domain will be redirected for authentication through Dex.
-     applicationDomain: "app-name.kube.my-domain.com"
-     # Whether to send the `Authorization: Bearer` header to the application. Useful with `auth_request` in NGINX.
-     sendAuthorizationHeader: false
-     # The name of the Secret with the SSL certificate.
-     applicationIngressCertificateSecretName: "ingress-tls"
-     # The name of the Ingress class to use for the Ingress resource created for the Dex authenticator.
-     applicationIngressClassName: "nginx"
-     # The duration for which the user's session will be considered active.
-     keepUsersLoggedInFor: "720h"
-     # List of groups allowed to authenticate.
-     allowedGroups:
-       - everyone
-       - admins
-     # List of addresses and networks allowed to authenticate.
-     whitelistSourceRanges:
-       - 1.1.1.1/32
-       - 192.168.0.0/24
-  ```
+   ```yaml
+    apiVersion: deckhouse.io/v1
+    kind: DexAuthenticator
+    metadata:
+      # Prefix for the Dex authenticator pod names.
+      # For example, if the name prefix is `app-name`, the Dex authenticator pods will have names like `app-name-dex-authenticator-7f698684c8-c5cjg`.
+      name: app-name
+      # Namespace where the Dex authenticator will be deployed.
+      namespace: app-ns
+    spec:
+      # The domain of your application. Requests to this domain will be redirected for authentication through Dex.
+      applicationDomain: "app-name.kube.my-domain.com"
+      # Whether to send the `Authorization: Bearer` header to the application. Useful with `auth_request` in NGINX.
+      sendAuthorizationHeader: false
+      # The name of the Secret with the SSL certificate.
+      applicationIngressCertificateSecretName: "ingress-tls"
+      # The name of the Ingress class to use for the Ingress resource created for the Dex authenticator.
+      applicationIngressClassName: "nginx"
+      # The duration for which the user's session will be considered active.
+      keepUsersLoggedInFor: "720h"
+      # List of groups allowed to authenticate.
+      allowedGroups:
+        - everyone
+        - admins
+      # List of addresses and networks allowed to authenticate.
+      whitelistSourceRanges:
+        - 1.1.1.1/32
+        - 192.168.0.0/24
+   ```
 
 1. Connect the application to `Dex`. To do this, add the following annotations to the application's Ingress resource:
 
