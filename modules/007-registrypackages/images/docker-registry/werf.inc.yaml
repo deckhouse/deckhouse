@@ -66,6 +66,7 @@ shell:
   - make build
   - mv ./auth_server /auth_server
   - mkdir -p /go/src/github.com/docker/
+  - mv /src/distribution /go/src/github.com/docker/
   - cd /go/src/github.com/docker/distribution
   - make
   - mv bin/registry /
