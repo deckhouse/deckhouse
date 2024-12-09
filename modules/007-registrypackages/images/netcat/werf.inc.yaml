@@ -44,8 +44,6 @@ shell:
   - apk add --no-cache make g++
   setup:
     - cd /src/netcat
-    - git clone -b applied/{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/netcat src
-    - cd src
     - make linux LDFLAGS='-static' DFLAGS='-DDEBIAN_VERSION=\"Flant\"'
     - strip ./nc
     - mv ./nc /nc
