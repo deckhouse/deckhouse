@@ -83,10 +83,10 @@ spec:
     Пример вывода команды:
 
     ```console
-    # NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
-    # ...
-    # kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
-    # ...
+    NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
+    ...
+    kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d
+    ...
     ```
 
 1. Перейдите по предоставленному адресу и используйте в качестве учетных данных email и пароль, которые вы указали при создании пользователя.
