@@ -1,5 +1,18 @@
-{{- $version := "8.2.1" }}
+{{- $version := "8.9.1" }}
 {{- $image_version := $version | replace "." "-" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+fromArtifact: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} {{ $.SOURCE_REPO }}/curl/curl.git /src/curl
+  - rm -rf /src/curl/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -20,6 +33,11 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_ALPINE_DEV }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: setup
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -28,15 +46,16 @@ git:
       - '**/*'
 shell:
   beforeInstall:
-    - apk add --no-cache openssh-client
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache openssh-client make autoconf automake clang libtool gettext-dev binutils g++ openssl openssl-dev libssh2-dev libgcrypt ssl_client libssh2-static libcrypto3 openssl-libs-static zlib-static libgcc clang-libs gettext-libs
   setup:
   - export CC=clang
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} {{ $.SOURCE_REPO }}/curl/curl.git
-  - cd /curl
+  - cd /src/curl
   - autoreconf -fi
   - LDFLAGS="-static" PKG_CONFIG="pkg-config --static" ./configure --disable-shared --enable-static --disable-ldap --enable-ipv6 --enable-unix-sockets --with-ssl --with-libssh2
   - make -j4 V=1 LDFLAGS="-static -all-static"
   - strip src/curl
   - mv src/curl /d8-curl
+  - mv /src/scripts/* /
   - chmod +x /d8-curl /install /uninstall
