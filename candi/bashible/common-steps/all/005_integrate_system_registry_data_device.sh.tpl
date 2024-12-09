@@ -28,6 +28,11 @@ function setup_registry_data_device() {
       exit 1
     fi
 
+    if is_data_device_mounted "$data_device"; then
+      >&2 echo "Failed to mount $data_device disk. Disk is already mounted."
+      exit 1
+    fi
+
     # Ensure the mount directory exists
     mkdir -p "$mount_point"
 
@@ -101,6 +106,12 @@ function find_mounted_registry_data_device() {
     '[.blockdevices[] | select(.mountpoint == "/mnt/system-registry-data" ) | .path] | first'
 }
 
+function find_mountpoint_by_data_device() {
+  local data_device="$1"
+  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r \
+    "[.blockdevices[] | select(.path == \"$data_device\") | .mountpoint] | first"
+}
+
 {{- /*
 # Example (lsblk -o path,type,mountpoint,fstype --tree --json):
 #         {
@@ -128,6 +139,19 @@ function find_mounted_registry_data_device() {
 #          "fstype": null
 #       }
 */}}
+
+function is_data_device_mounted() {
+  local data_device="$1"
+  local data_device_info
+
+  data_device_info=$(find_mountpoint_by_data_device "$data_device")
+
+  if [ "$data_device_info" != "null" ] && [ -n "$data_device_info" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
 
 function is_unmounted_data_device_exists() {
   local data_device
