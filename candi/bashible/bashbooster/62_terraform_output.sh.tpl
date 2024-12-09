@@ -12,29 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function bb-get-kubernetes-data-device-from-terraform-output() {
-{{- if eq .runType "ClusterBootstrap" }}
+bb-get-kubernetes-data-device-from-terraform-output() {
+{{- if eq .runType "Normal" }}
+  # other nodes
+  __bb-fetch-data-from-secret "d8-system" "d8-masters-kubernetes-data-device-path" | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
+{{- else }}
   # for bootstrap first master node
   file="/var/lib/bashible/kubernetes_data_device_path"
   if [ -f "$file" ]; then
     cat $file
   fi
-{{- else }}
-  # other nodes
-  __bb-fetch-data-from-secret "d8-system" "d8-masters-kubernetes-data-device-path" | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
 {{- end }}
 }
 
-function bb-get-registry-data-device-from-terraform-output() {
-{{- if eq .runType "ClusterBootstrap" }}
+bb-get-registry-data-device-from-terraform-output() {
+{{- if eq .runType "Normal" }}
+  # other nodes
+  __bb-fetch-data-from-secret "d8-system" "d8-masters-system-registry-data-device-path" | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
+{{- else }}
   # for bootstrap first master node
   file="/var/lib/bashible/system_registry_data_device_path"
   if [ -f "$file" ]; then
     cat $file
   fi
-{{- else }}
-  # other nodes
-  __bb-fetch-data-from-secret "d8-system" "d8-masters-system-registry-data-device-path" | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
 {{- end }}
 }
 
@@ -93,15 +93,20 @@ function bb-get-registry-data-device-from-terraform-output() {
 # "" - empty
 # ------------------
 */}}
-function __bb-fetch-data-from-secret() {
+__bb-fetch-data-from-secret() {
   local namespace="$1"
   local secret_name="$2"
+  {{- if eq .runType "Normal" }}
+  local api_server_endpoints="{{ .normal.apiserverEndpoints | join " " }}"
+  {{- else }}
+  local api_server_endpoints=""
+  {{- end }}
 
   if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
     # Ensure bootstrap-token exists before proceeding
     if [ -f "$BOOTSTRAP_DIR/bootstrap-token" ]; then
       # Iterate through each API server endpoint
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+      for server in $api_server_endpoints; do
         local http_status
         # Check HTTP status without outputting error details
         http_status=$(d8-curl -s -w "%{http_code}" -o /dev/null \
@@ -134,7 +139,7 @@ function __bb-fetch-data-from-secret() {
     fi
   else
     # Use kubectl to retrieve the secret
-    if output=$(__bb-kubectl-with-kubelet-kubeconfig get secret "$secret_name" -n "$namespace" --ignore-not-found=true -o json 2>/dev/null); then
+    if output=$(bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf get secret "$secret_name" -n "$namespace" --ignore-not-found=true -o json 2>/dev/null); then
       echo "$output"
       return 0
     fi
@@ -142,8 +147,4 @@ function __bb-fetch-data-from-secret() {
     >&2 echo "Failed to get secret $secret_name using kubectl."
     exit 1
   fi
-}
-
-function __bb-kubectl-with-kubelet-kubeconfig() {
-  bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
 }
