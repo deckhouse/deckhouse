@@ -176,4 +176,4 @@ spec:
 - [https://kubernetes.io/docs/concepts/services-networking/network-policies](https://kubernetes.io/docs/concepts/services-networking/network-policies).
 - [https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicy-v1-networking-k8s-io](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicy-v1-networking-k8s-io).
   
-  где 1.31 — версия Kubernetes релиза. При необходимости укажите поддерживаемую в вашем кластере версию.
+  где `1.31` — версия Kubernetes релиза. При необходимости укажите поддерживаемую в вашем кластере версию.
