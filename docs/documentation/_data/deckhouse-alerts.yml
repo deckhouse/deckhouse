@@ -505,17 +505,6 @@ alerts:
         Cluster-autoscaler issues too many errors.
       severity: "8"
       markupFormat: markdown
-    - name: D8CNIDoesNotExplicitlyEnabled
-      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 021-cni-cilium
-      module: cni-cilium
-      edition: ce
-      description: |
-        For the cluster to work correctly, CNI must be explicitly enabled. In its moduleConfig, `enabled: true` should be specified.
-      summary: |
-        No CNI is explicitly enabled in the cluster.
-      severity: "4"
-      markupFormat: markdown
     - name: D8CNIEnabledMoreThanOne
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -528,31 +517,41 @@ alerts:
         More than one CNI is enabled in the cluster.
       severity: "2"
       markupFormat: markdown
-    - name: D8CNIEnablingMismatch
-      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/cni-checks.yaml
-      moduleUrl: 021-cni-cilium
-      module: cni-cilium
-      edition: ce
-      description: |
-        Several CNIs are enabled in the cluster:
-        - from secret d8-cni-configuratuin: {{ $labels.secret }}
-        - from moduleConfigs: {{ $labels.mc }}
-        For the cluster to work correctly, only one CNI must be enabled.
-      summary: |
-        The CNI enabled in the secret d8-cni-configuratuin does not match the one enabled in the moduleConfig.
-      severity: "4"
-      markupFormat: markdown
     - name: D8CNIMisconfigured
       sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/cni-checks.yaml
       moduleUrl: 021-cni-cilium
       module: cni-cilium
       edition: ce
       description: |
-        It is necessary to correct the settings in the CNI {{ $labels.secret }} moduleConfig.
-        You can find the desired settings in the `d8-system/desiredCNIMC` configmap.
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
+        You can find the desired settings in the `d8-system/desiredCNIModuleConfig` configmap.
       summary: |
         The settings from the secret d8-cni-configuratuin and the moduleConfig contradict each other.
-      severity: "4"
+      severity: "3"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
+        You can find the desired settings in the `d8-system/desiredCNIModuleConfig` configmap.
+      summary: |
+        The settings from the secret d8-cni-configuratuin and the moduleConfig contradict each other.
+      severity: "3"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
+        You can find the desired settings in the `d8-system/desiredCNIModuleConfig` configmap.
+      summary: |
+        The settings from the secret d8-cni-configuratuin and the moduleConfig contradict each other.
+      severity: "3"
       markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
@@ -4726,6 +4725,8 @@ modules-having-alerts:
     - chrony
     - cloud-provider-yandex
     - cni-cilium
+    - cni-flannel
+    - cni-simple-bridge
     - control-plane-manager
     - documentation
     - extended-monitoring
