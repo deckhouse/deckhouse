@@ -80,22 +80,6 @@ function teardown_registry_data_device() {
     fi
 }
 
-{{- /*
-# This function removes the system_registry_data_device_path file, which is used by the 
-# function get_registry_data_device_from_file_or_from_secret
-#
-# Purpose:
-#   After this step, the file must be deleted to ensure the system uses the latest data from the 
-#   Kubernetes secret d8-masters-system-registry-data-device-path. This secret is updated after 
-#   the "converge" operation and contains the actual device information.
-*/}}
-function remove_registry_data_device_file() {
-  local data_device_file="$BOOTSTRAP_DIR/system_registry_data_device_path"
-  if [ -f "$data_device_file" ]; then
-    rm -f "$data_device_file"
-  fi
-}
-
 function find_all_unmounted_data_devices() {
   lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '
     [
@@ -193,12 +177,12 @@ function is_registry_data_device_mounted() {
 }
 
 function create_registry_data_device_installed_file() {
-  local installed_file="$BOOTSTRAP_DIR/system-registry-data-device-installed"
+  local installed_file="/var/lib/bashible/system-registry-data-device-installed"
   touch "$installed_file"
 }
 
 function remove_registry_data_device_installed_file() {
-  local installed_file="$BOOTSTRAP_DIR/system-registry-data-device-installed"
+  local installed_file="/var/lib/bashible/system-registry-data-device-installed"
   if [ -f "$installed_file" ]; then
     rm -f "$installed_file"
   fi
@@ -210,7 +194,8 @@ if is_registry_data_device_mounted; then
   create_registry_data_device_installed_file
 else
   # Read the device path from the system registry file
-  dataDevice=$(cat "$BOOTSTRAP_DIR/system_registry_data_device_path")
+  # The file always exists (created in step 000_create_system_registry_data_device_path.sh.tpl)
+  dataDevice=$(cat "/var/lib/bashible/system_registry_data_device_path")
   
   # If dataDevice is non-empty
   if [ -n "$dataDevice" ]; then
@@ -239,9 +224,6 @@ else
     remove_registry_data_device_installed_file
   fi
 fi
-
-# Clean up by removing the registry data device file
-remove_registry_data_device_file
 
   {{- end  }}
 {{- end  }}

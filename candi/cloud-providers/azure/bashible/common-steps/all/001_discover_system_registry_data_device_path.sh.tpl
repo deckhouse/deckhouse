@@ -3,8 +3,7 @@
   {{- if eq .nodeGroup.name "master" }}
 
 # The file always exists (created in step 000_create_system_registry_data_device_path.sh.tpl)
-# and is removed after completion (removed in step 005_integrate_system_registry_data_device.sh.tpl)
-system_registry_file="$BOOTSTRAP_DIR/system_registry_data_device_path"
+system_registry_file="/var/lib/bashible/system_registry_data_device_path"
 
 # Read the device path from the file
 dataDevice=$(cat "$system_registry_file")

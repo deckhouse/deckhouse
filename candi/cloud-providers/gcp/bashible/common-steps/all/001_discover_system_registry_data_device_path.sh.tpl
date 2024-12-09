@@ -33,8 +33,7 @@ function discover_device_path() {
 }
 
 # The system registry file is always created in step 000_create_system_registry_data_device_path.sh.tpl
-# and it is removed after the process completes in step 005_integrate_system_registry_data_device.sh.tpl
-system_registry_file="$BOOTSTRAP_DIR/system_registry_data_device_path"
+system_registry_file="/var/lib/bashible/system_registry_data_device_path"
 
 # Read the cloud disk name from the system registry file
 cloud_disk_name=$(cat "$system_registry_file")
