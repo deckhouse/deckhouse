@@ -28,6 +28,28 @@ $(document).ready(function() {
         let token = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
         tokenInputElement-{{ revision }}.val(token);
     }
+
+    $.cookie('lang', '{{ page.lang }}');
+      $('#enter-license-key-{{ revision }}').click((e)=> {
+        e.preventDefault();
+        let licenseToken = $('[license-token-{{ revision }}]').val().trim();
+        getLicenseToken(licenseToken, {{ revision }})
+      });
+    
+      $('[license-token-{{ revision }}]').keypress((e) => {
+          const keycode = (event.keyCode ? event.keyCode : event.which);
+          let licenseToken = $('[license-token-{{ revision }}]').val().trim();
+          if (keycode == '13') {
+            getLicenseToken(licenseToken)
+          }
+      });
+    
+      triggerBlockOnItemContent('[license-token]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
+    
+      generate_password(true);
+      replace_snippet_password();
+      sessionStorage.setItem('dhctl-revision','{% if page.ee_only == true %}ee{% else %}ce{% endif %}');
+
 })
 </script>
 
