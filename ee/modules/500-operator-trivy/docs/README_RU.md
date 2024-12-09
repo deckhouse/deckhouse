@@ -10,7 +10,7 @@ description: operator-trivy — модуль Deckhouse для периодиче
 
 Как только в кластере обнаруживается пространство имён с меткой `security-scanning.deckhouse.io/enabled=""`, сканирование пространства имён `default` прекращается.
 
-Чтобы снова включить сканирование для пространства имён `default`, необходимо установить метку командой:
+Чтобы снова включить сканирование для пространства имён `default`, необходимо установить у него метку командой:
 
 ```shell
 kubectl label namespace default security-scanning.deckhouse.io/enabled=""

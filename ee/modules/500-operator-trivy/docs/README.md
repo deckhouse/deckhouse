@@ -10,7 +10,7 @@ If there are no namespaces with this label in the cluster, the `default` namespa
 
 Once a namespace with the label `security-scanning.deckhouse.io/enabled=""` is detected in the cluster, scanning of the `default` namespace stops.
 
-To re-enable scanning for the `default` namespace, the following label must be applied using this command:
+To re-enable scanning for the `default` namespace, use the following command to set the label to the namespace:
 
 ```shell
 kubectl label namespace default security-scanning.deckhouse.io/enabled=""
