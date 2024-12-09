@@ -18,11 +18,9 @@ spec:
   validations:
     - expression: 'request.userInfo.username == "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"'
       reason: Forbidden
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
       messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed
             by '' + object.metadata.name + '' Project. Manual modification is forbidden.''
             : ''This resource is managed by '' + object.metadata.namespace + '' Project. Manual modification is forbidden.'''
-{{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -31,9 +29,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
-{{- end }}
   matchResources:
     namespaceSelector:
       matchLabels:
