@@ -86,11 +86,18 @@ shell:
         export OPENAPI_PATH=virtualization-platform/openapi
         bash ./prepare_resources.sh
 
+        # "Generating CR schemas for Stronghold..."
+        cd /srv/jekyll-data/site/
+        export MODULES_RAW_DIR=/rawdata
+        export CRD_PATH=stronghold/crds
+        export OPENAPI_PATH=stronghold/openapi
+        bash ./prepare_resources.sh
+
         # "Building static files"
         cd /srv/jekyll-data/site/
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
-        jekyll build -d /app/_site/ --config  _config.yml
+        jekyll build -d /app/_site/ --config  _config.yml -t
 git:
 - add: /docs/documentation/js
   to: /srv/jekyll-data/site/js
