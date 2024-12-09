@@ -1,0 +1,155 @@
+function updateNode(selector, storageItemName) {
+  storageValue = sessionStorage.getItem(storageItemName);
+  if (storageValue && storageValue.length > 0) {
+    if ($(selector).is(':checkbox')) {
+      $(selector).attr("checked", storageValue === 'true').trigger('change');
+    } else {
+      $(selector).val(storageValue);
+    }
+  }
+}
+
+function restoreData() {
+  {%- if page.platform_code == 'bm-private' %}
+  // proxy settings
+  updateNode('#proxyHttpURI', 'dhctl-proxy-http-uri');
+  updateNode('#proxyHttpsURI', 'dhctl-proxy-https-uri');
+  updateNode('#noProxyAddressList', 'dhctl-noproxy-address-list');
+
+  // registry settings
+  updateNode('#registryCA', 'dhctl-registry-ca');
+  updateNode('#registryDockerCfg', 'dhctl-registry-docker-cfg');
+  updateNode('#registryImagesRepo', 'dhctl-registry-images-repo');
+  updateNode('#registryScheme', 'dhctl-registry-scheme-http');
+  {% endif %}
+  updateNode('#clusterdomain', 'dhctl-domain');
+  // updateNode('#resourceprefix', 'dhctl-prefix');
+  updateNode('#sshkey', 'dhctl-sshkey');
+  {% for preset in site.data.getting_started.stronghold.presets %}
+  {%- if preset[1].recommended %}
+  sessionStorage.setItem('dhctl-preset', '{{ preset[0] }}');
+  {%- endif %}
+  {%- endfor %}
+}
+
+$(document).ready(function () {
+  const publicDomainTemplatePattern = /^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
+  const httpPrefixPattern = /^(http|https):\/\//i;
+  $('#clusterdomain').change(function () {
+    if (!$(this).val().match(publicDomainTemplatePattern)) {
+      $(this).addClass('invalid');
+      $(this).parent().find('.invalid-message-main').addClass('active');
+    } else if ($(this).val().match(/\.example\.com/)) {
+      $(this).addClass('invalid');
+      $(this).parent().find('.invalid-message-example-com').addClass('active');
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message').removeClass('active');
+      sessionStorage.setItem('dhctl-domain', $(this).val());
+    }
+  });
+  $('#sshkey').change(function () {
+    sessionStorage.setItem('dhctl-sshkey', $(this).val());
+  });
+  {%- if page.platform_code == 'bm-private' %}
+  // proxy
+  const proxyAddress = /^https?:\/\/([0-9a-zA-Z\.\-\_]+(:[0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$/;
+  $('#proxyHttpURI').change(function () {
+    if ($(this).val() !== "") {
+      if (!$(this).val().match(proxyAddress)) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-main').addClass('active');
+      } else if ($(this).val().match(/\.proxy\.company\.my/)) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-example-com').addClass('active');
+      } else {
+        $(this).removeClass('invalid');
+        $(this).parent().find('.invalid-message').removeClass('active');
+        sessionStorage.setItem('dhctl-proxy-http-uri', $(this).val());
+      }
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message').removeClass('active');
+    }
+  });
+  $('#proxyHttpsURI').change(function () {
+    if ($(this).val() !== "") {
+      if (!$(this).val().match(proxyAddress)) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-main').addClass('active');
+      } else if ($(this).val().match(/\.proxy\.company\.my/)) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-example-com').addClass('active');
+      } else {
+        $(this).removeClass('invalid');
+        $(this).parent().find('.invalid-message').removeClass('active');
+        sessionStorage.setItem('dhctl-proxy-https-uri', $(this).val());
+      }
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message').removeClass('active');
+    }
+  });
+  const ipAndProxy = /^[a-z0-9\-\.\/]+$/
+  $('#noProxyAddressList').change(function () {
+    if ($(this).val() !== "") {
+      let arr = $(this).val().split(', ');
+      let err = false
+      let errdomen = false
+      for (let i = 0; i < arr.length; i++) {
+        if (!arr[i].match(ipAndProxy)) {
+          err = true
+        }
+        if (arr[i].match(/example\.com/)) {
+          errdomen = true
+        }
+      }
+      if (err) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-main').addClass('active');
+      } else {
+        $(this).removeClass('invalid');
+        $(this).parent().find('.invalid-message-main').removeClass('active');
+      }
+      if (errdomen) {
+        $(this).addClass('invalid');
+        $(this).parent().find('.invalid-message-example-com').addClass('active');
+      } else {
+        $(this).removeClass('invalid');
+        $(this).parent().find('.invalid-message-example-com').removeClass('active');
+      }
+      if (!errdomen && !err) sessionStorage.setItem('dhctl-noproxy-address-list', $(this).val());
+    } else {
+      $(this).removeClass('invalid');
+      $(this).parent().find('.invalid-message').removeClass('active');
+    }
+  });
+  // registry
+  $('#registryImagesRepo').change(function () {
+    const val = $(this).val().replace(httpPrefixPattern, '');
+    if (!($(this).val() === val)) {
+      $(this).val(val);
+    };
+    sessionStorage.setItem('dhctl-registry-images-repo', val);
+  });
+  $('#registryDockerCfg').change(function () {
+    sessionStorage.setItem('dhctl-registry-docker-cfg', $(this).val());
+  });
+  $('#registryScheme').change(function () {
+    if (this.checked) {
+      sessionStorage.setItem('dhctl-registry-scheme-http', "true");
+      $('.registryca-block').css("display", "none");
+    } else {
+      sessionStorage.setItem('dhctl-registry-scheme-http', "false");
+      $('.registryca-block').css("display", "block");
+    }
+  });
+  $('#registryCA').change(function () {
+    sessionStorage.setItem('dhctl-registry-ca', $(this).val());
+  });
+
+  {% endif %}
+
+  restoreData();
+
+});
