@@ -835,6 +835,33 @@ The full list of plugins is available in the [Kubernetes documentation](https://
 
 ### Working logic
 
+#### Scheduler profiles
+
+There are two predefined scheduler profiles:
+
+* `default-scheduler`: the default profile that distributes pods to nodes with the lowest load.
+* `high-node-utilization`: a profile that places pods on nodes with the highest load.
+
+> To specify a scheduler profile, use the `spec.schedulerName` parameter in the pod manifest.
+
+Example of using a profile:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: scheduler-example
+  labels:
+    name: scheduler-example
+spec:
+  schedulerName: high-node-utilization
+  containers:
+  - name: example-pod
+    image: registry.k8s.io/pause:2.0  
+```
+
+#### Pod scheduling stages
+
 The selection process starts with the `Filtering` phase. During it, `filter` plugins select nodes that satisfy filter conditions such as `taints`, `nodePorts`, `nodeName`, `unschedulable`, etc.
 If the nodes are in different zones, the scheduler alternates zones when selecting to ensure that all Pods will not end up in the same zone.
 
@@ -883,26 +910,3 @@ You can connect an `extender` using [KubeSchedulerWebhookConfiguration](cr.html#
 {% alert level="danger" %}
 When using the `failurePolicy: Fail` option, in case of an error in the webhook's operation, the scheduler will stop working and new pods will not be able to start.
 {% endalert %}
-
-### Scheduler profiles
-
-There is 3 pre-defined scheduler profiles:
-
-* default-scheduler: schedule pod to least resource utilization
-* high-node-utilization: schedule pod to most resource utilization
-
-To use scheduler profile in pod, specify `spec.schedulerName` like this:
-
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: scheduler-example
-  labels:
-    name: scheduler-example
-spec:
-  schedulerName: high-node-utilization
-  containers:
-  - name: example-pod
-    image: registry.k8s.io/pause:2.0  
-```
