@@ -2,6 +2,22 @@
 {{- $image_version := $containerd_version | replace "." "-" }}
 {{- $runc_version := "1.2.2" }}
 ---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+fromArtifact: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
+  - rm -rf /src/containerd/.git
+  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc /src/runc
+  - rm -rf /src/runc/.git
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
@@ -27,7 +43,12 @@ docker:
     runc: {{ $runc_version }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -38,19 +59,17 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get update && apt-get install libseccomp-dev -y
   install:
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - cd /src
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git
-  - cd containerd
+  - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
   - make STATIC=1 all
   - mv bin/* /
-  - cd /src
-  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc
-  - cd runc
+  - cd /src/runc
   - git config --global user.email "builder@deckhouse.io"
   - make static
   - mv runc /runc
+  - mv /src/scripts/* /
