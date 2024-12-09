@@ -77,7 +77,7 @@ function teardown_registry_data_device() {
 
 {{- /*
 # This function removes the system_registry_data_device_path file, which is used by the 
-# function get_registry_data_device_from_secret_or_from_file
+# function get_registry_data_device_from_file_or_from_secret
 #
 # Purpose:
 #   After this step, the file must be deleted to ensure the system uses the latest data from the 
@@ -175,7 +175,14 @@ else
     if ! [ -b "$dataDevice" ]; then
       # If it doesn't exist, log an error and attempt to detect the correct device
       >&2 echo "Failed to find $dataDevice disk. Detecting the correct one..."
-      # Find the first unmounted data device
+
+      {{- /*
+        # Sometimes the device path (`device_path`) returned by Terraform points to a non-existent device.
+        # In such a situation, we want to find an unpartitioned unused device
+        # without a file system, assuming that it is the correct one.
+        # To form the mounting order of devices in Terraform, we specify mounting with the `depends` condition.
+        # Additionally, we define the array of disks in Terraform when creating the instance machine.
+      */}}
       dataDevice=$(find_first_unmounted_data_device)
     fi
     # Set up the registry data device

@@ -185,7 +185,7 @@ function extract_registry_data_device_from_secret() {
 #   - The resolved device path as a string, either from the file or the Kubernetes secret.
 #   - If no data is available, returns an empty string.
 */}}
-function get_registry_data_device_from_secret_or_from_file() {
+function get_registry_data_device_from_file_or_from_secret() {
   local data_device=""
   if [ -f "$BOOTSTRAP_DIR/system_registry_data_device_path" ]; then
     # For the first master node (after bootstrap)
@@ -199,7 +199,7 @@ function get_registry_data_device_from_secret_or_from_file() {
 
 
 # Retrieve the data device
-dataDevice=$(get_registry_data_device_from_secret_or_from_file)
+dataDevice=$(get_registry_data_device_from_file_or_from_secret)
 
 # Write the new device path to the file
 echo "$dataDevice" > "$BOOTSTRAP_DIR/system_registry_data_device_path"

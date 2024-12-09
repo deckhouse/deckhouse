@@ -217,7 +217,9 @@ resource "vsphere_virtual_machine" "master" {
   lifecycle {
     ignore_changes = [
       extra_config,
-      disk,
+      disk[0], // root disk
+      disk[1], // kubernetes_data disk
+      disk[2], // system_registry_data disk
       vapp,
       firmware,
     ]
