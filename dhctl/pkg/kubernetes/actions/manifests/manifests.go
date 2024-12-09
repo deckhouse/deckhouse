@@ -579,7 +579,7 @@ func SecretWithClusterConfig(data []byte) *apiv1.Secret {
 		"d8-cluster-configuration",
 		"kube-system",
 		map[string][]byte{"cluster-configuration.yaml": data},
-		nil,
+		map[string]string{"name": "d8-cluster-configuration"},
 	)
 }
 
