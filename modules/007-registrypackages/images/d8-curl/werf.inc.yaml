@@ -47,10 +47,9 @@ git:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache openssh-client make autoconf automake clang libtool gettext-dev binutils g++ openssl openssl-dev libssh2-dev libgcrypt ssl_client libssh2-static libcrypto3 openssl-libs-static zlib-static libgcc clang-libs gettext-libs
+  - apk add --no-cache make autoconf automake clang libtool gettext-dev binutils g++ openssl openssl-dev libssh2-dev libgcrypt ssl_client libssh2-static libcrypto3 openssl-libs-static zlib-static libgcc clang-libs gettext-libs
   setup:
   - export CC=clang
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - cd /src/curl
   - autoreconf -fi
   - LDFLAGS="-static" PKG_CONFIG="pkg-config --static" ./configure --disable-shared --enable-static --disable-ldap --enable-ipv6 --enable-unix-sockets --with-ssl --with-libssh2

@@ -12,9 +12,8 @@ git:
     - '**/*'
 shell:
   install:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
-  - rm -rf /src/containerd/.git
+  - rm -rf /src/containerd/.git # https://github.com/containerd/containerd/blob/main/Makefile#L35-L36
   - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc /src/runc
   - rm -rf /src/runc/.git
 ---
@@ -65,11 +64,9 @@ shell:
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src/containerd
-  - git config --global user.email "builder@deckhouse.io"
   - make STATIC=1 all
   - mv bin/* /
   - cd /src/runc
-  - git config --global user.email "builder@deckhouse.io"
   - make static
   - mv runc /runc
   - mv /src/scripts/* /
