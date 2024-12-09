@@ -188,7 +188,7 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
 function toggleDisabled(tab, inputDataAttr) {
   if (tab === 'tab_layout_ce' ) {
     $('.dimmer-block-content.common').removeClass('disabled');
-  } else if (tab === 'tab_layout_ee' ) {
+  } else if (tab === 'tab_layout_ee' || tab === 'tab_layout_be' || tab === 'tab_layout_se' ) {
     const licenseToken = $(inputDataAttr).val().trim();
     getLicenseToken(licenseToken)
   }
@@ -199,9 +199,8 @@ async function getLicenseToken(token, revision) {
     if (token === '') {
       throw new Error(responseFromLicense[pageLang]['empty_input']);
     }
-    console.log(revision)
-    const span = $($('#enter-license-key').next('span'));
-    const input = $('[license-token]');
+    const span = $($('#enter-license-key-' + revision).next('span'));
+    const input = $('[license-token-' + revision + ']');
     const response = await fetch(`https://license.deckhouse.io/api/license/check?token=${token}`);
     if(response.ok) {
       const data = await response.json();
@@ -210,8 +209,8 @@ async function getLicenseToken(token, revision) {
       handlerRejectData(token, span, input);
     }
   } catch (e) {
-    const span = $($('#enter-license-key').next('span'));
-    const input = $('[license-token]');
+    const span = $($('#enter-license-key-' + revision).next('span'));
+    const input = $('[license-token-' + revision + ']');
     handlerRejectData(token, span, input, e.message);
   }
 }

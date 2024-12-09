@@ -12,7 +12,7 @@
       Лицензионный ключ
     </label>
     <input id="license-token-input" class="textfield"
-      type="text" license-token name="license-token-{{ revision }}"
+      type="text" license-token-{{ revision }} name="license-token-{{ revision }}"
       autocomplete="off" />
   </div>
   <a href="#" id="enter-license-key-{{ revision }}" class="button button_alt">Ввести</a>
@@ -23,10 +23,10 @@
 <script>
 $(document).ready(function() {
 
-    tokenInputElement-{{ revision }} = $('[license-token-{{ revision }}]');
+    tokenInputElement{{ revision }} = $('[license-token-{{ revision }}]');
     if ($.cookie("demotoken") || $.cookie("license-token")) {
         let token = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
-        tokenInputElement-{{ revision }}.val(token);
+        tokenInputElement{{ revision }}.val(token);
     }
 })
 </script>

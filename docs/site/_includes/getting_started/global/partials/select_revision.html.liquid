@@ -21,7 +21,7 @@
         <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
                  openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
-                 toggleDisabled('tab_layout_{{ revision }}', '[license-token]');" >
+                 toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
         {{ site.data.i18n[revision] }}
         </a>
     {%- endfor %}
@@ -99,21 +99,21 @@ $(document).ready(function() {
   {% if revision != "ce" %}
   $('#enter-license-key-{{ revision }}').click((e)=> {
     e.preventDefault();
-    let licenseToken = $('[license-token]').val().trim();
-    getLicenseToken(licenseToken, {{ revision }})
+    let licenseToken = $('[license-token-{{ revision }}]').val().trim();
+    getLicenseToken(licenseToken, '{{ revision }}')
   });
 
   $('[license-token-{{ revision }}]').keypress((e) => {
       const keycode = (event.keyCode ? event.keyCode : event.which);
       let licenseToken = $('[license-token-{{ revision }}]').val().trim();
       if (keycode == '13') {
-        getLicenseToken(licenseToken, {{ revision }})
+        getLicenseToken(licenseToken, '{{ revision }}')
       }
+  });
   {% endif %}
   {% endfor %}
-  });
 
-  triggerBlockOnItemContent('[license-token]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
+  triggerBlockOnItemContent('[license-token-{{ revision }}]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
 
   generate_password(true);
   replace_snippet_password();
