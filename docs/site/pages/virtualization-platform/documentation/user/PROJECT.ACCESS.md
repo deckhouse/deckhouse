@@ -9,4 +9,4 @@ To connect to the project, follow these steps:
 1. Enter your email address and password to access the project.
 1. Copy the configuration file to your home directory at `~/.kube/config`.
 1. Install the [d8 utility](../reference/console-utilities/d8.html).
-1. Use the following command format to manage project resources: `d8 k -n <project_name>` or `d8 v -n <project_name>`.
+1. To manage the project, use the command: `d8 k -n <project_name>` or `d8 v -n <project_name>`.
