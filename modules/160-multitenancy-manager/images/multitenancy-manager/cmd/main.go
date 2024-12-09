@@ -57,7 +57,7 @@ var (
 	// controller service account
 	serviceAccount = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
 	// list of service accounts allowed to create namespaces when allowNamespacesWithoutProjects is set to false
-	nsCreateAllowedServiceAccounts = []string{serviceAccount, "system:serviceaccount:d8-system:deckhouse", "system:serviceaccount:d8-upmeter:upmeter"}
+	nsCreateAllowedServiceAccounts = []string{serviceAccount, "system:serviceaccount:d8-system:deckhouse", "system:serviceaccount:d8-upmeter:upmeter-agent"}
 )
 
 const (
