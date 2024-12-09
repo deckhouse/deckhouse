@@ -14,7 +14,7 @@ git:
     - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git /src/cri-tools
+  - git clone --depth 1 --branch v{{ $full_version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git /src/cri-tools
   - rm -rf /src/cri-tools/hack/tools
   - rm -rf /src/cri-tools/.git
 ---
@@ -51,7 +51,7 @@ git:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache openssh-client make git
+  - apk add --no-cache make git
   setup:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src/cri-tools
