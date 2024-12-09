@@ -100,14 +100,14 @@ $(document).ready(function() {
   $('#enter-license-key-{{ revision }}').click((e)=> {
     e.preventDefault();
     let licenseToken = $('[license-token]').val().trim();
-    getLicenseToken(licenseToken)
+    getLicenseToken(licenseToken, {{ revision }})
   });
 
   $('[license-token-{{ revision }}]').keypress((e) => {
       const keycode = (event.keyCode ? event.keyCode : event.which);
       let licenseToken = $('[license-token-{{ revision }}]').val().trim();
       if (keycode == '13') {
-        getLicenseToken(licenseToken)
+        getLicenseToken(licenseToken, {{ revision }})
       }
   {% endif %}
   {% endfor %}
