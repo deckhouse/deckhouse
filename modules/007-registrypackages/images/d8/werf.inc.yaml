@@ -10,7 +10,6 @@ git:
 shell:
   install:
   - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
-  - cd /src/deckhouse-cli
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
@@ -55,7 +54,6 @@ shell:
   - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
   - go install github.com/go-task/task/v3/cmd/task@latest
   - cd /src/deckhouse-cli
-  - apt-get install -y libbtrfs-dev
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
   - mv /src/scripts/* /
