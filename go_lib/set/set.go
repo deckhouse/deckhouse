@@ -37,7 +37,7 @@ func NewFromSnapshot(snapshot []go_hook.FilterResult) Set {
 }
 
 // NewFromValues expects values array to contain only strings, otherwise it panics
-func NewFromValues(values *go_hook.PatchableValues, path string) Set {
+func NewFromValues(values go_hook.PatchableValuesCollector, path string) Set {
 	s := Set{}
 	for _, m := range values.Get(path).Array() {
 		s.Add(m.String())

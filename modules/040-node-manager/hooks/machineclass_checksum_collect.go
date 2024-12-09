@@ -146,7 +146,7 @@ type nodeGroupValue struct {
 	Raw  interface{}
 }
 
-func parseNodeGroupValues(values *go_hook.PatchableValues) ([]*nodeGroupValue, error) {
+func parseNodeGroupValues(values go_hook.PatchableValuesCollector) ([]*nodeGroupValue, error) {
 	const nodeGroupsPath = "nodeManager.internal.nodeGroups"
 	var ng []*nodeGroupValue
 
