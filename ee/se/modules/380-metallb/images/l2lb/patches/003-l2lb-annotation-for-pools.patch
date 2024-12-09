@@ -1,0 +1,28 @@
+diff --git a/internal/k8s/controllers/config_controller.go b/internal/k8s/controllers/config_controller.go
+index 4f741273..b6f7beb3 100644
+--- a/internal/k8s/controllers/config_controller.go
++++ b/internal/k8s/controllers/config_controller.go
+@@ -60,7 +60,8 @@ var requestHandler = func(r *ConfigReconciler, ctx context.Context, req ctrl.Req
+ 	updates.Inc()
+ 
+ 	var ipAddressPools metallbv1beta1.IPAddressPoolList
+-	if err := r.List(ctx, &ipAddressPools, client.InNamespace(r.Namespace)); err != nil {
++	labelSelector := client.MatchingLabels{"heritage": "deckhouse"}
++	if err := r.List(ctx, &ipAddressPools, client.InNamespace(r.Namespace), labelSelector); err != nil {
+ 		level.Error(r.Logger).Log("controller", "ConfigReconciler", "error", "failed to get ipaddresspools", "error", err)
+ 		return ctrl.Result{}, err
+ 	}
+diff --git a/internal/k8s/controllers/pool_controller.go b/internal/k8s/controllers/pool_controller.go
+index d072c00d..fa832975 100644
+--- a/internal/k8s/controllers/pool_controller.go
++++ b/internal/k8s/controllers/pool_controller.go
+@@ -50,7 +50,8 @@ func (r *PoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
+ 	updates.Inc()
+ 
+ 	var ipAddressPools metallbv1beta1.IPAddressPoolList
+-	if err := r.List(ctx, &ipAddressPools, client.InNamespace(r.Namespace)); err != nil {
++	labelSelector := client.MatchingLabels{"heritage": "deckhouse"}
++	if err := r.List(ctx, &ipAddressPools, client.InNamespace(r.Namespace), labelSelector); err != nil {
+ 		level.Error(r.Logger).Log("controller", "PoolReconciler", "message", "failed to get ipaddresspools", "error", err)
+ 		return ctrl.Result{}, err
+ 	}

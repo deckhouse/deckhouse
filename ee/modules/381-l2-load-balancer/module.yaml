@@ -1,5 +1,0 @@
-name: l2-load-balancer
-weight: 381
-
-requirements:
-  bootstrapped: true
