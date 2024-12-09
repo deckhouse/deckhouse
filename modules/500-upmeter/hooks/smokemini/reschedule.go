@@ -207,7 +207,7 @@ func parseBoolSnapshot(rs []go_hook.FilterResult) []bool {
 	return ret
 }
 
-func getSmokeMiniImage(values *go_hook.PatchableValues) string {
+func getSmokeMiniImage(values go_hook.PatchableValuesCollector) string {
 	var (
 		registry = values.Get("global.modulesImages.registry.base").String()
 		digest   = values.Get("global.modulesImages.digests.upmeter.smokeMini").String()
@@ -215,7 +215,7 @@ func getSmokeMiniImage(values *go_hook.PatchableValues) string {
 	return registry + "@" + digest
 }
 
-func getSmokeMiniStorageClass(values *go_hook.PatchableValues, storageClassSnap []go_hook.FilterResult) string {
+func getSmokeMiniStorageClass(values go_hook.PatchableValuesCollector, storageClassSnap []go_hook.FilterResult) string {
 	var (
 		k8s = getK8sDefaultStorageClass(storageClassSnap)
 		d8  = values.Get("global.modules.storageClass").String()
@@ -237,7 +237,7 @@ func firstNonEmpty(xs ...string) string {
 
 // smokeMiniEnabled returns true if smoke-mini is not disabled. This function is to avoid reversed
 // boolean naming.
-func smokeMiniEnabled(v *go_hook.PatchableValues) bool {
+func smokeMiniEnabled(v go_hook.PatchableValuesCollector) bool {
 	disabled := v.Get("upmeter.smokeMiniDisabled").Bool()
 	return !disabled
 }
