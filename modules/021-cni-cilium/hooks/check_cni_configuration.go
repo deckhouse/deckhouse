@@ -42,7 +42,7 @@ import (
 
 const (
 	cniConfigurationSettledKey = "cniConfigurationSettled"
-	checkCNIConfigMetricName   = "enabledCNI"
+	checkCNIConfigMetricName   = "cniMisconfigured"
 	checkCNIConfigMetricGroup  = "d8_chech_cni_conf"
 	cni                        = "cilium"
 	cniName                    = "cni-" + cni
@@ -149,20 +149,19 @@ func applyCNIMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	return mc, nil
 }
 
-func setMetricAndReq(input *go_hook.HookInput, miss bool) {
+func setCNIMiscMetricAndReq(input *go_hook.HookInput, miss bool) {
 	switch miss {
 	// misconfigure detected
 	case true:
 		input.MetricsCollector.Set(checkCNIConfigMetricName, 1,
 			map[string]string{
-				"cni":           cniName,
-				"misconfigured": "true",
+				"cni": cniName,
 			}, metrics.WithGroup(checkCNIConfigMetricGroup))
 		requirements.SaveValue(cniConfigurationSettledKey, "false")
 
 	// configuration settled
 	case false:
-		input.MetricsCollector.Set(checkCNIConfigMetricName, 1,
+		input.MetricsCollector.Set(checkCNIConfigMetricName, 0,
 			map[string]string{
 				"cni": cniName,
 			}, metrics.WithGroup(checkCNIConfigMetricGroup))
@@ -174,12 +173,13 @@ func checkCni(input *go_hook.HookInput) error {
 	// Clear a metrics and reqKey
 	input.MetricsCollector.Expire(checkCNIConfigMetricGroup)
 	requirements.RemoveValue(cniConfigurationSettledKey)
+	needUpdateMC := false
 
-	// Let's check secret
-	// Secret d8-cni-configuration does not exist or exist but contain nil
+	// Let's check secret.
+	// Secret d8-cni-configuration does not exist or exist but contain nil.
 	// This means that the current CNI module is enabled and configured via mc, nothing to do.
 	if len(input.Snapshots["cni_configuration_secret"]) == 0 || input.Snapshots["cni_configuration_secret"][0] == nil {
-		setMetricAndReq(input, false)
+		setCNIMiscMetricAndReq(input, false)
 		return nil
 	}
 
@@ -187,13 +187,13 @@ func checkCni(input *go_hook.HookInput) error {
 	// This means that the current CNI module is enabled and configured via mc, nothing to do.
 	cniSecret := input.Snapshots["cni_configuration_secret"][0].(cniSecretStruct)
 	if cniSecret.cni != cni {
-		setMetricAndReq(input, false)
+		setCNIMiscMetricAndReq(input, false)
 		return nil
 	}
 
 	// Secret d8-cni-configuration exist, key "cni" eq "cilium".
 
-	// Let's check what mc exist and explicitly enabled
+	// Let's check what mc exist and explicitly enabled.
 	desiredCNIModuleConfig := &v1alpha1.ModuleConfig{}
 	if len(input.Snapshots["deckhouse_cni_mc"]) == 0 {
 		desiredCNIModuleConfig = &v1alpha1.ModuleConfig{
@@ -209,86 +209,67 @@ func checkCni(input *go_hook.HookInput) error {
 				Version: 1,
 			},
 		}
-		// алярм, мц с явным включением модуля не обнаружено, надо создать
-		setMetricAndReq(input, true)
+		needUpdateMC = true
 	} else {
 		cniModuleConfig := input.Snapshots["deckhouse_cni_mc"][0].(*v1alpha1.ModuleConfig)
 		desiredCNIModuleConfig = cniModuleConfig.DeepCopy()
 	}
 
-	// ???
-	// Secret d8-cni-configuration exist, key "cni" eq "cilium", but key "cilium" does not exist or empty.
-	if cniSecret.cilium == (ciliumConfigStruct{}) {
-		setMetricAndReq(input, false)
-		return nil
+	// Skip comparison if in secret d8-cni-configuration key "cilium" does not exist or empty.
+	if cniSecret.cilium != (ciliumConfigStruct{}) {
+		// Secret d8-cni-configuration exist, key "cni" eq "cilium" and key "cilium" does not empty.
+		// Let's compare secret with module configuration.
+		switch cniSecret.cilium.Mode {
+		case "VXLAN":
+			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
+			if !ok || value.String() != "VXLAN" {
+				desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "VXLAN"
+				needUpdateMC = true
+			}
+		case "Direct":
+			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
+			if !ok || value.String() != "Disabled" {
+				desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "Disabled"
+				needUpdateMC = true
+			}
+		case "DirectWithNodeRoutes":
+			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
+			if !ok || value.String() != "Disabled" {
+				desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "Disabled"
+				needUpdateMC = true
+			}
+			value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
+			if !ok || !value.Bool() {
+				desiredCNIModuleConfig.Spec.Settings["createNodeRoutes"] = "true"
+				needUpdateMC = true
+			}
+		default:
+			setCNIMiscMetricAndReq(input, true)
+			return fmt.Errorf("unknown cilium mode %s", cniSecret.cilium.Mode)
+		}
+		switch cniSecret.cilium.MasqueradeMode {
+		case "Netfilter", "BPF":
+			value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
+			if !ok || value.String() != cniSecret.cilium.MasqueradeMode {
+				desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = cniSecret.cilium.MasqueradeMode
+				needUpdateMC = true
+			}
+		case "":
+			value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
+			if !ok || value.String() != "BPF" {
+				desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = "BPF"
+				needUpdateMC = true
+			}
+		default:
+			setCNIMiscMetricAndReq(input, true)
+			return fmt.Errorf("unknown cilium masquerade mode %s", cniSecret.cilium.MasqueradeMode)
+		}
 	}
-	// Secret d8-cni-configuration exist, key "cni" eq "cilium" and key "cilium" does not empty.
-
-	// Let's compare secret with module configuration
-	// desiredValuesOfMisconfiguredKeys := make([]string, 0)
-	needUpdateMC := false
-	switch cniSecret.cilium.Mode {
-	case "VXLAN":
-		value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
-		if !ok || value.String() != "VXLAN" {
-			// desiredValuesOfMisconfiguredKeys = append(desiredValuesOfMisconfiguredKeys, "tunnelMode: VXLAN")
-			desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "VXLAN"
-			needUpdateMC = true
-		}
-	case "Direct":
-		value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
-		if !ok || value.String() != "Disabled" {
-			// desiredValuesOfMisconfiguredKeys = append(desiredValuesOfMisconfiguredKeys, "tunnelMode: Disabled")
-			desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "Disabled"
-			needUpdateMC = true
-		}
-	case "DirectWithNodeRoutes":
-		value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
-		if !ok || value.String() != "Disabled" {
-			// desiredValuesOfMisconfiguredKeys = append(desiredValuesOfMisconfiguredKeys, "tunnelMode: Disabled")
-			desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "Disabled"
-			needUpdateMC = true
-		}
-		value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
-		if !ok || !value.Bool() {
-			// desiredValuesOfMisconfiguredKeys = append(desiredValuesOfMisconfiguredKeys, "createNodeRoutes: true")
-			desiredCNIModuleConfig.Spec.Settings["createNodeRoutes"] = "true"
-			needUpdateMC = true
-		}
-	default:
-		setMetricAndReq(input, true)
-		return fmt.Errorf("unknown cilium mode %s", cniSecret.cilium.Mode)
-	}
-
-	switch cniSecret.cilium.MasqueradeMode {
-	case "Netfilter", "BPF":
-		value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
-		if !ok || value.String() != cniSecret.cilium.MasqueradeMode {
-			// desiredValuesOfMisconfiguredKeys = append(desiredValuesOfMisconfiguredKeys, "masqueradeMode: "+cniSecret.cilium.MasqueradeMode)
-			desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = cniSecret.cilium.MasqueradeMode
-			needUpdateMC = true
-		}
-	case "":
-		value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
-		if !ok || value.String() != "BPF" {
-			// desiredValuesOfMisconfiguredKeys = append(desiredValuesOfMisconfiguredKeys, "masqueradeMode: BPF")
-			desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = "BPF"
-			needUpdateMC = true
-		}
-	default:
-		setMetricAndReq(input, true)
-		return fmt.Errorf("unknown cilium masquerade mode %s", cniSecret.cilium.MasqueradeMode)
-	}
-
-	// if len(desiredValuesOfMisconfiguredKeys) > 0 {
-	//	setMetricAndReq(input, true)
-	//	return nil
-	//}
 
 	if needUpdateMC {
 		desiredCNIModuleConfigYAML, err := yaml.Marshal(*desiredCNIModuleConfig)
 		if err != nil {
-			return err
+			return fmt.Errorf("cannot marshal desired CNI moduleConfig, err: %w", err)
 		}
 		cm := &v1.ConfigMap{
 			TypeMeta: metav1.TypeMeta{
@@ -303,11 +284,11 @@ func checkCni(input *go_hook.HookInput) error {
 		}
 
 		input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
-		setMetricAndReq(input, true)
+		setCNIMiscMetricAndReq(input, true)
 		return nil
 	}
 
 	// All configuration settled, nothing to do.
-	setMetricAndReq(input, false)
+	setCNIMiscMetricAndReq(input, false)
 	return nil
 }
