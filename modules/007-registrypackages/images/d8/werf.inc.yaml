@@ -1,4 +1,18 @@
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - cd /src/deckhouse-cli
+  - rm -rf /src/deckhouse-cli/.git
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
@@ -18,6 +32,11 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 git:
   - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /
@@ -25,7 +44,10 @@ git:
       setup:
       - '**/*'
 shell:
-  setup:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get update && apt-get install libbtrfs-dev -y
+  install:
   {{- include "debian packages proxy" . | nindent 2 }}
   - export GOPROXY={{ $.GOPROXY }}
   - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
@@ -34,10 +56,10 @@ shell:
   - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - go install github.com/go-task/task/v3/cmd/task@latest
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
-  - cd /deckhouse-cli
+  - cd /src/deckhouse-cli
   - apt-get install -y libbtrfs-dev
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
+  - mv /src/scripts/* /
   - chmod +x /d8 /install /uninstall
   - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer

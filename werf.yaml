@@ -212,7 +212,7 @@ import:
   to: /etc/ssl
   before: setup
 
-- artifact: registrypackages/d8-curl-artifact-8-2-1
+- artifact: registrypackages/d8-curl-artifact-8-9-1
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
