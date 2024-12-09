@@ -12,7 +12,7 @@ git:
 shell:
   install:
   - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/xfs/xfsprogs-dev.git /src/xfsprogs-dev
-  - rm -rf /src/xfsprogs-dev/.git #TODO It is necessary to check the possibility of assembly without this
+  - rm -rf /src/xfsprogs-dev/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
