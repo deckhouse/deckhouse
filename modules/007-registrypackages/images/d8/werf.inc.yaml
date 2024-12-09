@@ -51,7 +51,7 @@ shell:
   - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
   - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
   - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
-  - go install github.com/go-task/task/v3/cmd/task@latest
+  - go install github.com/go-task/task/v3/cmd/task@v3.40.0
   - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
