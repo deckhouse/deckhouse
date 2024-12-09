@@ -14,7 +14,7 @@
 
 # Main features
 
-<img align="right" width="200" height="270" src="docs/site/images/cncf-certified-kubernetes.png">
+<img align="centre" width="280" height="270" src="docs/site/images/cncf-certified-kubernetes.png">
 
 - NoOps: system software on the nodes, Kubernetes core software, Kubernetes platform components are automatically managed.
 - SLA by design: availability can be guaranteed even without direct access to your infrastructure.
