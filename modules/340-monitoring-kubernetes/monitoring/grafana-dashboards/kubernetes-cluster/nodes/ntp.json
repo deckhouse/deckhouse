@@ -1014,7 +1014,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "node_time_seconds - chrony_tracking_reference_timestamp_seconds{node=~\"$node\"}",
+          "expr": "node_time_seconds - on(node) chrony_tracking_reference_timestamp_seconds{node=~\"$node\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
