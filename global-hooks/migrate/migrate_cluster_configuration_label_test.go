@@ -33,7 +33,6 @@ kind: Secret
 metadata:
   labels:
     a: b
-    name: d8-cluster-configuration
   name: d8-cluster-configuration
   namespace: kube-system
 type: Opaque
