@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,10 +43,10 @@ type Watcher struct {
 	registrySecretDiscoveryPeriod time.Duration
 	sync.RWMutex
 	registryClientConfigs map[string]*registry.ClientConfig
-	logger                *log.Entry
+	logger                *log.Logger
 }
 
-func NewWatcher(k8sClient *kubernetes.Clientset, k8sDynamicClient dynamic.Interface, registrySecretDiscoveryPeriod time.Duration, logger *log.Entry) *Watcher {
+func NewWatcher(k8sClient *kubernetes.Clientset, k8sDynamicClient dynamic.Interface, registrySecretDiscoveryPeriod time.Duration, logger *log.Logger) *Watcher {
 	return &Watcher{
 		k8sClient:                     k8sClient,
 		k8sDynamicClient:              k8sDynamicClient,

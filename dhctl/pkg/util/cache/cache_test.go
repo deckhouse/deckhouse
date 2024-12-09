@@ -27,7 +27,7 @@ import (
 )
 
 func TestNewTempStateCache(t *testing.T) {
-	log.InitLogger("simple")
+	log.InitLogger("json")
 
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-cache-*")
 	require.NoError(t, err)
