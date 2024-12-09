@@ -1,3 +1,5 @@
+{% assign revision=include.revision %}
+
 <div class="license-form__wrap">
 <div class="license-form-enter">
 <h3 class="text text_h3">
@@ -10,7 +12,7 @@
       Лицензионный ключ
     </label>
     <input id="license-token-input" class="textfield"
-      type="text" license-token name="license-token"
+      type="text" license-token name="license-token-{{ revision }}"
       autocomplete="off" />
   </div>
   <a href="#" id="enter-license-key" class="button button_alt">Ввести</a>
