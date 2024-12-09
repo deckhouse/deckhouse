@@ -62,6 +62,6 @@ shell:
     mv growfs/xfs_growfs /xfs_growfs &&
     mv mdrestore/xfs_mdrestore /xfs_mdrestore &&
     mv spaceman/xfs_spaceman /xfs_spaceman &&
-    mv spaceman/xfs_info.sh /xfs_info
+    mv spaceman/xfs_info.sh /xfs_info &&
     mv /src/scripts/* /
   - chmod +x /mkfs.xfs /xfs_repair /xfs_quota /xfs_growfs /xfs_mdrestore /xfs_spaceman /xfs_info /install /uninstall
