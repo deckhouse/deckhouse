@@ -287,9 +287,6 @@ if [ -f /var/lib/bashible/kubernetes-data-device-installed ]; then
   exit 0
 fi
 
-# Wait all disks
-check_expected_disk_count
-
 # Get Kubernetes data device
 DATA_DEVICE=$(get_kubernetes_data_device_from_file_or_from_secret)
 if [ -z "$DATA_DEVICE" ]; then
@@ -307,6 +304,11 @@ if ! [ -b "$DATA_DEVICE" ]; then
     # To form the mounting order of devices in Terraform, we specify mounting with the `depends` condition.
     # Additionally, we define the array of disks in Terraform when creating the instance machine.
   */}}
+
+  # Wait all disks
+  check_expected_disk_count
+
+  # Get first unmounted data device
   DATA_DEVICE=$(find_first_unmounted_data_device)
   if ! [ -b "$DATA_DEVICE" ]; then
     >&2 echo "Failed to find a valid disk by lsblk."
