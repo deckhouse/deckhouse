@@ -1,6 +1,7 @@
 {{- define "node_group_static_or_hybrid_machine_deployment" }}
   {{- $context := index . 0 }}
   {{- $ng := index . 1 }}
+  {{- $staticMachineTemplateName := include "static_machine_template_name" (list $ng) }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
@@ -19,6 +20,6 @@ spec:
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
         kind: StaticMachineTemplate
-        name: {{ $ng.name }}
+        name: {{ $staticMachineTemplateName }}
   selector: {}
 {{- end }}
