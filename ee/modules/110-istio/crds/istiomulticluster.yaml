@@ -40,9 +40,9 @@ spec:
                   default: true
                   x-doc-d8Revision: ee
                   description: |
-                    Should Istio use ingressgateways to access remote Pods?
+                    Using IngressGateway for accessing remote Pods.
 
-                    If remote Pods are accessible directly from our cluster ("flat" network), it is efficient not to use extra hop.
+                    If remote Pods are accessible directly from our cluster (flat network), it is efficient not to use extra hop.
                 metadata:
                   type: object
                   properties:

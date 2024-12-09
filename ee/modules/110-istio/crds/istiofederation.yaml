@@ -40,9 +40,9 @@ spec:
                   type: string
                   x-doc-d8Revision: ee
                   description: |
-                    The `TrustDomain` of the remote cluster.
+                    The TrustDomain of the remote cluster.
 
-                    A mandatory parameter, however, it isn't used currently since Istio cannot match TrustDomain with the root CA.
+                    A mandatory parameter, but it is not currently utilized, as Istio does not yet support mapping TrustDomain to a root Certificate Authority (CA).
                   pattern: '^[0-9a-zA-Z._-]+$'
                   x-doc-examples: ['cluster.local']
                 metadataEndpoint:
