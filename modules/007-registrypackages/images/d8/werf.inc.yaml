@@ -43,16 +43,16 @@ git:
       setup:
       - '**/*'
 shell:
-  beforeInstall:
-  {{- include "debian packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install libbtrfs-dev -y
+#  beforeInstall:
+#  {{- include "debian packages proxy" . | nindent 2 }}
+#  - apt-get update && apt-get install libbtrfs-dev -y
   install:
-  {{- include "debian packages proxy" . | nindent 2 }}
   - export GOPROXY={{ $.GOPROXY }}
   - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
   - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
   - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
   - go install github.com/go-task/task/v3/cmd/task@latest
+  - apt-get install -y libbtrfs-dev
   - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
