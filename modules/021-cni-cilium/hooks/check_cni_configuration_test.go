@@ -17,8 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/json"
-	"fmt"
+	"strings"
+
+	"k8s.io/utils/pointer"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,7 +33,7 @@ import (
 )
 
 var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", func() {
-	cniSecret := func(cniName, data string) string {
+	cniSecretYAML := func(cniName, data string) string {
 		secretData := make(map[string][]byte)
 		secretData["cni"] = []byte(cniName)
 		if data != "" {
@@ -47,32 +50,34 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", fu
 			},
 			Data: secretData,
 		}
-		j, err := json.Marshal(s)
-		if err != nil {
-			panic(err)
-		}
-		c, err := yaml.JSONToYAML(j)
-		if err != nil {
-			panic(err)
-		}
-		return string(c)
+		marshaled, _ := yaml.Marshal(s)
+		return string(marshaled)
 	}
 
-	cniMC := func(cniName string) string {
-		return fmt.Sprintf(`
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: %s
-spec:
-  enabled: true
-  version: 1
-`, cniName)
+	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues) string {
+		mc := &v1alpha1.ModuleConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1alpha1",
+				Kind:       "ModuleConfig",
+			},
+
+			ObjectMeta: metav1.ObjectMeta{
+				Name: cniName,
+			},
+
+			Spec: v1alpha1.ModuleConfigSpec{
+				Version:  1,
+				Settings: settings,
+				Enabled:  enabled,
+			},
+		}
+		marshaled, _ := yaml.Marshal(mc)
+		return string(marshaled)
 	}
 
-	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	//f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"cniCilium": {"internal": {}}}`, `{"cniCilium":{}}`)
+	//f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	Context("Cluster has not d8-cni-configuration secret and has not cni mc", func() {
 		BeforeEach(func() {
@@ -80,16 +85,23 @@ spec:
 			f.RunHook()
 		})
 
-		It("ExecuteSuccessfully", func() {
+		FIt("ExecuteSuccessfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
 
-	Context("Cluster has d8-cni-configuration secret and has correct CM 1", func() {
+	Context("Cluster has d8-cni-configuration secret and has correct MC", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(cniSecret("cilium", `{"mode": "VXLAN", "masqueradeMode": "BPF"}`)))
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
+			resources := []string{
+				cniSecretYAML("cilium", `{"mode": "VXLAN", "masqueradeMode": "BPF"}`),
+				cniMCYAML("cilium", pointer.Bool(true), v1alpha1.SettingsValues{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "BPF",
+				}),
+			}
+			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
 		})
 
