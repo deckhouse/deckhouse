@@ -5,6 +5,13 @@ description: operator-trivy — модуль Deckhouse для периодиче
 
 Модуль позволяет запускать периодическое сканирование на уязвимости. Базируется на проекте [Trivy](https://github.com/aquasecurity/trivy).
 
-Сканирование осуществляется каждые 24 часа в пространствах имён с лейблом `security-scanning.deckhouse.io/enabled=""`.
+Модуль выполняет сканирование каждые 24 часа в пространствах имён, которые содержат метку `security-scanning.deckhouse.io/enabled=""`.
+Если в кластере отсутствуют пространства имён с указанной меткой, сканируется пространство имён `default`.
 
-Если не найдено пространств имён с лейблом `security-scanning.deckhouse.io/enabled=""` производится сканирование пространства имён `default`. После обнаружения какого-либо пространства имён с лейблом `security-scanning.deckhouse.io/enabled=""`, сканирование для пространства имён `default` будет отключено и чтобы он сканировался, потребуется также установить лейбл `kubectl label namespace default security-scanning.deckhouse.io/enabled=""`
+Как только в кластере обнаруживается пространство имён с меткой `security-scanning.deckhouse.io/enabled=""`, сканирование пространства имён `default` прекращается.
+
+Чтобы снова включить сканирование для пространства имён `default`, необходимо установить метку командой:
+
+```shell
+`kubectl label namespace default security-scanning.deckhouse.io/enabled=""`
+```
