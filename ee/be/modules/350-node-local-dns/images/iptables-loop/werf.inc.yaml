@@ -1,17 +1,19 @@
-image: {{ .ModuleName }}/{{ .ImageName }}
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
-  to: /
-  includePaths:
-  - '**/*.sh'
-  stageDependencies:
-    install:
-    - '**/*.sh'
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
+  before: setup
+- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
@@ -20,33 +22,31 @@ import:
 docker:
   ENTRYPOINT: ["/iptables-loop.sh"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromArtifact: common/relocate-artifact
+{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/inotifywait" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/350-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /relocate
+  stageDependencies:
+    install:
+    - '**/*'
+  includePaths:
+    - '*.sh'
 shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y iptables iptables-nft inotify-tools
-  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
   install:
-  - |
-    /binary_replace.sh -i "\
-      /bin/rm \
-      /bin/mkfifo \
-      /bin/mktemp \
-      /bin/echo \
-      /bin/sleep \
-      /bin/bash \
-      /sbin/ip \
-      /usr/bin/iptables* \
-      /sbin/iptables* \
-      /sbin/ip6tables* \
-      /sbin/xtables* \
-      /sbin/arptables* \
-      /usr/bin/inotifywait \
-      " -o /relocate
-  - |
-    set -x
-    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-      rm -f "/relocate/sbin/${cmd}"
-      ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-    done
+    - /binary_replace.sh -i "{{ $iptablesLoopBinaries }}" -o /relocate
+    - |
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+        rm -f "/relocate/sbin/${cmd}"
+        ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+      done
+    - |
+      for mode in legacy nft; do
+        for basecmd in iptables ip6tables; do
+          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+          done
+        done
+      done
