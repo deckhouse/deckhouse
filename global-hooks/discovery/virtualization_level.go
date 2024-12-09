@@ -95,7 +95,7 @@ func setGlobalVirtualizationLevel(input *go_hook.HookInput) error {
 	virtualizationLevel := 0
 
 	if len(virtLevelSecretSnap) == 0 { // secret doesn't exist
-		input.LogEntry.Info("secret d8-virtualization-level not found, will be created automatically")
+		input.Logger.Info("secret d8-virtualization-level not found, will be created automatically")
 		virtualizationLevel = getVirtualizationLevelFromMaterNodesLabels(input.Snapshots["master_nodes"])
 
 		createSecretWithVirtualizationLevel(input, virtualizationLevel)
@@ -104,7 +104,7 @@ func setGlobalVirtualizationLevel(input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set("global.discovery.dvpNestingLevel", virtualizationLevel)
-	input.LogEntry.Infof("set DVP nesting level to: %d", virtualizationLevel)
+	input.Logger.Infof("set DVP nesting level to: %d", virtualizationLevel)
 
 	return nil
 }
