@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"encoding/json"
+	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -57,7 +58,21 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", fu
 		return string(c)
 	}
 
+	cniMC := func(cniName string) string {
+		return fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: %s
+spec:
+  enabled: true
+  version: 1
+`, cniName)
+	}
+
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	Context("Cluster has not d8-cni-configuration secret and has not cni mc", func() {
 		BeforeEach(func() {
