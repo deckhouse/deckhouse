@@ -33,9 +33,9 @@ d8 k get volumesnapshotclasses
 Example output:
 
 ```console
-# NAME                     DRIVER                                DELETIONPOLICY   AGE
-# csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
-# sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
+NAME                     DRIVER                                DELETIONPOLICY   AGE
+csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
+sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
 ```
 
 Here is an example manifest for creating a disk snapshot:
@@ -62,8 +62,8 @@ d8 k get vdsnapshot
 Example output:
 
 ```console
-# NAME                   PHASE     CONSISTENT   AGE
-# linux-vm-root-snapshot Ready     true         3m2s
+NAME                   PHASE     CONSISTENT   AGE
+linux-vm-root-snapshot Ready     true         3m2s
 ```
 
 After creation, the `VirtualDiskSnapshot` resource can be in the following states:
@@ -127,9 +127,9 @@ d8 k get volumesnapshotclasses
 Example output:
 
 ```console
-# NAME                     DRIVER                                DELETIONPOLICY   AGE
-# csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
-# sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
+NAME                     DRIVER                                DELETIONPOLICY   AGE
+csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
+sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
 ```
 
 A virtual machine snapshot will not be created if any of the following conditions are met:

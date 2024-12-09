@@ -34,9 +34,9 @@ d8 k get volumesnapshotclasses
 Пример вывода:
 
 ```console
-# NAME                     DRIVER                                DELETIONPOLICY   AGE
-# csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
-# sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
+NAME                     DRIVER                                DELETIONPOLICY   AGE
+csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
+sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
 ```
 
 Пример манифеста для создания снимка диска:
@@ -63,8 +63,8 @@ d8 k get vdsnapshot
 Пример вывода:
 
 ```console
-# NAME                   PHASE     CONSISTENT   AGE
-# linux-vm-root-snapshot Ready     true         3m2s
+NAME                   PHASE     CONSISTENT   AGE
+linux-vm-root-snapshot Ready     true         3m2s
 ```
 
 После создания, `VirtualDiskSnapshot` может находиться в следующих состояниях:
@@ -128,9 +128,9 @@ d8 k get volumesnapshotclasses
 Пример вывода:
 
 ```console
-# NAME                     DRIVER                                DELETIONPOLICY   AGE
-# csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
-# sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
+NAME                     DRIVER                                DELETIONPOLICY   AGE
+csi-nfs-snapshot-class   nfs.csi.k8s.io                        Delete           34d
+sds-replicated-volume    replicated.csi.storage.deckhouse.io   Delete           39d
 ```
 
 Снимок виртуальной машины не будет создан, если выполнится хотя бы одно из следующих условий:

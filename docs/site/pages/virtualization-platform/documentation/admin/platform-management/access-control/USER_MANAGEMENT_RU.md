@@ -78,6 +78,11 @@ spec:
 
     ```shell
     d8 k get ingress -n d8-user-authn
+    ```
+
+    Пример вывода команды:
+
+    ```console
     # NAME                   CLASS   HOSTS                              ADDRESS                            PORTS     AGE
     # ...
     # kubeconfig-generator   nginx   kubeconfig.example.com             172.25.0.2,172.25.0.3,172.25.0.4   80, 443   267d

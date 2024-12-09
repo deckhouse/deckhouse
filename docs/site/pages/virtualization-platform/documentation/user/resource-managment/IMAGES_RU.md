@@ -66,8 +66,8 @@ d8 k get vi ubuntu-22.04
 Пример вывода:
 
 ```console
-# NAME           PHASE   CDROM   PROGRESS   AGE
-# ubuntu-22.04   Ready   false   100%       23h
+NAME           PHASE   CDROM   PROGRESS   AGE
+ubuntu-22.04   Ready   false   100%       23h
 ```
 
 После создания ресурс [VirtualImage](../../../reference/cr/virtualimage.html) может находиться в следующих состояниях:
@@ -90,14 +90,14 @@ d8 k get vi ubuntu-22.04 -w
 Пример вывода:
 
 ```console
-# NAME           PHASE          CDROM   PROGRESS   AGE
-# ubuntu-22.04   Provisioning   false              4s
-# ubuntu-22.04   Provisioning   false   0.0%       4s
-# ubuntu-22.04   Provisioning   false   28.2%      6s
-# ubuntu-22.04   Provisioning   false   66.5%      8s
-# ubuntu-22.04   Provisioning   false   100.0%     10s
-# ubuntu-22.04   Provisioning   false   100.0%     16s
-# ubuntu-22.04   Ready          false   100%       18s
+NAME           PHASE          CDROM   PROGRESS   AGE
+ubuntu-22.04   Provisioning   false              4s
+ubuntu-22.04   Provisioning   false   0.0%       4s
+ubuntu-22.04   Provisioning   false   28.2%      6s
+ubuntu-22.04   Provisioning   false   66.5%      8s
+ubuntu-22.04   Provisioning   false   100.0%     10s
+ubuntu-22.04   Provisioning   false   100.0%     16s
+ubuntu-22.04   Ready          false   100%       18s
 ```
 
 В описании ресурса [VirtualImage](../../../reference/cr/virtualimage.html) можно получить дополнительную информацию о скачанном образе:
@@ -134,8 +134,8 @@ d8 k get vi ubuntu-22.04-pvc
 Пример вывода:
 
 ```console
-# NAME              PHASE   CDROM   PROGRESS   AGE
-# ubuntu-22.04-pvc  Ready   false   100%       23h
+NAME              PHASE   CDROM   PROGRESS   AGE
+ubuntu-22.04-pvc  Ready   false   100%       23h
 ```
 
 ### Создание образа из container registry
@@ -239,8 +239,8 @@ d8 k get vi some-image
 Пример вывода:
 
 ```console
-# NAME         PHASE   CDROM   PROGRESS   AGE
-# some-image   Ready   false   100%       1m
+NAME         PHASE   CDROM   PROGRESS   AGE
+some-image   Ready   false   100%       1m
 ```
 
 ### Создание образа из диска

@@ -88,8 +88,8 @@ d8 k get vm linux-vm
 Example output:
 
 ```console
-# NAME       PHASE     NODE           IPADDRESS     AGE
-# linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
+NAME       PHASE     NODE           IPADDRESS     AGE
+linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
 
 After creation, the virtual machine will automatically receive an IP address from the range specified in the module settings (block `virtualMachineCIDRs`).
@@ -111,10 +111,10 @@ d8 v console linux-vm
 Example output:
 
 ```console
-# Successfully connected to linux-vm console. The escape sequence is ^]
-#
-# linux-vm login: cloud
-# Password: cloud
+Successfully connected to linux-vm console. The escape sequence is ^]
+
+linux-vm login: cloud
+Password: cloud
 ```
 
 To exit the serial console, press `Ctrl+]`.
@@ -225,7 +225,7 @@ d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":2}}}'
 Example output:
 
 ```console
-# virtualmachine.virtualization.deckhouse.io/linux-vm patched
+virtualmachine.virtualization.deckhouse.io/linux-vm patched
 ```
 
 The configuration changes have been made, but they have not been applied to the virtual machine yet. Verify this by running the following command again:
@@ -244,14 +244,14 @@ d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
 Example output:
 
 ```console
-# [
-#   {
-#     "currentValue": 1,
-#     "desiredValue": 2,
-#     "operation": "replace",
-#     "path": "cpu.cores"
-#   }
-# ]
+[
+  {
+    "currentValue": 1,
+    "desiredValue": 2,
+    "operation": "replace",
+    "path": "cpu.cores"
+  }
+]
 ```
 
 Run the following command:
@@ -263,8 +263,8 @@ d8 k get vm linux-vm -o wide
 Example output:
 
 ```console
-# NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
-# linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
+NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
+linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
 
 In the `NEED RESTART` column, we see `True`, which indicates that a restart is required to apply the changes.
@@ -509,8 +509,8 @@ d8 k get vmbda attach-blank-disk
 Example output:
 
 ```console
-# NAME                PHASE      VIRTUAL MACHINE NAME   AGE
-# attach-blank-disk   Attached   linux-vm              3m7s
+NAME                PHASE      VIRTUAL MACHINE NAME   AGE
+attach-blank-disk   Attached   linux-vm              3m7s
 ```
 
 Connect to the virtual machine and verify that the disk is attached:
@@ -522,13 +522,13 @@ d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
 Example output:
 
 ```console
-# NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
-# sda       8:0    0   10G  0 disk <--- statically attached disk linux-vm-root
-# |-sda1    8:1    0  9.9G  0 part /
-# |-sda14   8:14   0    4M  0 part
-# `-sda15   8:15   0  106M  0 part /boot/efi
-# sdb       8:16   0    1M  0 disk <--- cloudinit
-# sdc       8:32   0 95.9M  0 disk <--- dynamically attached disk blank-disk
+NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+sda       8:0    0   10G  0 disk <--- statically attached disk linux-vm-root
+|-sda1    8:1    0  9.9G  0 part /
+|-sda14   8:14   0    4M  0 part
+`-sda15   8:15   0  106M  0 part /boot/efi
+sdb       8:16   0    1M  0 disk <--- cloudinit
+sdc       8:32   0 95.9M  0 disk <--- dynamically attached disk blank-disk
 ```
 
 To detach the disk from the virtual machine, delete the previously created resource:
@@ -558,8 +558,8 @@ d8 k get vm
 Example output:
 
 ```console
-# NAME       PHASE     NODE           IPADDRESS     AGE
-# linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
+NAME       PHASE     NODE           IPADDRESS     AGE
+linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
 ```
 
 The virtual machine is running on the `virtlab-pt-1` node.
@@ -589,11 +589,11 @@ d8 k get vm -w
 Example output:
 
 ```console
-# NAME       PHASE       NODE           IPADDRESS     AGE
-# linux-vm   Running     virtlab-pt-1   10.66.10.14   79m
-# linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm   Running     virtlab-pt-2   10.66.10.14   79m
+NAME       PHASE       NODE           IPADDRESS     AGE
+linux-vm   Running     virtlab-pt-1   10.66.10.14   79m
+linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
+linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
+linux-vm   Running     virtlab-pt-2   10.66.10.14   79m
 ```
 
 You can also perform the migration using the following command:
@@ -617,8 +617,8 @@ d8 k get vmipl
 Example output:
 
 ```console
-# NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
-# ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
+NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
+ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
 The [VirtualMachineIPAddress](../../../reference/cr/virtualmachineipaddress.html) (`vmip`) resource is a project or namespace resource responsible for reserving allocated IP addresses and binding them to virtual machines. IP addresses can be assigned automatically or upon request.
@@ -632,8 +632,8 @@ d8 k get vmipl
 Example output:
 
 ```console
-# NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
-# ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
+NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
+ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
 To check the assigned IP address, you can use the following command:
@@ -645,8 +645,8 @@ d8 k get vmip
 Example output:
 
 ```console
-# NAME             ADDRESS       STATUS     VM         AGE
-# linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
+NAME             ADDRESS       STATUS     VM         AGE
+linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
 
 The algorithm for automatically assigning an IP address to a virtual machine works as follows:
@@ -694,7 +694,7 @@ d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
 Example output:
 
 ```console
-# linux-vm-7prpx
+linux-vm-7prpx
 ```
 
 Remove the `.metadata.ownerReferences` blocks from the found resource:

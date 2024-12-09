@@ -65,8 +65,8 @@ d8 k get vi ubuntu-22.04
 Example output:
 
 ```console
-# NAME           PHASE   CDROM   PROGRESS   AGE
-# ubuntu-22.04   Ready   false   100%       23h
+NAME           PHASE   CDROM   PROGRESS   AGE
+ubuntu-22.04   Ready   false   100%       23h
 ```
 
 After creation, the [VirtualImage](../../../reference/cr/virtualimage.html) resource can be in the following states:
@@ -89,14 +89,14 @@ d8 k get vi ubuntu-22.04 -w
 Example output:
 
 ```console
-# NAME           PHASE          CDROM   PROGRESS   AGE
-# ubuntu-22.04   Provisioning   false              4s
-# ubuntu-22.04   Provisioning   false   0.0%       4s
-# ubuntu-22.04   Provisioning   false   28.2%      6s
-# ubuntu-22.04   Provisioning   false   66.5%      8s
-# ubuntu-22.04   Provisioning   false   100.0%     10s
-# ubuntu-22.04   Provisioning   false   100.0%     16s
-# ubuntu-22.04   Ready          false   100%       18s
+NAME           PHASE          CDROM   PROGRESS   AGE
+ubuntu-22.04   Provisioning   false              4s
+ubuntu-22.04   Provisioning   false   0.0%       4s
+ubuntu-22.04   Provisioning   false   28.2%      6s
+ubuntu-22.04   Provisioning   false   66.5%      8s
+ubuntu-22.04   Provisioning   false   100.0%     10s
+ubuntu-22.04   Provisioning   false   100.0%     16s
+ubuntu-22.04   Ready          false   100%       18s
 ```
 
 You can obtain additional information about the downloaded image in the [VirtualImage](../../../reference/cr/virtualimage.html) resource description:
@@ -133,8 +133,8 @@ d8 k get vi ubuntu-22.04-pvc
 Example output:
 
 ```console
-# NAME              PHASE   CDROM   PROGRESS   AGE
-# ubuntu-22.04-pvc  Ready   false   100%       23h
+NAME              PHASE   CDROM   PROGRESS   AGE
+ubuntu-22.04-pvc  Ready   false   100%       23h
 ```
 
 ### Creating an image from a container registry
@@ -238,8 +238,8 @@ d8 k get vi some-image
 Example output:
 
 ```console
-# NAME         PHASE   CDROM   PROGRESS   AGE
-# some-image   Ready   false   100%       1m
+NAME         PHASE   CDROM   PROGRESS   AGE
+some-image   Ready   false   100%       1m
 ```
 
 ### Creating an image from a disk

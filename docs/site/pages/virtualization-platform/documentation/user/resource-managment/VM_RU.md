@@ -89,8 +89,8 @@ d8 k get vm linux-vm
 Пример вывода:
 
 ```console
-# NAME       PHASE     NODE           IPADDRESS     AGE
-# linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
+NAME       PHASE     NODE           IPADDRESS     AGE
+linux-vm   Running   virtlab-pt-2   10.66.10.12   11m
 ```
 
 После создания виртуальная машина автоматически получит IP-адрес из диапазона, указанного в настройках модуля (блок `virtualMachineCIDRs`).
@@ -112,10 +112,10 @@ d8 v console linux-vm
 Пример вывода:
 
 ```console
-# Successfully connected to linux-vm console. The escape sequence is ^]
-#
-# linux-vm login: cloud
-# Password: cloud
+Successfully connected to linux-vm console. The escape sequence is ^]
+
+linux-vm login: cloud
+Password: cloud
 ```
 
 Для завершения работы с серийной консолью нажмите `Ctrl+]`.
@@ -226,7 +226,7 @@ d8 k patch vm linux-vm --type merge -p '{"spec":{"cpu":{"cores":2}}}'
 Пример вывода:
 
 ```console
-# virtualmachine.virtualization.deckhouse.io/linux-vm patched
+virtualmachine.virtualization.deckhouse.io/linux-vm patched
 ```
 
 Изменения в конфигурацию внесены, но ещё не применены к виртуальной машине. Проверьте это, повторно выполнив:
@@ -245,14 +245,14 @@ d8 k get vm linux-vm -o jsonpath="{.status.restartAwaitingChanges}" | jq .
 Пример вывода:
 
 ```console
-# [
-#   {
-#     "currentValue": 1,
-#     "desiredValue": 2,
-#     "operation": "replace",
-#     "path": "cpu.cores"
-#   }
-# ]
+[
+  {
+    "currentValue": 1,
+    "desiredValue": 2,
+    "operation": "replace",
+    "path": "cpu.cores"
+  }
+]
 ```
 
 Выполните команду:
@@ -264,8 +264,8 @@ d8 k get vm linux-vm -o wide
 Пример вывода:
 
 ```console
-# NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
-# linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
+NAME        PHASE     CORES   COREFRACTION   MEMORY   NEED RESTART   AGENT   MIGRATABLE   NODE           IPADDRESS     AGE
+linux-vm   Running   2       100%           1Gi      True           True    True         virtlab-pt-1   10.66.10.13   5m16s
 ```
 
 В колонке `NEED RESTART` мы видим значение `True`, а это значит что для применения изменений требуется перезагрузка.
@@ -510,8 +510,8 @@ d8 k get vmbda attach-blank-disk
 Пример вывода:
 
 ```console
-# NAME                PHASE      VIRTUAL MACHINE NAME   AGE
-# attach-blank-disk   Attached   linux-vm              3m7s
+NAME                PHASE      VIRTUAL MACHINE NAME   AGE
+attach-blank-disk   Attached   linux-vm              3m7s
 ```
 
 Подключитесь к виртуальной машине и удостоверьтесь, что диск подключен:
@@ -523,13 +523,13 @@ d8 v ssh cloud@linux-vm --local-ssh --command "lsblk"
 Пример вывода:
 
 ```console
-# NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
-# sda       8:0    0   10G  0 disk <--- статично подключенный диск linux-vm-root
-# |-sda1    8:1    0  9.9G  0 part /
-# |-sda14   8:14   0    4M  0 part
-# `-sda15   8:15   0  106M  0 part /boot/efi
-# sdb       8:16   0    1M  0 disk <--- cloudinit
-# sdc       8:32   0 95.9M  0 disk <--- динамически подключенный диск blank-disk
+NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+sda       8:0    0   10G  0 disk <--- статично подключенный диск linux-vm-root
+|-sda1    8:1    0  9.9G  0 part /
+|-sda14   8:14   0    4M  0 part
+`-sda15   8:15   0  106M  0 part /boot/efi
+sdb       8:16   0    1M  0 disk <--- cloudinit
+sdc       8:32   0 95.9M  0 disk <--- динамически подключенный диск blank-disk
 ```
 
 Для отключения диска от виртуальной машины удалите ранее созданный ресурс:
@@ -559,8 +559,8 @@ d8 k get vm
 Пример вывода:
 
 ```console
-# NAME       PHASE     NODE           IPADDRESS     AGE
-# linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
+NAME       PHASE     NODE           IPADDRESS     AGE
+linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
 ```
 
 Виртуальная машина запущена на узле `virtlab-pt-1`.
@@ -590,11 +590,11 @@ d8 k get vm -w
 Пример вывода:
 
 ```console
-# NAME       PHASE       NODE           IPADDRESS     AGE
-# linux-vm   Running     virtlab-pt-1   10.66.10.14   79m
-# linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm   Running     virtlab-pt-2   10.66.10.14   79m
+NAME       PHASE       NODE           IPADDRESS     AGE
+linux-vm   Running     virtlab-pt-1   10.66.10.14   79m
+linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
+linux-vm   Migrating   virtlab-pt-1   10.66.10.14   79m
+linux-vm   Running     virtlab-pt-2   10.66.10.14   79m
 ```
 
 Также для выполнения миграции можно использовать команду:
@@ -618,8 +618,8 @@ d8 k get vmipl
 Пример вывода:
 
 ```console
-# NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
-# ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
+NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
+ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
 Ресурс [VirtualMachineIPAddress](../../../reference/cr/virtualmachineipaddress.html) (`vmip`) — это ресурс проекта или пространства имен, который отвечает за резервирование выделенных IP-адресов и их привязку к виртуальным машинам. IP-адреса могут выделяться автоматически или по запросу.
@@ -633,8 +633,8 @@ d8 k get vmipl
 Пример вывода:
 
 ```console
-# NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
-# ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
+NAME             VIRTUALMACHINEIPADDRESS                             STATUS   AGE
+ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
 Проверить назначенный IP-адрес можно с помощью команды:
@@ -646,8 +646,8 @@ d8 k get vmip
 Пример вывода:
 
 ```console
-# NAME             ADDRESS       STATUS     VM         AGE
-# linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
+NAME             ADDRESS       STATUS     VM         AGE
+linux-vm-7prpx   10.66.10.14   Attached   linux-vm   12h
 ```
 
 Алгоритм автоматического присвоения IP-адреса виртуальной машине выглядит следующим образом:
@@ -695,7 +695,7 @@ d8 k get vm linux-vm -o jsonpath="{.status.virtualMachineIPAddressName}"
 Пример вывода:
 
 ```console
-# linux-vm-7prpx
+linux-vm-7prpx
 ```
 
 Удалите блоки `.metadata.ownerReferences` из найденного ресурса:
