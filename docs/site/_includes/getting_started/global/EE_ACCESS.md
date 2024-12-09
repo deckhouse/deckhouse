@@ -1,3 +1,5 @@
+{% assign revision=include.revision %}
+
 <div class="license-form__wrap">
 <div class="license-form-enter">
 <h3 class="text text_h3">
@@ -21,10 +23,10 @@
 <script>
 $(document).ready(function() {
 
-    tokenInputElement = $('[license-token]');
+    tokenInputElement{{ revision }} = $('[license-token-{{ revision }}]');
     if ($.cookie("demotoken") || $.cookie("license-token")) {
         let token = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
-        tokenInputElement.val(token);
+        tokenInputElement{{ revision }}.val(token);
     }
 })
 </script>
