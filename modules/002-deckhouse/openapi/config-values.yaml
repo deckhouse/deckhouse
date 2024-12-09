@@ -19,12 +19,12 @@ properties:
     default: "Default"
   releaseChannel:
     type: string
-    enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
+    enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid", "LTS"]
     x-examples: ["Stable"]
     description: |
       Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#what-happens-when-the-release-channel-changes) to it when such an opportunity appears).
 
-      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`, `LTS`.
   update:
     type: object
     description: Settings of the Deckhouse update mode and windows.

@@ -23,9 +23,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"path"
-	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -214,7 +215,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 			actual := release.GetVersion()
 			for !actual.Equal(newSemver) {
 				if actual, err = releaseChecker.StepByStepUpdate(ctx, actual, newSemver); err != nil {
-					releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
+					releaseChecker.logger.Error("step by step update failed", log.Err(err))
 					labels := map[string]string{
 						"version": release.GetVersion().Original(),
 					}
@@ -336,7 +337,7 @@ type DeckhouseReleaseChecker struct {
 
 	releaseChannel  string
 	releaseMetadata ReleaseMetadata
-	tags            []string
+	tags            []*semver.Version
 }
 
 func (dcr *DeckhouseReleaseChecker) IsCanaryRelease() bool {
@@ -522,7 +523,6 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, actual
 	if err != nil {
 		return nil, fmt.Errorf("get next version: %w", err)
 	}
-
 	image, err := dcr.registryClient.Image(ctx, nextVersion.Original())
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
@@ -542,51 +542,61 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, actual
 	return nextVersion, nil
 }
 
+// nextVersion returns the next version of the target version
+// uf we have some versions:
+// 1.67.0
+// 1.67.1
+// 1.67.2
+// 1.68.0
+// and actual = 1.67.0, target = 1.68.0
+// result will be 1.67.2
+// if actual = 1.67.2, target = 1.68.0
+// result will be 1.68.0
+// for LTS channel we return only target version
 func (dcr *DeckhouseReleaseChecker) nextVersion(ctx context.Context, actual, target *semver.Version) (*semver.Version, error) {
-	if actual.Major() != target.Major() {
-		return nil, fmt.Errorf("major version updated") // TODO step by step update for major version
+	if strings.ToUpper(dcr.releaseChannel) == "LTS" {
+		return target, nil
 	}
 
-	if actual.Minor() == target.Minor() {
-		return dcr.getMaxPatch(ctx, 1, actual.Minor())
-	}
-
-	// Here we get the following minor with the maximum patch version.
-	// <major.minor+1.max>
-	return dcr.getMaxPatch(ctx, 1, actual.IncMinor().Minor())
-}
-
-func (dcr *DeckhouseReleaseChecker) getMaxPatch(ctx context.Context, major, minor uint64) (*semver.Version, error) {
 	tags, err := dcr.listTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
-	expr := fmt.Sprintf("^v%d.%d.([0-9]+)$", major, minor)
-	r, err := regexp.Compile(expr)
-	if err != nil {
-		return nil, err
+	var vs []*semver.Version
+	for _, tag := range tags {
+		if tag.Compare(actual) > 0 && tag.Compare(target) <= 0 {
+			vs = append(vs, tag)
+		}
 	}
+	sort.Sort(semver.Collection(vs))
 
-	collection := make([]*semver.Version, 0)
-	for _, ver := range tags {
-		if r.MatchString(ver) {
-			newSemver, err := semver.NewVersion(ver)
-			if err != nil {
-				dcr.logger.Errorf("unable to parse semver from the registry Version: %v. This version will be skipped.", ver)
-				continue
+	var patchVersion, nextVersion *semver.Version
+	for _, tag := range vs {
+		if tag.Major() == actual.Major() &&
+			tag.Minor() == actual.Minor() &&
+			tag.Patch() > actual.Patch() {
+			patchVersion = tag
+		}
+		if tag.Major() > actual.Major() || tag.Minor() > actual.Minor() {
+			if nextVersion == nil ||
+				(tag.Major() == nextVersion.Major() &&
+					tag.Minor() == nextVersion.Minor() &&
+					tag.Patch() > nextVersion.Patch()) {
+				nextVersion = tag
 			}
-			collection = append(collection, newSemver)
 		}
 	}
 
-	if len(collection) == 0 {
-		return nil, fmt.Errorf("next minor version is missed")
+	if patchVersion != nil {
+		return patchVersion, nil
 	}
 
-	sort.Sort(sort.Reverse(semver.Collection(collection)))
+	if nextVersion != nil {
+		return nextVersion, nil
+	}
 
-	return collection[0], nil
+	return nil, fmt.Errorf("no suitable versions found")
 }
 
 var globalModules = []string{"candi", "deckhouse-controller", "global"}
@@ -611,13 +621,22 @@ func (dcr *DeckhouseReleaseChecker) generateChangelogForEnabledModules() map[str
 	return enabledModulesChangelog
 }
 
-func (dcr *DeckhouseReleaseChecker) listTags(ctx context.Context) ([]string, error) {
-	var err error
+func (dcr *DeckhouseReleaseChecker) listTags(ctx context.Context) ([]*semver.Version, error) {
 	if dcr.tags == nil {
-		dcr.tags, err = dcr.registryClient.ListTags(ctx)
+		tags, err := dcr.registryClient.ListTags(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("registry client list tags: %w", err)
+		}
+		for _, tag := range tags {
+			version, err := semver.NewVersion(tag)
+			if err != nil {
+				dcr.logger.Warn("bad semver", slog.String("version", tag))
+			}
+			dcr.tags = append(dcr.tags, version)
+		}
 	}
 
-	return dcr.tags, err
+	return dcr.tags, nil
 }
 
 type ReleaseMetadata struct {
