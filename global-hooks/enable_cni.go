@@ -17,6 +17,8 @@ package hooks
 import (
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -37,6 +39,10 @@ Developer notes:
 - It is the only hook that subscribes to configuration ConfigMap because
   there is no way to get enabled modules list in global hook.
 */
+
+const (
+	cniConfigurationSettledKey = "cniConfigurationSettled"
+)
 
 var (
 	cniNameToModule = map[string]string{
@@ -105,6 +111,8 @@ func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func enableCni(input *go_hook.HookInput) error {
+	requirements.RemoveValue(cniConfigurationSettledKey)
+
 	cniNameSnap := input.Snapshots["cni_name"]
 	deckhouseMCSnap := input.Snapshots["deckhouse_mc"]
 
@@ -116,6 +124,7 @@ func enableCni(input *go_hook.HookInput) error {
 	}
 
 	if len(explicitlyEnabledCNIs) > 1 {
+		requirements.SaveValue(cniConfigurationSettledKey, "false")
 		return fmt.Errorf("more then one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
 	} else if len(explicitlyEnabledCNIs) == 1 {
 		input.Logger.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])

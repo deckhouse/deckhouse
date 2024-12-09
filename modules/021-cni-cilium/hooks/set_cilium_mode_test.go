@@ -124,6 +124,23 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
+	Context("kube-system/d8-cni-configuration is absent, masqueradeMode set to `Netfilter`", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+			f.ConfigValuesSet("cniCilium.masqueradeMode", "Netfilter")
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.RunHook()
+		})
+		It("hook should run successfully, secret should be changed", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
+		})
+	})
+
 	Context("kube-system/d8-cni-configuration is absent, tunnelMode set to `Disabled`, but previously the mode was discovered to `VXLAN`", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
