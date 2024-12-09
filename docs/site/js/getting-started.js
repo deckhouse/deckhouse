@@ -194,7 +194,7 @@ function toggleDisabled(tab, inputDataAttr) {
   }
 }
 
-async function getLicenseToken(token) {
+async function getLicenseToken(token, revision) {
   try {
     if (token === '') {
       throw new Error(responseFromLicense[pageLang]['empty_input']);
