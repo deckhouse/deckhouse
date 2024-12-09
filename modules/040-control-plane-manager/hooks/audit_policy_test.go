@@ -59,8 +59,8 @@ metadata:
 data:
   basicAuditPolicy: |
     serviceAccounts:
+    - system:serviceaccount:d8-istio:istiod-v1x21x6
     - system:serviceaccount:d8-istio:istiod-v1x19x7
-    - system:serviceaccount:d8-istio:istiod-v1x16x9
 `
 		policyA = `
 apiVersion: audit.k8s.io/v1
@@ -184,8 +184,8 @@ rules:
 			_ = yaml.UnmarshalStrict(data, &policy)
 
 			istiodServiceAccounts := []string{
+				"system:serviceaccount:d8-istio:istiod-v1x21x6",
 				"system:serviceaccount:d8-istio:istiod-v1x19x7",
-				"system:serviceaccount:d8-istio:istiod-v1x16x9",
 			}
 
 			// All rules, except last three are dropping rules.

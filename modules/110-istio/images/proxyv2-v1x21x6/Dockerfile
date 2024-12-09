@@ -1,15 +1,15 @@
-# Based on https://github.com/istio/istio/blob/1.16.2/docker/Dockerfile.base
-#      and https://github.com/istio/istio/blob/1.16.2/pilot/docker/Dockerfile.proxyv2
+# Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
+#      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
 ARG BASE_ALT
-FROM docker.io/istio/proxyv2:1.16.2@sha256:e3122850ded1a844bd7d74afafbd3e388221c9e916c4e0ac47af8b644b939871 as artifact
+FROM docker.io/istio/proxyv2:1.21.6@sha256:a0afbbc8488060f8059e7fa04576edde01915d40576132dae83479b3abe5ce15 as artifact
 
 FROM $BASE_ALT
 WORKDIR /
 
-# https://hub.docker.com/layers/istio/proxyv2/1.16.2/images/sha256-d50597afa2ac9a9ddad16d1f4065c83326d4b21526e1c4fc997e7f9f21d65c53?context=explore
-# from image layer 14
-ARG proxy_version=istio-proxy:fa88959eb040f004889985399669f7a824a7e18e
-ARG istio_version=1.16.2
+# https://hub.docker.com/layers/istio/proxyv2/1.21.6/images/sha256-1d1cbdc7d940e09ce3d636897db74c77d4fff4c91f3c97fad96ed0bbb4c7eee4?context=explore
+# from image layer 17
+ARG proxy_version=istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489
+ARG istio_version=1.21.6
 ARG SIDECAR=envoy
 
 RUN apt-get update && \
@@ -49,11 +49,6 @@ ENV ISTIO_META_ISTIO_PROXY_SHA $proxy_version
 ENV ISTIO_META_ISTIO_VERSION $istio_version
 
 COPY --from=artifact /usr/local/bin/pilot-agent /usr/local/bin/pilot-agent
-
-COPY --from=artifact /etc/istio/extensions/stats-filter.wasm /etc/istio/extensions/stats-filter.wasm
-COPY --from=artifact /etc/istio/extensions/stats-filter.compiled.wasm /etc/istio/extensions/stats-filter.compiled.wasm
-COPY --from=artifact /etc/istio/extensions/metadata-exchange-filter.wasm /etc/istio/extensions/metadata-exchange-filter.wasm
-COPY --from=artifact /etc/istio/extensions/metadata-exchange-filter.compiled.wasm /etc/istio/extensions/metadata-exchange-filter.compiled.wasm
 
 # The pilot-agent will bootstrap Envoy.
 ENTRYPOINT ["/usr/local/bin/pilot-agent"]
