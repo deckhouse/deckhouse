@@ -17,10 +17,8 @@ limitations under the License.
 package moduledependency
 
 import (
-	"strconv"
 	"sync"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/versionmatcher"
@@ -28,8 +26,7 @@ import (
 )
 
 const (
-	Name              extenders.ExtenderName = "ModuleDependency"
-	RequirementsField string                 = "modules"
+	Name extenders.ExtenderName = "ModuleDependency"
 )
 
 var (
@@ -37,16 +34,20 @@ var (
 	once     sync.Once
 )
 
-var _ extenders.Extender = &Extender{}
+var (
+	_ extenders.Extender            = &Extender{}
+	_ extenders.TopologicalExtender = &Extender{}
+	_ extenders.StatefulExtender    = &Extender{}
+)
 
 type moduleDescriptor struct {
-	version     semver.Version
 	constraints *versionmatcher.Matcher
 }
 
 type Extender struct {
-	modules map[string]moduleDescriptor
-	logger  *log.Logger
+	modulesStateHelper func() []string
+	modules            map[string]moduleDescriptor
+	logger             *log.Logger
 }
 
 func Instance() *Extender {
@@ -59,19 +60,21 @@ func Instance() *Extender {
 	return instance
 }
 
-func (e *Extender) AddConstraint(name string, value string) error {
-	parsed, err := strconv.ParseBool(value)
-	if err != nil {
-		e.logger.Debugf("adding installed constraint for the '%s' module failed", name)
-		return err
+func (e *Extender) AddConstraint(name string, value map[string]string) error {
+	module := e.modules[name]
+	if module.constraints == nil {
+		module.constraints = versionmatcher.New(false)
 	}
-	e.modules[name] = parsed
+	for dependency, version := range value {
+		module.constraints.AddConstraint(dependency, version)
+	}
+	e.modules[name] = module
 	e.logger.Debugf("installed constraint for the '%s' module is added", name)
 	return nil
 }
 
 func (e *Extender) DeleteConstraint(name string) {
-	// TODO
+	delete(e.modules, name)
 }
 
 // Name implements Extender interface, it is used by scheduler in addon-operator
@@ -88,9 +91,9 @@ func (e *Extender) IsTerminator() bool {
 func (e *Extender) GetTopologicalHints(moduleName string) []string {
 	hints := make([]string, 0)
 	for module, descriptor := range e.modules {
-		for constraintName := range descriptor.constraints.GetConstraintNames() {
+		for _, constraintName := range descriptor.constraints.GetConstraintNames() {
 			if constraintName == moduleName {
-				hints = append(hints, constraintName)
+				hints = append(hints, module)
 				break
 			}
 		}
@@ -102,5 +105,10 @@ func (e *Extender) GetTopologicalHints(moduleName string) []string {
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	// TODO
-	return nil
+	return nil, nil
+}
+
+// SetModulesStateHelper implements StatefulExtender interface of the addon-operator
+func (e *Extender) SetModulesStateHelper(f func() []string) {
+	e.modulesStateHelper = f
 }

@@ -82,6 +82,11 @@ const (
 	ModuleMessageWaitSyncTasks               = "run sync tasks"
 	ModuleMessageOnStartupHook               = "onStartup hooks done"
 	ModuleMessageHooksDisabled               = "hooks disabled"
+
+	DeckhouseRequirementFieldName        string = "deckhouse"
+	KubernetesRequirementFieldName       string = "kubernetes"
+	BootstrappedRequirementFieldName     string = "bootstrapped"
+	ModuleDependencyRequirementFieldName string = "modules"
 )
 
 var (
@@ -130,16 +135,27 @@ type Module struct {
 	Status ModuleStatus `json:"status,omitempty"`
 }
 
+type ModuleRequirements struct {
+	ModulePlatformRequirements `json:",inline"`
+	ParentModules              map[string]string `json:"modules,omitempty"`
+}
+
+type ModulePlatformRequirements struct {
+	Deckhouse    string `json:"deckhouse,omitempty"`
+	Kubernetes   string `json:"kubernetes,omitempty"`
+	Bootstrapped bool   `json:"bootstrapped,omitempty"`
+}
+
 type ModuleProperties struct {
-	Weight           uint32            `json:"weight,omitempty"`
-	Source           string            `json:"source,omitempty"`
-	ReleaseChannel   string            `json:"releaseChannel,omitempty"`
-	Stage            string            `json:"stage,omitempty"`
-	Description      string            `json:"description,omitempty"`
-	Version          string            `json:"version,omitempty"`
-	UpdatePolicy     string            `json:"updatePolicy,omitempty"`
-	AvailableSources []string          `json:"availableSources,omitempty"`
-	Requirements     map[string]string `json:"requirements,omitempty"`
+	Weight           uint32              `json:"weight,omitempty"`
+	Source           string              `json:"source,omitempty"`
+	ReleaseChannel   string              `json:"releaseChannel,omitempty"`
+	Stage            string              `json:"stage,omitempty"`
+	Description      string              `json:"description,omitempty"`
+	Version          string              `json:"version,omitempty"`
+	UpdatePolicy     string              `json:"updatePolicy,omitempty"`
+	AvailableSources []string            `json:"availableSources,omitempty"`
+	Requirements     *ModuleRequirements `json:"requirements,omitempty"`
 }
 
 type ModuleStatus struct {

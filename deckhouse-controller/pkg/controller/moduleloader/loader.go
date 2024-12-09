@@ -19,9 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -332,7 +332,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				needsUpdate = true
 			}
 
-			if !maps.Equal(module.Properties.Requirements, def.Requirements) {
+			if !reflect.DeepEqual(module.Properties.Requirements, def.Requirements) {
 				module.Properties.Requirements = def.Requirements
 				needsUpdate = true
 			}
