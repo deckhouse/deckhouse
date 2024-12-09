@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 	"runtime/trace"
+	"slices"
 	"strings"
 	"time"
 
@@ -38,6 +39,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+)
+
+var (
+	allowedСommands []string
 )
 
 func main() {
@@ -62,77 +67,159 @@ func main() {
 		return nil
 	})
 
-	commands.DefineServerCommand(kpApp)
-	commands.DefineSingleThreadedServerCommand(kpApp)
-
-	bootstrap.DefineBootstrapCommand(kpApp)
-	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
-	{
-		bootstrap.DefineBootstrapExecuteBashibleCommand(bootstrapPhaseCmd)
-		bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd)
-		bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd)
-		bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd)
-		bootstrap.DefineBaseInfrastructureCommand(bootstrapPhaseCmd)
-		bootstrap.DefineExecPostBootstrapScript(bootstrapPhaseCmd)
+	allowed, _ := checkCommand("server", allowedСommands)
+	if allowed {
+		commands.DefineServerCommand(kpApp)
 	}
 
-	commands.DefineConvergeCommand(kpApp)
-	commands.DefineAutoConvergeCommand(kpApp)
-
-	lockCmd := kpApp.Command("lock", "Converge cluster lock")
-	{
-		commands.DefineReleaseConvergeLockCommand(lockCmd)
+	allowed, _ = checkCommand("_server", allowedСommands)
+	if allowed {
+		commands.DefineSingleThreadedServerCommand(kpApp)
 	}
 
-	commands.DefineDestroyCommand(kpApp)
-
-	terraformCmd := kpApp.Command("terraform", "Terraform commands.")
-	{
-		commands.DefineTerraformConvergeExporterCommand(terraformCmd)
-		commands.DefineTerraformCheckCommand(terraformCmd)
+	allowed, _ = checkCommand("bootstrap", allowedСommands)
+	if allowed {
+		bootstrap.DefineBootstrapCommand(kpApp)
 	}
 
-	configCmd := kpApp.Command("config", "Load, edit and save various dhctl configurations.")
-	{
-		parseCmd := configCmd.Command("parse", "Parse, validate and output configurations.")
+	allowed, subcommands := checkCommand("bootstrap-phase", allowedСommands)
+	if allowed {
+		bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
 		{
-			commands.DefineCommandParseClusterConfiguration(kpApp, parseCmd)
-			commands.DefineCommandParseCloudDiscoveryData(kpApp, parseCmd)
-		}
+			if checkSubcommand("execute-bashible-bundle", subcommands) {
+				bootstrap.DefineBootstrapExecuteBashibleCommand(bootstrapPhaseCmd)
+			}
 
-		renderCmd := configCmd.Command("render", "Render transitional configurations.")
-		{
-			commands.DefineRenderBashibleBundle(renderCmd)
-			commands.DefineRenderKubeadmConfig(renderCmd)
-			commands.DefineRenderMasterBootstrap(renderCmd)
-		}
+			if checkSubcommand("install-deckhouse", subcommands) {
+				bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd)
+			}
 
-		editCmd := configCmd.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
-		{
-			commands.DefineEditCommands(editCmd /* wConnFlags */, true)
+			if checkSubcommand("create-resources", subcommands) {
+				bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd)
+			}
+
+			if checkSubcommand("abort", subcommands) {
+				bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd)
+			}
+
+			if checkSubcommand("base-infra", subcommands) {
+				bootstrap.DefineBaseInfrastructureCommand(bootstrapPhaseCmd)
+			}
+
+			if checkSubcommand("exec-post-bootstrap", subcommands) {
+				bootstrap.DefineExecPostBootstrapScript(bootstrapPhaseCmd)
+			}
 		}
 	}
 
-	testCmd := kpApp.Command("test", "Commands to test the parts of bootstrap and converge process.")
-	{
-		commands.DefineTestSSHConnectionCommand(testCmd)
-		commands.DefineTestKubernetesAPIConnectionCommand(testCmd)
-		commands.DefineTestSCPCommand(testCmd)
-		commands.DefineTestUploadExecCommand(testCmd)
-		commands.DefineTestBundle(testCmd)
+	allowed, _ = checkCommand("converge", allowedСommands)
+	if allowed {
+		commands.DefineConvergeCommand(kpApp)
+	}
 
-		controlPlaneCmd := testCmd.Command("control-plane", "Commands to test control plane nodes.")
+	allowed, _ = checkCommand("converge-periodical", allowedСommands)
+	if allowed {
+		commands.DefineAutoConvergeCommand(kpApp)
+	}
+
+	allowed, _ = checkCommand("lock", allowedСommands)
+	if allowed {
+		lockCmd := kpApp.Command("lock", "Converge cluster lock")
 		{
-			commands.DefineTestControlPlaneManagerReadyCommand(controlPlaneCmd)
-			commands.DefineTestControlPlaneNodeReadyCommand(controlPlaneCmd)
+			commands.DefineReleaseConvergeLockCommand(lockCmd)
 		}
 	}
 
-	deckhouseCmd := testCmd.Command("deckhouse", "Install and uninstall deckhouse.")
-	{
-		commands.DefineDeckhouseCreateDeployment(deckhouseCmd)
-		commands.DefineDeckhouseRemoveDeployment(deckhouseCmd)
-		commands.DefineWaitDeploymentReadyCommand(deckhouseCmd)
+	allowed, _ = checkCommand("destroy", allowedСommands)
+	if allowed {
+		commands.DefineDestroyCommand(kpApp)
+	}
+
+	allowed, subcommands = checkCommand("terraform", allowedСommands)
+	if allowed {
+		terraformCmd := kpApp.Command("terraform", "Terraform commands.")
+		{
+			if checkSubcommand("converge-exporter", subcommands) {
+				commands.DefineTerraformConvergeExporterCommand(terraformCmd)
+			}
+
+			if checkSubcommand("check", subcommands) {
+				commands.DefineTerraformCheckCommand(terraformCmd)
+			}
+		}
+	}
+
+	allowed, subcommands = checkCommand("config", allowedСommands)
+	if allowed {
+		configCmd := kpApp.Command("config", "Load, edit and save various dhctl configurations.")
+		{
+			if checkSubcommand("parse", subcommands) {
+				parseCmd := configCmd.Command("parse", "Parse, validate and output configurations.")
+				{
+					commands.DefineCommandParseClusterConfiguration(kpApp, parseCmd)
+					commands.DefineCommandParseCloudDiscoveryData(kpApp, parseCmd)
+				}
+			}
+
+			if checkSubcommand("render", subcommands) {
+				renderCmd := configCmd.Command("render", "Render transitional configurations.")
+				{
+					commands.DefineRenderBashibleBundle(renderCmd)
+					commands.DefineRenderKubeadmConfig(renderCmd)
+					commands.DefineRenderMasterBootstrap(renderCmd)
+				}
+			}
+
+			if checkSubcommand("edit", subcommands) {
+				editCmd := configCmd.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
+				{
+					commands.DefineEditCommands(editCmd /* wConnFlags */, true)
+				}
+			}
+		}
+	}
+
+	allowed, subcommands = checkCommand("test", allowedСommands)
+	if allowed {
+		testCmd := kpApp.Command("test", "Commands to test the parts of bootstrap and converge process.")
+		{
+			if checkSubcommand("ssh-connection", subcommands) {
+				commands.DefineTestSSHConnectionCommand(testCmd)
+			}
+
+			if checkSubcommand("kubernetes-api-connection", subcommands) {
+				commands.DefineTestKubernetesAPIConnectionCommand(testCmd)
+			}
+
+			if checkSubcommand("scp", subcommands) {
+				commands.DefineTestSCPCommand(testCmd)
+			}
+
+			if checkSubcommand("upload-exec", subcommands) {
+				commands.DefineTestUploadExecCommand(testCmd)
+			}
+
+			if checkSubcommand("bashible-bundle", subcommands) {
+				commands.DefineTestBundle(testCmd)
+			}
+
+			if checkSubcommand("control-plane", subcommands) {
+				controlPlaneCmd := testCmd.Command("control-plane", "Commands to test control plane nodes.")
+				{
+					commands.DefineTestControlPlaneManagerReadyCommand(controlPlaneCmd)
+					commands.DefineTestControlPlaneNodeReadyCommand(controlPlaneCmd)
+				}
+			}
+		}
+
+		if checkSubcommand("deckhouse", subcommands) {
+			deckhouseCmd := testCmd.Command("deckhouse", "Install and uninstall deckhouse.")
+			{
+				commands.DefineDeckhouseCreateDeployment(deckhouseCmd)
+				commands.DefineDeckhouseRemoveDeployment(deckhouseCmd)
+				commands.DefineWaitDeploymentReadyCommand(deckhouseCmd)
+			}
+		}
 	}
 
 	runApplication(kpApp)
@@ -295,6 +382,12 @@ func initGlobalVars() {
 		panic(err)
 	}
 
+	commandsEnv := os.Getenv("DHCTL_CLI_ALLOWED_COMMANDS")
+
+	if len(commandsEnv) > 0 {
+		allowedСommands = strings.Split(commandsEnv, ", ")
+	}
+
 	// set relative path to config and template files
 	config.InitGlobalVars(dhctlPath)
 	commands.InitGlobalVars(dhctlPath)
@@ -302,4 +395,28 @@ func initGlobalVars() {
 	terraform.InitGlobalVars(dhctlPath)
 	manifests.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
+}
+
+func checkCommand(name string, allowedСommands []string) (bool, []string) {
+	if len(allowedСommands) == 0 || slices.Index(allowedСommands, name) != -1 {
+		return true, []string{}
+	}
+
+	for _, cm := range allowedСommands {
+		c := strings.Split(cm, " ")
+		if c[0] == name {
+			return true, c
+		}
+	}
+
+	return false, []string{}
+}
+
+func checkSubcommand(name string, subcommands []string) bool {
+	ex, _ := checkCommand(name, subcommands)
+	if len(subcommands) == 2 && subcommands[1] == "*" || ex {
+		return true
+	}
+
+	return false
 }
