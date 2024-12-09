@@ -19,6 +19,11 @@ variable "cloudConfig" {
   default = ""
 }
 
+variable "systemRegistryEnable" {
+  type = bool
+  default = false
+}
+
 locals{
   resource_name_prefix = var.clusterConfiguration.cloud.prefix
   master_node_name = join("-", [local.resource_name_prefix, "master", var.nodeIndex])
@@ -27,9 +32,11 @@ locals{
   ssh_pubkey = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
   master_root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeGb", 50)
   master_etcd_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", 15)
+  master_system_registry_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "systemRegistryDiskSizeGb", 100)
   image_name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "imageName", null)
   resource_group_name = join("-", [local.resource_name_prefix, "rg"])
   kubernetes_data_disk_name = join("-", [local.master_node_name, "kubernetes-data"])
+  system_registry_data_disk_name = join("-", [local.master_node_name, "system-registry-data"])
   location = lookup(var.providerClusterConfiguration, "location", null)
   storage_endpoint = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storageEndpoint", null)
   pool = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "pool", null)

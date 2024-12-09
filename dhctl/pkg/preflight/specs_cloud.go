@@ -90,9 +90,9 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
+		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 		// externalDiskSizeDefault = 30
-		// TODO registryDiskPropertyPath
-		
+
 	default:
 		return fmt.Errorf("unknown provider cluster configuration kind: %s", configKind)
 	}

@@ -50,6 +50,9 @@ apiVersions:
               etcdDiskSizeGb:
                 description: |
                   Размер диска для хранения данных etcd в GiB.
+              systemRegistryDiskSizeGb:
+                description: |
+                  Размер диска system registry. Значение указывается в гигабайтах.
               imageName:
                 description: |
                   Имя образа ОС, используемое для развертывания ВМ.
