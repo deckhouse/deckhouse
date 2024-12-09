@@ -13,8 +13,8 @@ The image creation process involves the following steps:
 
 There are different types of images:
 
-- ISO Image: An installation image used for the initial installation of an operating system. Such images are released by OS vendors and are used for installation on physical and virtual servers.
-- Preinstalled System Disk Image: Contains a pre-installed and configured operating system, ready for use after creating a virtual machine. These images are offered by various vendors and can come in formats such as qcow2, raw, vmdk, and others.
+- ISO Image: An image used for the initial installation of an operating system. Such images are released by OS vendors and are used for installation on physical and virtual servers.
+- Preinstalled System Disk Image: Contains configured operating system, ready for use after creating a virtual machine. These images are offered by various vendors and can come in formats such as qcow2, raw, vmdk, and others.
 
 Examples of resources for obtaining virtual machine images:
 
@@ -31,7 +31,7 @@ Images can also be created from other images and virtual machine disks.
 For project-specific images, two storage options are supported:
 
 - Container registry: The default type where the image is stored in the DVCR.
-- Persistent Volume Claim`: This type uses PVC as the storage for the image. This option is preferable when using storage that supports fast PVC cloning, as disk creation from images will be faster in this case.
+- Persistent Volume Claim: This type uses PVC as the storage for the image. This option is preferable when using storage that supports fast PVC cloning, as disk creation from images will be faster in this case.
 
 ### Creating an image from an HTTP server
 
