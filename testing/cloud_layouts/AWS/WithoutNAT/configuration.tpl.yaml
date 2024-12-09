@@ -79,7 +79,7 @@ spec:
   enabled: true
   settings:
     earlyOomEnabled: false
-  version: 1
+  version: 2
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
