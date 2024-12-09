@@ -148,6 +148,27 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 			continue
 		}
 
+		// update module version
+		module := new(v1alpha1.Module)
+		if err = l.client.Get(ctx, client.ObjectKey{Name: release.Spec.ModuleName}, module); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("get '%s' module: %w", release.Spec.ModuleName, err)
+			}
+			l.log.Warnf("the '%s' module is missing, skip setting version", release.Spec.ModuleName)
+		} else {
+			l.log.Debugf("set the '%s' version for the '%s' module", release.Spec.Version.String(), release.Spec.ModuleName)
+			err = utils.Update[*v1alpha1.Module](ctx, l.client, module, func(module *v1alpha1.Module) bool {
+				if module.Properties.Version != "v"+release.Spec.Version.String() {
+					module.Properties.Version = "v" + release.Spec.Version.String()
+					return true
+				}
+				return false
+			})
+			if err != nil {
+				return fmt.Errorf("update the '%s' module: %w", release.Spec.ModuleName, err)
+			}
+		}
+
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
