@@ -87,7 +87,8 @@ resource "google_compute_instance" "master" {
   }
   lifecycle {
     ignore_changes = [
-      attached_disk,
+      attached_disk[0], # ignore changes for kubernetes_data device
+      attached_disk[1], # ignore changes for system_registry_data device
       metadata["user-data"]
     ]
   }
