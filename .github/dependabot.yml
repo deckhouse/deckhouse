@@ -259,7 +259,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/015-admission-policy-engine/images/constraint-exporter"
+  directory: "/modules/015-admission-policy-engine/images/constraint-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
