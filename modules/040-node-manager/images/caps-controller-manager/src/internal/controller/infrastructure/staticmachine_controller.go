@@ -148,15 +148,6 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if !staticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		machineScope.Logger.Info("Reconciling delete StaticMachine")
 
-		if instanceScope != nil {
-			if _, skip := instanceScope.Instance.Annotations["static.node.deckhouse.io/skip-bootstrap-phase"]; skip {
-				controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
-				if err := machineScope.Patch(ctx); err != nil {
-					return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer from StaticMachine")
-				}
-				return ctrl.Result{}, nil
-			}
-		}
 		return r.reconcileDelete(ctx, machineScope, instanceScope)
 	}
 
@@ -268,6 +259,12 @@ func (r *StaticMachineReconciler) cleanup(
 	ctx context.Context,
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
+	if instanceScope != nil {
+		if _, skip := instanceScope.Instance.Annotations["static.node.deckhouse.io/skip-cleanup-phase"]; skip {
+			return ctrl.Result{}, nil
+		}
+	}
+
 	instanceScope.Logger.Info("StaticInstance is cleaning")
 
 	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning &&

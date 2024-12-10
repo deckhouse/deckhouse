@@ -273,7 +273,7 @@ func (r *StaticInstanceReconciler) adoptBootstrappedStaticInstance(ctx context.C
 		APIVersion: machine.APIVersion,
 	}
 
-	delete(instanceScope.Instance.Annotations, skipBootstrapPhaseAnnotation)
+	// delete(instanceScope.Instance.Annotations, skipBootstrapPhaseAnnotation)
 	conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceBootstrapSucceededCondition)
 	conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning)
