@@ -43,7 +43,7 @@ import (
 const (
 	cniConfigurationSettledKey = "cniConfigurationSettled"
 	checkCNIConfigMetricName   = "cniMisconfigured"
-	checkCNIConfigMetricGroup  = "d8_chech_cni_conf"
+	checkCNIConfigMetricGroup  = "d8_check_cni_conf"
 	cni                        = "cilium"
 	cniName                    = "cni-" + cni
 )
@@ -199,14 +199,15 @@ func checkCni(input *go_hook.HookInput) error {
 		desiredCNIModuleConfig = &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ModuleConfig",
-				APIVersion: "deckhouse. io/v1alpha1",
+				APIVersion: "deckhouse.io/v1alpha1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: cniName,
 			},
 			Spec: v1alpha1.ModuleConfigSpec{
-				Enabled: pointer.Bool(true),
-				Version: 1,
+				Enabled:  pointer.Bool(true),
+				Version:  1,
+				Settings: v1alpha1.SettingsValues{},
 			},
 		}
 		needUpdateMC = true
@@ -271,6 +272,7 @@ func checkCni(input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("cannot marshal desired CNI moduleConfig, err: %w", err)
 		}
+		data := map[string]string{cniName + "-mc.yaml": string(desiredCNIModuleConfigYAML)}
 		cm := &v1.ConfigMap{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",
@@ -280,9 +282,8 @@ func checkCni(input *go_hook.HookInput) error {
 				Name:      "desiredCNIModuleConfig",
 				Namespace: "d8-system",
 			},
-			Data: map[string]string{cniName + "-mc.yaml": string(desiredCNIModuleConfigYAML)},
+			Data: data,
 		}
-
 		input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
 		setCNIMiscMetricAndReq(input, true)
 		return nil

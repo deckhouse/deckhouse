@@ -19,7 +19,12 @@ package hooks
 import (
 	"strings"
 
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 
@@ -32,13 +37,27 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+func checkMetric(metrics []operation.MetricOperation, value float64) {
+	Expect(metrics).To(HaveLen(2))
+	Expect(metrics[0]).To(BeEquivalentTo(operation.MetricOperation{
+		Group:  checkCNIConfigMetricGroup,
+		Action: "expire",
+	}))
+	Expect(metrics[1].Name).To(BeEquivalentTo(checkCNIConfigMetricName))
+	Expect(metrics[1].Group).To(BeEquivalentTo(checkCNIConfigMetricGroup))
+	Expect(metrics[1].Action).To(BeEquivalentTo("set"))
+	Expect(metrics[1].Value).To(BeEquivalentTo(ptr.To(value)))
+	Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{"cni": cniName}))
+}
+
 var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", func() {
 
 	const (
-		initValuesString = `{"cniCilium":{"internal": {}}}`
-		// initConfigValuesString = `{"cniCilium":{}}`
-		initConfigValuesString = `{}`
+		initValuesString       = `{"cniCilium":{"internal": {}}}`
+		initConfigValuesString = `{"cniCilium":{}}`
 	)
+	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	cniSecretYAML := func(cniName, data string) string {
 		secretData := make(map[string][]byte)
@@ -63,7 +82,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", fu
 	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues) string {
 		mc := &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1alpha1",
+				APIVersion: "deckhouse.io/v1alpha1",
 				Kind:       "ModuleConfig",
 			},
 
@@ -81,45 +100,80 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", fu
 		return string(marshaled)
 	}
 
-	//f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
-	//f := HookExecutionConfigInit(`{"cniCilium":{"internal":{}}}`, `{"cniCilium":{}}`)
-	// f := HookExecutionConfigInit(`{"cniCilium":{"internal":{}}}`, ``)
-	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
-	//f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
-
-	Context("Cluster has not d8-cni-configuration secret and has not cni mc", func() {
+	Context("Cluster has not cni secret (and has not cni mc too)", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			// f.BindingContexts.Set(f.KubeStateSet(``))
-			f.RunHook()
-		})
-
-		FIt("ExecuteSuccessfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-		})
-	})
-
-	Context("Cluster has d8-cni-configuration secret and has correct MC", func() {
-		BeforeEach(func() {
-			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
-			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
-			resources := []string{
-				cniSecretYAML("cilium", `{"mode": "VXLAN", "masqueradeMode": "BPF"}`),
-				cniMCYAML("cilium", pointer.Bool(true), v1alpha1.SettingsValues{
-					"tunnelMode":     "VXLAN",
-					"masqueradeMode": "BPF",
-				}),
-			}
-			//f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
-			f.KubeStateSet(strings.Join(resources, "\n---\n"))
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-
 			f.RunHook()
 		})
 
 		It("ExecuteSuccessfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("true"))
+			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "desiredCNIModuleConfig")
+			Expect(cm.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster has cni secret but key `cni` does not equal `cilium`", func() {})
+
+	Context("Cluster has cni secret, key `cni` eq `cilium`, but cni MC does not exist or it not explicitly enabled", func() {
+		BeforeEach(func() {
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "BPF"}`),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+
+		})
+
+		It("ExecuteSuccessfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("false"))
+			checkMetric(f.MetricsCollector.CollectedMetrics(), 1.0)
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "desiredCNIModuleConfig")
+			Expect(cm.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled but secret key `cilium` does not exist", func() {})
+
+	Context("??Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled, secret key `cilium` exist but it is empty ??", func() {})
+
+	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled, secret key `cilium` exist and not empty but some parameters misconfigured", func() {})
+
+	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled, secret key `cilium` exist and not empty but some parameters has unexpected value", func() {})
+
+	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled, secret key `cilium` exist and not empty and all parameters equal", func() {
+		BeforeEach(func() {
+			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "BPF"}`),
+				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "BPF",
+				}),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("ExecuteSuccessfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("true"))
+			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "desiredCNIModuleConfig")
+			Expect(cm.Exists()).To(BeFalse())
 		})
 	})
 })
