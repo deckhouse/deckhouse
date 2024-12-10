@@ -400,9 +400,7 @@ echo "$MYRESULTSTRING"
 
 При использовании менеджера репозиториев [Nexus](https://github.com/sonatype/nexus-public) должны быть выполнены следующие требования:
 
-* Включен `Docker Bearer Token Realm` (*Administration* -> *Security* -> *Realms*).
 * Создан **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*):
-  * Параметр `Allow anonymous docker pull` для репозитория должен быть включен. Данный параметр включает поддержку авторизации с помощью Bearer-токенов, при этом анонимный доступ [не будет работать](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories), если он не был явно включен в *Administration* -> *Security* -> *Anonymous Access* и пользователю `anonymous` не были даны права на доступ к репозиторию.
   * Параметр `Maximum metadata age` для репозитория должен быть установлен в `0`.
 * Должен быть настроен контроль доступа:
   * Создана роль **Nexus** (*Administration* -> *Security* -> *Roles*) со следующими полномочиями:
@@ -412,16 +410,12 @@ echo "$MYRESULTSTRING"
 
 **Настройка**:
 
-* Включите `Docker Bearer Token Realm` (*Administration* -> *Security* -> *Realms*):
-  ![Включение `Docker Bearer Token Realm`](images/registry/nexus/nexus-realm.png)
-
 * Создайте **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*), указывающий на [Deckhouse registry](https://registry.deckhouse.ru/):
   ![Создание проксирующего репозитория Docker](images/registry/nexus/nexus-repository.png)
 
 * Заполните поля страницы создания репозитория следующим образом:
   * `Name` должно содержать имя создаваемого репозитория, например `d8-proxy`.
   * `Repository Connectors / HTTP` или `Repository Connectors / HTTPS` должно содержать выделенный порт для создаваемого репозитория, например `8123` или иной.
-  * `Allow anonymous docker pull` должно быть включено, чтобы работала авторизация с помощью Bearer-токенов. При этом анонимный доступ [не будет работать](https://help.sonatype.com/en/docker-authentication.html#unauthenticated-access-to-docker-repositories), если он не был явно включен в *Administration* -> *Security* -> *Anonymous Access* и пользователю `anonymous` не были даны права на доступ к репозиторию.
   * `Remote storage` должно иметь значение `https://registry.deckhouse.ru/`.
   * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
   * `Maximum Metadata Age` должно быть равно `0`.
@@ -812,6 +806,10 @@ proxy:
 ```
 
 ## Изменение конфигурации
+
+{% alert level="warning" %}
+Для применения изменений конфигурации узлов необходимо выполнить команду  `dhctl converge`, запустив инсталлятор Deckhouse. Эта команда синхронизирует состояние узлов с указанным в конфигурации.
+{% endalert %}
 
 ### Как изменить конфигурацию кластера?
 

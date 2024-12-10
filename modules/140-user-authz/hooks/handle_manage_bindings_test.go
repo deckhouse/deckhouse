@@ -29,7 +29,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", func() {
+var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal": {}}}`, "")
 
 	Context("There`s ManageScopeBinding", func() {
@@ -50,13 +50,13 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 
 		It("Should create RoleBinding", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:binding:test"))
-			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:binding:test"))
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
 
-			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:binding:test2")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:binding:test2"))
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:admin:binding:test2")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test2"))
 		})
 	})
 
@@ -75,10 +75,10 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 
 		It("Should create RoleBinding", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:binding:test"))
-			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:binding:test")
-			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:binding:test"))
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
 		})
 	})
 
@@ -96,13 +96,13 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-scope-bindings ::", f
 
 		It("Should delete RoleBinding", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:binding:test")
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test")
 			Expect(roleBinding).To(BeEmpty())
-			roleBinding = f.KubernetesResource("RoleBinding", "test-ns", "d8:use:binding:test2")
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test2")
 			Expect(roleBinding).To(BeEmpty())
-			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:use:binding:test3")
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:use:admin:binding:test3")
 			Expect(roleBinding).To(BeEmpty())
-			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:use:binding:test4")
+			roleBinding = f.KubernetesResource("RoleBinding", "test-ns2", "d8:use:admin:binding:test4")
 			Expect(roleBinding).To(BeEmpty())
 		})
 	})

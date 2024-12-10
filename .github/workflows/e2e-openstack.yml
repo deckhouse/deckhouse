@@ -45,7 +45,7 @@ on:
       test_config:
         description: 'JSON string of parameters of current test'
         required: false
-        default: '{"cri":"Containerd","ver":"1.27","edition":"FE"}'
+        default: '{"cri":"Containerd","ver":"1.29","edition":"FE"}'
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'
         required: false
@@ -190,7 +190,7 @@ jobs:
         with:
           script: |
             const provider = 'openstack';
-            const kubernetesDefaultVersion = '1.27';
+            const kubernetesDefaultVersion = '1.29';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});

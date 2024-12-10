@@ -83,7 +83,6 @@ discovery:
 `
 
 const dashboard = `
-accessLevel: User
 internal:
   auth: {}
 auth: {}
@@ -109,7 +108,7 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", "d8-dashboard", "deckhouse-registry")
 
 			metricsScraper := f.KubernetesResource("Deployment", "d8-dashboard", "metrics-scraper")
-			dashboard := f.KubernetesResource("Deployment", "d8-dashboard", "dashboard")
+			web := f.KubernetesResource("Deployment", "d8-dashboard", "web")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -131,9 +130,9 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 			Expect(metricsScraper.Field("spec.strategy").Exists()).To(BeFalse())
 			Expect(metricsScraper.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
-			Expect(dashboard.Exists()).To(BeTrue())
-			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
-			Expect(dashboard.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+			Expect(web.Exists()).To(BeTrue())
+			Expect(web.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
+			Expect(web.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "dashboard"
@@ -144,9 +143,9 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
 `))
-			Expect(dashboard.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
-			Expect(dashboard.Field("spec.strategy").Exists()).To(BeFalse())
-			Expect(dashboard.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
+			Expect(web.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
+			Expect(web.Field("spec.strategy").Exists()).To(BeFalse())
+			Expect(web.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 		})
 	})
 
@@ -165,7 +164,7 @@ var _ = Describe("Module :: dashboard :: helm template ::", func() {
 			registrySecret := f.KubernetesResource("Secret", "d8-dashboard", "deckhouse-registry")
 
 			metricsScraper := f.KubernetesResource("Deployment", "d8-dashboard", "metrics-scraper")
-			dashboard := f.KubernetesResource("Deployment", "d8-dashboard", "dashboard")
+			web := f.KubernetesResource("Deployment", "d8-dashboard", "web")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -197,9 +196,9 @@ podAntiAffinity:
         app: metrics-scraper
     topologyKey: kubernetes.io/hostname
 `))
-			Expect(dashboard.Exists()).To(BeTrue())
-			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
-			Expect(dashboard.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+			Expect(web.Exists()).To(BeTrue())
+			Expect(web.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
+			Expect(web.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "dashboard"
@@ -210,19 +209,19 @@ podAntiAffinity:
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
 `))
-			Expect(dashboard.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
-			Expect(dashboard.Field("spec.strategy").String()).To(MatchYAML(`
+			Expect(web.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
+			Expect(web.Field("spec.strategy").String()).To(MatchYAML(`
 type: RollingUpdate
 rollingUpdate:
   maxSurge: 0
   maxUnavailable: 1
 `))
-			Expect(dashboard.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
+			Expect(web.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
 podAntiAffinity:
   requiredDuringSchedulingIgnoredDuringExecution:
   - labelSelector:
       matchLabels:
-        app: dashboard
+        app: web
     topologyKey: kubernetes.io/hostname
 `))
 		})
@@ -243,7 +242,7 @@ podAntiAffinity:
 			registrySecret := f.KubernetesResource("Secret", "d8-dashboard", "deckhouse-registry")
 
 			metricsScraper := f.KubernetesResource("Deployment", "d8-dashboard", "metrics-scraper")
-			dashboard := f.KubernetesResource("Deployment", "d8-dashboard", "dashboard")
+			web := f.KubernetesResource("Deployment", "d8-dashboard", "web")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -264,9 +263,9 @@ podAntiAffinity:
 			Expect(metricsScraper.Field("spec.strategy").Exists()).To(BeFalse())
 			Expect(metricsScraper.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 
-			Expect(dashboard.Exists()).To(BeTrue())
-			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
-			Expect(dashboard.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+			Expect(web.Exists()).To(BeTrue())
+			Expect(web.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
+			Expect(web.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "dashboard"
@@ -277,9 +276,9 @@ podAntiAffinity:
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
 `))
-			Expect(dashboard.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
-			Expect(dashboard.Field("spec.strategy").Exists()).To(BeFalse())
-			Expect(dashboard.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
+			Expect(web.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
+			Expect(web.Field("spec.strategy").Exists()).To(BeFalse())
+			Expect(web.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
 		})
 	})
 
@@ -298,7 +297,7 @@ podAntiAffinity:
 			registrySecret := f.KubernetesResource("Secret", "d8-dashboard", "deckhouse-registry")
 
 			metricsScraper := f.KubernetesResource("Deployment", "d8-dashboard", "metrics-scraper")
-			dashboard := f.KubernetesResource("Deployment", "d8-dashboard", "dashboard")
+			web := f.KubernetesResource("Deployment", "d8-dashboard", "web")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -330,9 +329,9 @@ podAntiAffinity:
         app: metrics-scraper
     topologyKey: kubernetes.io/hostname
 `))
-			Expect(dashboard.Exists()).To(BeTrue())
-			Expect(dashboard.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
-			Expect(dashboard.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
+			Expect(web.Exists()).To(BeTrue())
+			Expect(web.Field("spec.template.spec.nodeSelector").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
+			Expect(web.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "dashboard"
@@ -343,19 +342,19 @@ podAntiAffinity:
 - key: drbd.linbit.com/force-io-error
 - key: drbd.linbit.com/ignore-fail-over
 `))
-			Expect(dashboard.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
-			Expect(dashboard.Field("spec.strategy").String()).To(MatchYAML(`
+			Expect(web.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
+			Expect(web.Field("spec.strategy").String()).To(MatchYAML(`
 type: RollingUpdate
 rollingUpdate:
   maxSurge: 0
   maxUnavailable: 1
 `))
-			Expect(dashboard.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
+			Expect(web.Field("spec.template.spec.affinity").String()).To(MatchYAML(`
 podAntiAffinity:
   requiredDuringSchedulingIgnoredDuringExecution:
   - labelSelector:
       matchLabels:
-        app: dashboard
+        app: web
     topologyKey: kubernetes.io/hostname
 `))
 		})

@@ -48,12 +48,12 @@ import (
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	moduleconfig "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/config"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
+	moduleoverride "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/override"
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -172,7 +172,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	// init module manager
 	if err = operator.Setup(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("setup operator: %w", err)
 	}
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
@@ -201,7 +201,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	bundle := os.Getenv("DECKHOUSE_BUNDLE")
 
-	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, embeddedPolicy, logger.Named("module-loader"))
+	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, embeddedPolicy, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
 	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger.Named("deckhouse-release-controller"))
@@ -209,9 +209,9 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, configHandler, operator.ModuleManager, operator.MetricStorage, loader, bundle, logger.Named("module-config-controller"))
+	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, loader, bundle, logger.Named("module-config-controller"))
 	if err != nil {
-		return nil, fmt.Errorf("register module config: %w", err)
+		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
 	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, logger.Named("module-source-controller"))
@@ -219,14 +219,14 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
 
-	err = modulerelease.NewModuleReleaseController(runtimeManager, dc, embeddedPolicy, operator.ModuleManager, operator.MetricStorage, preflightCountDown, logger.Named("module-release-controller"))
+	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
 	if err != nil {
-		return nil, fmt.Errorf("create module release controller: %w", err)
+		return nil, fmt.Errorf("register module release controller: %w", err)
 	}
 
-	err = modulerelease.NewModulePullOverrideController(runtimeManager, dc, operator.ModuleManager, preflightCountDown, logger.Named("module-pull-override-controller"))
+	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, dc, logger.Named("module-pull-override-controller"))
 	if err != nil {
-		return nil, fmt.Errorf("create module pull override controller: %w", err)
+		return nil, fmt.Errorf("register module pull override controller: %w", err)
 	}
 
 	err = docbuilder.NewModuleDocumentationController(runtimeManager, dc, logger.Named("module-documentation-controller"))
@@ -234,7 +234,13 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return nil, fmt.Errorf("create module documentation controller: %w", err)
 	}
 
-	validation.RegisterAdmissionHandlers(operator.AdmissionServer, runtimeManager.GetClient(), operator.ModuleManager, configtools.NewValidator(operator.ModuleManager), loader, operator.MetricStorage)
+	validation.RegisterAdmissionHandlers(
+		operator.AdmissionServer,
+		runtimeManager.GetClient(),
+		operator.ModuleManager,
+		configtools.NewValidator(operator.ModuleManager),
+		loader,
+		operator.MetricStorage)
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
@@ -251,14 +257,17 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
 func (c *DeckhouseController) Start(ctx context.Context) error {
-	// run preflight checks
-	if d8env.GetDownloadedModulesDir() != "" {
-		c.startModulesControllers(ctx)
-	}
+	// run preflight check
+	c.startModulesControllers(ctx)
 
 	// wait for cache sync
 	if ok := c.runtimeManager.GetCache().WaitForCacheSync(ctx); !ok {
 		return fmt.Errorf("wait for cache sync")
+	}
+
+	// sync fs with cluster state, restore or delete modules
+	if err := c.moduleLoader.Sync(ctx); err != nil {
+		return fmt.Errorf("init module loader: %w", err)
 	}
 
 	// load and ensure modules from FS at start

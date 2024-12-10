@@ -1,0 +1,39 @@
+# #####################################################################
+# Based on https://github.com/kubernetes/dashboard/blob/web/v1.5.2/modules/api/Dockerfile
+# #####################################################################
+{{- $version := "1.10.1" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /dashboard-api
+  before: setup
+docker:
+  ENTRYPOINT: ["/dashboard-api"]
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src/modules/api
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go mod download
+  - go build -trimpath -ldflags="-s -w -X k8s.io/dashboard/api/pkg/environment.Version=v{{ $version }}" -o /dashboard-api .
+  - chown 64535:64535 /dashboard-api
+  - chmod 0755 /dashboard-api
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 -b api/v{{ $version }} {{ .SOURCE_REPO }}/kubernetes/dashboard .
+  - rm -r .git .github charts docs hack

@@ -240,8 +240,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubernetesApiProxy":       "imageHash-controlPlaneManager-kubernetesApiProxy",
 	},
 	"dashboard": map[string]interface{}{
-		"dashboard":      "imageHash-dashboard-dashboard",
+		"api":            "imageHash-dashboard-api",
+		"auth":           "imageHash-dashboard-auth",
 		"metricsScraper": "imageHash-dashboard-metricsScraper",
+		"web":            "imageHash-dashboard-web",
 	},
 	"deckhouse": map[string]interface{}{
 		"webhookHandler": "imageHash-deckhouse-webhookHandler",
@@ -454,6 +456,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"falcosidekick":    "imageHash-runtimeAuditEngine-falcosidekick",
 		"k8sMetacollector": "imageHash-runtimeAuditEngine-k8sMetacollector",
 		"rulesLoader":      "imageHash-runtimeAuditEngine-rulesLoader",
+	},
+	"serviceWithHealthchecks": map[string]interface{}{
+		"agent":      "imageHash-serviceWithHealthchecks-agent",
+		"controller": "imageHash-serviceWithHealthchecks-controller",
 	},
 	"snapshotController": map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",
