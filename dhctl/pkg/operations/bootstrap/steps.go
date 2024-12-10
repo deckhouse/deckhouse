@@ -38,6 +38,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
+	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -55,8 +58,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
-	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
 const (
@@ -437,7 +438,7 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 		}
 
 		err := retry.NewLoop(fmt.Sprintf("Prepare %s", app.NodeDeckhouseDirectoryPath), 30, 10*time.Second).Run(func() error {
-			cmd := nodeInterface.Command("mkdir", "-p", "-m", "0755", app.DeckhouseNodeBinPath)
+			cmd := nodeInterface.Command("sh", "-c", fmt.Sprintf("umask 0022 ; mkdir -p -m 0755 %s", app.DeckhouseNodeBinPath))
 			cmd.Sudo()
 			if err = cmd.Run(); err != nil {
 				return fmt.Errorf("ssh: mkdir -p %s -m 0755: %w", app.DeckhouseNodeBinPath, err)
@@ -445,13 +446,12 @@ func RunBashiblePipeline(nodeInterface node.Interface, cfg *config.MetaConfig, n
 
 			return nil
 		})
-
 		if err != nil {
 			return fmt.Errorf("cannot create %s directories: %w", app.NodeDeckhouseDirectoryPath, err)
 		}
 
 		err = retry.NewLoop(fmt.Sprintf("Prepare %s", app.DeckhouseNodeTmpPath), 30, 10*time.Second).Run(func() error {
-			cmd := nodeInterface.Command("mkdir", "-p", "-m", "1777", app.DeckhouseNodeTmpPath)
+			cmd := nodeInterface.Command("sh", "-c", fmt.Sprintf("umask 0022 ; mkdir -p -m 1777 %s", app.DeckhouseNodeTmpPath))
 			cmd.Sudo()
 			if err := cmd.Run(); err != nil {
 				return fmt.Errorf("ssh: mkdir -p -m 1777 %s: %w", app.DeckhouseNodeTmpPath, err)
@@ -542,7 +542,6 @@ func setupRPPTunnel(sshClient *ssh.Client) (func(), error) {
 }
 
 func CheckDHCTLDependencies(nodeInteface node.Interface) error {
-
 	type checkResult struct {
 		name string
 		err  error
@@ -561,7 +560,6 @@ func CheckDHCTLDependencies(nodeInteface node.Interface) error {
 
 		return retry.NewSilentLoop(fmt.Sprintf("Check dependency %s", dep), 30, 5*time.Second).BreakIf(breakPredicate).Run(func() error {
 			output, err := nodeInteface.Command("command", "-v", dep).CombinedOutput()
-
 			if err != nil {
 				var ee *exec.ExitError
 				if errors.As(err, &ee) {
@@ -604,7 +602,6 @@ func CheckDHCTLDependencies(nodeInteface node.Interface) error {
 					go func() {
 						defer wg.Done()
 						err := checkDependency(dep, resultsChan)
-
 						if err != nil {
 							err = errors.Join(exceedDependency, err)
 						}
@@ -636,7 +633,6 @@ func CheckDHCTLDependencies(nodeInteface node.Interface) error {
 
 		log.InfoLn("OK!")
 		return nil
-
 	})
 }
 
