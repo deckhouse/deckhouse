@@ -95,6 +95,12 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}()
 
+	if instanceScope.Instance.Annotations == nil {
+		instanceScope.Instance.Annotations = make(map[string]string)
+	}
+	nodeGroupName := instanceScope.MachineScope.StaticMachine.Labels["node-group"]
+	instanceScope.Instance.Annotations["node-group"] = nodeGroupName
+
 	status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
