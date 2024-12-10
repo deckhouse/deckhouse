@@ -15,6 +15,7 @@
 package testclient
 
 import (
+	"log/slog"
 	"maps"
 	"reflect"
 	"slices"
@@ -44,7 +45,7 @@ type Validator struct {
 func (v *Validator) Validate(obj any, options ...validation.ValidationOption) *validate.Result {
 	runtimeObject, ok := obj.(runtime.Object)
 	if !ok {
-		v.logger.Debug("unsupported type", "obj", obj, "type", reflect.TypeOf(obj).String())
+		v.logger.Debug("unsupported type", slog.Any("obj", obj), slog.String("type", reflect.TypeOf(obj).String()))
 		return nil
 	}
 
@@ -59,7 +60,7 @@ func (v *Validator) Validate(obj any, options ...validation.ValidationOption) *v
 func (v *Validator) ValidateUpdate(newObj, oldObj any, options ...validation.ValidationOption) *validate.Result {
 	runtimeObject, ok := newObj.(runtime.Object)
 	if !ok {
-		v.logger.Debug("unsupported type", "obj", newObj, "type", reflect.TypeOf(newObj).String())
+		v.logger.Debug("unsupported type", slog.Any("obj", newObj), slog.String("type", reflect.TypeOf(newObj).String()))
 		return nil
 	}
 
