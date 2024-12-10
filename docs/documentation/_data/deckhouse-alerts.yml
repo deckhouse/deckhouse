@@ -2634,7 +2634,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Failed to send Deckhouse release notification webhook.
+        Failed to send the Deckhouse release notification webhook.
 
         Check the notification webhook address by running `kubectl get mc deckhouse -o yaml`.
       summary: |
