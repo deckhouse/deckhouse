@@ -61,7 +61,7 @@ spec:
                   description: The module description.
                 requirements:
                   type: object
-                  additionalProperties: true
+                  x-kubernetes-preserve-unknown-fields: true
                   description: The module requirements.
             status:
               type: object
