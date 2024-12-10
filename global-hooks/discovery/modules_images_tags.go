@@ -21,11 +21,12 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/iancoleman/strcase"
+
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var re = regexp.MustCompile(`^([0-9]+)-([a-zA-Z-]+)$`)
