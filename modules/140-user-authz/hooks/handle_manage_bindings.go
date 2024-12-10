@@ -136,7 +136,7 @@ func syncBindings(input *go_hook.HookInput) error {
 	for _, snap := range input.Snapshots["manageBindings"] {
 		binding := snap.(*filteredManageBinding)
 		role, namespaces := roleAndNamespacesByBinding(input.Snapshots["manageRoles"], binding.RoleName)
-		useBindingName := fmt.Sprintf("d8:use:binding:%s", binding.Name)
+		useBindingName := fmt.Sprintf("d8:use:%s:binding:%s", role, binding.Name)
 		for namespace := range namespaces {
 			input.PatchCollector.Create(createBinding(binding, role, namespace), object_patch.UpdateIfExists())
 			expected[useBindingName] = true
@@ -228,7 +228,7 @@ func createBinding(binding *filteredManageBinding, useRoleName string, namespace
 			APIVersion: "rbac.authorization.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("d8:use:binding:%s", binding.Name),
+			Name:      fmt.Sprintf("d8:use:%s:binding:%s", useRoleName, binding.Name),
 			Namespace: namespace,
 			Labels: map[string]string{
 				"heritage":                       "deckhouse",
