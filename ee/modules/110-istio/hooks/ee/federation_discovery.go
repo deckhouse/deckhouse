@@ -134,7 +134,6 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 		var httpOptionCA []http.Option
 		var httpOptionInsecure []http.Option
-		var allOptions []http.Option
 
 		if federationInfo.ClusterCA != "" {
 			caCerts := [][]byte{[]byte(federationInfo.ClusterCA)}
@@ -143,7 +142,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		if federationInfo.EnableInsecureConnection {
 			httpOptionInsecure = append(httpOptionInsecure, http.WithInsecureSkipVerify())
 		}
-		allOptions = append(httpOptionCA, httpOptionInsecure...)
+		allOptions := append(httpOptionCA, httpOptionInsecure...)
 
 		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(allOptions...), federationInfo.PublicMetadataEndpoint, "")
 		if err != nil {
