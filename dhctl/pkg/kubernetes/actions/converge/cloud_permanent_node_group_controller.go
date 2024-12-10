@@ -60,7 +60,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 
 	err := log.Process("terraform", fmt.Sprintf("Pipelines %s for %s-%s-%v", c.layoutStep, c.config.ClusterPrefix, c.name, nodesIndexToCreate), func() error {
 		var err error
-		nodesToWait, err = ParallelBootstrapAdditionalNodes(c.client, c.config, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+		nodesToWait, err = ParallelBootstrapAdditionalNodes(c.client, c.config, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext, nil, false)
 		return err
 	})
 	if err != nil {
