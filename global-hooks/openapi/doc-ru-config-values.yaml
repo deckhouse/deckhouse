@@ -96,32 +96,6 @@ properties:
               memory:
                 description: |
                   Объем памяти, выделяемой для компонентов control plane, работающих на каждом master-узле кластера.
-          everyNode:
-            description: |
-              Количество ресурсов (CPU и памяти), выделяемых для компонентов Deckhouse, работающих на каждом узле кластера.
-            properties:
-              cpu:
-                description: |
-                  Количество CPU, выделяемых на каждом узле.
-              memory:
-                description: |
-                  Объем памяти, выделяемой на каждом узле.
-          masterNode:
-            description: |
-              Количество ресурсов (CPU и памяти), выделяемых для компонентов Deckhouse, работающих на каждом master-узле (в том числе `control plane`, если `control plane` управляется Deckhouse).
-
-              > **Внимание!** В случае managed-кластера (Kubernetes as a Service) Deckhouse может не управлять компонентами `control plane`. В таких случаях все указанные в параметре `masterNode` ресурсы отдаются компонентам Deckhouse.
-            properties:
-              cpu:
-                description: |
-                  Количество CPU, выделяемых на каждом master-узле **дополнительно** к указанному в параметре `everyNode.cpu`:
-                    * Для кластера, управляемого Deckhouse, значение по умолчанию определяется автоматически по формуле: `.status.allocatable.cpu` минимального master-узла (но не более `4` (ядер CPU)) минус количество CPU, указанное в параметре `everyNode.cpu`.
-                    * Для managed-кластера значение по умолчанию: `1` (одно ядро CPU) минус количество CPU, указанное в параметре `everyNode.cpu`.
-              memory:
-                description: |
-                  Объем памяти, выделяемой на каждом master-узле, **дополнительно** к указанному в параметре `everyNode.memory`:
-                    * Для кластера, управляемого Deckhouse, значение по умолчанию определяется автоматически по формуле: `.status.allocatable.memory` минимального master-узла (но не более `8Gi`) минус значение, указанное в параметре `everyNode.memory`.
-                    * Для managed-кластера значение по умолчанию: `1Gi` минус значение, указанное в параметре `everyNode.memory`.
       storageClass:
         description: |
           Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).

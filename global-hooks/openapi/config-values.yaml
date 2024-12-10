@@ -176,59 +176,6 @@ properties:
                   The combined memory requests for control-plane components on each master node.
                 type: string
                 pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-          everyNode:
-            type: object
-            default: {}
-            additionalProperties: false
-            description: |
-              The amount of resources (CPU and memory) allocated to Deckhouse components running on each node of the cluster.
-            x-examples:
-            - cpu: 100m
-              memory: 150M
-            x-doc-deprecated: true
-            properties:
-              cpu:
-                description: |
-                  The combined CPU requests for all the Deckhouse components on each node.
-                default: "300m"
-                oneOf:
-                  - type: string
-                    pattern: "^[0-9]+m?$"
-                  - type: number
-              memory:
-                description: |
-                  The combined memory requests for all the Deckhouse components on each node.
-                type: string
-                default: "512Mi"
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-          masterNode:
-            type: object
-            additionalProperties: false
-            description: |
-              The amount of resources (CPU and memory) allocated to Deckhouse components running on the master nodes (including control plane components, if they are managed by Deckhouse).
-
-              > **Caution!** Deckhouse may not manage control plane components in KaaS clusters (Kubernetes as a Service, managed Kubernetes service, etc.). In such cases, all the specified resources are allocated to the Deckhouse components except the control plane.
-            x-examples:
-            - cpu: "1"
-              memory: 150Mi
-            x-doc-deprecated: true
-            properties:
-              cpu:
-                description: |
-                  The combined CPU requests for Deckhouse components on master nodes **in addition** to `everyNode.cpu`.
-                    * For a Deckhouse-controlled cluster, the default value is calculated automatically: `.status.allocatable.cpu` of the smallest master node (no more than `4` (CPU cores)) minus `everyNode.cpu`.
-                    * For a managed cluster, the default value is `1` (CPU core) minus `everyNode.cpu`.
-                oneOf:
-                  - type: string
-                    pattern: "^[0-9]+m?$"
-                  - type: number
-              memory:
-                description: |
-                  The total amount of memory allocated to Deckhouse components on master nodes **in addition** to `everyNode.memory`.
-                    * For a Deckhouse-managed cluster, the default value is calculated automatically: `.status.allocatable.memory` of the smallest master node (no more than `8Gi`) minus `everyNode.memory`.
-                    * For a managed cluster, the default value is `1Gi` minus `everyNode.memory`.
-                type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
       storageClass:
         type: string
         default: null
