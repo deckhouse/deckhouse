@@ -146,7 +146,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		instanceScope.Instance.Annotations = make(map[string]string)
 	}
 
-	nodeGroupName := getLabel(instanceScope.MachineScope.StaticMachine.Labels, "node-group", "unknown")
+	nodeGroupName := GetMachineScopeLabel(instanceScope.MachineScope, "node-group", "unknown")
 	instanceScope.Instance.Annotations["node-group"] = nodeGroupName
 
 	// Handle deleted static instance
@@ -336,12 +336,20 @@ func (r *StaticInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func getLabel(labels map[string]string, key string, defaultValue string) string {
-	if labels == nil {
+func GetMachineScopeLabel(machineScope *scope.MachineScope, key string, defaultValue string) string {
+	if machineScope == nil {
 		return defaultValue
 	}
-	if value, ok := labels[key]; ok && value != "" {
+	if machineScope.StaticMachine == nil {
+		return defaultValue
+	}
+	if machineScope.StaticMachine.Labels == nil {
+		return defaultValue
+	}
+
+	if value, exists := machineScope.StaticMachine.Labels[key]; exists && value != "" {
 		return value
 	}
+
 	return defaultValue
 }
