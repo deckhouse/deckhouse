@@ -11,11 +11,14 @@ mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - mkdir -p /src
     - cd /src
     - git clone --depth 1 -b v1.11.1 {{ $.SOURCE_REPO }}/coredns/coredns.git .
-    - find /patches -name '*.patch' -exec git apply {} \;
+    - git apply /patches/*.patch --verbose
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
     - go build -ldflags='-extldflags "-static" -s -w -X github.com/coredns/coredns/coremain.GitCommit=v1.11.1' -o /coredns
     - chown 64535:64535 /coredns

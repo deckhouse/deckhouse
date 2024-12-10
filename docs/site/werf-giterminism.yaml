@@ -2,4 +2,6 @@ giterminismConfigVersion: 1
 config:
   goTemplateRendering:
     allowEnvVariables: [ /BASE_.+/, /CI_.+/, "WERF_ENV" , /DOC_API_.+/ ]
-
+  stapel:
+    git:
+      allowBranch: true

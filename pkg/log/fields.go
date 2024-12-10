@@ -28,6 +28,13 @@ const (
 	yamlFormatter = "yaml"
 )
 
+func Err(err error) slog.Attr {
+	return slog.Attr{
+		Key:   "error",
+		Value: slog.StringValue(err.Error()),
+	}
+}
+
 var _ slog.LogValuer = (*Raw)(nil)
 
 func RawJSON(key, text string) slog.Attr {

@@ -174,6 +174,11 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 
 	privateKeyPath := filepath.Join(tmpDir, "id_rsa_converger")
 
+	privateKey := session.AgentPrivateKey{
+		Key:        privateKeyPath,
+		Passphrase: c.convergeState.NodeUserCredentials.Password,
+	}
+
 	err = os.WriteFile(privateKeyPath, []byte(c.convergeState.NodeUserCredentials.PrivateKey), 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to write private key for NodeUser: %w", err)
@@ -207,11 +212,8 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 	}
 
 	c.client.KubeProxy.StopAll()
-	if sshCl != nil {
-		sshCl.Stop()
-	}
 
-	newSSHClient, err := ssh.NewClient(session.NewSession(session.Input{
+	newSSHClient := ssh.NewClient(session.NewSession(session.Input{
 		User:           c.convergeState.NodeUserCredentials.Name,
 		Port:           settings.Port,
 		BastionHost:    settings.BastionHost,
@@ -220,14 +222,18 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 		ExtraArgs:      settings.ExtraArgs,
 		AvailableHosts: settings.AvailableHosts(),
 		BecomePass:     c.convergeState.NodeUserCredentials.Password,
-	}), []session.AgentPrivateKey{
-		{
-			Key:        privateKeyPath,
-			Passphrase: c.convergeState.NodeUserCredentials.Password,
-		},
-	}).Start()
+	}), []session.AgentPrivateKey{privateKey})
+	// Avoid starting a new ssh agent
+	newSSHClient.InitializeNewAgent = false
+
+	_, err = newSSHClient.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
+	}
+
+	err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys)
+	if err != nil {
+		return fmt.Errorf("failed to add keys to ssh agent: %w", err)
 	}
 
 	kubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))

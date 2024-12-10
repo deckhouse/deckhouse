@@ -8,15 +8,17 @@ git:
       install:
         - '**/*'
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client git
   install:
-    - apk add --no-cache git
     - mkdir -p /src
     - cd /src
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b v0.14.5 {{ $.SOURCE_REPO }}/metallb/metallb.git .
     - git config --global user.email "builder@deckhouse.io"
     - git checkout 7ebb4a2e569930bcbf303e95ff801240c4cb466b
     - mkdir ./api/v1alpha1
-    - find /patches -name '*.patch' | sort | xargs git apply --verbose
+    - git apply /patches/*.patch --verbose
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - cd controller

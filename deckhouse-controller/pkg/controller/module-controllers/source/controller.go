@@ -74,7 +74,7 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 
 	// add preflight to set the cluster UUID
 	if err := runtimeManager.Add(manager.RunnableFunc(r.preflight)); err != nil {
-		return err
+		return fmt.Errorf("add preflight: %w", err)
 	}
 
 	sourceController, err := controller.New(controllerName, runtimeManager, controller.Options{
@@ -84,7 +84,7 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 		Reconciler:              r,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("create controller: %w", err)
 	}
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
@@ -146,11 +146,12 @@ func (r *reconciler) preflight(ctx context.Context) error {
 	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
 		return r.moduleManager.AreModulesInited(), nil
 	}); err != nil {
-		r.log.Errorf("failed to init module manager: %v", err)
-		return err
+		return fmt.Errorf("init module manager: %w", err)
 	}
 
 	r.clusterUUID = utils.GetClusterUUID(ctx, r.client)
+
+	r.log.Debug("controller is ready")
 
 	return nil
 }
@@ -277,7 +278,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			return fmt.Errorf("get update policy for the '%s' module: %w", moduleName, err)
 		}
 
-		// TODO(ipaqsa): can be removed
 		availableModule.Policy = policy.Name
 
 		// create or update module
@@ -412,7 +412,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationForceDelete] != "true" {
 			for _, module := range source.Status.AvailableModules {
 				if err := r.cleanSourceInModule(ctx, source.Name, module.Name); err != nil {
-					r.log.Errorf("failed to clean source in the '%s' module, during deleting the '%s' module source: %v", module.Name, source.Name, err)
+					r.log.Errorf("failed to clean source in the %q module during deleting the %q module source: %v", module.Name, source.Name, err)
 					return ctrl.Result{Requeue: true}, nil
 				}
 			}

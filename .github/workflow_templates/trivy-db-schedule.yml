@@ -31,9 +31,10 @@ jobs:
     steps:
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 6 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 6 }!}
+{!{ tmpl.Exec "login_git_step" . | strings.Indent 6 }!}
       - name: Download custom trivy-db binary and copy image
         run: |
-          rm -rf ./trivy-db && git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO}}/aquasecurity/trivy-db.git && cd trivy-db 
+          rm -rf ./trivy-db && git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git && cd trivy-db
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee >/dev/null 2>&1
           ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe >/dev/null 2>&1
           ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss >/dev/null 2>&1

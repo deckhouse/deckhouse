@@ -35,6 +35,7 @@ func TestDashboardConversions(t *testing.T) {
 			name: "should convert from 1 to 2 version",
 			settings: `
 auth:
+  password: 111
   allowedUserGroups:
     - group
     - group2
@@ -56,6 +57,33 @@ externalLabels:
 `,
 			currentVersion:  1,
 			expectedVersion: 2,
+		},
+		{
+			name: "should convert from 2 to 3 version",
+			settings: `
+accessLevel: PrivilegedUser
+auth:
+  allowedUserGroups:
+    - group
+    - group2
+  whitelistSourceRange:
+    - source1
+externalLabels:
+  prometheus_replica: pod
+  shard: shard`,
+			expected: `
+auth:
+  allowedUserGroups:
+    - group
+    - group2
+  whitelistSourceRange:
+    - source1
+externalLabels:
+  prometheus_replica: pod
+  shard: shard
+`,
+			currentVersion:  2,
+			expectedVersion: 3,
 		},
 	}
 

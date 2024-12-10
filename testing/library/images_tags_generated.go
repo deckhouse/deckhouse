@@ -6,6 +6,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	"admissionPolicyEngine": map[string]interface{}{
 		"constraintExporter": "imageHash-admissionPolicyEngine-constraintExporter",
 		"gatekeeper":         "imageHash-admissionPolicyEngine-gatekeeper",
+		"ratify":             "imageHash-admissionPolicyEngine-ratify",
 		"trivyProvider":      "imageHash-admissionPolicyEngine-trivyProvider",
 	},
 	"basicAuth": map[string]interface{}{
@@ -239,8 +240,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubernetesApiProxy":       "imageHash-controlPlaneManager-kubernetesApiProxy",
 	},
 	"dashboard": map[string]interface{}{
-		"dashboard":      "imageHash-dashboard-dashboard",
+		"api":            "imageHash-dashboard-api",
+		"auth":           "imageHash-dashboard-auth",
 		"metricsScraper": "imageHash-dashboard-metricsScraper",
+		"web":            "imageHash-dashboard-web",
 	},
 	"deckhouse": map[string]interface{}{
 		"webhookHandler": "imageHash-deckhouse-webhookHandler",
@@ -442,6 +445,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubernetesCni140":          "imageHash-registrypackages-kubernetesCni140",
 		"lsblk2402":                 "imageHash-registrypackages-lsblk2402",
 		"netcat110481":              "imageHash-registrypackages-netcat110481",
+		"nvmeCli211":                "imageHash-registrypackages-nvmeCli211",
 		"socat1734":                 "imageHash-registrypackages-socat1734",
 		"tomlMerge01":               "imageHash-registrypackages-tomlMerge01",
 		"virtWhat125":               "imageHash-registrypackages-virtWhat125",
@@ -452,6 +456,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"falcosidekick":    "imageHash-runtimeAuditEngine-falcosidekick",
 		"k8sMetacollector": "imageHash-runtimeAuditEngine-k8sMetacollector",
 		"rulesLoader":      "imageHash-runtimeAuditEngine-rulesLoader",
+	},
+	"serviceWithHealthchecks": map[string]interface{}{
+		"agent":      "imageHash-serviceWithHealthchecks-agent",
+		"controller": "imageHash-serviceWithHealthchecks-controller",
 	},
 	"snapshotController": map[string]interface{}{
 		"snapshotController":        "imageHash-snapshotController-snapshotController",

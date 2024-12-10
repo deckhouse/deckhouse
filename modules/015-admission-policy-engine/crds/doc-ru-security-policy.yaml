@@ -175,6 +175,33 @@ spec:
                       description: "Список разрешенных ролей кластера для связывания с пользователями."
                     allowedVolumes:
                       description: Список разрешенных volume-плагинов.
+                    verifyImageSignatures:
+                      description: |
+                        Список политик проверки подписи образов контейнеров.
+
+                        Образы контейнеров должны быть подписаны с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys).
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          dockerCfg:
+                            description: |
+                              Строка в формате Base64 с данными аутентификации в хранилище образов контейнеров.
+
+                              Не указывается, если образы контейнеров доступны анонимно.
+                          publicKeys:
+                            description: |
+                              Список публичных ключей Cosign.
+                          ca:
+                            description: |
+                              Пользовательский `certificate authority` для подключения к хранилищу образов контейнеров.
+                          reference:
+                            description: |
+                              Адрес или шаблон адресов образов контейнеров.
+
+                              Если содержит символ `*`, то считается шаблоном адресов образов контейнеров. Символ `*` может быть только один и только в конце. Например, для значения `company.registry.com/*` с указанными ключами и параметрами доступа будут проверяться любые образы контейнеров из хранилища `company.registry.com`.
+
+                              Если не содержит символа `*`, то считается абсолютным адресом образа контейнера. Например, для значения `company.registry.com/nginx` с указанными ключами и параметрами доступа будет проверяться только образ nginx из хранилища `company.registry.com`.
                 match:
                   description: Условия фильтрации контейнеров. С помощью условий можно выбрать группу подов или контейнеров, к которой будут применены политики.
                   properties:

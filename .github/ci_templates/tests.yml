@@ -101,3 +101,16 @@ steps:
       docker run {!{ $run.docker_options }!} ${TESTS_IMAGE_NAME} {!{ $run.args }!}
 # </template: tests_before_build_template>
 {!{- end -}!}
+
+{!{ define "tests_webhooks_template" }!}
+# <template: tests_webhooks_template>
+{!{- $ctx       := index . 0 }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+  - name: Run python webhook tests
+    run: |
+      make tests-webhooks
+# </template: tests_webhooks_template>
+{!{- end -}!}

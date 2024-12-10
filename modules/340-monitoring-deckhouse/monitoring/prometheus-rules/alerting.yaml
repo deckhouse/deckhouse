@@ -154,3 +154,25 @@
         Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disable-` to stop this alert.
       summary: |
         ModuleConfig annotation for allow to disable is setted.
+  - alert: ModuleAtConflict
+    expr: max by (moduleName) (d8_module_at_conflict) >= 1
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        Conflicting sources for the {{ $labels.moduleName }} module. Please specify the proper source in the module configuration.
+      summary: |
+        Conflict detected for module {{ $labels.moduleName }}.
+  - alert: ModuleConfigObsoleteVersion
+    expr: max by (name) (d8_module_config_obsolete_version) >= 1
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        ModuleConfig {{ $labels.name }} is outdated. Update ModuleConfig {{ $labels.name }} to the latest version.
+      summary: |
+        ModuleConfig {{ $labels.name }} is outdated.

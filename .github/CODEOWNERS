@@ -41,7 +41,7 @@
 350-node-local-dns/             @name212 @sprait
 380-metallb/                    @apolovov
 400-descheduler/                @RomanenkoDenys @name212 @sprait
-402-ingress-nginx/              @miklezzzz @yalosev
+402-ingress-nginx/              @apolovov
 450-keepalived/                 @apolovov
 450-network-gateway/            @apolovov
 460-log-shipper/                @nabokihms @vladimirGuryanov @lazovskiy

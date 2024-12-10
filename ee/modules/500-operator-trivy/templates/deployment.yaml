@@ -63,7 +63,6 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "operator") }}
         env:
-          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           - name: OPERATOR_NAMESPACE
             value: d8-operator-trivy
           {{- $enabledNamespaces := .Values.operatorTrivy | dig "internal" "enabledNamespaces" (list) }}
@@ -106,7 +105,11 @@ spec:
           - name: OPERATOR_VULNERABILITY_SCANNER_ENABLED
             value: "true"
           - name: OPERATOR_SBOM_GENERATION_ENABLED
+          {{- if .Values.operatorTrivy.disableSBOMGeneration }}
+            value: "false"
+          {{- else }}
             value: "true"
+          {{- end }}
           - name: OPERATOR_CLUSTER_SBOM_CACHE_ENABLED
             value: "false"
           - name: OPERATOR_VULNERABILITY_SCANNER_SCAN_ONLY_CURRENT_REVISIONS
@@ -141,6 +144,8 @@ spec:
             value: "10h"
           - name: OPERATOR_MERGE_RBAC_FINDING_WITH_CONFIG_AUDIT
             value: "false"
+          - name: OPERATOR_USE_LOCAL_POLICIES
+            value: "true"
         ports:
           - name: metrics
             containerPort: 8080

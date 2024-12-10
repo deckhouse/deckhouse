@@ -9,14 +9,27 @@ import:
 docker:
   ENTRYPOINT: ["/pause"]
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+from: {{ $.Images.BASE_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache build-base
   install:
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
-    - mkdir /src
-    - git clone --depth 1 --branch v1.28.0 {{ $.SOURCE_REPO }}/kubernetes/kubernetes.git /src
-    - cd /src
-    - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 build/pause/linux/pause.c
-    - strip /pause-linux-amd64
+  - cd /src
+  - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 pause.c
+  - strip /pause-linux-amd64
