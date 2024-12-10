@@ -20,6 +20,8 @@
 bb-var BB_APT_UNHANDLED_PACKAGES_STORE "/var/lib/bashible/bashbooster_unhandled_packages"
 
 bb-apt-rpm?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     bb-exe? apt-get
 }
 
@@ -33,6 +35,8 @@ bb-apt-rpm-repo?() {
 # }
 
 bb-apt-rpm-repo-add() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     local REPO_HASH="$(sed -E -e 's/[ \t]+/;;/g' <<< "${@}")"
     local REPO_DOMAIN="$(sed -E -e 's/.*http(s)?:\/\/([^/ \t]+)\/.*/\2/' <<< $2)"
 
@@ -44,6 +48,8 @@ bb-apt-rpm-repo-add() {
 }
 
 bb-apt-rpm-package?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     IFS='=' read -ra PACKAGE_ARRAY <<< "$1"
     local PACKAGE="${PACKAGE_ARRAY[0]}"
     local VERSION_DESIRED="${PACKAGE_ARRAY[1]-}"
@@ -59,6 +65,8 @@ bb-apt-rpm-package?() {
 }
 
 bb-apt-rpm-update() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     export DEBIAN_FRONTEND=noninteractive
     bb-flag? apt-rpm-updated && return 0
     bb-log-info 'Updating apt cache'
@@ -67,6 +75,8 @@ bb-apt-rpm-update() {
 }
 
 bb-apt-rpm-dist-upgrade() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     export DEBIAN_FRONTEND=noninteractive
     bb-apt-rpm-update
     bb-log-info 'Processing dist-upgrade'
@@ -101,6 +111,8 @@ bb-apt-rpm-install() {
     then
         bb-apt-rpm-update
         bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
+        bb-set-proxy
+        trap bb-unset-proxy RETURN
         apt-get install -y ${PACKAGES_TO_INSTALL[@]}
         bb-exit-on-error "Failed to install packages '${PACKAGES_TO_INSTALL[@]}'"
         printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" >> "$BB_APT_UNHANDLED_PACKAGES_STORE"
@@ -112,6 +124,8 @@ bb-apt-rpm-install() {
 }
 
 bb-apt-rpm-remove() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     export DEBIAN_FRONTEND=noninteractive
     local PACKAGES_TO_REMOVE=( )
 
@@ -134,12 +148,16 @@ bb-apt-rpm-remove() {
 }
 
 bb-apt-rpm-autoremove() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     export DEBIAN_FRONTEND=noninteractive
     bb-log-info 'Autoremoving unused packages'
     apt-get --purge -y autoremove
 }
 
 bb-apt-rpm-package-upgrade?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     bb-apt-rpm-update
 
     local PACKAGE=$1
@@ -159,6 +177,8 @@ bb-apt-rpm-package-upgrade?() {
 }
 
 bb-apt-rpm-upgrade() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     for PACKAGE in "$@"
     do
         if bb-apt-rpm-package-upgrade? "$PACKAGE"

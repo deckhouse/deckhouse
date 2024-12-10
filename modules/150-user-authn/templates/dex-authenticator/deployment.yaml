@@ -126,7 +126,7 @@ spec:
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
         - --cookie-secure=false
     {{- end }}
-        - --redirect-url=https://{{ $crd.spec.applicationDomain }}
+        - --redirect-url=/dex-authenticator/callback
         - --oidc-issuer-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
         # Skip oidc issuer validation and discovery to avoid CrashLoopBackoffs
         - --skip-oidc-discovery
@@ -141,7 +141,9 @@ spec:
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
-        - --whitelist-domain={{ $crd.spec.applicationDomain }}
+    {{- range $app := $crd.spec.applications }}
+        - --whitelist-domain={{ $app.domain }}
+    {{- end }}
         - --upstream=file:///dev/null
         - --https-address=0.0.0.0:8443
         - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt

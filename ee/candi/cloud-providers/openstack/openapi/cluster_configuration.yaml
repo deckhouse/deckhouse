@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-unsafe-rules: [deleteZones]
@@ -106,7 +108,6 @@ apiVersions:
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         x-doc-required: true
-        x-unsafe-rules: [updateMasterImage]
         additionalProperties: false
         required: [replicas, instanceClass, volumeTypeMap]
         properties:
@@ -115,7 +116,6 @@ apiVersions:
             minimum: 1
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
-            x-unsafe-rules: [updateReplicas]
           instanceClass:
             description: |
               Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/cr.html#openstackinstanceclass).

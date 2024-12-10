@@ -60,8 +60,10 @@ function tryParseAbortE2eCluster({argv, context, core}){
   const layout = ranForSplit[1];
   const cri = ranForSplit[2];
   const k8s_version = ranForSplit[3];
+  const edition = 'fe';
   const k8sSlug = k8s_version.replace('.', '_');
   const state_artifact_name = `failed_cluster_state_${provider}_${cri}_${k8sSlug}`;
+  const test_config = JSON.stringify({ cri: cri, ver: k8s_version, edition: edition })
 
   const inputs = {
     run_id,
@@ -71,8 +73,7 @@ function tryParseAbortE2eCluster({argv, context, core}){
     ssh_master_connection_string: sshConnectStr,
 
     layout,
-    cri,
-    k8s_version,
+    test_config,
     issue_number: prNumber.toString(),
   };
 

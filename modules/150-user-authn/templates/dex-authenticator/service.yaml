@@ -15,4 +15,4 @@ spec:
   selector:
     app: dex-authenticator
     name: {{ $crd.name }}
-{{- end }}
+  {{- end }}

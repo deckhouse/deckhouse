@@ -172,6 +172,8 @@ bb-package-module-install() {
 # Fetch packages by digest
 # bb-package-fetch package1:digest1 [package2:digest2 ...]
 bb-package-fetch() {
+  bb-set-proxy
+  trap bb-unset-proxy RETURN
   mkdir -p "${BB_FETCHED_PACKAGES_STORE}"
 
   declare -A PACKAGES_MAP

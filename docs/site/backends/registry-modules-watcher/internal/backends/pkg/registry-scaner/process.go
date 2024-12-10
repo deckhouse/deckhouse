@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"k8s.io/klog"
 )
 
@@ -102,7 +102,10 @@ func (s *registryscaner) processVersion(ctx context.Context, registry, module, v
 }
 
 func extractDocumentation(image v1.Image) ([]byte, error) {
-	readCloser := mutate.Extract(image)
+	readCloser, err := cr.Extract(image)
+	if err != nil {
+		return nil, err
+	}
 	defer readCloser.Close()
 
 	tarFile := bytes.NewBuffer(nil)
@@ -110,7 +113,7 @@ func extractDocumentation(image v1.Image) ([]byte, error) {
 	tarReader := tar.NewReader(readCloser)
 
 	// "docs" directory
-	err := tarWriter.WriteHeader(&tar.Header{
+	err = tarWriter.WriteHeader(&tar.Header{
 		Typeflag: tar.TypeDir,
 		Name:     "docs",
 		Mode:     0700,
@@ -205,7 +208,10 @@ func extractVersionFromImage(releaseImage v1.Image) (string, error) {
 		Version string `json:"version"`
 	}
 
-	readCloser := mutate.Extract(releaseImage)
+	readCloser, err := cr.Extract(releaseImage)
+	if err != nil {
+		return "", err
+	}
 	defer readCloser.Close()
 
 	tarReader := tar.NewReader(readCloser)

@@ -37,6 +37,7 @@ const (
 
 	globalValues = `
 deckhouseVersion: test
+deckhouseEdition: CSE
 enabledModules: ["vertical-pod-autoscaler", "prometheus", "operator-prometheus"]
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
@@ -59,41 +60,143 @@ modules:
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "podSecurityStandards": {}, "internal": {"podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
-    {
-      "metadata": {
-        "name": "foo"
-      },
-      "spec": {
-        "enforcementAction": "Deny",
-        "match": {
-          "labelSelector": {
-            "matchLabels": {
-              "operation-policy.deckhouse.io/enabled": "true"
-            }
-          },
-          "namespaceSelector": {
-            "excludeNames": [
-              "some-ns"
-            ],
-            "labelSelector": {
-              "matchLabels": {
-                "operation-policy.deckhouse.io/enabled": "true"
-              }
-            },
-            "matchNames": [
-              "default"
-            ]
-          }
-        },
-        "policies": {
-          "allowedRepos": [
-            "foo"
-          ]
-        }
-      }
-    }
-  ],
+	f := SetupHelmConfig(`{"admissionPolicyEngine": {"denyVulnerableImages": {}, "podSecurityStandards": {}, "internal": {"ratify": {"imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey2"]}], "webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
+	{
+		"metadata": {
+			"name": "foo"
+		},
+		"spec": {
+			"enforcementAction": "Deny",
+			"match": {
+				"labelSelector": {
+					"matchLabels": {
+						"operation-policy.deckhouse.io/enabled": "true"
+					}
+				},
+				"namespaceSelector": {
+					"excludeNames": [
+						"some-ns"
+					],
+					"labelSelector": {
+						"matchLabels": {
+							"operation-policy.deckhouse.io/enabled": "true"
+						}
+					},
+					"matchNames": [
+						"default"
+					]
+				}
+			},
+			"policies": {
+				"allowedRepos": [
+					"foo"
+				]
+			}
+		}
+    	}
+],
+        "securityPolicies": [
+	{
+		"metadata": {
+			"name": "foo"
+		},
+		"spec": {
+			"enforcementAction": "Deny",
+			"match": {
+				"namespaceSelector": {
+					"labelSelector": {
+						"matchLabels": {
+								"security-policy.deckhouse.io/enabled": "true"
+						}
+					}
+				},
+				"labelSelector": {}
+			},
+			"policies": {
+				"allowedAppArmor": [
+					"runtime/default"
+				],
+				"allowedFlexVolumes": [
+					{
+						"driver": "vmware"
+					}
+				],
+				"allowedHostPaths": [
+					{
+						"pathPrefix": "/dev",
+						"readOnly": true
+					}
+				],
+				"allowedHostPorts": [
+					{
+						"max": 100,
+						"min": 10
+					}
+				],
+				"allowedUnsafeSysctls": [
+					"*"
+				],
+				"allowHostIPC": true,
+				"allowHostNetwork": false,
+				"allowHostPID": false,
+				"allowPrivileged": false,
+				"allowPrivilegeEscalation": false,
+				"automountServiceAccountToken": true,
+				"forbiddenSysctls": [
+					"user/example"
+				],
+				"readOnlyRootFilesystem": true,
+				"requiredDropCapabilities": [
+					"ALL"
+				],
+				"runAsUser": {
+					"ranges": [
+						{
+							"max": 500,
+							"min": 300
+						}
+					],
+					"rule": "MustRunAs"
+				},
+				"seccompProfiles": {
+					"allowedLocalhostFiles": [
+						"*"
+					],
+					"allowedProfiles": [
+						"RuntimeDefault",
+						"Localhost"
+					]
+				},
+				"seLinux": [
+					{
+						"role": "role",
+						"user": "user"
+					},
+					{
+						"level": "level",
+						"type": "type"
+					}
+				],
+				"supplementalGroups": {
+					"ranges": [
+						{
+							"max": 1000,
+							"min": 500
+						}
+					],
+					"rule": "MustRunAs"
+				},
+				"verifyImageSignatures": [
+					{
+						"dockerCfg": "zxc=",
+						"reference": "ghcr.io/*",
+						"publicKeys": ["someKey2"]
+					}
+				]
+			}
+		}
+	}
+],
 	trackedConstraintResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]},{"apiGroups": [""],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}],
 	trackedMutateResources: [{"apiGroups":[""],"resources":["pods"]}],
 	webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
@@ -110,10 +213,14 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	BeforeSuite(func() {
 		err := os.Symlink("/deckhouse/ee/modules/015-admission-policy-engine/templates/trivy-provider", "/deckhouse/modules/015-admission-policy-engine/templates/trivy-provider")
 		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/ee/modules/015-admission-policy-engine/templates/ratify", "/deckhouse/modules/015-admission-policy-engine/templates/ratify")
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
 		err := os.Remove("/deckhouse/modules/015-admission-policy-engine/templates/trivy-provider")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Remove("/deckhouse/modules/015-admission-policy-engine/templates/ratify")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -131,11 +238,17 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			sa := f.KubernetesResource("ServiceAccount", nsName, "admission-policy-engine")
 			dp := f.KubernetesResource("Deployment", nsName, "gatekeeper-controller-manager")
+			tp := f.KubernetesResource("StatefulSet", nsName, "trivy-provider")
+			r := f.KubernetesResource("Deployment", nsName, "ratify")
 			Expect(sa.Exists()).To(BeTrue())
 			Expect(dp.Exists()).To(BeTrue())
+			Expect(tp.Exists()).To(BeFalse())
+			Expect(r.Exists()).To(BeFalse())
 
 			tpSvc := f.KubernetesResource("Service", nsName, "trivy-provider")
 			Expect(tpSvc.Exists()).To(BeFalse())
+			ratifySvc := f.KubernetesResource("Service", nsName, "ratify")
+			Expect(ratifySvc.Exists()).To(BeFalse())
 
 			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
 			Expect(vw.Exists()).To(BeFalse())
@@ -212,6 +325,32 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 
 			It("Creates ValidatingWebhookConfiguration after bootstrap with trivy provider config", func() {
 				checkVWC(f, 2, trivyProviderRules, trackedResourcesRules)
+			})
+		})
+	})
+
+	Context("Cluster with deckhouse on master node and ratify-provider", func() {
+		Context("Enables signature verification", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("admissionPolicyEngine.internal", `{ "bootstrapped": true, "podSecurityStandards": {"enforcementActions": ["deny"]}, "securityPolicies": [{"metadata": {"name": "foo"}, "spec": {"match": {"labelSelector": {}}, "policies": {"verifyImageSignatures": [{"dockerCfg": "zxc=", "reference": "ghcr.io/*", "publicKeys": ["someKey1"]}]}}}], "ratify": {"webhook": {"ca": "ca", "crt": "crt", "key": "key"}, "imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey1"]}]}, "trackedConstraintResources": [{"apiGroups": [], "resources": ["pod"]}], "webhook": {"ca": "ca", "crt": "crt", "key": "key"}, "trackedMutateResources": []}`)
+				f.HelmRender()
+			})
+
+			It("Everything must render properly", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+			})
+
+			It("Creates ratify", func() {
+				rd := f.KubernetesResource("Deployment", nsName, "ratify")
+				Expect(rd.Exists()).To(BeTrue())
+				rs := f.KubernetesResource("Service", nsName, "ratify")
+				Expect(rs.Exists()).To(BeTrue())
+			})
+
+			It("Registry secret stores data from values", func() {
+				ratifyRegSecret := f.KubernetesResource("Secret", nsName, "ratify-dockercfg-0")
+				Expect(ratifyRegSecret.Exists()).To(BeTrue())
+				Expect(ratifyRegSecret.Field(`data.\.dockerconfigjson`).String()).To(Equal("zxc="))
 			})
 		})
 	})

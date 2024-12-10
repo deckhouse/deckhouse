@@ -22,20 +22,28 @@ bb-var BB_YUM_UNHANDLED_PACKAGES_STORE "/var/lib/bashible/bashbooster_unhandled_
 bb-var BB_YUM_INSTALL_EXTRA_ARGS ""
 
 bb-yum?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     bb-exe? yum
 }
 
 bb-yum-repo?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     local REPO=$1
     yum -C repolist | grep -Ewq "^(\W)*${REPO}"
 }
 
 bb-yum-package?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     local PACKAGE=$1
     yum -C list installed "$PACKAGE" &> /dev/null
 }
 
 bb-yum-update() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     bb-flag? yum-updated && return 0
     bb-log-info 'Updating yum cache'
     yum clean all
@@ -44,6 +52,7 @@ bb-yum-update() {
 }
 
 bb-yum-install() {
+
     PACKAGES_TO_INSTALL=()
     for PACKAGE in "$@"
     do
@@ -62,6 +71,8 @@ bb-yum-install() {
         bb-yum-update
         bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
 
+        bb-set-proxy
+        trap bb-unset-proxy RETURN
         yum install $BB_YUM_INSTALL_EXTRA_ARGS -y ${PACKAGES_TO_INSTALL[@]}
         bb-exit-on-error "Failed to install packages '${PACKAGES_TO_INSTALL[@]}'"
         printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" >> "$BB_YUM_UNHANDLED_PACKAGES_STORE"
@@ -73,6 +84,8 @@ bb-yum-install() {
 }
 
 bb-yum-remove() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     for PACKAGE in "$@"; do
         if bb-yum-package? "$PACKAGE"
         then

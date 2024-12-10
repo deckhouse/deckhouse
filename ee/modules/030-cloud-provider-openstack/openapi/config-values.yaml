@@ -156,14 +156,14 @@ properties:
         x-examples:
           - "ceph-ssd"
         description: |-
-          > **DEPRECATED**. Use [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass) instead.
-
           The name of StorageClass that will be used in the cluster by default.
 
           If the parameter is omitted, the default StorageClass is either:
 
           * an arbitrary StorageClass present in the cluster that has the default annotation;
           * the first (in lexicographic order) StorageClass created by the module (in accordance with the order in OpenStack).
+
+          > **Parameter is deprecated**. Instead, use the global parameter [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
       topologyEnabled:
         type: boolean
         description: |

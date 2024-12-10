@@ -72,7 +72,10 @@ var embeddedMUP = &v1alpha1.ModuleUpdatePolicySpec{
 var initValues = `{
 	"global": {
 		"clusterIsBootstrapped": true,
-       "modulesImages": {
+		"clusterConfiguration": {
+			"kubernetesVersion": "1.28"
+		},
+		"modulesImages": {
 			"registry": {
 				"base": "my.registry.com/deckhouse"
 			}
@@ -970,7 +973,7 @@ func (suite *ControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer
 		dc.GetFakeClock().Advance(result.RequeueAfter)
 
 		dr := suite.getDeckhouseRelease(releaseName)
-		if dr.Status.Phase == v1alpha1.PhaseDeployed {
+		if dr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
 			suite.T().Log("Deployed")
 			return
 		}

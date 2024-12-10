@@ -36,7 +36,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
-var cloudProvidersDir = "/deckhouse/candi/cloud-providers/"
+var (
+	dhctlPath         = "/"
+	cloudProvidersDir = "/deckhouse/candi/cloud-providers/"
+)
 
 const (
 	deckhouseClusterStateSuffix = "-dhctl.*.tfstate"
@@ -302,7 +305,7 @@ func (r *Runner) Init() error {
 	return log.Process("default", "terraform init ...", func() error {
 		args := []string{
 			"init",
-			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(os.Getenv("PWD"), "/")),
+			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(dhctlPath, "/")),
 			"-get-plugins=false",
 			"-no-color",
 			"-input=false",
@@ -749,5 +752,6 @@ func buildTerraformPath(provider, layout, step string) string {
 }
 
 func InitGlobalVars(pwd string) {
+	dhctlPath = pwd
 	cloudProvidersDir = pwd + "/deckhouse/candi/cloud-providers/"
 }

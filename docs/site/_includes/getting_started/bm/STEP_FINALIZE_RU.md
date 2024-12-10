@@ -48,12 +48,11 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-<p>Укажите, что созданный StorageClass должен использоваться в кластере как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:
+<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить для StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:
 </p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
-  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>
@@ -84,11 +83,10 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-<p>Укажите, что созданный StorageClass должен использоваться в кластере как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+<p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду, чтобы добавить для StorageClass аннотацию <code>storageclass.kubernetes.io/is-default-class='true'</code>:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
-  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
 ```
 {% endsnippetcut %}
   </li>

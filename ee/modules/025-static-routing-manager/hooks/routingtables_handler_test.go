@@ -42,6 +42,8 @@ spec:
     gateway: 1.2.3.4
   - destination: 192.168.0.0/24
     gateway: 192.168.0.1
+  - destination: 192.168.100.0/24
+    dev: eth0
   nodeSelector:
     node-role: testrole1
 status:
@@ -60,6 +62,8 @@ spec:
     gateway: 1.2.3.4
   - destination: 192.168.1.0/24
     gateway: 192.168.2.1
+  - destination: 192.168.200.0/24
+    dev: eth3
   nodeSelector:
     node-role: testrole1
 status:
@@ -137,6 +141,8 @@ spec:
     gateway: 1.2.3.4
   - destination: 192.168.0.0/24
     gateway: 192.168.0.1
+  - destination: 192.168.100.0/24
+    dev: eth0
 `
 		orphannrt11YAML = `
 ---
@@ -166,6 +172,8 @@ spec:
     gateway: 1.2.3.4
   - destination: 192.168.0.0/24
     gateway: 192.168.0.1
+  - destination: 192.168.100.0/24
+    dev: eth0
 `
 		node1YAML = `
 ---
@@ -321,6 +329,8 @@ status:
   gateway: 1.2.3.4
 - destination: 192.168.0.0/24
   gateway: 192.168.0.1
+- destination: 192.168.100.0/24
+  dev: eth0
 `))
 			nrt12Name := "testrt1" + "-" + lib.GenerateShortHash("testrt1"+"#"+"kube-worker-2")
 			Expect(f.ValuesGet(nrtKeyPath + ".1.name").String()).To(Equal(nrt12Name))
@@ -332,6 +342,8 @@ status:
   gateway: 1.2.3.4
 - destination: 192.168.0.0/24
   gateway: 192.168.0.1
+- destination: 192.168.100.0/24
+  dev: eth0
 `))
 			nrt21Name := "testrt2" + "-" + lib.GenerateShortHash("testrt2"+"#"+"kube-worker-1")
 			Expect(f.ValuesGet(nrtKeyPath + ".3.name").String()).To(Equal(nrt21Name))
@@ -461,6 +473,8 @@ status:
   gateway: 1.2.3.4
 - destination: 192.168.1.0/24
   gateway: 192.168.2.1
+- destination: 192.168.200.0/24
+  dev: eth3
 `))
 		})
 	})

@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-unsafe-rules: [deleteZones]
@@ -74,14 +76,12 @@ apiVersions:
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
         additionalProperties: false
         required: [replicas, instanceClass]
-        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             description: |
               The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
             type: integer
             minimum: 1
-            x-unsafe-rules: [updateReplicas]
           zones:
             description: |
               A limited set of zones in which nodes can be created.
@@ -149,7 +149,7 @@ apiVersions:
 
                   If `externalSubnetID` is set, you must select specific unallocated IP addresses from the specified subnet.
 
-                  The number of array elements **must** correspond to the number of nodes in the group (the value of the `replicas` parameter). If the value `Auto` is used (automatic public IP address reservation), then in the list, you still need to specify as many elements with the value `Auto` as there are nodes in the group.
+                  If the number of array elements is less than the number of nodes in the group (the value of the `replicas` parameter), the value `Auto` (automatic public IP address reservation) is used.
 
                   The array elements must be listed in the same order as the zones in which the nodes will be created. For example:
 

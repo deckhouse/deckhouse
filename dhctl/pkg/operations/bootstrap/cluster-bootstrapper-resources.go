@@ -86,6 +86,6 @@ func (b *ClusterBootstrapper) CreateResources() error {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers)
+		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers, nil)
 	})
 }

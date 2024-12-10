@@ -3,17 +3,22 @@
   to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/doc-ru-config-values.yaml
   to: /deckhouse/modules/040-node-manager/openapi/doc-ru-config-values.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/be/modules/040-node-manager/openapi/openapi-case-tests.yaml
   to: /deckhouse/modules/040-node-manager/openapi/openapi-case-tests.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
+- add: /ee/be/modules/040-node-manager/openapi/values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/modules/140-user-authz/templates/webhook
   to: /deckhouse/modules/140-user-authz/templates/webhook
   stageDependencies:
@@ -29,68 +34,113 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/se-plus/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/se-plus/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/se-plus/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/se-plus/modules/021-cni-cilium/crds/egressgateways.yaml
+  to: /deckhouse/modules/021-cni-cilium/crds/egressgateways.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/se-plus/modules/021-cni-cilium/crds/internal
+  to: /deckhouse/modules/021-cni-cilium/crds/internal
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se-plus/modules/021-cni-cilium/hooks/ee
+  to: /deckhouse/modules/021-cni-cilium/hooks/ee
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent
+  to: /deckhouse/modules/021-cni-cilium/images/egress-gateway-agent
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se-plus/modules/021-cni-cilium/templates/egress-gateway-agent
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se-plus/modules/021-cni-cilium/templates/egress-gateway-instance
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-instance
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se-plus/modules/021-cni-cilium/templates/egress-policy
+  to: /deckhouse/modules/021-cni-cilium/templates/egress-policy
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se-plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/se-plus/modules/030-cloud-provider-vsphere
+  to: /deckhouse/modules/030-cloud-provider-vsphere
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se-plus/modules/030-cloud-provider-zvirt
+  to: /deckhouse/modules/030-cloud-provider-zvirt
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
+  to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/se-plus/modules/040-node-manager/capi/zvirt
+  to: /deckhouse/modules/040-node-manager/capi/zvirt
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
   to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
-  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgatewaypolicies.yaml
+- add: /ee/modules/015-admission-policy-engine/templates/ratify
+  to: /deckhouse/modules/015-admission-policy-engine/templates/ratify
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
-  to: /deckhouse/modules/021-cni-cilium/crds/doc-ru-egressgateways.yaml
+- add: /ee/modules/015-admission-policy-engine/hooks/common_test.go
+  to: /deckhouse/modules/015-admission-policy-engine/hooks/common_test.go
   stageDependencies:
     setup:
-        - '**/*.go'
-- add: /ee/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
-  to: /deckhouse/modules/021-cni-cilium/crds/egressgatewaypolicies.yaml
+        - '**/*'
+- add: /ee/modules/015-admission-policy-engine/hooks/update_trivy_provider_config.go
+  to: /deckhouse/modules/015-admission-policy-engine/hooks/update_trivy_provider_config.go
   stageDependencies:
     setup:
-        - '**/*.go'
-- add: /ee/modules/021-cni-cilium/crds/egressgateways.yaml
-  to: /deckhouse/modules/021-cni-cilium/crds/egressgateways.yaml
+        - '**/*'
+- add: /ee/modules/015-admission-policy-engine/hooks/update_trivy_provider_config_test.go
+  to: /deckhouse/modules/015-admission-policy-engine/hooks/update_trivy_provider_config_test.go
   stageDependencies:
     setup:
-        - '**/*.go'
-- add: /ee/modules/021-cni-cilium/crds/internal
-  to: /deckhouse/modules/021-cni-cilium/crds/internal
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/021-cni-cilium/hooks/ee
-  to: /deckhouse/modules/021-cni-cilium/hooks/ee
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/021-cni-cilium/images/egress-gateway-agent
-  to: /deckhouse/modules/021-cni-cilium/images/egress-gateway-agent
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/021-cni-cilium/templates/egress-gateway-agent
-  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-agent
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/021-cni-cilium/templates/egress-gateway-instance
-  to: /deckhouse/modules/021-cni-cilium/templates/egress-gateway-instance
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/021-cni-cilium/templates/egress-policy
-  to: /deckhouse/modules/021-cni-cilium/templates/egress-policy
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
-  to: /deckhouse/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
-  stageDependencies:
-    setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/025-static-routing-manager
   to: /deckhouse/modules/025-static-routing-manager
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/modules/030-cloud-provider-dynamix
+  to: /deckhouse/modules/030-cloud-provider-dynamix
   stageDependencies:
     setup:
         - '**/*.go'
@@ -104,33 +154,18 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/030-cloud-provider-vsphere
-  to: /deckhouse/modules/030-cloud-provider-vsphere
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/030-cloud-provider-zvirt
-  to: /deckhouse/modules/030-cloud-provider-zvirt
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/040-node-manager/cloud-providers/vsphere
-  to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
+- add: /ee/modules/040-node-manager/capi/dynamix
+  to: /deckhouse/modules/040-node-manager/capi/dynamix
   stageDependencies:
     setup:
         - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
-  stageDependencies:
-    setup:
-        - '**/*.go'
-- add: /ee/modules/040-node-manager/capi/zvirt
-  to: /deckhouse/modules/040-node-manager/capi/zvirt
   stageDependencies:
     setup:
         - '**/*.go'
@@ -163,72 +198,67 @@
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiomulticluster.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/crds/istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/istiofederation.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/crds/istiomulticluster.yaml
   to: /deckhouse/modules/110-istio/crds/istiomulticluster.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/federation.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/federation.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/150-user-authn/hooks/common_test.go
   to: /deckhouse/modules/150-user-authn/hooks/common_test.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/150-user-authn/hooks/custom_logo.go
   to: /deckhouse/modules/150-user-authn/hooks/custom_logo.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/150-user-authn/hooks/custom_logo_test.go
   to: /deckhouse/modules/150-user-authn/hooks/custom_logo_test.go
   stageDependencies:
     setup:
-        - '**/*.go'
-- add: /ee/modules/160-multitenancy-manager
-  to: /deckhouse/modules/160-multitenancy-manager
-  stageDependencies:
-    setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/300-prometheus/hooks/common_test.go
   to: /deckhouse/modules/300-prometheus/hooks/common_test.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/300-prometheus/hooks/custom_logo.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/300-prometheus/hooks/custom_logo_test.go
   to: /deckhouse/modules/300-prometheus/hooks/custom_logo_test.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/modules/381-l2-load-balancer
   to: /deckhouse/modules/381-l2-load-balancer
   stageDependencies:
@@ -249,6 +279,11 @@
   stageDependencies:
     setup:
         - '**/*.go'
+- add: /ee/modules/610-service-with-healthchecks
+  to: /deckhouse/modules/610-service-with-healthchecks
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/modules/650-runtime-audit-engine
   to: /deckhouse/modules/650-runtime-audit-engine
   stageDependencies:
@@ -258,12 +293,37 @@
   to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   stageDependencies:
     setup:
+        - '**/*'
+- add: /ee/fe/modules/300-prometheus/openapi/openapi-case-tests.yaml
+  to: /deckhouse/modules/300-prometheus/openapi/openapi-case-tests.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/fe/modules/300-prometheus/openapi/values.yaml
+  to: /deckhouse/modules/300-prometheus/openapi/values.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/fe/modules/300-prometheus/templates/prometheus/pp
+  to: /deckhouse/modules/300-prometheus/templates/prometheus/pp
+  stageDependencies:
+    setup:
         - '**/*.go'
+- add: /ee/fe/modules/300-prometheus/images/prometheuspp
+  to: /deckhouse/modules/300-prometheus/images/prometheuspp
+  stageDependencies:
+    setup:
+        - '**/*.go'
+- add: /ee/fe/modules/300-prometheus/hooks/cm_check.go
+  to: /deckhouse/modules/300-prometheus/hooks/cm_check.go
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   stageDependencies:
@@ -278,9 +338,9 @@
   to: /deckhouse/modules/500-okmeter/hooks/update_agent_image.go
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/fe/modules/500-okmeter/templates/daemonset.yaml
   to: /deckhouse/modules/500-okmeter/templates/daemonset.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'

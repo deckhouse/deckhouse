@@ -109,10 +109,10 @@ func assertOssProject(i int, p ossProject) error {
 		complaints = append(complaints, fmt.Sprintf("link URL is malformed (%q)", p.Link))
 	}
 
-	// Licence
+	// License
 
-	if strings.TrimSpace(p.Licence) == "" {
-		complaints = append(complaints, "licence must not be empty")
+	if strings.TrimSpace(p.License) == "" {
+		complaints = append(complaints, "license must not be empty")
 	}
 
 	// Logo
@@ -158,6 +158,7 @@ var skipOssChecks = map[string]struct{}{
 	"025-static-routing-manager":              {},
 	"030-cloud-provider-aws":                  {},
 	"030-cloud-provider-azure":                {},
+	"030-cloud-provider-dynamix":              {},
 	"030-cloud-provider-gcp":                  {},
 	"030-cloud-provider-openstack":            {},
 	"030-cloud-provider-vsphere":              {},
@@ -180,6 +181,7 @@ var skipOssChecks = map[string]struct{}{
 	"500-okmeter":                             {},
 	"500-upmeter":                             {},
 	"600-secret-copier":                       {},
+	"610-service-with-healthchecks":           {},
 	"800-deckhouse-tools":                     {},
 	"810-documentation":                       {},
 }
@@ -195,5 +197,5 @@ type ossProject struct {
 	Description string `yaml:"description"`    // example: A Federated OpenID Connect Provider with pluggable connectors
 	Link        string `yaml:"link"`           // example: https://github.com/dexidp/dex
 	Logo        string `yaml:"logo,omitempty"` // example: https://dexidp.io/img/logos/dex-horizontal-color.png
-	Licence     string `yaml:"licence"`        // example: Apache License 2.0
+	License     string `yaml:"license"`        // example: Apache License 2.0
 }

@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -34,7 +36,8 @@ var (
 	SSHBastionPort       = ""
 	SSHBastionUser       = os.Getenv("USER")
 	SSHUser              = os.Getenv("USER")
-	SSHHosts             = make([]string, 0)
+	SSHHosts             = make([]session.Host, 0)
+	sshHostsRaw          = make([]string, 0)
 	SSHPort              = ""
 	SSHExtraArgs         = ""
 
@@ -74,7 +77,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.Flag("ssh-host", "SSH destination hosts, can be specified multiple times").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_HOSTS")).
-		StringsVar(&SSHHosts)
+		StringsVar(&sshHostsRaw)
 	cmd.Flag("ssh-port", "SSH destination port").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_PORT")).
@@ -91,6 +94,14 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		if !sshBastionUserFlagSetByUser && sshUserFlagSetByUser {
 			SSHBastionUser = SSHUser
 			sshFlagSetByUser = true
+		}
+		return nil
+	})
+	cmd.PreAction(func(c *kingpin.ParseContext) error {
+		if len(sshHostsRaw) > 0 {
+			for i, host := range sshHostsRaw {
+				SSHHosts = append(SSHHosts, session.Host{Host: host, Name: strconv.Itoa(i)})
+			}
 		}
 		return nil
 	})

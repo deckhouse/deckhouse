@@ -81,21 +81,21 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: custom:manage:mycustomscope:admin
+  name: custom:manage:mycustomscope:manager
   labels:
     rbac.deckhouse.io/use-role: admin
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: scope
     rbac.deckhouse.io/scope: custom
-    rbac.deckhouse.io/aggregate-to-all-as: admin
+    rbac.deckhouse.io/aggregate-to-all-as: manager
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         rbac.deckhouse.io/kind: manage
-        rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+        rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
     - matchLabels:
         rbac.deckhouse.io/kind: manage
-        rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
+        rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
     - matchLabels:
         rbac.deckhouse.io/kind: manage
         module: user-authn
@@ -133,16 +133,16 @@ rules: []
 - позволяет `manage:all`-роли сагрегировать эту роль:
 
   ```yaml
-  rbac.deckhouse.io/aggregate-to-all-as: admin
+  rbac.deckhouse.io/aggregate-to-all-as: manager
   ```
 
 Далее указаны селекторы, именно они реализуют агрегацию:
 
-- агрегирует роль админа из области `deckhouse`:
+- агрегирует роль менеджера из области `deckhouse`:
 
   ```yaml
   rbac.deckhouse.io/kind: manage
-  rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+  rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
   ```
 
 - агрерирует все правила от модуля user-authn:
@@ -167,7 +167,7 @@ rules: []
 
 ```yaml
 rbac.deckhouse.io/kind: manage
-rbac.deckhouse.io/aggregate-to-custom-as: admin
+rbac.deckhouse.io/aggregate-to-custom-as: manager
 ```
 
 Этот селектор позволит агрегировать роли к новой области через указание этого лейбла. После добавления нового селектора роль будет выглядеть так:
@@ -176,27 +176,27 @@ rbac.deckhouse.io/aggregate-to-custom-as: admin
  apiVersion: rbac.authorization.k8s.io/v1
  kind: ClusterRole
  metadata:
-   name: custom:manage:mycustomscope:admin
+   name: custom:manage:mycustomscope:manager
    labels:
      rbac.deckhouse.io/use-role: admin
      rbac.deckhouse.io/kind: manage
      rbac.deckhouse.io/level: scope
      rbac.deckhouse.io/scope: custom
-     rbac.deckhouse.io/aggregate-to-all-as: admin
+     rbac.deckhouse.io/aggregate-to-all-as: manager
  aggregationRule:
    clusterRoleSelectors:
      - matchLabels:
          rbac.deckhouse.io/kind: manage
-         rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+         rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
      - matchLabels:
          rbac.deckhouse.io/kind: manage
-         rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
+         rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
      - matchLabels:
          rbac.deckhouse.io/kind: manage
          module: user-authn
      - matchLabels:
          rbac.deckhouse.io/kind: manage
-         rbac.deckhouse.io/aggregate-to-custom-as: admin
+         rbac.deckhouse.io/aggregate-to-custom-as: manager
  rules: []
  ```
 
@@ -207,7 +207,7 @@ rbac.deckhouse.io/aggregate-to-custom-as: admin
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-custom-as: admin
+     rbac.deckhouse.io/aggregate-to-custom-as: manager
      rbac.deckhouse.io/kind: manage
    name: custom:manage:capability:mycustommodule:superresource:view
  rules:
@@ -231,14 +231,14 @@ rbac.deckhouse.io/aggregate-to-custom-as: admin
 
 Если необходимо расширить существующую роль, нужно выполнить те же шаги, что и в пункте выше, но изменив лейблы и название роли.
 
-Пример для расширения роли админа из области `deckhouse`(`d8:manage:deckhouse:admin`):
+Пример для расширения роли менеджера из области `deckhouse`(`d8:manage:deckhouse:manager`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+    rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
     rbac.deckhouse.io/kind: manage
   name: custom:manage:capability:mycustommodule:superresource:view
 rules:
@@ -269,7 +269,7 @@ rules:
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+     rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
      rbac.deckhouse.io/kind: manage
      rbac.deckhouse.io/namespace: namespace
    name: custom:manage:capability:mycustommodule:superresource:view

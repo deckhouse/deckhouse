@@ -7,7 +7,7 @@ clientConfig:
     name: gatekeeper-webhook-service
     namespace: d8-admission-policy-engine
     path: /v1/admit
-failurePolicy: Ignore
+failurePolicy: Fail
 matchPolicy: Exact
 sideEffects: None
 objectSelector: {}
@@ -96,7 +96,7 @@ webhooks:
     - name: 'exclude-virtualization' # Exclude virtualization module's service accounts until their manifests get to comply with the restricted policy
       expression: '!(["system:serviceaccount:d8-virtualization:kubevirt-internal-virtualization-controller", "system:serviceaccount:d8-virtualization:cdi-sa", "system:serviceaccount:d8-virtualization:virtualization-controller"].exists(e, (e == request.userInfo.username)))'
 {{- end }}
-  timeoutSeconds: 3
+  timeoutSeconds: 15
   {{- include "validating.webhook.config" . | nindent 2 }}
   {{- end }}
 {{- end }}

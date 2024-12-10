@@ -29,7 +29,7 @@ status:
   approved: false
   message: Release is waiting for the update window until 18 Oct 19 10:00 UTC
   phase: Pending
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null
 ---
 apiVersion: v1
 kind: Pod

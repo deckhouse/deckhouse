@@ -1,7 +1,9 @@
 type: object
 properties:
   storageClass:
-    description: |-
+    description: |
+      > **УСТАРЕВШИЙ**. Теперь его значение задается в [global.modules.storageClass](#parameters-modules-storageclass).
+
       Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
 
         * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
@@ -10,11 +12,15 @@ properties:
   defaultClusterStorageClass:
     type: string
     default: null
-    description: |
-      Имя StorageClass, который будет назначен по умолчанию в кластере.
-        * Если значение отсутствует, то будет сохранен текущий StorageClass по умолчанию, при его наличии в кластере.
-          Иначе будет использован первый StorageClass из создаваемых модулем cloud-provider (если какой-либо модуль cloud-provider-а используется).
-        * Воспользуйтесь этим параметром, чтобы изменить StorageClass по умолчанию в кластере, поскольку вручную добавлять default-аннотации в StorageClass-ы запрещено.
+    description: |-
+      Имя StorageClass, который DKP определит как StorageClass используемый в кластере по умолчанию.
+
+      DKP запрещает вручную добавлять или изменять default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`) у StorageClass. Используйте параметр, чтобы определять или изменять StorageClass используемый в кластере по умолчанию.
+
+      Если значение не указано, фактический StorageClass используемый в кластере по умолчанию будет определяться в следующем порядке:
+
+       * StorageClass в кластере, имеющий default-аннотацию (`storageclass.kubernetes.io/is-default-class='true'`);
+       * Первый (по алфавиту) StorageClass из создаваемых модулем облачного провайдера (если какой-либо модуль облачного провайдера используется).
   highAvailability:
     description: |
       Параметр глобального включения *режима отказоустойчивости* для модулей, которые его поддерживают.
@@ -116,6 +122,13 @@ properties:
                   Объем памяти, выделяемой на каждом master-узле, **дополнительно** к указанному в параметре `everyNode.memory`:
                     * Для кластера, управляемого Deckhouse, значение по умолчанию определяется автоматически по формуле: `.status.allocatable.memory` минимального master-узла (но не более `8Gi`) минус значение, указанное в параметре `everyNode.memory`.
                     * Для managed-кластера значение по умолчанию: `1Gi` минус значение, указанное в параметре `everyNode.memory`.
+      storageClass:
+        description: |
+          Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
+
+            * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+            * Этот параметр имеет смысл использовать только в исключительных ситуациях.
+            * Этот параметр применяется в процессе включения модуля.
       proxy:
         description: |
           Глобальная настройка proxy для модулей.

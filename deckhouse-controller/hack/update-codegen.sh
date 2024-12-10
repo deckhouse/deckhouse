@@ -39,7 +39,7 @@ fi
 
 chmod +x ${CODEGEN_PKG}/generate-groups.sh
 chmod +x ${CODEGEN_PKG}/generate-internal-groups.sh
-${CODEGEN_PKG}/generate-groups.sh deepcopy,defaulter,client,lister,informer github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis deckhouse.io:v1alpha1 --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt --output-base "/tmp"
+${CODEGEN_PKG}/generate-groups.sh deepcopy,defaulter,client,lister,informer github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis deckhouse.io:v1alpha1,v1alpha2 --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt --output-base "/tmp"
 
 rm -r /tmp/github.com
 

@@ -26,14 +26,14 @@ spec:
           type: object
           required:
             - spec
-          description: |
+          description: |-
             After the `DexAuthenticator` object appears in the namespace, the following objects will be created:
-            * Deployment containing oauth2-proxy and redis containers
-            * Service, pointing to a Deployment with an oauth2-proxy
-            * Ingress, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side
-            * Secrets, needed to access Dex
+            * Deployment containing OAuth2-Proxy and Redis containers;
+            * Service, pointing to OAuth2-Proxy;
+            * Ingress resource, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
+            * Secrets, needed to access Dex.
 
-            **NOTE!** After restarting a pod with an oauth2-proxy, the current `access token` and `id token` will be queried (using the refresh token) and stored in a redis memory.
+            **Warning.** After restarting a pod with an OAuth2-Proxy, the current Access Token and ID Token will be queried (using the refresh token) and stored in a Redis memory.
           x-doc-examples:
             - apiVersion: deckhouse.io/v1
               kind: DexAuthenticator
@@ -52,6 +52,13 @@ spec:
                 whitelistSourceRanges:
                   - 1.1.1.1/32
                   - 192.168.0.0/24
+                additionalApplications:
+                  - domain: "additional-app-name.kube.my-domain.com"
+                    ingressSecretName: "ingress-tls"
+                    ingressClassName: "nginx"
+                    signOutURL: "/logout"
+                    whitelistSourceRanges:
+                      - 2.2.2.2/32
           properties:
             spec:
               type: object
@@ -61,39 +68,46 @@ spec:
               properties:
                 applicationDomain:
                   type: string
-                  description: 'Public domain that points to your application. Must be specified **without** HTTP scheme.'
+                  description: |-
+                    An address for the application (DNS domain for Ingress resource) from which the user request will be redirected for authentication in Dex.
+
+                    **Warning.** Must be specified without HTTP scheme.
                   x-doc-examples: ['my-app.domain.com']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 sendAuthorizationHeader:
                   type: boolean
-                  description: 'Request to application will be sent with "Authorization: Bearer" header when the option is switched to true.'
+                  description: 'Request to application will be sent with `Authorization: Bearer` header when the option is switched to true.'
                 applicationIngressCertificateSecretName:
                   type: string
-                  description: 'Name of TLS-certificate secret specified in your application Ingress object to add to Dex authenticator Ingress object for HTTPS access. Secret must be located in the same namespace with DexAuthenticator object.'
+                  description: |-
+                    The name of the Secret containing the TLS certificate for the application domain (is used in the Ingress resource). The Secret must be located in the same namespace as the DexAuthenticator.
                   x-doc-examples: ['ingress-tls']
                   pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
                 applicationIngressClassName:
                   type: string
-                  description: 'Ingress class that serves your application ingress resource.'
+                  description: |
+                    The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
                   x-doc-examples: ['nginx']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 signOutURL:
                   type: string
-                  description: 'Provide the URL from which requests will be proxied to the Dex authenticator sign out URL.'
+                  description: |-
+                    The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
+
+                    It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
                 keepUsersLoggedInFor:
                   type: string
-                  description: |
+                  description: |-
                     User session will be kept for specified amount of time even if user will not log in.
-
-                    Specified with  s, m or h suffix.
+                    Specified with  `s`, `m` or `h` suffix.
                   x-doc-examples: ['24h']
                   x-doc-default: '168h'
                 allowedGroups:
                   type: array
-                  description: |
-                    Groups that the user should be in to authenticate successfully.
+                  description: |-
+                    A list of groups whose members are allowed to connect to the client.
 
-                    Additionally, this parameter limits the list of groups that will be put into OIDC token (there will be an intersection of the specified groups and the actual groups of the user).
+                    **By default**, all groups can connect.
                   x-doc-default: 'All groups are allowed.'
                   items:
                     type: string
@@ -109,61 +123,225 @@ spec:
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
-                  description: |
-                    If specified, the `dex-authenticator` pods `nodeSelector`.
+                  description: |-
+                    If specified, the `dex-authenticator` pods nodeSelector.
 
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
-
-                    **Pattern**: the same as in the pods' `spec.nodeSelector` parameter in Kubernetes;
+                    **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
                   type: object
                 tolerations:
-                  description: |
-                    If specified, the `dex-authenticator` pods `tolerations`.
+                  description: |-
+                    If specified the `dex-authenticator` pods tolerations.
 
-                    The `dex-authenticator` pod this Toleration is attached to tolerates any taint that matches the triple <key,value,effect> using the matching operator <operator>.
-
-                    If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
-
-                    **Pattern**: Standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) object. Pods inherit this object AS IS.
+                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
                   items:
                     properties:
                       effect:
                         description: |
-                          Effect indicates the taint effect to match. Empty means match all taint effects.
+                          Defines the taint’s effect this toleration is associated with (it matches any effect if empty).
                         type: string
                         enum: ["NoSchedule", "PreferNoSchedule", "NoExecute"]
                       key:
-                        description: |
-                          Key is the taint key that the toleration applies to. Empty means match all taint keys.
+                        description: |-
+                          Defines the taint’s key this toleration is associated with (it matches any key if empty).
 
-                          If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                          If the key is omitted (emplty), then `operator` must be set to `Exists` (which means it matches any `value` and `key`).
                         type: string
                       operator:
-                        description: |
-                          Operator represents a key's relationship to the value.
+                        description: |-
+                          Defines how the key and its value are linked — whether the key must be `Equal` to the value or can have any value.
 
-                          Exists is equivalent to wildcard for value, so that a pod can tolerate all taints of a particular category.
+                          Setting it to `Exists` is equivalent to the value having any value so that the pod with the specified toleration can match the corresponding taint.
+                        type: string
+                        enum: ["Exists", "Equal"]
+                        x-doc-default: Equal
+                      tolerationSeconds:
+                        description: |-
+                          Specifies the period (in seconds) that the scheduler waits before evicting a Pod from a node if the toleration no longer matches the taint (**only** applicable to the `NoExecute` effect, otherwise ignored).
+
+                          If the parameter **is not set**, the Pod will not be evicted from the node if the toleration no longer matches the taint. If the parameter **is set to zero** (or negative), the Pod will be evicted immediately if the toleration no longer matches the taint.
+
+                          **The default is**: not set.
+                        format: int64
+                        type: integer
+                      value:
+                        description: |-
+                          The value that the toleration must match.
+
+                          Must be empty if the operator parameter is set to `Exists`.
+                        type: string
+                    type: object
+                  type: array
+                additionalApplications:
+                  type: array
+                  description: |
+                    A list of additional applications for which user authentication is required.
+                  items:
+                    type: object
+                    required:
+                      - domain
+                      - ingressClassName
+                    properties:
+                      domain:
+                        type: string
+                        description: |-
+                          An application domain from which the user request will be redirected for authentication in Dex.
+
+                          **Warning.** Must be specified without HTTP scheme.
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      ingressSecretName:
+                        type: string
+                        description: 'The name of the Secret containing the TLS certificate (from the domain) used in the applications Ingress resource. The Secret must be in the same namespace as DexAuthenticator.'
+                        pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
+                      ingressClassName:
+                        type: string
+                        description: |-
+                          The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      signOutURL:
+                        type: string
+                        description: |-
+                          The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
+
+                          It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+                      whitelistSourceRanges:
+                        type: array
+                        description: |
+                          CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, If not specified.
+                        items:
+                          type: string
+                          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+      additionalPrinterColumns: &additionalPrinterColumns
+        - jsonPath: .spec.applicationDomain
+          name: Domain
+          type: string
+    - name: v2alpha1
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - applications
+              properties:
+                applications:
+                  type: array
+                  description: |
+                    A list of applications for which user authentication is required.
+                  items:
+                    type: object
+                    required:
+                      - domain
+                      - ingressClassName
+                    properties:
+                      domain:
+                        type: string
+                        description: |-
+                          An application domain (for Ingress resources) from which the user request will be redirected for authentication in Dex.
+
+                          **Warning.** Must be specified without HTTP scheme.
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      ingressSecretName:
+                        type: string
+                        description: |-
+                          The name of the Secret containing the TLS certificate for the application domain (is used in the Ingress resource). The Secret must be located in the same namespace as the DexAuthenticator.
+                        pattern: '^(|[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)$'
+                      ingressClassName:
+                        type: string
+                        description: |-
+                          The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      signOutURL:
+                        type: string
+                        description: |-
+                          The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
+
+                          It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+                      whitelistSourceRanges:
+                        type: array
+                        description: |
+                          CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, if not specified.
+                        items:
+                          type: string
+                          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+                sendAuthorizationHeader:
+                  type: boolean
+                  description: 'Request to application will be sent with `Authorization: Bearer` header when the option is switched to true.'
+                keepUsersLoggedInFor:
+                  type: string
+                  description: |-
+                    User session will be kept for specified amount of time even if user will not log in.
+
+                    Specified with  `s`, `m` or `h` suffix.
+                  x-doc-default: '168h'
+                allowedGroups:
+                  type: array
+                  description: |-
+                    A list of groups whose members are allowed to connect to the client.
+
+                    **By default**, all groups can connect.
+                  x-doc-default: 'All groups are allowed.'
+                  items:
+                    type: string
+                nodeSelector:
+                  additionalProperties:
+                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
+                  description: |-
+                    If specified, the `dex-authenticator` pods nodeSelector.
+
+                    **Format**: the standard `nodeSelector` list. Instance pods inherit this field as is.
+                  type: object
+                tolerations:
+                  description: |-
+                    If specified the `dex-authenticator` pods tolerations.
+
+                    **Format**: the standard [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) list. Instance pods inherit this field as is.
+                  items:
+                    properties:
+                      effect:
+                        description: |
+                          Defines the taint’s effect this toleration is associated with (it matches any effect if empty).
+                        type: string
+                        enum: ["NoSchedule", "PreferNoSchedule", "NoExecute"]
+                      key:
+                        description: |-
+                          Defines the taint’s key this toleration is associated with (it matches any key if empty).
+
+                          If the key is omitted (emplty), then `operator` must be set to `Exists` (which means it matches any `value` and `key`).
+                        type: string
+                      operator:
+                        description: |-
+                          Defines how the key and its value are linked — whether the key must be `Equal` to the value or can have any value.
+
+                          Setting it to `Exists` is equivalent to the value having any value so that the pod with the specified toleration can match the corresponding taint.
                         type: string
                         enum: ["Exists", "Equal"]
                         x-doc-default: Equal
                       tolerationSeconds:
                         description: |
-                          TolerationSeconds represents the period of time the toleration (which must be of effect NoExecute, otherwise this field is ignored) tolerates the taint.
+                          Specifies the period (in seconds) that the scheduler waits before evicting a Pod from a node if the toleration no longer matches the taint (**only** applicable to the `NoExecute` effect, otherwise ignored).
 
-                          By default, it is not set, which means tolerate the taint forever (do not evict). Zero and negative values will be treated as 0 (evict immediately) by the system.
+                          If the parameter **is not set**, the Pod will not be evicted from the node if the toleration no longer matches the taint. If the parameter **is set to zero** (or negative), the Pod will be evicted immediately if the toleration no longer matches the taint.
+
+                          **The default is**: not set.
                         format: int64
                         type: integer
                       value:
-                        description: |
-                          Value is the taint value the toleration matches to.
+                        description: |-
+                          The value that the toleration must match.
 
-                          If the operator is Exists, the value should be empty, otherwise just a regular string.
+                          Must be empty if the operator parameter is set to `Exists`.
                         type: string
                     type: object
                   type: array
-      additionalPrinterColumns: &additionalPrinterColumns
-        - jsonPath: .spec.applicationDomain
-          name: Domain
+      additionalPrinterColumns:
+        - jsonPath: .spec.applications[*].domain
+          name: Domains
           type: string
     - name: v1
       served: true

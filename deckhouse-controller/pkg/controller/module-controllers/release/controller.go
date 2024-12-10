@@ -18,12 +18,11 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -32,17 +31,9 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/shell-operator/pkg/metric_storage"
-	openapierrors "github.com/go-openapi/errors"
-	"github.com/gofrs/uuid/v5"
-	"github.com/hashicorp/go-multierror"
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
-	corev1 "k8s.io/api/core/v1"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
@@ -54,155 +45,499 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/models"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	deckhouseconfig "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// moduleReleaseReconciler is the controller implementation for ModuleRelease resources
-type moduleReleaseReconciler struct {
-	client client.Client
-
-	dc            dependency.Container
-	metricStorage *metric_storage.MetricStorage
-	logger        *log.Logger
-
-	moduleManager        moduleManager
-	downloadedModulesDir string
-	symlinksDir          string
-
-	deckhouseEmbeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
-
-	preflightCountDown *sync.WaitGroup
-
-	m             sync.Mutex
-	delayTimer    *time.Timer
-	restartReason string
-	clusterUUID   string
-}
-
 const (
-	RegistrySpecChangedAnnotation = "modules.deckhouse.io/registry-spec-changed"
-	UpdatePolicyLabel             = "modules.deckhouse.io/update-policy"
-	deckhouseNodeNameAnnotation   = "modules.deckhouse.io/deployed-on"
+	controllerName = "d8-module-release-controller"
+
+	delayTimer = 3 * time.Second
+
+	maxConcurrentReconciles = 3
+	cacheSyncTimeout        = 3 * time.Minute
 
 	defaultCheckInterval   = 15 * time.Second
-	fsReleaseFinalizer     = "modules.deckhouse.io/exist-on-fs"
-	sourceReleaseFinalizer = "modules.deckhouse.io/release-exists"
 	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
 
 	outdatedReleasesKeepCount = 3
 )
 
-func NewModuleReleaseController(
-	// TODO: logger log.Logger,
-	mgr manager.Manager,
-	dc dependency.Container,
-	embeddedPolicyContainer *helpers.ModuleUpdatePolicySpecContainer,
+func RegisterController(
+	runtimeManager manager.Manager,
 	mm moduleManager,
-	metricStorage *metric_storage.MetricStorage,
-	preflightCountDown *sync.WaitGroup,
+	dc dependency.Container,
+	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
+	ms *metricstorage.MetricStorage,
 	logger *log.Logger,
 ) error {
-	lg := log.Default().Named("ModuleReleaseController")
-
-	c := &moduleReleaseReconciler{
-		client:               mgr.GetClient(),
+	r := &reconciler{
+		init:                 new(sync.WaitGroup),
+		client:               runtimeManager.GetClient(),
+		log:                  logger,
+		moduleManager:        mm,
+		metricStorage:        ms,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		dc:                   dc,
-		logger:               lg,
-
-		metricStorage:           metricStorage,
-		moduleManager:           mm,
-		symlinksDir:             filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
-		deckhouseEmbeddedPolicy: embeddedPolicyContainer,
-
-		delayTimer: time.NewTimer(3 * time.Second),
-
-		preflightCountDown: preflightCountDown,
+		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
+		embeddedPolicy:       embeddedPolicy,
+		delayTimer:           time.NewTimer(delayTimer),
+		dependencyContainer:  dc,
 	}
 
-	// Add Preflight Check
-	err := mgr.Add(manager.RunnableFunc(c.PreflightCheck))
-	if err != nil {
-		return err
-	}
-	c.preflightCountDown.Add(1)
+	r.init.Add(1)
 
-	ctr, err := controller.New("module-release", mgr, controller.Options{
-		MaxConcurrentReconciles: 3,
-		CacheSyncTimeout:        3 * time.Minute,
+	// add preflight
+	if err := runtimeManager.Add(manager.RunnableFunc(r.preflight)); err != nil {
+		return fmt.Errorf("add preflight: %w", err)
+	}
+
+	releaseController, err := controller.New(controllerName, runtimeManager, controller.Options{
+		MaxConcurrentReconciles: maxConcurrentReconciles,
+		CacheSyncTimeout:        cacheSyncTimeout,
 		NeedLeaderElection:      ptr.To(false),
-		Reconciler:              c,
+		Reconciler:              r,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("create controller: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
+	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleRelease{}).
 		// for reconcile documentation if accidentally removed
 		Owns(&v1alpha1.ModuleDocumentation{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Complete(ctr)
+		Complete(releaseController)
 }
 
-func (r *moduleReleaseReconciler) emitRestart(msg string) {
-	r.m.Lock()
-	r.delayTimer.Reset(3 * time.Second)
-	r.restartReason = msg
-	r.m.Unlock()
+type reconciler struct {
+	init                 *sync.WaitGroup
+	client               client.Client
+	log                  *log.Logger
+	dependencyContainer  dependency.Container
+	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
+	moduleManager        moduleManager
+	metricStorage        *metricstorage.MetricStorage
+	downloadedModulesDir string
+	symlinksDir          string
+	restartReason        string
+	clusterUUID          string
+	mtx                  sync.Mutex
+	delayTimer           *time.Timer
 }
 
-func (r *moduleReleaseReconciler) restartLoop(ctx context.Context) {
+type moduleManager interface {
+	DisableModuleHooks(moduleName string)
+	GetModule(moduleName string) *addonmodules.BasicModule
+	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
+	GetEnabledModuleNames() []string
+	AreModulesInited() bool
+}
+
+func (r *reconciler) preflight(ctx context.Context) error {
+	defer r.init.Done()
+
+	// wait until module manager init
+	r.log.Debug("wait until module manager is inited")
+	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
+		return r.moduleManager.AreModulesInited(), nil
+	}); err != nil {
+		return fmt.Errorf("init module manager: %w", err)
+	}
+
+	r.clusterUUID = utils.GetClusterUUID(ctx, r.client)
+
+	go r.restartLoop(ctx)
+
+	// register metrics
+	releases := new(v1alpha1.ModuleReleaseList)
+	if err := r.client.List(ctx, releases); err != nil {
+		return fmt.Errorf("list module releases: %w", err)
+	}
+
+	for _, release := range releases.Items {
+		labels := map[string]string{
+			"version": release.Spec.Version.String(),
+			"module":  release.Spec.ModuleName,
+		}
+
+		r.metricStorage.GaugeSet("{PREFIX}module_pull_seconds_total", release.Status.PullDuration.Seconds(), labels)
+		r.metricStorage.GaugeSet("{PREFIX}module_size_bytes_total", float64(release.Status.Size), labels)
+	}
+
+	r.log.Debug("controller is ready")
+
+	return nil
+}
+
+func (r *reconciler) restartLoop(ctx context.Context) {
 	for {
-		r.m.Lock()
+		r.mtx.Lock()
 		select {
 		case <-r.delayTimer.C:
 			if r.restartReason != "" {
-				r.logger.Infof("Restarting Deckhouse because %s", r.restartReason)
-
-				err := syscall.Kill(1, syscall.SIGUSR2)
-				if err != nil {
-					r.logger.Fatalf("Send SIGUSR2 signal failed: %s", err)
+				r.log.Infof("restart Deckhouse because %s", r.restartReason)
+				if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
+					r.log.Fatalf("send SIGUSR2 signal failed: %s", err)
 				}
 			}
-			r.delayTimer.Reset(3 * time.Second)
+			r.delayTimer.Reset(delayTimer)
 
 		case <-ctx.Done():
 			return
 		}
-
-		r.m.Unlock()
+		r.mtx.Unlock()
 	}
 }
 
-// only ModuleRelease with active finalizer can get here, we have to remove the module on filesystem and remove the finalizer
-func (r *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	var result ctrl.Result
+func (r *reconciler) emitRestart(msg string) {
+	r.mtx.Lock()
+	r.delayTimer.Reset(delayTimer)
+	r.restartReason = msg
+	r.mtx.Unlock()
+}
 
-	// deleted release
-	// also cleanup the filesystem
-	modulePath := path.Join(r.downloadedModulesDir, mr.Spec.ModuleName, "v"+mr.Spec.Version.String())
+func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// wait for init
+	r.init.Wait()
 
-	err := os.RemoveAll(modulePath)
-	if err != nil {
-		return result, fmt.Errorf("remove all in %s: %w", modulePath, err)
+	r.log.Debugf("reconciling the '%s' module release", req.Name)
+	release := new(v1alpha1.ModuleRelease)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: req.Name}, release); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.log.Warnf("the '%s' module release not found", req.Name)
+			return ctrl.Result{}, nil
+		}
+		r.log.Errorf("failed to get the '%s' module release: %v", req.Name, err)
+		return ctrl.Result{Requeue: true}, nil
 	}
 
-	if mr.Status.Phase == v1alpha1.PhaseDeployed {
-		extenders.DeleteConstraints(mr.GetModuleName())
-		symlinkPath := filepath.Join(r.downloadedModulesDir, "modules", fmt.Sprintf("%d-%s", mr.Spec.Weight, mr.Spec.ModuleName))
-		err := os.RemoveAll(symlinkPath)
+	// handle delete event
+	if !release.DeletionTimestamp.IsZero() {
+		return r.deleteRelease(ctx, release)
+	}
+
+	// handle create/update events
+	return r.handleRelease(ctx, release)
+}
+
+// handleRelease handles releases
+func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	switch release.Status.Phase {
+	case "":
+		release.Status.Phase = v1alpha1.ModuleReleasePhasePending
+		release.Status.TransitionTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
+		if err := r.client.Status().Update(ctx, release); err != nil {
+			r.log.Errorf("failed to update the '%s' module release status: %v", release.Name, err)
+			return ctrl.Result{Requeue: true}, nil
+		}
+		// process to the next phase
+		return ctrl.Result{Requeue: true}, nil
+
+	case v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseSkipped:
+		if len(release.Labels) == 0 || (release.Labels[v1alpha1.ModuleReleaseLabelStatus] != strings.ToLower(release.Status.Phase)) {
+			if len(release.Labels) == 0 {
+				release.Labels = make(map[string]string)
+			}
+			release.Labels[v1alpha1.ModuleReleaseLabelStatus] = strings.ToLower(release.Status.Phase)
+			if err := r.client.Update(ctx, release); err != nil {
+				r.log.Errorf("failed to update the '%s' module release status: %v", release.Name, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
+
+		return ctrl.Result{}, nil
+
+	case v1alpha1.ModuleReleasePhaseDeployed:
+		return r.handleDeployedRelease(ctx, release)
+	}
+
+	// if module pull override exists, don't process pending release, to avoid fs override
+	exists, err := utils.ModulePullOverrideExists(ctx, r.client, release.GetModuleSource(), release.Spec.ModuleName)
+	if err != nil {
+		r.log.Errorf("failed to get the '%s' module pull override: %v", release.Spec.ModuleName, err)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	if exists {
+		r.log.Infof("the %q module is overridden, skip release processing", release.Spec.ModuleName)
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	// process only pending releases
+	return r.handlePendingRelease(ctx, release)
+}
+
+// handleRelease handles deployed releases
+func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	var needsUpdate bool
+
+	// check if RegistrySpecChanged annotation is set process it
+	if _, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
+		// if module is enabled - push runModule task in the main queue
+		r.log.Infof("apply new registry settings to the '%s' module", release.Spec.ModuleName)
+		modulePath := filepath.Join(r.downloadedModulesDir, release.Spec.ModuleName, fmt.Sprintf("v%s", release.Spec.Version))
+		source := release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelSource]
+		if err := r.moduleManager.RunModuleWithNewOpenAPISchema(release.Spec.ModuleName, source, modulePath); err != nil {
+			r.log.Errorf("failed to run the '%s' module with new openAPI schema: %v", release.Spec.ModuleName, err)
+			return ctrl.Result{Requeue: true}, nil
+		}
+		// delete annotation and requeue
+		delete(release.ObjectMeta.Annotations, v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged)
+		needsUpdate = true
+	}
+
+	// add finalizer
+	if !controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs) {
+		controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs)
+		needsUpdate = true
+	}
+
+	if len(release.Labels) == 0 || (release.Labels[v1alpha1.ModuleReleaseLabelStatus] != strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)) {
+		if len(release.ObjectMeta.Labels) == 0 {
+			release.ObjectMeta.Labels = make(map[string]string)
+		}
+		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed)
+		needsUpdate = true
+	}
+
+	if needsUpdate {
+		if err := r.client.Update(ctx, release); err != nil {
+			r.log.Errorf("failed to update the '%s' module release: %v", release.Name, err)
+		}
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// at least one release for module source is deployed, add finalizer to prevent module source deletion
+	source := new(v1alpha1.ModuleSource)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
+		r.log.Errorf("failed to get the '%s' module source: %v", release.GetModuleSource(), err)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists) {
+		controllerutil.AddFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists)
+		if err := r.client.Update(ctx, source); err != nil {
+			r.log.Errorf("failed to add finalizer to the '%s' module source: %v", release.GetModuleSource(), err)
+			return ctrl.Result{Requeue: true}, nil
+		}
+	}
+
+	// checks if the module release is overridden by modulepulloverride
+	mpo := new(v1alpha1.ModulePullOverride)
+	err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, mpo)
+	if err == nil {
+		// mpo has been found and mpo version must be used as the source of the documentation
+		return ctrl.Result{}, nil
+	}
+
+	// some other error apart from IsNotFound
+	if !apierrors.IsNotFound(err) {
+		r.log.Errorf("failed to get the '%s' module pull override: %v", release.GetModuleName(), err)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	modulePath := fmt.Sprintf("/%s/v%s", release.GetModuleName(), release.Spec.Version.String())
+	moduleVersion := "v" + release.Spec.Version.String()
+
+	moduleChecksum := release.Labels[v1alpha1.ModuleReleaseLabelReleaseChecksum]
+	if moduleChecksum == "" {
+		moduleChecksum = fmt.Sprintf("%x", md5.Sum([]byte(moduleVersion)))
+	}
+
+	ownerRef := metav1.OwnerReference{
+		APIVersion: v1alpha1.ModuleReleaseGVK.GroupVersion().String(),
+		Kind:       v1alpha1.ModuleReleaseGVK.Kind,
+		Name:       release.GetName(),
+		UID:        release.GetUID(),
+		Controller: ptr.To(true),
+	}
+
+	// mpo not found - update the docs from the module release version
+	if err = utils.EnsureModuleDocumentation(ctx, r.client, release.GetModuleName(), release.GetModuleSource(), moduleChecksum, moduleVersion, modulePath, ownerRef); err != nil {
+		r.log.Errorf("failed to ensure the '%s' module documentation: %v", release.GetModuleName(), err)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	r.log.Debugf("delete outdated releases for the '%s' module", release.GetModuleName())
+	return r.deleteOutdatedModuleReleases(ctx, release.GetModuleSource(), release.GetModuleName())
+}
+
+// handleRelease handles pending releases
+func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	var modulesChangedReason string
+	defer func() {
+		if modulesChangedReason != "" {
+			r.emitRestart(modulesChangedReason)
+		}
+	}()
+
+	policy := new(v1alpha2.ModuleUpdatePolicy)
+	// if release has associated update policy
+	if policyName, found := release.GetObjectMeta().GetLabels()[v1alpha1.ModuleReleaseLabelUpdatePolicy]; found {
+		if policyName == "" {
+			policy = &v1alpha2.ModuleUpdatePolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha2.ModuleUpdatePolicyGVK.Kind,
+					APIVersion: v1alpha2.ModuleUpdatePolicyGVK.GroupVersion().String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "",
+				},
+				Spec: *r.embeddedPolicy.Get(),
+			}
+		} else {
+			// get policy spec
+			if err := r.client.Get(ctx, client.ObjectKey{Name: policyName}, policy); err != nil {
+				r.metricStorage.CounterAdd("{PREFIX}module_update_policy_not_found", 1.0, map[string]string{
+					"version":        release.GetReleaseVersion(),
+					"module_release": release.GetName(),
+					"module":         release.GetModuleName(),
+				})
+
+				if uerr := r.updateReleaseStatusMessage(ctx, release, fmt.Sprintf("Update policy %s not found", policyName)); uerr != nil {
+					r.log.Errorf("failed to update the '%s' release status: %v", release.Name, uerr)
+					return ctrl.Result{Requeue: true}, nil
+				}
+				r.log.Errorf("failed to get the '%s' update policy: %v", policyName, err)
+				return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+			}
+		}
+
+		// TODO(ipaqsa): remove it
+		if policy.Spec.Update.Mode == v1alpha1.ModuleUpdatePolicyModeIgnore {
+			if err := r.updateReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); err != nil {
+				r.log.Errorf("failed to update the '%s' release status: %v", release.Name, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{RequeueAfter: defaultCheckInterval * 4}, nil
+		}
+	} else {
+		var err error
+		policy, err = utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, release.GetModuleName())
 		if err != nil {
-			return result, err
+			r.log.Errorf("failed to get update policy for the '%s' release: %v", release.Name, err)
+			if err = r.updateReleaseStatusMessage(ctx, release, "Update policy not set. Create a suitable ModuleUpdatePolicy object"); err != nil {
+				r.log.Errorf("failed to update the '%s' release status: %v", release.Name, err)
+				return ctrl.Result{}, nil
+			}
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+		marshalledPatch, _ := json.Marshal(map[string]any{
+			"metadata": map[string]any{
+				"labels": map[string]any{
+					v1alpha1.ModuleReleaseLabelUpdatePolicy: policy.Name,
+				},
+			},
+			"status": map[string]string{
+				"message": "",
+			},
+		})
+		patch := client.RawPatch(types.MergePatchType, marshalledPatch)
+		if err = r.client.Patch(ctx, release, patch); err != nil {
+			r.log.Errorf("failed to patch the '%s' module release: %v", release.Name, err)
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+		// also patch status field
+		if err = r.client.Status().Patch(ctx, release, patch); err != nil {
+			r.log.Errorf("failed to patch the '%s' module release status: %v", release.Name, err)
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+	}
+
+	// parse notification config from the deckhouse-discovery secret
+	config, err := utils.GetNotificationConfig(ctx, r.client)
+	if err != nil {
+		r.log.Errorf("failed to parse the notification config: %v", err)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	settings := &updater.Settings{
+		NotificationConfig: config,
+		Mode:               updater.ParseUpdateMode(policy.Spec.Update.Mode),
+		Windows:            policy.Spec.Update.Windows,
+	}
+
+	releaseUpdater := updater.NewUpdater[*v1alpha1.ModuleRelease](
+		ctx, r.dependencyContainer, r.log, settings, updater.DeckhouseReleaseData{}, true, false,
+		newKubeAPI(r.log, r.client, r.downloadedModulesDir, r.symlinksDir, r.clusterUUID, r.moduleManager, r.dependencyContainer),
+		&metricsUpdater{metricStorage: r.metricStorage}, &webhookDataSource{logger: r.log}, r.moduleManager.GetEnabledModuleNames(),
+	)
+
+	{
+		otherReleases := new(v1alpha1.ModuleReleaseList)
+		if err = r.client.List(ctx, otherReleases, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: release.GetModuleName()}); err != nil {
+			r.log.Errorf("failed to list module releases: %v", err)
+			return ctrl.Result{Requeue: true}, nil
+		}
+		pointerReleases := make([]*v1alpha1.ModuleRelease, 0, len(otherReleases.Items))
+		for _, rel := range otherReleases.Items {
+			pointerReleases = append(pointerReleases, &rel)
+		}
+		releaseUpdater.SetReleases(pointerReleases)
+	}
+
+	if releaseUpdater.ReleasesCount() == 0 {
+		return ctrl.Result{}, nil
+	}
+
+	releaseUpdater.PredictNextRelease(release)
+
+	if releaseUpdater.LastReleaseDeployed() {
+		r.log.Debug("latest release is deployed")
+		return ctrl.Result{}, nil
+	}
+
+	if predicted := releaseUpdater.GetPredictedRelease(); predicted != nil {
+		if predicted.GetName() != release.GetName() {
+			// requeue the release
+			r.log.Debugf("processing wrong release (current: %s, predicted: %s)", predicted.Name, predicted.Name)
+			return ctrl.Result{Requeue: true}, nil
+		}
+	}
+
+	if releaseUpdater.PredictedReleaseIsPatch() {
+		// patch release does not respect update windows or ManualMode
+		if err = releaseUpdater.ApplyPredictedRelease(); err != nil {
+			r.log.Errorf("failed to apply predicted release: %v", err.Error())
+			return r.wrapApplyReleaseError(err), nil
+		}
+
+		modulesChangedReason = "a new module release found"
+		return ctrl.Result{}, nil
+	}
+
+	if err = releaseUpdater.ApplyPredictedRelease(); err != nil {
+		r.log.Errorf("failed to apply predicted release: %v", err.Error())
+		return r.wrapApplyReleaseError(err), nil
+	}
+
+	modulesChangedReason = "a new module release found"
+
+	r.log.Debugf("delete outdated releases for the '%s' module", release.GetModuleName())
+	return r.deleteOutdatedModuleReleases(ctx, release.GetModuleSource(), release.GetModuleName())
+}
+
+// deleteRelease deletes the module from filesystem
+func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	modulePath := path.Join(r.downloadedModulesDir, release.Spec.ModuleName, "v"+release.Spec.Version.String())
+
+	if err := os.RemoveAll(modulePath); err != nil {
+		r.log.Errorf("failed to remove the '%s' module in the '%s' downloaded dir: %v", release.Name, modulePath, err)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	if release.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
+		extenders.DeleteConstraints(release.GetModuleName())
+		symlinkPath := filepath.Join(r.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, release.Spec.ModuleName))
+		if err := os.RemoveAll(symlinkPath); err != nil {
+			r.log.Errorf("failed to remove the '%s' module in the '%s' symlinks dir: %v", release.Name, modulePath, err)
+			return ctrl.Result{Requeue: true}, nil
 		}
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
@@ -212,105 +547,24 @@ func (r *moduleReleaseReconciler) deleteReconcile(ctx context.Context, mr *v1alp
 		r.emitRestart("a module release was removed")
 	}
 
-	if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
-		return result, nil
+	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs) {
+		controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs)
+		if err := r.client.Update(ctx, release); err != nil {
+			r.log.Errorf("failed to update the '%s' module release: %v", release.Name, err)
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
-	controllerutil.RemoveFinalizer(mr, fsReleaseFinalizer)
-	err = r.client.Update(ctx, mr)
-	if err != nil {
-		return result, err
-	}
-
-	return result, nil
+	return ctrl.Result{}, nil
 }
 
-func (r *moduleReleaseReconciler) createOrUpdateReconcile(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	var result ctrl.Result
-
-	switch mr.Status.Phase {
-	case "":
-		mr.Status.Phase = v1alpha1.PhasePending
-		mr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
-		if err := r.client.Status().Update(ctx, mr); err != nil {
-			return result, fmt.Errorf("update status: %w", err)
-		}
-
-		return ctrl.Result{Requeue: true}, nil // process to the next phase
-
-	case v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseSkipped:
-		if mr.Labels["status"] != strings.ToLower(mr.Status.Phase) {
-			// update labels
-			addLabels(mr, map[string]string{"status": strings.ToLower(mr.Status.Phase)})
-			if err := r.client.Update(ctx, mr); err != nil {
-				return result, fmt.Errorf("update status: %w", err)
-			}
-		}
-
-		return result, nil
-
-	case v1alpha1.PhaseDeployed:
-		return r.reconcileDeployedRelease(ctx, mr)
-	}
-
-	// if ModulePullOverride is set, don't process pending release, to avoid fs override
-	exists, err := r.isModulePullOverrideExists(ctx, mr.GetModuleSource(), mr.Spec.ModuleName)
-	if err != nil {
-		return result, err
-	}
-
-	if exists {
-		r.logger.Infof("ModulePullOverride for module %q exists. Skipping release processing", mr.Spec.ModuleName)
-		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
-	}
-
-	// process only pending releases
-	return r.reconcilePendingRelease(ctx, mr)
-}
-
-func (r *moduleReleaseReconciler) isModulePullOverrideExists(ctx context.Context, sourceName, moduleName string) (bool, error) {
-	var res v1alpha1.ModulePullOverrideList
-	err := r.client.List(ctx, &res, client.MatchingLabels{"source": sourceName, "module": moduleName}, client.Limit(1))
-	if err != nil {
-		return false, err
-	}
-
-	return len(res.Items) > 0, nil
-}
-
-func (r *moduleReleaseReconciler) reconcileDeployedRelease(ctx context.Context, mr *v1alpha1.ModuleRelease) (ctrl.Result, error) {
-	var result ctrl.Result
-	var metaUpdateRequired bool
-
-	// check if RegistrySpecChangedAnnotation annotation is set and processes it
-	if _, set := mr.GetAnnotations()[RegistrySpecChangedAnnotation]; set {
-		// if module is enabled - push runModule task in the main queue
-		r.logger.Infof("Applying new registry settings to the %s module", mr.Spec.ModuleName)
-		err := r.moduleManager.RunModuleWithNewOpenAPISchema(mr.Spec.ModuleName, mr.ObjectMeta.Labels["source"], filepath.Join(r.downloadedModulesDir, mr.Spec.ModuleName, fmt.Sprintf("v%s", mr.Spec.Version)))
-		if err != nil {
-			return result, fmt.Errorf("run module with new OpenAPI schema: %w", err)
-		}
-		// delete annotation and requeue
-		delete(mr.ObjectMeta.Annotations, RegistrySpecChangedAnnotation)
-		metaUpdateRequired = true
-	}
-
-	// add finalizer and status label
-	if !controllerutil.ContainsFinalizer(mr, fsReleaseFinalizer) {
-		controllerutil.AddFinalizer(mr, fsReleaseFinalizer)
-		metaUpdateRequired = true
-	}
-
-	if mr.Labels["status"] != strings.ToLower(v1alpha1.PhaseDeployed) {
-		addLabels(mr, map[string]string{"status": strings.ToLower(v1alpha1.PhaseDeployed)})
-		metaUpdateRequired = true
-	}
-
-	if metaUpdateRequired {
-		err := r.client.Update(ctx, mr)
-		if err != nil {
-			return result, fmt.Errorf("update release: %w", err)
-		}
+// deleteOutdatedModuleReleases finds and deletes all outdated releases of the module in
+// Suspend, Skipped or Superseded phases, except for <outdatedReleasesKeepCount> most recent ones
+func (r *reconciler) deleteOutdatedModuleReleases(ctx context.Context, moduleSource, module string) (ctrl.Result, error) {
+	releases := new(v1alpha1.ModuleReleaseList)
+	labelSelector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelSource: moduleSource, v1alpha1.ModuleReleaseLabelModule: module}
+	if err := r.client.List(ctx, releases, labelSelector); err != nil {
+		r.log.Errorf("failed to list all module releases: %v", err)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -1197,37 +1451,69 @@ func (r *moduleReleaseReconciler) cleanUpModuleReleases(ctx context.Context, mr 
 		version *semver.Version
 	}
 
-	outdatedReleases := make(map[string][]outdatedRelease, 0)
+	outdatedReleases := make(map[string][]outdatedRelease)
 
 	// get all outdated releases by module names
-	for _, rl := range moduleReleasesFromSource.Items {
-		if rl.Status.Phase == v1alpha1.PhaseSuperseded || rl.Status.Phase == v1alpha1.PhaseSuspended || rl.Status.Phase == v1alpha1.PhaseSkipped {
-			outdatedReleases[rl.Spec.ModuleName] = append(outdatedReleases[rl.Spec.ModuleName], outdatedRelease{
-				name:    rl.Name,
-				version: rl.Spec.Version,
+	for _, outdated := range releases.Items {
+		if outdated.Status.Phase == v1alpha1.ModuleReleasePhaseSuperseded || outdated.Status.Phase == v1alpha1.ModuleReleasePhaseSuspended || outdated.Status.Phase == v1alpha1.ModuleReleasePhaseSkipped {
+			outdatedReleases[outdated.Spec.ModuleName] = append(outdatedReleases[outdated.Spec.ModuleName], outdatedRelease{
+				name:    outdated.Name,
+				version: outdated.Spec.Version,
 			})
 		}
 	}
 
 	// sort and delete all outdated releases except for <outdatedReleasesKeepCount> last releases per a module
-	for moduleName, releases := range outdatedReleases {
-		sort.Slice(releases, func(i, j int) bool { return releases[j].version.LessThan(releases[i].version) })
-		r.logger.Debugf("Found the following outdated releases for %s module: %v", moduleName, releases)
-		if len(releases) > outdatedReleasesKeepCount {
-			for i := outdatedReleasesKeepCount; i < len(releases); i++ {
-				releaseObj := &v1alpha1.ModuleRelease{
+	for moduleName, outdated := range outdatedReleases {
+		r.log.Debugf("found the following outdated releases for the '%s' module: %v", moduleName, releases)
+
+		sort.Slice(outdated, func(i, j int) bool { return outdated[j].version.LessThan(outdated[i].version) })
+
+		if len(outdated) > outdatedReleasesKeepCount {
+			for idx := outdatedReleasesKeepCount; idx < len(outdated); idx++ {
+				obj := &v1alpha1.ModuleRelease{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: releases[i].name,
+						Name: outdated[idx].name,
 					},
 				}
-				err = r.client.Delete(ctx, releaseObj)
-				if err != nil && !apierrors.IsNotFound(err) {
-					return result, fmt.Errorf("couldn't clean up outdated release %q of %s module: %w", releases[i].name, moduleName, err)
+				if err := r.client.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+					r.log.Errorf("failed to delete the '%s' outdated release: %v", outdated[idx].name, err)
+					return ctrl.Result{Requeue: true}, nil
 				}
-				r.logger.Infof("cleaned up outdated release %q of %q module", releases[i].name, moduleName)
+				r.log.Infof("cleaned up the %q outdated release of the %q module", outdated[idx].name, moduleName)
 			}
 		}
 	}
 
-	return result, nil
+	return ctrl.Result{}, nil
+}
+
+func (r *reconciler) wrapApplyReleaseError(err error) ctrl.Result {
+	var notReadyErr *updater.NotReadyForDeployError
+	if errors.As(err, &notReadyErr) {
+		// TODO: requeue all releases if deckhouse update settings is changed
+		// requeueAfter := notReadyErr.RetryDelay()
+		// if requeueAfter == 0 {
+		// requeueAfter = defaultCheckInterval
+		// }
+		// r.logger.Infof("%s: retry after %s", err.Error(), requeueAfter)
+		// return ctrl.Result{RequeueAfter: requeueAfter}, nil
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}
+	}
+
+	return ctrl.Result{}
+}
+
+func (r *reconciler) updateReleaseStatusMessage(ctx context.Context, release *v1alpha1.ModuleRelease, message string) error {
+	if release.Status.Message == message {
+		return nil
+	}
+
+	release.Status.Message = message
+
+	if err := r.client.Status().Update(ctx, release); err != nil {
+		return fmt.Errorf("update the '%s' module release status: %w", release.Name, err)
+	}
+
+	return nil
 }

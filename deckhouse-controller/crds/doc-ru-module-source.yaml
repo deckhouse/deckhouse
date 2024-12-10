@@ -31,7 +31,7 @@ spec:
                   description: Время последней синхронизации с container registry.
                 modulesCount:
                   type: integer
-                  description: Колличество доступых модулей.
+                  description: Количество доступных модулей.
                 modules:
                   type: array
                   description: Список доступных для установки модулей и их политики обновления.
@@ -41,6 +41,12 @@ spec:
                       name:
                         type: string
                         description: Имя модуля.
+                      pullError:
+                        type: string
+                        description: Ошибка скачивания модуля.
+                      checksum:
+                        type: string
+                        description: Чексумма релиза.
                       policy:
                         type: string
                         description: Имя политики.
@@ -49,26 +55,23 @@ spec:
                 message:
                   type: string
                   description: Сообщение с детальной ошибкой.
-                moduleErrors:
-                  type: array
-                  description: Сообщения с ошибками установки модулей.
       subresources:
         status: {}
       additionalPrinterColumns:
         - name: "release channel"
           type: string
           jsonPath: .spec.releaseChannel
-          description: "Канал обновлений по умолчанию для модулей в данном репозитории."
+          description: Канал обновлений по умолчанию для модулей в данном репозитории.
         - name: count
           type: integer
           jsonPath: .status.modulesCount
-          description: "Количество доступных модулей в данном репозитории."
+          description: Количество доступных модулей в данном репозитории.
         - name: sync
           jsonPath: .status.syncTime
           type: date
           format: date-time
-          description: 'Время последней синхронизации с container registry.'
+          description: Время последней синхронизации с container registry.
         - name: msg
           jsonPath: .status.message
           type: string
-          description: 'Сообщение об ошибке.'
+          description: Сообщение об ошибке.

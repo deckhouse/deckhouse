@@ -162,10 +162,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: CniCiliumOrphanEgressGatewayPolicyFound
-      sourceFile: ee/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+      sourceFile: ee/se-plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
       moduleUrl: 021-cni-cilium
       module: cni-cilium
-      edition: ee
+      edition: se-plus
       description: |
         There is orphan EgressGatewayPolicy in the cluster: with the name: `{{$labels.name}}` which has irrelevant EgressGateway name.
 
@@ -1099,7 +1099,7 @@ alerts:
       description: |
         There is deprecated istio version `{{$labels.version}}` installed.
         Impact — version support will be removed in future deckhouse releases. The higher alert severity — the higher probability of support cancelling.
-        Upgrading instructions — https://deckhouse.io/documentation//modules/110-istio/examples.html#upgrading-istio.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio) on upgrading Istio.
       summary: |
         There is deprecated istio version installed
       severity: undefined
@@ -1240,7 +1240,7 @@ alerts:
       description: |
         The current istio version `{{$labels.istio_version}}` may not work properly with the current k8s version `{{$labels.k8s_version}}`, because it is unsupported officially.
         Please upgrade istio as soon as possible.
-        Upgrading instructions — https://deckhouse.io/documentation//modules/110-istio/examples.html#upgrading-istio.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio) on upgrading Istio.
       summary: |
         The installed istio version is incompatible with the k8s version
       severity: "3"
@@ -1281,7 +1281,7 @@ alerts:
       description: |-
         Current kubernetes version "{{ $labels.k8s_version }}" is deprecated, and its support will be removed within 6 months
 
-        Please migrate to the next kubernetes version (at least 1.27)
+        Please migrate to the next kubernetes version (at least 1.28)
 
         Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
       summary: |
@@ -1449,6 +1449,17 @@ alerts:
         MetalLB BGP session down.
       severity: "4"
       markupFormat: markdown
+    - name: D8MetallbBothBGPAndL2PoolsConfigured
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        There must not be `Layer2` and `BGP` IP pools configured at the same time in ModuleConfig version 1.
+      summary: |
+        MetaLB module misconfiguration.
+      severity: "4"
+      markupFormat: markdown
     - name: D8MetalLBConfigNotLoaded
       sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
@@ -1477,6 +1488,53 @@ alerts:
         ```
       summary: |
         MetalLB running on a stale configuration, because the latest config failed to load.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbIpAddressPoolNSMismatch
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        IpAddressPool `{{$labels.name}}` is located in namespace `{{$labels.namespace}}`, but must be located in namespace `d8-metallb`.
+      summary: |
+        MetaLB module misconfiguration.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbL2AdvertisementNodeSelectorsMismatch
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        L2Advertisement `{{$labels.name}}`: there must only be one matchLabels (not matchExpressions) in the nodeSelectors.
+      summary: |
+        MetaLB module misconfiguration.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbL2AdvertisementNSMismatch
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        L2Advertisement `{{$labels.name}}` is located in namespace `{{$labels.namespace}}`, but must be located in namespace `d8-metallb`.
+      summary: |
+        MetaLB module misconfiguration.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbOrphanedLoadBalancerDetected
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        The Service `{{$labels.name}}` in `{{$labels.namespace}}` namespace is orphaned. A Service must have any of the following properties:
+        - have the loadBalancerClass,
+        - have the `metallb.universe.tf/address-pool` annotation,
+        - have the `metallb.universe.tf/ip-allocated-from-pool` annotation.
+      summary: |
+        MetaLB module misconfiguration.
       severity: "4"
       markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
@@ -1640,10 +1698,10 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node is not managed by the [node-manager](http://documentation.example.com/modules/040-node-manager/) module.
+        The {{ $labels.node }} Node is not managed by the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module.
 
         The recommended actions are as follows:
-        - Follow these instructions to clean up the node and add it to the cluster: http://documentation.example.com/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
+        - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -1818,7 +1876,7 @@ alerts:
         - reserved `metadata.labels` *node-role.deckhouse.io/* with ending not in `(system|frontend|monitoring|_deckhouse_module_name_)`
         - or reserved `spec.taints` *dedicated.deckhouse.io* with values not in `(system|frontend|monitoring|_deckhouse_module_name_)`
 
-        [Get instructions on how to fix it here](http://documentation.example.com/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        [Get instructions on how to fix it here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} needs fixing up
       severity: "6"
@@ -2683,7 +2741,7 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](http://documentation.example.com/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
+        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
         Use the following command to get the list of the IngressNginxControllers that contain GeoIPv1 variables:
         `kubectl  get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'`
 
@@ -3608,6 +3666,17 @@ alerts:
         Storage class {{ $labels.storageclass }} uses the deprecated rbd provisioner. It is necessary to migrate the volumes to the Ceph CSI driver.
       severity: "9"
       markupFormat: markdown
+    - name: ModuleAtConflict
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Conflicting sources for the {{ $labels.moduleName }} module. Please specify the proper source in the module configuration.
+      summary: |
+        Conflict detected for module {{ $labels.moduleName }}.
+      severity: "4"
+      markupFormat: markdown
     - name: ModuleConfigDeprecated
       sourceFile: modules/810-documentation/monitoring/prometheus-rules/deprecated-mc.yaml
       moduleUrl: 810-documentation
@@ -3621,13 +3690,37 @@ alerts:
         Deprecated ModuleConfig was found.
       severity: "9"
       markupFormat: markdown
+    - name: ModuleConfigObsoleteVersion
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        ModuleConfig {{ $labels.name }} is outdated. Update ModuleConfig {{ $labels.name }} to the latest version.
+      summary: |
+        ModuleConfig {{ $labels.name }} is outdated.
+      severity: "4"
+      markupFormat: markdown
+    - name: ModuleReleaseIsBlockedByRequirements
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module {{ $labels.moduleName }} release is blocked by the requirements.
+
+        Please check the requirements with the following command `kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements`.
+      summary: |
+        Module release is blocked by the requirements.
+      severity: "6"
+      markupFormat: markdown
     - name: ModuleReleaseIsWaitingManualApproval
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module release is waiting for manual approval.
+        Module {{ $labels.moduleName }} release is waiting for manual approval.
 
         Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
       summary: |
@@ -4522,9 +4615,6 @@ alerts:
       description: |-
         StorageClass having a cloud-provider provisioner shouldn't be deployed manually.
         They are managed by the cloud-provider module, you only need to change the module configuration to fit your needs.
-
-
-        [Find storage configuration documentation for your cloud-provider here](http://documentation.example.com/kubernetes.html).
       summary: |
         Manually deployed StorageClass {{ $labels.name }} found in the cluster
       severity: "6"
@@ -4537,9 +4627,6 @@ alerts:
       description: |-
         More than one StorageClass in the cluster annotated as a default.
         Probably manually deployed StorageClass exists, that overlaps with cloud-provider module default Storage configuration.
-
-
-        [Find storage configuration documentation for your cloud-provider here](http://documentation.example.com/kubernetes.html).
       summary: |
         Multiple default StorageClasses found in the cluster
       severity: "6"

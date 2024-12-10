@@ -218,7 +218,7 @@ func getSmokeMiniImage(values *go_hook.PatchableValues) string {
 func getSmokeMiniStorageClass(values *go_hook.PatchableValues, storageClassSnap []go_hook.FilterResult) string {
 	var (
 		k8s = getK8sDefaultStorageClass(storageClassSnap)
-		d8  = values.Get("global.storageClass").String()
+		d8  = values.Get("global.modules.storageClass").String()
 		sm  = values.Get("upmeter.smokeMini.storageClass").String()
 	)
 	return firstNonEmpty(sm, d8, k8s, snapshot.DefaultStorageClass)

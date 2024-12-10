@@ -68,7 +68,7 @@ func Test_Logger(t *testing.T) {
 
 		logger.Error(message, slog.String(argKey, argValue))
 
-		assert.Contains(t, buf.String(), `{"level":"error","msg":"stub msg","stub_arg":"arg","stacktrace":"`)
+		assert.Contains(t, buf.String(), `{"level":"error","msg":"stub msg","stub_arg":"arg","stacktrace":`)
 	})
 }
 
@@ -137,7 +137,7 @@ func Test_LoggerFormat(t *testing.T) {
 			args: args{},
 			wants: wants{
 				containsRegexp: `(^{"level":"(info|warn|fatal)","msg":"stub msg","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
-					`^{"level":"(error)","msg":"stub msg","stub_arg":"arg","stacktrace":".*","time":"2006-01-02T15:04:05Z"}$)`,
+					`^{"level":"(error)","msg":"stub msg","stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(debug|trace)".*`,
 			},
 		},
@@ -160,7 +160,7 @@ func Test_LoggerFormat(t *testing.T) {
 			},
 			wants: wants{
 				containsRegexp: `(^{"level":"(debug|info|warn|fatal)","msg":"stub msg","source":"log\/logger_test.go:[1-9][0-9]","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
-					`^{"level":"(error)","msg":"stub msg","stub_arg":"arg","stacktrace":".*","time":"2006-01-02T15:04:05Z"}$)`,
+					`^{"level":"(error)","msg":"stub msg","stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(trace)".*`,
 			},
 		},
@@ -183,7 +183,7 @@ func Test_LoggerFormat(t *testing.T) {
 			},
 			wants: wants{
 				containsRegexp: `(^{"level":"(debug|info|warn|fatal)","msg":"stub msg: arg","source":"log\/logger_test.go:([1-9][0-9]|[1-9][0-9][0-9])","time":"2006-01-02T15:04:05Z"}$|` +
-					`^{"level":"(error)","msg":"stub msg: arg","stacktrace":".*","time":"2006-01-02T15:04:05Z"}$)`,
+					`^{"level":"(error)","msg":"stub msg: arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(trace)".*`,
 			},
 		},
@@ -204,7 +204,7 @@ func Test_LoggerFormat(t *testing.T) {
 			},
 			wants: wants{
 				containsRegexp: `(^{"level":"(info|warn|fatal)","logger":"first","msg":"stub msg","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
-					`^{"level":"(error)","logger":"first","msg":"stub msg","stub_arg":"arg","stacktrace":".*","time":"2006-01-02T15:04:05Z"}$)`,
+					`^{"level":"(error)","logger":"first","msg":"stub msg","stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(debug|trace)".*`,
 			},
 		},
@@ -227,7 +227,7 @@ func Test_LoggerFormat(t *testing.T) {
 			},
 			wants: wants{
 				containsRegexp: `(^{"level":"(info|warn|fatal)","logger":"first.second.third","msg":"stub msg","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
-					`^{"level":"(error)","logger":"first.second.third","msg":"stub msg","stub_arg":"arg","stacktrace":".*","time":"2006-01-02T15:04:05Z"}$)`,
+					`^{"level":"(error)","logger":"first.second.third","msg":"stub msg","stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(debug|trace)".*`,
 			},
 		},
@@ -248,7 +248,7 @@ func Test_LoggerFormat(t *testing.T) {
 			},
 			wants: wants{
 				containsRegexp: `(^{"level":"(info|warn|fatal)","msg":"stub msg","module":{"stub_arg":"arg"},"time":"2006-01-02T15:04:05Z"}$|` +
-					`^{"level":"(error)","msg":"stub msg","module":{"stub_arg":"arg"},"stacktrace":".*","time":"2006-01-02T15:04:05Z"}$)`,
+					`^{"level":"(error)","msg":"stub msg","module":{"stub_arg":"arg"},"stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(debug|trace)".*`,
 			},
 		},
@@ -269,7 +269,7 @@ func Test_LoggerFormat(t *testing.T) {
 			},
 			wants: wants{
 				containsRegexp: `(^{"level":"(info|warn|fatal)","msg":"stub msg","stub log":{"stub arg":{"nested arg":"some"}},"stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
-					`^{"level":"(error)","msg":"stub msg","stub log":{"stub arg":{"nested arg":"some"}},"stub_arg":"arg","stacktrace":".*","time":"2006-01-02T15:04:05Z"}$)`,
+					`^{"level":"(error)","msg":"stub msg","stub log":{"stub arg":{"nested arg":"some"}},"stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(debug|trace)".*`,
 			},
 		},
@@ -292,7 +292,7 @@ stubArg:
 			},
 			wants: wants{
 				containsRegexp: `(^{"level":"(info|warn|fatal)","msg":"stub msg","stub log":{"stubArg":{"nestedArg":"some"}},"stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
-					`^{"level":"(error)","msg":"stub msg","stub log":{"stubArg":{"nestedArg":"some"}},"stub_arg":"arg","stacktrace":".*","time":"2006-01-02T15:04:05Z"}$)`,
+					`^{"level":"(error)","msg":"stub msg","stub log":{"stubArg":{"nestedArg":"some"}},"stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(debug|trace)".*`,
 			},
 		},
@@ -315,7 +315,7 @@ stubArg:
 			},
 			wants: wants{
 				containsRegexp: `(^{"level":"(fatal)","msg":"stub msg","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
-					`^{"level":"(error)","msg":"stub msg","stub_arg":"arg","stacktrace":".*","time":"2006-01-02T15:04:05Z"}$)`,
+					`^{"level":"(error)","msg":"stub msg","stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(info|warn|debug|trace)".*`,
 			},
 		},

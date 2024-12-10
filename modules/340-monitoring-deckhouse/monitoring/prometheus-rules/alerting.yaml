@@ -20,7 +20,7 @@
       summary: |
         Deckhouse in the cluster is not subscribed to one of the regular release channels.
   - alert: DeckhouseReleaseIsWaitingManualApproval
-    expr: max by (name) (d8_release_waiting_manual) == 1
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth=~"(nil|one)"})
     labels:
       severity_level: "9"
       d8_module: deckhouse
@@ -37,7 +37,7 @@
       summary: |
         Deckhouse release is waiting for manual approval.
   - alert: DeckhouseReleaseIsWaitingManualApproval
-    expr: max by (name) (d8_release_waiting_manual) == 2
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="two"})
     labels:
       severity_level: "6"
       d8_module: deckhouse
@@ -54,7 +54,7 @@
       summary: |
         Deckhouse release is waiting for manual approval.
   - alert: DeckhouseReleaseIsWaitingManualApproval
-    expr: max by (name) (d8_release_waiting_manual) >= 3
+    expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth="three"})
     labels:
       severity_level: "3"
       d8_module: deckhouse
@@ -71,7 +71,7 @@
       summary: |
         Deckhouse release is waiting for manual approval.
   - alert: DeckhouseReleaseIsBlocked
-    expr: max by (name) (d8_release_blocked{reason="requirement"}) >= 1
+    expr: sum by (name) (d8_release_info{requirementsNotMet="true"})
     labels:
       severity_level: "5"
       d8_module: deckhouse
@@ -87,7 +87,7 @@
       summary: |
         Deckhouse release requirements unmet.
   - alert: DeckhouseReleaseDisruptionApprovalRequired
-    expr: max by (name) (d8_release_blocked{reason="disruption"}) >= 1
+    expr: sum by (name) (d8_release_info{disruptionApproval="true"})
     labels:
       severity_level: "4"
       d8_module: deckhouse
@@ -104,7 +104,7 @@
       summary: |
         Deckhouse release disruption approval required.
   - alert: ModuleReleaseIsWaitingManualApproval
-    expr: max by (name) (d8_module_release_waiting_manual) >= 1
+    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) d8_module_release_info{manualApproval="true"}) by (name, moduleName)
     labels:
       severity_level: "6"
     annotations:
@@ -112,11 +112,25 @@
       plk_protocol_version: "1"
       plk_ignore_labels: "name"
       description: |
-        Module release is waiting for manual approval.
+        Module {{ $labels.moduleName }} release is waiting for manual approval.
 
         Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
       summary: |
         Module release is waiting for manual approval.
+  - alert: ModuleReleaseIsBlockedByRequirements
+    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) d8_module_release_info{requirementsNotMet="true"}) by (name, moduleName)
+    labels:
+      severity_level: "6"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      description: |
+        Module {{ $labels.moduleName }} release is blocked by the requirements.
+
+        Please check the requirements with the following command `kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements`.
+      summary: |
+        Module release is blocked by the requirements.
   - alert: D8HasModuleConfigAllowedToDisable
     expr: max by (module) (d8_moduleconfig_allowed_to_disable) >= 1
     for: 3m
@@ -140,3 +154,25 @@
         Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disable-` to stop this alert.
       summary: |
         ModuleConfig annotation for allow to disable is setted.
+  - alert: ModuleAtConflict
+    expr: max by (moduleName) (d8_module_at_conflict) >= 1
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        Conflicting sources for the {{ $labels.moduleName }} module. Please specify the proper source in the module configuration.
+      summary: |
+        Conflict detected for module {{ $labels.moduleName }}.
+  - alert: ModuleConfigObsoleteVersion
+    expr: max by (name) (d8_module_config_obsolete_version) >= 1
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        ModuleConfig {{ $labels.name }} is outdated. Update ModuleConfig {{ $labels.name }} to the latest version.
+      summary: |
+        ModuleConfig {{ $labels.name }} is outdated.

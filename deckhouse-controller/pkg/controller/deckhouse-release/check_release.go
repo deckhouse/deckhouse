@@ -30,7 +30,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/spaolacci/murmur3"
@@ -152,7 +151,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		// GT
 		case release.GetVersion().GreaterThan(newSemver):
 			// cleanup versions which are older than current version in a specified channel and are in a Pending state
-			if release.Status.Phase == v1alpha1.PhasePending {
+			if release.Status.Phase == v1alpha1.ModuleReleasePhasePending {
 				err = r.client.Delete(ctx, release, client.PropagationPolicy(metav1.DeletePropagationBackground))
 				if err != nil {
 					return fmt.Errorf("delete old release: %w", err)
@@ -163,7 +162,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 		case release.GetVersion().Equal(newSemver):
 			r.logger.Debugf("Release with version %s already exists", release.GetVersion())
 			switch release.Status.Phase {
-			case v1alpha1.PhasePending, "":
+			case v1alpha1.ModuleReleasePhasePending, "":
 				if releaseChecker.releaseMetadata.Suspend {
 					patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend))
 					err := r.client.Patch(ctx, release, patch)
@@ -177,7 +176,7 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 					}
 				}
 
-			case v1alpha1.PhaseSuspended:
+			case v1alpha1.ModuleReleasePhaseSuspended:
 				if !releaseChecker.releaseMetadata.Suspend {
 					patch := client.RawPatch(types.MergePatchType, buildSuspendAnnotation(releaseChecker.releaseMetadata.Suspend))
 					err := r.client.Patch(ctx, release, patch)
@@ -416,7 +415,10 @@ func (rr *releaseReader) untarMetadata(rc io.Reader) error {
 func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(img v1.Image) (*ReleaseMetadata, error) {
 	meta := new(ReleaseMetadata)
 
-	rc := mutate.Extract(img)
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return nil, err
+	}
 	defer rc.Close()
 
 	rr := &releaseReader{
@@ -424,7 +426,7 @@ func (dcr *DeckhouseReleaseChecker) fetchReleaseMetadata(img v1.Image) (*Release
 		changelogReader: bytes.NewBuffer(nil),
 	}
 
-	err := rr.untarMetadata(rc)
+	err = rr.untarMetadata(rc)
 	if err != nil {
 		return nil, err
 	}

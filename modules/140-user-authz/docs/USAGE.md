@@ -8,7 +8,7 @@ title: "The user-authz module: usage"
 The example uses the [new role-based](./#the-new-role-based-model).
 {% endalert %}
 
-To grant access to a cluster administrator, use the role `d8:manage:all:admin` in `ClusterRoleBinding`.
+To grant access to a cluster administrator, use the role `d8:manage:all:manager` in `ClusterRoleBinding`.
 
 Example of assigning rights to a cluster administrator (User `joe`):
 
@@ -23,7 +23,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:admin
+  name: d8:manage:all:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -46,7 +46,7 @@ The user will be able to:
 The example uses the [new role-based](./#the-new-role-based-model).
 {% endalert %}
 
-To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:manage:networking:admin` in `ClusterRoleBinding`.
+To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:manage:networking:manager` in `ClusterRoleBinding`.
 
 Example of assigning rights to a network administrator (User `joe`):
 
@@ -61,7 +61,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:networking:admin
+  name: d8:manage:networking:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
