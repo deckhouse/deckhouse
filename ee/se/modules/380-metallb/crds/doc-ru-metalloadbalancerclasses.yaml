@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Описывает ресурс MetalLoadBalancerClass для кластера. Данный класс можно использовать для настройки сервиса с типом `LoadBalancer` указав в поле соответствующий `spec.loadBalancerClass` или не указывать если в кластере присутствует MetalLoadBalancerClass с флагом `spec.isDefault` со значением `true`.
+            Описывает ресурс MetalLoadBalancerClass для кластера. Данный класс можно использовать для настройки сервиса с типом `LoadBalancer`, указав в поле соответствующий `spec.loadBalancerClass`. Если в кластере присутствует MetalLoadBalancerClass с флагом `spec.isDefault`, установленным в `true`, явное указание может быть не обязательным.
           properties:
             spec:
               properties:

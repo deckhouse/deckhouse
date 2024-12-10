@@ -4,7 +4,7 @@ required: ["addressPools"]
 properties:
   loadBalancerClass:
     type: string
-    description: An optional field describing the LoadBalancer class. The LoadBalancerClass field should be used in L2 LoadBalancer mode to specify the MetalLoadBalancerClass that will define the balancer parameters for the Service.
+    description: An optional field describing the LoadBalancer class. The LoadBalancerClass field should be used in L2 LoadBalancer mode to specify the MetalLoadBalancerClass that defines the balancer parameters for the Service.
   nodeSelector:
     type: object
     additionalProperties:

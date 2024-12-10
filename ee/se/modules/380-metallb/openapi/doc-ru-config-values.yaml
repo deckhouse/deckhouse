@@ -2,7 +2,7 @@ type: object
 properties:
   loadBalancerClass:
     description: |
-      Необязательное поле, описывающее класс LoadBalancer. Поле LoadBalancerClass следует использовать в режиме L2 LoadBalancer для указания MetalLoadBalancerClass, который будет задавать параметры балансировщика для Service.
+      Необязательное поле, описывающее класс LoadBalancer. Поле LoadBalancerClass следует использовать в режиме L2 LoadBalancer для указания MetalLoadBalancerClass, задающего параметры балансировщика для Service.
   nodeSelector:
     description: |
       Селектор узлов, на которых будет работать главный контроллер. Структура, аналогичная параметру `spec.nodeSelector` пода Kubernetes.
@@ -15,7 +15,7 @@ properties:
       Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   speaker:
     description: |
-      Настройки компонента `speaker`, который реализует протокол публикации и направляет на свой узел прикладной трафик сервисов.
+      Настройки компонента `speaker`, реализующего протокол публикации и направляющего на свой узел прикладной трафик сервисов.
     properties:
       nodeSelector:
         description: |
