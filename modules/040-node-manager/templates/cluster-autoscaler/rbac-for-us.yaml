@@ -41,6 +41,7 @@ rules:
   - watch
   resources:
   - vcdmachinetemplates
+  - huaweicloudmachinetemplates
 - apiGroups:
   - cluster.x-k8s.io
   resources:
@@ -172,6 +173,7 @@ rules:
   - watch
   resources:
   - vcdmachinetemplates
+  - huaweicloudmachinetemplates
 - apiGroups: ["cluster.x-k8s.io"]
   resources:
   - machinedeployments
