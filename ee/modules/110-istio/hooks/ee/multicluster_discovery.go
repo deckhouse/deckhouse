@@ -122,6 +122,7 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 
 		var httpOptionCA []http.Option
 		var httpOptionInsecure []http.Option
+		var allOptions []http.Option
 
 		if multiclusterInfo.ClusterCA != "" {
 			caCerts := [][]byte{[]byte(multiclusterInfo.ClusterCA)}
@@ -130,7 +131,7 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 		if multiclusterInfo.EnableInsecureConnection {
 			httpOptionInsecure = append(httpOptionInsecure, http.WithInsecureSkipVerify())
 		}
-		allOptions := append(httpOptionCA, httpOptionInsecure...)
+		allOptions = append(httpOptionCA, httpOptionInsecure...)
 
 		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(allOptions...), multiclusterInfo.PublicMetadataEndpoint, "")
 		if err != nil {
