@@ -40,6 +40,7 @@ type HookForUpdatePipeline struct {
 	kubeCl            *client.KubernetesClient
 	nodeToConverge    string
 	oldMasterIPForSSH string
+	commanderMode     bool
 }
 
 func NewHookForUpdatePipeline(
@@ -132,19 +133,21 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 		return nil
 	}
 
-	cl := h.kubeCl.NodeInterfaceAsSSHClient()
-	if cl == nil {
-		panic("Node interface is not ssh")
-	}
-
-	cl.Settings.RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
-
 	outputs, err := terraform.GetMasterNodeResult(runner)
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %v", err)
 	}
 
-	cl.Settings.AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
+	if !h.commanderMode {
+		cl := h.kubeCl.NodeInterfaceAsSSHClient()
+		if cl == nil {
+			panic("Node interface is not ssh")
+		}
+
+		cl.Settings.RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
+		cl.Settings.AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
+
+	}
 
 	// Before waiting for the master node to be listed as a member of the etcd cluster,
 	// we need to store the path to the Kubernetes data device to avoid deadlock.
