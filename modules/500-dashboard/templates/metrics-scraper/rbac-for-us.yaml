@@ -24,7 +24,6 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-scraper")) | nindent 2 }}
 roleRef:
-roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: d8:{{ .Chart.Name }}:metrics-scraper
