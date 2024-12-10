@@ -7,7 +7,7 @@ mount:
 git:
   - url: {{ $.OBSERVABILITY_SOURCE_REPO }}/observability.git
     to: /src
-    commit: 0cfa94570c39756166230c7d2a4e0ce1e37309ba
+    commit: 995c8c6ad03bcf248cc915f87e9449d272540fed
     stageDependencies:
       install:
         - go.mod
