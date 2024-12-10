@@ -51,11 +51,6 @@ discovery:
     system: 1
 modules:
   placement: {}
-  proxy:
-    httpProxy: "http://1.2.3.4:80"
-    httpsProxy: "https://1.2.3.4:443"
-    noProxy:
-    - example.com
 `
 
 	moduleValuesForMasterNode = `
