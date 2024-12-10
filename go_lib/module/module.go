@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-func getFirstDefined(values *go_hook.PatchableValues, keys ...string) (gjson.Result, bool) {
+func getFirstDefined(values go_hook.PatchableValuesCollector, keys ...string) (gjson.Result, bool) {
 	var (
 		v  gjson.Result
 		ok bool
