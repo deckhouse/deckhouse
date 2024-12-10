@@ -11,6 +11,7 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: common/src-artifact
+fromCacheVersion: "2024-09-24 15:35"
 git:
 - add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
