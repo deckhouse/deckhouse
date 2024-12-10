@@ -1,6 +1,6 @@
 ---
 title: "NFS-хранилище"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/sds/nfs.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
 lang: ru
 ---
 

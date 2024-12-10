@@ -1,6 +1,6 @@
 ---
 title: "CEPH Storage"
-permalink: en/virtualization-platform/documentation/admin/platform-management/storage/ceph.html
+permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
 ---
 
 To create StorageClass objects based on RBD (RADOS Block Device) or Ceph file system, you can use the csi-ceph module, which allows you to configure connections to one or more Ceph clusters.
