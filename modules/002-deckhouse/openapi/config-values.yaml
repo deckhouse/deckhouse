@@ -138,9 +138,9 @@ properties:
             description: |
               URL for an external webhook handler.
 
-              The POST request will be sent on the webhook URL after a new minor version of Deckhouse appears on the update channel before it is applied to the cluster.
+              The POST request will be sent to the webhook URL after a new minor version of Deckhouse appears on the update channel before it is applied to the cluster.
 
-              > **Caution!**  
+              > **Caution!**
               > If you specify an invalid webhook address, Deckhouse update will be blocked.
 
               > Use the [minimalNotificationTime](#parameters-update-notification-minimalnotificationtime) parameter if necessary to set the minimum time that must pass before updating from the moment a new minor version appears on the release channel used.
