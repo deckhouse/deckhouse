@@ -281,7 +281,7 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
        - 192.168.0.0/24
    ```
 
-1. Подключите приложение к `Dex`. Для этого добавьте в Ingress ресурс приложения аннотации:
+1. Подключите приложение к `Dex`. Для этого добавьте в Ingress-ресурс приложения аннотации:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
