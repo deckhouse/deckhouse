@@ -839,10 +839,10 @@ The full list of plugins is available in the [Kubernetes documentation](https://
 
 There are two predefined scheduler profiles:
 
-* `default-scheduler`: the default profile that distributes pods to nodes with the lowest load.
-* `high-node-utilization`: a profile that places pods on nodes with the highest load.
+* `default-scheduler` — the default profile that distributes pods to nodes with the lowest load;
+* `high-node-utilization` — a profile that places pods on nodes with the highest load.
 
-> To specify a scheduler profile, use the `spec.schedulerName` parameter in the pod manifest.
+To specify a scheduler profile, use the `spec.schedulerName` parameter in the pod manifest.
 
 Example of using a profile:
 
