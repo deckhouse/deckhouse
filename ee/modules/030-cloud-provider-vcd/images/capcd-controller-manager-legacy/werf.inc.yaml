@@ -29,6 +29,7 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - export VERSION="v1.2.0"
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
     - cd /src
     - git apply /patches/*.patch --verbose
