@@ -136,16 +136,19 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 			return rejectResult("'Embedded' is a forbidden source")
 		}
 
-		module := new(v1alpha1.Module)
-		if err = cli.Get(context.Background(), client.ObjectKey{Name: cfg.Name}, module); err != nil {
-			if apierrors.IsNotFound(err) {
-				return allowResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+		// skip checking source for the global module
+		if cfg.Name != "global" {
+			module := new(v1alpha1.Module)
+			if err = cli.Get(context.Background(), client.ObjectKey{Name: cfg.Name}, module); err != nil {
+				if apierrors.IsNotFound(err) {
+					return allowResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+				}
+				return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
 			}
-			return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
-		}
 
-		if cfg.Spec.Source != "" && !slices.Contains(module.Properties.AvailableSources, cfg.Spec.Source) {
-			return rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, module.Properties.AvailableSources))
+			if cfg.Spec.Source != "" && !slices.Contains(module.Properties.AvailableSources, cfg.Spec.Source) {
+				return rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, module.Properties.AvailableSources))
+			}
 		}
 
 		// empty policy means module uses deckhouse embedded policy
