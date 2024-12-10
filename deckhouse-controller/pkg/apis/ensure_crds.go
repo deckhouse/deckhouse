@@ -24,12 +24,10 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-var (
-	deprecatedCRDs = []string{
-		"externalmodulesources.deckhouse.io",
-		"externalmodulereleases.deckhouse.io",
-	}
-)
+var deprecatedCRDs = []string{
+	"externalmodulesources.deckhouse.io",
+	"externalmodulereleases.deckhouse.io",
+}
 
 type kubeClient interface {
 	kubernetes.Interface
