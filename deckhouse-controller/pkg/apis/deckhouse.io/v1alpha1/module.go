@@ -136,14 +136,14 @@ type Module struct {
 }
 
 type ModuleRequirements struct {
-	ModulePlatformRequirements `json:",inline"`
-	ParentModules              map[string]string `json:"modules,omitempty"`
+	ModulePlatformRequirements `json:",inline" yaml:",inline"`
+	ParentModules              map[string]string `json:"modules,omitempty" yaml:"modules,omitempty"`
 }
 
 type ModulePlatformRequirements struct {
-	Deckhouse    string `json:"deckhouse,omitempty"`
-	Kubernetes   string `json:"kubernetes,omitempty"`
-	Bootstrapped string `json:"bootstrapped,omitempty"`
+	Deckhouse    string `json:"deckhouse,omitempty" yaml:"deckhouse,omitempty"`
+	Kubernetes   string `json:"kubernetes,omitempty" yaml:"kubernetes,omitempty"`
+	Bootstrapped string `json:"bootstrapped,omitempty" yaml:"bootstrapped,omitempty"`
 }
 
 type ModuleProperties struct {
@@ -155,7 +155,7 @@ type ModuleProperties struct {
 	Version          string              `json:"version,omitempty"`
 	UpdatePolicy     string              `json:"updatePolicy,omitempty"`
 	AvailableSources []string            `json:"availableSources,omitempty"`
-	Requirements     *ModuleRequirements `json:"requirements,omitempty"`
+	Requirements     *ModuleRequirements `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 }
 
 type ModuleStatus struct {
