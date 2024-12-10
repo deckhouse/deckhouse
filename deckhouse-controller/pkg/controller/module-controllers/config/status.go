@@ -89,14 +89,18 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 				return err
 			}
 
-			// update metrics
-			converter := conversion.Store().Get(moduleConfig.Name)
-			if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
-				r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_config_obsolete_version", 1.0, map[string]string{
-					"name":    moduleConfig.Name,
-					"version": strconv.Itoa(moduleConfig.Spec.Version),
-					"latest":  strconv.Itoa(converter.LatestVersion()),
-				})
+			// skip firing alert for global module
+			if moduleConfig.Name != "global" {
+				// update metrics
+				converter := conversion.Store().Get(moduleConfig.Name)
+				// fire alert at obsolete version
+				if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
+					r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_config_obsolete_version", 1.0, map[string]string{
+						"name":    moduleConfig.Name,
+						"version": strconv.Itoa(moduleConfig.Spec.Version),
+						"latest":  strconv.Itoa(converter.LatestVersion()),
+					})
+				}
 			}
 			return nil
 		})

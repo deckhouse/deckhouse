@@ -201,7 +201,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	bundle := os.Getenv("DECKHOUSE_BUNDLE")
 
-	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, dc, embeddedPolicy, logger.Named("module-loader"))
+	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, embeddedPolicy, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
 	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger.Named("deckhouse-release-controller"))
