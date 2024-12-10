@@ -45,9 +45,10 @@ type moduleDescriptor struct {
 }
 
 type Extender struct {
-	modulesStateHelper func() []string
-	modules            map[string]moduleDescriptor
-	logger             *log.Logger
+	modulesVersionHelper func(moduleName string) (string, error)
+	modulesStateHelper   func() []string
+	modules              map[string]moduleDescriptor
+	logger               *log.Logger
 }
 
 func Instance() *Extender {
@@ -58,6 +59,10 @@ func Instance() *Extender {
 		}
 	})
 	return instance
+}
+
+func (e *Extender) SetModulesVersionHelper(f func(moduleName string) (string, error)) {
+	e.modulesVersionHelper = f
 }
 
 func (e *Extender) AddConstraint(name string, value map[string]string) error {

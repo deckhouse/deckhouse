@@ -257,3 +257,7 @@ func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
 	}
 	return false
 }
+
+func (m *Module) GetVersion() string {
+	return m.Properties.Version
+}
