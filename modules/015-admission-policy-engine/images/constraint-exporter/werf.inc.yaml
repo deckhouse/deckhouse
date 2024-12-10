@@ -10,7 +10,7 @@ docker:
   ENTRYPOINT: [ "/constraint_exporter" ]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: src-artifact
+fromArtifact: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
