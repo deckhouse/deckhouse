@@ -129,16 +129,3 @@ properties:
             * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
             * Этот параметр имеет смысл использовать только в исключительных ситуациях.
             * Этот параметр применяется в процессе включения модуля.
-      proxy:
-        description: |
-          Глобальная настройка proxy для модулей.
-        properties:
-          httpProxy:
-            description: |
-              Proxy URL для HTTP-запросов.
-          httpsProxy:
-            description: |
-              Proxy URL для HTTPS-запросов.
-          noProxy:
-            description: |
-              Список IP и доменных имен, для которых проксирование не применяется. Для указания wildcard-домена используйте имя с точкой в качестве префикса (например, `.example.com`).
