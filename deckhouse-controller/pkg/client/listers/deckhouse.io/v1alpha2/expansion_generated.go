@@ -18,6 +18,10 @@ limitations under the License.
 
 package v1alpha2
 
+// ModulePullOverrideListerExpansion allows custom methods to be added to
+// ModulePullOverrideLister.
+type ModulePullOverrideListerExpansion interface{}
+
 // ModuleUpdatePolicyListerExpansion allows custom methods to be added to
 // ModuleUpdatePolicyLister.
 type ModuleUpdatePolicyListerExpansion interface{}

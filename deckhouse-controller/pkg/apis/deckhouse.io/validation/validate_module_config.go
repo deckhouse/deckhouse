@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 )
 
@@ -49,7 +50,7 @@ const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhous
 
 // moduleConfigValidationHandler validations for ModuleConfig creation
 func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorage, metricStorage *metricstorage.MetricStorage, configValidator *configtools.Validator) http.Handler {
-	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
 		var (
 			cfg = new(v1alpha1.ModuleConfig)
 			ok  bool
@@ -77,6 +78,14 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 							}
 						}
 					}
+				}
+
+				exist, err := utils.ModulePullOverrideExists(ctx, cli, cfg.Name)
+				if err != nil {
+					return nil, fmt.Errorf("get the '%s' module pull override: %v", cfg.Name, err)
+				}
+				if exist {
+					return rejectResult("delete the ModulePullOverride before deleting the module config")
 				}
 
 				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 0, map[string]string{"module": cfg.GetName()})
@@ -137,7 +146,7 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 		}
 
 		module := new(v1alpha1.Module)
-		if err = cli.Get(context.Background(), client.ObjectKey{Name: cfg.Name}, module); err != nil {
+		if err = cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
 			if apierrors.IsNotFound(err) {
 				return allowResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
 			}
@@ -151,7 +160,7 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 		// empty policy means module uses deckhouse embedded policy
 		if cfg.Spec.UpdatePolicy != "" {
 			tmp := new(v1alpha1.ModuleUpdatePolicy)
-			if err = cli.Get(context.Background(), client.ObjectKey{Name: cfg.Spec.UpdatePolicy}, tmp); err != nil {
+			if err = cli.Get(ctx, client.ObjectKey{Name: cfg.Spec.UpdatePolicy}, tmp); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return nil, fmt.Errorf("get the '%s' module policy: %w", cfg.Spec.UpdatePolicy, err)
 				}

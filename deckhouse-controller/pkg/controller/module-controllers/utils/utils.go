@@ -209,13 +209,16 @@ func UpdatePolicy(ctx context.Context, cli client.Client, embeddedPolicy *helper
 	}, nil
 }
 
-// ModulePullOverrideExists checks if module pull override for the source and module exists
-func ModulePullOverrideExists(ctx context.Context, cli client.Client, sourceName, moduleName string) (bool, error) {
-	mpos := new(v1alpha1.ModulePullOverrideList)
-	if err := cli.List(ctx, mpos, client.MatchingLabels{v1alpha1.ModuleReleaseLabelSource: sourceName, v1alpha1.ModuleReleaseLabelModule: moduleName}, client.Limit(1)); err != nil {
-		return false, err
+// ModulePullOverrideExists checks if module pull override for the module exists
+func ModulePullOverrideExists(ctx context.Context, cli client.Client, moduleName string) (bool, error) {
+	mpo := new(v1alpha2.ModulePullOverride)
+	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, mpo); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, err
+		}
+		return false, nil
 	}
-	return len(mpos.Items) > 0, nil
+	return true, nil
 }
 
 // GetClusterUUID gets uuid from the secret or generate a new one
