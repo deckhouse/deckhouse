@@ -36,7 +36,7 @@ type Module struct {
 }
 
 func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBytes []byte, logger *log.Logger) (*Module, error) {
-	basic, err := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, configBytes, valuesBytes, logger)
+	basic, err := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, configBytes, valuesBytes, modules.WithLogger(logger))
 	if err != nil {
 		return nil, fmt.Errorf("failed to build the '%s' basic module: %w", def.Name, err)
 	}
