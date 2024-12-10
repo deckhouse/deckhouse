@@ -137,7 +137,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	release := new(v1alpha1.DeckhouseRelease)
 	err = r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
-		r.logger.Debug("get release", "err", err)
+		r.logger.Debug("get release", log.Err(err))
 		// The DeckhouseRelease resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
@@ -364,7 +364,7 @@ func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Resu
 	var result ctrl.Result
 	var notReadyErr *updater.NotReadyForDeployError
 	if errors.As(err, &notReadyErr) {
-		r.logger.Debug("ignoring NotReadyForDeployError", "err", err)
+		r.logger.Debug("ignoring NotReadyForDeployError", log.Err(err))
 		// TODO: requeue all releases if deckhouse update settings is changed
 		// requeueAfter := notReadyErr.RetryDelay()
 		// if requeueAfter == 0 {
