@@ -250,4 +250,4 @@ spec:
     served: true
     storage: false
     subresources:
-      status: {}ё
+      status: {}
