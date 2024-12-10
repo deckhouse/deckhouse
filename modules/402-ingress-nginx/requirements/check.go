@@ -26,9 +26,9 @@ import (
 )
 
 const (
-	minVersionValuesKey     = "ingressNginx:minimalControllerVersion"
-	incompatibleVersionsKey = "ingressNginx:hasIncompatibleIngressClass"
-	moduleConfigVersionKey  = "ingressNginx:moduleConfigVersion"
+	minVersionValuesKey         = "ingressNginx:minimalControllerVersion"
+	incompatibleVersionsKey     = "ingressNginx:hasIncompatibleIngressClass"
+	configuredDefaultVersionKey = "ingressNginx:configuredDefaultVersion"
 )
 
 func init() {
@@ -46,10 +46,10 @@ func init() {
 			return false, err
 		}
 
-		moduleConfigVersionStr, exists := getter.Get(moduleConfigVersionKey)
+		configuredDefaultVersionStr, exists := getter.Get(configuredDefaultVersionKey)
 		if exists {
-			if moduleConfigVersion, err := semver.NewVersion(moduleConfigVersionStr.(string)); err == nil && moduleConfigVersion.LessThan(desiredVersion) {
-				return false, fmt.Errorf("ModuleConfig defaultControllerVersion %s is lower then required %s", moduleConfigVersion.String(), desiredVersion.String())
+			if configuredDefaultVersion, err := semver.NewVersion(configuredDefaultVersionStr.(string)); err == nil && configuredDefaultVersion.LessThan(desiredVersion) {
+				return false, fmt.Errorf("ModuleConfig defaultControllerVersion %s is lower then required %s", configuredDefaultVersion.String(), desiredVersion.String())
 			}
 		}
 

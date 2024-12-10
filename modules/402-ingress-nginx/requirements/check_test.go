@@ -57,7 +57,7 @@ func TestIngressNginxVersionRequirement(t *testing.T) {
 	})
 
 	t.Run("Outdated ModuleConfig version", func(t *testing.T) {
-		requirements.SaveValue(moduleConfigVersionKey, "0.26")
+		requirements.SaveValue(configuredDefaultVersionKey, "0.26")
 		ok, err := requirements.CheckRequirement("ingressNginx", "0.33")
 		assert.False(t, ok)
 		require.Error(t, err)
