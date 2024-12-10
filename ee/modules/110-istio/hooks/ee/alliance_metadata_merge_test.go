@@ -319,6 +319,8 @@ status:
               }
             ],
             "name": "federation-only-full-0",
+            "ca": "",
+            "insecureSkipVerify": false,
             "publicServices": [
               {
                 "hostname": "bbb",
@@ -336,6 +338,8 @@ status:
               }
             ],
             "name": "federation-only-full-1",
+            "ca": "",
+            "insecureSkipVerify": false,
             "publicServices": [
               {
                 "hostname": "ccc",

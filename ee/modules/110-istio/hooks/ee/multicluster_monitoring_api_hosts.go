@@ -9,13 +9,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
+
+	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
-	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
 
 var (
@@ -58,7 +58,26 @@ func monitoringAPIHosts(input *go_hook.HookInput, dc dependency.Container) error
 		apiSkipVerify := m.Get("insecureSkipVerify").Bool()
 		apiAdditionalCA := m.Get("ca").String()
 
-		options := []http.Option{}
+		//type Option http(options *httpOptions)
+		//var (
+		//	option1 Option
+		//	option2 Option
+		//)
+		//
+		//if apiSkipVerify {
+		//	option1 = http.WithInsecureSkipVerify()
+		//} else {
+		//	option1 = nil
+		//}
+		//
+		//if apiAdditionalCA != "" {
+		//	caCerts := [][]byte{[]byte(apiAdditionalCA)}
+		//	option2 = http.WithAdditionalCACerts(caCerts)
+		//} else {
+		//	option2 = nil
+		//}
+
+		var options []http.Option
 		if apiSkipVerify {
 			options = append(options, http.WithInsecureSkipVerify())
 		}
@@ -67,7 +86,7 @@ func monitoringAPIHosts(input *go_hook.HookInput, dc dependency.Container) error
 			options = append(options, http.WithAdditionalCACerts(caCerts))
 		}
 
-		bodyBytes, statusCode, err := lib.HTTPGet(http.NewClient(options...), fmt.Sprintf("https://%s/api", apiHost), apiJWT)
+		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(options...), fmt.Sprintf("https://%s/api", apiHost), apiJWT)
 		if err != nil {
 			input.Logger.Warnf("cannot fetch api host %s for IstioMulticluster %s, error: %s", apiHost, name, err.Error())
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
