@@ -145,7 +145,8 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if instanceScope.Instance.Annotations == nil {
 		instanceScope.Instance.Annotations = make(map[string]string)
 	}
-	nodeGroupName := instanceScope.MachineScope.StaticMachine.Labels["node-group"]
+
+	nodeGroupName := getLabel(instanceScope.MachineScope.StaticMachine.Labels, "node-group", "unknown")
 	instanceScope.Instance.Annotations["node-group"] = nodeGroupName
 
 	// Handle deleted static instance
@@ -333,4 +334,14 @@ func (r *StaticInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&deckhousev1.StaticInstance{}).
 		Complete(r)
+}
+
+func getLabel(labels map[string]string, key string, defaultValue string) string {
+	if labels == nil {
+		return defaultValue
+	}
+	if value, ok := labels[key]; ok && value != "" {
+		return value
+	}
+	return defaultValue
 }
