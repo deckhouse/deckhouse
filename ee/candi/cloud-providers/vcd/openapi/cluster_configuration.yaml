@@ -113,9 +113,9 @@ apiVersions:
                   description: |
                     Path of the template OVA that is to be used.
 
-                    Consists of organization (optional), catalog, template name or template identifier. Organization may not match with provider.organization (in case of shared templates).
+                    Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
 
-                    If you have templates with the same name in the multiple catalogs with the same name, you should specify the identifier of the template.
+                    If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
                     You can find the template identifier in the URL when you open the template in the VCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
                   type: string
@@ -231,9 +231,9 @@ apiVersions:
                     description: |
                       Path of the template OVA that is to be used.
 
-                      Consists of organization (optional), catalog, template name or template identifier. Organization may not match with provider.organization (in case of shared templates).
+                      Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
 
-                      If you have templates with the same name in the multiple catalogs with the same name, you should specify the identifier of the template.
+                      If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
                       You can find the template identifier in the URL when you open the template in the VCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
                     type: string
