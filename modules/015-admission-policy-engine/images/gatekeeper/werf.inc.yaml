@@ -1,0 +1,44 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /gatekeeper
+  to: /bin/gatekeeper
+  before: setup
+docker:
+  ENTRYPOINT: [ "/bin/gatekeeper" ]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v3.17.1 {{ .SOURCE_REPO }}/open-policy-agent/gatekeeper.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf website
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GOPROXY={{ .GOPROXY }}
+  - cd /src
+  - go mod vendor
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -mod vendor -ldflags="-s -w" -o /gatekeeper .
+  - chown 64535:64535 /gatekeeper
+  - chmod 0700 /gatekeeper
