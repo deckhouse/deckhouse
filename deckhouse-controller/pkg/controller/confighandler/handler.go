@@ -148,6 +148,7 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 
 	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, moduleConfig.Spec.Settings)
 	if err != nil {
+		h.log.Error(fmt.Sprintf("!!! cannot convert values for module %s: %s", moduleConfig.Name, err.Error()))
 		return utils.Values{}, err
 	}
 
