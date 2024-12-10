@@ -58,25 +58,6 @@ func monitoringAPIHosts(input *go_hook.HookInput, dc dependency.Container) error
 		apiSkipVerify := m.Get("insecureSkipVerify").Bool()
 		apiAdditionalCA := m.Get("ca").String()
 
-		//type Option http(options *httpOptions)
-		//var (
-		//	option1 Option
-		//	option2 Option
-		//)
-		//
-		//if apiSkipVerify {
-		//	option1 = http.WithInsecureSkipVerify()
-		//} else {
-		//	option1 = nil
-		//}
-		//
-		//if apiAdditionalCA != "" {
-		//	caCerts := [][]byte{[]byte(apiAdditionalCA)}
-		//	option2 = http.WithAdditionalCACerts(caCerts)
-		//} else {
-		//	option2 = nil
-		//}
-
 		var options []http.Option
 		if apiSkipVerify {
 			options = append(options, http.WithInsecureSkipVerify())
