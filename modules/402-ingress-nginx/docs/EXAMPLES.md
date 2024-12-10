@@ -142,53 +142,53 @@ metallb:
 
 1. Enable the `metallb` module:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: metallb
-spec:
-  enabled: true
-  version: 2
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: metallb
+   spec:
+     enabled: true
+     version: 2
+   ```
 
 1. Deploy the _MetalLoadBalancerClass_ resource:
 
-```yaml
-apiVersion: network.deckhouse.io/v1alpha1
-kind: MetalLoadBalancerClass
-metadata:
-  name: ingress
-spec:
-  addressPool:
-    - 192.168.2.100-192.168.2.150
-  isDefault: false
-  nodeSelector:
-    node-role.kubernetes.io/loadbalancer: "" # node-balancer selector
-  type: L2
-```
+   ```yaml
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: MetalLoadBalancerClass
+   metadata:
+     name: ingress
+   spec:
+     addressPool:
+       - 192.168.2.100-192.168.2.150
+     isDefault: false
+     nodeSelector:
+       node-role.kubernetes.io/loadbalancer: "" # node-balancer selector
+     type: L2
+   ```
 
 1. Deploy the _IngressNginxController_ resource:
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: main
-spec:
-  ingressClass: nginx
-  inlet: LoadBalancer
-  loadBalancer:
-    loadBalancerClass: ingress
-    annotations:
-    # The number of addresses that will be allocated from the pool described in _MetalLoadBalancerClass_.
-    network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: IngressNginxController
+   metadata:
+     name: main
+   spec:
+     ingressClass: nginx
+     inlet: LoadBalancer
+     loadBalancer:
+       loadBalancerClass: ingress
+       annotations:
+       # The number of addresses that will be allocated from the pool described in _MetalLoadBalancerClass_.
+       network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+   ```
 
 1. The platform will create a service with the type `LoadBalancer`, to which a specified number of addresses will be assigned:
 
-```shell
-$ kubectl -n d8-ingress-nginx get svc
-NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
-main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
-```
+   ```shell
+   $ kubectl -n d8-ingress-nginx get svc
+   NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
+   main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
+   ```
