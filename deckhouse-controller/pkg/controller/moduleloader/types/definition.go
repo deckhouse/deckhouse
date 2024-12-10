@@ -38,7 +38,7 @@ type Definition struct {
 	Tags         []string                     `yaml:"tags"`
 	Stage        string                       `yaml:"stage"`
 	Description  string                       `yaml:"description"`
-	Requirements *v1alpha1.ModuleRequirements `json:"requirements,omitempty"`
+	Requirements *v1alpha1.ModuleRequirements `yaml:"requirements,omitempty"`
 
 	DisableOptions DisableOptions `yaml:"disable"`
 
