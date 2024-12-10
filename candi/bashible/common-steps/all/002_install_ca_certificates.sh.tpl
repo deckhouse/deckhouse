@@ -18,6 +18,8 @@ REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/registry-ca.crt"
 
 EMBEDDED_REGISTRY_CACERT_PATH="/opt/deckhouse/share/ca-certificates/embedded-registry-ca.crt"
 
+mkdir -p /opt/deckhouse/share/ca-certificates/
+
 {{- if .registry.ca }}
 bb-sync-file $REGISTRY_CACERT_PATH - << "EOF"
 {{ .registry.ca }}
