@@ -19,17 +19,16 @@ package smokemini
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 
+	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/scheduler"
+	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/tidwall/gjson"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-
-	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/scheduler"
-	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
 )
 
 const (
@@ -157,7 +156,7 @@ func reschedule(input *go_hook.HookInput) error {
 	x, newSts, err := sched.Schedule(state, nodes)
 	if err != nil {
 		if errors.Is(err, scheduler.ErrSkip) {
-			logger.Info("scheduler skip", slog.String("error", err.Error()))
+			logger.Info("scheduler skip", log.Err(err))
 			return nil
 		}
 		return err
