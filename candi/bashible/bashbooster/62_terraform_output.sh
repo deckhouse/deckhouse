@@ -13,33 +13,31 @@
 # limitations under the License.
 
 bb-get-kubernetes-data-device-from-terraform-output() {
-{{- if eq .runType "Normal" }}
-  # other nodes
-  __bb-fetch-data-from-secret "d8-system" "d8-masters-kubernetes-data-device-path" | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
-{{- else }}
-  # for bootstrap first master node
-  file="/var/lib/bashible/kubernetes_data_device_path"
-  if [ -f "$file" ]; then
-    cat $file
+  if [ "$RUN_TYPE" = "Normal" ]; then
+    # other nodes
+    __bb-fetch-data-from-secret "d8-system" "d8-masters-kubernetes-data-device-path" | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
+  else
+    # for bootstrap first master node
+    file="/var/lib/bashible/kubernetes_data_device_path"
+    if [ -f "$file" ]; then
+      cat $file
+    fi
   fi
-{{- end }}
 }
 
 bb-get-registry-data-device-from-terraform-output() {
-{{- if eq .runType "Normal" }}
-  # other nodes
-  __bb-fetch-data-from-secret "d8-system" "d8-masters-system-registry-data-device-path" | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
-{{- else }}
-  # for bootstrap first master node
-  file="/var/lib/bashible/system_registry_data_device_path"
-  if [ -f "$file" ]; then
-    cat $file
+  if [ "$RUN_TYPE" = "Normal" ]; then
+    # other nodes
+    __bb-fetch-data-from-secret "d8-system" "d8-masters-system-registry-data-device-path" | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
+    else
+    # for bootstrap first master node
+    file="/var/lib/bashible/system_registry_data_device_path"
+    if [ -f "$file" ]; then
+      cat $file
+    fi
   fi
-{{- end }}
 }
 
-
-{{- /*
 # Description:
 #   This function fetches Kubernetes secret data from a specified namespace and secret name.
 #   Depending on the context (e.g., the first run of Bashible or subsequent runs), it uses
@@ -92,21 +90,16 @@ bb-get-registry-data-device-from-terraform-output() {
 # ------------------
 # "" - empty
 # ------------------
-*/}}
 __bb-fetch-data-from-secret() {
   local namespace="$1"
   local secret_name="$2"
-  {{- if eq .runType "Normal" }}
-  local api_server_endpoints="{{ .normal.apiserverEndpoints | join " " }}"
-  {{- else }}
-  local api_server_endpoints=""
-  {{- end }}
 
   if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
     # Ensure bootstrap-token exists before proceeding
     if [ -f "$BOOTSTRAP_DIR/bootstrap-token" ]; then
       # Iterate through each API server endpoint
-      for server in $api_server_endpoints; do
+      IFS=',' read -ra SERVERS <<< "$API_SERVER_ENDPOINTS"
+      for server in "${SERVERS[@]}"; do
         local http_status
         # Check HTTP status without outputting error details
         http_status=$(d8-curl -s -w "%{http_code}" -o /dev/null \

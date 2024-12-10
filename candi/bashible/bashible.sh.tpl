@@ -164,6 +164,7 @@ function main() {
   export FIRST_BASHIBLE_RUN="no"
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
+  export RUN_TYPE="{{ .runType }}"
 {{- if .registry }}
   export REGISTRY_ADDRESS="{{ .registry.address }}"
   export SCHEME="{{ .registry.scheme }}"
@@ -173,6 +174,11 @@ function main() {
 {{- if .packagesProxy }}
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
+{{- end }}
+{{- if .normal }}
+  {{- if .normal.apiserverEndpoints }}
+  export API_SERVER_ENDPOINTS="{{ .normal.apiserverEndpoints | join "," }}"
+  {{- end }}
 {{- end }}
 unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
