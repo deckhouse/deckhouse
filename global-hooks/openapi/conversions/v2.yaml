@@ -1,5 +1,3 @@
-# this is redundant conversions file because `global` is not a module, so `global-hooks/openapi/conversions` folder is not processed
-# by module loading flow
 version: 2
 conversions:
   - if .global.storageClass and .global.modules.storageClass == null then .global.modules.storageClass = .global.storageClass end

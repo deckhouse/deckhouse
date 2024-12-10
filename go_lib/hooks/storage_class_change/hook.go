@@ -196,12 +196,6 @@ func calculateEffectiveStorageClass(input *go_hook.HookInput, args Args, current
 		}
 	}
 
-	// Deprecated setting. From 1.67 global.storageClass moved to global.modules.storageClass
-	// TODO: should be removed when parameter `global.storageClass` removed from `global-hooks/openapi/config-values.yaml`
-	if input.ConfigValues.Exists("global.storageClass") {
-		effectiveStorageClass = input.ConfigValues.Get("global.storageClass").String()
-	}
-
 	if input.ConfigValues.Exists("global.modules.storageClass") {
 		effectiveStorageClass = input.ConfigValues.Get("global.modules.storageClass").String()
 	}
