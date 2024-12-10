@@ -33,6 +33,13 @@ import (
 )
 
 var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", func() {
+
+	const (
+		initValuesString = `{"cniCilium":{"internal": {}}}`
+		// initConfigValuesString = `{"cniCilium":{}}`
+		initConfigValuesString = `{}`
+	)
+
 	cniSecretYAML := func(cniName, data string) string {
 		secretData := make(map[string][]byte)
 		secretData["cni"] = []byte(cniName)
@@ -53,7 +60,6 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", fu
 		marshaled, _ := yaml.Marshal(s)
 		return string(marshaled)
 	}
-
 	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues) string {
 		mc := &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
@@ -76,12 +82,16 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", fu
 	}
 
 	//f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
-	f := HookExecutionConfigInit(`{"cniCilium": {"internal": {}}}`, `{"cniCilium":{}}`)
+	//f := HookExecutionConfigInit(`{"cniCilium":{"internal":{}}}`, `{"cniCilium":{}}`)
+	// f := HookExecutionConfigInit(`{"cniCilium":{"internal":{}}}`, ``)
+	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	//f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
 	Context("Cluster has not d8-cni-configuration secret and has not cni mc", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			// f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
 
@@ -101,7 +111,10 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", fu
 					"masqueradeMode": "BPF",
 				}),
 			}
-			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
+			//f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+
 			f.RunHook()
 		})
 
