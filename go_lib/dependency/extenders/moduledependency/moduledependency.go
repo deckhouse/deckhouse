@@ -65,11 +65,15 @@ func (e *Extender) AddConstraint(name string, value map[string]string) error {
 	if module.constraints == nil {
 		module.constraints = versionmatcher.New(false)
 	}
+
 	for dependency, version := range value {
-		module.constraints.AddConstraint(dependency, version)
+		if err := module.constraints.AddConstraint(dependency, version); err != nil {
+			return err
+		}
 	}
 	e.modules[name] = module
 	e.logger.Debugf("installed constraint for the '%s' module is added", name)
+
 	return nil
 }
 
@@ -103,7 +107,7 @@ func (e *Extender) GetTopologicalHints(moduleName string) []string {
 }
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
-func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
+func (e *Extender) Filter(_ string, _ map[string]string) (*bool, error) {
 	// TODO
 	return nil, nil
 }

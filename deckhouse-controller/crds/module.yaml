@@ -61,8 +61,7 @@ spec:
                   description: The module description.
                 requirements:
                   type: object
-                  additionalProperties:
-                    type: string
+                  additionalProperties: true
                   description: The module requirements.
             status:
               type: object

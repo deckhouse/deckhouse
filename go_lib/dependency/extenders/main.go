@@ -64,7 +64,7 @@ func AddConstraints(module string, requirements *v1alpha1.ModuleRequirements) er
 		}
 	}
 
-	if requirements.Bootstrapped {
+	if len(requirements.Bootstrapped) > 0 {
 		if err := bootstrapped.Instance().AddConstraint(module, requirements.Bootstrapped); err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func DeleteConstraints(module string) {
 
 func CheckModuleReleaseRequirements(moduleRelease string, requirements *v1alpha1.ModuleReleaseRequirements) error {
 	if requirements == nil {
-		//no requirements
+		// no requirements
 		return nil
 	}
 
