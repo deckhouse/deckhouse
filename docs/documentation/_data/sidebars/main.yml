@@ -31,7 +31,9 @@ entries:
           en: Global configuration
           ru: Глобальные настройки
         url: /deckhouse-configure-global.html
-      - title: Custom Resources
+      - title:
+          en: Custom Resources
+          ru: Custom Resources
         url: /cr.html
     - title:
         en: Platform uninstalling
@@ -97,13 +99,17 @@ entries:
         en: Network security settings
         ru: Настройка сетевых политик
       url: /network_security_setup.html
-    - title: FAQ
+    - title:
+        en: FAQ
+        ru: FAQ
       url: /deckhouse-faq.html
     - title:
         en: Modules
         ru: Модули
       folders:
-      - title: deckhouse
+      - title:
+          en: deckhouse
+          ru: deckhouse
         folders:
         - title:
             en: Description
@@ -117,9 +123,13 @@ entries:
             en: Usage
             ru: Примеры
           url: /modules/deckhouse/usage.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/deckhouse/faq.html
-      - title: documentation
+      - title:
+          en: documentation
+          ru: documentation
         folders:
         - title:
             en: Description
@@ -141,9 +151,13 @@ entries:
         en: Description
         ru: Описание
       url: /kubernetes.html
-    - title: Cloud providers
+    - title:
+        en: Cloud providers
+        ru: Cloud providers
       folders:
-      - title: Amazon Web Services
+      - title:
+          en: Amazon Web Services
+          ru: Amazon Web Services
         folders:
         - title:
             en: Description
@@ -173,15 +187,21 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/cloud-provider-aws/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/cloud-provider-aws/cr.html
         - title:
             en: Examples
             ru: Примеры
           url: /modules/cloud-provider-aws/examples.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/cloud-provider-aws/faq.html
-      - title: Google Cloud Platform
+      - title:
+          en: Google Cloud Platform
+          ru: Google Cloud Platform
         folders:
         - title:
             en: Description
@@ -211,15 +231,21 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/cloud-provider-gcp/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/cloud-provider-gcp/cr.html
         - title:
             en: Examples
             ru: Примеры
           url: /modules/cloud-provider-gcp/examples.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/cloud-provider-gcp/faq.html
-      - title: Microsoft Azure
+      - title:
+          en: Microsoft Azure
+          ru: Microsoft Azure
         folders:
         - title:
             en: Description
@@ -249,13 +275,17 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/cloud-provider-azure/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/cloud-provider-azure/cr.html
         - title:
             en: Examples
             ru: Примеры
           url: /modules/cloud-provider-azure/examples.html
-      - title: OpenStack
+      - title:
+          en: OpenStack
+          ru: OpenStack
         d8Revision: ee
         folders:
         - title:
@@ -286,15 +316,21 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/cloud-provider-openstack/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/cloud-provider-openstack/cr.html
         - title:
             en: Examples
             ru: Примеры
           url: /modules/cloud-provider-openstack/examples.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/cloud-provider-openstack/faq.html
-      - title: VMware Cloud Director
+      - title:
+          en: VMware Cloud Director
+          ru: VMware Cloud Director
         d8Revision: ee
         featureStatus: experimental
         folders:
@@ -326,15 +362,21 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/cloud-provider-vcd/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/cloud-provider-vcd/cr.html
         - title:
             en: Examples
             ru: Примеры
           url: /modules/cloud-provider-vcd/examples.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/cloud-provider-vcd/faq.html
-      - title: VMware vSphere
+      - title:
+          en: VMware vSphere
+          ru: VMware vSphere
         d8Revision: ee
         folders:
         - title:
@@ -365,15 +407,21 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/cloud-provider-vsphere/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/cloud-provider-vsphere/cr.html
         - title:
             en: Examples
             ru: Примеры
           url: /modules/cloud-provider-vsphere/examples.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/cloud-provider-vsphere/faq.html
-      - title: Yandex Cloud
+      - title:
+          en: Yandex Cloud
+          ru: Yandex Cloud
         folders:
         - title:
             en: Description
@@ -403,15 +451,21 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/cloud-provider-yandex/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/cloud-provider-yandex/cr.html
         - title:
             en: Examples
             ru: Примеры
           url: /modules/cloud-provider-yandex/examples.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/cloud-provider-yandex/faq.html
-      - title: zVirt
+      - title:
+          en: zVirt
+          ru: zVirt
         d8Revision: ee
         featureStatus: experimental
         folders:
@@ -443,9 +497,13 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/cloud-provider-zvirt/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/cloud-provider-zvirt/cr.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/cloud-provider-zvirt/faq.html
       - title:
           en: Dynamix
@@ -481,7 +539,9 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/cloud-provider-dynamix/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/cloud-provider-dynamix/cr.html
     - title:
         en: Control plane management
@@ -499,13 +559,17 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/control-plane-manager/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/control-plane-manager/cr.html
       - title:
           en: Examples
           ru: Примеры
         url: /modules/control-plane-manager/examples.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/control-plane-manager/faq.html
     - title:
         en: Node management
@@ -527,15 +591,21 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/node-manager/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/node-manager/cr.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/node-manager/faq.html
     - title:
         en: Other modules
         ru: Другие модули
       folders:
-      - title: cilium-hubble
+      - title:
+          en: cilium-hubble
+          ru: cilium-hubble
         folders:
         - title:
             ru: Описание
@@ -545,7 +615,9 @@ entries:
             ru: Настройки
             en: Configuration
           url: /modules/cilium-hubble/configuration.html
-      - title: cni-cilium
+      - title:
+          en: cni-cilium
+          ru: cni-cilium
         folders:
         - title:
             ru: Описание
@@ -555,13 +627,17 @@ entries:
             ru: Настройки
             en: Configuration
           url: /modules/cni-cilium/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/cni-cilium/cr.html
         - title:
             en: Examples
             ru: Примеры
           url: /modules/cni-cilium/examples.html
-      - title: cni-flannel
+      - title:
+          en: cni-flannel
+          ru: cni-flannel
         folders:
         - title:
             en: Description
@@ -571,13 +647,17 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/cni-flannel/configuration.html
-      - title: cni-simple-bridge
+      - title:
+          en: cni-simple-bridge
+          ru: cni-simple-bridge
         folders:
         - title:
             en: Description
             ru: Описание
           url: /modules/cni-simple-bridge/
-      - title: kube-dns
+      - title:
+          en: kube-dns
+          ru: kube-dns
         folders:
         - title:
             en: Description
@@ -591,15 +671,21 @@ entries:
             en: Examples
             ru: Примеры
           url: /modules/kube-dns/examples.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/kube-dns/faq.html
-      - title: kube-proxy
+      - title:
+          en: kube-proxy
+          ru: kube-proxy
         folders:
         - title:
             en: Description
             ru: Описание
           url: /modules/kube-proxy/
-      - title: node-local-dns
+      - title:
+          en: node-local-dns
+          ru: node-local-dns
         d8Revision: ee
         folders:
         - title:
@@ -614,7 +700,9 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/node-local-dns/configuration.html
-      - title: static-routing-manager
+      - title:
+          en: static-routing-manager
+          ru: static-routing-manager
         d8Revision: ee
         folders:
         - title:
@@ -629,13 +717,17 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/static-routing-manager/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/static-routing-manager/cr.html
         - title:
             en: Examples
             ru: Примеры
           url: /modules/static-routing-manager/examples.html
-      - title: terraform-manager
+      - title:
+          en: terraform-manager
+          ru: terraform-manager
         folders:
         - title:
             en: Description
@@ -649,7 +741,9 @@ entries:
       en: Accessing cluster
       ru: Доступ к кластеру
     folders:
-    - title: dashboard
+    - title:
+        en: dashboard
+        ru: dashboard
       folders:
       - title:
           en: Description
@@ -663,7 +757,9 @@ entries:
           en: Configuration
           ru: Настройки
         url: /modules/dashboard/configuration.html
-    - title: openvpn
+    - title:
+        en: openvpn
+        ru: openvpn
       featureStatus: experimental
       folders:
       - title:
@@ -682,7 +778,9 @@ entries:
       en: Network Load Balancing
       ru: Балансировка трафика
     folders:
-    - title: ingress-nginx
+    - title:
+        en: ingress-nginx
+        ru: ingress-nginx
       folders:
       - title:
           en: Description
@@ -700,11 +798,17 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/ingress-nginx/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/ingress-nginx/cr.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/ingress-nginx/faq.html
-    - title: istio
+    - title:
+        en: istio
+        ru: istio
       folders:
       - title:
           en: Description
@@ -718,7 +822,9 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/istio/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/istio/cr.html
         - title:
             en: "Custom Resources (by istio.io)"
@@ -728,7 +834,9 @@ entries:
           en: Examples
           ru: Примеры
         url: /modules/istio/examples.html
-    - title: service-with-healthchecks
+    - title:
+        en: service-with-healthchecks
+        ru: service-with-healthchecks
       featureStatus: experimental
       d8Revision: ee
       moduleName: service-with-healthchecks
@@ -745,7 +853,9 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/610-service-with-healthchecks/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/610-service-with-healthchecks/cr.html
       - title:
           en: Examples
@@ -755,7 +865,9 @@ entries:
       en: Monitoring
       ru: Мониторинг
     folders:
-    - title: Prometheus & Grafana
+    - title:
+        en: Prometheus & Grafana
+        ru: Prometheus & Grafana
       url: /modules/prometheus/
       folders:
       - title:
@@ -774,9 +886,13 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/prometheus/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/prometheus/cr.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/prometheus/faq.html
     - title:
         en: Monitoring your applications
@@ -870,9 +986,13 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/log-shipper/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/log-shipper/cr.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/log-shipper/faq.html
 
       - title:
@@ -896,7 +1016,9 @@ entries:
         en: Other modules
         ru: Другие модули
       folders:
-      - title: operator-prometheus
+      - title:
+          en: operator-prometheus
+          ru: operator-prometheus
         folders:
         - title:
             en: Description
@@ -906,9 +1028,13 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/operator-prometheus/configuration.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/operator-prometheus/faq.html
-      - title: okmeter
+      - title:
+          en: okmeter
+          ru: okmeter
         featureStatus: proprietaryOkmeter
         folders:
         - title:
@@ -923,7 +1049,9 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/okmeter/configuration.html
-      - title: prometheus-pushgateway
+      - title:
+          en: prometheus-pushgateway
+          ru: prometheus-pushgateway
         folders:
         - title:
             en: Description
@@ -937,7 +1065,9 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/prometheus-pushgateway/configuration.html
-      - title: upmeter
+      - title:
+          en: upmeter
+          ru: upmeter
         folders:
         - title:
             en: Description
@@ -955,13 +1085,17 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/upmeter/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/upmeter/cr.html
   - title:
       en: Autoscaling & Managing resources
       ru: Масштабирование и управление ресурсами
     folders:
-    - title: Priority classes
+    - title:
+        en: Priority classes
+        ru: Priority classes
       folders:
       - title:
           en: Description
@@ -991,7 +1125,9 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/prometheus-metrics-adapter/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/prometheus-metrics-adapter/cr.html
     - title:
         en: Vertical Pod autoscaler
@@ -1013,15 +1149,21 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/vertical-pod-autoscaler/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/vertical-pod-autoscaler/cr.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/vertical-pod-autoscaler/faq.html
     - title:
         en: Other modules
         ru: Другие модули
       folders:
-      - title: descheduler
+      - title:
+          en: descheduler
+          ru: descheduler
         featureStatus: experimental
         folders:
         - title:
@@ -1040,9 +1182,13 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/descheduler/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/descheduler/cr.html
-      - title: flow-schema
+      - title:
+          en: flow-schema
+          ru: flow-schema
         folders:
         - title:
             en: Description
@@ -1052,9 +1198,13 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/flow-schema/configuration.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/flow-schema/faq.html
-      - title: pod-reloader
+      - title:
+          en: pod-reloader
+          ru: pod-reloader
         folders:
         - title:
             en: Description
@@ -1072,7 +1222,9 @@ entries:
       en: Security
       ru: Безопасность
     folders:
-    - title: User authentication
+    - title:
+        en: User authentication
+        ru: User authentication
       folders:
       - title:
           en: Description
@@ -1090,11 +1242,17 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/user-authn/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/user-authn/cr.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/user-authn/faq.html
-    - title: User authorization
+    - title:
+        en: User authorization
+        ru: User authorization
       folders:
       - title:
           en: Description
@@ -1112,11 +1270,17 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/user-authz/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/user-authz/cr.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/user-authz/faq.html
-    - title: Multitenancy
+    - title:
+        en: Multitenancy
+        ru: Multitenancy
       moduleName: multitenancy-manager
       folders:
       - title:
@@ -1135,7 +1299,9 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/multitenancy-manager/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/multitenancy-manager/cr.html
     - title:
         en: Admission Policy
@@ -1153,9 +1319,13 @@ entries:
             ru: Настройки
             en: Configuration
           url: /modules/admission-policy-engine/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/admission-policy-engine/cr.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/admission-policy-engine/faq.html
     - title:
         en: Audit
@@ -1176,7 +1346,9 @@ entries:
             ru: Настройки
             en: Configuration
           url: /modules/runtime-audit-engine/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/runtime-audit-engine/cr.html
       - title:
           en: Advanced Usage
@@ -1186,13 +1358,17 @@ entries:
           en: Examples
           ru: Примеры
         url: /modules/runtime-audit-engine/examples.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/runtime-audit-engine/faq.html
     - title:
         en: Other modules
         ru: Другие модули
       folders:
-      - title: cert-manager
+      - title:
+          en: cert-manager
+          ru: cert-manager
         folders:
         - title:
             en: Description
@@ -1210,11 +1386,17 @@ entries:
               en: Configuration
               ru: Настройки
             url: /modules/cert-manager/configuration.html
-          - title: Custom Resources
+          - title:
+              en: Custom Resources
+              ru: Custom Resources
             url: /modules/cert-manager/cr.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/cert-manager/faq.html
-      - title: network-policy-engine
+      - title:
+          en: network-policy-engine
+          ru: network-policy-engine
         folders:
         - title:
             en: Description
@@ -1228,7 +1410,9 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/network-policy-engine/configuration.html
-      - title: operator-trivy
+      - title:
+          en: operator-trivy
+          ru: operator-trivy
         d8Revision: ee
         featureStatus: experimental
         folders:
@@ -1240,13 +1424,17 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/operator-trivy/configuration.html
-        - title: FAQ
+        - title:
+            en: FAQ
+            ru: FAQ
           url: /modules/operator-trivy/faq.html
   - title:
       en: Storage
       ru: Хранилище
     folders:
-    - title: ceph-csi
+    - title:
+        en: ceph-csi
+        ru: ceph-csi
       featureStatus: deprecated
       folders:
       - title:
@@ -1265,11 +1453,17 @@ entries:
             ru: Настройки
             en: Configuration
           url: /modules/ceph-csi/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/ceph-csi/cr.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/ceph-csi/faq.html
-    - title: local-path-provisioner
+    - title:
+        en: local-path-provisioner
+        ru: local-path-provisioner
       folders:
       - title:
           en: Description
@@ -1287,11 +1481,17 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/local-path-provisioner/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/local-path-provisioner/cr.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/local-path-provisioner/faq.html
-    - title: snapshot-controller
+    - title:
+        en: snapshot-controller
+        ru: snapshot-controller
       folders:
       - title:
           en: Description
@@ -1309,7 +1509,9 @@ entries:
       en: Little things
       ru: Приятные мелочи
     folders:
-    - title: chrony
+    - title:
+        en: chrony
+        ru: chrony
       folders:
       - title:
           en: Description
@@ -1319,9 +1521,13 @@ entries:
           en: Configuration
           ru: Настройки
         url: /modules/chrony/configuration.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/chrony/faq.html
-    - title: namespace-configurator
+    - title:
+        en: namespace-configurator
+        ru: namespace-configurator
       folders:
       - title:
           en: Description
@@ -1335,13 +1541,17 @@ entries:
           en: Examples
           ru: Примеры
         url: /modules/namespace-configurator/examples.html
-    - title: secret-copier
+    - title:
+        en: secret-copier
+        ru: secret-copier
       folders:
       - title:
           en: Description
           ru: Описание
         url: /modules/secret-copier/
-    - title: deckhouse-tools
+    - title:
+        en: deckhouse-tools
+        ru: deckhouse-tools
       folders:
       - title:
           en: Description
@@ -1374,11 +1584,17 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/keepalived/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/keepalived/cr.html
-      - title: FAQ
+      - title:
+          en: FAQ
+          ru: FAQ
         url: /modules/keepalived/faq.html
-    - title: l2-load-balancer
+    - title:
+        en: l2-load-balancer
+        ru: l2-load-balancer
       d8Revision: ee
       featureStatus: deprecated
       folders:
@@ -1398,9 +1614,13 @@ entries:
             en: Configuration
             ru: Настройки
           url: /modules/l2-load-balancer/configuration.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /modules/l2-load-balancer/cr.html
-    - title: metallb
+    - title:
+        en: metallb
+        ru: metallb
       d8Revision: ee
       folders:
       - title:
@@ -1415,7 +1635,9 @@ entries:
           en: Configuration
           ru: Настройки
         url: /modules/metallb/configuration.html
-    - title: network-gateway
+    - title:
+        en: network-gateway
+        ru: network-gateway
       d8Revision: ee
       folders:
       - title:
