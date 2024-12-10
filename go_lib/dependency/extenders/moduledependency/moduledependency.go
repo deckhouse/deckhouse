@@ -94,13 +94,8 @@ func (e *Extender) IsTerminator() bool {
 // GetTopologicalHints implements TopologicalExtender interface of the addon-operator
 func (e *Extender) GetTopologicalHints(moduleName string) []string {
 	hints := make([]string, 0)
-	for module, descriptor := range e.modules {
-		for _, constraintName := range descriptor.constraints.GetConstraintNames() {
-			if constraintName == moduleName {
-				hints = append(hints, module)
-				break
-			}
-		}
+	if descriptor, found := e.modules[moduleName]; found {
+		hints = append(hints, descriptor.constraints.GetConstraintNames()...)
 	}
 
 	return hints
