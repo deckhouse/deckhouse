@@ -15,3 +15,13 @@ properties:
         properties:
           token:
             type: string
+      labelProxyCert:
+        type: object
+        default: {}
+        properties:
+          crt:
+            type: string
+          key:
+            type: string
+          ca:
+            type: string
