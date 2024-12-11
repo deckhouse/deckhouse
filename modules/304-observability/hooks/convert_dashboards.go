@@ -19,6 +19,7 @@ package hooks
 import (
 	"encoding/json"
 	"errors"
+	"regexp"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -69,14 +70,23 @@ type LegacyDashboard struct {
 	Definition string
 }
 
-func (d *LegacyDashboard) PrefixUID(prefix string) error {
-	var dashboard map[string]interface{}
+var (
+	legacyDashboardUidUrlReplaceRegexp = regexp.MustCompile(`("url":\s+?"/d/)([A-Za-z0-9]{10}/.+?",?)`);
+)
 
-	if err := json.Unmarshal([]byte(d.Definition), &dashboard); err != nil {
-		return err
+func (d *LegacyDashboard) PrefixURLs(prefix string) {
+	urlMatches := legacyDashboardUidUrlReplaceRegexp.FindAllStringSubmatch(d.Definition, -1);
+
+	for _, urlMatch := range urlMatches {
+		originalUrlProperty := urlMatch[0];
+		prefixedUrlProperty := urlMatch[1] + prefix + urlMatch[2]
+
+		d.Definition = strings.ReplaceAll(d.Definition, originalUrlProperty, prefixedUrlProperty);
 	}
+}
 
-	uid, ok := dashboard["uid"]
+func (d *LegacyDashboard) PrefixUIDs(dashboardMap map[string]interface{}, prefix string) error {
+	uid, ok := dashboardMap["uid"]
 	if !ok {
 		return errors.New("dashboard definition contains no uid field")
 	}
@@ -86,16 +96,19 @@ func (d *LegacyDashboard) PrefixUID(prefix string) error {
 		return errors.New("dashboard definition uid field is not a string")
 	}
 
-	dashboard["uid"] = prefix + dashboardUID
-
-	ret, err := json.MarshalIndent(dashboard, "", strings.Repeat(JSONIndentCharacter, 4))
-	if err != nil {
-		return err
-	}
-
-	d.Definition = string(ret)
+	dashboardMap["uid"] = prefix + dashboardUID
 
 	return nil
+}
+
+func (d *LegacyDashboard) Title(dashboardMap map[string]interface{}) string {
+	if title, ok := dashboardMap["title"]; ok {
+		if titleString, ok := title.(string); ok {
+			return titleString;
+		}
+	}
+
+	return d.Name;
 }
 
 func filterLegacyDashboard(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -149,21 +162,38 @@ func convertDashboards(input *go_hook.HookInput) error {
 	legacyDashboardsSnap := input.Snapshots["legacy_dashboards"]
 
 	for _, snap := range legacyDashboardsSnap {
-		dash := snap.(*LegacyDashboard)
-		kind := dashboardKindByName(dash.Name)
+		dashboard := snap.(*LegacyDashboard)
+		kind := dashboardKindByName(dashboard.Name)
 		prefix := dashboardPrefixByKind(kind)
 
-		if err := dash.PrefixUID(prefix); err != nil {
-			log.Error("Failed to prefix uid for dashboard", dash.Name, err)
+		dashboard.PrefixURLs(prefix);
+
+		var dashboardMap map[string]interface{}
+
+		if err := json.Unmarshal([]byte(dashboard.Definition), &dashboardMap); err != nil {
+			return err
+		}
+
+		if err := dashboard.PrefixUIDs(dashboardMap, prefix); err != nil {
+			log.Error("Failed to prefix uid for dashboard", dashboard.Name, err)
 			continue
 		}
 
+		title := dashboard.Title(dashboardMap);
+
+		dashboardJSON, err := json.MarshalIndent(dashboardMap, "", strings.Repeat(JSONIndentCharacter, 4))
+		if err != nil {
+			return err
+		}
+
+		dashboard.Definition = string(dashboardJSON)
+
 		input.PatchCollector.Create(
-			dashboardManifest(dash.Name, dash.Folder, kind, dash.Definition),
+			dashboardManifest(dashboard.Name, title, dashboard.Folder, kind, dashboard.Definition),
 			object_patch.UpdateIfExists(),
 		)
 
-		dashboards[dash.Name] = true
+		dashboards[dashboard.Name] = true
 	}
 
 	clusterObservabilityDashboardsSnap := input.Snapshots["cluster_observability_dashboards"]
@@ -203,7 +233,7 @@ func dashboardPrefixByKind(kind string) string {
 	return "cluster_"
 }
 
-func dashboardManifest(name, category, kind, definition string) *unstructured.Unstructured {
+func dashboardManifest(name, title, category, kind, definition string) *unstructured.Unstructured {
 	un := unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "observability.deckhouse.io/v1alpha1",
 		"kind":       kind,
@@ -211,6 +241,7 @@ func dashboardManifest(name, category, kind, definition string) *unstructured.Un
 			"name": name,
 			"annotations": map[string]interface{}{
 				"observability.deckhouse.io/category": category,
+				"metadata.deckhouse.io/title": title,
 			},
 			"labels": map[string]interface{}{
 				"module":   "observability",
