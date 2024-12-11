@@ -117,6 +117,22 @@
         Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
       summary: |
         Module release is waiting for manual approval.
+  - alert: DeckhouseReleaseNotificationNotSent
+    expr: sum by (name) (d8_release_info{notificationNotSent="true"})
+    labels:
+      severity_level: "4"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      description: |
+        Failed to send the Deckhouse release notification webhook.
+
+        Check the notification webhook address by running `kubectl get mc deckhouse -o yaml`.
+      summary: |
+        Deckhouse release notification webhook not sent.
   - alert: ModuleReleaseIsBlockedByRequirements
     expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) d8_module_release_info{requirementsNotMet="true"}) by (name, moduleName)
     labels:
@@ -148,7 +164,7 @@
         It is recommended to keep clean your module configurations from approve annotations.
 
         If you ignore this alert and do not clear the annotation, it may cause the module to be accidentally removed from the cluster.
-        
+
         Removing a module from a cluster can lead to a number of irreparable consequences.
 
         Please run `kubectl annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disable-` to stop this alert.
