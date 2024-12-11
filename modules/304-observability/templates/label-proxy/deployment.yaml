@@ -42,6 +42,8 @@ spec:
       app: label-proxy
   template:
     metadata:
+      annotations:
+        checksum/tls-secret: {{ include (print $.Template.BasePath "/label-proxy/secret.yaml") $ | sha256sum }}
       labels:
         app: label-proxy
     spec:
@@ -49,6 +51,9 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $ "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple $ "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ | nindent 6 }}
+      serviceAccountName: label-proxy
+      imagePullSecrets:
+      - name: deckhouse-registry
       containers:
       - name: label-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
@@ -62,12 +67,25 @@ spec:
               name: prometheus-token
               key: token
               optional: false
+        - name: TLS_CERT_FILE
+          value: /cert/tls.crt
+        - name: TLS_KEY_FILE
+          value: /cert/tls.key
+        - name: TLS_ENABLED
+          value: "true"
         ports:
         - name: http
           containerPort: 9091
-  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+        {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+        resources:
+          requests:
             {{- include "label_proxy_resources" . | nindent 12 }}
-  {{- end }}
-      imagePullSecrets:
-      - name: deckhouse-registry
-      serviceAccountName: label-proxy
+        {{- end }}
+        volumeMounts:
+        - name: label-proxy-tls
+          mountPath: /cert
+          readOnly: true
+      volumes:
+      - name: label-proxy-tls
+        secret:
+          secretName: label-proxy-tls
