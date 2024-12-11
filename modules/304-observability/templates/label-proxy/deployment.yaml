@@ -1,9 +1,9 @@
-{{- if .Values.observability.internal.deployFlags.labelProxy }}
 {{- define "label_proxy_resources" }}
 cpu: 25m
 memory: 128Mi
 {{- end }}
 
+{{- if .Values.observability.internal.deployFlags.labelProxy }}
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
