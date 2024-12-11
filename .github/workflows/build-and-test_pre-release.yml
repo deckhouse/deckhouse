@@ -433,6 +433,10 @@ jobs:
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
+          #temporary: move temp dir
+          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
+          mkdir -p "$TEMP_WORKDIR"
+
           # Registry path to publish images for Git branches.
           BRANCH_REGISTRY_PATH=
           # Registry path to publish images for Git tags.
@@ -452,6 +456,7 @@ jobs:
               ${SECONDARY_REPO} \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
+              --tmp-dir="$TEMP_WORKDIR" \
               --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
@@ -463,11 +468,14 @@ jobs:
             werf build \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
+              --tmp-dir="$TEMP_WORKDIR" \
               --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
             echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
           fi
+
+          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
