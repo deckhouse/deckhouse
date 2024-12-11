@@ -26,6 +26,7 @@ import (
 var _ = Describe("Observability hooks :: convert dashboards ::", func() {
 	f := HookExecutionConfigInit(``, ``)
 	f.RegisterCRD("observability.deckhouse.io", "v1alpha1", "ClusterObservabilityDashboard", false)
+	f.RegisterCRD("observability.deckhouse.io", "v1alpha1", "ClusterObservabilityPropagatedDashboard", false)
 	f.RegisterCRD("deckhouse.io", "v1", "GrafanaDashboardDefinition", false)
 
 	Context("Empty cluster", func() {
@@ -43,7 +44,10 @@ kind: GrafanaDashboardDefinition
 metadata:
   name: test
 spec:
-  definition: "{}"
+  definition: |
+    {
+      "uid": "DEADBEEF"
+    }
 `, 1))
 				f.RunHook()
 			})
@@ -53,7 +57,7 @@ spec:
 
 				dashboard := f.KubernetesGlobalResource("ClusterObservabilityDashboard", "test")
 				Expect(dashboard.Exists()).To(BeTrue())
-				Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{}`))
+				Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{"uid": "cluster_DEADBEEF"}`))
 			})
 
 			Context("And after updating GrafanaDashboardDefinition", func() {
@@ -75,7 +79,7 @@ spec:
 
 					dashboard := f.KubernetesGlobalResource("ClusterObservabilityDashboard", "test")
 					Expect(dashboard.Exists()).To(BeTrue())
-					Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{"uid": "DEADBEEF"}`))
+					Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{"uid": "cluster_DEADBEEF"}`))
 				})
 
 				Context("And after deleting GrafanaDashboardDefinition", func() {
@@ -126,11 +130,11 @@ spec:
 
 			dashboard := f.KubernetesGlobalResource("ClusterObservabilityDashboard", "one")
 			Expect(dashboard.Exists()).To(BeTrue())
-			Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{"uid": "foo"}`))
+			Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{"uid": "cluster_foo"}`))
 
 			dashboardNext := f.KubernetesGlobalResource("ClusterObservabilityDashboard", "two")
 			Expect(dashboardNext.Exists()).To(BeTrue())
-			Expect(dashboardNext.Field("spec.definition").String()).To(MatchYAML(`{"uid": "bar"}`))
+			Expect(dashboardNext.Field("spec.definition").String()).To(MatchYAML(`{"uid": "cluster_bar"}`))
 		})
 	})
 
