@@ -32,16 +32,16 @@ import (
 var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal": {}}}`, "")
 
-	Context("There`s ManageScopeBinding", func() {
+	Context("There`s ManageSubsystemBinding", func() {
 		BeforeEach(func() {
 			resources := []string{
-				manageModuleRole("d8:manage:capability:module:test:edit", "others", "test-ns"),
-				manageModuleRole("d8:manage:capability:module:test2:edit", "others", "test2-ns"),
-				manageRole("d8:manage:others:manager", "scope", "others"),
+				manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
+				manageModuleRole("d8:manage:permission:module:test2:edit", "others", "test2-ns"),
+				manageRole("d8:manage:others:manager", "subsystem", "others"),
 				manageBinding("test", "d8:manage:others:manager"),
 
-				manageModuleRole("d8:manage:capability:module:test3:edit", "test", "test2-ns"),
-				manageRole("d8:manage:test:manager", "scope", "test"),
+				manageModuleRole("d8:manage:permission:module:test3:edit", "test", "test2-ns"),
+				manageRole("d8:manage:test:manager", "subsystem", "test"),
 				manageBinding("test2", "d8:manage:test:manager"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
@@ -63,9 +63,9 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 	Context("There`s ManageAllBinding", func() {
 		BeforeEach(func() {
 			resources := []string{
-				manageModuleRole("d8:manage:capability:module:test:edit", "others", "test-ns"),
-				manageModuleRole("d8:manage:capability:module:test2:edit", "others", "test2-ns"),
-				manageRole("d8:manage:others:manager", "scope", "others"),
+				manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
+				manageModuleRole("d8:manage:permission:module:test2:edit", "others", "test2-ns"),
+				manageRole("d8:manage:others:manager", "subsystem", "others"),
 				manageRole("d8:manage:all:manager", "all", "all"),
 				manageBinding("test", "d8:manage:all:manager"),
 			}
@@ -108,7 +108,7 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 	})
 })
 
-func manageRole(name, level, scope string) string {
+func manageRole(name, level, subsystem string) string {
 	role := rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -125,8 +125,8 @@ func manageRole(name, level, scope string) string {
 		AggregationRule: &rbacv1.AggregationRule{ClusterRoleSelectors: []metav1.LabelSelector{
 			{
 				MatchLabels: map[string]string{
-					"rbac.deckhouse.io/kind":                                   "manage",
-					fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", scope): "manager",
+					"rbac.deckhouse.io/kind": "manage",
+					fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", subsystem): "manager",
 				},
 			},
 		}},
@@ -138,7 +138,7 @@ func manageRole(name, level, scope string) string {
 	return string(marshaled)
 }
 
-func manageModuleRole(name, scope, namespace string) string {
+func manageModuleRole(name, subsystem, namespace string) string {
 	role := rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -147,10 +147,10 @@ func manageModuleRole(name, scope, namespace string) string {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				"rbac.deckhouse.io/level":                                  "module",
-				"rbac.deckhouse.io/kind":                                   "manage",
-				"rbac.deckhouse.io/namespace":                              namespace,
-				fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", scope): "manager",
+				"rbac.deckhouse.io/level":                                      "module",
+				"rbac.deckhouse.io/kind":                                       "manage",
+				"rbac.deckhouse.io/namespace":                                  namespace,
+				fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", subsystem): "manager",
 			},
 		},
 	}

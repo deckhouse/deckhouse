@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: kube-system
-  name: d8:manage:capability:module:control-plane-manager:view
+  name: d8:manage:permission:module:control-plane-manager:view
 rules:
 - apiGroups:
   - deckhouse.io

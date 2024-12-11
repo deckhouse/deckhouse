@@ -1,13 +1,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:manage:capability:scope:security:manage_resources
+  name: d8:manage:permission:subsystem:security:view_resources
   labels:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
-    rbac.deckhouse.io/aggregate-to-security-as: manager
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+    rbac.deckhouse.io/aggregate-to-security-as: viewer
 rules:
   - apiGroups:
       - admissionregistration.k8s.io
@@ -17,27 +17,37 @@ rules:
       - validatingadmissionpolicybindings
       - validatingwebhookconfigurations
     verbs:
-      - create
-      - update
-      - patch
-      - delete
+      - get
+      - list
+      - watch
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:
       - clusterrolebindings
       - clusterroles
     verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - localsubjectaccessreviews
+      - subjectaccessreviews
+    verbs:
       - create
-      - update
-      - patch
-      - delete
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
+      - selfsubjectreviews
+    verbs:
+      - create
   - apiGroups:
       - certificates.k8s.io
     resources:
       - certificatesigningrequests
     verbs:
-      - create
-      - delete
-      - deletecollection
-      - patch
-      - update
+      - get
+      - list
+      - watch
