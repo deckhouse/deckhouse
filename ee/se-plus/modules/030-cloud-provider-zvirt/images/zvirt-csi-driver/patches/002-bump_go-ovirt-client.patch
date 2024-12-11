@@ -1,0 +1,35 @@
+Subject: [PATCH] bump go-ovirt-client
+---
+Index: go.mod
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.mod b/go.mod
+--- a/go.mod	(revision a3e7ca282841314182807059b09f11508624e169)
++++ b/go.mod	(revision a57b5890587ca4478b2b85e5c4ea77cdf091d27c)
+@@ -64,4 +64,4 @@
+ 	sigs.k8s.io/yaml v1.2.0 // indirect
+ )
+ 
+-replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant
++replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1
+Index: go.sum
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/go.sum b/go.sum
+--- a/go.sum	(revision a3e7ca282841314182807059b09f11508624e169)
++++ b/go.sum	(revision a57b5890587ca4478b2b85e5c4ea77cdf091d27c)
+@@ -114,8 +114,8 @@
+ github.com/evanphx/json-patch v4.11.0+incompatible h1:glyUF9yIYtMHzn8xaKw5rMhdWcwsYV8dZHIq5567/xs=
+ github.com/evanphx/json-patch v4.11.0+incompatible/go.mod h1:50XU6AFN0ol/bzJsmQLiYLvXMP4fmwYFNcr97nuDLSk=
+ github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
+-github.com/flant/go-ovirt-client/v3 v3.2.0-flant h1:LpX1XTvdK9f7m18Dqpw2H2n3zqOiaH1tUdhxGnBcOGc=
+-github.com/flant/go-ovirt-client/v3 v3.2.0-flant/go.mod h1:2QkYFK7OTrtM/kOQCmX5V/RRBGVt4Ro4tsxoU68my+0=
++github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1 h1:H4fak/42BjtvGaMTwJ/qZVqrjF3RGxBP17CJ9ZDsGWY=
++github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1/go.mod h1:EhTzJm+T2zvQTwtK3IT5v77d70/I6A9zAG1OOlQqTUI=
+ github.com/form3tech-oss/jwt-go v3.2.2+incompatible/go.mod h1:pbq4aXjuKjdthFRnoDwaVPLA+WlJuPGy+QneDUgJi2k=
+ github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
+ github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=
