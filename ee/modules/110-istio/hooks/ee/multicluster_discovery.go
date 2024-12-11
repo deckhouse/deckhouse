@@ -120,19 +120,26 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.MulticlusterPrivateMetadata
 
-		var httpOptionCA []http.Option
-		var httpOptionInsecure []http.Option
+		// var httpOptionCA []http.Option
+		// var httpOptionInsecure []http.Option
+		var httpOption []http.Option
 
 		if multiclusterInfo.ClusterCA != "" {
 			caCerts := [][]byte{[]byte(multiclusterInfo.ClusterCA)}
-			httpOptionCA = append(httpOptionCA, http.WithAdditionalCACerts(caCerts))
+			httpOption = append(httpOption, http.WithAdditionalCACerts(caCerts))
+		} else if multiclusterInfo.EnableInsecureConnection {
+			httpOption = append(httpOption, http.WithInsecureSkipVerify())
 		}
-		if multiclusterInfo.EnableInsecureConnection {
-			httpOptionInsecure = append(httpOptionInsecure, http.WithInsecureSkipVerify())
-		}
-		allOptions := append(httpOptionCA, httpOptionInsecure...)
+		// if multiclusterInfo.ClusterCA != "" {
+		// 	caCerts := [][]byte{[]byte(multiclusterInfo.ClusterCA)}
+		// 	httpOptionCA = append(httpOptionCA, http.WithAdditionalCACerts(caCerts))
+		// }
+		// if multiclusterInfo.EnableInsecureConnection {
+		// 	httpOptionInsecure = append(httpOptionInsecure, http.WithInsecureSkipVerify())
+		// }
+		// allOptions := append(httpOptionCA, httpOptionInsecure...)
 
-		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(allOptions...), multiclusterInfo.PublicMetadataEndpoint, "")
+		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(httpOption...), multiclusterInfo.PublicMetadataEndpoint, "")
 		if err != nil {
 			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioMulticluster %s, error: %s", multiclusterInfo.PublicMetadataEndpoint, multiclusterInfo.Name, err.Error())
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
@@ -174,7 +181,7 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
-		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(allOptions...), multiclusterInfo.PrivateMetadataEndpoint, bearerToken)
+		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), multiclusterInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
 			input.Logger.Warnf("cannot fetch private metadata endpoint %s for IstioMulticluster %s, error: %s", multiclusterInfo.PrivateMetadataEndpoint, multiclusterInfo.Name, err.Error())
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
