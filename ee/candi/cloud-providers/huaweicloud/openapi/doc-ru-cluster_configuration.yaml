@@ -34,15 +34,15 @@ apiVersions:
           instanceClass:
             description: |
               Partial contents of the fields of the [HuaweiCloudInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass).
-            properties: &instanceClassProperties
-              flavorName: &instanceClassFlavorName
+            properties: &instanceClassProperties_ru
+              flavorName: &instanceClassFlavorName_ru
                 description: |
                   Тип заказываемых виртуальных машин.
-              imageName: &instanceClassImageName
+              imageName: &instanceClassImageName_ru
                 description: |
                   Имя образа виртуальной машины, который будет использоваться для инстанса.
                   Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
-              rootDiskSize: &instanceClassRootDiskSize
+              rootDiskSize: &instanceClassRootDiskSize_ru
                 description: |
                   Размер root-диска. Значение указывается в гигабайтах.
               etcdDiskSizeGb:
@@ -90,119 +90,88 @@ apiVersions:
                     Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
                     Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
-                annotations:
-                  type: object
-                  description: |
-                    The same as the `metadata.annotations` standard [field](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
-                  x-examples:
-                  - ai.fleet.com/discombobulate: "true"
-                  additionalProperties:
-                    type: string
-                taints:
-                  type: array
-                  description: |
-                    The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                    > **Caution!** Only the `effect`, `key`, `values`  fields are available.
-                  x-examples:
-                  - - effect: NoExecute
+                    Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
+                annotations:
+                  description: |
+                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
+                taints:
+                  description: |
+                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+
+                    > **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
                       key: ship-class
                       value: frigate
-                  items:
-                    type: object
-                    properties:
-                      effect:
-                        type: string
-                        enum: [NoSchedule, PreferNoSchedule, NoExecute]
-                      key:
-                        type: string
-                      value:
-                        type: string
+                    ```
             instanceClass:
-              type: object
-              additionalProperties: false
-              required: [flavorName, imageName]
               description: |
-                Partial contents of the fields of the.
+                Частичное содержимое полей.
               properties:
-                <<: *instanceClassProperties
+                <<: *instanceClassProperties_ru
       layout:
         description: |
-          The way resources are located in the cloud.
+          Название схемы размещения.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html) about possible provider layouts.
-        type: string
-        x-unsafe: true
+          [Подробние](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html) about possible provider layouts.
       standard:
         type: object
         description: |
-          Settings for the [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html#standard) layout.
-        additionalProperties: false
-        required: [internalNetworkCIDR]
+          Настройки для схемы размещения [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html#standard) layout.
         properties:
-          internalNetworkCIDR: &internalNetworkCIDR
+          internalNetworkCIDR: &internalNetworkCIDR_ru
             description: |
-              Routing for the internal cluster network.
-            type: string
-            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
-            x-unsafe: true
+              Адресация для внутренней сети узлов кластера.
           internalNetworkDNSServers:
             description: |
-              A list of addresses of the recursive DNSs of the internal cluster network.
-            type: array
-            items:
-              type: string
-              pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
-          internalNetworkSecurity: &internalNetworkSecurity
+              Список адресов рекурсивных DNS внутренней сети.
+          internalNetworkSecurity: &internalNetworkSecurity_ru
             description: |
-              Defines whether [SecurityGroups](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#how-to-check-whether-the-provider-supports-securitygroups) and [AllowedAddressPairs](https://docs.openstack.org/developer/dragonflow/specs/allowed_address_pairs.html) must be configured for ports of the internal network.
-            type: boolean
-            default: true
+              Флаг, который определяет необходимость настройки
           enableEIP:
             description: |
-                Enable Elastic IP for the master nodes.
-            type: boolean
-            pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
-            x-unsafe: true
+                Включите Elastic IP для мастер узлов.
       provider:
         description: |
-          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/environment.html) to the HuaweiCloud API.
+          [Параметры подключения](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/environment.html) to the HuaweiCloud API.
 
-          These settings are the same as those in the `connection` field of the [cloud-provider-huaweicloud](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/configuration.html#parameters) module.
-        type: object
-        additionalProperties: false
-        required: [cloud, region, accessKey, secretKey]
+          TСовпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-huaweicloud](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/configuration.html#parameters) module.
         properties:
           cloud:
-            type: string
             description: |
-              The endpoint of the cloud provider.
+              Конечная точка поставщика облачных услуг.
           region:
-            type: string
             description: |
-              The HuaweiCloud region where the cluster will be deployed.
-            x-unsafe: true
+              Регион HuaweiCloud, в котором будет развернут кластер.
           accessKey:
-            type: string
             description: |
-              The access key of the HuaweiCloud to use.
+              Ключ доступа к облаку HuaweiCloud, который необходимо использовать.
           secretKey:
-            type: string
             description: |
-              The secret key of the HuaweiCloud to use.
+              Секретный ключ облака HuaweiCloud для использования.
           insecure:
-            type: boolean
             description: |
-              Trust self-signed SSL certificates.
+              Доверяйте самоподписанным сертификатам SSL.
           authURL:
-            type: string
             description: |
-              The Identity authentication URL.
+              URL-адрес аутентификации личности.
           domainName:
-            type: string
             description: |
-              The Account name of IAM to scope to.
+              Имя учетной записи IAM для охвата.
           projectID:
-            type: string
             description: |
-              The project id.
+              Идентификатор проекта.
