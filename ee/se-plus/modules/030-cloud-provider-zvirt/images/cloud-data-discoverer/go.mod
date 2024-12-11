@@ -74,4 +74,4 @@ require (
 
 replace github.com/deckhouse/deckhouse/go_lib/cloud-data => ../../../../../../go_lib/cloud-data/
 
-replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant
+replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant-1
