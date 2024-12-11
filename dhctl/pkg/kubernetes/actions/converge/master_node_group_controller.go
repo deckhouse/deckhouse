@@ -201,7 +201,9 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 
 		ipAddress, err := terraform.GetMasterIPAddressForSSH(statePath)
 		if err != nil {
-			return fmt.Errorf("failed to get master IP address: %w", err)
+			log.WarnF("failed to get master IP address: %s", err)
+
+			continue
 		}
 
 		settings.AddAvailableHosts(session.Host{Host: ipAddress, Name: nodeName})
