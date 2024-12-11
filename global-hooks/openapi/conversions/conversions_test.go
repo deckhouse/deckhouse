@@ -34,13 +34,11 @@ func TestStorageClassConversions(t *testing.T) {
 		{
 			name: "should move `global.storageClass` to `global.modules.storageClass`",
 			settings: `
-global:
   storageClass: some-storage-class
   modules:
     ingressClass: nginx
 `,
 			expected: `
-global:
   modules:
     ingressClass: nginx
     storageClass: some-storage-class
@@ -52,14 +50,12 @@ global:
 		{
 			name: "do not override `global.modules.storageClass` if it already exists",
 			settings: `
-global:
   storageClass: some-storage-class
   modules:
     ingressClass: nginx
     storageClass: do-not-override-storage-class
 `,
 			expected: `
-global:
   modules:
     ingressClass: nginx
     storageClass: do-not-override-storage-class
