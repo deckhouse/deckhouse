@@ -2,4 +2,4 @@ module: user-authn
 subsystems:
   - security
 crds:
-  - modules/010-user-authn/crds/*.yaml
+  - modules/15-user-authn/crds/*.yaml
