@@ -62,7 +62,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.7.0+incompatible
-	github.com/flant/addon-operator v0.0.0-20241211093034-cddd4c5b258a
+	github.com/flant/addon-operator v0.0.0-20241211151735-95c8f23c5091
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-openapi/errors v0.19.7
