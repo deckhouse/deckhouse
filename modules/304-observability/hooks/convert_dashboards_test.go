@@ -51,7 +51,7 @@ spec:
 			It("Should create ClusterObservabilityDashboard", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				dashboard := f.KubernetesResource("ClusterObservabilityDashboard", "", "test")
+				dashboard := f.KubernetesGlobalResource("ClusterObservabilityDashboard", "test")
 				Expect(dashboard.Exists()).To(BeTrue())
 				Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{}`))
 			})
@@ -73,7 +73,7 @@ spec:
 				It("Should update ClusterObservabilityDashboard", func() {
 					Expect(f).To(ExecuteSuccessfully())
 
-					dashboard := f.KubernetesResource("ClusterObservabilityDashboard", "", "test")
+					dashboard := f.KubernetesGlobalResource("ClusterObservabilityDashboard", "test")
 					Expect(dashboard.Exists()).To(BeTrue())
 					Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{"uid": "DEADBEEF"}`))
 				})
@@ -87,7 +87,7 @@ spec:
 					It("Should delete ClusterObservabilityDashboard", func() {
 						Expect(f).To(ExecuteSuccessfully())
 
-						Expect(f.KubernetesResource("ClusterObservabilityDashboard", "", "test").Exists()).ToNot(BeTrue())
+						Expect(f.KubernetesGlobalResource("ClusterObservabilityDashboard", "test").Exists()).ToNot(BeTrue())
 					})
 				})
 			})
@@ -105,8 +105,8 @@ metadata:
 spec:
   definition: |
     {
-	  "uid": "foo"
-	}
+      "uid": "foo"
+    }
 ---
 apiVersion: deckhouse.io/v1
 kind: GrafanaDashboardDefinition
@@ -114,9 +114,9 @@ metadata:
   name: two
 spec:
   definition: |
-	{
-	  "uid": "bar"
-	}
+    {
+      "uid": "bar"
+    }
 `, 2))
 			f.RunHook()
 		})
@@ -124,11 +124,11 @@ spec:
 		It("Should synchronize the rules", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			dashboard := f.KubernetesResource("ClusterObservabilityDashboard", "", "one")
+			dashboard := f.KubernetesGlobalResource("ClusterObservabilityDashboard", "one")
 			Expect(dashboard.Exists()).To(BeTrue())
 			Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{"uid": "foo"}`))
 
-			dashboardNext := f.KubernetesResource("ClusterObservabilityDashboard", "", "two")
+			dashboardNext := f.KubernetesGlobalResource("ClusterObservabilityDashboard", "two")
 			Expect(dashboardNext.Exists()).To(BeTrue())
 			Expect(dashboardNext.Field("spec.definition").String()).To(MatchYAML(`{"uid": "bar"}`))
 		})
@@ -148,7 +148,7 @@ metadata:
 
 		It("Should delete ClusterObservabilityDashboard on synchronization", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("ClusterObservabilityDashboard", "", "test").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterObservabilityDashboard", "test").Exists()).To(BeFalse())
 		})
 	})
 })
