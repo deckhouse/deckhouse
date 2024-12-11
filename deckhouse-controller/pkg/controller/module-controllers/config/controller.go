@@ -319,6 +319,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 			r.log.Warnf("the module '%s' not found", moduleConfig.Name)
 			return ctrl.Result{}, nil
 		}
+		r.log.Errorf("failed to get the '%s' module: %v", moduleConfig.Name, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
 

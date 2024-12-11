@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,22 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
-)
-
-const (
-	ModulePullOverrideAnnotationDeployedOn = "modules.deckhouse.io/deployed-on"
-
-	ModulePullOverrideFinalizer = "modules.deckhouse.io/mpo-finalizer"
-
-	ModulePullOverrideMessageReady          = "Ready"
-	ModulePullOverrideMessageModuleEmbedded = "The module is embedded"
-	ModulePullOverrideMessageModuleDisabled = "The module disabled"
-	ModulePullOverrideMessageModuleNotFound = "The module not found"
-	ModulePullOverrideMessageSourceNotFound = "The source not found"
-	ModulePullOverrideMessageNoSource       = "The module does not have an active source"
-	ModulePullOverrideMessageNoDef          = "The module does not have a module definition"
-
-	ModulePullOverrideAnnotationRenew = "renew"
 )
 
 var (
@@ -86,22 +70,20 @@ type ModulePullOverride struct {
 	Status ModulePullOverrideStatus `json:"status,omitempty"`
 }
 
+// +k8s:deepcopy-gen=true
+
 type ModulePullOverrideSpec struct {
-	Source       string          `json:"source,omitempty"`
 	ImageTag     string          `json:"imageTag"`
 	ScanInterval libapi.Duration `json:"scanInterval"`
 }
+
+// +k8s:deepcopy-gen=true
 
 type ModulePullOverrideStatus struct {
 	UpdatedAt   metav1.Time `json:"updatedAt"`
 	Message     string      `json:"message"`
 	ImageDigest string      `json:"imageDigest"`
 	Weight      uint32      `json:"weight,omitempty"`
-}
-
-// GetModuleSource returns the module source of the related module
-func (mo *ModulePullOverride) GetModuleSource() string {
-	return mo.Spec.Source
 }
 
 // GetModuleName returns the module's name of the module pull override

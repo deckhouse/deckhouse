@@ -105,11 +105,12 @@ func (suite *ModuleLoaderTestSuite) setupModuleLoader(raw string) {
 
 	sc := runtime.NewScheme()
 	_ = v1alpha1.SchemeBuilder.AddToScheme(sc)
+	_ = v1alpha2.SchemeBuilder.AddToScheme(sc)
 	_ = corev1.AddToScheme(sc)
 	suite.client = fake.NewClientBuilder().
 		WithScheme(sc).
 		WithObjects(objects...).
-		WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha1.ModulePullOverride{}).Build()
+		WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha2.ModulePullOverride{}).Build()
 
 	suite.loader = &Loader{
 		client:               suite.client,
@@ -146,8 +147,8 @@ func (suite *ModuleLoaderTestSuite) parseKubernetesObject(raw []byte) client.Obj
 		require.NoError(suite.T(), err)
 		obj = policy
 
-	case v1alpha1.ModulePullOverrideGVK.Kind:
-		mpo := new(v1alpha1.ModulePullOverride)
+	case v1alpha2.ModulePullOverrideGVK.Kind:
+		mpo := new(v1alpha2.ModulePullOverride)
 		err = yaml.Unmarshal(raw, mpo)
 		require.NoError(suite.T(), err)
 		obj = mpo
@@ -380,7 +381,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 
 		mpo := suite.modulePullOverride(moduleName)
 		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.ModulePullOverrideAnnotationDeployedOn)
-		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "dev-master-0", "Module's weight must be set to %d", 900)
+		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "Module's weight must be set to %d", 900)
 
 		require.NoError(suite.T(), cleanupPaths(desc.dir, symlink, symlink1, symlink2, symlink3))
 	})
@@ -393,7 +394,6 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 			},
 		}, nil)
 
-		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", moduleName))
 		desc := moduleDirDescriptor{
 			dir:    moduleDir,
 			values: values,
@@ -401,6 +401,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		err := desc.prepareModuleDir()
 		require.NoError(suite.T(), err)
 
+		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", moduleName))
 		err = os.Symlink("../notEcho/fakeVersion", symlink)
 		require.NoError(suite.T(), err)
 
@@ -426,7 +427,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 
 		mpo := suite.modulePullOverride(moduleName)
 		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.ModulePullOverrideAnnotationDeployedOn)
-		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "dev-master-0", "Module's weight must be set to %d", 900)
+		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "Module's weight must be set to %d", 900)
 
 		require.NoError(suite.T(), cleanupPaths(desc.dir, symlink))
 	})
@@ -444,8 +445,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 	})
 }
 
-func (suite *ModuleLoaderTestSuite) modulePullOverride(name string) *v1alpha1.ModulePullOverride {
-	mpo := new(v1alpha1.ModulePullOverride)
+func (suite *ModuleLoaderTestSuite) modulePullOverride(name string) *v1alpha2.ModulePullOverride {
+	mpo := new(v1alpha2.ModulePullOverride)
 	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, mpo)
 	require.NoError(suite.T(), err)
 
@@ -465,7 +466,7 @@ func (suite *ModuleLoaderTestSuite) fetchResults() []byte {
 		result.Write(got)
 	}
 
-	mpos := new(v1alpha1.ModulePullOverrideList)
+	mpos := new(v1alpha2.ModulePullOverrideList)
 	err = suite.client.List(context.TODO(), mpos)
 	require.NoError(suite.T(), err)
 
