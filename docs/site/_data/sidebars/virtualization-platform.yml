@@ -317,7 +317,9 @@ entries:
             en: Modules settings
             ru: Настройки модулей
           url: /virtualization-platform/reference/mc.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /virtualization-platform/reference/cr/
         - title:
             en: Console utilities
