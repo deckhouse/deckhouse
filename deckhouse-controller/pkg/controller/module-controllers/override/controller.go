@@ -160,10 +160,12 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			return ctrl.Result{Requeue: true}, nil
 		}
 		r.log.Warnf("the '%s' module not found", mpo.Name)
-		mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleNotFound
-		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-			r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
-			return ctrl.Result{Requeue: true}, nil
+		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleNotFound {
+			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleNotFound
+			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
+				r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
+				return ctrl.Result{Requeue: true}, nil
+			}
 		}
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
@@ -171,10 +173,12 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	// skip embedded modules
 	if module.IsEmbedded() {
 		r.log.Debugf("the '%s' module is embedded, skip it", mpo.Name)
-		mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleEmbedded
-		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-			r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
-			return ctrl.Result{Requeue: true}, nil
+		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleEmbedded {
+			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleEmbedded
+			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
+				r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
+				return ctrl.Result{Requeue: true}, nil
+			}
 		}
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
@@ -182,10 +186,12 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	// module must be enabled
 	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 		r.log.Debugf("the '%s' module is disabled, skip it", mpo.Name)
-		mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleDisabled
-		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-			r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
-			return ctrl.Result{Requeue: true}, nil
+		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleDisabled {
+			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleDisabled
+			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
+				r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
+				return ctrl.Result{Requeue: true}, nil
+			}
 		}
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
@@ -193,10 +199,12 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	// source must be
 	if module.Properties.Source == "" {
 		r.log.Debugf("the '%s' module does not have an active source, skip it", mpo.Name)
-		mpo.Status.Message = v1alpha1.ModulePullOverrideMessageNoSource
-		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-			r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
-			return ctrl.Result{Requeue: true}, nil
+		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageNoSource {
+			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageNoSource
+			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
+				r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
+				return ctrl.Result{Requeue: true}, nil
+			}
 		}
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
@@ -246,10 +254,12 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			r.log.Errorf("failed to get the '%s' module source for the '%s' module pull override: %v", module.Properties.Source, mpo.Name, err)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		mpo.Status.Message = v1alpha1.ModulePullOverrideMessageSourceNotFound
-		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-			r.log.Errorf("failed to update the '%s' module pull override status: %v", mpo.Name, uerr)
-			return ctrl.Result{Requeue: true}, nil
+		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageSourceNotFound {
+			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageSourceNotFound
+			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
+				r.log.Errorf("failed to update the '%s' module pull override status: %v", mpo.Name, uerr)
+				return ctrl.Result{Requeue: true}, nil
+			}
 		}
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
