@@ -168,7 +168,7 @@ var skipOssChecks = map[string]struct{}{
 	"035-cni-simple-bridge":                   {},
 	"140-user-authz":                          {},
 	"160-multitenancy-manager":                {},
-	"304-observability"                        {}, // module has no OSS dependencies
+	"304-observability":                       {}, // module has no OSS dependencies
 	"340-extended-monitoring":                 {},
 	"340-monitoring-applications":             {},
 	"340-monitoring-custom":                   {},
