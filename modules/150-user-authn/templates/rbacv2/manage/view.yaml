@@ -18,9 +18,9 @@ rules:
   - groups
   - users
   verbs:
-    - get
-    - list
-    - watch
+  - get
+  - list
+  - watch
 - apiGroups:
   - deckhouse.io
   resourceNames:
