@@ -323,8 +323,15 @@ properties:
         x-examples:
         - apiVersion: deckhouse.io/v1
           kind: HuaweiCloudDiscoveryData
-          storageDomains:
-          - name: Default
+          layout: Standard
+          zones:
+            - eu-3a
+          instances:
+            vpcIPv4SubnetId: "00000000-0000-0000-0000-000000000000"
+          volumeTypes:
+          - id: "00000000-0000-0000-0000-000000000000"
+            name: "ssd"
+            isPublic: true
         properties:
           apiVersion:
             type: string
