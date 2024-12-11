@@ -9,9 +9,9 @@ spec:
   type: ClusterIP
   clusterIP: None
   ports:
-  - name: http
-    port: 9091
+  - name: https
+    port: 8443
     protocol: TCP
-    targetPort: http
+    targetPort: https
   selector:
     app: label-proxy
