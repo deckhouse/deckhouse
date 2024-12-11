@@ -84,6 +84,8 @@ spec:
             - spec
           properties:
             spec:
+#             TODO(ipaqsa): Remove it after delete v1alpha1
+              x-kubernetes-preserve-unknown-fields: true
               type: object
               required:
                 - imageTag
