@@ -25,8 +25,8 @@ import (
 
 var _ = Describe("Prometheus hooks :: custom rules ::", func() {
 	f := HookExecutionConfigInit(``, ``)
-	f.RegisterCRD("deckhouse.io", "v1", "CustomPrometheusRules", false)
-	f.RegisterCRD("monitoring.coreos.com", "v1", "PrometheusRule", true)
+	f.RegisterCRD("observability.deckhouse.io", "v1alpha1", "ClusterObservabilityDashboard", false)
+	f.RegisterCRD("deckhouse.io", "v1", "GrafanaDashboardDefinition", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -34,86 +34,60 @@ var _ = Describe("Prometheus hooks :: custom rules ::", func() {
 			f.RunHook()
 		})
 
-		Context("After adding CustomPrometheusRules", func() {
+		Context("After adding GrafanaDashboardDefinition", func() {
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: deckhouse.io/v1
-kind: CustomPrometheusRules
+kind: GrafanaDashboardDefinition
 metadata:
   name: test
 spec:
-  groups:
-  - name: gr1
-    rules:
-    - alert: Rule1
-      expr: testit
-  - name: gr2
-    rules:
-    - alert: Rule2
-      expr: testit
+  definition: "{}"
 `, 1))
 				f.RunHook()
 			})
 
-			It("Should create PrometheusRule", func() {
+			It("Should create ClusterObservabilityDashboard", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				prometheusRule := f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-test")
-				Expect(prometheusRule.Exists()).To(BeTrue())
-				Expect(prometheusRule.Field("spec.groups").String()).To(MatchYAML(`
-- name: gr1
-  rules:
-  - alert: Rule1
-    expr: testit
-- name: gr2
-  rules:
-  - alert: Rule2
-    expr: testit
-`))
+				dashboard := f.KubernetesResource("ClusterObservabilityDashboard", "", "test")
+				Expect(dashboard.Exists()).To(BeTrue())
+				Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{}`))
 			})
 
-			Context("And after updating CustomPrometheusRules", func() {
+			Context("And after updating GrafanaDashboardDefinition", func() {
 				BeforeEach(func() {
 					f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: deckhouse.io/v1
-kind: CustomPrometheusRules
+kind: GrafanaDashboardDefinition
 metadata:
   name: test
 spec:
-  groups:
-  - name: update
-    rules:
-    - alert: updateRule1
-      expr: testit
+  definition: "{\"uid\": \"DEADBEEF\"}"
 `, 2))
 					f.RunHook()
 				})
 
-				It("Should update PrometheusRule", func() {
+				It("Should update ClusterObservabilityDashboard", func() {
 					Expect(f).To(ExecuteSuccessfully())
 
-					prometheusRule := f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-test")
-					Expect(prometheusRule.Exists()).To(BeTrue())
-					Expect(prometheusRule.Field("spec.groups").String()).To(MatchYAML(`
-- name: update
-  rules:
-    - alert: updateRule1
-      expr: testit
-`))
+					dashboard := f.KubernetesResource("ClusterObservabilityDashboard", "", "test")
+					Expect(dashboard.Exists()).To(BeTrue())
+					Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{"uid": "DEADBEEF"}`))
 				})
 
-				Context("And after deleting CustomPrometheusRules", func() {
+				Context("And after deleting GrafanaDashboardDefinition", func() {
 					BeforeEach(func() {
 						f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
 						f.RunHook()
 					})
 
-					It("Should delete PrometheusRule", func() {
+					It("Should delete ClusterObservabilityDashboard", func() {
 						Expect(f).To(ExecuteSuccessfully())
 
-						Expect(f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-test").Exists()).ToNot(BeTrue())
+						Expect(f.KubernetesResource("ClusterObservabilityDashboard", "", "test").Exists()).ToNot(BeTrue())
 					})
 				})
 			})
@@ -125,26 +99,24 @@ spec:
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: deckhouse.io/v1
-kind: CustomPrometheusRules
+kind: GrafanaDashboardDefinition
 metadata:
   name: one
 spec:
-  groups:
-  - name: gr1
-    rules:
-    - alert: Rule1
-      expr: testit
+  definition: |
+    {
+	  "uid": "foo"
+	}
 ---
 apiVersion: deckhouse.io/v1
-kind: CustomPrometheusRules
+kind: GrafanaDashboardDefinition
 metadata:
   name: two
 spec:
-  groups:
-  - name: gr1
-    rules:
-    - alert: Rule1
-      expr: testit
+  definition: |
+	{
+	  "uid": "bar"
+	}
 `, 2))
 			f.RunHook()
 		})
@@ -152,49 +124,31 @@ spec:
 		It("Should synchronize the rules", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			prometheusRule := f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-one")
-			Expect(prometheusRule.Exists()).To(BeTrue())
-			Expect(prometheusRule.Field("spec.groups").String()).To(MatchYAML(`
-- name: gr1
-  rules:
-  - alert: Rule1
-    expr: testit
-`))
+			dashboard := f.KubernetesResource("ClusterObservabilityDashboard", "", "one")
+			Expect(dashboard.Exists()).To(BeTrue())
+			Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{"uid": "foo"}`))
 
-			prometheusRuleNext := f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-two")
+			prometheusRuleNext := f.KubernetesResource("ClusterObservabilityDashboard", "", "two")
 			Expect(prometheusRuleNext.Exists()).To(BeTrue())
-			Expect(prometheusRuleNext.Field("spec.groups").String()).To(MatchYAML(`
-- name: gr1
-  rules:
-  - alert: Rule1
-    expr: testit
-`))
+			Expect(prometheusRuleNext.Field("spec.definition").String()).To(MatchYAML(`{"uid": "bar"}`))
 		})
 	})
 
-	Context("Cluster with prometheus rule but without custom prometheus rules", func() {
+	Context("Cluster with GrafanaDashboardDefinition but without ClusterObservabilityDashboard", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
+apiVersion: observability.deckhouse.io/v1alpha1
+kind: ClusterObservabilityDashboard
 metadata:
-  name: d8-custom-one
-  namespace: d8-monitroing
-  labels:
-    module: prometheus
-    heritage: deckhouse
-    app: prometheus
-    prometheus: main
-    component: rules
-    origin: custom
+  name: test
 `, 1))
 			f.RunHook()
 		})
 
-		It("Should delete prometheus rule on synchronization", func() {
+		It("Should delete ClusterObservabilityDashboard on synchronization", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.KubernetesResource("PrometheusRule", "d8-monitoring", "d8-custom-one").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("ClusterObservabilityDashboard", "", "test").Exists()).To(BeFalse())
 		})
 	})
 })
