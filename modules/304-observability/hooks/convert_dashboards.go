@@ -75,14 +75,7 @@ var (
 )
 
 func (d *LegacyDashboard) PrefixURLs(prefix string) {
-	urlMatches := legacyDashboardUidUrlReplaceRegexp.FindAllStringSubmatch(d.Definition, -1);
-
-	for _, urlMatch := range urlMatches {
-		originalUrlProperty := urlMatch[0];
-		prefixedUrlProperty := urlMatch[1] + prefix + urlMatch[2]
-
-		d.Definition = strings.ReplaceAll(d.Definition, originalUrlProperty, prefixedUrlProperty);
-	}
+	d.Definition = legacyDashboardUidUrlReplaceRegexp.ReplaceAllString(d.Definition, "$1" + prefix + "$2")
 }
 
 func (d *LegacyDashboard) PrefixUIDs(dashboardMap map[string]interface{}, prefix string) error {
@@ -166,12 +159,13 @@ func convertDashboards(input *go_hook.HookInput) error {
 		kind := dashboardKindByName(dashboard.Name)
 		prefix := dashboardPrefixByKind(kind)
 
-		dashboard.PrefixURLs(prefix);
+		dashboard.PrefixURLs(prefix)
 
 		var dashboardMap map[string]interface{}
 
 		if err := json.Unmarshal([]byte(dashboard.Definition), &dashboardMap); err != nil {
-			return err
+			log.Error("Failed to unmarshal dashboard JSON", dashboard.Name, err)
+			continue
 		}
 
 		if err := dashboard.PrefixUIDs(dashboardMap, prefix); err != nil {
@@ -183,7 +177,8 @@ func convertDashboards(input *go_hook.HookInput) error {
 
 		dashboardJSON, err := json.MarshalIndent(dashboardMap, "", strings.Repeat(JSONIndentCharacter, 4))
 		if err != nil {
-			return err
+			log.Error("Failed to marshal dashboard JSON", dashboard.Name, err)
+			continue
 		}
 
 		dashboard.Definition = string(dashboardJSON)
