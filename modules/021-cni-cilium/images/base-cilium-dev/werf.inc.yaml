@@ -103,7 +103,7 @@ shell:
       # instead of using installer script, download binaries directly, as installer script doesn't append version suffix,
       # so for multiple versions to be usable files will need to moved around, which would be more tedious
       long_binary_name="bazel-${bazel_version}-linux-x86_64"
-      curl --fail --show-error --silent --location {{ $source }}w/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
+      curl --fail --show-error --silent --location {{ $source }}/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
       chmod +x "/usr/local/bin/${long_binary_name}"
       USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
     done
