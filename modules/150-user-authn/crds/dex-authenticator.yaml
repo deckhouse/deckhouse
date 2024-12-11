@@ -349,9 +349,9 @@ spec:
                 highAvailability:
                   type: boolean
                   description: |-
-                    Включает режим высокой доступности для dex-authenticator.
+                    Enables high availability mode for dex-authenticator.
                     
-                    При включении этого режима будет развернуто несколько реплик pod'ов для обеспечения отказоустойчивости.
+                    When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
                   x-doc-default: 'false'
       additionalPrinterColumns:
         - jsonPath: .spec.applications[*].domain
