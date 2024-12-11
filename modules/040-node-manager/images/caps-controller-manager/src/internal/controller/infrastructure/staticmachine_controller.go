@@ -240,16 +240,16 @@ func (r *StaticMachineReconciler) reconcileDelete(
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
 	if instanceScope != nil {
+
 		if _, skip := instanceScope.Instance.Annotations["static.node.deckhouse.io/skip-cleanup-phase"]; skip {
+			instanceScope.Logger.Info("reconcileDelete: skip")
 			controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
 			if err := machineScope.Patch(ctx); err != nil {
 				return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer from StaticMachine")
 			}
 			return ctrl.Result{}, nil
 		}
-	}
 
-	if instanceScope != nil {
 		result, err := r.cleanup(ctx, instanceScope)
 		if err != nil {
 			return result, errors.Wrap(err, "failed to cleanup StaticInstance")
