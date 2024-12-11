@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -167,6 +169,9 @@ spec:
 		It("Throw the error", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
 			Expect(f.GoHookError.Error()).To(ContainSubstring("more then one CNI enabled"))
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("false"))
 		})
 	})
 })
