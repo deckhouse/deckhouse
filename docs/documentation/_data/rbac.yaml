@@ -2325,6 +2325,16 @@ modules:
         rules:
         - apiGroups:
           - deckhouse.io
+          resources:
+          - dexproviders
+          - groups
+          - users
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - deckhouse.io
           resourceNames:
           - user-authn
           resources:
@@ -2337,6 +2347,18 @@ modules:
         rules:
         - apiGroups:
           - deckhouse.io
+          resources:
+          - dexproviders
+          - groups
+          - users
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
+        - apiGroups:
+          - deckhouse.io
           resourceNames:
           - user-authn
           resources:
@@ -2346,7 +2368,31 @@ modules:
           - update
           - patch
           - delete
-      use: null
+      use:
+      - name: d8:use:capability:module:user-authn:view
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - dexauthenticators
+          - dexclients
+          verbs:
+          - get
+          - list
+          - watch
+      - name: d8:use:capability:module:user-authn:edit
+        rules:
+        - apiGroups:
+          - deckhouse.io
+          resources:
+          - dexauthenticators
+          - dexclients
+          verbs:
+          - create
+          - update
+          - patch
+          - delete
+          - deletecollection
     namespace: d8-user-authn
     subsystems:
     - security

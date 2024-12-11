@@ -13,6 +13,18 @@ metadata:
 rules:
 - apiGroups:
   - deckhouse.io
+  resources:
+  - dexproviders
+  - groups
+  - users
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - deckhouse.io
   resourceNames:
   - user-authn
   resources:
