@@ -16,6 +16,9 @@
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
 
+# Find and delete broken symbolic links in the /dev directory
+find /dev -xtype l -delete -print
+
 # Get the list of NVMe devices
 volume_names="$(find /dev | grep -i 'nvme[0-21]n1$' || true)"
 
@@ -37,10 +40,12 @@ if [ ! -z "${volume_names}" ]; then
             symlink="$(/opt/deckhouse/bin/ebsnvme-id "${volume}" | sed -n '2p' )"
         fi
 
-        # Create the symlink if it does not already exist
-        if [ ! -z "${symlink}" ] && [ ! -e "${symlink}" ]; then
+        # Create the symlink if it does not already exist and starts with /dev
+        if [ ! -z "${symlink}" ] && [ "${symlink}" == /dev/* ] && [ ! -e "${symlink}" ]; then
             ln -s "${volume}" "${symlink}"
             echo "Created symlink ${symlink} -> ${volume}"
+        elif [ "${symlink}" != /dev/* ]; then
+            echo "Symlink ${symlink} does not start with /dev, skipping."
         else
             echo "Symlink ${symlink} already exists"
         fi
