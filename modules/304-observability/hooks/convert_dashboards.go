@@ -72,11 +72,11 @@ type LegacyDashboard struct {
 }
 
 var (
-	legacyDashboardUidUrlReplaceRegexp = regexp.MustCompile(`("url":\s+?"/d/)([A-Za-z0-9]{10}/.+?",?)`)
+	legacyDashboardReplaceRegexp = regexp.MustCompile(`("url":\s+?"/d/)([A-Za-z0-9]{10}/.+?",?)`)
 )
 
 func (d *LegacyDashboard) PrefixURLs(prefix string) {
-	d.Definition = legacyDashboardUidUrlReplaceRegexp.ReplaceAllString(d.Definition, "$1"+prefix+"$2")
+	d.Definition = legacyDashboardReplaceRegexp.ReplaceAllString(d.Definition, "$1"+prefix+"$2")
 }
 
 func (d *LegacyDashboard) PrefixUIDs(dashboardMap map[string]interface{}, prefix string) error {
