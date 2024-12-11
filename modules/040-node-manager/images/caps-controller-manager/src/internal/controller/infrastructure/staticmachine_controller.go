@@ -244,6 +244,16 @@ func (r *StaticMachineReconciler) reconcileDelete(
 		if _, skip := instanceScope.Instance.Annotations["static.node.deckhouse.io/skip-cleanup-phase"]; skip {
 			instanceScope.Logger.Info("reconcileDelete: skip")
 			controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
+
+			if machineScope.Machine.Status.NodeRef != nil {
+				machineScope.Machine.Status.NodeRef = nil
+				if err := r.Status().Update(ctx, machineScope.Machine); err != nil {
+					instanceScope.Logger.Error(err, "failed to remove NodeRef from Machine status")
+					return ctrl.Result{}, errors.Wrap(err, "failed to remove NodeRef from Machine status")
+				}
+				instanceScope.Logger.Info("NodeRef removed from Machine status")
+			}
+
 			if err := machineScope.Patch(ctx); err != nil {
 				return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer from StaticMachine")
 			}
