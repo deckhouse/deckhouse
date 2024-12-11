@@ -58,7 +58,7 @@ shell:
   - export PATH=${GOROOT}/bin:${GOPATH}/bin:/root/bin:/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /src/cilium/images/runtime
+  - cd /src/cilium
   - go mod tidy && go mod vendor && go mod verify
   # git-adding files from patches to force build script take them into account
   - git add .
