@@ -36,15 +36,16 @@ if [ ! -z "${volume_names}" ]; then
         # Extract the potential symlink using 'nvme id-ctrl'
         symlink="$(/opt/deckhouse/bin/nvme id-ctrl -v "${volume}" | ( grep '^0000:' || true ) | sed -E 's/.*"(\/dev\/)?([a-z0-9]+)\.+"$/\/dev\/\2/')"
         if [ -z "${symlink}" ]; then
-            # Alternative way to extract the symlink
             symlink="$(/opt/deckhouse/bin/ebsnvme-id "${volume}" | sed -n '2p' )"
         fi
 
-        # Create the symlink if it does not already exist and starts with /dev
-        if [ ! -z "${symlink}" ] && [ "${symlink}" == /dev/* ] && [ ! -e "${symlink}" ]; then
+        # Correctly handle all symlink creation checks
+        if [ -z "${symlink}" ]; then
+            echo "Symlink for ${volume} could not be determined"
+        elif [[ "${symlink}" == /dev/* ]] && [ ! -e "${symlink}" ]; then
             ln -s "${volume}" "${symlink}"
             echo "Created symlink ${symlink} -> ${volume}"
-        elif [ "${symlink}" != /dev/* ]; then
+        elif [[ "${symlink}" != /dev/* ]]; then
             echo "Symlink ${symlink} does not start with /dev, skipping."
         else
             echo "Symlink ${symlink} already exists"
