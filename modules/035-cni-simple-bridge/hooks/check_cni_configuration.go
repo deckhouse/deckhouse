@@ -191,7 +191,8 @@ func checkCni(input *go_hook.HookInput) error {
 	// Secret d8-cni-configuration exist, key "cni" eq "simple-bridge".
 
 	// Let's check what mc exist and explicitly enabled.
-	desiredCNIModuleConfig := &v1alpha1.ModuleConfig{}
+	// desiredCNIModuleConfig := &v1alpha1.ModuleConfig{}
+	var desiredCNIModuleConfig *v1alpha1.ModuleConfig
 	if len(input.Snapshots["deckhouse_cni_mc"]) == 0 || input.Snapshots["deckhouse_cni_mc"][0] == nil {
 		desiredCNIModuleConfig = &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
