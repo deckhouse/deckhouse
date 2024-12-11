@@ -42,6 +42,12 @@ resource "decort_disk" "kubernetes_data_disk" {
   type       = "D" # disk type, always use "D" for extra disks
   sep_id     = local.storage_endpoint_id
   pool       = local.pool
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
 }
 
 resource "decort_kvmvm" "master_vm" {
@@ -74,5 +80,10 @@ resource "decort_kvmvm" "master_vm" {
       cloud_init,
     ]
   }
-}
 
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
+}

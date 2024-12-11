@@ -55,10 +55,17 @@ resource "google_compute_instance" "static" {
     ssh-keys  = "${local.ssh_user}:${local.ssh_key}"
     user-data = base64decode(var.cloudConfig)
   }
+
   lifecycle {
     ignore_changes = [
       attached_disk,
       metadata["user-data"]
     ]
+  }
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
   }
 }
