@@ -66,18 +66,28 @@
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
 ---
-artifact: {{ $.ModuleName }}/agent-binaries-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /
+  to: /src
   includePaths:
   - binary_replace.sh
   - check-n-cleaning-iptables.sh
   stageDependencies:
     install:
     - "**/*.sh"
+shell:
+  install:
+  - rm -rf /src/.git
+---
+artifact: {{ $.ModuleName }}/agent-binaries-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 - artifact: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
@@ -153,17 +163,16 @@ shell:
   install:
   - chown root:root /usr/sbin/iptables-wrapper
   - chmod 755 /usr/sbin/iptables-wrapper
-  #
   - chmod +x /check-n-cleaning-iptables.sh
   beforeSetup:
   # common relocate
-  - chmod +x /binary_replace.sh
+  - chmod +x /src/binary_replace.sh
   - mkdir -p /relocate
   # copy base binaries and deps from ALT
   - ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-  - /binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
+  - /src/binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
   # copy self built binaries and deps
-  - /binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
+  - /src/binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
   # additional relocate for iptables
   - |
     for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
@@ -214,7 +223,6 @@ shell:
   - mkdir -p /relocate/var /relocate/run /relocate/run/lock
   - ln -f -s /run "/relocate/var/run"
   - ln -f -s /run/lock "/relocate/var/lock"
-  #
   - mkdir -p /relocate/home/cilium
   - mkdir -p /relocate/etc
   - cp -a /from_common_distroless/group /relocate/etc/group

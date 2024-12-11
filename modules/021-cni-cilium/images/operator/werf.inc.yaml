@@ -6,6 +6,11 @@
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+import:
+- artifact: {{ $.ModuleName }}/bin-cilium-src-artifact
+  add: /src
+  to: /src
+  before: install
 git:
 - add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -17,15 +22,13 @@ mount:
   to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
+  {{- include "alpine packages proxy" . | nindent 2 }}
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64
   - mkdir -p /go/src/github.com/cilium/cilium
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
-  - cd /go/src/github.com/cilium/cilium
+  - cd /src/cilium
   - git apply /patches/*.patch --verbose
   - go mod tidy && go mod vendor && go mod verify
   - make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator

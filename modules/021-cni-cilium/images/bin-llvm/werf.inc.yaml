@@ -12,18 +12,28 @@
 # and https://github.com/cilium/image-tools/blob/063fa0d879d9560b85b6134c48ece08e672fa057/images/compilers/install-deps.sh
 # #####################################################################
 ---
-artifact: {{ $.ModuleName }}/llvm-artifact
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
 shell:
-  beforeInstall:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
   - git clone --branch "{{ $llvmRev }}" {{ $.SOURCE_REPO }}/llvm/llvm-project.git /src/llvm
   - cd /src/llvm
-  - git config --global user.email "builder@deckhouse.io"
   - git cherry-pick 29bc5dd19407c4d7cad1c059dea26ee216ddc7ca
   - git cherry-pick 13f6c81c5d9a7a34a684363bcaad8eb7c65356fd
   - git cherry-pick ea72b0319d7b0f0c2fcf41d121afa5d031b319d5
-  - cd -
+  - rm -rf clang-tools-extra/clangd/clients/clangd-vscode
+  - rm -rf .git
+---
+artifact: {{ $.ModuleName }}/llvm-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  - cd /src/llvm
   install:
   - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
   - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2

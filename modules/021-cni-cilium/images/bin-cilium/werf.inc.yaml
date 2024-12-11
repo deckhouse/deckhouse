@@ -4,16 +4,28 @@
 # Build cilium-agent binaries
 # Based on https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (builder stage)
 ---
-artifact: {{ $.ModuleName }}/cilium-artifact
-fromCacheVersion: "2024-11-21.0"
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /src/cilium
+  - cd /src/cilium
+  - git apply --verbose /patches/*.patch
+  - rm -rf Documentation
+---
+artifact: {{ $.ModuleName }}/cilium-artifact
+fromImage: {{ $.ModuleName }}/base-cilium-dev
 import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 - artifact: {{ $.ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
@@ -38,10 +50,6 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
-  beforeInstall:
-  - mkdir -p /go/src/github.com/cilium/cilium
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
   setup:
   - export GOROOT=/usr/local/go GOPATH=/go
   # When launching this container via CI, an unexpected path is inserted into the PATH variable.
@@ -50,7 +58,7 @@ shell:
   - export PATH=${GOROOT}/bin:${GOPATH}/bin:/root/bin:/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /go/src/github.com/cilium/cilium
+  - cd /src/cilium/images/runtime
   - git apply /patches/*.patch --verbose
   - go mod tidy && go mod vendor && go mod verify
   # git-adding files from patches to force build script take them into account
