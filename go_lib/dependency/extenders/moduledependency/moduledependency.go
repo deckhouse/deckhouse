@@ -17,15 +17,16 @@ limitations under the License.
 package moduledependency
 
 import (
+	"fmt"
 	"slices"
 	"sync"
 
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
+	"github.com/hashicorp/go-multierror"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/versionmatcher"
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -112,12 +113,19 @@ func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error)
 		return nil, nil
 	}
 
-	enabledModules := e.modulesStateHelper()
+	var (
+		enabledModules = e.modulesStateHelper()
+		err            error
+	)
 
 	for _, parentModule := range constraints.GetConstraintNames() {
 		if !slices.Contains(enabledModules, parentModule) {
-			return ptr.To(false), nil
+			err = multierror.Append(err, fmt.Errorf("the module's dependency '%s' is disabled", parentModule))
 		}
+	}
+
+	if err != nil {
+		return ptr.To(false), err
 	}
 
 	// TODO: check modules' versions
