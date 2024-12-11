@@ -29,7 +29,6 @@ shell:
   - export GOOS=linux GOARCH=amd64
   - mkdir -p /go/src/github.com/cilium/cilium
   - cd /src/cilium
-  - git apply /patches/*.patch --verbose
   - go mod tidy && go mod vendor && go mod verify
   - make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator
   - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator
