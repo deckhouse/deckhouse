@@ -17,12 +17,15 @@ limitations under the License.
 package moduledependency
 
 import (
+	"slices"
 	"sync"
 
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/versionmatcher"
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -40,14 +43,10 @@ var (
 	_ extenders.StatefulExtender    = &Extender{}
 )
 
-type moduleDescriptor struct {
-	constraints *versionmatcher.Matcher
-}
-
 type Extender struct {
 	modulesVersionHelper func(moduleName string) (string, error)
 	modulesStateHelper   func() []string
-	modules              map[string]moduleDescriptor
+	modules              map[string]*versionmatcher.Matcher
 	logger               *log.Logger
 }
 
@@ -55,7 +54,7 @@ func Instance() *Extender {
 	once.Do(func() {
 		instance = &Extender{
 			logger:  log.Default().With("extender", Name),
-			modules: make(map[string]moduleDescriptor),
+			modules: make(map[string]*versionmatcher.Matcher),
 		}
 	})
 	return instance
@@ -66,17 +65,17 @@ func (e *Extender) SetModulesVersionHelper(f func(moduleName string) (string, er
 }
 
 func (e *Extender) AddConstraint(name string, value map[string]string) error {
-	module := e.modules[name]
-	if module.constraints == nil {
-		module.constraints = versionmatcher.New(false)
+	constraints := e.modules[name]
+	if constraints == nil {
+		constraints = versionmatcher.New(false)
 	}
 
 	for dependency, version := range value {
-		if err := module.constraints.AddConstraint(dependency, version); err != nil {
+		if err := constraints.AddConstraint(dependency, version); err != nil {
 			return err
 		}
 	}
-	e.modules[name] = module
+	e.modules[name] = constraints
 	e.logger.Debugf("installed constraint for the '%s' module is added", name)
 
 	return nil
@@ -99,17 +98,30 @@ func (e *Extender) IsTerminator() bool {
 // GetTopologicalHints implements TopologicalExtender interface of the addon-operator
 func (e *Extender) GetTopologicalHints(moduleName string) []string {
 	hints := make([]string, 0)
-	if descriptor, found := e.modules[moduleName]; found {
-		hints = append(hints, descriptor.constraints.GetConstraintNames()...)
+	if constraints, found := e.modules[moduleName]; found {
+		hints = append(hints, constraints.GetConstraintNames()...)
 	}
 
 	return hints
 }
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
-func (e *Extender) Filter(_ string, _ map[string]string) (*bool, error) {
-	// TODO
-	return nil, nil
+func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error) {
+	constraints, found := e.modules[moduleName]
+	if !found {
+		return nil, nil
+	}
+
+	enabledModules := e.modulesStateHelper()
+
+	for _, parentModule := range constraints.GetConstraintNames() {
+		if !slices.Contains(enabledModules, parentModule) {
+			return ptr.To(false), nil
+		}
+	}
+
+	// TODO: check modules' versions
+	return ptr.To(true), nil
 }
 
 // SetModulesStateHelper implements StatefulExtender interface of the addon-operator
