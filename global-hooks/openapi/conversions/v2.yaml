@@ -2,3 +2,7 @@ version: 2
 conversions:
   - if .storageClass and .modules.storageClass == null then .modules.storageClass = .storageClass end
   - del(.storageClass)
+  # these deprecated properties was removed from openapi in 1.67
+  - del(.modules.resourcesRequests.everyNode)
+  - del(.modules.resourcesRequests.masterNode)
+  - del(.modules.proxy)
