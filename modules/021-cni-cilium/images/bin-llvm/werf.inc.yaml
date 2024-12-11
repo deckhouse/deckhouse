@@ -38,8 +38,6 @@ shell:
   - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
   - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
   setup:
-  - mkdir -p /tmp/ccache-dir
-  - git clone --depth 1 --branch {{ $llvmCacheRev }} {{ $.SOURCE_REPO }}/llvm/llvm-build-cache.git /tmp/ccache-dir
   - sed -i '/\#include <string>/a \#include <cstdint>' /src/llvm/llvm/include/llvm/Support/Signals.h
   - export CCACHE_DIR="/tmp/ccache-dir"
   - mkdir -p /src/llvm/llvm/build-native
