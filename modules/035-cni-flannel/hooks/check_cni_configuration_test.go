@@ -46,11 +46,11 @@ func checkMetric(metrics []operation.MetricOperation, value float64) {
 	Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{"cni": cniName}))
 }
 
-var _ = Describe("Modules :: cni-cilium :: hooks :: check_cni_configuration", func() {
+var _ = Describe("Modules :: cni-flannel :: hooks :: check_cni_configuration", func() {
 
 	const (
-		initValuesString       = `{"cniCilium":{"internal": {}}}`
-		initConfigValuesString = `{"cniCilium":{}}`
+		initValuesString       = `{"cniFlannel":{"internal": {}}}`
+		initConfigValuesString = `{"cniFlannel":{}}`
 		anotherCni             = "simple-bridge"
 		foreignDesiredCM       = `
 apiVersion: v1
@@ -60,6 +60,20 @@ metadata:
   name: desiredCNIModuleConfig
   namespace: d8-system
 data:
+  cni-flannel-mc.yaml: |
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      creationTimestamp: null
+      name: cni-flannel
+    spec:
+      enabled: true
+      settings:
+        podNetworkMode: VXLAN
+      version: 1
+    status:
+      message: ""
+      version: ""
   cni-cilium-mc.yaml: |
     apiVersion: deckhouse.io/v1alpha1
     kind: ModuleConfig
@@ -140,7 +154,7 @@ data:
 		})
 	})
 
-	Context("Cluster has cni secret but key `cni` does not equal `cilium`", func() {
+	Context("Cluster has cni secret but key `cni` does not equal `flannel`", func() {
 		BeforeEach(func() {
 			resources := []string{
 				cniSecretYAML(anotherCni, ""),
@@ -148,7 +162,6 @@ data:
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
-
 		})
 
 		It("Should execute successfully, set req=true and metric=0 and should not create desired mc", func() {
@@ -162,15 +175,14 @@ data:
 		})
 	})
 
-	Context("Cluster has cni secret, key `cni` eq `cilium`, but cni MC does not exist or it not explicitly enabled", func() {
+	Context("Cluster has cni secret, key `cni` eq `flannel`, but cni MC does not exist or it not explicitly enabled", func() {
 		BeforeEach(func() {
 			resources := []string{
-				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "BPF"}`),
+				cniSecretYAML(cni, `{"podNetworkMode": "VXLAN"}`),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
-
 		})
 
 		It("Should execute successfully, set req=false and metric=1 and create desired mc", func() {
@@ -181,18 +193,17 @@ data:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 1.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", "desiredCNIModuleConfig")
 			Expect(cm.Exists()).To(BeTrue())
-			Expect(cm.Field(`data.cni-cilium-mc\.yaml`).Exists()).To(BeTrue())
-			Expect(cm.Field(`data.cni-cilium-mc\.yaml`).String()).To(MatchYAML(`
+			Expect(cm.Field(`data.cni-flannel-mc\.yaml`).Exists()).To(BeTrue())
+			Expect(cm.Field(`data.cni-flannel-mc\.yaml`).String()).To(MatchYAML(`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   creationTimestamp: null
-  name: cni-cilium
+  name: cni-flannel
 spec:
   enabled: true
   settings:
-    masqueradeMode: BPF
-    tunnelMode: VXLAN
+    podNetworkMode: VXLAN
   version: 1
 status:
   message: ""
@@ -201,15 +212,13 @@ status:
 		})
 	})
 
-	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled but secret key `cilium` does not exist", func() {
+	Context("Cluster has cni secret, key `cni` eq `flannel`, cni MC exist and enabled but secret key `flannel` does not exist", func() {
 		BeforeEach(func() {
-			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
-			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, ``),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
-					"tunnelMode":     "VXLAN",
-					"masqueradeMode": "BPF",
+					"podNetworkMode": "VXLAN",
 				}),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
@@ -228,15 +237,13 @@ status:
 		})
 	})
 
-	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled, secret key `cilium` exist but it is empty", func() {
+	Context("Cluster has cni secret, key `cni` eq `flannel`, cni MC exist and enabled, secret key `flannel` exist but it is empty", func() {
 		BeforeEach(func() {
-			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
-			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{}`),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
-					"tunnelMode":     "VXLAN",
-					"masqueradeMode": "BPF",
+					"podNetworkMode": "VXLAN",
 				}),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
@@ -255,23 +262,18 @@ status:
 		})
 	})
 
-	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled, secret key `cilium` exist and not empty but some parameters misconfigured 1", func() {
+	Context("Cluster has cni secret, key `cni` eq `flannel`, cni MC exist and enabled, secret key `flannel` exist and not empty but some parameters misconfigured 1", func() {
 		BeforeEach(func() {
-			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
-			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
-			f.ConfigValuesSet("cniCilium.debugLogging", "true")
+			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
-				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes", "masqueradeMode": "Netfilter"}`),
+				cniSecretYAML(cni, `{"podNetworkMode": "HostGW"}`),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
-					"tunnelMode":   "VXLAN",
-					"bpfLBMode":    "SNAT",
-					"debugLogging": "true",
+					"podNetworkMode": "VXLAN",
 				}),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
-
 		})
 
 		It("Should execute successfully, set req=false and metric=1 and create desired mc", func() {
@@ -282,21 +284,17 @@ status:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 1.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", "desiredCNIModuleConfig")
 			Expect(cm.Exists()).To(BeTrue())
-			Expect(cm.Field(`data.cni-cilium-mc\.yaml`).Exists()).To(BeTrue())
-			Expect(cm.Field(`data.cni-cilium-mc\.yaml`).String()).To(MatchYAML(`
+			Expect(cm.Field(`data.cni-flannel-mc\.yaml`).Exists()).To(BeTrue())
+			Expect(cm.Field(`data.cni-flannel-mc\.yaml`).String()).To(MatchYAML(`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   creationTimestamp: null
-  name: cni-cilium
+  name: cni-flannel
 spec:
   enabled: true
   settings:
-    tunnelMode: Disabled
-    masqueradeMode: Netfilter
-    createNodeRoutes: "true"
-    bpfLBMode: SNAT
-    debugLogging: "true"
+    podNetworkMode: HostGW
   version: 1
 status:
   message: ""
@@ -305,62 +303,13 @@ status:
 		})
 	})
 
-	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled, secret key `cilium` exist and not empty but some parameters misconfigured 2", func() {
+	Context("Cluster has cni secret, key `cni` eq `flannel`, cni MC exist and enabled, secret key `flannel` exist and not empty but some parameters misconfigured 2. And foreign desiredCNIModuleConfig exist", func() {
 		BeforeEach(func() {
-			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
-			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
+			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
-				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes"}`),
+				cniSecretYAML(cni, `{"podNetworkMode": "VXLAN"}`),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
-					"tunnelMode": "VXLAN",
-					"bpfLBMode":  "SNAT",
-				}),
-			}
-			f.KubeStateSet(strings.Join(resources, "\n---\n"))
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.RunHook()
-
-		})
-
-		It("Should execute successfully, set req=false and metric=1 and create desired mc", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(cniConfigurationSettledKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("false"))
-			checkMetric(f.MetricsCollector.CollectedMetrics(), 1.0)
-			cm := f.KubernetesResource("ConfigMap", "d8-system", "desiredCNIModuleConfig")
-			Expect(cm.Exists()).To(BeTrue())
-			Expect(cm.Field(`data.cni-cilium-mc\.yaml`).Exists()).To(BeTrue())
-			Expect(cm.Field(`data.cni-cilium-mc\.yaml`).String()).To(MatchYAML(`
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  creationTimestamp: null
-  name: cni-cilium
-spec:
-  enabled: true
-  settings:
-    tunnelMode: Disabled
-    masqueradeMode: BPF
-    createNodeRoutes: "true"
-    bpfLBMode: SNAT
-  version: 1
-status:
-  message: ""
-  version: ""
-`))
-		})
-	})
-
-	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled, secret key `cilium` exist and not empty but some parameters misconfigured 2. And foreign desiredCNIModuleConfig exist", func() {
-		BeforeEach(func() {
-			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
-			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
-			resources := []string{
-				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes"}`),
-				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
-					"tunnelMode": "VXLAN",
-					"bpfLBMode":  "SNAT",
+					"podNetworkMode": "HostGW",
 				}),
 				foreignDesiredCM,
 			}
@@ -377,20 +326,17 @@ status:
 			Expect(value).To(BeEquivalentTo("false"))
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 1.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", "desiredCNIModuleConfig")
-			Expect(cm.Field(`data.cni-cilium-mc\.yaml`).Exists()).To(BeTrue())
-			Expect(cm.Field(`data.cni-cilium-mc\.yaml`).String()).To(MatchYAML(`
+			Expect(cm.Field(`data.cni-flannel-mc\.yaml`).Exists()).To(BeTrue())
+			Expect(cm.Field(`data.cni-flannel-mc\.yaml`).String()).To(MatchYAML(`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   creationTimestamp: null
-  name: cni-cilium
+  name: cni-flannel
 spec:
   enabled: true
   settings:
-    tunnelMode: Disabled
-    masqueradeMode: BPF
-    createNodeRoutes: "true"
-    bpfLBMode: SNAT
+    podNetworkMode: VXLAN
   version: 1
 status:
   message: ""
@@ -399,21 +345,18 @@ status:
 		})
 	})
 
-	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled, secret key `cilium` exist and not empty but some parameters has unexpected value", func() {
+	Context("Cluster has cni secret, key `cni` eq `flannel`, cni MC exist and enabled, secret key `flannel` exist and not empty but some parameters has unexpected value", func() {
 		BeforeEach(func() {
-			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
-			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
+			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
-				cniSecretYAML(cni, `{"mode": "DirectWithNodeRutes", "masqueradeMode": "Netfilter"}`),
+				cniSecretYAML(cni, `{"podNetworkMode": "HostGWv"}`),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
-					"tunnelMode": "VXLAN",
-					"bpfLBMode":  "SNAT",
+					"podNetworkMode": "VXLAN",
 				}),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
-
 		})
 
 		It("Should not execute successfully, should set req=false and metric=1 and should not create desired mc", func() {
@@ -424,19 +367,17 @@ status:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 1.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", "desiredCNIModuleConfig")
 			Expect(cm.Exists()).To(BeFalse())
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`unknown cilium mode DirectWithNodeRutes`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`unknown flannel podNetworkMode HostGWv`))
 		})
 	})
 
-	Context("Cluster has cni secret, key `cni` eq `cilium`, cni MC exist and enabled, secret key `cilium` exist and not empty and all parameters equal", func() {
+	Context("Cluster has cni secret, key `cni` eq `flannel`, cni MC exist and enabled, secret key `flannel` exist and not empty and all parameters equal", func() {
 		BeforeEach(func() {
-			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
-			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
-				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "BPF"}`),
+				cniSecretYAML(cni, `{"podNetworkMode": "VXLAN"}`),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
-					"tunnelMode":     "VXLAN",
-					"masqueradeMode": "BPF",
+					"podNetworkMode": "VXLAN",
 				}),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
