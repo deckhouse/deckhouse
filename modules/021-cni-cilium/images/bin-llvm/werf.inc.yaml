@@ -33,8 +33,6 @@ import:
   to: /src
   before: install
 shell:
-  beforeInstall:
-  - cd /src/llvm
   install:
   - update-alternatives --install /usr/bin/python python /usr/bin/python2 1
   - update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 2
