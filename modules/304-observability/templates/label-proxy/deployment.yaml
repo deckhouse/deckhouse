@@ -59,6 +59,8 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "labelProxy") }}
         env:
+        - name: PORT
+          value: "8443"
         - name: BACKEND_ADDRESS
           value: https://aggregating-proxy.d8-monitoring.svc
         - name: BACKEND_BEARER_TOKEN
@@ -74,8 +76,8 @@ spec:
         - name: TLS_ENABLED
           value: "true"
         ports:
-        - name: http
-          containerPort: 9091
+        - name: https
+          containerPort: 8443
         {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         resources:
           requests:
