@@ -87,7 +87,7 @@ type ModulePullOverride struct {
 }
 
 type ModulePullOverrideSpec struct {
-	Source       string          `json:"source"`
+	Source       string          `json:"source,omitempty"`
 	ImageTag     string          `json:"imageTag"`
 	ScanInterval libapi.Duration `json:"scanInterval"`
 }

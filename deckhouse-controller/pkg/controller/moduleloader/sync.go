@@ -111,7 +111,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		// if deployedOn annotation isn't set or its value doesn't equal to current node name - overwrite the module from the repository
 		if deployedOn, set := mpo.GetAnnotations()[v1alpha1.ModulePullOverrideAnnotationDeployedOn]; !set || deployedOn != currentNodeName {
 			l.log.Infof("reinitialize the '%s' module pull override due to stale/absent deployedOn annotation", mpo.Name)
-			if err := os.RemoveAll(filepath.Join(l.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion)); err != nil {
+			if err = os.RemoveAll(filepath.Join(l.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion)); err != nil {
 				return fmt.Errorf("delete the stale directory of the '%s' module: %w", mpo.Name, err)
 			}
 
@@ -120,14 +120,14 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 			}
 			mpo.ObjectMeta.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn] = currentNodeName
 
-			if err := l.client.Update(ctx, &mpo); err != nil {
+			if err = l.client.Update(ctx, &mpo); err != nil {
 				l.log.Warnf("failed to annotate the '%s' module pull override: %v", mpo.Name, err)
 			}
 		}
 
 		// if annotation is ok - we have to check that the file system is in sync
 		moduleSymLink := filepath.Join(l.symlinksDir, fmt.Sprintf("%d-%s", mpo.Status.Weight, mpo.Name))
-		if _, err := os.Stat(moduleSymLink); err != nil {
+		if _, err = os.Stat(moduleSymLink); err != nil {
 			// module symlink not found
 			if !os.IsNotExist(err) {
 				return fmt.Errorf("check the '%s' module symlink: %w", mpo.Name, err)
@@ -152,7 +152,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		}
 
 		// sync registry spec
-		if err := utils.SyncModuleRegistrySpec(l.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion, source); err != nil {
+		if err = utils.SyncModuleRegistrySpec(l.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion, source); err != nil {
 			return fmt.Errorf("sync the '%s' module's registry settings with the '%s' module source: %w", mpo.Name, source.Name, err)
 		}
 		l.log.Infof("resynced the '%s' module's registry settings with the '%s' module source", mpo.Name, source.Name)
