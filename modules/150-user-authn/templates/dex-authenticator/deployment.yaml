@@ -48,7 +48,7 @@ metadata:
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
-  minAvailable: {{ include "helm_lib_is_ha_to_value" (list $context 1 0) }}
+  minAvailable: {{ if ne $crd.highAvailability nil }}{{ if $crd.highAvailability }}1{{ else }}0{{ end }}{{ else }}{{ include "helm_lib_is_ha_to_value" (list $context 1 0) }}{{ end }}
   selector:
     matchLabels:
       app: dex-authenticator
@@ -61,11 +61,11 @@ metadata:
   namespace: {{ $crd.namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
 spec:
-  replicas: {{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}
+  replicas: {{ if ne $crd.highAvailability nil }}{{ if $crd.highAvailability }}2{{ else }}1{{ end }}{{ else }}{{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}{{ end }}
   revisionHistoryLimit: 2
   strategy:
     type: RollingUpdate
-    {{- if (include "helm_lib_ha_enabled" $context) }}
+    {{- if or (and (ne $crd.highAvailability nil) $crd.highAvailability) (include "helm_lib_ha_enabled" $context) }}
     rollingUpdate:
       maxSurge: 0
       maxUnavailable: 1

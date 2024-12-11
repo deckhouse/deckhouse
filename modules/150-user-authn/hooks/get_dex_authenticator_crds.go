@@ -37,6 +37,7 @@ type DexAuthenticator struct {
 	Spec        map[string]interface{} `json:"spec"`
 
 	AllowAccessToKubernetes bool        `json:"allowAccessToKubernetes"`
+	HighAvailability        *bool       `json:"highAvailability,omitempty"`
 	Credentials             Credentials `json:"credentials"`
 }
 
@@ -69,6 +70,11 @@ func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.Filter
 
 	_, allowAccessToKubernetes := obj.GetAnnotations()["dexauthenticator.deckhouse.io/allow-access-to-kubernetes"]
 
+	var highAvailability *bool
+	if ha, ok, err := unstructured.NestedBool(obj.Object, "spec", "highAvailability"); err == nil && ok {
+		highAvailability = &ha
+	}
+
 	return DexAuthenticator{
 		ID:                      id,
 		EncodedName:             encodedName,
@@ -76,6 +82,7 @@ func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		Namespace:               namespace,
 		Spec:                    spec,
 		AllowAccessToKubernetes: allowAccessToKubernetes,
+		HighAvailability:        highAvailability,
 	}, nil
 }
 

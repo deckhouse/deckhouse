@@ -171,6 +171,13 @@ spec:
                         type: string
                     type: object
                   type: array
+                highAvailability:
+                  type: boolean
+                  description: |-
+                    Enables high availability mode for dex-authenticator.
+                    
+                    When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
+                  x-doc-default: 'false'
                 additionalApplications:
                   type: array
                   description: |
@@ -339,6 +346,13 @@ spec:
                         type: string
                     type: object
                   type: array
+                highAvailability:
+                  type: boolean
+                  description: |-
+                    Включает режим высокой доступности для dex-authenticator.
+                    
+                    При включении этого режима будет развернуто несколько реплик pod'ов для обеспечения отказоустойчивости.
+                  x-doc-default: 'false'
       additionalPrinterColumns:
         - jsonPath: .spec.applications[*].domain
           name: Domains
