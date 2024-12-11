@@ -122,8 +122,8 @@ properties:
             allowAccessToKubernetes:
               type: boolean
             highAvailability:
-              default: {}
               type: boolean
+              default: false
             encodedName:
               type: string
             credentials:
