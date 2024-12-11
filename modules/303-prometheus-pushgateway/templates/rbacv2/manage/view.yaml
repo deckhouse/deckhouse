@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: kube-prometheus-pushgateway
-  name: d8:manage:capability:module:prometheus-pushgateway:view
+  name: d8:manage:permission:module:prometheus-pushgateway:view
 rules:
 - apiGroups:
   - deckhouse.io

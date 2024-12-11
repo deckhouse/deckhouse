@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-operator-trivy
-  name: d8:manage:capability:module:operator-trivy:edit
+  name: d8:manage:permission:module:operator-trivy:edit
 rules:
 - apiGroups:
   - aquasecurity.github.io
@@ -18,6 +18,8 @@ rules:
   - clusterconfigauditreports
   - clusterinfraassessmentreports
   - clusterrbacassessmentreports
+  - clustersbomreports
+  - clustervulnerabilityreports
   verbs:
   - create
   - update

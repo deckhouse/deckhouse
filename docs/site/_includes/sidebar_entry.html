@@ -16,6 +16,10 @@
 {%- assign skip_item = true %}
 {%- endif %}
 
+{%- unless entry.title[page.lang] %}
+  {%- assign skip_item = true %}
+{%- endunless %}
+
 {%- unless skip_item %}
 
 {%- assign entry_with_lang = entry.url | prepend: page.lang | prepend: "/" %}
@@ -41,7 +45,7 @@
 
 {%- if entry.folders %}
 <li class="{{ folder_entry_class }}">
-    <a href="#">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}
+    <a href="#">{{ entry.title[page.lang] }}
     {%- if entry.featureStatus %}<span class="sidebar__badge sidebar__badge_{{ entry.featureStatus }}" title="{{ site.data.i18n.features[entry.featureStatus][page.lang] | lstrip | strip_html | regex_replace: '.$', '' }}">
         {%- if entry.featureStatus == "experimental" %}
           Experimental
@@ -66,14 +70,14 @@
     </ul>
 </li>
 {%- elsif entry.external_url %}
-<li class="{{ item_entry_class }}"><a href="{{ entry.external_url }}" target="_blank">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
+<li class="{{ item_entry_class }}"><a href="{{ entry.external_url }}" target="_blank">{{ entry.title[page.lang] }}</a></li>
 {%- elsif page_url == entry.url or page_url == entry_with_lang or cr_pages_section %}
-<li class="{{ item_entry_class }} active"><a href="{{ entry.url | true_relative_url }}">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
+<li class="{{ item_entry_class }} active"><a href="{{ entry.url | true_relative_url }}">{{ entry.title[page.lang] }}</a></li>
 {%- else %}
     {%- if page.name == '404.md' %}
-    <li class="{{ item_entry_class }}"><a data-proofer-ignore href="{{ site.canonical_url_prefix_documentation }}{{ entry.url | relative_url }}">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
+    <li class="{{ item_entry_class }}"><a data-proofer-ignore href="{{ site.canonical_url_prefix_documentation }}{{ entry.url | relative_url }}">{{ entry.title[page.lang] }}</a></li>
     {%- else %}
-    <li class="{{ item_entry_class }}"><a href="{{ entry.url | true_relative_url }}">{%- if entry.title[page.lang] %}{{ entry.title[page.lang] }}{% else %}{{ entry.title }}{% endif -%}</a></li>
+    <li class="{{ item_entry_class }}"><a href="{{ entry.url | true_relative_url }}">{{ entry.title[page.lang] }}</a></li>
     {%- endif %}
 {%- endif %}
 

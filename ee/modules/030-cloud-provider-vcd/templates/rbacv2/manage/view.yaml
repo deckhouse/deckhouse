@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-cloud-provider-vcd
-  name: d8:manage:capability:module:cloud-provider-vcd:view
+  name: d8:manage:permission:module:cloud-provider-vcd:view
 rules:
 - apiGroups:
   - deckhouse.io

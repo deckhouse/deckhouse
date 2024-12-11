@@ -1,6 +1,6 @@
 ---
 title: "CEPH-хранилище"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/sds/ceph.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
 lang: ru
 ---
 

@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-pod-reloader
-  name: d8:manage:capability:module:pod-reloader:view
+  name: d8:manage:permission:module:pod-reloader:view
 rules:
 - apiGroups:
   - deckhouse.io

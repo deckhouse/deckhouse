@@ -7,8 +7,8 @@ metadata:
     module: user-authz
     rbac.deckhouse.io/use-role: user
     rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: scope
-    rbac.deckhouse.io/scope: security
+    rbac.deckhouse.io/level: subsystem
+    rbac.deckhouse.io/subsystem: security
     rbac.deckhouse.io/aggregate-to-all-as: manager
 aggregationRule:
   clusterRoleSelectors:
