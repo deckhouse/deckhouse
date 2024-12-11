@@ -12,7 +12,7 @@
 # and https://github.com/cilium/proxy/blob/39a2a56bbd5b3a591f69dbca51d3e30ef97e0e51/.github/workflows/build-envoy-images-release.yaml
 # #####################################################################
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: common/src-artifact
 shell:
   install:
@@ -42,6 +42,7 @@ shell:
   - ln -f -s llvm-17.0 "/usr/lib/llvm-17"
   - update-alternatives --install /usr/bin/python python /usr/bin/python3 1
   - apt-get autoclean && apt-get clean
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - mkdir -p /cilium && mv /src/proxy /cilium/
   - sed -i "s/# root ALL=(ALL:ALL) ALL/root ALL=(ALL:ALL) ALL/" /etc/sudoers
