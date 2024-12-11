@@ -1,6 +1,6 @@
 ---
 title: "NFS Storage"
-permalink: en/virtualization-platform/documentation/admin/platform-management/storage/sds/nfs.html
+permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
 ---
 
 To manage volumes based on the NFS (Network File System) protocol, you can use the `csi-nfs` module, which allows the creation of a StorageClass through the creation of custom `NFSStorageClass` resources.

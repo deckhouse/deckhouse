@@ -1,6 +1,6 @@
 ---
 title: "Хранилище YADRO"
-permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/hardware/yadro.html
+permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
 lang: ru
 d8Revision: ee
 ---

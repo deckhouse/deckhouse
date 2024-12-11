@@ -172,15 +172,15 @@ entries:
                       folders:
                         - title:
                             ru: Yadro
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/hardware/yadro.html
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
                         - title:
                             en: NFS storage
                             ru: NFS-хранилище
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/nfs.html
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
                         - title:
                             en: CEPH storage
                             ru: CEPH-хранилище
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/ceph.html
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
             - title:
                 en: Virtualization
                 ru: Виртуализация
