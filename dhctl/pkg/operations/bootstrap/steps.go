@@ -565,7 +565,7 @@ func CheckDHCTLDependencies(nodeInteface node.Interface) error {
 				if errors.As(err, &ee) {
 					log.DebugF("exit code: %v", ee)
 				}
-				e := fmt.Errorf("bashible dependency %s error: %v - %s",
+				e := fmt.Errorf("bashible dependency '%s' error: %v - %s",
 					dep,
 					err,
 					string(output),
