@@ -3,9 +3,13 @@ title: "Cloud provider — GCP: Layouts"
 description: "Schemes of placement and interaction of resources in GCP when working with the Deckhouse cloud provider."
 ---
 
-Two layouts are supported. Below is more information about each of them.
+Before reading this document, make sure you are familiar with the [Cloud provider layout](/deckhouse/docs/documentation/pages/CLOUD-PROVIDER-LAYOUT.md).
+
+Two layouts are supported.
 
 ## Standard
+
+**Recommended layout.**
 
 * A separate VPC with [Cloud NAT](https://cloud.google.com/nat/docs/overview) is created for the cluster.
 * Nodes in the cluster do not have public IP addresses.

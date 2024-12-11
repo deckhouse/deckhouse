@@ -3,10 +3,14 @@ title: "Cloud provider - zVirt: Layouts"
 description: "Schemes of placement and interaction of resources in zVirt when working with the Deckhouse cloud provider."
 ---
 
+One layout is supported.
+
 ## Standard
 
-![resources](../../images/cloud-provider-zvirt/network/zvirt-standard.svg)
-<!--- Исходник: https://docs.google.com/drawings/d/1aosnFD7AzBgHrQGvxxQHZPfV0PSaTM66A-EPMWgPEqw/edit --->
+* Network infrastructure should be configured manually.
+
+![resources](https://docs.google.com/drawings/d/e/2PACX-1vT38mXMMBEoVwOyq0yicOIukzVeAP_uxmOC0Kpz3LSVuP7Q-tq2NioZNfkKf2u6-Jsk_dzHsaaWA27S/pub?w=667&h=516)
+<!--- Исходник: https://docs.google.com/drawings/d/1xeM2JZtnlfTmP44MzjvKmXroSIbrJhK4AYyVVs5HA1Y/edit --->
 
 Example of the layout configuration:
 
