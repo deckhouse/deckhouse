@@ -105,6 +105,7 @@ properties:
                   operator: Equal
                   value: bar
             allowAccessToKubernetes: true
+            highAvailability: true
         items:
           type: object
           properties:
@@ -119,6 +120,9 @@ properties:
               type: object
               additionalProperties: true
             allowAccessToKubernetes:
+              type: boolean
+            highAvailability:
+              default: {}
               type: boolean
             encodedName:
               type: string
