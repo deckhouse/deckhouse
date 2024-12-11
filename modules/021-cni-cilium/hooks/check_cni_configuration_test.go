@@ -20,20 +20,16 @@ import (
 	"strings"
 
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
-
-	"k8s.io/utils/pointer"
-	"k8s.io/utils/ptr"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 

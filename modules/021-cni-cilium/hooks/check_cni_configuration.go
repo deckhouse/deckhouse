@@ -20,24 +20,19 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"sigs.k8s.io/yaml"
-
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
-
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
-
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 const (
