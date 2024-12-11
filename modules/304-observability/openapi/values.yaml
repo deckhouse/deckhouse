@@ -25,3 +25,8 @@ properties:
             type: string
           ca:
             type: string
+      deployFlags:
+        type: object
+        default: {}
+        additionalProperties:
+          type: boolean
