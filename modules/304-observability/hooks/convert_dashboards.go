@@ -76,7 +76,7 @@ var (
 )
 
 func (d *LegacyDashboard) PrefixURLs(prefix string) {
-	d.Definition = legacyDashboardReplaceRegexp.ReplaceAllString(d.Definition, "$1"+prefix+"$2")
+	d.Definition = legacyDashboardReplaceRegexp.ReplaceAllString(d.Definition, "${1}"+prefix+"${2}")
 }
 
 func (d *LegacyDashboard) PrefixUIDs(dashboardMap map[string]interface{}, prefix string) error {
