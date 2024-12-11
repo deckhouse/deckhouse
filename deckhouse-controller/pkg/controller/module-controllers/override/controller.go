@@ -192,7 +192,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 	// source must be
 	if module.Properties.Source == "" {
-		r.log.Debugf("the '%s' module does have an active source, skip it", mpo.Name)
+		r.log.Debugf("the '%s' module does not have an active source, skip it", mpo.Name)
 		mpo.Status.Message = v1alpha1.ModulePullOverrideMessageNoSource
 		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
 			r.log.Errorf("failed to update the '%s' module pull override: %v", mpo.Name, uerr)
