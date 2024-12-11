@@ -33,7 +33,7 @@ apiVersions:
               Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
           instanceClass:
             description: |
-              Partial contents of the fields of the [HuaweiCloudInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass).
+              Частичное содержимое полей [HuaweiCloudInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass).
             properties: &instanceClassProperties_ru
               flavorName: &instanceClassFlavorName_ru
                 description: |
@@ -149,7 +149,7 @@ apiVersions:
         description: |
           [Параметры подключения](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/environment.html) to the HuaweiCloud API.
 
-          TСовпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-huaweicloud](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/configuration.html#parameters) module.
+          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-huaweicloud](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/configuration.html#parameters) module.
         properties:
           cloud:
             description: |
