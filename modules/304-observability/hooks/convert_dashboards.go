@@ -72,7 +72,7 @@ type LegacyDashboard struct {
 }
 
 var (
-	legacyDashboardReplaceRegexp = regexp.MustCompile(`("url":\s+?"/d/)([A-Za-z0-9]{10}/.+?",?)`)
+	legacyDashboardReplaceRegexp = regexp.MustCompile(`(":\s+?"/d/)([A-Za-z0-9]{10}/.+?",?)`)
 )
 
 func (d *LegacyDashboard) PrefixURLs(prefix string) {
