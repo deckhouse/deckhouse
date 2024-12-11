@@ -163,7 +163,7 @@ shell:
   install:
   - chown root:root /usr/sbin/iptables-wrapper
   - chmod 755 /usr/sbin/iptables-wrapper
-  - chmod +x /src/check-n-cleaning-iptables.sh
+  - mv /src/check-n-cleaning-iptables.sh /check-n-cleaning-iptables.sh && chmod +x /check-n-cleaning-iptables.sh
   beforeSetup:
   # common relocate
   - chmod +x /src/binary_replace.sh
