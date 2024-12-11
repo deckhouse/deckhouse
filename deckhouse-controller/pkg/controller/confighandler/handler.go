@@ -17,7 +17,6 @@ package confighandler
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
@@ -137,27 +136,14 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 		return utils.Values(moduleConfig.Spec.Settings), nil
 	}
 
-	if moduleConfig.Name == moduleGlobal {
-		h.log.Info(fmt.Sprintf("!!! valuesByModuleConfig.conversion before: %d %s", moduleConfig.Spec.Version, moduleConfig.Spec.Settings))
-	}
-
 	converter := conversion.Store().Get(moduleConfig.Name)
-	if moduleConfig.Name == moduleGlobal {
-		h.log.Info(fmt.Sprintf("!!! latest version of global: %d", converter.LatestVersion()))
-	}
-
 	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, moduleConfig.Spec.Settings)
 	if err != nil {
-		h.log.Error(fmt.Sprintf("!!! cannot convert values for module %s: %s", moduleConfig.Name, err.Error()))
 		return utils.Values{}, err
 	}
 
 	moduleConfig.Spec.Version = newVersion
 	moduleConfig.Spec.Settings = newSettings
-
-	if moduleConfig.Name == moduleGlobal {
-		h.log.Info(fmt.Sprintf("!!! valuesByModuleConfig.conversion after: %d %s", moduleConfig.Spec.Version, moduleConfig.Spec.Settings))
-	}
 
 	return utils.Values(moduleConfig.Spec.Settings), nil
 }
