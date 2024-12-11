@@ -11,12 +11,6 @@ import:
   add: /src
   to: /src
   before: install
-git:
-- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
