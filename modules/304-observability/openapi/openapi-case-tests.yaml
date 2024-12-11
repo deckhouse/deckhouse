@@ -1,2 +1,11 @@
-positive: {}
-negative: {}
+positive:
+  values:
+  - internal:
+      deployFlags:
+        labelProxy: true
+      prometheus:
+        token: "DEADBEEF"
+
+negative:
+  values:
+  - internal: {}

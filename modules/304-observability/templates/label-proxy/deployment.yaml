@@ -1,3 +1,4 @@
+{{- if .Values.observability.internal.deployFlags.labelProxy }}
 {{- define "label_proxy_resources" }}
 cpu: 25m
 memory: 128Mi
@@ -91,3 +92,4 @@ spec:
       - name: label-proxy-tls
         secret:
           secretName: label-proxy-tls
+{{- end }}
