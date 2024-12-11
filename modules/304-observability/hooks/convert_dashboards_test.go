@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Prometheus hooks :: custom rules ::", func() {
+var _ = Describe("Observability hooks :: convert dashboards ::", func() {
 	f := HookExecutionConfigInit(``, ``)
 	f.RegisterCRD("observability.deckhouse.io", "v1alpha1", "ClusterObservabilityDashboard", false)
 	f.RegisterCRD("deckhouse.io", "v1", "GrafanaDashboardDefinition", false)
@@ -128,9 +128,9 @@ spec:
 			Expect(dashboard.Exists()).To(BeTrue())
 			Expect(dashboard.Field("spec.definition").String()).To(MatchJSON(`{"uid": "foo"}`))
 
-			prometheusRuleNext := f.KubernetesResource("ClusterObservabilityDashboard", "", "two")
-			Expect(prometheusRuleNext.Exists()).To(BeTrue())
-			Expect(prometheusRuleNext.Field("spec.definition").String()).To(MatchYAML(`{"uid": "bar"}`))
+			dashboardNext := f.KubernetesResource("ClusterObservabilityDashboard", "", "two")
+			Expect(dashboardNext.Exists()).To(BeTrue())
+			Expect(dashboardNext.Field("spec.definition").String()).To(MatchYAML(`{"uid": "bar"}`))
 		})
 	})
 
