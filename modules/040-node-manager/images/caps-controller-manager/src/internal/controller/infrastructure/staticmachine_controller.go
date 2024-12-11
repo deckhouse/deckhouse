@@ -245,18 +245,6 @@ func (r *StaticMachineReconciler) reconcileDelete(
 			instanceScope.Logger.Info("reconcileDelete: skip")
 			controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
 
-			if machineScope.Machine.Status.NodeRef != nil {
-				instanceScope.Logger.Info("NodeRef: nil")
-				patchHelper, err := patch.NewHelper(machineScope.Machine, r.Client)
-				if err != nil {
-					return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
-				}
-				machineScope.Machine.Status.NodeRef = nil
-				instanceScope.Logger.Info("NodeRef: make patch")
-				if err := patchHelper.Patch(ctx, machineScope.Machine); err != nil {
-					return ctrl.Result{}, errors.Wrap(err, "failed to patch Machine removing NodeRef")
-				}
-			}
 			if err := machineScope.Patch(ctx); err != nil {
 				return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer from StaticMachine")
 			}
