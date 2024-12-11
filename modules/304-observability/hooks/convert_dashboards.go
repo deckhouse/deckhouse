@@ -22,11 +22,12 @@ import (
 	"regexp"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -71,11 +72,11 @@ type LegacyDashboard struct {
 }
 
 var (
-	legacyDashboardUidUrlReplaceRegexp = regexp.MustCompile(`("url":\s+?"/d/)([A-Za-z0-9]{10}/.+?",?)`);
+	legacyDashboardUidUrlReplaceRegexp = regexp.MustCompile(`("url":\s+?"/d/)([A-Za-z0-9]{10}/.+?",?)`)
 )
 
 func (d *LegacyDashboard) PrefixURLs(prefix string) {
-	d.Definition = legacyDashboardUidUrlReplaceRegexp.ReplaceAllString(d.Definition, "$1" + prefix + "$2")
+	d.Definition = legacyDashboardUidUrlReplaceRegexp.ReplaceAllString(d.Definition, "$1"+prefix+"$2")
 }
 
 func (d *LegacyDashboard) PrefixUIDs(dashboardMap map[string]interface{}, prefix string) error {
@@ -97,11 +98,11 @@ func (d *LegacyDashboard) PrefixUIDs(dashboardMap map[string]interface{}, prefix
 func (d *LegacyDashboard) Title(dashboardMap map[string]interface{}) string {
 	if title, ok := dashboardMap["title"]; ok {
 		if titleString, ok := title.(string); ok {
-			return titleString;
+			return titleString
 		}
 	}
 
-	return d.Name;
+	return d.Name
 }
 
 func filterLegacyDashboard(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -173,7 +174,7 @@ func convertDashboards(input *go_hook.HookInput) error {
 			continue
 		}
 
-		title := dashboard.Title(dashboardMap);
+		title := dashboard.Title(dashboardMap)
 
 		dashboardJSON, err := json.MarshalIndent(dashboardMap, "", strings.Repeat(JSONIndentCharacter, 4))
 		if err != nil {
@@ -236,7 +237,7 @@ func dashboardManifest(name, title, category, kind, definition string) *unstruct
 			"name": name,
 			"annotations": map[string]interface{}{
 				"observability.deckhouse.io/category": category,
-				"metadata.deckhouse.io/title": title,
+				"metadata.deckhouse.io/title":         title,
 			},
 			"labels": map[string]interface{}{
 				"module":   "observability",
