@@ -119,9 +119,6 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.MulticlusterPrivateMetadata
-
-		// var httpOptionCA []http.Option
-		// var httpOptionInsecure []http.Option
 		var httpOption []http.Option
 
 		if multiclusterInfo.ClusterCA != "" {
@@ -130,14 +127,6 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 		} else if multiclusterInfo.EnableInsecureConnection {
 			httpOption = append(httpOption, http.WithInsecureSkipVerify())
 		}
-		// if multiclusterInfo.ClusterCA != "" {
-		// 	caCerts := [][]byte{[]byte(multiclusterInfo.ClusterCA)}
-		// 	httpOptionCA = append(httpOptionCA, http.WithAdditionalCACerts(caCerts))
-		// }
-		// if multiclusterInfo.EnableInsecureConnection {
-		// 	httpOptionInsecure = append(httpOptionInsecure, http.WithInsecureSkipVerify())
-		// }
-		// allOptions := append(httpOptionCA, httpOptionInsecure...)
 
 		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(httpOption...), multiclusterInfo.PublicMetadataEndpoint, "")
 		if err != nil {

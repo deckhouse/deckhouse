@@ -131,20 +131,16 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.FederationPrivateMetadata
-
-		var httpOptionCA []http.Option
-		var httpOptionInsecure []http.Option
+		var httpOption []http.Option
 
 		if federationInfo.ClusterCA != "" {
 			caCerts := [][]byte{[]byte(federationInfo.ClusterCA)}
-			httpOptionCA = append(httpOptionCA, http.WithAdditionalCACerts(caCerts))
+			httpOption = append(httpOption, http.WithAdditionalCACerts(caCerts))
+		} else if federationInfo.EnableInsecureConnection {
+			httpOption = append(httpOption, http.WithInsecureSkipVerify())
 		}
-		if federationInfo.EnableInsecureConnection {
-			httpOptionInsecure = append(httpOptionInsecure, http.WithInsecureSkipVerify())
-		}
-		allOptions := append(httpOptionCA, httpOptionInsecure...)
 
-		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(allOptions...), federationInfo.PublicMetadataEndpoint, "")
+		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(httpOption...), federationInfo.PublicMetadataEndpoint, "")
 		if err != nil {
 			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
@@ -186,7 +182,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
-		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(allOptions...), federationInfo.PrivateMetadataEndpoint, bearerToken)
+		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), federationInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
 			input.Logger.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
