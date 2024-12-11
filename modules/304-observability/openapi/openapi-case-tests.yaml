@@ -5,7 +5,4 @@ positive:
         labelProxy: true
       prometheus:
         token: "DEADBEEF"
-
-negative:
-  values:
   - internal: {}
