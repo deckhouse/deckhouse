@@ -399,7 +399,7 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 				r.log.Errorf("failed to remove finalizer for the '%s' module pull override: %v", mpo.Name, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, nil
 		}
 
 		err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(mpo *v1alpha1.Module) bool {
@@ -417,7 +417,7 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
-	return ctrl.Result{Requeue: true}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *reconciler) enableModule(moduleName, symlinkPath string) error {
