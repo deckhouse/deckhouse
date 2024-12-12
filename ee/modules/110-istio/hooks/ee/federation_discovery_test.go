@@ -86,8 +86,7 @@ metadata:
   name: proper-federation-0
 spec:
   trustDomain: "p.f0"
-  metadata:
-    endpoint: "https://proper-hostname-0/metadata/"
+  metadataEndpoint: "https://proper-hostname-0/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -96,8 +95,7 @@ metadata:
   name: proper-federation-1
 spec:
   trustDomain: "p.f1"
-  metadata:
-    endpoint: "https://proper-hostname-1/metadata/"
+  metadataEndpoint: "https://proper-hostname-1/metadata/"
 status:
   metadataCache:
     private:
@@ -116,8 +114,7 @@ metadata:
   name: proper-federation-2
 spec:
   trustDomain: "p.f2"
-  metadata:
-    endpoint: "https://proper-hostname-2/metadata/"
+  metadataEndpoint: "https://proper-hostname-2/metadata/"
 status:
   metadataCache:
     private:
@@ -444,8 +441,7 @@ metadata:
  name: local-federation
 spec:
  trustDomain: "my.cluster" # local clusterDomain
- metadata:
-   endpoint: "https://local-hostname/metadata/"
+ metadataEndpoint: "https://local-hostname/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -454,8 +450,7 @@ metadata:
  name: public-internal-error
 spec:
  trustDomain: "pubie"
- metadata:
-   endpoint: "https://public-internal-error/metadata/"
+ metadataEndpoint: "https://public-internal-error/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -464,8 +459,7 @@ metadata:
  name: public-bad-json
 spec:
  trustDomain: "pubbj"
- metadata:
-   endpoint: "https://public-bad-json/metadata/"
+ metadataEndpoint: "https://public-bad-json/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -474,8 +468,7 @@ metadata:
  name: public-wrong-format
 spec:
  trustDomain: "pubwf"
- metadata:
-   endpoint: "https://public-wrong-format/metadata/"
+ metadataEndpoint: "https://public-wrong-format/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -484,8 +477,7 @@ metadata:
  name: private-internal-error
 spec:
  trustDomain: "privie"
- metadata:
-   endpoint: "https://private-internal-error/metadata/"
+ metadataEndpoint: "https://private-internal-error/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -494,8 +486,7 @@ metadata:
  name: private-bad-json
 spec:
  trustDomain: "privbj"
- metadata:
-   endpoint: "https://private-bad-json/metadata/"
+ metadataEndpoint: "https://private-bad-json/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -504,8 +495,7 @@ metadata:
  name: private-wrong-format
 spec:
  trustDomain: "privwf"
- metadata:
-   endpoint: "https://private-wrong-format/metadata/"
+ metadataEndpoint: "https://private-wrong-format/metadata/"
 status: {}
 `))
 

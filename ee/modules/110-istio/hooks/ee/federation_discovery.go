@@ -75,7 +75,7 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		clusterUUID = federation.Status.MetadataCache.Public.ClusterUUID
 	}
 
-	me := federation.Spec.Metadata.Endpoint
+	me := federation.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
 	return IstioFederationDiscoveryCrdInfo{

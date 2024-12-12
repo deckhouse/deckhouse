@@ -49,7 +49,7 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 		return nil, err
 	}
 
-	me := federation.Spec.Metadata.Endpoint
+	me := federation.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
 	var igs *[]eeCrd.FederationIngressGateways
@@ -88,7 +88,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, err
 	}
 
-	me := multicluster.Spec.Metadata.Endpoint
+	me := multicluster.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
 	var igs *[]eeCrd.MulticlusterIngressGateways

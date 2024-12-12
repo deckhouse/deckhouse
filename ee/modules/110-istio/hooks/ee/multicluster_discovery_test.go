@@ -86,8 +86,7 @@ metadata:
   name: proper-multicluster-0
 spec:
   enableIngressGateway: true
-  metadata:
-    endpoint: "https://proper-hostname-0/metadata/"
+  metadataEndpoint: "https://proper-hostname-0/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -96,8 +95,7 @@ metadata:
   name: proper-multicluster-1
 spec:
   enableIngressGateway: true
-  metadata:
-    endpoint: "https://proper-hostname-1/metadata/"
+  metadataEndpoint: "https://proper-hostname-1/metadata/"
 status:
   metadataCache:
     private:
@@ -116,8 +114,7 @@ metadata:
   name: proper-multicluster-2
 spec:
   enableIngressGateway: true
-  metadata:
-    endpoint: "https://proper-hostname-2/metadata/"
+  metadataEndpoint: "https://proper-hostname-2/metadata/"
 status:
   metadataCache:
     ingressGateways:
@@ -422,8 +419,7 @@ metadata:
  name: public-internal-error
 spec:
   enableIngressGateway: true
-  metadata:
-    endpoint: "https://public-internal-error/metadata/"
+  metadataEndpoint: "https://public-internal-error/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -432,8 +428,7 @@ metadata:
  name: public-bad-json
 spec:
   enableIngressGateway: true
-  metadata:
-    endpoint: "https://public-bad-json/metadata/"
+  metadataEndpoint: "https://public-bad-json/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -442,8 +437,7 @@ metadata:
  name: public-wrong-format
 spec:
   enableIngressGateway: true
-  metadata:
-    endpoint: "https://public-wrong-format/metadata/"
+  metadataEndpoint: "https://public-wrong-format/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -452,8 +446,7 @@ metadata:
  name: private-internal-error
 spec:
   enableIngressGateway: true
-  metadata:
-    endpoint: "https://private-internal-error/metadata/"
+  metadataEndpoint: "https://private-internal-error/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -462,8 +455,7 @@ metadata:
  name: private-bad-json
 spec:
   enableIngressGateway: true
-  metadata:
-    endpoint: "https://private-bad-json/metadata/"
+  metadataEndpoint: "https://private-bad-json/metadata/"
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -472,8 +464,7 @@ metadata:
  name: private-wrong-format
 spec:
   enableIngressGateway: true
-  metadata:
-    endpoint: "https://private-wrong-format/metadata/"
+  metadataEndpoint: "https://private-wrong-format/metadata/"
 status: {}
 `))
 

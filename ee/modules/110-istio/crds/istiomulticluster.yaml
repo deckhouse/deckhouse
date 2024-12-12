@@ -33,7 +33,7 @@ spec:
               type: object
               x-doc-d8Revision: ee
               required:
-              - metadata
+              - metadataEndpoint
               properties:
                 enableIngressGateway:
                   type: boolean
@@ -43,16 +43,16 @@ spec:
                     Using IngressGateway for accessing remote Pods.
 
                     If remote Pods are accessible directly from our cluster (flat network), it is efficient not to use extra hop.
+                metadataEndpoint:
+                  type: string
+                  x-doc-d8Revision: ee
+                  description: |
+                    HTTPS endpoint with remote cluster metadata.
+                  pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
+                  x-doc-examples: ['https://istio.k8s.example.com/metadata/']
                 metadata:
                   type: object
                   properties:
-                    endpoint:
-                      type: string
-                      x-doc-d8Revision: ee
-                      description: |
-                        HTTPS endpoint with remote cluster metadata.
-                      pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
-                      x-doc-examples: ['https://istio.k8s.example.com/metadata/']
                     ca:
                       type: string
                       x-doc-d8Revision: ee

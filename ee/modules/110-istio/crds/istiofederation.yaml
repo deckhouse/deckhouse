@@ -34,7 +34,7 @@ spec:
               x-doc-d8Revision: ee
               required:
               - trustDomain
-              - metadata
+              - metadataEndpoint
               properties:
                 trustDomain:
                   type: string
@@ -45,16 +45,16 @@ spec:
                     A mandatory parameter, but it is not currently utilized, as Istio does not yet support mapping TrustDomain to a root Certificate Authority (CA).
                   pattern: '^[0-9a-zA-Z._-]+$'
                   x-doc-examples: ['cluster.local']
+                metadataEndpoint:
+                  type: string
+                  x-doc-d8Revision: ee
+                  description: |
+                    HTTPS endpoint with remote cluster metadata.
+                  pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
+                  x-doc-examples: ['https://istio.k8s.example.com/metadata/']
                 metadata:
                   type: object
                   properties:
-                    endpoint:
-                      type: string
-                      x-doc-d8Revision: ee
-                      description: |
-                        HTTPS endpoint with remote cluster metadata.
-                      pattern: '^(https|file)://[0-9a-zA-Z._/-]+$'
-                      x-doc-examples: ['https://istio.k8s.example.com/metadata/']
                     insecureSkipVerify:
                       type: boolean
                       x-doc-d8Revision: ee
