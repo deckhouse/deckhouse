@@ -21,7 +21,7 @@ KUMA объединяет продукты «Лаборатории Каспер
 #### Описание настроек
 
 {% alert level="warning" %}
-Для работы с KUMA должен быть **обязательно включён** модуль [log-shipper](/modules/log-shipper/).
+Для работы с KUMA должен быть **обязательно включён** модуль [log-shipper](./modules/log-shipper/).
 {% endalert %}
 
 Для отправки данных [в KUMA](https://go.kaspersky.com/ru-kuma) необходимо настроить на стороне DKP следующие ресурсы:
