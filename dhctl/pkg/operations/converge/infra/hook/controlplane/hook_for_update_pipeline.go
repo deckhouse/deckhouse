@@ -112,6 +112,11 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 		return false, fmt.Errorf("not all nodes are ready: %v", err)
 	}
 
+	// err = removeSystemRegistryFromNode(h.kubeCl, h.nodeToConverge)
+	// if err != nil {
+	// 	return false, fmt.Errorf("failed to remove system registry from node '%s': %v", h.nodeToConverge, err)
+	// }
+
 	err = removeControlPlaneRoleFromNode(h.kubeCl, h.nodeToConverge)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
