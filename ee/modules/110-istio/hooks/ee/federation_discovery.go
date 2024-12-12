@@ -7,6 +7,7 @@ package ee
 
 import (
 	"encoding/json"
+	"k8s.io/utils/ptr"
 	"strings"
 	"time"
 
@@ -92,10 +93,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("federation"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "federations",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "IstioFederation",
-			FilterFunc: applyFederationFilter,
+			Name:                         "federations",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "IstioFederation",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   applyFederationFilter,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
