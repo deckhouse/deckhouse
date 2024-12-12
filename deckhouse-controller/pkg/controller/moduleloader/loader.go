@@ -363,6 +363,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			// TODO(ipaqsa): it is needed for migration, can be removed after 1.68
 			if !embedded && module.IsEmbedded() {
 				module.Properties.Source = ""
+				needsUpdate = true
 			}
 
 			if needsUpdate {
