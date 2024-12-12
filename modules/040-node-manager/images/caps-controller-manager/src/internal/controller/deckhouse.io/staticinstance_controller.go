@@ -50,6 +50,11 @@ type StaticInstanceReconciler struct {
 	Recorder *event.Recorder
 }
 
+const (
+	skipBootstrapPhaseAnnotation = "static.node.deckhouse.io/skip-bootstrap-phase"
+	skipCleanupPhaseAnnotation   = "static.node.deckhouse.io/skip-cleanup-phase"
+)
+
 // +kubebuilder:rbac:groups=deckhouse.io,resources=staticinstances,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=deckhouse.io,resources=staticinstances/status,verbs=get;update;patch
 
@@ -156,8 +161,6 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	return r.reconcileNormal(ctx, instanceScope)
 }
-
-const skipBootstrapPhaseAnnotation = "static.node.deckhouse.io/skip-bootstrap-phase"
 
 func (r *StaticInstanceReconciler) reconcileNormal(
 	ctx context.Context,

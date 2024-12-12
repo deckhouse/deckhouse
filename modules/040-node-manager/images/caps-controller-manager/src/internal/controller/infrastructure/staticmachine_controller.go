@@ -56,6 +56,11 @@ const (
 	RequeueForStaticMachineDeleting       = 5 * time.Second
 )
 
+const (
+	skipBootstrapPhaseAnnotation = "static.node.deckhouse.io/skip-bootstrap-phase"
+	skipCleanupPhaseAnnotation   = "static.node.deckhouse.io/skip-cleanup-phase"
+)
+
 // StaticMachineReconciler reconciles a StaticMachine object
 type StaticMachineReconciler struct {
 	k8sClient.Client
@@ -146,6 +151,37 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Handle deleted machines
 	if !staticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
+
+		if _, skip := instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation]; skip {
+
+			// Remove finalizer from staticmachine
+			instanceScope.Logger.Info("Reconciling delete StaticMachine: skip")
+			controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
+
+			// Pause machine and remove finalizer
+			controllerutil.RemoveFinalizer(machineScope.Machine, clusterv1.MachineFinalizer)
+			if machineScope.Machine.Annotations == nil {
+				machineScope.Machine.Annotations = make(map[string]string)
+			}
+			machineScope.Machine.Annotations["cluster.x-k8s.io/paused"] = ""
+
+			// StaticInstance - Pending
+			if instanceScope.Instance.Status.CurrentStatus != nil &&
+				instanceScope.Instance.Status.CurrentStatus.Phase != deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
+				instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
+			}
+
+			err := instanceScope.Patch(ctx)
+			if err != nil {
+				return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance to Pending phase")
+			}
+
+			if err = machineScope.Patch(ctx); err != nil {
+				return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer from StaticMachine")
+			}
+
+			return ctrl.Result{}, nil
+		}
 		machineScope.Logger.Info("Reconciling delete StaticMachine")
 
 		return r.reconcileDelete(ctx, machineScope, instanceScope)
@@ -240,16 +276,6 @@ func (r *StaticMachineReconciler) reconcileDelete(
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
 	if instanceScope != nil {
-
-		if _, skip := instanceScope.Instance.Annotations["static.node.deckhouse.io/skip-cleanup-phase"]; skip {
-			instanceScope.Logger.Info("reconcileDelete: skip")
-			controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
-
-			if err := machineScope.Patch(ctx); err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer from StaticMachine")
-			}
-			return ctrl.Result{}, nil
-		}
 
 		result, err := r.cleanup(ctx, instanceScope)
 		if err != nil {
