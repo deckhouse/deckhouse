@@ -193,7 +193,7 @@
       summary: |
         ModuleConfig {{ $labels.name }} is outdated.
   - alert: ModuleHasDeprecatedUpdatePolicy
-    expr: max by (moduleName) (d8_module_at_conflict) >= 1
+    expr: max by (moduleName) (d8_deprecated_update_policy) >= 1
     labels:
       severity_level: "4"
     annotations:
