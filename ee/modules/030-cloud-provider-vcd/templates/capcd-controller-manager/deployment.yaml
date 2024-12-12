@@ -109,12 +109,12 @@ spec:
             readOnly: true
         args:
           - "--leader-elect"
-          {{- if semverCompare "<37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
+{{- if semverCompare "<37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
           - "--metrics-bind-address=127.0.0.1:9446"
-          {{- else}}
+{{- else}}
           - "--diagnostics-address=127.0.0.1:9446"
           - "--insecure-diagnostics"
-          {{- end }}
+{{- end }}
           - "--health-probe-bind-address=:9445"
         livenessProbe:
           httpGet:
