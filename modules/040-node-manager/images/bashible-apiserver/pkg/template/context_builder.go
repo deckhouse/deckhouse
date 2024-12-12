@@ -158,7 +158,6 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Proxy:          cb.clusterInputData.Proxy,
 		PackagesProxy:  cb.clusterInputData.PackagesProxy,
 		SystemRegistry: cb.clusterInputData.SystemRegistry,
-		RegistryMode:   cb.clusterInputData.RegistryMode,
 	}
 
 	cb.clusterInputData.AllowedBundles = append(cb.clusterInputData.AllowedBundles, "common") // temporary hack for using single bundle boostrap for all bundles
@@ -215,7 +214,6 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle
 		CloudProviderType: cb.getCloudProvider(),
 		PackagesProxy:     cb.clusterInputData.PackagesProxy,
 		SystemRegistry:    cb.clusterInputData.SystemRegistry,
-		RegistryMode:      cb.clusterInputData.RegistryMode,
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -569,7 +567,6 @@ type inputData struct {
 	BootstrapTokens    map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
 	PackagesProxy      map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
 	SystemRegistry     map[string]interface{} `json:"systemRegistry,omitempty" yaml:"systemRegistry,omitempty"`
-	RegistryMode       string                 `json:"registryMode,omitempty" yaml:"registryMode,omitempty"`
 	APIServerEndpoints []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
 	KubernetesCA       string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles     []string               `json:"allowedBundles" yaml:"allowedBundles"`
