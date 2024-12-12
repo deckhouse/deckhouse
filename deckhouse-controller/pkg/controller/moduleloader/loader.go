@@ -50,6 +50,8 @@ import (
 const (
 	moduleOrderIdx = 2
 	moduleNameIdx  = 3
+
+	embeddedModulesDir = "/deckhouse/modules"
 )
 
 var (
@@ -257,7 +259,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			}
 
 			l.log.Debugf("ensure the '%s' module", def.Name)
-			if err = l.ensureModule(ctx, def, !strings.HasPrefix(def.Path, d8env.GetDownloadedModulesDir())); err != nil {
+			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, embeddedModulesDir)); err != nil {
 				return fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
 			}
 
@@ -356,6 +358,12 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 					module.Properties.Source = v1alpha1.ModuleSourceEmbedded
 					needsUpdate = true
 				}
+			}
+
+			// TODO(ipaqsa): it is needed for migration, can be removed after 1.68
+			if !embedded && module.IsEmbedded() {
+				module.Properties.Source = ""
+				needsUpdate = true
 			}
 
 			if needsUpdate {
