@@ -3673,6 +3673,16 @@ alerts:
         ModuleConfig {{ $labels.name }} is outdated.
       severity: "4"
       markupFormat: markdown
+    - name: ModuleHasDeprecatedUpdatePolicy
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: "The  {{ $labels.moduleName }} module has a deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy. \n\nPlease specify the proper update policy in the module configuration to continue get updates.\n"
+      summary: |
+        The {{ $labels.moduleName }} module has a deprecated module update policy.
+      severity: "4"
+      markupFormat: markdown
     - name: ModuleReleaseIsBlockedByRequirements
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
