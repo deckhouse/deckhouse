@@ -299,7 +299,7 @@ func (c *MasterNodeGroupController) addNodes() error {
 		}
 
 		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs, nodeInternalIPList...)
+		nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs, log.GetDefaultLogger(), nodeInternalIPList...)
 		if err != nil {
 			return err
 		}
