@@ -5,7 +5,6 @@
 {{- else }}
 - "--diagnostics-address=127.0.0.1:9446"
 - "--insecure-diagnostics"
-- "--port=4201"
 {{- end }}
 - "--health-probe-bind-address=:9445"
 {{- end }}
