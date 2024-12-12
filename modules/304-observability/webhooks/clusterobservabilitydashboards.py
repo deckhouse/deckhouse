@@ -26,8 +26,8 @@ kubernetesValidating:
 - name: clusterobservabilitydashboards-policy.deckhouse.io
   group: main
   rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
+  - apiGroups:   ["observability.deckhouse.io"]
+    apiVersions: ["v1alpha1"]
     operations:  ["CREATE", "UPDATE"]
     resources:   ["clusterobservabilitydashboards"]
     scope:       "Cluster"
@@ -37,7 +37,7 @@ kubernetes:
   executeHookOnEvent: []
   executeHookOnSynchronization: false
   keepFullObjectsInMemory: false
-  apiVersion: deckhouse.io/v1
+  apiVersion: observability.deckhouse.io/v1alpha1
   kind: ClusterObservabilityDashboard
   jqFilter: |
     {
