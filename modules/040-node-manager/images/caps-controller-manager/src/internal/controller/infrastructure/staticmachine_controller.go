@@ -152,17 +152,19 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Handle deleted machines
 	if !staticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 
-		if _, skip := instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation]; skip {
+		if instanceScope.Instance.Annotations != nil {
+			if _, skip := instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation]; skip {
 
-			// Remove finalizer from staticmachine
-			instanceScope.Logger.Info("Reconciling delete StaticMachine: skip")
-			controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
+				// Remove finalizer from staticmachine
+				instanceScope.Logger.Info("Reconciling delete StaticMachine: skip")
+				controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
 
-			if err = machineScope.Patch(ctx); err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer from StaticMachine")
+				if err = machineScope.Patch(ctx); err != nil {
+					return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer from StaticMachine")
+				}
+
+				return ctrl.Result{}, nil
 			}
-
-			return ctrl.Result{}, nil
 		}
 		machineScope.Logger.Info("Reconciling delete StaticMachine")
 
