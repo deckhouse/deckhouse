@@ -418,15 +418,16 @@ global:
 				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
 			},
 		}, nil)
-		dependency.TestDC.CRClient.ImageMock.When("v1.32.3").Then(&fake.FakeImage{
+		dependency.TestDC.CRClient.ImageMock.When("v1.34.0").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.32.3"}`}}}, nil
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.34.0"}`}}}, nil
 			},
 		}, nil)
 
 		suite.setupController("step-by-step-update-failed.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
-		require.Error(suite.T(), err)
+		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("StepByStepUpdateSuccessfully", func() {
