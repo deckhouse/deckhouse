@@ -132,16 +132,6 @@ func (dc *dependencyContainer) GetHTTPClient(options ...http.Option) http.Client
 		return TestDC.GetHTTPClient(options...)
 	}
 
-	dc.m.RLock()
-	if dc.httpClient != nil {
-		defer dc.m.RUnlock()
-		return dc.httpClient
-	}
-	dc.m.RUnlock()
-
-	dc.m.Lock()
-	defer dc.m.Unlock()
-
 	var opts []http.Option
 	opts = append(opts, options...)
 
@@ -150,9 +140,9 @@ func (dc *dependencyContainer) GetHTTPClient(options ...http.Option) http.Client
 		opts = append(opts, http.WithAdditionalCACerts([][]byte{contentCA}))
 	}
 
-	dc.httpClient = http.NewClient(opts...)
+	httpClient := http.NewClient(opts...)
 
-	return dc.httpClient
+	return httpClient
 }
 
 func (dc *dependencyContainer) GetEtcdClient(endpoints []string, options ...etcd.Option) (etcd.Client, error) {

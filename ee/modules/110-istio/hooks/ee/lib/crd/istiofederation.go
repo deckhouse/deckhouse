@@ -21,8 +21,12 @@ type IstioFederation struct {
 }
 
 type IstioFederationSpec struct {
-	MetadataEndpoint string `json:"metadataEndpoint"`
-	TrustDomain      string `json:"trustDomain,omitempty"`
+	Metadata struct {
+		Endpoint                 string `json:"endpoint"`
+		ClusterCA                string `json:"ca"`
+		EnableInsecureConnection bool   `json:"insecureSkipVerify"`
+	} `json:"metadata,omitempty"`
+	TrustDomain string `json:"trustDomain,omitempty"`
 }
 
 type IstioFederationStatus struct {
