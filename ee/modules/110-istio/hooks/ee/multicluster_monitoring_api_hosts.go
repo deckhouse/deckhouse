@@ -8,13 +8,13 @@ package ee
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
 
@@ -55,14 +55,25 @@ func monitoringAPIHosts(input *go_hook.HookInput, dc dependency.Container) error
 		name := m.Get("name").String()
 		apiHost := m.Get("apiHost").String()
 		apiJWT := m.Get("apiJWT").String()
+		apiSkipVerify := m.Get("insecureSkipVerify").Bool()
+		apiAdditionalCA := m.Get("ca").String()
 
-		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(), fmt.Sprintf("https://%s/api", apiHost), apiJWT)
+		var options []http.Option
+		if apiSkipVerify {
+			options = append(options, http.WithInsecureSkipVerify())
+		}
+		if apiAdditionalCA != "" {
+			caCerts := [][]byte{[]byte(apiAdditionalCA)}
+			options = append(options, http.WithAdditionalCACerts(caCerts))
+		}
+
+		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(options...), fmt.Sprintf("https://%s/api", apiHost), apiJWT)
 		if err != nil {
 			input.Logger.Warnf("cannot fetch api host %s for IstioMulticluster %s, error: %s", apiHost, name, err.Error())
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
 			continue
 		}
-		if statusCode != http.StatusOK {
+		if statusCode != 200 {
 			input.Logger.Warnf("cannot fetch api host %s for IstioMulticluster %s (HTTP code %d)", apiHost, name, statusCode)
 			setAPIHostMetric(input.MetricsCollector, name, apiHost, 1)
 			continue

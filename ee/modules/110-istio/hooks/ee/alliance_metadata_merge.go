@@ -19,18 +19,22 @@ import (
 )
 
 type IstioFederationMergeCrdInfo struct {
-	Name            string                             `json:"name"`
-	TrustDomain     string                             `json:"trustDomain"`
-	SpiffeEndpoint  string                             `json:"spiffeEndpoint"`
-	IngressGateways *[]eeCrd.FederationIngressGateways `json:"ingressGateways"`
-	PublicServices  *[]eeCrd.FederationPublicServices  `json:"publicServices"`
-	Public          *eeCrd.AlliancePublicMetadata      `json:"public,omitempty"`
+	Name             string                             `json:"name"`
+	TrustDomain      string                             `json:"trustDomain"`
+	SpiffeEndpoint   string                             `json:"spiffeEndpoint"`
+	IngressGateways  *[]eeCrd.FederationIngressGateways `json:"ingressGateways"`
+	MetadataCA       string                             `json:"ca"`
+	MetadataInsecure bool                               `json:"insecureSkipVerify"`
+	PublicServices   *[]eeCrd.FederationPublicServices  `json:"publicServices"`
+	Public           *eeCrd.AlliancePublicMetadata      `json:"public,omitempty"`
 }
 
 type IstioMulticlusterMergeCrdInfo struct {
 	Name                 string                               `json:"name"`
 	SpiffeEndpoint       string                               `json:"spiffeEndpoint"`
 	EnableIngressGateway bool                                 `json:"enableIngressGateway"`
+	MetadataCA           string                               `json:"ca"`
+	MetadataInsecure     bool                                 `json:"insecureSkipVerify"`
 	APIHost              string                               `json:"apiHost"`
 	NetworkName          string                               `json:"networkName"`
 	APIJWT               string                               `json:"apiJWT"`
@@ -65,12 +69,14 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	}
 
 	return IstioFederationMergeCrdInfo{
-		Name:            federation.GetName(),
-		TrustDomain:     federation.Spec.TrustDomain,
-		SpiffeEndpoint:  me + "/public/spiffe-bundle-endpoint",
-		IngressGateways: igs,
-		PublicServices:  pss,
-		Public:          p,
+		Name:             federation.GetName(),
+		TrustDomain:      federation.Spec.TrustDomain,
+		SpiffeEndpoint:   me + "/public/spiffe-bundle-endpoint",
+		IngressGateways:  igs,
+		MetadataCA:       federation.Spec.Metadata.ClusterCA,
+		MetadataInsecure: federation.Spec.Metadata.EnableInsecureConnection,
+		PublicServices:   pss,
+		Public:           p,
 	}, nil
 }
 
@@ -104,6 +110,8 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	return IstioMulticlusterMergeCrdInfo{
 		Name:                 multicluster.GetName(),
 		SpiffeEndpoint:       me + "/public/spiffe-bundle-endpoint",
+		MetadataCA:           multicluster.Spec.Metadata.ClusterCA,
+		MetadataInsecure:     multicluster.Spec.Metadata.EnableInsecureConnection,
 		EnableIngressGateway: multicluster.Spec.EnableIngressGateway,
 		APIHost:              apiHost,
 		NetworkName:          networkName,
