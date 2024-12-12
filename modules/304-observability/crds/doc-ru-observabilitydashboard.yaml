@@ -1,0 +1,15 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Ресурс хранения и управления dashboard в Grafana.
+          properties:
+            spec:
+              properties:
+                definition:
+                  description: |
+                    JSON-манифест dashboard.
+
+                    > **Важно!** Следите, чтобы, помимо `uid`, в манифесте не было «местного» `id` по адресу `.id`.
