@@ -71,9 +71,11 @@ type Loader struct {
 	client         client.Client
 	log            *log.Logger
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
+	modules        map[string]*moduletypes.Module
 	version        string
 	modulesDirs    []string
-	modules        map[string]*moduletypes.Module
+	// global module dir
+	globalDir string
 
 	dependencyContainer dependency.Container
 
@@ -82,11 +84,12 @@ type Loader struct {
 	clusterUUID          string
 }
 
-func New(client client.Client, version, modulesDir string, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
+func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		log:                  logger,
 		modulesDirs:          utils.SplitToPaths(modulesDir),
+		globalDir:            globalDir,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
@@ -224,6 +227,16 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 
 // LoadModulesFromFS parses and ensures modules from FS
 func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
+	// load the 'global' module conversions
+	if _, err := os.Stat(filepath.Join(l.globalDir, "openapi", "conversions")); err == nil {
+		l.log.Debug("conversions for the 'global' module found")
+		if err = conversion.Store().Add("global", filepath.Join(l.globalDir, "openapi", "conversions")); err != nil {
+			return fmt.Errorf("load conversions for the 'global' module: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("load conversions for the 'global' module: %w", err)
+	}
+
 	for _, dir := range l.modulesDirs {
 		l.log.Debugf("parse modules from the '%s' dir", dir)
 		definitions, err := l.parseModulesDir(dir)

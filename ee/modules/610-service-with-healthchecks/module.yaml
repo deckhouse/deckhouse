@@ -1,0 +1,6 @@
+name: service-with-healthchecks
+weight: 610
+description: |
+  Internal LoadBalancer with per-port healthchecks.
+requirements:
+  bootstrapped: true

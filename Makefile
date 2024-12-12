@@ -261,7 +261,7 @@ docs-linkscheck: ## Build documentation and run checker of html links.
 .PHONY: docs-spellcheck
 docs-spellcheck: ## Check the spelling in the documentation.
   ##~ Options: file="path/to/file" (Specify a path to a specific file)
-	cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/spell_check.sh -f $(file)
+	cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" --repo ":local" -- /app/spell_check.sh -f $(file)
 
 lint-doc-spellcheck-pr:
 	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=bash" -- /app/check_diff.sh

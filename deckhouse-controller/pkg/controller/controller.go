@@ -76,7 +76,7 @@ type DeckhouseController struct {
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 	settings       *helpers.DeckhouseSettingsContainer
-	logger         *log.Logger
+	log            *log.Logger
 }
 
 func NewDeckhouseController(ctx context.Context, version string, operator *addonoperator.AddonOperator, logger *log.Logger) (*DeckhouseController, error) {
@@ -157,6 +157,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				&v1alpha1.ModuleUpdatePolicy{}:  {},
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
 				&v1alpha1.ModulePullOverride{}:  {},
+				&v1alpha2.ModulePullOverride{}:  {},
 				&v1alpha1.DeckhouseRelease{}:    {},
 			},
 		},
@@ -201,7 +202,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	bundle := os.Getenv("DECKHOUSE_BUNDLE")
 
-	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, dc, embeddedPolicy, logger.Named("module-loader"))
+	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, embeddedPolicy, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
 	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger.Named("deckhouse-release-controller"))
@@ -251,7 +252,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 		embeddedPolicy: embeddedPolicy,
 		settings:       settingsContainer,
-		logger:         logger,
+		log:            logger,
 	}, nil
 }
 
@@ -286,13 +287,13 @@ func (c *DeckhouseController) startModulesControllers(ctx context.Context) {
 	// syncs the fs with the cluster state, starts the manager and various controllers
 	go func() {
 		if err := c.runtimeManager.Start(ctx); err != nil {
-			c.logger.Fatalf("start controller manager failed: %s", err)
+			c.log.Fatalf("start controller manager failed: %s", err)
 		}
 	}()
 
-	c.logger.Info("waiting for the preflight checks to run")
+	c.log.Info("waiting for the preflight checks to run")
 	c.preflightCountDown.Wait()
-	c.logger.Info("the preflight checks are done")
+	c.log.Info("the preflight checks are done")
 }
 
 // syncDeckhouseSettings updates embeddedPolicy and deckhouse settings by the deckhouse moduleConfig
@@ -308,17 +309,19 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		settings.Update.DisruptionApprovalMode = "Auto"
 
 		if err := yaml.Unmarshal(configBytes, settings); err != nil {
-			c.logger.Errorf("failed to unmarshal the deckhouse setting: %s", err)
+			c.log.Errorf("failed to unmarshal the deckhouse setting: %s", err)
 			continue
 		}
 
+		c.log.Debugf("update deckhouse settings")
 		c.settings.Set(settings)
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
 			settings.ReleaseChannel = "Stable"
-			c.logger.Debugf("the embedded deckhouse policy release channel set to %q", settings.ReleaseChannel)
+			c.log.Debugf("the embedded deckhouse policy release channel set to %q", settings.ReleaseChannel)
 		}
+
 		c.embeddedPolicy.Set(settings)
 	}
 }

@@ -1,5 +1,5 @@
 module: ceph-csi
-scopes:
+subsystems:
   - storage
   - infrastructure
 crds:

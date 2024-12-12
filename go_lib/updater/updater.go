@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sort"
 	"time"
 
@@ -123,8 +122,13 @@ func (u *Updater[R]) checkPatchReleaseConditions(release R, metricLabels MetricL
 
 	// check: Notification
 	if u.settings.NotificationConfig != (NotificationConfig{}) && u.settings.NotificationConfig.ReleaseType == ReleaseTypeAll {
+		metricLabels[NotificationNotSent] = "false"
 		err = u.sendReleaseNotification(release, applyTime)
 		if err != nil {
+			metricLabels[NotificationNotSent] = "true"
+			if err := u.updateStatus(release, "Release blocked: failed to send release notification", PhasePending); err != nil {
+				return fmt.Errorf("update status: %w", err)
+			}
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
@@ -189,8 +193,13 @@ func (u *Updater[R]) checkMinorReleaseConditions(release R, metricLabels MetricL
 
 	// check: Notification
 	if u.settings.NotificationConfig != (NotificationConfig{}) {
+		metricLabels[NotificationNotSent] = "false"
 		err = u.sendReleaseNotification(release, resultDeployTime)
 		if err != nil {
+			metricLabels[NotificationNotSent] = "true"
+			if err := u.updateStatus(release, "Release blocked: failed to send release notification", PhasePending); err != nil {
+				return fmt.Errorf("update status: %w", err)
+			}
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
@@ -415,7 +424,7 @@ func (u *Updater[R]) checkReleaseDisruptions(rl R) bool {
 				msg := fmt.Sprintf("Release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.GetName(), reason)
 				err := u.updateStatus(rl, msg, PhasePending)
 				if err != nil {
-					u.logger.Error("update status", slog.String("error", err.Error()))
+					u.logger.Error("update status", log.Err(err))
 				}
 				return false
 			}
@@ -569,7 +578,7 @@ func (u *Updater[R]) ApplyForcedRelease(ctx context.Context) error {
 		if i < u.forcedReleaseIndex {
 			err := u.updateStatus(release, "", PhaseSuperseded)
 			if err != nil {
-				u.logger.Error("update status", slog.String("error", err.Error()))
+				u.logger.Error("update status", log.Err(err))
 			}
 		}
 	}
@@ -626,7 +635,7 @@ func (u *Updater[R]) processPendingRelease(index int, release R, releaseRequirem
 			previousPredictedRelease := u.releases[u.predictedReleaseIndex]
 			if previousPredictedRelease.GetVersion().Major() < release.GetVersion().Major() || previousPredictedRelease.GetVersion().Minor() < release.GetVersion().Minor() {
 				if err := u.updateStatus(release, fmt.Sprintf("Awaiting for %s release to be deployed", previousPredictedRelease.GetName()), PhasePending); err != nil {
-					u.logger.Error("update status", slog.String("error", err.Error()))
+					u.logger.Error("update status", log.Err(err))
 				}
 				return
 			}
@@ -644,7 +653,7 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 		if err := extenders.CheckModuleReleaseRequirements(rl.GetName(), rl.GetRequirements()); err != nil {
 			err = u.updateStatus(rl, err.Error(), PhasePending)
 			if err != nil {
-				u.logger.Error("update status", slog.String("error", err.Error()))
+				u.logger.Error("update status", log.Err(err))
 			}
 			return false
 		}
@@ -654,7 +663,7 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 			// invalid deckhouse version in deckhouse release or an enabled module has requirements that prevent deckhouse release from becoming predicted
 			if moduleName == "" || u.enabledModules.Has(moduleName) {
 				if err = u.updateStatus(rl, err.Error(), PhasePending); err != nil {
-					u.logger.Error("update status", slog.String("error", err.Error()))
+					u.logger.Error("update status", log.Err(err))
 				}
 				return false
 			}
@@ -663,7 +672,7 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 		k8sVersionAutomatic, err := u.kubeAPI.IsKubernetesVersionAutomatic(u.ctx)
 		// if discovery failed, we musn't suspend the release
 		if err != nil {
-			u.logger.Error("check k8s automatic version", slog.String("error", err.Error()))
+			u.logger.Error("check k8s automatic version", log.Err(err))
 			return false
 		}
 		if k8sVersionAutomatic && len(rl.GetRequirements()["autoK8sVersion"]) > 0 {
@@ -671,7 +680,7 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 				// invalid auto kubernetes version in deckhouse release or an enabled module has requirements that prevent deckhouse release from becoming predicted
 				if moduleName == "" || u.enabledModules.Has(moduleName) {
 					if err = u.updateStatus(rl, err.Error(), PhasePending); err != nil {
-						u.logger.Error("update status", slog.String("error", err.Error()))
+						u.logger.Error("update status", log.Err(err))
 					}
 					return false
 				}
@@ -687,11 +696,11 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 			if !passed {
 				msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, rl.GetVersion(), err)
 				if errors.Is(err, requirements.ErrNotRegistered) {
-					u.logger.Error("check requirements", slog.String("error", err.Error()))
+					u.logger.Error("check requirements", log.Err(err))
 					msg = fmt.Sprintf("%q requirement is not registered", key)
 				}
 				if err := u.updateStatus(rl, msg, PhasePending); err != nil {
-					u.logger.Error("update status", slog.String("error", err.Error()))
+					u.logger.Error("update status", log.Err(err))
 				}
 				return false
 			}

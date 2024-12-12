@@ -24,7 +24,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -90,7 +89,7 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleSource{}).
 		Watches(&v1alpha1.Module{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: obj.(*v1alpha1.Module).Properties.Source}}}
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha1.Module).Properties.Source}}}
 		}), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(_ event.CreateEvent) bool {
 				return false
@@ -292,12 +291,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		exist, err := utils.ModulePullOverrideExists(ctx, r.client, source.Name, moduleName)
+		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
 		if err != nil {
 			return fmt.Errorf("get pull override for the '%s' module: %w", moduleName, err)
 		}
-
-		if exist {
+		if exists {
 			// skip overridden module
 			availableModule.Overridden = true
 			availableModules = append(availableModules, availableModule)
@@ -307,11 +305,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		var cachedChecksum = availableModule.Checksum
 
 		// check if release exists
-		exist, err = r.releaseExists(ctx, source.Name, moduleName, cachedChecksum)
+		exists, err = r.releaseExists(ctx, source.Name, moduleName, cachedChecksum)
 		if err != nil {
 			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
-		if !exist {
+		if !exists {
 			// if release does not exist, clear checksum to trigger meta downloading
 			cachedChecksum = ""
 		}
@@ -320,13 +318,14 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		r.log.Debugf("download meta from the '%s' release channel for the '%s' module for the '%s' module source", policy.Spec.ReleaseChannel, moduleName, source.Name)
 		meta, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
 		if err != nil {
+			r.log.Warnf("failed to downloaded the '%s' module: %v", moduleName, err)
 			availableModule.PullError = err.Error()
 			availableModules = append(availableModules, availableModule)
 			pullErrorsExist = true
 			continue
 		}
 
-		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exist) {
+		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exists) {
 			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
 					module.Status.Phase = v1alpha1.ModulePhaseDownloading
@@ -350,12 +349,12 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 	// update source status
 	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
-		source.Status.Message = ""
+		source.Status.Message = v1alpha1.ModuleSourceMessageReady
 		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
 		source.Status.ModulesCount = len(availableModules)
 		if pullErrorsExist {
-			source.Status.Message = "Some errors occurred. Inspect status for details"
+			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
 		}
 		return true
 	})
