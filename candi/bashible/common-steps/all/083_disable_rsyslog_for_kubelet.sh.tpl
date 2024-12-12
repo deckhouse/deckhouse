@@ -26,7 +26,4 @@ if [ -d /etc/rsyslog.d ]; then
 :programname,isequal, "kubelet" ~
 END
 
-  bb-sync-file /etc/rsyslog.d/10-dockerd.conf - <<END
-:programname,isequal, "dockerd" ~
-END
 fi

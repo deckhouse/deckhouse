@@ -107,21 +107,6 @@ var _ = Describe("node-manager :: check_containerd_nodes ", func() {
 		})
 	})
 
-	Context("One node without status.nodeInfo.containerRuntimeVersion set and defaultCRI is "+criTypeDocker, func() {
-		BeforeEach(func() {
-			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeDocker)
-			f.BindingContexts.Set(f.KubeStateSet(nodeWithoutContainerVersion))
-			f.RunHook()
-		})
-
-		It(hasNodesWithDocker+" should exist and true", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			value, exists := requirements.GetValue(hasNodesWithDocker)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeTrue())
-		})
-	})
-
 	Context("One node with containerD", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterConfiguration.defaultCRI", criTypeContainerd)
