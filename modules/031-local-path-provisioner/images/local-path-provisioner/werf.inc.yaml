@@ -1,5 +1,19 @@
 {{- $localPathProvisionerVersion := "0.0.26"}}
-
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
@@ -12,25 +26,20 @@ docker:
   ENTRYPOINT: ["/usr/bin/local-path-provisioner"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
-git:
-  - add: /{{ $.ModulePath }}modules/031-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+import:
+- artifact: { { .ModuleName } }/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  {{- include "alpine packages proxy" . | nindent 2 }}
   install:
-    - mkdir /src
-    - git clone --depth 1 --branch v{{$localPathProvisionerVersion}} {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git /src
     - cd /src
-    - git apply /patches/*.patch --verbose
     - go get github.com/prometheus/client_golang@v1.17.0
     - go mod tidy
     - go mod vendor
