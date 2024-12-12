@@ -90,20 +90,19 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        lib.Queue("federation"),
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue: lib.Queue("federation"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "federations",
 			ApiVersion:                   "deckhouse.io/v1alpha1",
 			Kind:                         "IstioFederation",
-			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
 			FilterFunc:                   applyFederationFilter,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
-		{Name: "cron", Crontab: "*/5 * * * *"},
+		{Name: "cron", Crontab: "* * * * *"},
 	},
 }, dependency.WithExternalDependencies(federationDiscovery))
 
