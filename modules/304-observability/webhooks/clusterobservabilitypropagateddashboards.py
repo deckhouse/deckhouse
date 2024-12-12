@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
 from deckhouse import hook
 from dotmap import DotMap
 import json
@@ -51,34 +52,39 @@ def main(ctx: hook.Context):
     try:
         # DotMap is a dict with dot notation
         binding_context = DotMap(ctx.binding_context)
-        validate(binding_context, ctx.output.validations)
+        errmsg, warnings = validate(binding_context)
+        if errmsg is None:
+            ctx.output.validations.allow(*warnings)
+        else:
+            ctx.output.validations.deny(errmsg)
     except Exception as e:
         ctx.output.validations.error(str(e))
 
 
-def validate(ctx: DotMap, output: hook.ValidationsCollector):
+def validate(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     operation = ctx.review.request.operation
     if operation == "CREATE" or operation == "UPDATE":
-        validate_creation_or_update(ctx, output)
+        return validate_creation_or_update(ctx)
     elif operation == "DELETE":
-        validate_delete(ctx, output)
+        return validate_delete(ctx)
     else:
         raise Exception(f"Unknown operation {ctx.operation}")
 
+def validate_creation_or_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
+    warnings = []
 
-def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
+    name = ctx.review.request.object.metadata.name
     definition = json.loads(ctx.review.request.object.spec.definition)
-
     uid = definition["uid"]
     if not uid.startswith(prefix):
-        output.deny("\".spec.definition\" must contain uid with \"{prefix}\" prefix.")
-        return
+        return f"clusterobservabilitypropagateddashboard \"{name}\" must contain uid with \"{prefix}\" prefix", warnings
 
-    output.allow()
+    return None, warnings
 
 
-def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
-    output.allow()
+def validate_delete(ctx: DotMap) -> tuple[Optional[str], list[str]]:
+    warnings = []
+    return None, warnings
 
 
 if __name__ == "__main__":
