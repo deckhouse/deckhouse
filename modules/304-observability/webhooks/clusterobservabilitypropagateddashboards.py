@@ -75,10 +75,7 @@ def validate_creation_or_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
 
     name = ctx.review.request.object.metadata.name
     definition = json.loads(ctx.review.request.object.spec.definition)
-    warnings.append(definition["uid"])
-    return None, warnings
-
-    uid = definition.uid
+    uid = definition["uid"]
     if not uid.startswith(prefix):
         return f"clusterobservabilitypropagateddashboard \"{name}\" must contain uid with \"{prefix}\" prefix", warnings
 
