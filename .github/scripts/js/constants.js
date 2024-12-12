@@ -50,6 +50,9 @@ const labels = {
   // E2E: use multimaster configuration
   'e2e/use/multimaster': { type: 'e2e-use', multimaster: true },
 
+  // E2E: run e2e on commander
+  'e2e/use/commander_mode': { type: 'e2e-use', commander_mode: true },
+
   // E2E: edition
   'e2e/use/edition/ce': { type: 'e2e-use', edition: 'CE' },
   'e2e/use/edition/ee': { type: 'e2e-use', edition: 'EE' },
@@ -159,6 +162,7 @@ module.exports.e2eDefaults = {
   criName: 'Containerd',
   edition: 'FE',
   multimaster: false,
+  commander_mode: false,
 }
 
 const editions = [

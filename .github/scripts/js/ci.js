@@ -432,10 +432,12 @@ const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }
   const defaultCRI = e2eDefaults.criName.toLowerCase();
   const defaultVersion = kubernetesDefaultVersion.replace(/\./g, '_');
   const defaultMultimaster = e2eDefaults.multimaster
+  const defaultCommanderMode = e2eDefaults.commander_mode;
 
   let cri = [defaultCRI];
   let ver = [defaultVersion];
   let multimaster = [defaultMultimaster];
+  let commander_mode = [defaultCommanderMode];
 
   let test_config = JSON.parse(context.payload.inputs.test_config)
 
@@ -451,10 +453,15 @@ const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }
     const requested_multimaster = context.payload.inputs.multimaster;
     multimaster = requested_multimaster;
   }
+  if (!!context.payload.inputs.commander_mode) {
+    const requested_commander_mode = context.payload.inputs.commander_mode;
+    commander_mode = requested_commander_mode;
+  }
 
   core.info(`e2e inputs: '${JSON.stringify(context.payload.inputs)}'`);
   core.info(`workflow_dispatch is release related. e2e parsed inputs: cri='${test_config.cri}' and version='${test_config.ver}'.`);
   core.setOutput(`multimaster`, `${multimaster}`);
+  core.setOutput(`commander_mode`, `${commander_mode}`);
 
   for (const out_cri of cri) {
     for (const out_ver of ver) {
@@ -478,6 +485,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   let ver = [];
   let cri = [];
   let multimaster = e2eDefaults.multimaster;
+  let commander_mode = e2eDefaults.commander_mode;
   let edition = "";
 
   for (const label of labels) {
@@ -501,6 +509,10 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
       core.info(`Detect '${label.name}': use Kubernetes multimaster configuration`);
       multimaster = true;
     }
+    if (info.commander_mode) {
+      core.info(`Detect '${label.name}': use Commander mode`);
+      commander_mode = true;
+    }
   }
 
   if (ver.length === 0) {
@@ -519,6 +531,7 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   core.setCommandEcho(true);
   core.setOutput(`edition`, `${edition}`);
   core.setOutput(`multimaster`, `${multimaster}`);
+  core.setOutput(`commander_mode`, `${commander_mode}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
@@ -731,6 +744,7 @@ const detectSlashCommand = ({ comment , context, core}) => {
       let ver = [];
       let cri = [];
       let multimaster;
+      let commander_mode;
       let edition = "fe";
       for (const line of lines) {
         let useParts = line.split('/e2e/use/cri/');
@@ -745,6 +759,10 @@ const detectSlashCommand = ({ comment , context, core}) => {
         if (useParts[1]) {
           multimaster.push(true);
         }
+        useParts = line.split('/e2e/use/commander_mode/');
+        if (useParts[1]) {
+          commander_mode.push(true);
+        }
         useParts = line.split('/e2e/use/edition/');
         if (useParts[1]) {
           edition = useParts[1]
@@ -754,6 +772,7 @@ const detectSlashCommand = ({ comment , context, core}) => {
       inputs = {
         test_config: JSON.stringify({ cri: cri.join(','), ver: ver.join(','), edition: edition }),
         multimaster: multimaster,
+        commander_mode: commander_mode,
       }
 
       // Add initial_ref_slug input when e2e command has two args.
