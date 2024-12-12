@@ -15,6 +15,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -92,10 +93,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("multicluster"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "multiclusters",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "IstioMulticluster",
-			FilterFunc: applyMulticlusterFilter,
+			Name:                         "multiclusters",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "IstioMulticluster",
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			FilterFunc:                   applyMulticlusterFilter,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
