@@ -525,6 +525,7 @@ alerts:
       description: |
         It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
         You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
       summary: |
         The settings from the secret d8-cni-configuratuin and the moduleConfig contradict each other.
       severity: "3"
@@ -537,6 +538,7 @@ alerts:
       description: |
         It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
         You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
       summary: |
         The settings from the secret d8-cni-configuratuin and the moduleConfig contradict each other.
       severity: "3"
@@ -549,6 +551,7 @@ alerts:
       description: |
         It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
         You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
       summary: |
         The settings from the secret d8-cni-configuratuin and the moduleConfig contradict each other.
       severity: "3"
