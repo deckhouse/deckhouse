@@ -1,7 +1,9 @@
 - name: kubernetes.node.chrony
   rules:
-  - record: node_ntp_offset_seconds:abs
-    expr: abs(node_ntp_offset_seconds)
+  - record: chrony_tracking_last_offset_seconds:abs
+    expr: abs(chrony_tracking_last_offset_seconds)
+  - record: chrony_rtt_seconds
+    expr: chrony_tracking_last_offset_seconds - chrony_serverstats_ntp_timestamps_held
 
   - alert: NTPDaemonOnNodeDoesNotSynchronizeTime
     expr: (min by (node) (node_timex_sync_status{job="node-exporter"})) == 0
@@ -25,7 +27,7 @@
       summary: NTP daemon on node {{$labels.node}} have not synchronized time for too long.
 
   - alert: NodeTimeOutOfSync
-    expr: abs(node_ntp_offset_seconds:abs - (node_ntp_rtt_seconds/2)) > 0.05
+    expr: abs(chrony_tracking_last_offset_seconds:abs - (node_ntp_rtt_seconds/2)) > 0.05
     for: 30m
     labels:
       severity_level: "5"
