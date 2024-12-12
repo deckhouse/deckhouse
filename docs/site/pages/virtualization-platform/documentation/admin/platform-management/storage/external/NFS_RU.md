@@ -4,11 +4,11 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-Для управления томами на основе протокола NFS (Network File System) можно использовать модуль csi-nfs, позводяющий создавать StorageClass через создание пользовательских ресурсов `NFSStorageClass`.
+Для управления томами на основе протокола NFS (Network File System) можно использовать модуль `csi-nfs`, позволяющий создавать StorageClass через создание пользовательских ресурсов `NFSStorageClass`.
 
 ## Включение модуля
 
-Чтобы включить модуль csi-nfs, выполните команду:
+Чтобы включить модуль `csi-nfs`, выполните команду:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -22,13 +22,18 @@ spec:
 EOF
 ```
 
-Дождитесь, когда модуль csi-nfs перейдет в состояние Ready:
+Дождитесь, когда модуль `csi-nfs` перейдет в состояние `Ready`.
+Проверить состояние можно, выполнив следующую команду:
 
 ```shell
 d8 k get module csi-nfs -w
+```
 
-# NAME      WEIGHT   STATE     SOURCE     STAGE   STATUS
-# csi-nfs   910      Enabled   Embedded           Ready
+В результате будет выведена информация о модуле `csi-nfs`:
+
+```console
+NAME      WEIGHT   STATE     SOURCE     STAGE   STATUS
+csi-nfs   910      Enabled   Embedded           Ready
 ```
 
 ## Создание StorageClass
@@ -65,18 +70,30 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс `NFSStorageClass` перешел в состояние Created и соответствующий StorageClass создался:
+Проверьте, что созданный ресурс `NFSStorageClass` перешел в состояние Created, выполнив следующую команду:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
+```
 
-# NAME                PHASE     AGE
-# nfs-storage-class   Created   1h
+В результате будет выведена информация о созданном ресурсе `NFSStorageClass`:
 
+```console
+NAME                PHASE     AGE
+nfs-storage-class   Created   1h
+```
+
+Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
+
+```shell
 d8 k get sc nfs-storage-class
+```
 
-# NAME                PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-# nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true                   1h
+В результате будет выведена информация о созданном StorageClass:
+
+```console
+NAME                PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
 Если StorageClass с именем `nfs-storage-class` появился, значит настройка модуля csi-nfs завершена.
@@ -87,18 +104,22 @@ d8 k get sc nfs-storage-class
 ## Проверка работоспособности модуля
 
 Для того, чтобы проверить работоспособность модуля csi-nfs, необходимо проверить состояние подов в пространстве имен d8-csi-nfs.
-Все поды должны быть в состоянии Running или Completed, поды csi-nfs должны быть запущены на всех узлах.
+Все поды должны быть в состоянии `Running` или `Completed`, поды csi-nfs должны быть запущены на всех узлах.
 
-Проверить работоспособность модуля можно с помощью команды:
+Проверить работоспособность модуля можно с помощью следующей команды:
 
 ```shell
 d8 k -n d8-csi-nfs get pod -owide -w
+```
 
-# NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES
-# controller-547979bdc7-5frcl      1/1     Running   0          1h    10.111.2.84    master     <none>           <none>
-# csi-controller-5c6bd5c85-wzwmk   6/6     Running   0          1h    172.18.18.50   master     <none>           <none>
-# webhooks-7b5bf9dbdb-m5wxb        1/1     Running   0          1h    10.111.0.16    master     <none>           <none>
-# csi-nfs-8mpcd                    2/2     Running   0          1h    172.18.18.50   master     <none>           <none>
-# csi-nfs-n6sks                    2/2     Running   0          1h    172.18.18.51   worker-1   <none>           <none>
-# csi-nfs-6nqq8                    2/2     Running   0          1h    172.18.18.52   worker-2   <none>           <none>
+В результате будет выведен список всех подов в пространстве имен d8-csi-nfs:
+
+```console
+NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES
+controller-547979bdc7-5frcl      1/1     Running   0          1h    10.111.2.84    master     <none>           <none>
+csi-controller-5c6bd5c85-wzwmk   6/6     Running   0          1h    172.18.18.50   master     <none>           <none>
+webhooks-7b5bf9dbdb-m5wxb        1/1     Running   0          1h    10.111.0.16    master     <none>           <none>
+csi-nfs-8mpcd                    2/2     Running   0          1h    172.18.18.50   master     <none>           <none>
+csi-nfs-n6sks                    2/2     Running   0          1h    172.18.18.51   worker-1   <none>           <none>
+csi-nfs-6nqq8                    2/2     Running   0          1h    172.18.18.52   worker-2   <none>           <none>
 ```

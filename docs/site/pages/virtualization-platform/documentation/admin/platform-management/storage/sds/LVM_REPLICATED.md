@@ -27,13 +27,18 @@ spec:
 EOF
 ```
 
-Wait for the `sds-node-configurator` module to reach the `Ready` state:
+Wait for the `sds-node-configurator` module to reach the `Ready` status.
+To check the status, run the following command:
 
 ```shell
 d8 k get modules sds-node-configurator -w
+```
 
-# NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
-# sds-node-configurator   900      Enabled   deckhouse           Ready
+In the output, you should see information about the `sds-node-configurator` module:
+
+```console
+NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
+sds-node-configurator   900      Enabled   deckhouse           Ready
 ```
 
 ### DRBD connection
@@ -54,13 +59,18 @@ EOF
 
 This will install the DRBD kernel module on all nodes in the cluster, register the CSI driver, and start the service pods of the sds-replicated-volume components.
 
-Wait until the `sds-replicated-volume` module reaches the `Ready` state.
+Wait until the `sds-replicated-volume` module reaches the `Ready` status.
+To check the module status, run the following command:
 
 ```shell
 d8 k get modules sds-replicated-volume -w
+```
 
-# NAME                    WEIGHT   STATE     SOURCE     STAGE   STATUS
-# sds-replicated-volume   915      Enabled   Embedded           Ready
+In the output, you should see information about the `sds-replicated-volume` module:
+
+```console
+NAME                    WEIGHT   STATE     SOURCE     STAGE   STATUS
+sds-replicated-volume   915      Enabled   Embedded           Ready
 ```
 
 To check that all pods in the `d8-sds-replicated-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and have been started on all nodes where DRBD resources are planned to be used, use the following commands:
@@ -80,14 +90,18 @@ Before configuring the creation of StorageClass objects, you need to combine the
 
 ```shell
 d8 k get bd
+```
 
-# NAME                                           NODE       CONSUMABLE   SIZE           PATH
-# dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
-# dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
-# dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
-# dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
-# dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
-# dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
+In the output, you should see a list of available block devices:
+
+```console
+NAME                                           NODE       CONSUMABLE   SIZE           PATH
+dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
+dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
+dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
+dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
+dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
+dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
 
 In the example above, there are six block devices available across three nodes.
@@ -122,30 +136,39 @@ spec:
 EOF
 ```
 
-Details about the LVMVolumeGroup resource configuration options are described in the [reference](../../../../reference/cr.html#lvmvolumegroup) section.
+Details about the LVMVolumeGroup resource configuration options are described in the [reference](../../../../../reference/cr/lvmvolumegroup.html) section.
 
-Wait for the created `LVMVolumeGroup` resource to reach the `Ready` state.
+Wait for the created `LVMVolumeGroup` resource to reach the `Ready` phase.
+To check the resource phase, run the following command:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
-
-# NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-# vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
-If the resource has transitioned to the `Ready` state, this means that an LVM volume group named vg has been created on node worker-0 from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
+In the output, you should see information about the resource phase:
+
+```console
+NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+```
+
+If the resource has transitioned to the `Ready` phase, this means that an LVM volume group named vg has been created on node worker-0 from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
 Next, you need to repeat the creation of `LVMVolumeGroup` resources for the remaining nodes (worker-1 and worker-2), changing the resource name, node name, and block device names accordingly.
 
-Ensure that LVM volume groups have been created on all nodes where they are planned to be used:
+Ensure that LVM volume groups have been created on all nodes where they are planned to be used by running the following command:
 
 ```shell
 d8 k get lvg -w
+```
 
-# NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-# vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
-# vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
-# vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
+In the output, you should see a list of created volume groups:
+
+```console
+NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
+vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
 ```
 
 ### Creating replicated Thick pools
@@ -171,15 +194,20 @@ spec:
 EOF
 ```
 
-Details about the configuration options of the `ReplicatedStoragePool` resource are described in the [reference](../../../../../reference/cr/replicatedstoragespool.html) section.
+Details about the configuration options of the `ReplicatedStoragePool` resource are described in the [reference](../../../../../reference/cr/replicatedstoragepool.html) section.
 
-Wait for the created `ReplicatedStoragePool` resource to reach the `Completed` state:
+Wait for the created `ReplicatedStoragePool` resource to reach the `Completed` phase.
+To check the resource phase, run the following command:
 
 ```shell
 d8 k get rsp data -w
+```
 
-# NAME         PHASE       TYPE   AGE
-# thick-pool   Completed   LVM    87d
+In the output, you should see information about the resource phase:
+
+```console
+NAME         PHASE       TYPE   AGE
+thick-pool   Completed   LVM    87d
 ```
 
 ### Creating replicated Thin pools
@@ -225,15 +253,20 @@ spec:
 EOF
 ```
 
-Details about the configuration options of the ReplicatedStoragePool resource are described in the [reference](../../../../../reference/cr/replicatedstoragespool.html) section.
+Details about the configuration options of the ReplicatedStoragePool resource are described in the [reference](../../../../../reference/cr/replicatedstoragepool.html) section.
 
-Wait for the created `ReplicatedStoragePool` resource to reach the `Completed` state:
+Wait for the created `ReplicatedStoragePool` resource to reach the `Completed` phase.
+To check the resource phase, run the following command:
 
 ```shell
 d8 k get rsp data -w
+```
 
-# NAME        PHASE       TYPE      AGE
-# thin-pool   Completed   LVMThin   87d
+In the output, you should see information about the resource phase:
+
+```console
+NAME        PHASE       TYPE      AGE
+thin-pool   Completed   LVMThin   87d
 ```
 
 ## Creating StorageClass objects
@@ -264,20 +297,32 @@ spec:
 EOF
 ```
 
-Details about the configuration options of the ReplicatedStorageClass resource are described in the [reference](../../../../../reference/cr/replicatedstoragesclass.html) section.
+Details about the configuration options of the ReplicatedStorageClass resource are described in the [reference](../../../../../reference/cr/replicatedstorageclass.html) section.
 
-Check that the created `ReplicatedStorageClass` resource has transitioned to the `Created` state, and the corresponding StorageClass has been created:
+Check that the created `ReplicatedStorageClass` resource has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get rsc replicated-storage-class -w
+```
 
-# NAME                       PHASE     AGE
-# replicated-storage-class   Created   1h
+In the output, you should see information about the created `ReplicatedStorageClass` resource:
 
+```console
+NAME                       PHASE     AGE
+replicated-storage-class   Created   1h
+```
+
+Check that the corresponding StorageClass has been generated by running the following command:
+
+```shell
 d8 k get sc replicated-storage-class
+```
 
-# NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-# replicated-storage-class   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
+In the output, you should see information about the generated StorageClass:
+
+```console
+NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+replicated-storage-class   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
 If a StorageClass with the name `replicated-storage-class` appears, it means the configuration of the `sds-replicated-volume` module is complete. Users can now create `PersistentVolume` objects by specifying the replicated-storage-class StorageClass. With the above configuration, a volume with three replicas across different nodes will be created.

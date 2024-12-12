@@ -70,48 +70,48 @@ EOF
 
 1. Отредактируйте настройки модуля control-plane manager, который отвечает за конфигурацию Deckhouse.
 
-    Внесите изменения в секции по шаблону ниже:
+   Внесите изменения в секции по шаблону ниже:
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: control-plane-manager
-    spec:
-      version: 1
-      enabled: true
-      settings:
-        apiserver:
-          # Список опций сертификата SANs, с которыми будет сгенерирован сертификат API-сервера.
-          certSANs:
-           - kubernetes.default.svc.<старый clusterDomain>
-           - kubernetes.default.svc.<новый clusterDomain>
-          serviceAccount:
-            # Список API audience’ов, которые следует добавить при создании токенов ServiceAccount.
-            additionalAPIAudiences:
-            - https://kubernetes.default.svc.<старый clusterDomain>
-            - https://kubernetes.default.svc.<новый clusterDomain>
-            # Список дополнительных издателей API токенов ServiceAccount, которые нужно включить при их создании.
-            additionalAPIIssuers:
-            - https://kubernetes.default.svc.<старый clusterDomain>
-            - https://kubernetes.default.svc.<новый clusterDomain>
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       apiserver:
+         # Список опций сертификата SANs, с которыми будет сгенерирован сертификат API-сервера.
+         certSANs:
+          - kubernetes.default.svc.<старый clusterDomain>
+          - kubernetes.default.svc.<новый clusterDomain>
+         serviceAccount:
+           # Список API audience’ов, которые следует добавить при создании токенов ServiceAccount.
+           additionalAPIAudiences:
+           - https://kubernetes.default.svc.<старый clusterDomain>
+           - https://kubernetes.default.svc.<новый clusterDomain>
+           # Список дополнительных издателей API токенов ServiceAccount, которые нужно включить при их создании.
+           additionalAPIIssuers:
+           - https://kubernetes.default.svc.<старый clusterDomain>
+           - https://kubernetes.default.svc.<новый clusterDomain>
+   ```
 
 1. Укажите список альтернативных доменов кластера в настройках модуля kube-dns:
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: kube-dns
-    spec:
-      version: 1
-      enabled: true
-      settings:
-        clusterDomainAliases:
-          - <старый clusterDomain>
-          - <новый clusterDomain>
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: kube-dns
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       clusterDomainAliases:
+         - <старый clusterDomain>
+         - <новый clusterDomain>
+   ```
 
 1. Дождитесь перезапуска `kube-apiserver`.
 1. Поменяйте `clusterDomain` на новый домен в `dhctl config edit cluster-configuration`.

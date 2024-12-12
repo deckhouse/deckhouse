@@ -6,7 +6,7 @@ lang: ru
 
 Для создания виртуальной машины используется ресурс [VirtualMachine](../../../reference/cr/virtualmachine.html), его параметры позволяют сконфигурировать:
 
-- [класс виртуальной машины](../../admin/platform-management/virtualization/virtual_machine_classes.html);
+- [класс виртуальной машины](../../admin/platform-management/virtualization/virtual-machine-classes.html);
 - ресурсы, требуемые для работы виртуальной машины (процессор, память, диски и образы);
 - правила размещения виртуальной машины на узлах кластера;
 - настройки загрузчика и оптимальные параметры для гостевой ОС;
@@ -144,7 +144,7 @@ d8 v ssh cloud@linux-vm --local-ssh
 Состоянием виртуальной машины можно управлять с помощью следующих методов:
 
 - Создание ресурса [VirtualMachineOperation](../../../reference/cr/virtualmachineoperation.html) (`vmop`).
-- Использование утилиты [`d8`](../../reference/console-utilities/d8.html) с соответствующей подкомандой.
+- Использование утилиты [`d8`](../../../reference/console-utilities/d8.html) с соответствующей подкомандой.
 
 Ресурс `VirtualMachineOperation` декларативно определяет действие, которое должно быть выполнено на виртуальной машине.
 
@@ -565,7 +565,7 @@ linux-vm   Running   virtlab-pt-1   10.66.10.14   79m
 
 Виртуальная машина запущена на узле `virtlab-pt-1`.
 
-Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperations](../../reference/cr/virtualmachineoperations.html) (`vmop`) с типом Evict.
+Для осуществления миграции виртуальной машины с одного узла на другой, с учетом требований к размещению виртуальной машины используется ресурс [VirtualMachineOperation](../../../reference/cr/virtualmachineoperation.html) (`vmop`) с типом Evict.
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -607,7 +607,7 @@ d8 v evict <vm-name>
 
 Блок `.spec.settings.virtualMachineCIDRs` в конфигурации модуля virtualization задает список подсетей для назначения IP-адресов виртуальным машинам (общий пул IP-адресов). Все адреса в этих подсетях доступны для использования, за исключением первого (адрес сети) и последнего (широковещательный адрес).
 
-Ресурс [VirtualMachineIPAddressLease](../../../reference/cr/virtualmachineipaddressLease.html) (`vmipl`): кластерный ресурс, который управляет временным выделением IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
+Ресурс [VirtualMachineIPAddressLease](../../../reference/cr/virtualmachineipaddresslease.html) (`vmipl`): кластерный ресурс, который управляет временным выделением IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
 
 Чтобы посмотреть список временно выделенных IP-адресов (`vmipl`), используйте команду:
 

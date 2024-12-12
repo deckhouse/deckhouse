@@ -105,24 +105,32 @@ spec:
 EOF
 ```
 
-Check that the created `CephStorageClass` resources have transitioned to the `Created` state and that the corresponding StorageClass objects have been created:
+Check that the created `CephStorageClass` resources have transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get cephstorageclass
-
-# NAME          PHASE     AGE
-# ceph-rbd-sc   Created   1h
-# ceph-fs-sc    Created   1h
 ```
 
-The created StorageClass can be checked using the following command:
+In the output, you should see information about the created `CephStorageClass` resources:
+
+```console
+NAME          PHASE     AGE
+ceph-rbd-sc   Created   1h
+ceph-fs-sc    Created   1h
+```
+
+Check the created StorageClass using the following command:
 
 ```shell
 d8 k get sc
+```
 
-# NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-# ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
-# ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
+In the output, you should see information about the created StorageClass:
+
+```console
+NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
+ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
 ```
 
 If the StorageClass objects are listed, it means the csi-ceph module configuration is complete. Users can now create PersistentVolumes by specifying the created StorageClass objects.

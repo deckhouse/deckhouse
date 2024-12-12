@@ -20,5 +20,5 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/mo
 - `d8_node_group_min` — минимальное количество инстансов в группе;
 - `d8_node_group_max` — максимальное количество инстансов в группе;
 - `d8_node_group_up_to_date` — количество узлов в группе в состоянии up-to-date;
-- `d8_node_group_standby` — количество резервных узлов (см. параметр [standby](../../../reference/cr.html#nodegroup-v1-spec-cloudinstances-standby) в группе;
+- `d8_node_group_standby` — количество резервных узлов в группе (см. параметр [standby](../../../../reference/cr/nodegroup-v1-spec-cloudinstances-standby.html));
 - `d8_node_group_has_errors` — единица, если в группе узлов есть какие-либо ошибки.

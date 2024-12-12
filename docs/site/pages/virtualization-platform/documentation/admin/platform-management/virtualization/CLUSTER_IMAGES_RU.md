@@ -54,15 +54,20 @@ spec:
 EOF
 ```
 
-Проверьте результат создания `ClusterVirtualImage`:
+Проверьте результат создания `ClusterVirtualImage` с помощью следующей команды:
 
 ```shell
 d8 k get clustervirtualimage ubuntu-22.04
-# или более короткий вариант
-d8 k get cvi ubuntu-22.04
 
-# NAME           PHASE   CDROM   PROGRESS   AGE
-# ubuntu-22.04   Ready   false   100%       23h
+# Укороченный вариант команды
+d8 k get cvi ubuntu-22.04
+```
+
+В результате будет выведена информация о ресурсе `ClusterVirtualImage`:
+
+```console
+NAME           PHASE   CDROM   PROGRESS   AGE
+ubuntu-22.04   Ready   false   100%       23h
 ```
 
 После создания ресурс `ClusterVirtualImage` может находиться в следующих состояниях (фазах):
@@ -81,15 +86,19 @@ d8 k get cvi ubuntu-22.04
 
 ```shell
 d8 k get cvi ubuntu-22.04 -w
+```
 
-# NAME           PHASE          CDROM   PROGRESS   AGE
-# ubuntu-22.04   Provisioning   false              4s
-# ubuntu-22.04   Provisioning   false   0.0%       4s
-# ubuntu-22.04   Provisioning   false   28.2%      6s
-# ubuntu-22.04   Provisioning   false   66.5%      8s
-# ubuntu-22.04   Provisioning   false   100.0%     10s
-# ubuntu-22.04   Provisioning   false   100.0%     16s
-# ubuntu-22.04   Ready          false   100%       18s
+В результате будет выведена информация о прогрессе создания образа:
+
+```console
+NAME           PHASE          CDROM   PROGRESS   AGE
+ubuntu-22.04   Provisioning   false              4s
+ubuntu-22.04   Provisioning   false   0.0%       4s
+ubuntu-22.04   Provisioning   false   28.2%      6s
+ubuntu-22.04   Provisioning   false   66.5%      8s
+ubuntu-22.04   Provisioning   false   100.0%     10s
+ubuntu-22.04   Provisioning   false   100.0%     16s
+ubuntu-22.04   Ready          false   100%       18s
 ```
 
 В описании ресурса `ClusterVirtualImage` можно получить дополнительную информацию о скачанном образе:
@@ -191,6 +200,11 @@ curl https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm 
 
 ```shell
 d8 k get cvi some-image
-# NAME         PHASE   CDROM   PROGRESS   AGE
-# some-image   Ready   false   100%       1m
+```
+
+В результате будет выведена информация о состоянии образа:
+
+```console
+NAME         PHASE   CDROM   PROGRESS   AGE
+some-image   Ready   false   100%       1m
 ```

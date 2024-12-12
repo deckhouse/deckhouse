@@ -69,48 +69,48 @@ To replace a cluster domain with minimal downtime, follow these steps:
 
 1. Edit the settings of the control-plane manager module responsible for Deckhouse configuration.
 
-    Make changes using the following template:
+   Make changes using the following template:
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: control-plane-manager
-    spec:
-      version: 1
-      enabled: true
-      settings:
-        apiserver:
-          # A list of SANs certificate options for generating the API server certificate
-          certSANs:
-           - kubernetes.default.svc.<old clusterDomain>
-           - kubernetes.default.svc.<new clusterDomain>
-          serviceAccount:
-            # A list of API audiences to include when creating ServiceAccount tokens
-            additionalAPIAudiences:
-            - https://kubernetes.default.svc.<old clusterDomain>
-            - https://kubernetes.default.svc.<new clusterDomain>
-            # A list of additional ServiceAccount API token issuers to add as they are created
-            additionalAPIIssuers:
-            - https://kubernetes.default.svc.<old clusterDomain>
-            - https://kubernetes.default.svc.<new clusterDomain>
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       apiserver:
+         # A list of SANs certificate options for generating the API server certificate
+         certSANs:
+          - kubernetes.default.svc.<old clusterDomain>
+          - kubernetes.default.svc.<new clusterDomain>
+         serviceAccount:
+           # A list of API audiences to include when creating ServiceAccount tokens
+           additionalAPIAudiences:
+           - https://kubernetes.default.svc.<old clusterDomain>
+           - https://kubernetes.default.svc.<new clusterDomain>
+           # A list of additional ServiceAccount API token issuers to add as they are created
+           additionalAPIIssuers:
+           - https://kubernetes.default.svc.<old clusterDomain>
+           - https://kubernetes.default.svc.<new clusterDomain>
+   ```
 
 1. Add a list of alternative cluster domains to the kube-dns module configuration:
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: kube-dns
-    spec:
-      version: 1
-      enabled: true
-      settings:
-        clusterDomainAliases:
-          - <old clusterDomain>
-          - <new clusterDomain>
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: kube-dns
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       clusterDomainAliases:
+         - <old clusterDomain>
+         - <new clusterDomain>
+   ```
 
 1. Wait for `kube-apiserver` to restart.
 1. Replace `clusterDomain` with a new domain in `dhctl config edit cluster-configuration`.
