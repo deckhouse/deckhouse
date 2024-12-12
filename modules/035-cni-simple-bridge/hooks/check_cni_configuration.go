@@ -39,6 +39,7 @@ const (
 	cniConfigurationSettledKey = "cniConfigurationSettled"
 	checkCNIConfigMetricName   = "cniMisconfigured"
 	checkCNIConfigMetricGroup  = "d8_check_cni_conf"
+	desiredCNIModuleConfigName = "desired-cni-moduleconfig"
 	cni                        = "simple-bridge"
 	cniName                    = "cni-" + cni
 )
@@ -175,7 +176,7 @@ func checkCni(input *go_hook.HookInput) error {
 	// This means that the current CNI module is enabled and configured via mc, nothing to do.
 	if len(input.Snapshots["cni_configuration_secret"]) == 0 || input.Snapshots["cni_configuration_secret"][0] == nil {
 		setCNIMiscMetricAndReq(input, false)
-		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "desiredCNIModuleConfig")
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
 	}
 
@@ -184,7 +185,7 @@ func checkCni(input *go_hook.HookInput) error {
 	cniSecret := input.Snapshots["cni_configuration_secret"][0].(cniSecretStruct)
 	if cniSecret.cni != cni {
 		setCNIMiscMetricAndReq(input, false)
-		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "desiredCNIModuleConfig")
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		return nil
 	}
 
@@ -226,12 +227,12 @@ func checkCni(input *go_hook.HookInput) error {
 				Kind:       "ConfigMap",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "desiredCNIModuleConfig",
+				Name:      desiredCNIModuleConfigName,
 				Namespace: "d8-system",
 			},
 			Data: data,
 		}
-		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "desiredCNIModuleConfig")
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 		input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
 		setCNIMiscMetricAndReq(input, true)
 		return nil
@@ -239,6 +240,6 @@ func checkCni(input *go_hook.HookInput) error {
 
 	// All configuration settled, nothing to do.
 	setCNIMiscMetricAndReq(input, false)
-	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", "desiredCNIModuleConfig")
+	input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
 	return nil
 }

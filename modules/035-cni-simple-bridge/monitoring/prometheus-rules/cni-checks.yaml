@@ -13,5 +13,5 @@
         plk_grouped_by__d8_cni_check: D8CNIMisconfigured,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         description: |
           It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
-          You can find the desired settings in the `d8-system/desiredCNIModuleConfig` configmap.
+          You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
         summary: The settings from the secret `d8-cni-configuratuin` and the moduleConfig contradict each other.
