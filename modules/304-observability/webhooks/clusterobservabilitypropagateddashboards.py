@@ -17,6 +17,7 @@
 from typing import Optional
 from deckhouse import hook
 from dotmap import DotMap
+import json
 
 prefix = "propagated_"
 
@@ -73,8 +74,8 @@ def validate_creation_or_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     warnings = []
 
     name = ctx.review.request.object.metadata.name
-    definition = ctx.review.request.object.spec.definition
-    warnings.append(str(definition.uid))
+    definition = json.loads(ctx.review.request.object.spec.definition)
+    warnings.append(definition["uid"])
     return None, warnings
 
     uid = definition.uid
