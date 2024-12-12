@@ -90,7 +90,8 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: lib.Queue("federation"),
+	Queue:        lib.Queue("federation"),
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "federations",
@@ -102,7 +103,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
-		{Name: "cron", Crontab: "* * * * *"},
+		{Name: "cron", Crontab: "*/5 * * * *"},
 	},
 }, dependency.WithExternalDependencies(federationDiscovery))
 
