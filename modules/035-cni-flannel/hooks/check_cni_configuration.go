@@ -191,27 +191,28 @@ func checkCni(input *go_hook.HookInput) error {
 
 	// Secret d8-cni-configuration exist, key "cni" eq "flannel".
 
+	// Prepare desiredCNIModuleConfig
+	desiredCNIModuleConfig := &v1alpha1.ModuleConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ModuleConfig",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: cniName,
+		},
+		Spec: v1alpha1.ModuleConfigSpec{
+			Enabled:  pointer.Bool(true),
+			Version:  1,
+			Settings: v1alpha1.SettingsValues{},
+		},
+	}
+
 	// Let's check what mc exist and explicitly enabled.
-	desiredCNIModuleConfig := &v1alpha1.ModuleConfig{}
 	if len(input.Snapshots["deckhouse_cni_mc"]) == 0 || input.Snapshots["deckhouse_cni_mc"][0] == nil {
-		desiredCNIModuleConfig = &v1alpha1.ModuleConfig{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ModuleConfig",
-				APIVersion: "deckhouse.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: cniName,
-			},
-			Spec: v1alpha1.ModuleConfigSpec{
-				Enabled:  pointer.Bool(true),
-				Version:  1,
-				Settings: v1alpha1.SettingsValues{},
-			},
-		}
 		needUpdateMC = true
 	} else {
 		cniModuleConfig := input.Snapshots["deckhouse_cni_mc"][0].(*v1alpha1.ModuleConfig)
-		desiredCNIModuleConfig = cniModuleConfig.DeepCopy()
+		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
 	}
 
 	// Skip comparison if in secret d8-cni-configuration key "flannel" does not exist or empty.

@@ -259,13 +259,13 @@ status:
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
-			f.ConfigValuesSet("cniCilium.debugLogging", "true")
+			f.ConfigValuesSet("cniCilium.debugLogging", true)
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes", "masqueradeMode": "Netfilter"}`),
 				cniMCYAML(cniName, pointer.Bool(true), v1alpha1.SettingsValues{
 					"tunnelMode":   "VXLAN",
 					"bpfLBMode":    "SNAT",
-					"debugLogging": "true",
+					"debugLogging": true,
 				}),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
@@ -294,9 +294,9 @@ spec:
   settings:
     tunnelMode: Disabled
     masqueradeMode: Netfilter
-    createNodeRoutes: "true"
+    createNodeRoutes: true
     bpfLBMode: SNAT
-    debugLogging: "true"
+    debugLogging: true
   version: 1
 status:
   message: ""
@@ -342,7 +342,7 @@ spec:
   settings:
     tunnelMode: Disabled
     masqueradeMode: BPF
-    createNodeRoutes: "true"
+    createNodeRoutes: true
     bpfLBMode: SNAT
   version: 1
 status:
@@ -389,7 +389,7 @@ spec:
   settings:
     tunnelMode: Disabled
     masqueradeMode: BPF
-    createNodeRoutes: "true"
+    createNodeRoutes: true
     bpfLBMode: SNAT
   version: 1
 status:

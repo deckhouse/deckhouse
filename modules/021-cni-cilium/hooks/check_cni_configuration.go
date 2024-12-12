@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"k8s.io/utils/pointer"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -28,7 +30,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -191,27 +192,28 @@ func checkCni(input *go_hook.HookInput) error {
 
 	// Secret d8-cni-configuration exist, key "cni" eq "cilium".
 
+	// Prepare desiredCNIModuleConfig
+	desiredCNIModuleConfig := &v1alpha1.ModuleConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ModuleConfig",
+			APIVersion: "deckhouse.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: cniName,
+		},
+		Spec: v1alpha1.ModuleConfigSpec{
+			Enabled:  pointer.Bool(true),
+			Version:  1,
+			Settings: v1alpha1.SettingsValues{},
+		},
+	}
+
 	// Let's check what mc exist and explicitly enabled.
-	desiredCNIModuleConfig := &v1alpha1.ModuleConfig{}
 	if len(input.Snapshots["deckhouse_cni_mc"]) == 0 || input.Snapshots["deckhouse_cni_mc"][0] == nil {
-		desiredCNIModuleConfig = &v1alpha1.ModuleConfig{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ModuleConfig",
-				APIVersion: "deckhouse.io/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: cniName,
-			},
-			Spec: v1alpha1.ModuleConfigSpec{
-				Enabled:  pointer.Bool(true),
-				Version:  1,
-				Settings: v1alpha1.SettingsValues{},
-			},
-		}
 		needUpdateMC = true
 	} else {
 		cniModuleConfig := input.Snapshots["deckhouse_cni_mc"][0].(*v1alpha1.ModuleConfig)
-		desiredCNIModuleConfig = cniModuleConfig.DeepCopy()
+		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
 	}
 
 	// Skip comparison if in secret d8-cni-configuration key "cilium" does not exist or empty.
