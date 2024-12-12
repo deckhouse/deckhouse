@@ -12,7 +12,7 @@ Deckhouse Kubernetes Platform (DKP) использует следующие ди
 
 ## SIEM - ПО для сбора и анализа информации о событиях безопасности
 
-SIEM (Security information and event management) - класс программных продуктов, предназначенных для сбора и анализа информации о событиях безопасности.
+SIEM (Security information and event management) — класс программных продуктов, предназначенных для сбора и анализа информации о событиях безопасности.
 
 ### KUMA (Kaspersky Unified Monitoring and Analysis Platform)
 
