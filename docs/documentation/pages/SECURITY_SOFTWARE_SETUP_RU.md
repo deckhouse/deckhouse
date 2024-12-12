@@ -21,13 +21,13 @@ KUMA объединяет продукты «Лаборатории Каспер
 #### Описание настроек
 
 {% alert level="warning" %}
-Для работы с KUMA должен быть **обязательно включён** модуль [log-shipper](./modules/log-shipper/).
+Для работы с KUMA должен быть **обязательно включён** модуль [log-shipper](modules/log-shipper/).
 {% endalert %}
 
 Для отправки данных [в KUMA](https://go.kaspersky.com/ru-kuma) необходимо настроить на стороне DKP следующие ресурсы:
 
-- [`ClusterLogDestination`](/modules/log-shipper/cr.html#clusterlogdestination);
-- [`ClusterLoggingConfig`](/modules/log-shipper/cr.html#clusterloggingconfig).
+- [`ClusterLogDestination`](modules/log-shipper/cr.html#clusterlogdestination);
+- [`ClusterLoggingConfig`](modules/log-shipper/cr.html#clusterloggingconfig).
 
 {% alert level="info" %}
 На стороне KUMA должны быть настроены необходимые ресурсы для приёма событий.
@@ -167,10 +167,10 @@ spec:
     - kuma-tcp-syslog
 ```
 
-#### Отправка логов в Kafka
+#### Отправка логов в Apache Kafka
 
 {% alert level="info" %}
-При условии, что Kafka настроена на приём данных.
+При условии, что Apache Kafka настроена на приём данных.
 {% endalert %}
 
 ```yaml
