@@ -37,12 +37,14 @@ type HookForDestroyPipeline struct {
 	kubeCl            *client.KubernetesClient
 	nodeToDestroy     string
 	oldMasterIPForSSH string
+	commanderMode     bool
 }
 
-func NewHookForDestroyPipeline(kubeCl *client.KubernetesClient, nodeToDestroy string) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(kubeCl *client.KubernetesClient, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		kubeCl:        kubeCl,
 		nodeToDestroy: nodeToDestroy,
+		commanderMode: commanderMode,
 	}
 }
 
@@ -63,6 +65,10 @@ func (h *HookForDestroyPipeline) BeforeAction(runner terraform.RunnerInterface) 
 }
 
 func (h *HookForDestroyPipeline) AfterAction(runner terraform.RunnerInterface) error {
+	if !h.commanderMode {
+		return nil
+	}
+
 	cl := h.kubeCl.NodeInterfaceAsSSHClient()
 	if cl == nil {
 		log.DebugLn("Node interface is not ssh")
