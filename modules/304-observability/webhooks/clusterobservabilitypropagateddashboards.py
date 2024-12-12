@@ -77,8 +77,7 @@ def validate_creation_or_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     definition = json.loads(ctx.review.request.object.spec.definition)
     uid = definition["uid"]
     if not uid.startswith(prefix):
-        raise Exception(f"clusterobservabilitypropagateddashboard \"{name}\" must contain uid with \"{prefix}\" prefix")
-        return f"clusterobservabilitypropagateddashboard \"{name}\" must contain uid with \"{prefix}\" prefix", warnings
+        return "not allowed", warnings
 
     return None, warnings
 
