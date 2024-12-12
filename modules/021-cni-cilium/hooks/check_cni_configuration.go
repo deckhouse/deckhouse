@@ -239,7 +239,7 @@ func checkCni(input *go_hook.HookInput) error {
 			}
 			value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 			if !ok || !value.Bool() {
-				desiredCNIModuleConfig.Spec.Settings["createNodeRoutes"] = "true"
+				desiredCNIModuleConfig.Spec.Settings["createNodeRoutes"] = true
 				needUpdateMC = true
 			}
 		default:
