@@ -29,6 +29,8 @@ const (
 	ModuleConfigAnnotationAllowDisable = "modules.deckhouse.io/allow-disable"
 
 	ModuleConfigFinalizer = "modules.deckhouse.io/module-config"
+
+	ModuleConfigMessageUnknownModule = "Ignored: unknown module name"
 )
 
 var (

@@ -155,6 +155,14 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.log.Warnf("the module '%s' not found", moduleConfig.Name)
+			err = utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+				moduleConfig.Status.Message = v1alpha1.ModuleConfigMessageUnknownModule
+				return true
+			})
+			if err != nil {
+				r.log.Errorf("failed to update the '%s' module config: %v", moduleConfig.Name, err)
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{Requeue: true}, nil
