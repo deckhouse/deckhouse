@@ -41,6 +41,7 @@ func NewClient(options ...Option) Client {
 	for _, opt := range options {
 		opt(opts)
 	}
+
 	dialer := &net.Dialer{
 		Timeout: opts.timeout,
 	}
