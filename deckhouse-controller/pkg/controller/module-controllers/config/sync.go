@@ -96,7 +96,7 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 			continue
 		}
 		if err := r.refreshModule(ctx, event.ModuleName); err != nil {
-			r.log.Errorf("failed to handle the event for the '%s' module: %v", event.ModuleName, err)
+			r.log.Warnf("failed to handle the event for the '%s' module: %v", event.ModuleName, err)
 		}
 	}
 	return nil
