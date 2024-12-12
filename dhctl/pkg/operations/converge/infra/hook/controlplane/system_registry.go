@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -32,11 +33,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/hashicorp/go-multierror"
 	labels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
 	registryDataDeviceMountLockFile = "/var/lib/bashible/lock_mount_registry_data_device"
 	registryDataDeviceMountPoint    = "/mnt/system-registry-data"
+	registryDataDeviceNodeLabel     = "node.deckhouse.io/registry-data-device-ready"
 	registryTerraformEnableFlagVar  = "systemRegistryEnable"
 	registryPodsNamespace           = "d8-system"
 )
@@ -103,6 +106,12 @@ func attemptUnmountRegistryData(kubeClient *client.KubernetesClient, nodeName st
 		if err != nil {
 			return fmt.Errorf("failed to create SSH client: %s", err)
 		}
+
+		err = unsetRegistryDataDeviceNodeLabel(kubeClient, nodeName)
+		if err != nil {
+			return err
+		}
+
 		exists, err := isMountPointPresent(mountPoint, sshClient)
 		if err != nil {
 			return err
@@ -195,6 +204,36 @@ func checkRegistryPodsExistence(kubeClient *client.KubernetesClient, nodeName, p
 			nodeName,
 		)
 	}
+	return nil
+}
+
+func unsetRegistryDataDeviceNodeLabel(kubeClient *client.KubernetesClient, nodeName string) error {
+	node, err := kubeClient.CoreV1().Nodes().Get(context.Background(), nodeName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get the node %s: %w", nodeName, err)
+	}
+
+	if _, ok := node.ObjectMeta.Labels[registryDataDeviceNodeLabel]; !ok {
+		return nil
+	}
+
+	patchData := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				registryDataDeviceNodeLabel: "",
+			},
+		},
+	}
+	patchBytes, err := json.Marshal(patchData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal patch data: %w", err)
+	}
+
+	_, err = kubeClient.CoreV1().Nodes().Patch(context.Background(), nodeName, types.MergePatchType, patchBytes, metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to delete the label from the node: %w", err)
+	}
+	time.Sleep(5 * time.Second)
 	return nil
 }
 

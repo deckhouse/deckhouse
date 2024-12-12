@@ -188,6 +188,40 @@ function remove_registry_data_device_installed_file() {
   fi
 }
 
+function enable_registry_data_device_label() {
+  if [[ "$FIRST_BASHIBLE_RUN" == "yes" ]]; then
+    return 0
+  fi
+
+  local label="node.deckhouse.io/registry-data-device-ready=true"
+  local node="$D8_NODE_HOSTNAME"
+
+  echo "Label node $node with labels $label"
+  error=$(bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf label node $node --overwrite $label 2>&1)
+  if [ $? -ne 0 ]; then
+    >&2 echo "Failed to label node $node. Error from kubectl: ${error}"
+    exit 1
+  fi
+  echo "Successful label node $node with labels $label"
+}
+
+function disable_registry_data_device_label() {
+  if [[ "$FIRST_BASHIBLE_RUN" == "yes" ]]; then
+    return 0
+  fi
+
+  local label="node.deckhouse.io/registry-data-device-ready="
+  local node="$D8_NODE_HOSTNAME"
+
+  echo "Label node $node with labels $label"
+  error=$(bb-kubectl --request-timeout=60s --kubeconfig=/etc/kubernetes/kubelet.conf label node $node --overwrite $label 2>&1)
+  if [ $? -ne 0 ]; then
+    >&2 echo "Failed to label node $node. Error from kubectl: ${error}"
+    exit 1
+  fi
+  echo "Successful label node $node with labels $label"
+}
+
 # Skip for
 if [ -f /var/lib/bashible/lock_mount_registry_data_device ]; then
   exit 0
@@ -197,6 +231,7 @@ fi
 if is_registry_data_device_mounted; then
   # If mounted, create the installed file marker
   create_registry_data_device_installed_file
+  enable_registry_data_device_label
 else
   # Read the device path from the system registry file
   # The file always exists (created in step 000_create_system_registry_data_device_path.sh.tpl)
@@ -222,7 +257,11 @@ else
     setup_registry_data_device "$dataDevice"
     # Create the installed file marker after setup
     create_registry_data_device_installed_file
+    enable_registry_data_device_label
   else
+    # Disable label before teardown
+    disable_registry_data_device_label
+    sleep 5
     # If dataDevice is empty, teardown the registry data device
     teardown_registry_data_device
     # Remove the installed file marker
