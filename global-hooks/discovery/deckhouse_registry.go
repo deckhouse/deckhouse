@@ -35,7 +35,6 @@ type registrySecret struct {
 	Path              string
 	Scheme            string
 	CA                string
-	RegistryMode      string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -77,7 +76,6 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		Path:              string(secret.Data["path"]),
 		Scheme:            string(scheme),
 		CA:                string(secret.Data["ca"]),
-		RegistryMode:      string(secret.Data["registryMode"]),
 	}, nil
 }
 
@@ -102,20 +100,11 @@ func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
 	// In values we store base64-encoded docker config because in this form it is applied in other places.
 	registryConfEncoded := base64.StdEncoding.EncodeToString(registrySecretRaw.RegistryDockercfg)
 
-	d8Edition := input.Values.Get("global.deckhouseEdition").String()
-	registryMode := "Direct"
-
-	// Don't apply registryMode for CE and BE editions
-	if registrySecretRaw.RegistryMode != "" && (d8Edition != "CE" && d8Edition != "BE") {
-		registryMode = registrySecretRaw.RegistryMode
-	}
-
 	input.Values.Set("global.modulesImages.registry.base", fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path))
 	input.Values.Set("global.modulesImages.registry.dockercfg", registryConfEncoded)
 	input.Values.Set("global.modulesImages.registry.scheme", registrySecretRaw.Scheme)
 	input.Values.Set("global.modulesImages.registry.CA", registrySecretRaw.CA)
 	input.Values.Set("global.modulesImages.registry.address", registrySecretRaw.Address)
 	input.Values.Set("global.modulesImages.registry.path", registrySecretRaw.Path)
-	input.Values.Set("global.modulesImages.registry.registryMode", registryMode)
 	return nil
 }
