@@ -9,13 +9,13 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/ingress.
 Выполните на **master-узле** следующую команду:
 
   ```shell
-  sudo d8 k -n d8-ingress-nginx get po -l app=kruise
+  sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
   ```
 
 Создайте ресурс IngressNginxController, описывающий параметры NGINX Ingress controller.
 
 ```shell
-d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
 # Секция, описывающая параметры NGINX Ingress controller.
 # https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
 apiVersion: deckhouse.io/v1
@@ -43,7 +43,7 @@ EOF
 Запуск Ingress-контроллера может занять какое-то время. Убедитесь что поды Ingress-контроллера перешли в статус  `Running`, выполнив команду:
 
 ```shell
-d8 k -n d8-ingress-nginx get po -l app=controller
+sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 
 {% offtopic title="Пример вывода..." %}
@@ -65,7 +65,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 Поддомены должны резолвиться в IP адрес узла, где запускается nginx-controller. В нашем случае это master-0. Так же убедитесь, что шаблон имён имеет вид %s.<домен>:
 
 ```shell
-d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
+sudo -i d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 ```
 
 Пример вывода, если использовался свой wildcard-домен:
@@ -166,8 +166,7 @@ EOF
 
 
 ```shell
-
-d8 k create -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule

@@ -215,7 +215,8 @@ dhctl bootstrap-phase install-deckhouse \
 
 ```bash
 ssh dvpinstall@54.43.32.21
-d8 k get no
+
+sudo -i d8 k get no
 
 NAME           STATUS   ROLES                  AGE     VERSION
 master-0       Ready    control-plane,master   5m      v1.29.10

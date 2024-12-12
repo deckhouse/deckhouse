@@ -16,7 +16,7 @@ lang: ru
 
   {% snippetcut %}
   ```shell
-  d8 k create -f - << EOF
+  sudo -i d8 k create -f - << EOF
     apiVersion: deckhouse.io/v1
     kind: NodeGroup
     metadata:
@@ -44,7 +44,7 @@ lang: ru
 
   {% snippetcut %}
   ```shell
-  d8 k create -f - <<EOF
+  sudo -i d8 k create -f - <<EOF
     apiVersion: deckhouse.io/v1alpha1
     kind: SSHCredentials
     metadata:
@@ -96,7 +96,7 @@ lang: ru
   ```shell
   export NODE_IP=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.
   export NODE_NAME=<NODE-NAME> # Укажите уникальное имя узла, например, dvp-worker-1.
-  d8 k create -f - <<EOF
+  sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: StaticInstance
   metadata:
@@ -117,12 +117,13 @@ lang: ru
   Выполните на **master-узле** следующую команду, чтобы получить список узлов кластера:
 
   ```shell
-  d8 k get no
+  sudo -i d8 k get no
   ```
   
   Пример вывода:
   {% snippetcut %}
   ```
+  user@master-0:~$ sudo -i d8 k get no
   NAME            STATUS   ROLES                  AGE    VERSION
   master-0        Ready    control-plane,master   40m    v1.29.10
   dvp-worker-1    Ready    worker                 3m     v1.29.10

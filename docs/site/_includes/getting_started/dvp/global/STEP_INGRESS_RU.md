@@ -5,7 +5,7 @@
 
 {% snippetcut %}
 ```shell
-sudo d8 k -n d8-ingress-nginx get po -l app=kruise
+sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
 {% endsnippetcut %}
 
@@ -16,7 +16,7 @@ sudo d8 k -n d8-ingress-nginx get po -l app=kruise
   <li><p><strong>Установка Ingress-контроллера</strong></p>
 {% snippetcut %}
 ```shell
-sudo d8 k apply -f - <<EOF
+sudo -i d8 k apply -f - <<EOF
 # Параметры контроллера NGINX Ingress.
 # https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
 apiVersion: deckhouse.io/v1
@@ -46,15 +46,15 @@ EOF
 
 {% snippetcut %}
 ```shell
-sudo d8 k -n d8-ingress-nginx get po -l app=controller
+sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 {% endsnippetcut %}
 
-<p>Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.</p>
+<p>Дождитесь перехода подов Ingress-контроллера в статус <code>Running</code>.</p>
 
 {% offtopic title="Пример вывода..." %}
 ```console
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+user@host:~$ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```

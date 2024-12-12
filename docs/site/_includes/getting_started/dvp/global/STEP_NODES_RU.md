@@ -12,7 +12,7 @@
 
   {% snippetcut %}
   ```shell
-  sudo d8 k create -f - << EOF
+  sudo -i d8 k create -f - << EOF
   apiVersion: deckhouse.io/v1
   kind: NodeGroup
   metadata:
@@ -40,7 +40,7 @@
 
   {% snippetcut %}
   ```shell
-  kubectl create -f - <<EOF
+  sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: SSHCredentials
   metadata:
@@ -89,7 +89,7 @@
   {% snippetcut %}
   ```shell
   export NODE=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.
-  kubectl create -f - <<EOF
+  sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: StaticInstance
   metadata:
@@ -110,6 +110,6 @@
 
   {% snippetcut %}
   ```shell
-  sudo kubectl get no
+  sudo -i d8 k get no
   ```
   {% endsnippetcut %}

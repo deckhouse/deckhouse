@@ -12,7 +12,7 @@
 <li><p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-d8 k create -f user.yml
+sudo -i d8 k create -f user.yml
 ```
 {% endsnippetcut %}
 </li>
