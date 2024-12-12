@@ -1,0 +1,46 @@
+{{- $options := dict -}}
+
+{{- $imageName := .nil }}
+{{- if .nodeGroup.instanceClass.imageName }}
+  {{- $imageName = .nodeGroup.instanceClass.imageName }}
+{{- end }}
+
+{{- $flavorName := .nil }}
+{{- if .nodeGroup.instanceClass.flavorName }}
+  {{- $flavorName = .nodeGroup.instanceClass.flavorName }}
+{{- end }}
+
+{{- $rootDiskSize := .nil }}
+{{- if .nodeGroup.instanceClass.rootDiskSize }}
+  {{- $rootDiskSize = .nodeGroup.instanceClass.rootDiskSize }}
+{{- end }}
+
+{{- $rootDiskType := .nil }}
+{{- if .nodeGroup.instanceClass.rootDiskType }}
+  {{- $rootDiskType = .nodeGroup.instanceClass.rootDiskType }}
+{{- end }}
+
+{{- $subnets := .nil }}
+{{- if .nodeGroup.instanceClass.subnets }}
+  {{- $subnets = .nodeGroup.instanceClass.subnets }}
+{{- end }}
+
+{{- $securityGroups := .nil }}
+{{- if .nodeGroup.instanceClass.securityGroups }}
+  {{- $securityGroups = .nodeGroup.instanceClass.securityGroups }}
+{{- end }}
+
+{{- $serverGroupID := .nil }}
+{{- if .nodeGroup.instanceClass.serverGroupID }}
+  {{- $serverGroupID = .nodeGroup.instanceClass.serverGroupID }}
+{{- end }}
+
+{{- $_ := set $options "imageName" .nodeGroup.instanceClass.imageName -}}
+{{- $_ := set $options "flavorName" .nodeGroup.instanceClass.flavorName -}}
+{{- $_ := set $options "rootDiskSize" .nodeGroup.instanceClass.rootDiskSize -}}
+{{- $_ := set $options "rootDiskType" .nodeGroup.instanceClass.rootDiskType -}}
+{{- $_ := set $options "subnets" .nodeGroup.instanceClass.subnets -}}
+{{- $_ := set $options "securityGroups" .nodeGroup.instanceClass.securityGroups -}}
+{{- $_ := set $options "serverGroupID" .nodeGroup.instanceClass.serverGroupID -}}
+
+{{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}
