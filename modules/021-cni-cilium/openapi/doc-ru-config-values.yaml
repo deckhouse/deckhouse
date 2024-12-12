@@ -14,6 +14,11 @@ properties:
       Включает создание маршрутов к подам на других узлах.
 
       Все узлы должны находиться в одной сети L2.
+  masqueradeMode:
+    description: |
+      Режим работы SNAT.
+      * - `Netfilter` - использовать Netfilter(iptables/nf_tables).
+      * - `BPF` - использовать BPF.
   tunnelMode:
     description: |
       Режим работы туннеля.
