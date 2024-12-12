@@ -1,7 +1,10 @@
-module: observability 
+module: observability
 namespace: d8-observability
 scopes:
   - observability
 crds:
-  - modules/300-prometheus/crds/*.yaml
+  # - modules/300-prometheus/crds/*.yaml
   - modules/304-observability/crds/*.yaml
+allowedResources:
+  - group: observability.deckhouse.io
+    resources: [all]

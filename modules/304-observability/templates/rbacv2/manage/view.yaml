@@ -1,0 +1,32 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: observability
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-observability
+  name: d8:manage:permission:module:observability:view
+rules:
+- apiGroups:
+  - observability.deckhouse.io
+  resources:
+  - clustermetrics
+  - clusterobservabilitydashboards
+  - clusterobservabilitypropagateddashboards
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - observability
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

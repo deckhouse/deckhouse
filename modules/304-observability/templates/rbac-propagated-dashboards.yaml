@@ -1,0 +1,25 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:observabilitypropageteddashboards:view
+  labels:
+    heritage: deckhouse
+rules:
+- apiGroups: ["observability.deckhouse.io"]
+  resources: ["clusterobservabilitypropagateddashboards"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:observabilitypropageteddashboards:view
+subjects:
+- kind: Group
+  name: system:authenticated
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:observabilitypropageteddashboards:view
+  apiGroup: rbac.authorization.k8s.io
