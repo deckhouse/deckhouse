@@ -17,7 +17,6 @@
 from typing import Optional
 from deckhouse import hook
 from dotmap import DotMap
-import json
 
 prefix = "propagated_"
 
@@ -74,9 +73,8 @@ def validate_creation_or_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     warnings = []
 
     name = ctx.review.request.object.metadata.name
-    definition = json.loads(ctx.review.request.object.spec.definition)
-    uid = definition["uid"]
-    return str(definition), warnings
+    definition = ctx.review.request.object.spec.definition
+    uid = definition.uid
     if not uid.startswith(prefix):
         return f"clusterobservabilitypropagateddashboard \"{name}\" must contain uid with \"{prefix}\" prefix", warnings
 
