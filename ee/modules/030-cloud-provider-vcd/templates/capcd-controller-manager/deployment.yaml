@@ -5,6 +5,7 @@
 {{- else }}
 - "--diagnostics-address=127.0.0.1:9446"
 - "--insecure-diagnostics"
+- "--port=4201"
 {{- end }}
 - "--health-probe-bind-address=:9445"
 {{- end }}
@@ -118,6 +119,8 @@ spec:
           - mountPath: /tmp/k8s-webhook-server/serving-certs
             name: cert
             readOnly: true
+        webhook:
+          port: 4201
         args:
           {{- include "capcd_controller_manager_args" . | nindent 10 }}
         livenessProbe:
