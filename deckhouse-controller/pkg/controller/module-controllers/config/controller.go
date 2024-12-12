@@ -154,7 +154,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
-			if moduleConfig.Name != "global" {
+			if moduleConfig.Name != moduleGlobal {
 				r.log.Warnf("the module '%s' not found", moduleConfig.Name)
 				err = utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 					moduleConfig.Status.Message = v1alpha1.ModuleConfigMessageUnknownModule
