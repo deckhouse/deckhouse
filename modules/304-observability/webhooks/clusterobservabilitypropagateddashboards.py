@@ -74,7 +74,7 @@ def validate_creation_or_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
 
     name = ctx.review.request.object.metadata.name
     definition = ctx.review.request.object.spec.definition
-    warnings.append(str(definition))
+    warnings.append(str(definition.uid))
     return None, warnings
 
     uid = definition.uid
