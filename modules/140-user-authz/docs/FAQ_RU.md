@@ -295,7 +295,7 @@ rules:
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-role: user
+     rbac.deckhouse.io/aggregate-to-kubernetes-as: user
      rbac.deckhouse.io/kind: use
    name: custom:use:capability:mycustom:superresource:view
  rules:
@@ -309,4 +309,4 @@ rules:
    - watch
  ```
 
-Эта роль дополнит роль `d8:use:role:user`.
+Эта роль дополнит роль `d8:use:role:user:kubernetes`.
