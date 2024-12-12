@@ -112,10 +112,21 @@ func (h *HookForUpdatePipeline) BeforeAction(runner terraform.RunnerInterface) (
 		return false, fmt.Errorf("not all nodes are ready: %v", err)
 	}
 
-	// err = removeSystemRegistryFromNode(h.kubeCl, h.nodeToConverge)
-	// if err != nil {
-	// 	return false, fmt.Errorf("failed to remove system registry from node '%s': %v", h.nodeToConverge, err)
-	// }
+	err = tryLockRegistryDataDeviceMount(h.kubeCl, h.nodeToConverge)
+	if err != nil {
+		return false, fmt.Errorf("failed to lock registry data device mount: %v", err)
+	}
+	
+	isRegistryMustBeEnabled, err := isRegistryMustBeEnabled(runner.GetInputVariables())
+	if err != nil {
+		return false, fmt.Errorf("failed to check is registry must be enable: %v", err)
+	}
+	if !isRegistryMustBeEnabled {
+		err = gracefulUnmountRegistryData(h.kubeCl, h.nodeToConverge)
+		if err != nil {
+			return false, fmt.Errorf("failed to umount registry data device from node '%s': %v", h.nodeToConverge, err)
+		}
+	}
 
 	err = removeControlPlaneRoleFromNode(h.kubeCl, h.nodeToConverge)
 	if err != nil {
@@ -159,7 +170,12 @@ func (h *HookForUpdatePipeline) AfterAction(runner terraform.RunnerInterface) er
 	}
 	err = h.saveSystemRegistryDataDevicePath(outputs.SystemRegistryDataDevicePath)
 	if err != nil {
-		return fmt.Errorf("failed to save System registry data device path: %v", err)
+		return fmt.Errorf("failed to save registry data device path: %v", err)
+	}
+
+	err = tryUnlockRegistryDataDeviceMount(h.kubeCl, h.nodeToConverge)
+	if err != nil {
+		return fmt.Errorf("failed to unlock registry data device mount: %v", err)
 	}
 
 	err = waitEtcdHasMember(h.kubeCl.KubeClient.(*flantkubeclient.Client), h.nodeToConverge)

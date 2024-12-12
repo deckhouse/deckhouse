@@ -100,17 +100,15 @@ func removeControlPlaneRoleFromNode(kubeCl *client.KubernetesClient, nodeName st
 	return nil
 }
 
-func removeSystemRegistryFromNode(kubeClient *client.KubernetesClient, nodeName string) error {
-	if err := waitForRegistryStaticPodDeletion(kubeClient, nodeName); err != nil {
-		return fmt.Errorf("failed to remove registry static pod on node '%s': %v", nodeName, err)
+func gracefulUnmountRegistryData(kubeClient *client.KubernetesClient, nodeName string) error {
+	if err := waitForRegistryPodsDeletion(kubeClient, nodeName); err != nil {
+		return fmt.Errorf("failed to wait for removing registry pods on node '%s': %v", nodeName, err)
 	}
-
 	if err := attemptUnmountRegistryData(kubeClient, nodeName); err != nil {
 		return fmt.Errorf("failed to unmount registry data device on node '%s': %v", nodeName, err)
 	}
 	return nil
 }
-
 
 func removeLabelsFromNode(kubeCl *client.KubernetesClient, nodeName string, labels []string) error {
 	return retry.NewLoop(fmt.Sprintf("Remove labels from node %s", nodeName), 45, 5*time.Second).Run(func() error {

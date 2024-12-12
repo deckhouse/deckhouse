@@ -188,6 +188,11 @@ function remove_registry_data_device_installed_file() {
   fi
 }
 
+# Skip for
+if [ -f /var/lib/bashible/lock_mount_registry_data_device ]; then
+  exit 0
+fi
+
 # Check if the registry data device is already mounted
 if is_registry_data_device_mounted; then
   # If mounted, create the installed file marker

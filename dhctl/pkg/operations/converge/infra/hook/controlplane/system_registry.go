@@ -18,16 +18,27 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
+
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/hashicorp/go-multierror"
 	labels "k8s.io/apimachinery/pkg/labels"
+)
+
+const (
+	registryDataDeviceMountLockFile = "/var/lib/bashible/lock_mount_registry_data_device"
+	registryDataDeviceMountPoint    = "/mnt/system-registry-data"
+	registryTerraformEnableFlagVar  = "systemRegistryEnable"
+	registryPodsNamespace           = "d8-system"
 )
 
 type MountPointInfo struct {
@@ -35,12 +46,50 @@ type MountPointInfo struct {
 	Mountpoint *string `json:"mountpoint"`
 }
 
-func waitForRegistryStaticPodDeletion(kubeClient *client.KubernetesClient, nodeName string) error {
+func isRegistryMustBeEnabled(terraformVars []byte) (bool, error) {
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(terraformVars, &objmap); err != nil {
+		return false, nil
+	}
+
+	value, found := objmap[registryTerraformEnableFlagVar]
+	if !found {
+		return false, nil
+	}
+
+	var boolValue bool
+	if err := json.Unmarshal(*value, &boolValue); err != nil {
+		return false, err
+	}
+	return boolValue, nil
+}
+
+func waitForRegistryPodsDeletion(kubeClient *client.KubernetesClient, nodeName string) error {
 	return retry.NewLoop(
-		fmt.Sprintf("Checking registry static pod on node '%s'", nodeName),
+		fmt.Sprintf("Checking for registry pods on node '%s'", nodeName),
 		45, 10*time.Second,
 	).Run(func() error {
-		return checkRegistryStaticPodExistence(kubeClient, nodeName)
+		var result *multierror.Error
+		if err := checkRegistryPodsExistence(
+			kubeClient, nodeName, registryPodsNamespace, "registry static",
+			map[string]string{
+				"component": "system-registry",
+				"tier":      "control-plane",
+			},
+		); err != nil {
+			result = multierror.Append(result, err)
+		}
+
+		if err := checkRegistryPodsExistence(
+			kubeClient, nodeName, registryPodsNamespace, "registry static pod manager",
+			map[string]string{
+				"app": "system-registry-staticpod-manager",
+			},
+		); err != nil {
+			result = multierror.Append(result, err)
+		}
+
+		return result.ErrorOrNil()
 	})
 }
 
@@ -49,60 +98,61 @@ func attemptUnmountRegistryData(kubeClient *client.KubernetesClient, nodeName st
 		fmt.Sprintf("Attempting to unmount registry data device on node '%s'", nodeName),
 		45, 10*time.Second,
 	).Run(func() error {
-		return unmountRegistryData(kubeClient, nodeName)
+		const mountPoint = registryDataDeviceMountPoint
+		sshClient, err := createNodeSshClient(kubeClient, nodeName)
+		if err != nil {
+			return fmt.Errorf("failed to create SSH client: %s", err)
+		}
+		exists, err := isMountPointPresent(mountPoint, sshClient)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return nil
+		}
+		return umountPath(mountPoint, sshClient)
 	})
 }
 
-func unmountRegistryData(kubeClient *client.KubernetesClient, nodeName string) error {
-	const mountPoint = "/mnt/system-registry-data"
-
-	sshClient := kubeClient.NodeInterfaceAsSSHClient()
-	if sshClient == nil {
-		return fmt.Errorf("failed to obtain SSH client")
-	}
-
-	host := ""
-	for _, availableHost := range sshClient.Settings.AvailableHosts() {
-		if availableHost.Name == nodeName {
-			host = availableHost.Host
+func tryLockRegistryDataDeviceMount(kubeClient *client.KubernetesClient, nodeName string) error {
+	return retry.NewLoop(
+		fmt.Sprintf("Attempting to lock registry data device on node '%s'", nodeName),
+		45, 10*time.Second,
+	).Run(func() error {
+		sshClient, err := createNodeSshClient(kubeClient, nodeName)
+		if err != nil {
+			return fmt.Errorf("failed to create SSH client: %v", err)
 		}
-	}
-	if host == "" {
-		return fmt.Errorf("node '%s' not found in available hosts", nodeName)
-	}
+		return createLockFile(sshClient, registryDataDeviceMountLockFile)
+	})
+}
 
-	settings := sshClient.Settings.Copy()
-	settings.SetAvailableHosts([]session.Host{{Host: host, Name: nodeName}})
-
-	customSSHClient := ssh.NewClient(settings, sshClient.PrivateKeys)
-
-	exists, err := isMountPointPresent(mountPoint, customSSHClient)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return nil
-	}
-
-	return unmountPath(mountPoint, sshClient)
+func tryUnlockRegistryDataDeviceMount(kubeClient *client.KubernetesClient, nodeName string) error {
+	return retry.NewLoop(
+		fmt.Sprintf("Attempting to unlock registry data device on node '%s'", nodeName),
+		45, 10*time.Second,
+	).Run(func() error {
+		sshClient, err := createNodeSshClient(kubeClient, nodeName)
+		if err != nil {
+			return fmt.Errorf("failed to create SSH client: %v", err)
+		}
+		return removeLockFile(sshClient, registryDataDeviceMountLockFile)
+	})
 }
 
 func isMountPointPresent(mountPoint string, sshClient *ssh.Client) (bool, error) {
-	nodeWrapper := ssh.NewNodeInterfaceWrapper(sshClient)
-	stdout, stderr, err := nodeWrapper.Command(
+	cmd := sshClient.Command(
 		"bash", "-c",
 		"lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '[.blockdevices[] | select(.mountpoint != null) ]'",
-	).Output()
+	)
+	stdout, _, err := cmd.Output()
 	if err != nil {
-		return false, fmt.Errorf("command error: %s %s", string(stderr), err)
+		return false, fmt.Errorf("failed to get lsblk output: %s", err)
 	}
-
 	var mountPoints []MountPointInfo
 	if err := json.Unmarshal(stdout, &mountPoints); err != nil {
 		return false, fmt.Errorf("failed to unmarshal lsblk output: %s", err)
 	}
-
 	for _, mountInfo := range mountPoints {
 		if mountInfo.Mountpoint != nil && *mountInfo.Mountpoint == mountPoint {
 			return true, nil
@@ -111,45 +161,96 @@ func isMountPointPresent(mountPoint string, sshClient *ssh.Client) (bool, error)
 	return false, nil
 }
 
-func unmountPath(mountPoint string, sshClient *ssh.Client) error {
-	nodeWrapper := ssh.NewNodeInterfaceWrapper(sshClient)
-	cmd := nodeWrapper.Command("umount", mountPoint)
+func umountPath(mountPoint string, sshClient *ssh.Client) error {
+	cmd := sshClient.Command("umount", mountPoint)
 	cmd.Sudo()
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to unmount path '%s': %s %s", mountPoint, string(cmd.StderrBytes()), err)
+		return fmt.Errorf("failed to umount path '%s': %s %s", mountPoint, string(cmd.StderrBytes()), err)
 	}
 	return nil
 }
 
-func checkRegistryStaticPodExistence(kubeClient *client.KubernetesClient, nodeName string) error {
-	const podNamespace = "d8-system"
-	podLabels := map[string]string{
-		"component": "system-registry",
-		"tier":      "control-plane",
-	}
-
+func checkRegistryPodsExistence(kubeClient *client.KubernetesClient, nodeName, podNamespace, podName string, podLabels map[string]string) error {
 	staticPods, err := kubeClient.CoreV1().Pods(podNamespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: labels.Set(podLabels).String(),
 		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
 	})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.InfoF("No static pods found on node '%s'. Skipping.", nodeName)
+			log.InfoF("No '%s' pod found on node '%s'. Skipping.", podName, nodeName)
 			return nil
 		}
-		return fmt.Errorf("failed to list pods on node '%s': %v", nodeName, err)
+		return fmt.Errorf("failed to list '%s' pod on node '%s': %v", podName, nodeName, err)
 	}
-
 	if len(staticPods.Items) > 0 {
 		var podNames []string
 		for _, pod := range staticPods.Items {
 			podNames = append(podNames, pod.Name)
 		}
 		return fmt.Errorf(
-			"found static pods '%v' on node '%s'. Please delete them manually",
-			podNames, nodeName,
+			"found '%s' pod '%v' on node '%s'. Please delete them before proceeding",
+			podName,
+			podNames,
+			nodeName,
 		)
 	}
 	return nil
+}
+
+func createNodeSshClient(kubeClient *client.KubernetesClient, nodeName string) (*ssh.Client, error) {
+	sshClient := kubeClient.NodeInterfaceAsSSHClient()
+	if sshClient == nil {
+		return nil, fmt.Errorf("failed to obtain SSH client")
+	}
+	host := ""
+	for _, availableHost := range sshClient.Settings.AvailableHosts() {
+		if availableHost.Name == nodeName {
+			host = availableHost.Host
+		}
+	}
+	if host == "" {
+		return nil, fmt.Errorf("node '%s' not found in available hosts", nodeName)
+	}
+	settings := sshClient.Settings.Copy()
+	settings.SetAvailableHosts([]session.Host{{Host: host, Name: nodeName}})
+	return ssh.NewClient(settings, sshClient.PrivateKeys), nil
+}
+func createLockFile(sshClient *ssh.Client, lockFilePath string) error {
+	isExist, err := isLockFileExists(sshClient, lockFilePath)
+	if err != nil {
+		return fmt.Errorf("error checking lock file '%s': %v", lockFilePath, err)
+	}
+	if isExist {
+		return nil
+	}
+	cmd := sshClient.Command("touch", lockFilePath)
+	cmd.Sudo()
+	return cmd.Run()
+}
+
+func removeLockFile(sshClient *ssh.Client, lockFilePath string) error {
+	isExist, err := isLockFileExists(sshClient, lockFilePath)
+	if err != nil {
+		return fmt.Errorf("error checking lock file '%s': %v", lockFilePath, err)
+	}
+	if !isExist {
+		return nil
+	}
+	cmd := sshClient.Command("rm", "-f", lockFilePath)
+	cmd.Sudo()
+	return cmd.Run()
+}
+
+func isLockFileExists(sshClient *ssh.Client, lockFilePath string) (bool, error) {
+	checkLockFileStdout := ""
+	checkLockFileStdoutHandler := func(l string) { checkLockFileStdout += l }
+	cmd := sshClient.Command("test", "-e", lockFilePath, "&&", "echo", "true", "||", "echo", "false")
+	cmd.Sudo()
+	cmd.WithStdoutHandler(checkLockFileStdoutHandler)
+	err := cmd.Run()
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(checkLockFileStdout) == "true", nil
 }

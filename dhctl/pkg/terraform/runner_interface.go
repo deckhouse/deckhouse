@@ -35,4 +35,5 @@ type RunnerInterface interface {
 	GetTerraformExecutor() Executor
 	IsLogToBuffer() bool
 	GetLog() []string
+	GetInputVariables() []byte
 }
