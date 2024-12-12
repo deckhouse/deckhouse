@@ -1,7 +1,9 @@
 ---
-title: "Platform installation"
+title: "Base platform installation"
 permalink: en/virtualization-platform/documentation/admin/install/steps/install.html
 ---
+
+TODO Sync with BASE_CLUSTER_RU
 
 ## Configuration Preparation
 
@@ -252,7 +254,7 @@ where:
   - SSH access keys;
   - configuration file;
   - resources file, etc.
-- `<RELEASE_CHANNEL>` — [update channel](../update_channels.html) of the platform in kebab-case. It should match the one set in `config.yaml`:
+- `<RELEASE_CHANNEL>` — [update channel](../../update_channels.html) of the platform in kebab-case. It should match the one set in `config.yaml`:
   - `alpha` — for the *Alpha* update channel;
   - `beta` — for the *Beta* update channel;
   - `early-access` — for the *Early Access* update channel;
