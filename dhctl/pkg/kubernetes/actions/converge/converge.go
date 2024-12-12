@@ -15,9 +15,12 @@
 package converge
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/google/uuid"
 
@@ -244,6 +247,13 @@ func (r *Runner) converge() error {
 		}
 
 		var nodeGroupsWithStateInCluster []string
+		var nodeGroupsWithoutStateInCluster []config.TerraNodeGroupSpec
+
+		type checkResult struct {
+			name    string
+			buffLog *bytes.Buffer
+			err     error
+		}
 
 		for _, group := range terraNodeGroups {
 			// Skip if node group terraform state exists, we will update node group state below
@@ -251,9 +261,12 @@ func (r *Runner) converge() error {
 				nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
 				continue
 			}
-			if err := r.createPreviouslyNotExistedNodeGroup(group, metaConfig); err != nil {
-				return err
-			}
+
+			nodeGroupsWithoutStateInCluster = append(nodeGroupsWithoutStateInCluster, group)
+		}
+		err := r.parallelCreatePreviouslyNotExistedNodeGroup(nodeGroupsWithoutStateInCluster, metaConfig)
+		if err != nil {
+			return err
 		}
 
 		for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
@@ -362,8 +375,9 @@ func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
 	})
 }
 
-func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroupSpec, metaConfig *config.MetaConfig) error {
+func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroupSpec, metaConfig *config.MetaConfig, saveLogToBuffer bool) error {
 	return log.Process("converge", fmt.Sprintf("Add NodeGroup %s (replicas: %v)️", group.Name, group.Replicas), func() error {
+
 		err := CreateNodeGroup(r.kubeCl, group.Name, metaConfig.NodeGroupManifest(group))
 		if err != nil {
 			return err
@@ -380,12 +394,95 @@ func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroup
 			nodesIndexToCreate = append(nodesIndexToCreate, i)
 		}
 
-		_, err = ParallelBootstrapAdditionalNodes(r.kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, r.terraformContext)
+		_, err = ParallelBootstrapAdditionalNodes(r.kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, r.terraformContext, nil, saveLogToBuffer)
 		if err != nil {
 			return err
 		}
 
 		return WaitForNodesBecomeReady(r.kubeCl, group.Name, group.Replicas)
+	})
+}
+
+func (r *Runner) parallelCreatePreviouslyNotExistedNodeGroup(groups []config.TerraNodeGroupSpec, metaConfig *config.MetaConfig) error {
+	msg := "Add NodeGroups"
+	for _, group := range groups {
+		msg += fmt.Sprintf("%s (replicas: %v)️, ", group.Name, group.Replicas)
+	}
+	return log.Process("converge", msg, func() error {
+		var (
+			nodeCloudConfig string
+			nodeListWait    []string
+			mu              sync.Mutex
+			wg              sync.WaitGroup
+		)
+		type checkResult struct {
+			name    string
+			buffLog *bytes.Buffer
+			err     error
+		}
+		saveLogToBuffer := true
+		resultsChan := make(chan checkResult, len(groups))
+		for i, group := range groups {
+			var nodeList []string
+			err := CreateNodeGroup(r.kubeCl, group.Name, metaConfig.NodeGroupManifest(group))
+			if err != nil {
+				return err
+			}
+
+			nodeCloudConfig, err = GetCloudConfig(r.kubeCl, group.Name, ShowDeckhouseLogs)
+			if err != nil {
+				return err
+			}
+
+			var nodesIndexToCreate []int
+			for i := 0; i < group.Replicas; i++ {
+				nodesIndexToCreate = append(nodesIndexToCreate, i)
+			}
+
+			wg.Add(1)
+			go func(i int, saveLogToBuffer bool) {
+				defer wg.Done()
+				var buffNGLog bytes.Buffer
+
+				if i == 0 {
+					saveLogToBuffer = false
+				}
+				nodeList, err = ParallelBootstrapAdditionalNodes(r.kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, r.terraformContext, &buffNGLog, saveLogToBuffer)
+
+				resultsChan <- checkResult{
+					name:    group.Name,
+					buffLog: &buffNGLog,
+					err:     err,
+				}
+				mu.Lock()
+				nodeListWait = append(nodeListWait, nodeList...)
+				mu.Unlock()
+			}(i, saveLogToBuffer)
+
+		}
+
+		go func() {
+			wg.Wait()
+			close(resultsChan)
+		}()
+
+		for ng := range resultsChan {
+			if ng.err != nil {
+				return ng.err
+			}
+			if ng.buffLog.Len() == 0 {
+				continue
+			}
+			currentLogger := log.GetProcessLogger()
+			currentLogger.LogProcessStart(fmt.Sprintf("Output NG log [%s]", ng.name))
+			scanner := bufio.NewScanner(ng.buffLog)
+			for scanner.Scan() {
+				log.InfoLn(scanner.Text())
+			}
+			currentLogger.LogProcessEnd()
+		}
+
+		return WaitForNodesListBecomeReady(r.kubeCl, nodeListWait, nil)
 	})
 }
 

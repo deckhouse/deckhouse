@@ -119,7 +119,7 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 	return nil
 }
 
-func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, nodesIndexToCreate []int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) ([]string, error) {
+func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, nodesIndexToCreate []int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, buffLog *bytes.Buffer, saveLogToBuffer bool) ([]string, error) {
 
 	var (
 		nodesToWait []string
@@ -149,26 +149,26 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 
 	resultsChan := make(chan checkResult, len(nodesIndexToCreate))
 	for i, indexCandidate := range nodesIndexToCreate {
-		saveLogToBuffer := true
 		candidateName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, indexCandidate)
-		var buffLog bytes.Buffer
+		var buffNodeLog bytes.Buffer
+		saveNodeLogToBuffer := true
 		wg.Add(1)
-		go func(i, indexCandidate int, candidateName string) {
+		go func(i, indexCandidate int, candidateName string, saveNodeLogToBuffer bool) {
 			defer wg.Done()
-			if i == 0 {
-				saveLogToBuffer = false
+			if i == 0 && !saveLogToBuffer {
+				saveNodeLogToBuffer = false
 			}
-			err := BootstrapAdditionalNodeForParallelRun(kubeCl, cfg, indexCandidate, step, nodeGroupName, cloudConfig, true, terraformContext, &buffLog, saveLogToBuffer)
+			err := BootstrapAdditionalNodeForParallelRun(kubeCl, cfg, indexCandidate, step, nodeGroupName, cloudConfig, true, terraformContext, &buffNodeLog, saveNodeLogToBuffer)
 
 			resultsChan <- checkResult{
 				name:    candidateName,
-				buffLog: &buffLog,
+				buffLog: &buffNodeLog,
 				err:     err,
 			}
 			mu.Lock()
 			nodesToWait = append(nodesToWait, candidateName)
 			mu.Unlock()
-		}(i, indexCandidate, candidateName)
+		}(i, indexCandidate, candidateName, saveNodeLogToBuffer)
 	}
 
 	go func() {
@@ -183,13 +183,13 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 		if candidate.buffLog.Len() == 0 {
 			continue
 		}
-		currentLogger := log.GetProcessLogger()
-		currentLogger.LogProcessStart(fmt.Sprintf("Output log [%s]", candidate.name))
+		buffLogger := log.NewPrettyLogger(log.LoggerOptions{OutStream: buffLog})
+		buffLogger.ProcessLogger().LogProcessStart(fmt.Sprintf("Output log [%s]", candidate.name))
 		scanner := bufio.NewScanner(candidate.buffLog)
 		for scanner.Scan() {
-			log.InfoLn(scanner.Text())
+			buffLogger.LogInfoLn((scanner.Text()))
 		}
-		currentLogger.LogProcessEnd()
+		buffLogger.ProcessLogger().LogProcessEnd()
 	}
 	return nodesToWait, nil
 }
