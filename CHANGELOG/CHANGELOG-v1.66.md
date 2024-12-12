@@ -1,5 +1,10 @@
 # Changelog v1.66
 
+## [MALFORMED]
+
+
+ - #10969 missing section, missing summary, missing type, unknown section ""
+
 ## Know before update
 
 
@@ -42,11 +47,14 @@
 ## Fixes
 
 
+ - **[candi]** Fix converge of Azure cluster without nameservers in config [#10931](https://github.com/deckhouse/deckhouse/pull/10931)
  - **[candi]** nodeUser creation fix [#10795](https://github.com/deckhouse/deckhouse/pull/10795)
  - **[candi]** Fix LC_MESSAGES unknown locale. [#10440](https://github.com/deckhouse/deckhouse/pull/10440)
  - **[candi]** Change permissions for containerd dir. [#10133](https://github.com/deckhouse/deckhouse/pull/10133)
  - **[control-plane-manager]** Label `heritage: deckhouse` in namespace kube-system. [#10224](https://github.com/deckhouse/deckhouse/pull/10224)
+ - **[dhctl]** Fixed bootstrap on systems with umask `027`. [#10967](https://github.com/deckhouse/deckhouse/pull/10967)
  - **[dhctl]** Add human readable error on dhctl converge except [#10589](https://github.com/deckhouse/deckhouse/pull/10589)
+ - **[docs]** Add some fixes for priority-class in docs [#10897](https://github.com/deckhouse/deckhouse/pull/10897)
  - **[docs]** Update docs about module creation, fix bugs [#10476](https://github.com/deckhouse/deckhouse/pull/10476)
  - **[monitoring-kubernetes]** Minor `Nodes` dashboard improvements. [#10339](https://github.com/deckhouse/deckhouse/pull/10339)
  - **[multitenancy-manager]** Enable multitenancy-manager by default in default and managed bundles. [#10652](https://github.com/deckhouse/deckhouse/pull/10652)
@@ -54,6 +62,7 @@
  - **[node-manager]** Add instruction on how to add static node to cluster. [#10655](https://github.com/deckhouse/deckhouse/pull/10655)
  - **[node-manager]** Fix handling of machine creation errors in the `machine-controller-manager`(`vsphere` driver). [#10225](https://github.com/deckhouse/deckhouse/pull/10225)
  - **[openvpn]** Fix supported ciphers list. [#10739](https://github.com/deckhouse/deckhouse/pull/10739)
+ - **[user-authn]** Extend list annotations helm.sh/ to delete from secret [#10918](https://github.com/deckhouse/deckhouse/pull/10918)
  - **[user-authn]** Numbers in dex groups. [#10211](https://github.com/deckhouse/deckhouse/pull/10211)
 
 ## Chore
