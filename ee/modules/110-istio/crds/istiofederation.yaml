@@ -67,7 +67,7 @@ spec:
                       x-doc-d8Revision: ee
                       description: |
                         Certificate for validation HTTPS endpoint with remote cluster metadata.
-                      x-doc-examples: ['-----BEGIN CERTIFICATE----- some certificate data -----END CERTIFICATE-----']
+                      x-doc-examples: ['-----BEGIN CERTIFICATE----- ..... -----END CERTIFICATE-----']
             status:
               type: object
               properties:
