@@ -3,4 +3,4 @@ title: "Adding nodes"
 permalink: en/virtualization-platform/documentation/admin/install/steps/nodes.html
 ---
 
-To be done.
+TODO To be done.
