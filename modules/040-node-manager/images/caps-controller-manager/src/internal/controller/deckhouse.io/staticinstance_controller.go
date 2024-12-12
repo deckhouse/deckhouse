@@ -30,6 +30,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -49,6 +50,11 @@ type StaticInstanceReconciler struct {
 	Config   *rest.Config
 	Recorder *event.Recorder
 }
+
+const (
+	skipBootstrapPhaseAnnotation = "static.node.deckhouse.io/skip-bootstrap-phase"
+	skipCleanupPhaseAnnotation   = "static.node.deckhouse.io/skip-cleanup-phase"
+)
 
 // +kubebuilder:rbac:groups=deckhouse.io,resources=staticinstances,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=deckhouse.io,resources=staticinstances/status,verbs=get;update;patch
@@ -94,12 +100,6 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			logger.Error(err, "failed to close instance scope")
 		}
 	}()
-
-	if instanceScope.Instance.Annotations == nil {
-		instanceScope.Instance.Annotations = make(map[string]string)
-	}
-	nodeGroupName := instanceScope.MachineScope.StaticMachine.Labels["node-group"]
-	instanceScope.Instance.Annotations["node-group"] = nodeGroupName
 
 	status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
@@ -148,15 +148,33 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
+	if instanceScope.Instance.Annotations == nil {
+		instanceScope.Instance.Annotations = make(map[string]string)
+	}
+
+	nodeGroupName := GetMachineScopeLabel(instanceScope.MachineScope, "node-group", "unknown")
+	instanceScope.Instance.Annotations["node-group"] = nodeGroupName
+
 	// Handle deleted static instance
 	if !staticInstance.ObjectMeta.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, nil
 	}
 
+	if _, skip := instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation]; skip {
+		result, err := r.reconcileMachineMigration(ctx, instanceScope, machineScope)
+		if err != nil {
+			logger.Error(err, "failed to reconcileMachineMigration")
+			return result, err
+		}
+		// result, err = r.adoptBootstrappedStaticInstance(ctx, instanceScope)
+		// if err != nil {
+		// 	logger.Error(err, "failed to adoptBootstrappedStaticInstance")
+		// 	return result, err
+		// }
+		// delete(instanceScope.Instance.Annotations, skipCleanupPhaseAnnotation)
+	}
 	return r.reconcileNormal(ctx, instanceScope)
 }
-
-const skipBootstrapPhaseAnnotation = "static.node.deckhouse.io/skip-bootstrap-phase"
 
 func (r *StaticInstanceReconciler) reconcileNormal(
 	ctx context.Context,
@@ -333,4 +351,75 @@ func (r *StaticInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&deckhousev1.StaticInstance{}).
 		Complete(r)
+}
+
+func GetMachineScopeLabel(machineScope *scope.MachineScope, key string, defaultValue string) string {
+	if machineScope == nil {
+		return defaultValue
+	}
+	if machineScope.StaticMachine == nil {
+		return defaultValue
+	}
+	if machineScope.StaticMachine.Labels == nil {
+		return defaultValue
+	}
+
+	if value, exists := machineScope.StaticMachine.Labels[key]; exists && value != "" {
+		return value
+	}
+
+	return defaultValue
+}
+
+func (r *StaticInstanceReconciler) reconcileMachineMigration(
+	ctx context.Context,
+	instanceScope *scope.InstanceScope,
+	machineScope *scope.MachineScope,
+) (ctrl.Result, error) {
+	logger := ctrl.LoggerFrom(ctx)
+
+	machine := machineScope.Machine
+
+	patchHelper, err := patch.NewHelper(machine, r.Client)
+	if err != nil {
+		logger.Error(err, "failed to init patch helper")
+		return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
+	}
+
+	defer func() {
+		if err := patchHelper.Patch(ctx, machine); err != nil {
+			logger.Error(err, "Failed to patch Machine during migration")
+		}
+	}()
+
+	if machine.Annotations == nil {
+		machine.Annotations = make(map[string]string)
+	}
+	if _, exists := machine.Annotations["cluster.x-k8s.io/paused"]; !exists {
+		machine.Annotations["cluster.x-k8s.io/paused"] = ""
+		logger.Info("Added 'cluster.x-k8s.io/paused' annotation to Machine", "Machine", machine.Name)
+	}
+
+	if len(machine.Finalizers) > 0 {
+		machine.Finalizers = []string{}
+		logger.Info("Removed all finalizers from Machine", "Machine", machine.Name)
+	}
+
+	if err := patchHelper.Patch(ctx, machine); err != nil {
+		logger.Error(err, "Failed to patch Machine during migration", "Machine", machine.Name)
+		return ctrl.Result{}, errors.Wrap(err, "failed to patch Machine")
+	}
+
+	logger.Info("Successfully patched Machine: added 'paused' annotation and removed all finalizers", "Machine", machine.Name)
+
+	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
+
+	if err := instanceScope.Patch(ctx); err != nil {
+		logger.Error(err, "Failed to set StaticInstance phase to Pending")
+		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticInstance with Pending phase")
+	}
+
+	logger.Info("Successfully updated StaticInstance to Pending phase", "StaticInstance", instanceScope.Instance.Name)
+
+	return ctrl.Result{}, nil
 }
