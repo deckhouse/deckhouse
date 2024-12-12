@@ -6,7 +6,7 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: use
-    rbac.deckhouse.io/aggregate-to-role: admin
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
 rules:
   - apiGroups:
       - rbac.authorization.k8s.io
@@ -17,16 +17,6 @@ rules:
       - get
       - list
       - watch
-      - create
-      - delete
-      - deletecollection
-      - patch
-      - update
-  - apiGroups:
-      - networking.k8s.io
-    resources:
-      - networkpolicies
-    verbs:
       - create
       - delete
       - deletecollection

@@ -1,0 +1,50 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+spec:
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Параметры группы Huaweicloud servers, которые будет использовать `CAPI` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                flavorName:
+                  description: |
+                    Тип заказываемых виртуальных машин.
+
+                    Получить список всех доступных flavor'ов можно с помощью команды: `openstack flavor list`.
+
+                    Для всех не master-узлов желательно использовать flavor'ы с локальным диском. Если в облаке поддерживаются локальные диски, они обычно быстрее и дешевле. Недостатком использования таких flavor'ов является невозможность миграции узлов между гипервизорами.
+                imageName:
+                  description: |
+                    Имя образа виртуальной машины, который будет использоваться для инстанса.
+
+                    Получить список всех доступных образов можно с помощью команды: `openstack image list`.
+
+                    Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                rootDiskSize:
+                  description: |
+                    Размер root-диска. Значение указывается в гигабайтах.
+
+                    Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+                rootDiskType:
+                  description: |
+                    Тип root-диска. Значение указывается в гигабайтах.
+
+                    Параметр используется для указания типа тома, который будет использоваться для корневого диска.
+                subnets:
+                  description: |
+                    Пути к сетям, к которым будут подключаться вторичные сетевые карты VirtualMachines.
+                securityGroups:
+                  description: |
+                    Группы безопасности, которые будут применяться к сетевым портам ВМ в дополнение к группам безопасности, установленным в конфигурации облачного провайдера.
+
+                    Они позволяют устанавливать правила брандмауэра для предоставленных экземпляров..
+
+                    Группа `SecurityGroups` может не поддерживаться поставщиком облачных услуг.
+                serverGroupID:
+                  description: Группа серверов, в которую следует назначить машину

@@ -114,6 +114,9 @@ func (s *TestMatrixSuite) changeSymlinks() {
 	s.changeSymlink(
 		"/deckhouse/ee/modules/030-cloud-provider-dynamix/candi",
 		"/deckhouse/ee/candi/cloud-providers/dynamix/")
+	s.changeSymlink(
+		"/deckhouse/ee/modules/030-cloud-provider-huaweicloud/candi",
+		"/deckhouse/ee/candi/cloud-providers/huaweicloud/")
 }
 
 // restoreSymlinks restores symlinks in module dir to original place

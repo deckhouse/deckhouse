@@ -1,0 +1,121 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: huaweicloudinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-huaweicloud
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of HuaweiCloud servers used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module).
+
+            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - flavorName
+              properties:
+                flavorName:
+                  description: |
+                    Flavor of HuaweiCloud servers.
+
+                    Get a list of all available flavors: `huaweicloud flavor list`.
+
+                    For all non-master nodes it is advisable to use flavor's with a local disk. If cloud provider supports local disks they are usually faster and cheaper. The disadvantage of using such flavors is the inability to migrate nodes between hypervisors.
+
+                    Flavor create example: `huaweicloud flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
+
+                  x-doc-examples: ['m1.medium']
+                  type: string
+                imageName:
+                  description: |
+                    Image to use while provisioning HuaweiCloud servers.
+
+                    Use this command to get a list of available images: `huaweicloud image list`.
+
+                    The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+
+                    **By default:** either `HuaweiCloudCloudDiscoveryData` value or `instances.imageName` is used.
+                  x-doc-required: false
+                  x-doc-examples: ['ubuntu-18-04-cloud-amd64']
+                  type: string
+                rootDiskSize:
+                  description: |
+                    The size of a root disk (in gigabytes).
+                    This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
+                  x-doc-examples: [20]
+                  type: integer
+                  x-doc-required: false
+                rootDiskType:
+                  description: |
+                    The type of a root disk.
+
+                    The parameter is used to specify the type of volume that will be used for the root disk.
+
+                    **By default:** the value from `HuaweiCloudCloudDiscoveryData` is used.
+                  x-doc-examples: ['GPSSD']
+                  type: string
+                  x-doc-required: false
+                subnets:
+                  description: |
+                    Paths to networks that VirtualMachines' secondary NICs will connect to.
+
+                    **By default:** the value from `HuaweiCloudCloudDiscoveryData` is used.
+                  x-doc-examples:
+                  - ['BGP-network-VLAN-3894', 'External-VLAN-3699']
+                  type: array
+                  items:
+                    type: string
+                  x-doc-required: false
+                securityGroups:
+                  description: |
+                    Security groups that will be applied to VM's network ports in addition to security groups set in a cloud provider configuration.
+
+                    They allow you to set firewall rules for provisioned instances.
+
+                    The `SecurityGroups` may not be supported by the cloud provider.
+                  x-doc-examples:
+                    - ["security-group-1", "security-group-2"]
+                  type: array
+                  items:
+                    type: string
+                  x-doc-required: false
+                serverGroupID:
+                  description: The server group to assign the machine to
+                  type: string
+                  x-doc-examples: ['server-group-1']
+                  x-doc-required: false
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: huaweicloudinstanceclasses
+    singular: huaweicloudinstanceclass
+    kind: HuaweiCloudInstanceClass
+    categories:
+      - cloudinstanceclasses
