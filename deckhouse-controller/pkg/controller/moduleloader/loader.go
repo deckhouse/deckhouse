@@ -19,9 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -197,7 +197,7 @@ func (l *Loader) processModuleDefinition(def *moduletypes.Definition) (*modulety
 		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 
-	// load constrains
+	// load constraints
 	if err = extenders.AddConstraints(def.Name, def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
@@ -332,7 +332,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 				needsUpdate = true
 			}
 
-			if !maps.Equal(module.Properties.Requirements, def.Requirements) {
+			if !reflect.DeepEqual(module.Properties.Requirements, def.Requirements) {
 				module.Properties.Requirements = def.Requirements
 				needsUpdate = true
 			}

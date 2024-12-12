@@ -56,6 +56,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -178,6 +179,16 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
+
+	// instantiate ModuleDependency extender
+	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
+		module := new(v1alpha1.Module)
+		if err := runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
+			return "", err
+		}
+
+		return module.GetVersion(), nil
+	})
 
 	// register extenders
 	for _, extender := range extenders.Extenders() {

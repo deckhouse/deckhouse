@@ -51,8 +51,7 @@ spec:
                   description: Marks release as a part of canary release. This release will be delayed until this time.
                 requirements:
                   type: object
-                  additionalProperties:
-                    type: string
+                  x-kubernetes-preserve-unknown-fields: true
                   description: Deckhouse release requirements.
                 changelog:
                   type: object
