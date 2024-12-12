@@ -441,18 +441,25 @@ name: echoserver
 version: 0.0.1
 dependencies:
 - name: deckhouse_lib_helm
-  version: 1.5.0
+  version: 1.38.0
   repository: https://deckhouse.github.io/lib-helm
 ```
 
 ## module.yaml
 
 В данном файле настройте следующие опции модуля:
-
+- `name: string` - имя модуля, например `echo-server`. Обязателен, при существовании данного файла.
 - `tags: string` — дополнительные теги для модуля, которые преобразуются в лейблы модуля: `module.deckhouse.io/$tag=""`.
-- `weight: integer` — вес модуля. Вес по-умолчанию: 900, можно задать собственный вес в диапазоне 900 – 999.
+- `weight: integer` — вес модуля. Вес по-умолчанию: 900.
 - `stage: string` — [cтадия жизненного цикла модуля](../versioning/#стадия-жизненного-цикла-модуля). Может быть `Sandbox`, `Incubating`, `Graduated` или `Deprecated`.
 - `description: string` — описание модуля.
+- `requirements: object` — зависимости модуля.
+  - `deckhouse: string` — зависимость от версии Deckhouse Kubernetes Platform.
+  - `kubernetes: string` — зависимость от версии Kubernetes.
+  - `bootstrapped: boolean` — зависимость от стадии установки Deckhouse Kubernetes Platform.
+- `disable: object` — опции отключения модуля.
+  - `confirmation: boolean` — требовать подтверждение при отключении модуля.
+  - `message: string` — сообщение с детализацией, что произойдет при отключении модуля.
 
 Например:
 
@@ -461,6 +468,13 @@ tags: ["test", "myTag"]
 weight: 960
 stage: "Sandbox"
 description: "my awesome module"
+requirements:
+    deckhouse: ">= 1.61"
+    kubernetes: ">= 1.27"
+    bootstrapped: true
+disable:
+  confirmation: true
+  message: "Disabling this module will delete all XXX resources."
 ```
 
 Будет создан модуль (`deckhouse.io/v1alpha/Module`) с лейблами: `module.deckhouse.io/test=""` и `module.deckhouse.io/myTag=""`, весом `960` и описанием `my awesome module`.
