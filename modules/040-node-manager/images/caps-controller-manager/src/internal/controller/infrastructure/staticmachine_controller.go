@@ -56,6 +56,11 @@ const (
 	RequeueForStaticMachineDeleting       = 5 * time.Second
 )
 
+const (
+	skipBootstrapPhaseAnnotation = "static.node.deckhouse.io/skip-bootstrap-phase"
+	skipCleanupPhaseAnnotation   = "static.node.deckhouse.io/skip-cleanup-phase"
+)
+
 // StaticMachineReconciler reconciles a StaticMachine object
 type StaticMachineReconciler struct {
 	k8sClient.Client
@@ -146,6 +151,21 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Handle deleted machines
 	if !staticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
+
+		if instanceScope.Instance.Annotations != nil {
+			if _, skip := instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation]; skip {
+
+				// Remove finalizer from staticmachine
+				instanceScope.Logger.Info("Reconciling delete StaticMachine: skip")
+				controllerutil.RemoveFinalizer(machineScope.StaticMachine, infrav1.MachineFinalizer)
+
+				if err = machineScope.Patch(ctx); err != nil {
+					return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer from StaticMachine")
+				}
+
+				return ctrl.Result{}, nil
+			}
+		}
 		machineScope.Logger.Info("Reconciling delete StaticMachine")
 
 		return r.reconcileDelete(ctx, machineScope, instanceScope)
@@ -240,6 +260,7 @@ func (r *StaticMachineReconciler) reconcileDelete(
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
 	if instanceScope != nil {
+
 		result, err := r.cleanup(ctx, instanceScope)
 		if err != nil {
 			return result, errors.Wrap(err, "failed to cleanup StaticInstance")
