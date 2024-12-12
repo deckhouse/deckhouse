@@ -148,12 +148,12 @@ oom_score = 0
       {{- end }}
     {{- else }}
       {{- /* Embedded registry in Direct mode or disabled */}}
-      {{- if eq .registryMode "Direct" }}
+      {{- if eq .registry.registryMode "Direct" }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
           endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
       {{- end }}
       {{- /* Embedded registry in non Direct mode and cluster uses external registry */}}
-      {{- if and (ne .registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address) }}
+      {{- if and (ne .registry.registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address) }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .registry.address }}"]
           endpoint = ["{{ .registry.scheme }}://{{ .registry.address }}"]
          {{- if .systemRegistry.registryAddress }}
@@ -164,7 +164,7 @@ oom_score = 0
       {{- end }}
       {{- /* Registry tls and auth configuration */}}
       {{- /* Embedded registry in non Direct mode and cluster uses internal embedded registry */}}
-      {{- if and (ne .registryMode "Direct") (eq .systemRegistry.registryAddress .registry.address) }}
+      {{- if and (ne .registry.registryMode "Direct") (eq .systemRegistry.registryAddress .registry.address) }}
         [plugins."io.containerd.grpc.v1.cri".registry.mirrors."{{ .systemRegistry.registryAddress }}"]
           endpoint = ["https://127.0.0.1:5001", "https://{{ .systemRegistry.registryAddress }}"]
       {{- end }}
@@ -190,7 +190,7 @@ oom_score = 0
         {{- end }}
     {{- else }}
       {{- /* Embedded registry in Direct mode or disabled OR Embedded registry in non Direct mode and cluster uses external registry */}}
-      {{- if or (eq .registryMode "Direct") (and (ne .registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address)) }}
+      {{- if or (eq .registry.registryMode "Direct") (and (ne .registry.registryMode "Direct") (ne .systemRegistry.registryAddress .registry.address)) }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."{{ .registry.address }}".auth]
           auth = "{{ .registry.auth | default "" }}"
         {{- if .registry.ca }}
@@ -203,7 +203,7 @@ oom_score = 0
         {{- end }}
       {{- end }}
       {{- /* Embedded registry configuration if non Direct mode for both cases external and internal registry*/}}
-      {{- if ne .registryMode "Direct" }}
+      {{- if ne .registry.registryMode "Direct" }}
         {{- if .systemRegistry.auth }}
         [plugins."io.containerd.grpc.v1.cri".registry.configs."127.0.0.1:5001".auth]
           auth = "{{ .systemRegistry.auth }}"

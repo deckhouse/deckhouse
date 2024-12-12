@@ -47,7 +47,7 @@ stream {
   }
 
 {{- if eq .runType "Normal" }}
-  {{- if and .registryMode (ne .registryMode "Direct") }}
+  {{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
   upstream system-registry {
     least_conn;
     {{- range $key, $value := .normal.apiserverEndpoints }}

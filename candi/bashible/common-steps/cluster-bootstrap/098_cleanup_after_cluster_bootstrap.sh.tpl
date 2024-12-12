@@ -15,7 +15,7 @@
 rm -rf /var/lib/bashible/kubeadm
 bb-package-remove kubeadm
 
-{{- if and .registryMode (ne .registryMode "Direct") }}
+{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
 bb-package-remove seaweedfs dockerAuth dockerDistribution etcd
 rm -rf $IGNITER_DIR
 {{- end }}
