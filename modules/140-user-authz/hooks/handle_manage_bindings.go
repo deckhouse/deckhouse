@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/ptr"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -60,9 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"rbac.deckhouse.io/automated": "true",
 				},
 			},
-			ExecuteHookOnEvents:          ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(false),
-			FilterFunc:                   filterUseBinding,
+			FilterFunc: filterUseBinding,
 		},
 	},
 }, syncBindings)

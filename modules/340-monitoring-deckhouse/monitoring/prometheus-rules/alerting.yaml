@@ -200,8 +200,8 @@
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       description: |
-        The  {{ $labels.moduleName }} module has an deprecated module update policy, the policy selector does not work, and the module does not has the active source. 
+        The  {{ $labels.moduleName }} module has a deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy. 
         
-        Please specify the proper source in the module configuration to continue get updates.
+        Please specify the proper update policy in the module configuration to continue get updates.
       summary: |
-        Conflict detected for module {{ $labels.moduleName }}.
+        The {{ $labels.moduleName }} module has a deprecated module update policy.

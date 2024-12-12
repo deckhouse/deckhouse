@@ -69,7 +69,7 @@ func moduleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) 
 	if err := sdk.FromUnstructured(obj, module); err != nil {
 		return nil, err
 	}
-	if module.Properties.Source != "" {
+	if module.Properties.UpdatePolicy != "" {
 		return nil, nil
 	}
 	return &filteredModule{Name: module.Name, Source: module.Properties.Source}, nil
@@ -84,9 +84,13 @@ func fireMupAlerts(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_update_policy")
 
 	for _, moduleSnapshot := range input.Snapshots["modules"] {
+		if moduleSnapshot == nil {
+			continue
+		}
+
 		module := moduleSnapshot.(*filteredModule)
 
-		var labelsSet labels.Set = map[string]string{"module": module.Name}
+		var labelsSet labels.Set = map[string]string{"module": module.Name, "source": module.Source}
 
 		for _, policySnapshot := range input.Snapshots["moduleUpdatePolicies"] {
 			if policySnapshot == nil {
