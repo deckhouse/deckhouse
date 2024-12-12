@@ -432,7 +432,8 @@ properties:
 
 ## Chart.yaml
 
-Обязательный файл для чарта, аналогичный [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file) из Helm. Должен содержать, как минимум, параметр `name` с именем модуля и параметр `version` с версией.
+Файл для чарта, аналогичный [`Chart.yaml`](https://helm.sh/docs/topics/charts/#the-chartyaml-file) из Helm. Должен содержать, как минимум, параметр `name` с именем модуля и параметр `version` с версией.
+Вы можете не создавать данный файл, Deckhouse создаст его автоматически.
 
 Пример:
 
