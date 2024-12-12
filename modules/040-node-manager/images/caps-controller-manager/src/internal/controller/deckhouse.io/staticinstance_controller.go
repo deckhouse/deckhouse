@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
@@ -157,6 +158,16 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Handle deleted static instance
 	if !staticInstance.ObjectMeta.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, nil
+	}
+
+	if _, skip := instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation]; skip {
+		_, err = r.reconcileMachineMigration(ctx, instanceScope, machineScope)
+		logger.Error(err, "failed to reconcileMachineMigration")
+		_, err = r.adoptBootstrappedStaticInstance(ctx, instanceScope)
+		logger.Error(err, "failed to adoptBootstrappedStaticInstance")
+		if err != nil {
+			delete(instanceScope.Instance.Annotations, skipCleanupPhaseAnnotation)
+		}
 	}
 
 	return r.reconcileNormal(ctx, instanceScope)
@@ -355,4 +366,32 @@ func GetMachineScopeLabel(machineScope *scope.MachineScope, key string, defaultV
 	}
 
 	return defaultValue
+}
+
+func (r *StaticInstanceReconciler) reconcileMachineMigration(
+	ctx context.Context,
+	instanceScope *scope.InstanceScope,
+	machineScope *scope.MachineScope,
+) (ctrl.Result, error) {
+	// Pause machine and remove finalizer
+	if machineScope.Machine.Annotations == nil {
+		machineScope.Machine.Annotations = make(map[string]string)
+	}
+
+	machineScope.Machine.Annotations["cluster.x-k8s.io/paused"] = ""
+	controllerutil.RemoveFinalizer(machineScope.Machine, clusterv1.MachineFinalizer)
+
+	// StaticInstance - Pending
+	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
+
+	err := instanceScope.Patch(ctx)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance to Pending phase")
+	}
+
+	if err = machineScope.Patch(ctx); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to remove finalizer from StaticMachine")
+	}
+
+	return ctrl.Result{}, nil
 }
