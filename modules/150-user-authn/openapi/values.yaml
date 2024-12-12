@@ -98,6 +98,7 @@ properties:
               applicationDomain: test.example.com
               applicationIngressCertificateSecretName: test-tls
               applicationIngressClassName: not-nginx
+              highAvailability: true
               nodeSelector:
                 testnode: ""
               tolerations:
@@ -105,7 +106,6 @@ properties:
                   operator: Equal
                   value: bar
             allowAccessToKubernetes: true
-            highAvailability: true
         items:
           type: object
           properties:
@@ -121,9 +121,6 @@ properties:
               additionalProperties: true
             allowAccessToKubernetes:
               type: boolean
-            highAvailability:
-              type: boolean
-              default: false
             encodedName:
               type: string
             credentials:
