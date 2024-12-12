@@ -6,27 +6,25 @@
 source /deckhouse/shell_lib.sh
 
 function __main__() {
-  # # Like control-plane
-  # if ! values::has global.clusterConfiguration ; then
-  #   echo "false" > "$MODULE_ENABLED_RESULT"
-  #   return
-  # fi
+  # Like control-plane
+  if values::has global.clusterConfiguration ; then
+    echo "true" > "$MODULE_ENABLED_RESULT"
+  else
+    echo "false" > "$MODULE_ENABLED_RESULT"
+  fi
 
-  # # Check if var clusterType exist
+  # # Only for "Static"
   # if ! values::has global.clusterConfiguration.clusterType ; then
   #   echo "Unknown cluster type"
   #   echo "false" > "$MODULE_ENABLED_RESULT"
   #   return
   # fi
-
-  # # Check if clusterType is "Static"
   # cluster_type=$(values::get global.clusterConfiguration.clusterType)
   # if [ "$cluster_type" != "Static" ]; then
   #   echo "false" > "$MODULE_ENABLED_RESULT"
   #   echo "The module is supported only for cluster type Static."
   #   return
   # fi
-  echo "true" > "$MODULE_ENABLED_RESULT"
 }
 
 enabled::run "$@"
