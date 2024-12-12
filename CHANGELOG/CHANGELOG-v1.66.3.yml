@@ -1,0 +1,35 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix values generation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10971
+candi:
+  fixes:
+    - summary: Fix converge of Azure cluster without nameservers in config
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10931
+dhctl:
+  fixes:
+    - summary: Add the 'name' label to the 'd8-cluster-configuration' secret.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10994
+    - summary: Fixed bootstrap on systems with umask `027`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10967
+docs:
+  fixes:
+    - summary: Update supported OS versions table.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11027
+    - summary: Removed optional steps in "Tips for configuring Nexus" in Deckhouse FAQ.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10977
+    - summary: Add some fixes for priority-class in docs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10897
+log-shipper:
+  fixes:
+    - summary: Small docs fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10982
+user-authn:
+  fixes:
+    - summary: Extend list annotations helm.sh/ to delete from secret
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10918
+user-authz:
+  fixes:
+    - summary: Small docs fixes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10982
+
