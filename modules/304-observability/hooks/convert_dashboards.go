@@ -19,14 +19,15 @@ package hooks
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"regexp"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -164,12 +165,12 @@ func convertDashboards(input *go_hook.HookInput) error {
 		var dashboardMap map[string]interface{}
 
 		if err := json.Unmarshal([]byte(dashboard.Definition), &dashboardMap); err != nil {
-			input.Logger.Error("failed to unmarshal dashboard JSON", slog.String("dashoard_name", dashboard.Name), slog.String("error", err.Error()))
+			log.Error("Failed to unmarshal dashboard JSON", dashboard.Name, err)
 			continue
 		}
 
 		if err := dashboard.PrefixUIDs(dashboardMap, prefix); err != nil {
-			input.Logger.Error("failed to prefix uid for dashboard", slog.String("dashboard_name", dashboard.Name), slog.String("error", err.Error()))
+			log.Error("Failed to prefix uid for dashboard", dashboard.Name, err)
 			continue
 		}
 
@@ -177,7 +178,7 @@ func convertDashboards(input *go_hook.HookInput) error {
 
 		dashboardJSON, err := json.MarshalIndent(dashboardMap, "", strings.Repeat(JSONIndentCharacter, 4))
 		if err != nil {
-			input.Logger.Error("failed to marshal dashboard JSON", slog.String("dashboard_name", dashboard.Name), slog.String("error", err.Error()))
+			log.Error("Failed to marshal dashboard JSON", dashboard.Name, err)
 			continue
 		}
 
@@ -235,8 +236,8 @@ func dashboardManifest(name, title, category, kind, definition string) *unstruct
 		"metadata": map[string]interface{}{
 			"name": name,
 			"annotations": map[string]interface{}{
-				"observability.deckhouse.io/category": category,
-				"metadata.deckhouse.io/title":         title,
+				"metadata.deckhouse.io/category": category,
+				"metadata.deckhouse.io/title":    title,
 			},
 			"labels": map[string]interface{}{
 				"module":   "observability",
