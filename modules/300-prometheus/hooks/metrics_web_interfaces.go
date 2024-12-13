@@ -18,14 +18,18 @@ package hooks
 
 import (
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	netv1 "k8s.io/api/networking/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 // This hook get all ingresses with labels `heritage: deckhouse` and 'module'
@@ -43,33 +47,53 @@ import (
 //     2. Relative path to grafana container (/public/img/mylogo.png)
 //     3. Data URI base64 string
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/prometheus/web_interfaces",
-	Kubernetes: []go_hook.KubernetesConfig{
-		{
-			Name:       "ingresses",
-			ApiVersion: "networking.k8s.io/v1",
-			Kind:       "Ingress",
-			LabelSelector: &v1.LabelSelector{
-				MatchLabels: map[string]string{
-					"heritage": "deckhouse",
-				},
-				MatchExpressions: []v1.LabelSelectorRequirement{
-					{
-						Key:      "module",
-						Operator: v1.LabelSelectorOpExists,
+var (
+	_ = sdk.RegisterFunc(&go_hook.HookConfig{
+		Queue: "/modules/prometheus/web_interfaces",
+		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				Name:       "ingresses",
+				ApiVersion: "networking.k8s.io/v1",
+				Kind:       "Ingress",
+				LabelSelector: &v1.LabelSelector{
+					MatchLabels: map[string]string{
+						"heritage": "deckhouse",
+					},
+					MatchExpressions: []v1.LabelSelectorRequirement{
+						{
+							Key:      "module",
+							Operator: v1.LabelSelectorOpExists,
+						},
 					},
 				},
+				FilterFunc: filterIngress,
 			},
-			FilterFunc: filterIngress,
+			{
+				Name:       "global-config",
+				ApiVersion: "deckhouse.io/v1alpha1",
+				Kind:       "ModuleConfig",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"global"},
+				},
+				FilterFunc: filterGlobalConfig,
+			},
 		},
-	},
-}, domainMetricHandler)
+	}, domainMetricHandler)
+)
 
 type exportedWebInterface struct {
 	Icon string
 	Name string
 	URL  string
+}
+
+func filterGlobalConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	mc := &v1alpha1.ModuleConfig{}
+	err := sdk.FromUnstructured(obj, mc)
+	if err != nil {
+		return nil, err
+	}
+	return mc.Spec.Settings["https"], nil
 }
 
 func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -146,7 +170,13 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 
 func domainMetricHandler(input *go_hook.HookInput) error {
 	snap := input.Snapshots["ingresses"]
+	globalConfig := input.Snapshots["global-config"]
 	input.MetricsCollector.Expire("deckhouse_exported_domains")
+
+	var httpsMode interface{}
+	if len(globalConfig) > 0 {
+		httpsMode = globalConfig[0].(map[string]interface{})["mode"].(string)
+	}
 
 	for _, sn := range snap {
 		if sn == nil {
@@ -154,6 +184,12 @@ func domainMetricHandler(input *go_hook.HookInput) error {
 		}
 
 		domain := sn.(exportedWebInterface)
+
+		if httpsMode == "OnlyInURI" {
+			re := regexp.MustCompile(`^http://`)
+			domain.URL = re.ReplaceAllString(domain.URL, "https://")
+		}
+
 		input.MetricsCollector.Set(
 			"deckhouse_web_interfaces",
 			1,
