@@ -35,6 +35,7 @@ kubernetesValidating:
 kubernetes:
 - name: clusterobservabilitypropagateddashboards
   group: main
+  queue: "clusterobservabilitypropagateddashboards"
   executeHookOnEvent: []
   executeHookOnSynchronization: false
   keepFullObjectsInMemory: false
