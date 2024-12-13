@@ -16,6 +16,7 @@ package commands
 
 import (
 	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -30,8 +31,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("converge-exporter", "Run terraform converge exporter.")
+func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
+	cmd := parent.Command(command, "Run terraform converge exporter.")
 	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
@@ -45,8 +46,8 @@ func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.
 	return cmd
 }
 
-func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("check", "Check differences between state of Kubernetes cluster and Terraform state.")
+func DefineTerraformCheckCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
+	cmd := parent.Command(command, "Check differences between state of Kubernetes cluster and Terraform state.")
 	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})

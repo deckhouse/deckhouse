@@ -31,8 +31,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("kubernetes-api-connection", "Test connection to kubernetes api via ssh or directly.")
+func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
+	cmd := parent.Command(command, "Test connection to kubernetes api via ssh or directly.")
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -74,8 +74,8 @@ func DefineTestKubernetesAPIConnectionCommand(parent *kingpin.CmdClause) *kingpi
 	return cmd
 }
 
-func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("deployment-ready", "Wait while deployment is ready.")
+func DefineWaitDeploymentReadyCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
+	cmd := parent.Command(command, "Wait while deployment is ready.")
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
