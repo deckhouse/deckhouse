@@ -70,16 +70,16 @@ import:
   add: /relocate
   to: /
   before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /iptables-wrapper
-  before: setup
 - artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
-  to: /usr/sbin/
+  to: /sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /sbin/iptables-wrapper
+  before: setup
 docker:
-  ENTRYPOINT: [ "/entrypoint" ]
+  ENTRYPOINT: ["/entrypoint"]
