@@ -28,8 +28,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
-func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("remove-deployment", "Delete deckhouse deployment.")
+func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
+	cmd := parent.Command(command, "Delete deckhouse deployment.")
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -64,8 +64,8 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 	return cmd
 }
 
-func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("create-deployment", "Install deckhouse after terraform is applied successful.")
+func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
+	cmd := parent.Command(command, "Install deckhouse after terraform is applied successful.")
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)

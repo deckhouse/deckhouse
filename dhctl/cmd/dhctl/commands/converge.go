@@ -26,8 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
-	cmd := kpApp.Command("converge", "Converge kubernetes cluster.")
+func DefineConvergeCommand(kpApp *kingpin.Application, command string) *kingpin.CmdClause {
+	cmd := kpApp.Command(command, "Converge kubernetes cluster.")
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -49,8 +49,8 @@ func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
 	return cmd
 }
 
-func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
-	cmd := kpApp.Command("converge-periodical", "Start service for periodical run converge.")
+func DefineAutoConvergeCommand(kpApp *kingpin.Application, command string) *kingpin.CmdClause {
+	cmd := kpApp.Command(command, "Start service for periodical run converge.")
 	app.DefineAutoConvergeFlags(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
