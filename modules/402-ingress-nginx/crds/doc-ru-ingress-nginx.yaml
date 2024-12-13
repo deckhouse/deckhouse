@@ -218,7 +218,7 @@ spec:
                         [Подробнее...](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)
                 legacySSL:
                   description: |
-                    Разрешены ли устаревшие версии протокола TLS и алгоритмов шифрования (cipher suites).
+                    Определяет, разрешены ли устаревшие версии протокола TLS и алгоритмов шифрования (cipher suites).
 
                     Работа разрешена для следующих версий протокола TLS: `TLSv1`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`.
 
