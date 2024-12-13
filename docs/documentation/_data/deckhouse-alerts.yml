@@ -49,9 +49,7 @@ alerts:
       edition: ce
       description: Certificate {{$labels.exported_namespace}}/{{$labels.name}} is not provided.
       summary: |
-        Certificate is not provided.
-        Check certificate details for more info.
-        `kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}`
+        Certificate is not provided. Check certificate details for more info. kubectl -n {{$labels.exported_namespace}} describe certificate {{$labels.name}}
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateExpiredSoon
