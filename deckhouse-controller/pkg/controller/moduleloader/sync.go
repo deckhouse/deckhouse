@@ -137,13 +137,13 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 				return fmt.Errorf("create the '%s' module symlink: %w", mpo.Name, err)
 			}
 		} else {
-			dstDir, err := filepath.EvalSymlinks(moduleSymLink)
+			downloadedModulePath, err := filepath.EvalSymlinks(moduleSymLink)
 			if err != nil {
 				return fmt.Errorf("evaluate the '%s' module symlink %s: %w", mpo.Name, moduleSymLink, err)
 			}
 
 			// check if module symlink leads to current version
-			if filepath.Base(dstDir) != downloader.DefaultDevVersion {
+			if filepath.Base(downloadedModulePath) != downloader.DefaultDevVersion {
 				l.log.Infof("the '%s' module symlink is incorrect, restore it", mpo.Name)
 				if err = l.createModuleSymlink(mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
 					return fmt.Errorf("create the '%s' module symlink: %w", mpo.Name, err)
@@ -196,8 +196,8 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 		} else {
 			l.log.Debugf("set the '%s' version for the '%s' module", release.Spec.Version.String(), release.Spec.ModuleName)
 			err = utils.Update[*v1alpha1.Module](ctx, l.client, module, func(module *v1alpha1.Module) bool {
-				if module.Properties.Version != "v"+release.Spec.Version.String() {
-					module.Properties.Version = "v" + release.Spec.Version.String()
+				if module.Properties.Version != moduleVersion {
+					module.Properties.Version = moduleVersion
 					return true
 				}
 				return false
@@ -223,19 +223,19 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 				return fmt.Errorf("create module symlink: %w", err)
 			}
 		} else {
-			dstDir, err := filepath.EvalSymlinks(moduleSymLink)
+			downloadedModulePath, err := filepath.EvalSymlinks(moduleSymLink)
 			if err != nil {
 				return fmt.Errorf("evaluate the '%s' module symlink %s: %w", release.Spec.ModuleName, moduleSymLink, err)
 			}
 
 			// skip overridden modules
-			if filepath.Base(dstDir) == downloader.DefaultDevVersion {
+			if filepath.Base(downloadedModulePath) == downloader.DefaultDevVersion {
 				l.log.Warnf("the '%s' module symlink is overridden, skip it", release.Spec.ModuleName)
 				continue
 			}
 
 			// check if module symlink leads to current version
-			if filepath.Base(dstDir) != moduleVersion {
+			if filepath.Base(downloadedModulePath) != moduleVersion {
 				l.log.Infof("the '%s' module symlink is incorrect, restore it", release.Spec.ModuleName)
 				if err = l.createModuleSymlink(release.Spec.ModuleName, moduleVersion, source, release.Spec.Weight, false); err != nil {
 					return fmt.Errorf("create the '%s' module symlink: %w", release.Spec.ModuleName, err)

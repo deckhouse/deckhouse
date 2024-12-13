@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -110,14 +110,15 @@ func (suite *ModuleLoaderTestSuite) setupModuleLoader(raw string) {
 	suite.client = fake.NewClientBuilder().
 		WithScheme(sc).
 		WithObjects(objects...).
-		WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha2.ModulePullOverride{}).Build()
+		WithStatusSubresource(&v1alpha1.ModuleRelease{}, &v1alpha1.ModuleSource{}, &v1alpha2.ModulePullOverride{}).
+		Build()
 
 	suite.loader = &Loader{
 		client:               suite.client,
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		dependencyContainer:  dependency.NewDependencyContainer(),
 		log:                  log.NewNop(),
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
+		dependencyContainer:  dependency.NewDependencyContainer(),
 	}
 }
 
@@ -173,104 +174,64 @@ func (suite *ModuleLoaderTestSuite) SetupSuite() {
 }
 
 func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
-	moduleName := "echo"
-	moduleDir := filepath.Join(suite.tmpDir, moduleName, downloader.DefaultDevVersion)
-	moduleValues := filepath.Join(moduleDir, "openapi", "values.yaml")
-	ManifestStub := func() (*v1.Manifest, error) {
-		return &v1.Manifest{
-			Layers: []v1.Descriptor{},
+	module := moduleSuite{
+		name:          "echo",
+		version:       downloader.DefaultDevVersion,
+		weight:        900,
+		downloadedDir: suite.tmpDir,
+	}
+
+	manifestStub := func() (*crv1.Manifest, error) {
+		return &crv1.Manifest{
+			Layers: []crv1.Descriptor{},
 		}, nil
 	}
 
 	type testCase struct {
 		name           string
 		filename       string
-		modulePath     string
-		layersStab     func() ([]v1.Layer, error)
-		weight         int
-		weightMessage  string
+		layersStab     func() ([]crv1.Layer, error)
 		symlinkChanged bool
 		valuesChanged  bool
 	}
 
 	testCases := []testCase{
 		{
-			name:          "Ok",
-			filename:      "up-to-date.yaml",
-			modulePath:    fmt.Sprintf("910-%s", moduleName),
-			weight:        910,
-			weightMessage: "Module's weight mustn't be modified",
+			// should not do anything
+			name:           "Ok",
+			filename:       "mpo.yaml",
+			symlinkChanged: false,
+			valuesChanged:  false,
 		},
 		{
-			name:       "No weight, no module.yaml",
-			filename:   "up-to-date-no-weight.yaml",
-			modulePath: fmt.Sprintf("900-%s", moduleName),
-			layersStab: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}}, nil
+			// should set default weight for module
+			name:     "NoWeightNoDefinition",
+			filename: "mpo-without-weight.yaml",
+			layersStab: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
-			weight:        900,
-			weightMessage: "Module's weight must be set to 900",
+			symlinkChanged: false,
+			valuesChanged:  false,
 		},
 		{
-			name:       "No weight",
-			filename:   "up-to-date-no-weight.yaml",
-			modulePath: fmt.Sprintf("915-%s", moduleName),
-			layersStab: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 915"}}}, nil
+			// should set mpo`s the weight from module.yaml
+			name:     "NoWeightWithDefinition",
+			filename: "mpo-without-weight.yaml",
+			layersStab: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}}}, nil
 			},
-			weight:        915,
-			weightMessage: "Module's weight must be set to 915",
+			symlinkChanged: false,
+			valuesChanged:  false,
 		},
 		{
-			name:          "Stale module values",
-			filename:      "up-to-date.yaml",
-			modulePath:    fmt.Sprintf("910-%s", moduleName),
-			weight:        910,
-			weightMessage: "Module's weight must be set to 910",
-		},
-		{
-			name:       "Old deployed-on annotation",
-			filename:   "old-deckhouse-node-name-annotation.yaml",
-			modulePath: fmt.Sprintf("900-%s", moduleName),
-			layersStab: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}}, nil
+			// should update deployed-on annotation
+			name:     "WrongDeployedOnAnnotation",
+			filename: "mpo-with-old-deployed-on.yaml",
+			layersStab: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
-			weight:         900,
-			weightMessage:  "Module's weight must be set to 900",
 			symlinkChanged: true,
 			valuesChanged:  true,
-		},
-		{
-			name:       "No deployed-on annotation",
-			filename:   "no-deckhouse-node-name-annotation.yaml",
-			modulePath: fmt.Sprintf("900-%s", moduleName),
-			layersStab: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}}, nil
-			},
-			weight:         900,
-			weightMessage:  "Module's weight must be set to 900",
-			symlinkChanged: true,
-			valuesChanged:  true,
-		},
-		{
-			name:       "No symlink",
-			filename:   "up-to-date-no-weight.yaml",
-			modulePath: fmt.Sprintf("900-%s", moduleName),
-			layersStab: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}}, nil
-			},
-			weight:        900,
-			weightMessage: "Module's weight must be set to 900",
-		},
-		{
-			name:       "No module dir",
-			filename:   "up-to-date-no-weight.yaml",
-			modulePath: fmt.Sprintf("900-%s", moduleName),
-			layersStab: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}}, nil
-			},
-			weight:        900,
-			weightMessage: "Module's weight must be set to 900",
 		},
 	}
 
@@ -278,98 +239,149 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		suite.Run(tc.name, func() {
 			if tc.layersStab != nil {
 				dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-					ManifestStub: ManifestStub,
+					ManifestStub: manifestStub,
 					LayersStub:   tc.layersStab,
 				}, nil)
 			}
 
-			desc := moduleDirDescriptor{
-				dir:     moduleDir,
-				values:  values,
-				symlink: filepath.Join(suite.tmpDir, "modules", tc.modulePath),
-			}
-			err := desc.prepareModuleDir()
+			require.NoError(suite.T(), module.prepare(true, true))
+
+			statValues, err := os.Stat(module.valuesPath)
 			require.NoError(suite.T(), err)
 
-			stat, err := os.Stat(moduleValues)
-			require.NoError(suite.T(), err)
-
-			sstat, err := os.Lstat(desc.symlink)
+			statSymlink, err := os.Lstat(module.symlinkPath)
 			require.NoError(suite.T(), err)
 
 			time.Sleep(50 * time.Millisecond)
 
-			suite.setupModuleLoader(string(suite.parseTestdata(tc.filename)))
-			err = suite.loader.restoreAbsentModulesFromOverrides(context.TODO())
+			suite.setupModuleLoader(string(suite.parseTestdata("override", tc.filename)))
+			require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+
+			newStatValues, err := os.Stat(module.valuesPath)
 			require.NoError(suite.T(), err)
 
-			newstat, err := os.Stat(moduleValues)
-			require.NoError(suite.T(), err)
 			if tc.valuesChanged {
-				assert.False(suite.T(), stat.ModTime().Equal(newstat.ModTime()), "Module's values.yaml must be modified")
+				assert.False(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml must be modified")
 			} else {
-				assert.True(suite.T(), stat.ModTime().Equal(newstat.ModTime()), "Module's values.yaml mustn't be modified")
+				assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
 			}
 
-			newsstat, err := os.Lstat(desc.symlink)
+			newStatSymlink, err := os.Lstat(module.symlinkPath)
 			require.NoError(suite.T(), err)
+
 			if tc.symlinkChanged {
-				assert.False(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink must be modified")
+				assert.False(suite.T(), statSymlink.ModTime().Equal(newStatSymlink.ModTime()), "Module's symlink must be modified")
 			} else {
-				assert.True(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink mustn't be modified")
+				assert.True(suite.T(), statSymlink.ModTime().Equal(newStatSymlink.ModTime()), "Module's symlink mustn't be modified")
 			}
 
-			mpo := suite.modulePullOverride(moduleName)
-			assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.ModulePullOverrideAnnotationDeployedOn)
-			assert.Equal(suite.T(), mpo.Status.Weight, uint32(tc.weight), tc.weightMessage)
+			mpo := suite.modulePullOverride(module.name)
+			assert.Equal(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "deployedOn must be set to dev-master-0")
+			assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
 
-			require.NoError(suite.T(), cleanupPaths(desc.dir, desc.symlink))
+			suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
 		})
 	}
 
-	suite.Run("Extra symlinks", func() {
+	// should ensure symlink
+	suite.Run("NoSymlink", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}}, nil
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
-		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", moduleName))
-		symlink1 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("901-%s", moduleName))
-		symlink2 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("902-%s", moduleName))
-		symlink3 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("903-%s", moduleName))
-		desc := moduleDirDescriptor{
-			dir:    moduleDir,
-			values: values,
-		}
-		err := desc.prepareModuleDir()
 
-		// extra symlinks
-		require.NoError(suite.T(), err)
-		err = os.Symlink(desc.dir, symlink1)
-		require.NoError(suite.T(), err)
-		err = os.Symlink(desc.dir, symlink2)
-		require.NoError(suite.T(), err)
-		err = os.Symlink(desc.dir, symlink3)
-		require.NoError(suite.T(), err)
+		require.NoError(suite.T(), module.prepare(true, false))
 
-		stat, err := os.Stat(desc.dir)
+		statValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
-
-		_, err = os.Lstat(symlink)
-		assert.True(suite.T(), os.IsNotExist(err), "Module's symlink mustn't exist")
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupModuleLoader(string(suite.parseTestdata("up-to-date-no-weight.yaml")))
-		err = suite.loader.restoreAbsentModulesFromOverrides(context.TODO())
+		suite.setupModuleLoader(string(suite.parseTestdata("override", "mpo.yaml")))
+		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+
+		newStatValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
 
-		newstat, err := os.Stat(desc.dir)
-		require.NoError(suite.T(), err)
-		assert.True(suite.T(), stat.ModTime().Equal(newstat.ModTime()), "Module's dir mustn't be modified")
+		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
 
-		_, err = os.Lstat(symlink)
+		_, err = os.Lstat(module.symlinkPath)
+		require.NoError(suite.T(), err)
+
+		mpo := suite.modulePullOverride(module.name)
+		assert.Equal(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "deployedOn must be set to dev-master-0")
+		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
+
+		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
+	})
+
+	// should ensure downloaded module`s dir
+	suite.Run("NoDownloadedModule", func() {
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
+
+		require.NoError(suite.T(), module.prepare(false, false))
+
+		time.Sleep(50 * time.Millisecond)
+
+		suite.setupModuleLoader(string(suite.parseTestdata("override", "mpo.yaml")))
+		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+
+		_, err := os.Stat(module.valuesPath)
+		require.NoError(suite.T(), err)
+
+		_, err = os.Lstat(module.symlinkPath)
+		require.NoError(suite.T(), err)
+
+		mpo := suite.modulePullOverride(module.name)
+		assert.Equal(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "deployedOn must be set to dev-master-0")
+		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
+
+		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
+	})
+
+	// should remove extra symlink
+	suite.Run("ExtraSymlinks", func() {
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
+
+		require.NoError(suite.T(), module.prepare(true, false))
+
+		statValues, err := os.Stat(module.valuesPath)
+		require.NoError(suite.T(), err)
+
+		_, err = os.Lstat(module.symlinkPath)
+		assert.True(suite.T(), os.IsNotExist(err), "Module's symlink mustn't exist")
+
+		symlink1 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("901-%s", module.name))
+		symlink2 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("902-%s", module.name))
+		symlink3 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("903-%s", module.name))
+
+		// extra symlinks
+		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink1))
+		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink2))
+		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink3))
+
+		time.Sleep(50 * time.Millisecond)
+
+		suite.setupModuleLoader(string(suite.parseTestdata("override", "mpo.yaml")))
+		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+
+		newStatValues, err := os.Stat(module.valuesPath)
+		require.NoError(suite.T(), err)
+		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
+
+		_, err = os.Lstat(module.symlinkPath)
 		assert.Equal(suite.T(), err, nil, "Module's symlink must be created")
 
 		_, err = os.Lstat(symlink1)
@@ -379,70 +391,211 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		_, err = os.Lstat(symlink3)
 		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
 
-		mpo := suite.modulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.ModulePullOverrideAnnotationDeployedOn)
-		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "Module's weight must be set to %d", 900)
+		mpo := suite.modulePullOverride(module.name)
+		assert.Equal(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "deployedOn must be set to dev-master-0")
+		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
 
-		require.NoError(suite.T(), cleanupPaths(desc.dir, symlink, symlink1, symlink2, symlink3))
+		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
 	})
 
-	suite.Run("Wrong symlink", func() {
+	// should remove wrong symlink and ensure new
+	suite.Run("WrongSymlink", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&utils.FakeLayer{}}, nil
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
 
-		desc := moduleDirDescriptor{
-			dir:    moduleDir,
-			values: values,
-		}
-		err := desc.prepareModuleDir()
+		require.NoError(suite.T(), module.prepare(true, false))
+
+		require.NoError(suite.T(), os.MkdirAll(filepath.Join(suite.tmpDir, "echo", "fakeVersion"), 0750))
+
+		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", module.name))
+		require.NoError(suite.T(), os.Symlink(filepath.Join(suite.tmpDir, "echo", "fakeVersion"), symlink))
+
+		statValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
 
-		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", moduleName))
-		err = os.Symlink("../notEcho/fakeVersion", symlink)
-		require.NoError(suite.T(), err)
-
-		stat, err := os.Stat(moduleDir)
-		require.NoError(suite.T(), err)
-
-		sstat, err := os.Lstat(symlink)
+		statSymlink, err := os.Lstat(symlink)
 		require.NoError(suite.T(), err)
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupModuleLoader(string(suite.parseTestdata("up-to-date-no-weight.yaml")))
-		err = suite.loader.restoreAbsentModulesFromOverrides(context.TODO())
+		suite.setupModuleLoader(string(suite.parseTestdata("override", "mpo.yaml")))
+		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+
+		newStatValues, err := os.Stat(module.valuesPath)
+		require.NoError(suite.T(), err)
+		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
+
+		newStatSymlink, err := os.Lstat(symlink)
+		require.NoError(suite.T(), err)
+		assert.False(suite.T(), statSymlink.ModTime().Equal(newStatSymlink.ModTime()), "Module's symlink must be modified")
+
+		mpo := suite.modulePullOverride(module.name)
+		assert.Equal(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "deployedOn must be set to dev-master-0")
+		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
+
+		suite.cleanupPaths([]string{symlink, module.downloadedPath, module.symlinkPath})
+	})
+}
+
+func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
+	module := moduleSuite{
+		name:          "echo",
+		weight:        900,
+		downloadedDir: suite.tmpDir,
+		version:       "v1.0.0",
+	}
+
+	manifestStub := func() (*crv1.Manifest, error) {
+		return &crv1.Manifest{
+			Layers: []crv1.Descriptor{},
+		}, nil
+	}
+
+	// should ensure symlink
+	suite.Run("NoSymlink", func() {
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
+
+		require.NoError(suite.T(), module.prepare(true, false))
+
+		statValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
 
-		newstat, err := os.Stat(moduleDir)
+		time.Sleep(50 * time.Millisecond)
+
+		suite.setupModuleLoader(string(suite.parseTestdata("release", "release.yaml")))
+		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+
+		newStatValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
-		assert.True(suite.T(), stat.ModTime().Equal(newstat.ModTime()), "Module's dir mustn't be modified")
 
-		newsstat, err := os.Lstat(symlink)
+		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
+
+		_, err = os.Lstat(module.symlinkPath)
 		require.NoError(suite.T(), err)
-		assert.False(suite.T(), sstat.ModTime().Equal(newsstat.ModTime()), "Module's symlink must be modified")
 
-		mpo := suite.modulePullOverride(moduleName)
-		assert.Equalf(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "%s must be set to dev-master-0", v1alpha1.ModulePullOverrideAnnotationDeployedOn)
-		assert.Equalf(suite.T(), mpo.Status.Weight, uint32(900), "Module's weight must be set to %d", 900)
-
-		require.NoError(suite.T(), cleanupPaths(desc.dir, symlink))
+		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
 	})
 
-	suite.Run("Module is absent and deletionTimestamp is set", func() {
-		suite.setupModuleLoader(string(suite.parseTestdata("deleted.yaml")))
-		err := suite.loader.restoreAbsentModulesFromOverrides(context.TODO())
+	// should ensure downloaded module`s dir
+	suite.Run("NoDownloadedModule", func() {
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
+
+		require.NoError(suite.T(), module.prepare(false, false))
+
+		time.Sleep(50 * time.Millisecond)
+
+		suite.setupModuleLoader(string(suite.parseTestdata("release", "release.yaml")))
+		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+
+		_, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
 
-		_, err = os.Stat(moduleDir)
-		assert.True(suite.T(), os.IsNotExist(err), "Module's dir mustn't exist")
+		_, err = os.Lstat(module.symlinkPath)
+		require.NoError(suite.T(), err)
 
-		_, err = os.Lstat(filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("910-%s", moduleName)))
+		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
+	})
+
+	// should remove extra symlink
+	suite.Run("ExtraSymlinks", func() {
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
+
+		require.NoError(suite.T(), module.prepare(true, false))
+
+		statValues, err := os.Stat(module.valuesPath)
+		require.NoError(suite.T(), err)
+
+		_, err = os.Lstat(module.symlinkPath)
 		assert.True(suite.T(), os.IsNotExist(err), "Module's symlink mustn't exist")
+
+		symlink1 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("901-%s", module.name))
+		symlink2 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("902-%s", module.name))
+		symlink3 := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("903-%s", module.name))
+
+		// extra symlinks
+		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink1))
+		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink2))
+		require.NoError(suite.T(), os.Symlink(module.downloadedDir, symlink3))
+
+		time.Sleep(50 * time.Millisecond)
+
+		suite.setupModuleLoader(string(suite.parseTestdata("release", "release.yaml")))
+		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+
+		newStatValues, err := os.Stat(module.valuesPath)
+		require.NoError(suite.T(), err)
+		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
+
+		_, err = os.Lstat(module.symlinkPath)
+		assert.Equal(suite.T(), err, nil, "Module's symlink must be created")
+
+		_, err = os.Lstat(symlink1)
+		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
+		_, err = os.Lstat(symlink2)
+		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
+		_, err = os.Lstat(symlink3)
+		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
+
+		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
 	})
+
+	// should remove wrong symlink and ensure new
+	suite.Run("WrongSymlink", func() {
+		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: manifestStub,
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{}}, nil
+			},
+		}, nil)
+
+		require.NoError(suite.T(), module.prepare(true, false))
+
+		require.NoError(suite.T(), os.MkdirAll(filepath.Join(suite.tmpDir, "echo", "fakeVersion"), 0750))
+
+		symlink := filepath.Join(suite.tmpDir, "modules", fmt.Sprintf("900-%s", module.name))
+		require.NoError(suite.T(), os.Symlink(filepath.Join(suite.tmpDir, "echo", "fakeVersion"), symlink))
+
+		statValues, err := os.Stat(module.valuesPath)
+		require.NoError(suite.T(), err)
+
+		statSymlink, err := os.Lstat(symlink)
+		require.NoError(suite.T(), err)
+
+		time.Sleep(50 * time.Millisecond)
+
+		suite.setupModuleLoader(string(suite.parseTestdata("release", "release.yaml")))
+		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+
+		newStatValues, err := os.Stat(module.valuesPath)
+		require.NoError(suite.T(), err)
+		assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
+
+		newStatSymlink, err := os.Lstat(symlink)
+		require.NoError(suite.T(), err)
+		assert.False(suite.T(), statSymlink.ModTime().Equal(newStatSymlink.ModTime()), "Module's symlink must be modified")
+
+		suite.cleanupPaths([]string{symlink, module.downloadedPath, module.symlinkPath})
+	})
+
 }
 
 func (suite *ModuleLoaderTestSuite) modulePullOverride(name string) *v1alpha2.ModulePullOverride {
@@ -451,6 +604,14 @@ func (suite *ModuleLoaderTestSuite) modulePullOverride(name string) *v1alpha2.Mo
 	require.NoError(suite.T(), err)
 
 	return mpo
+}
+
+func (suite *ModuleLoaderTestSuite) moduleRelease(name string) *v1alpha1.ModuleRelease {
+	release := new(v1alpha1.ModuleRelease)
+	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, release)
+	require.NoError(suite.T(), err)
+
+	return release
 }
 
 func (suite *ModuleLoaderTestSuite) fetchResults() []byte {
@@ -479,9 +640,8 @@ func (suite *ModuleLoaderTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-func (suite *ModuleLoaderTestSuite) parseTestdata(filename string) []byte {
-	dir := "./testdata/override"
-	data, err := os.ReadFile(filepath.Join(dir, filename))
+func (suite *ModuleLoaderTestSuite) parseTestdata(scope, filename string) []byte {
+	data, err := os.ReadFile(filepath.Join("./testdata", scope, filename))
 	require.NoError(suite.T(), err)
 
 	suite.testDataFileName = filename
@@ -489,41 +649,39 @@ func (suite *ModuleLoaderTestSuite) parseTestdata(filename string) []byte {
 	return data
 }
 
-type moduleDirDescriptor struct {
-	dir     string
-	values  string
-	symlink string
+func (suite *ModuleLoaderTestSuite) cleanupPaths(paths []string) {
+	for _, path := range paths {
+		require.NoError(suite.T(), os.RemoveAll(path))
+	}
 }
 
-func (d *moduleDirDescriptor) prepareModuleDir() error {
-	if d.dir != "" {
-		if err := os.MkdirAll(d.dir, 0750); err != nil {
+type moduleSuite struct {
+	name           string
+	version        string
+	weight         int
+	valuesPath     string
+	symlinkPath    string
+	downloadedPath string
+	downloadedDir  string
+}
+
+func (suite *moduleSuite) prepare(ensureDownloaded, ensureSymlink bool) error {
+	suite.downloadedPath = filepath.Join(suite.downloadedDir, suite.name, suite.version)
+	suite.symlinkPath = filepath.Join(suite.downloadedDir, "modules", fmt.Sprintf("%d-%s", suite.weight, suite.name))
+	suite.valuesPath = filepath.Join(suite.downloadedPath, "openapi", "values.yaml")
+
+	if ensureDownloaded {
+		if err := os.MkdirAll(filepath.Join(suite.downloadedPath, "openapi"), 0750); err != nil {
 			return err
 		}
-		if d.values != "" {
-			openAPIDir := filepath.Join(d.dir, "openapi")
-			if err := os.MkdirAll(openAPIDir, 0750); err != nil {
-				return err
-			}
-			if err := os.WriteFile(filepath.Join(openAPIDir, "values.yaml"), []byte(d.values), 0644); err != nil {
-				return err
-			}
+
+		if err := os.WriteFile(suite.valuesPath, []byte(values), 0750); err != nil {
+			return err
 		}
 	}
 
-	if d.symlink != "" {
-		if err := os.Symlink(d.dir, d.symlink); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func cleanupPaths(paths ...string) error {
-	for _, p := range paths {
-		err := os.RemoveAll(p)
-		if err != nil {
+	if ensureSymlink {
+		if err := os.Symlink(suite.downloadedPath, suite.symlinkPath); err != nil {
 			return err
 		}
 	}
