@@ -118,8 +118,6 @@ spec:
           - mountPath: /tmp/k8s-webhook-server/serving-certs
             name: cert
             readOnly: true
-        webhook:
-          port: 4201
         args:
           {{- include "capcd_controller_manager_args" . | nindent 10 }}
         livenessProbe:
