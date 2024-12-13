@@ -36,8 +36,8 @@ Lock info:
 %s
 `
 
-func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("release", "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful")
+func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
+	cmd := parent.Command(command, "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful")
 	app.DefineSanityFlags(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
