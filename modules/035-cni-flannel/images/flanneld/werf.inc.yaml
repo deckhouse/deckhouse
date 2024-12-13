@@ -1,5 +1,18 @@
 {{- $iptables_version := "1.8.9" }}
+{{- $flannel_version := "0.25.6" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+git:
+- add: /{{ .ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
+  to: /src/entrypoint
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $flannel_version }} {{ $.SOURCE_REPO }}/flannel-io/flannel.git /src/flannel
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
@@ -35,45 +48,51 @@ shell:
     - cd /src
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint main.go
 ---
-artifact: {{ .ModuleName }}/flanneld-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
+artifact: {{ .ModuleName }}/artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  {{- include "alpine packages proxy" . | nindent 2 }}
   install:
-    - mkdir -p /src
-    - cd /src
-    - git clone --depth 1 --branch v0.23.0 {{ $.SOURCE_REPO }}/flannel-io/flannel.git .
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
-    - make dist/flanneld
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src/entrypoint
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint main.go
+  - cd /src/flannel
+  - make dist/flanneld
+  - cp dist/flanneld /
+  - chown 64535:64535 /entrypoint /flanneld
+  - chmod 755 /entrypoint /flanneld
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}
+image: { { .ModuleName } }/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- artifact: { { .ModuleName } }/artifact
+  add: /flanneld
+  to: /opt/bin/flanneld
+  before: setup
+- artifact: { { .ModuleName } }/artifact
+  add: /entrypoint
+  to: /entrypoint
+  before: setup
+- artifact: { { $.ModuleName } }/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /iptables-wrapper
+  before: setup
 - artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
-  to: /sbin
+  to: /usr/sbin/
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /sbin/iptables-wrapper
-  before: setup
-- artifact: {{ .ModuleName }}/flanneld-artifact
-  add: /src/dist/flanneld
-  to: /opt/bin/flanneld
-  before: setup
-- artifact: {{ .ModuleName }}/entrypoint-artifact
-  add: /entrypoint
-  to: /entrypoint
-  before: setup
 docker:
-  ENTRYPOINT: ["/entrypoint"]
+  ENTRYPOINT: [ "/entrypoint" ]
