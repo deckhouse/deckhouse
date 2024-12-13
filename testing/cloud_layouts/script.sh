@@ -285,6 +285,13 @@ function prepare_environment() {
         envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON} ${MASTERS_COUNT}' \
         <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
+    [ -f "$cwd/commander.tpl.yaml" ] && \
+        env CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")" FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")" \
+        SERVICE_ACCOUNT_JSON="$(base64 -d <<< "$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON")" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
+        envsubst '${DECKHOUSE_DOCKERCFG} ${PREFIX} ${DEV_BRANCH} ${KUBERNETES_VERSION} ${CRI} ${CLOUD_ID} ${FOLDER_ID} ${SERVICE_ACCOUNT_JSON} ${MASTERS_COUNT}' \
+        <"$cwd/commander.tpl.yaml" >"$cwd/commander.yaml"
+
     ssh_user="redos"
     ;;
 
@@ -419,6 +426,12 @@ END_SCRIPT
 }
 
 function run-test() {
+  if [[ "$COMMANDER_MODE" == "true" ]]; then
+    run_commander_test
+    exit_code=$?
+    return "$exit_code"
+  fi
+
   if [[ "$PROVIDER" == "Static" ]]; then
     bootstrap_static
     exit_code=$?
@@ -928,6 +941,16 @@ ENDSSH
   if [[ $provisioning_failed == "true" ]] ; then
     return 1
   fi
+}
+
+function run_commander_test() {
+  >&2 echo "Run commander test ..."
+  TESTER_CONFIG=commander.yaml /commander.test \
+    -test.v \
+    -test.timeout=2h \
+    -config-dir=$cwd \
+    -skip-delete="${SKIP_DELETE}" \
+    -insecure-skip-verify="${INSECURE_SKIP_VERIFY}"
 }
 
 # change_deckhouse_image changes deckhouse container image.
