@@ -171,6 +171,7 @@ entries:
                         ru: Внешние
                       folders:
                         - title:
+                            en: Yadro storage
                             ru: Yadro
                           url: /virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
                         - title:
