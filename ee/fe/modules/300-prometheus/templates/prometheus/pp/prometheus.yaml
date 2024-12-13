@@ -51,7 +51,11 @@ spec:
   replicas: 1
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
-  image: {{ include "helm_lib_module_image" (list $ "prometheuspp") }}
+{{- if (.Values.global.enabledModules | has "prompp") }}
+  image: {{ include "helm_lib_module_image" (list . "prompp") }}
+{{- else }}
+  image: {{ include "helm_lib_module_image" (list . "prometheus") }}
+{{- end }}
   version: v2.53.2
   enableRemoteWriteReceiver: true
   enableFeatures:
@@ -66,6 +70,25 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
+{{- if and (.Values.global.modulesImages.digests | has "prompp") }}
+  initContainers:
+  - name: prompptool
+    image: {{ include "helm_lib_module_image" (list $ "prompptool") }}
+    command:
+    - /bin/prompptool
+    - "--working-dir=/prometheus"
+    {{- if (.Values.global.enabledModules | has "prompp") }}
+    - "--walpp"
+    {{- else }}
+    - "--walvanila"
+    {{- end }}
+    volumeMounts:
+    - name: prometheus-main-db
+      mountPath: /prometheus
+    resources:
+      requests:
+        {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- end }}
   containers:
   - name: prometheus
     startupProbe:
