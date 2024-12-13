@@ -210,6 +210,9 @@ func createBinding(binding *filteredManageBinding, useRoleName string, namespace
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("d8:use:%s:binding:%s", useRoleName, binding.Name),
 			Namespace: namespace,
+			Annotations: map[string]string{
+				"rbac.deckhouse.io/related-with": binding.Name,
+			},
 			Labels: map[string]string{
 				"heritage":                    "deckhouse",
 				"rbac.deckhouse.io/automated": "true",
