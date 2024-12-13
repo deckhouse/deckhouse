@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package lock
 
 import (
 	"encoding/json"
@@ -24,33 +24,40 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
+const (
+	AutoConvergerIdentity = "terraform-auto-converger"
+	tombIdenty            = "unlock converge"
+)
+
 type InLockRunner struct {
-	lockConfig     *client.LeaseLockConfig
+	lockConfig     *lease.LeaseLockConfig
 	forceLock      bool
 	fullUnlock     bool
-	kubeCl         *client.KubernetesClient
+	getter         kubernetes.KubeClientGetter
 	unlockConverge func(fullUnlock bool)
+	unlockMutex    sync.Mutex
 }
 
-func NewInLockRunner(kubeCl *client.KubernetesClient, identity string) *InLockRunner {
+func NewInLockRunner(getter kubernetes.KubeClientGetter, identity string) *InLockRunner {
 	lockConfig := GetLockLeaseConfig(identity)
 	return &InLockRunner{
-		kubeCl:     kubeCl,
+		getter:     getter,
 		lockConfig: lockConfig,
 		forceLock:  false,
 		fullUnlock: true,
 	}
 }
 
-func NewInLockLocalRunner(kubeCl *client.KubernetesClient, identity string) *InLockRunner {
+func NewInLockLocalRunner(getter kubernetes.KubeClientGetter, identity string) *InLockRunner {
 	localIdentity := getLocalConvergeLockIdentity(identity)
-	return NewInLockRunner(kubeCl, localIdentity)
+	return NewInLockRunner(getter, localIdentity)
 }
 
 func (r *InLockRunner) WithForceLock(f bool) *InLockRunner {
@@ -63,34 +70,65 @@ func (r *InLockRunner) WithFullUnlock(f bool) *InLockRunner {
 	return r
 }
 
-func (r *InLockRunner) Run(action func() error) error {
-	unlockConverge, err := lockLease(r.kubeCl, r.lockConfig, r.forceLock)
+func (r *InLockRunner) setLock() error {
+	unlockConverge, err := lockLease(r.getter, r.lockConfig, r.forceLock)
 	if err != nil {
 		return err
 	}
-	defer unlockConverge(r.fullUnlock)
-	tomb.RegisterOnShutdown("unlock converge", func() {
+	tomb.ReplaceOnShutdown(tombIdenty, func() {
 		unlockConverge(true)
 	})
 
 	r.unlockConverge = unlockConverge
 
+	return nil
+}
+
+func (r *InLockRunner) Run(action func() error) error {
+	err := r.setLock()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		log.DebugLn("Start unlock converge from Run")
+		if r.unlockConverge != nil {
+			r.unlockConverge(true)
+			return
+		}
+
+		log.DebugLn("unlockConverge is nil. Skip")
+	}()
+
+	log.DebugLn("lock for Run method was set. Start action")
+
 	return action()
+}
+
+func (r *InLockRunner) ResetLock() error {
+	err := r.setLock()
+	if err != nil {
+		return err
+	}
+
+	log.DebugLn("lock was reset")
+
+	return nil
 }
 
 func (r *InLockRunner) Stop() {
 	r.unlockConverge(true)
 }
 
-func LockConvergeFromLocal(kubeCl *client.KubernetesClient, identity string) (func(bool), error) {
+func LockConverge(getter kubernetes.KubeClientGetter, identity string) (func(bool), error) {
 	localIdentity := getLocalConvergeLockIdentity(identity)
 	lockConfig := GetLockLeaseConfig(localIdentity)
-	unlockConverge, err := lockLease(kubeCl, lockConfig, false)
+	unlockConverge, err := lockLease(getter, lockConfig, false)
 	if err != nil {
 		return nil, err
 	}
 
-	tomb.RegisterOnShutdown("unlock converge", func() {
+	tomb.ReplaceOnShutdown(tombIdenty, func() {
 		// always full unlock on shutdown
 		unlockConverge(true)
 	})
@@ -98,7 +136,7 @@ func LockConvergeFromLocal(kubeCl *client.KubernetesClient, identity string) (fu
 	return unlockConverge, nil
 }
 
-func GetLockLeaseConfig(identity string) *client.LeaseLockConfig {
+func GetLockLeaseConfig(identity string) *lease.LeaseLockConfig {
 	additionalInfo := ""
 	if app.SSHUser != "" {
 		info := struct {
@@ -113,7 +151,7 @@ func GetLockLeaseConfig(identity string) *client.LeaseLockConfig {
 		}
 	}
 
-	return &client.LeaseLockConfig{
+	return &lease.LeaseLockConfig{
 		Name:                 "d8-converge-lock",
 		Identity:             identity,
 		Namespace:            "d8-system",
@@ -159,13 +197,13 @@ func getLocalConvergeLockIdentity(pref string) string {
 }
 
 func lockLease(
-	kubeCl *client.KubernetesClient,
-	config *client.LeaseLockConfig,
+	getter kubernetes.KubeClientGetter,
+	config *lease.LeaseLockConfig,
 	forceLock bool,
 ) (toDefer func(fullUnlock bool), err error) {
 	log.DebugLn("Create converge lock and mutex")
 	mutex := &sync.Mutex{}
-	leaseLock := client.NewLeaseLock(kubeCl, *config)
+	leaseLock := lease.NewLeaseLock(getter, *config)
 
 	log.DebugLn("Try to lock converge")
 	err = leaseLock.Lock(forceLock)

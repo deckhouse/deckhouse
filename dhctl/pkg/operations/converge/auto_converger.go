@@ -22,19 +22,19 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	convergectx "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 type AutoConverger struct {
-	runner        *converge.Runner
+	runner        *runner
 	checkInterval time.Duration
 	listenAddress string
 }
 
-func NewAutoConverger(runner *converge.Runner, listenAddress string, interval time.Duration) *AutoConverger {
+func NewAutoConverger(runner *runner, listenAddress string, interval time.Duration) *AutoConverger {
 	return &AutoConverger{
 		checkInterval: interval,
 		listenAddress: listenAddress,
@@ -42,7 +42,7 @@ func NewAutoConverger(runner *converge.Runner, listenAddress string, interval ti
 	}
 }
 
-func (c *AutoConverger) Start() error {
+func (c *AutoConverger) Start(ctx *convergectx.Context) error {
 	defer log.InfoLn("Stop autoconverger fully")
 
 	log.InfoLn("Start exporter")
@@ -65,7 +65,7 @@ func (c *AutoConverger) Start() error {
 		}
 	})
 
-	go c.convergerLoop(shutdownAllCh, doneCh)
+	go c.convergerLoop(ctx, shutdownAllCh, doneCh)
 
 	err := httpServer.ListenAndServe()
 	if err != http.ErrServerClosed {
@@ -75,8 +75,8 @@ func (c *AutoConverger) Start() error {
 	return nil
 }
 
-func (c *AutoConverger) convergerLoop(shutdownCh <-chan struct{}, doneCh chan<- struct{}) {
-	c.runConverge()
+func (c *AutoConverger) convergerLoop(ctx *convergectx.Context, shutdownCh <-chan struct{}, doneCh chan<- struct{}) {
+	c.runConverge(ctx)
 
 	ticker := time.NewTicker(c.checkInterval)
 	defer ticker.Stop()
@@ -85,7 +85,7 @@ func (c *AutoConverger) convergerLoop(shutdownCh <-chan struct{}, doneCh chan<- 
 		select {
 		case <-ticker.C:
 			cache.ClearTemporaryDirs()
-			c.runConverge()
+			c.runConverge(ctx)
 		case <-shutdownCh:
 			doneCh <- struct{}{}
 			return
@@ -111,10 +111,10 @@ func (c *AutoConverger) getHTTPServer() *http.Server {
 	return &http.Server{Addr: c.listenAddress, Handler: router, ReadHeaderTimeout: 30 * time.Second}
 }
 
-func (c *AutoConverger) runConverge() {
+func (c *AutoConverger) runConverge(ctx *convergectx.Context) {
 	log.InfoLn("Start next converge")
 
-	err := c.runner.RunConverge()
+	err := c.runner.RunConverge(ctx)
 	if err != nil {
 		log.ErrorF("Converge error: %v\n", err)
 	}

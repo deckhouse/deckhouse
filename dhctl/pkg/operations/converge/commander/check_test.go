@@ -12,23 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge_test
+package commander_test
 
 import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"
 	"testing"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 )
 
 func TestStatistics_Format(t *testing.T) {
 	t.Parallel()
 
-	var statistics converge.Statistics
+	var statistics commander.Statistics
 	err := yaml.Unmarshal([]byte(statisticsYAML), &statistics)
 	require.NoError(t, err)
 
@@ -83,8 +82,8 @@ nodes:
 `
 )
 
-var expectedStatistics = converge.Statistics{
-	Cluster: converge.ClusterCheckResult{
+var expectedStatistics = commander.Statistics{
+	Cluster: commander.ClusterCheckResult{
 		Status: "ok",
 		DestructiveChanges: &terraform.BaseInfrastructureDestructiveChanges{
 			PlanDestructiveChanges: terraform.PlanDestructiveChanges{
@@ -97,7 +96,7 @@ var expectedStatistics = converge.Statistics{
 			},
 		},
 	},
-	NodeTemplates: []converge.NodeGroupCheckResult{
+	NodeTemplates: []commander.NodeGroupCheckResult{
 		{
 			Name:   "master",
 			Status: "ok",
@@ -107,7 +106,7 @@ var expectedStatistics = converge.Statistics{
 			Status: "ok",
 		},
 	},
-	Node: []converge.NodeCheckResult{
+	Node: []commander.NodeCheckResult{
 		{
 			Group:  "master",
 			Name:   "akul-master-0",

@@ -22,7 +22,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -72,17 +72,17 @@ func IsNodeReady(checkers []NodeChecker, nodeName, sourceCommandName string) (bo
 }
 
 type KubeNodeReadinessChecker struct {
-	kubeCl *client.KubernetesClient
+	getter kubernetes.KubeClientGetter
 }
 
-func NewKubeNodeReadinessChecker(kubeCl *client.KubernetesClient) *KubeNodeReadinessChecker {
+func NewKubeNodeReadinessChecker(getter kubernetes.KubeClientGetter) *KubeNodeReadinessChecker {
 	return &KubeNodeReadinessChecker{
-		kubeCl: kubeCl,
+		getter: getter,
 	}
 }
 
 func (c *KubeNodeReadinessChecker) IsReady(nodeName string) (bool, error) {
-	node, err := c.kubeCl.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+	node, err := c.getter.KubeClient().CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}

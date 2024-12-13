@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package controller
 
 import (
 	"cmp"
@@ -26,10 +26,11 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -37,19 +38,10 @@ import (
 )
 
 type NodeGroupController struct {
-	client         *client.KubernetesClient
-	config         *config.MetaConfig
-	changeSettings *terraform.ChangeActionSettings
-
 	excludedNodes map[string]bool
-
-	stateCache dstate.Cache
 
 	name  string
 	state state.NodeGroupTerraformState
-
-	commanderMode    bool
-	terraformContext *terraform.TerraformContext
 
 	nodeGroup nodeGroupController
 
@@ -58,35 +50,19 @@ type NodeGroupController struct {
 	layoutStep      string
 }
 
-func NewNodeGroupController(
-	kubeCl *client.KubernetesClient,
-	metaConfig *config.MetaConfig,
-	name string,
-	state state.NodeGroupTerraformState,
-	stateCache dstate.Cache,
-	terraformContext *terraform.TerraformContext,
-	commanderMode bool,
-	changeSettings *terraform.ChangeActionSettings,
-	nodesMap map[string]bool) *NodeGroupController {
+func NewNodeGroupController(name string, state state.NodeGroupTerraformState, excludeNodes map[string]bool) *NodeGroupController {
 	controller := &NodeGroupController{
-		client:           kubeCl,
-		config:           metaConfig,
-		changeSettings:   changeSettings,
-		excludedNodes:    nodesMap,
-		stateCache:       stateCache,
-		terraformContext: terraformContext,
-		commanderMode:    commanderMode,
-
-		name:  name,
-		state: state,
+		excludedNodes: excludeNodes,
+		name:          name,
+		state:         state,
 	}
 
 	return controller
 }
 
-func (c *NodeGroupController) Run() error {
+func (c *NodeGroupController) Run(ctx *context.Context) error {
 	// we hide deckhouse logs because we always have config
-	nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs, log.GetDefaultLogger())
+	nodeCloudConfig, err := entity.GetCloudConfig(ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
@@ -95,7 +71,7 @@ func (c *NodeGroupController) Run() error {
 
 	if c.desiredReplicas > len(c.state.State) {
 		err := log.Process("converge", fmt.Sprintf("Add Nodes to NodeGroup %s (replicas: %v)", c.name, c.desiredReplicas), func() error {
-			return c.nodeGroup.addNodes()
+			return c.nodeGroup.addNodes(ctx)
 		})
 		if err != nil {
 			return err
@@ -107,50 +83,62 @@ func (c *NodeGroupController) Run() error {
 		return err
 	}
 
-	err = c.updateNodes()
+	err = c.updateNodes(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = c.tryDeleteNodes(nodesToDeleteInfo)
+	err = c.tryDeleteNodes(ctx, nodesToDeleteInfo)
 	if err != nil {
 		return err
 	}
 
-	groupSpec := c.getSpec(c.name)
+	groupSpec, err := c.getSpec(ctx, c.name)
+	if err != nil {
+		return err
+	}
 	if groupSpec != nil {
-		return c.tryUpdateNodeTemplate(groupSpec.NodeTemplate)
+		return c.tryUpdateNodeTemplate(ctx, groupSpec.NodeTemplate)
 	}
 
-	return c.tryDeleteNodeGroup()
+	return c.tryDeleteNodeGroup(ctx)
 }
 
-func (c *NodeGroupController) tryDeleteNodes(nodesToDeleteInfo []nodeToDeleteInfo) error {
+func (c *NodeGroupController) tryDeleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
 	if len(nodesToDeleteInfo) == 0 {
 		log.DebugLn("No nodes to delete")
 		return nil
 	}
 
-	if c.changeSettings.AutoDismissDestructive {
+	if ctx.ChangesSettings().AutoDismissDestructive {
 		log.DebugLn("Skip delete nodes because destructive operations are disabled")
 		return nil
 	}
 
-	return c.nodeGroup.deleteNodes(nodesToDeleteInfo)
+	return c.nodeGroup.deleteNodes(ctx, nodesToDeleteInfo)
 }
 
 func (c *NodeGroupController) deleteRedundantNodes(
+	ctx *context.Context,
 	settings []byte,
 	nodesToDeleteInfo []nodeToDeleteInfo,
 	getHookByNodeName func(nodeName string) terraform.InfraActionHook,
 ) error {
-	cfg := c.config
+	cfg, err := ctx.MetaConfig()
+	if err != nil {
+		return err
+	}
+
 	if settings != nil {
 		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{settings})
 		if err != nil {
 			log.ErrorLn(err)
 		} else {
-			cfg, err = c.config.DeepCopy().Prepare()
+			mc, err := ctx.MetaConfig()
+			if err != nil {
+				return err
+			}
+			cfg, err = mc.DeepCopy().Prepare()
 			if err != nil {
 				return fmt.Errorf("unable to prepare copied config: %v", err)
 			}
@@ -173,23 +161,23 @@ func (c *NodeGroupController) deleteRedundantNodes(
 
 		// NOTE: In the commander mode nodes state should exist in the local state cache, no need to pass state explicitly.
 		var nodeState []byte
-		if !c.commanderMode {
+		if !ctx.CommanderMode() {
 			nodeState = nodeToDeleteInfo.state
 		}
 
-		nodeRunner := c.terraformContext.GetConvergeNodeDeleteRunner(cfg, terraform.NodeDeleteRunnerOptions{
-			AutoDismissDestructive: c.changeSettings.AutoDismissDestructive,
-			AutoApprove:            c.changeSettings.AutoApprove,
+		nodeRunner := ctx.Terraform().GetConvergeNodeDeleteRunner(cfg, terraform.NodeDeleteRunnerOptions{
+			AutoDismissDestructive: ctx.ChangesSettings().AutoDismissDestructive,
+			AutoApprove:            ctx.ChangesSettings().AutoApprove,
 			NodeName:               nodeToDeleteInfo.name,
 			NodeGroupName:          c.name,
 			LayoutStep:             c.layoutStep,
 			NodeIndex:              nodeIndex,
 			NodeState:              nodeState,
 			NodeCloudConfig:        c.cloudConfig,
-			CommanderMode:          c.commanderMode,
-			StateCache:             c.stateCache,
+			CommanderMode:          ctx.CommanderMode(),
+			StateCache:             ctx.StateCache(),
 			AdditionalStateSaverDestinations: []terraform.SaverDestination{
-				NewNodeStateSaver(c.client, nodeToDeleteInfo.name, c.name, nil),
+				entity.NewNodeStateSaver(ctx, nodeToDeleteInfo.name, c.name, nil),
 			},
 			Hook: getHookByNodeName(nodeToDeleteInfo.name),
 		})
@@ -200,21 +188,21 @@ func (c *NodeGroupController) deleteRedundantNodes(
 		}
 
 		if tomb.IsInterrupted() {
-			allErrs = multierror.Append(allErrs, ErrConvergeInterrupted)
+			allErrs = multierror.Append(allErrs, global.ErrConvergeInterrupted)
 			return allErrs.ErrorOrNil()
 		}
 
-		if err := DeleteNode(c.client, nodeToDeleteInfo.name); err != nil {
+		if err := entity.DeleteNode(ctx.KubeClient(), nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
 
-		if err := state_terraform.DeleteNodeTerraformStateFromCache(nodeToDeleteInfo.name, c.stateCache); err != nil {
+		if err := state_terraform.DeleteNodeTerraformStateFromCache(nodeToDeleteInfo.name, ctx.StateCache()); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("unable to delete node %s terraform state from cache: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
 
-		if err := DeleteTerraformState(c.client, fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
+		if err := entity.DeleteTerraformState(ctx.KubeClient(), fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -223,10 +211,10 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	return allErrs.ErrorOrNil()
 }
 
-func (c *NodeGroupController) tryUpdateNodeTemplate(nodeTemplate map[string]interface{}) error {
+func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTemplate map[string]interface{}) error {
 	nodeTemplatePath := []string{"spec", "nodeTemplate"}
 	for {
-		ng, err := GetNodeGroup(c.client, c.name)
+		ng, err := entity.GetNodeGroup(ctx.KubeClient(), c.name)
 		if err != nil {
 			return err
 		}
@@ -244,7 +232,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(nodeTemplate map[string]inte
 
 		msg := fmt.Sprintf("Node template diff:\n\n%s\n", diff)
 
-		if !c.changeSettings.AutoApprove && !input.NewConfirmation().WithMessage(msg).Ask() {
+		if !ctx.ChangesSettings().AutoApprove && !input.NewConfirmation().WithMessage(msg).Ask() {
 			log.InfoLn("Updating node group template was skipped")
 			return nil
 		}
@@ -254,13 +242,13 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(nodeTemplate map[string]inte
 			return err
 		}
 
-		err = UpdateNodeGroup(c.client, c.name, ng)
+		err = entity.UpdateNodeGroup(ctx.KubeClient(), c.name, ng)
 
 		if err == nil {
 			return nil
 		}
 
-		if errors.Is(err, ErrNodeGroupChanged) {
+		if errors.Is(err, global.ErrNodeGroupChanged) {
 			log.WarnLn(err.Error())
 			continue
 		}
@@ -269,34 +257,38 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(nodeTemplate map[string]inte
 	}
 }
 
-func (c *NodeGroupController) tryDeleteNodeGroup() error {
-	if c.changeSettings.AutoDismissDestructive {
+func (c *NodeGroupController) tryDeleteNodeGroup(ctx *context.Context) error {
+	if ctx.ChangesSettings().AutoDismissDestructive {
 		log.DebugF("Skip delete %s node group because destructive operations are disabled\n", c.name)
 		return nil
 	}
 
-	if c.name == MasterNodeGroupName {
+	if c.name == global.MasterNodeGroupName {
 		log.DebugF("Skip delete %s node group because it is master\n", c.name)
 		return nil
 	}
 
 	return log.Process("converge", fmt.Sprintf("Delete NodeGroup %s", c.name), func() error {
-		return DeleteNodeGroup(c.client, c.name)
+		return entity.DeleteNodeGroup(ctx.KubeClient(), c.name)
 	})
 }
 
-func (c *NodeGroupController) getSpec(name string) *config.TerraNodeGroupSpec {
-	for _, terranodeGroup := range c.config.GetTerraNodeGroups() {
+func (c *NodeGroupController) getSpec(ctx *context.Context, name string) (*config.TerraNodeGroupSpec, error) {
+	metaConfig, err := ctx.MetaConfig()
+	if err != nil {
+		return nil, err
+	}
+	for _, terranodeGroup := range metaConfig.GetTerraNodeGroups() {
 		if terranodeGroup.Name == name {
 			cc := terranodeGroup
-			return &cc
+			return &cc, nil
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (c *NodeGroupController) updateNodes() error {
+func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 	replicas := c.desiredReplicas
 	if replicas == 0 {
 		return nil
@@ -318,13 +310,13 @@ func (c *NodeGroupController) updateNodes() error {
 				return nil
 			}
 
-			err = c.nodeGroup.updateNode(nodeName)
+			err = c.nodeGroup.updateNode(ctx, nodeName)
 			if err != nil {
 				return err
 			}
 
 			// we hide deckhouse logs because we always have config
-			nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs, log.GetDefaultLogger())
+			nodeCloudConfig, err := entity.GetCloudConfig(ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
 			if err != nil {
 				return err
 			}
@@ -414,7 +406,7 @@ type nodeNameWithIndex struct {
 }
 
 type nodeGroupController interface {
-	addNodes() error
-	updateNode(name string) error
-	deleteNodes(nodesToDeleteInfo []nodeToDeleteInfo) error
+	addNodes(ctx *context.Context) error
+	updateNode(ctx *context.Context, name string) error
+	deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error
 }
