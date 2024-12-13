@@ -151,10 +151,12 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Handle deleted machines
 	if !staticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-		if instanceScope.Instance != nil {
-			if instanceScope.Instance.Annotations != nil {
-				if _, skip := instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation]; skip {
-					return ctrl.Result{}, nil
+		if instanceScope != nil {
+			if instanceScope.Instance != nil {
+				if instanceScope.Instance.Annotations != nil {
+					if _, skip := instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation]; skip {
+						return ctrl.Result{}, nil
+					}
 				}
 			}
 		}
