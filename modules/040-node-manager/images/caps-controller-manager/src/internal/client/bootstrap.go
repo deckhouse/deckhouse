@@ -65,7 +65,7 @@ func (c *Client) bootstrap(ctx context.Context, instanceScope *scope.InstanceSco
 		phase != deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping {
 		return ctrl.Result{}, errors.New("StaticInstance is not pending or bootstrapping")
 	}
-
+	instanceScope.Logger.Info("===bootstrapStaticInstance===")
 	result, err := c.bootstrapStaticInstance(ctx, instanceScope)
 	if err != nil {
 		return result, errors.Wrapf(err, "failed to bootstrap StaticInstance from '%s' phase", phase)

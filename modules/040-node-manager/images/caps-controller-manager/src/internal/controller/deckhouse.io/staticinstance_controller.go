@@ -164,6 +164,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				logger.Error(err, "failed to reconcileMachineMigration")
 				return result, err
 			}
+
 			// instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation] = "2"
 			return r.reconcileNormal(ctx, instanceScope)
 		}
