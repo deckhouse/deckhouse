@@ -53,12 +53,11 @@ def main(ctx: hook.Context):
         # DotMap is a dict with dot notation
         binding_context = DotMap(ctx.binding_context)
         errmsg, warnings = validate(binding_context)
-        ctx.output.validations.deny("not allowed")
-        return
         if errmsg is None:
             ctx.output.validations.allow(*warnings)
         else:
-            ctx.output.validations.deny(errmsg)
+            print("test")
+            ctx.output.validations.deny(f"test")
     except Exception as e:
         ctx.output.validations.error(str(e))
 
