@@ -603,8 +603,8 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/fe/modules/300-prometheus/images/prometheuspp
-  to: /deckhouse/modules/300-prometheus/images/prometheuspp
+- add: /ee/fe/modules/300-prometheus/images/prompp
+  to: /deckhouse/modules/300-prometheus/images/prompp
   excludePaths:
     - docs
     - README.md

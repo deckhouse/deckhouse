@@ -354,8 +354,8 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/fe/modules/300-prometheus/images/prometheuspp
-  to: /deckhouse/modules/300-prometheus/images/prometheuspp
+- add: /ee/fe/modules/300-prometheus/images/prompp
+  to: /deckhouse/modules/300-prometheus/images/prompp
   stageDependencies:
     setup:
         - '**/*.go'
