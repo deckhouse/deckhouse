@@ -125,7 +125,7 @@ func attemptUnmountRegistryData(kubeClient *client.KubernetesClient, nodeName st
 
 func tryLockRegistryDataDeviceMount(kubeClient *client.KubernetesClient, nodeName string) error {
 	return retry.NewLoop(
-		fmt.Sprintf("Attempting to lock registry data device on node '%s'", nodeName),
+		fmt.Sprintf("Attempting to lock mount actions for registry data device on node '%s'", nodeName),
 		45, 10*time.Second,
 	).Run(func() error {
 		sshClient, err := createNodeSshClient(kubeClient, nodeName)
