@@ -34,20 +34,6 @@ shell:
         done
       done
 ---
-artifact: {{ .ModuleName }}/entrypoint-artifact
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
-git:
-- add: /{{ .ModulePath }}modules/035-cni-flannel/images/flanneld/entrypoint
-  to: /src
-  stageDependencies:
-    install:
-      - '**/*'
-shell:
-  install:
-    - export GOPROXY={{ $.GOPROXY }}
-    - cd /src
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint main.go
----
 artifact: {{ .ModuleName }}/artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 import:
