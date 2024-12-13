@@ -152,26 +152,27 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		instanceScope.Instance.Annotations = make(map[string]string)
 	}
 
-	nodeGroupName := GetMachineScopeLabel(instanceScope.MachineScope, "node-group", "unknown")
-	instanceScope.Instance.Annotations["node-group"] = nodeGroupName
-
 	// Handle deleted static instance
 	if !staticInstance.ObjectMeta.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, nil
 	}
 
-	if _, skip := instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation]; skip {
-		result, err := r.reconcileMachineMigration(ctx, instanceScope, machineScope)
-		if err != nil {
-			logger.Error(err, "failed to reconcileMachineMigration")
-			return result, err
+	if value, skip := instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation]; skip {
+		if value == "1" {
+			result, err := r.reconcileMachineMigrationPhase1(ctx, instanceScope, machineScope)
+			if err != nil {
+				logger.Error(err, "failed to reconcileMachineMigration")
+				return result, err
+			}
+			instanceScope.Instance.Annotations[skipCleanupPhaseAnnotation] = "2"
 		}
-		// result, err = r.adoptBootstrappedStaticInstance(ctx, instanceScope)
-		// if err != nil {
-		// 	logger.Error(err, "failed to adoptBootstrappedStaticInstance")
-		// 	return result, err
-		// }
-		// delete(instanceScope.Instance.Annotations, skipCleanupPhaseAnnotation)
+		if value == "2" {
+			result, err := r.reconcileMachineMigrationPhase2(ctx, instanceScope, machineScope)
+			if err != nil {
+				logger.Error(err, "failed to reconcileMachineMigration")
+				return result, err
+			}
+		}
 	}
 	return r.reconcileNormal(ctx, instanceScope)
 }
@@ -353,25 +354,7 @@ func (r *StaticInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func GetMachineScopeLabel(machineScope *scope.MachineScope, key string, defaultValue string) string {
-	if machineScope == nil {
-		return defaultValue
-	}
-	if machineScope.StaticMachine == nil {
-		return defaultValue
-	}
-	if machineScope.StaticMachine.Labels == nil {
-		return defaultValue
-	}
-
-	if value, exists := machineScope.StaticMachine.Labels[key]; exists && value != "" {
-		return value
-	}
-
-	return defaultValue
-}
-
-func (r *StaticInstanceReconciler) reconcileMachineMigration(
+func (r *StaticInstanceReconciler) reconcileMachineMigrationPhase1(
 	ctx context.Context,
 	instanceScope *scope.InstanceScope,
 	machineScope *scope.MachineScope,
@@ -420,6 +403,61 @@ func (r *StaticInstanceReconciler) reconcileMachineMigration(
 	}
 
 	logger.Info("Successfully updated StaticInstance to Pending phase", "StaticInstance", instanceScope.Instance.Name)
+
+	return ctrl.Result{}, nil
+}
+
+func (r *StaticInstanceReconciler) reconcileMachineMigrationPhase2(
+	ctx context.Context,
+	instanceScope *scope.InstanceScope,
+	machineScope *scope.MachineScope,
+) (ctrl.Result, error) {
+	logger := ctrl.LoggerFrom(ctx)
+
+	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
+		return ctrl.Result{}, errors.Errorf("StaticInstance %s is not in Pending phase", instanceScope.Instance.Name)
+	}
+
+	staticMachines := &infrav1.StaticMachineList{}
+	if err := r.Client.List(ctx, staticMachines, client.InNamespace(machineScope.StaticMachine.Namespace)); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to list StaticMachines")
+	}
+
+	var staticMachine *infrav1.StaticMachine
+	for i := range staticMachines.Items {
+		if staticMachines.Items[i].Name == machineScope.StaticMachine.Name {
+			staticMachine = &staticMachines.Items[i]
+			break
+		}
+	}
+
+	if staticMachine == nil {
+		return ctrl.Result{}, errors.Errorf("no StaticMachine found with name %s/%s", machineScope.StaticMachine.Namespace, machineScope.StaticMachine.Name)
+	}
+
+	if staticMachine.Spec.ProviderID == "" {
+		staticMachine.Spec.ProviderID = providerid.GenerateProviderID(instanceScope.Instance.Name)
+	}
+
+	staticMachine.Status.Ready = true
+	conditions.MarkTrue(staticMachine, infrav1.StaticMachineStaticInstanceReadyCondition)
+
+	patchHelperMachine, err := patch.NewHelper(staticMachine, r.Client)
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper for StaticMachine")
+	}
+	if err := patchHelperMachine.Patch(ctx, staticMachine); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticMachine")
+	}
+
+	instanceScope.MachineScope.SetReady()
+	instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning)
+
+	if err := instanceScope.Patch(ctx); err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticInstance to Running phase")
+	}
+
+	logger.Info("Successfully finished Machine migration phase 2", "StaticInstance", instanceScope.Instance.Name, "StaticMachine", machineScope.StaticMachine.Name)
 
 	return ctrl.Result{}, nil
 }
