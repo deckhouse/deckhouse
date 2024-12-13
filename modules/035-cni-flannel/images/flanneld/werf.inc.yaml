@@ -68,18 +68,18 @@ shell:
   - chown 64535:64535 /entrypoint /flanneld
   - chmod 755 /entrypoint /flanneld
 ---
-image: { { .ModuleName } }/{{ .ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: { { .ModuleName } }/artifact
+- artifact: {{ .ModuleName }}/artifact
   add: /flanneld
   to: /opt/bin/flanneld
   before: setup
-- artifact: { { .ModuleName } }/artifact
+- artifact: {{ .ModuleName }}/artifact
   add: /entrypoint
   to: /entrypoint
   before: setup
-- artifact: { { $.ModuleName } }/{{ $.ImageName }}-binaries-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
