@@ -21,9 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	templatemanager "controller/pkg/manager/template"
-
 	"github.com/go-logr/logr"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,6 +33,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	templatemanager "controller/pkg/manager/template"
 )
 
 const controllerName = "d8-template-controller"

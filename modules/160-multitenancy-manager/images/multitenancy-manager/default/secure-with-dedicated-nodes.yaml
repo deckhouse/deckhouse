@@ -6,7 +6,6 @@ metadata:
   labels:
     heritage: deckhouse
 spec:
-  description: Includes all the capabilities of the secure template and additional features.
   parametersSchema:
     openAPIV3Schema:
       type: object
@@ -185,7 +184,7 @@ spec:
               description: |
                 The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
 
-                If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+                If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
 
                 These tolerations will be added to the pods in the project by default.
               items:
@@ -209,9 +208,9 @@ spec:
     metadata:
       name: {{ .projectName }}
       labels:
-        {{- with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
-        {{- if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
-        {{- if .parameters.securityScanningEnabled }}security-scanning.deckhouse.io/enabled: ""{{ end }}
+        {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
+        {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
+        {{ if .parameters.securityScanningEnabled }}security-scanning.deckhouse.io/enabled: ""{{ end }}
       {{- with .parameters.dedicatedNodes }}
       annotations:
         {{- with .defaultTolerations }}
@@ -221,6 +220,7 @@ spec:
           scheduler.alpha.kubernetes.io/node-selector: '{{ include "stringifyNodeSelector" . }}'
         {{- end }}
       {{- end }}
+
     {{- range $administrator := .parameters.administrators }}
     ---
     apiVersion: deckhouse.io/v1alpha1
@@ -233,6 +233,7 @@ spec:
       - kind: {{ $administrator.subject }}
         name: {{ $administrator.name }}
     {{- end }}
+
     ---
     # Max requests and limits for resource and storage consumption for all pods in a namespace.
     # Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
@@ -253,6 +254,7 @@ spec:
             {{ with .memory }}limits.memory: {{ . }}{{ end }}
           {{ end }}
         {{ end }}
+
     {{- if eq .parameters.networkPolicy "Isolated" }}
     ---
     # Deny all network traffic by default except namespaced traffic and dns.
@@ -302,6 +304,7 @@ spec:
             - protocol: UDP
               port: 53
     {{- end }}
+
     {{- with .parameters.clusterLogDestinationName }}
     ---
     # Refer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/
@@ -313,6 +316,7 @@ spec:
       clusterDestinationRefs:
         - {{ . }}
     {{- end }}
+
     ---
     # Referer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/015-admission-policy-engine/
     apiVersion: deckhouse.io/v1alpha1
@@ -330,6 +334,7 @@ spec:
           labelSelector:
             matchLabels:
               kubernetes.io/metadata.name: "{{ .projectName }}"
+
     {{- if .parameters.runtimeAuditEnabled }}
     {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
@@ -363,6 +368,7 @@ spec:
             - container_drift
     {{- end }}
     {{- end }}
+
     {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
     # Allowed uids/gids with the SecurityPolicy

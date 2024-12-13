@@ -1,6 +1,6 @@
 {{- define "controller_resources" }}
-cpu: 150m
-memory: 256Mi
+cpu: 30m
+memory: 150Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}

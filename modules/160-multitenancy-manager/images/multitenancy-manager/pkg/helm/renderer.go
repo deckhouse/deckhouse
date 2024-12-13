@@ -21,16 +21,13 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-
-	"controller/pkg/consts"
-
 	"helm.sh/helm/v3/pkg/releaseutil"
-
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	"sigs.k8s.io/yaml"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
 )
 
 type postRenderer struct {
@@ -69,9 +66,9 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 		if labels == nil {
 			labels = make(map[string]string, 1)
 		}
-		labels[consts.HeritageLabel] = consts.MultitenancyHeritage
-		labels[consts.ProjectLabel] = r.projectName
-		labels[consts.ProjectTemplateLabel] = r.projectTemplate
+		labels[v1alpha2.ResourceLabelHeritage] = v1alpha2.ResourceHeritageMultitenancy
+		labels[v1alpha2.ResourceLabelProject] = r.projectName
+		labels[v1alpha2.ResourceLabelTemplate] = r.projectTemplate
 		object.SetLabels(labels)
 
 		if object.GetKind() == "Namespace" {
@@ -101,7 +98,7 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 }
 
 func (r *postRenderer) makeNamespace(name string) []byte {
-	obj := v1.Namespace{
+	obj := corev1.Namespace{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Namespace",
@@ -109,9 +106,9 @@ func (r *postRenderer) makeNamespace(name string) []byte {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				consts.ProjectLabel:         r.projectName,
-				consts.ProjectTemplateLabel: r.projectTemplate,
-				consts.HeritageLabel:        consts.MultitenancyHeritage,
+				v1alpha2.ResourceLabelProject:  r.projectName,
+				v1alpha2.ResourceLabelTemplate: r.projectTemplate,
+				v1alpha2.ResourceLabelHeritage: v1alpha2.ResourceHeritageMultitenancy,
 			},
 		},
 	}

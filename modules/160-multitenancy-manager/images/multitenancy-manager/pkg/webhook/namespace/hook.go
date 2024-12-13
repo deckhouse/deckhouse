@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"slices"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"sigs.k8s.io/yaml"
 
@@ -43,7 +43,7 @@ type validator struct {
 }
 
 func (v *validator) Handle(_ context.Context, req admission.Request) admission.Response {
-	namespace := new(v1.Namespace)
+	namespace := new(corev1.Namespace)
 	if err := yaml.Unmarshal(req.Object.Raw, namespace); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -55,7 +55,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 	// other namespaces can be created only by deckhouse or multitenancy-manager
 	if !slices.Contains(v.nsCreateAllowedServiceAccounts, req.UserInfo.Username) {
-		return admission.Denied(fmt.Sprintf("namespaces can be created only as a part of a Project"))
+		return admission.Denied(fmt.Sprintf("namespaces can be created only as a part of a project"))
 	}
 
 	return admission.Allowed("")

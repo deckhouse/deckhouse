@@ -6,7 +6,6 @@ metadata:
   labels:
     heritage: deckhouse
 spec:
-  description: Includes all the capabilities of the default template and additional features.
   parametersSchema:
     openAPIV3Schema:
       type: object
@@ -170,6 +169,7 @@ spec:
         {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
         {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
         {{ if .parameters.securityScanningEnabled }}security-scanning.deckhouse.io/enabled: ""{{ end }}
+
     {{- range $administrator := .parameters.administrators }}
     ---
     apiVersion: deckhouse.io/v1alpha1
@@ -182,6 +182,7 @@ spec:
       - kind: {{ $administrator.subject }}
         name: {{ $administrator.name }}
     {{- end }}
+
     ---
     # Max requests and limits for resource and storage consumption for all pods in a namespace.
     # Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
@@ -202,6 +203,7 @@ spec:
             {{ with .memory }}limits.memory: {{ . }}{{ end }}
           {{ end }}
         {{ end }}
+
     {{- if eq .parameters.networkPolicy "Isolated" }}
     ---
     # Deny all network traffic by default except namespaced traffic and dns.
@@ -251,6 +253,7 @@ spec:
             - protocol: UDP
               port: 53
     {{- end }}
+
     {{- with .parameters.clusterLogDestinationName }}
     ---
     # Refer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/460-log-shipper/
@@ -262,6 +265,7 @@ spec:
       clusterDestinationRefs:
         - {{ . }}
     {{- end }}
+
     ---
     # Referer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/015-admission-policy-engine/
     apiVersion: deckhouse.io/v1alpha1
@@ -312,6 +316,7 @@ spec:
             - container_drift
     {{ end }}
     {{ end }}
+
     ---
     # Allowed uids/gids with the SecurityPolicy
     # Refer to https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/015-admission-policy-engine/cr.html#securitypolicy

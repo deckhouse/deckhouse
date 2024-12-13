@@ -20,34 +20,37 @@ import (
 	"errors"
 	"fmt"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-
 	"github.com/go-jose/go-jose/v4/json"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
 )
 
 func ProjectTemplate(template *v1alpha1.ProjectTemplate) error {
-	if _, err := loadOpenAPISchema(template.Spec.ParametersSchema.OpenAPIV3Schema); err != nil {
-		return fmt.Errorf("can't load open api schema from '%s' ProjectTemplate spec: %s", template.Name, err)
+	if _, err := LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema); err != nil {
+		return fmt.Errorf("load OpenAPI schema from the '%s' project template spec: %w", template.Name, err)
 	}
+
 	return nil
 }
 
 func Project(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	templateOpenAPI, err := loadOpenAPISchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
+	templateOpenAPI, err := LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
 	if err != nil {
-		return fmt.Errorf("can't load open api schema from '%s' ProjectTemplate spec: %s", template.Name, err)
+		return fmt.Errorf("load open api schema from the '%s' project template spec: %w", template.Name, err)
 	}
-	templateOpenAPI = transform(templateOpenAPI)
-	if err = validate.AgainstSchema(templateOpenAPI, project.Spec.Parameters, strfmt.Default); err != nil {
-		return fmt.Errorf("project '%s' doesn't match the OpenAPI schema for '%s' ProjectTemplate: %v", project.Name, template.Name, err)
+
+	if err = validate.AgainstSchema(transform(templateOpenAPI), project.Spec.Parameters, strfmt.Default); err != nil {
+		return fmt.Errorf("the '%s' project is not met the OpenAPI schema for the '%s' project template: %w", project.Name, template.Name, err)
 	}
+
 	return nil
 }
-func loadOpenAPISchema(properties map[string]interface{}) (*spec.Schema, error) {
+
+func LoadSchema(properties map[string]interface{}) (*spec.Schema, error) {
 	marshaled, err := json.Marshal(properties)
 	if err != nil {
 		var jsonErr *json.SyntaxError
