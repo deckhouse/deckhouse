@@ -86,6 +86,7 @@ jobs:
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
+      commander_mode: ${{ steps.check.outputs.commander_mode }}
     steps:
 
       # <template: checkout_step>
@@ -213,6 +214,7 @@ jobs:
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -505,6 +507,7 @@ jobs:
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -797,6 +800,7 @@ jobs:
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -1089,6 +1093,7 @@ jobs:
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -1381,6 +1386,7 @@ jobs:
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -1673,6 +1679,7 @@ jobs:
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
@@ -1965,6 +1972,7 @@ jobs:
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
           MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+          COMMANDER_MODE: ${{ needs.check_e2e_labels.outputs.commander_mode }}
         run: |
           # Create tmppath for test script.
           TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
