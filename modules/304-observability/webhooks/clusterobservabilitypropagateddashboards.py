@@ -57,8 +57,9 @@ def main(ctx: hook.Context):
         if errmsg is None:
             ctx.output.validations.allow(*warnings)
         else:
-            print("test")
-            ctx.output.validations.deny(f"test")
+            ctx.output.validations.error("test")
+            #print("test")
+            #ctx.output.validations.deny(f"test")
     except Exception as e:
         ctx.output.validations.error(str(e))
 
