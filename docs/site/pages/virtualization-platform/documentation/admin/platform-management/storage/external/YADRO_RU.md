@@ -51,7 +51,7 @@ spec:
   controlPlane:
     address: "172.19.28.184"
     username: "admin"
-    password: "cGFzc3dvcmQ=" # Должен быть закодирован в Base64
+    password: "cGFzc3dvcmQ=" # Должен быть закодирован в Base64.
     ca: "base64encoded"
     skipCertificateValidation: true
   dataPlane:
