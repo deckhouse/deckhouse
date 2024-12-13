@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package entity
 
 import (
 	"context"
@@ -21,6 +21,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 
 	"gopkg.in/yaml.v3"
 	apiv1 "k8s.io/api/core/v1"
@@ -38,12 +40,8 @@ import (
 )
 
 var (
-	nodeGroupResource   = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
-	ErrNodeGroupChanged = fmt.Errorf("Node group was changed during accept diff.")
+	nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 )
-
-const HideDeckhouseLogs = false
-const ShowDeckhouseLogs = true
 
 func GetCloudConfig(kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, apiserverHosts ...string) (string, error) {
 	var cloudData string
@@ -199,7 +197,7 @@ func UpdateNodeGroup(kubeCl *client.KubernetesClient, nodeGroupName string, ng *
 		})
 
 	if errors.IsConflict(err) {
-		return ErrNodeGroupChanged
+		return global.ErrNodeGroupChanged
 	}
 
 	return err

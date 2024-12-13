@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package lock
 
 import (
 	"encoding/json"
@@ -30,12 +30,18 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
+const (
+	AutoConvergerIdentity = "terraform-auto-converger"
+	tombIdenty            = "unlock converge"
+)
+
 type InLockRunner struct {
 	lockConfig     *client.LeaseLockConfig
 	forceLock      bool
 	fullUnlock     bool
 	kubeCl         *client.KubernetesClient
 	unlockConverge func(fullUnlock bool)
+	unlockMutex    sync.Mutex
 }
 
 func NewInLockRunner(kubeCl *client.KubernetesClient, identity string) *InLockRunner {
@@ -63,26 +69,59 @@ func (r *InLockRunner) WithFullUnlock(f bool) *InLockRunner {
 	return r
 }
 
-func (r *InLockRunner) Run(action func() error) error {
+func (r *InLockRunner) setLock() error {
 	unlockConverge, err := lockLease(r.kubeCl, r.lockConfig, r.forceLock)
 	if err != nil {
 		return err
 	}
-	defer unlockConverge(r.fullUnlock)
-	tomb.RegisterOnShutdown("unlock converge", func() {
+	tomb.ReplaceOnShutdown(tombIdenty, func() {
 		unlockConverge(true)
 	})
 
 	r.unlockConverge = unlockConverge
 
+	return nil
+}
+
+func (r *InLockRunner) Run(action func() error) error {
+	err := r.setLock()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		log.DebugLn("Start unlock converge from Run")
+		if r.unlockConverge != nil {
+			r.unlockConverge(true)
+			return
+		}
+
+		log.DebugLn("unlockConverge is nil. Skip")
+	}()
+
+	log.DebugLn("lock for Run method was set. Start action")
+
 	return action()
+}
+
+func (r *InLockRunner) ResetLock(kubeCl *client.KubernetesClient) error {
+	r.kubeCl = kubeCl
+
+	err := r.setLock()
+	if err != nil {
+		return err
+	}
+
+	log.DebugLn("lock was reset")
+
+	return nil
 }
 
 func (r *InLockRunner) Stop() {
 	r.unlockConverge(true)
 }
 
-func LockConvergeFromLocal(kubeCl *client.KubernetesClient, identity string) (func(bool), error) {
+func LockConverge(kubeCl *client.KubernetesClient, identity string) (func(bool), error) {
 	localIdentity := getLocalConvergeLockIdentity(identity)
 	lockConfig := GetLockLeaseConfig(localIdentity)
 	unlockConverge, err := lockLease(kubeCl, lockConfig, false)
@@ -90,7 +129,7 @@ func LockConvergeFromLocal(kubeCl *client.KubernetesClient, identity string) (fu
 		return nil, err
 	}
 
-	tomb.RegisterOnShutdown("unlock converge", func() {
+	tomb.ReplaceOnShutdown(tombIdenty, func() {
 		// always full unlock on shutdown
 		unlockConverge(true)
 	})

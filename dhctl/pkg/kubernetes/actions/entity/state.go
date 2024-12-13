@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package entity
 
 import (
 	"context"
@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -83,7 +84,7 @@ func SaveMasterNodeTerraformState(kubeCl *client.KubernetesClient, nodeName stri
 	}
 
 	getTerraformStateManifest := func() interface{} {
-		return manifests.SecretWithNodeTerraformState(nodeName, MasterNodeGroupName, tfState, nil)
+		return manifests.SecretWithNodeTerraformState(nodeName, global.MasterNodeGroupName, tfState, nil)
 	}
 	getDevicePathManifest := func() interface{} {
 		return manifests.SecretMasterDevicePath(nodeName, devicePath)

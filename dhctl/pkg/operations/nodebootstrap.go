@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package converge
+package operations
 
 import (
 	"bufio"
@@ -21,7 +21,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -37,7 +40,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
 	if isConverge {
-		nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName)
+		nodeExists, err := entity.IsNodeExistsInCluster(kubeCl, nodeName)
 		if err != nil {
 			return err
 		} else if nodeExists {
@@ -56,7 +59,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
+			entity.NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
 		},
 	})
 
@@ -66,10 +69,10 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	}
 
 	if tomb.IsInterrupted() {
-		return ErrConvergeInterrupted
+		return global.ErrConvergeInterrupted
 	}
 
-	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
+	err = entity.SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
 	if err != nil {
 		return err
 	}
@@ -93,7 +96,7 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 		LogToBuffer:     saveLogToBuffer,
 
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
+			entity.NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
 		},
 	})
 
@@ -103,10 +106,10 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 	}
 
 	if tomb.IsInterrupted() {
-		return ErrConvergeInterrupted
+		return global.ErrConvergeInterrupted
 	}
 
-	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
+	err = entity.SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
 	if err != nil {
 		return err
 	}
@@ -135,7 +138,7 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 
 	for _, indexCandidate := range nodesIndexToCreate {
 		candidateName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, indexCandidate)
-		nodeExists, err := IsNodeExistsInCluster(kubeCl, candidateName)
+		nodeExists, err := entity.IsNodeExistsInCluster(kubeCl, candidateName)
 		if err != nil {
 			return nil, err
 		} else if nodeExists {
@@ -195,10 +198,10 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 }
 
 func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) (*terraform.PipelineOutputs, error) {
-	nodeName := NodeName(cfg, MasterNodeGroupName, index)
+	nodeName := NodeName(cfg, global.MasterNodeGroupName, index)
 
 	if isConverge {
-		nodeExists, existsErr := IsNodeExistsInCluster(kubeCl, nodeName)
+		nodeExists, existsErr := entity.IsNodeExistsInCluster(kubeCl, nodeName)
 		if existsErr != nil {
 			return nil, existsErr
 		} else if nodeExists {
@@ -211,11 +214,11 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		AutoApprove:     true,
 		NodeName:        nodeName,
 		NodeGroupStep:   "master-node",
-		NodeGroupName:   MasterNodeGroupName,
+		NodeGroupName:   global.MasterNodeGroupName,
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			NewNodeStateSaver(kubeCl, nodeName, MasterNodeGroupName, nil),
+			entity.NewNodeStateSaver(kubeCl, nodeName, global.MasterNodeGroupName, nil),
 		},
 	})
 
@@ -225,10 +228,10 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 	}
 
 	if tomb.IsInterrupted() {
-		return nil, ErrConvergeInterrupted
+		return nil, global.ErrConvergeInterrupted
 	}
 
-	err = SaveMasterNodeTerraformState(kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
+	err = entity.SaveMasterNodeTerraformState(kubeCl, nodeName, outputs.TerraformState, []byte(outputs.KubeDataDevicePath))
 	if err != nil {
 		return outputs, err
 	}
