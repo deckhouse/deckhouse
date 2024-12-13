@@ -21,6 +21,9 @@ rules:
 - apiGroups: ["deckhouse.io"]
   resources: ["*"] # We want to read all resources from the deckhouse.io group
   verbs: ["get","list","watch"]
+- apiGroups: ["observability.deckhouse.io"]
+  resources: ["*"] # We want to read all resources from the observability.deckhouse.io group
+  verbs: ["get","list","watch"]
 - apiGroups: [""]
   resources: ["secrets","endpoints","configmaps","namespaces"]
   verbs: ["get", "list", "watch"]
