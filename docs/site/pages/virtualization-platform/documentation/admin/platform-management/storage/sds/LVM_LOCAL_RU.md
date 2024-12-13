@@ -69,7 +69,7 @@ NAME               WEIGHT   STATE     SOURCE     STAGE   STATUS
 sds-local-volume   920      Enabled   Embedded           Ready
 ```
 
-Чтобы проверить, что в пространстве имен `d8-sds-local-volume` и `d8-sds-node-configurator` все поды в состоянии Running или Completed, и запущены на всех узлах, где планируется использовать ресурсы LVM, можно использовать команды:
+Чтобы проверить, что в пространстве имен `d8-sds-local-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed`, и запущены на всех узлах, где планируется использовать ресурсы LVM, можно использовать команды:
 
 ```shell
 d8 k -n d8-sds-local-volume get pod -w
@@ -212,7 +212,7 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный `LocalStorageClass` перешел в состояние Created, выполнив следующую команду:
+Проверьте, что созданный `LocalStorageClass` перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get lsc local-storage-class -w
@@ -286,7 +286,7 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный `LocalStorageClass` перешел в состояние Created, выполнив следующую команду:
+Проверьте, что созданный `LocalStorageClass` перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get lsc local-storage-class -w

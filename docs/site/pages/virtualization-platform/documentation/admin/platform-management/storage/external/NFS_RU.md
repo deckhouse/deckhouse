@@ -70,7 +70,7 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс `NFSStorageClass` перешел в состояние Created, выполнив следующую команду:
+Проверьте, что созданный ресурс `NFSStorageClass` перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
