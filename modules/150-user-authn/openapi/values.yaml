@@ -98,6 +98,7 @@ properties:
               applicationDomain: test.example.com
               applicationIngressCertificateSecretName: test-tls
               applicationIngressClassName: not-nginx
+              highAvailability: true
               nodeSelector:
                 testnode: ""
               tolerations:

@@ -20,4 +20,9 @@ spec:
   allowedGroups:
   {{- . | toYaml | nindent 2 }}
   {{- end }}
+  {{- if (include "helm_lib_ha_enabled" .) }}
+  highAvailability: true
+  {{- else }}
+  highAvailability: false
+  {{- end }}
 {{- end }}
