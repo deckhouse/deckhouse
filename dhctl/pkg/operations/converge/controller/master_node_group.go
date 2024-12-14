@@ -18,15 +18,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -109,7 +108,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) (err error) {
 		return err
 	}
 
-	if c.convergeState.Phase == context.PhaseScaleToMultiMaster {
+	if c.convergeState.Phase == phases.ScaleToMultiMasterPhase {
 		replicas := 3
 
 		err = c.runWithReplicas(ctx, replicas)
@@ -117,7 +116,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) (err error) {
 			return fmt.Errorf("failed to converge with 3 replicas: %w", err)
 		}
 
-		c.convergeState.Phase = context.PhaseScaleToSingleMaster
+		c.convergeState.Phase = phases.ScaleToSingleMasterPhase
 
 		err := ctx.SetConvergeState(c.convergeState)
 		if err != nil {
@@ -125,7 +124,7 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) (err error) {
 		}
 	}
 
-	if c.convergeState.Phase == context.PhaseScaleToSingleMaster {
+	if c.convergeState.Phase == phases.ScaleToSingleMasterPhase {
 		replicas := 1
 
 		err := c.runWithReplicas(ctx, replicas)
@@ -262,7 +261,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 				return nil
 			}
 
-			c.convergeState.Phase = context.PhaseScaleToMultiMaster
+			c.convergeState.Phase = phases.ScaleToMultiMasterPhase
 
 			err := ctx.SetConvergeState(c.convergeState)
 			if err != nil {

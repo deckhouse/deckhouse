@@ -18,26 +18,19 @@ import (
 	gocontext "context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/utils"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/controller"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
-
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/controller"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
@@ -52,24 +45,20 @@ const (
 
 type runner struct {
 	excludedNodes map[string]bool
-	skipPhases    map[context.Phase]bool
+	skipPhases    map[phases.OperationPhase]bool
 	commanderUUID uuid.UUID
 
 	lockRunner *lock.InLockRunner
 	switcher   *context.KubeClientSwitcher
-
-	stateStore context.StateStore
-	state      *context.State
 }
 
 func newRunner(inLockRunner *lock.InLockRunner, switcher *context.KubeClientSwitcher) *runner {
 	return &runner{
 		excludedNodes: make(map[string]bool),
-		skipPhases:    make(map[context.Phase]bool),
+		skipPhases:    make(map[phases.OperationPhase]bool),
 
 		lockRunner: inLockRunner,
 		switcher:   switcher,
-		stateStore: context.NewInSecretStateStore(),
 	}
 }
 
@@ -91,9 +80,9 @@ func (r *runner) WithCommanderUUID(id uuid.UUID) *runner {
 	return r
 }
 
-func (r *runner) WithSkipPhases(phases []context.Phase) *runner {
-	newMap := make(map[context.Phase]bool)
-	for _, n := range phases {
+func (r *runner) WithSkipPhases(phs []phases.OperationPhase) *runner {
+	newMap := make(map[phases.OperationPhase]bool)
+	for _, n := range phs {
 		if n == "" {
 			continue
 		}
@@ -104,7 +93,7 @@ func (r *runner) WithSkipPhases(phases []context.Phase) *runner {
 	return r
 }
 
-func (r *runner) isSkip(phase context.Phase) bool {
+func (r *runner) isSkip(phase phases.OperationPhase) bool {
 	_, ok := r.skipPhases[phase]
 	return ok
 }
@@ -249,13 +238,6 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 }
 
 func (r *runner) converge(ctx *context.Context) error {
-	convergeState, err := r.stateStore.GetState(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get converge state: %w", err)
-	}
-
-	r.state = convergeState
-
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		return err
@@ -263,7 +245,7 @@ func (r *runner) converge(ctx *context.Context) error {
 
 	skipTerraform := metaConfig.ClusterType == config.StaticClusterType
 
-	if !skipTerraform && !r.isSkip(context.PhaseBaseInfra) {
+	if !skipTerraform && !r.isSkip(phases.BaseInfraPhase) {
 		if err := r.updateClusterState(ctx, metaConfig); err != nil {
 			return err
 		}
@@ -273,7 +255,7 @@ func (r *runner) converge(ctx *context.Context) error {
 
 	kubeClientSwitched := false
 
-	if !skipTerraform && !r.isSkip(context.PhaseAllNodes) {
+	if !skipTerraform && !r.isSkip(phases.AllNodesPhase) {
 		nodesStates, err := populateNodesState(ctx)
 		if err != nil {
 			return err

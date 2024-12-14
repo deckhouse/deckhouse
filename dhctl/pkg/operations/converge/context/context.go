@@ -42,7 +42,7 @@ type Context struct {
 	terraformContext *terraform.TerraformContext
 	commanderParams  *commander.CommanderModeParams
 	changeParams     terraform.ChangeActionSettings
-	stateStore       StateStore
+	stateStore       stateStore
 }
 
 func newContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, changeParams terraform.ChangeActionSettings) *Context {
@@ -50,9 +50,10 @@ func newContext(ctx context.Context, kubeClient *client.KubernetesClient, cache 
 		kubeClient:   kubeClient,
 		stateCache:   cache,
 		changeParams: changeParams,
+		ctx:          ctx,
 
-		ctx:              ctx,
 		terraformContext: terraform.NewTerraformContext(),
+		stateStore:       newInSecretStateStore(),
 	}
 }
 

@@ -20,15 +20,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"

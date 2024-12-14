@@ -274,7 +274,7 @@ func (c *Converger) AutoConverge() error {
 	r := newRunner(inLockRunner, convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)).
 		WithCommanderUUID(c.CommanderUUID).
 		WithExcludedNodes([]string{app.RunningNodeName}).
-		WithSkipPhases([]convergectx.Phase{convergectx.PhaseAllNodes})
+		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase})
 
 	converger := NewAutoConverger(r, app.AutoConvergeListenAddress, app.ApplyInterval)
 	return converger.Start(convergeCtx)

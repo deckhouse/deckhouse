@@ -25,40 +25,32 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
-
-const (
-	PhaseBaseInfra           Phase = "base-infrastructure"
-	PhaseAllNodes            Phase = "all-nodes"
-	PhaseScaleToMultiMaster  Phase = "scale-to-multi-master"
-	PhaseScaleToSingleMaster Phase = "scale-to-single-master"
-)
-
-type Phase string
 
 const (
 	stateSecretName = "d8-dhctl-converge-state"
 )
 
 type State struct {
-	Phase               Phase                `json:"phase"`
-	NodeUserCredentials *NodeUserCredentials `json:"nodeUserCredentials"`
+	Phase               phases.OperationPhase `json:"phase"`
+	NodeUserCredentials *NodeUserCredentials  `json:"nodeUserCredentials"`
 }
 
-type StateStore interface {
+type stateStore interface {
 	GetState(ctx *Context) (*State, error)
 	SetState(ctx *Context, st *State) error
 	Delete(ctx *Context) error
 }
 
-type InSecretStateStore struct{}
+type inSecretStateStore struct{}
 
-func NewInSecretStateStore() *InSecretStateStore {
-	return &InSecretStateStore{}
+func newInSecretStateStore() *inSecretStateStore {
+	return &inSecretStateStore{}
 }
 
-func (s *InSecretStateStore) GetState(ctx *Context) (*State, error) {
+func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 	var state State
 
 	err := retry.NewLoop("Get converge state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
@@ -88,7 +80,7 @@ func (s *InSecretStateStore) GetState(ctx *Context) (*State, error) {
 	return &state, nil
 }
 
-func (s *InSecretStateStore) Delete(ctx *Context) error {
+func (s *inSecretStateStore) Delete(ctx *Context) error {
 	return retry.NewLoop("Cleanup converge state from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
 		c, cancel := ctx.WithTimeout(10 * time.Second)
 		defer cancel()
@@ -106,7 +98,7 @@ func (s *InSecretStateStore) Delete(ctx *Context) error {
 	})
 }
 
-func (s *InSecretStateStore) SetState(ctx *Context, state *State) error {
+func (s *inSecretStateStore) SetState(ctx *Context, state *State) error {
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
 		return fmt.Errorf("failed to marshal state: %w", err)
