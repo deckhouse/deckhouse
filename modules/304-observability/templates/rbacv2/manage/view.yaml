@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: observability
+    rbac.deckhouse.io/aggregate-to-observability-as: viewer
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-observability
