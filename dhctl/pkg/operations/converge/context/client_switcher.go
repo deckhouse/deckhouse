@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -99,7 +101,9 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		return fmt.Errorf("failed to write private key for NodeUser: %w", err)
 	}
 
-	sshCl := s.ctx.kubeClient.NodeInterfaceAsSSHClient()
+	kubeCl := s.ctx.KubeClient()
+
+	sshCl := kubeCl.NodeInterfaceAsSSHClient()
 	if sshCl == nil {
 		panic("Node interface is not ssh")
 	}
@@ -128,7 +132,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		s.lockRunner.Stop()
 	}
 
-	s.ctx.kubeClient.KubeProxy.StopAll()
+	kubeCl.KubeProxy.StopAll()
 
 	newSSHClient := ssh.NewClient(session.NewSession(session.Input{
 		User:           convergeState.NodeUserCredentials.Name,
@@ -153,15 +157,15 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		return fmt.Errorf("failed to add keys to ssh agent: %w", err)
 	}
 
-	kubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))
+	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {
 		return fmt.Errorf("failed to connect to Kubernetes API: %w", err)
 	}
 
-	s.ctx.kubeClient = kubeClient
+	s.ctx.setKubeClient(newKubeClient)
 
 	if s.lockRunner != nil {
-		err := s.lockRunner.ResetLock(kubeClient)
+		err := s.lockRunner.ResetLock(newKubeClient)
 		if err != nil {
 			return fmt.Errorf("failed to reset lock: %w", err)
 		}
@@ -183,5 +187,5 @@ func (s *KubeClientSwitcher) CleanupNodeUser() error {
 
 	c, cancel := s.ctx.WithTimeout(10 * time.Second)
 	defer cancel()
-	return entity.DeleteNodeUser(c, s.ctx)
+	return entity.DeleteNodeUser(c, s.ctx, global.ConvergeNodeUserName)
 }

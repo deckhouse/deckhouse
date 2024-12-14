@@ -17,6 +17,7 @@ package context
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -29,7 +30,9 @@ import (
 )
 
 type Context struct {
-	kubeClient *client.KubernetesClient
+	kubeClientMu sync.RWMutex
+	kubeClient   *client.KubernetesClient
+
 	stateCache dstate.Cache
 	// yes we want to save context in struct,
 	// but it is not recommended https://go.dev/wiki/CodeReviewComments#contexts
@@ -50,7 +53,6 @@ func newContext(ctx context.Context, kubeClient *client.KubernetesClient, cache 
 
 		ctx:              ctx,
 		terraformContext: terraform.NewTerraformContext(),
-		stateStore:       NewInSecretStateStore(),
 	}
 }
 
@@ -75,6 +77,9 @@ func (c *Context) WithTerraformContext(ctx *terraform.TerraformContext) *Context
 }
 
 func (c *Context) KubeClient() *client.KubernetesClient {
+	c.kubeClientMu.RLock()
+	defer c.kubeClientMu.RUnlock()
+
 	return c.kubeClient
 }
 
@@ -150,4 +155,11 @@ func (c *Context) ConvergeState() (*State, error) {
 
 func (c *Context) deleteConvergeState() error {
 	return c.stateStore.Delete(c)
+}
+
+func (c *Context) setKubeClient(newKubeClient *client.KubernetesClient) {
+	c.kubeClientMu.Lock()
+	defer c.kubeClientMu.Unlock()
+
+	c.kubeClient = newKubeClient
 }

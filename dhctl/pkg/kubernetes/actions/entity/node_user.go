@@ -21,8 +21,6 @@ import (
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,9 +50,9 @@ func CreateNodeUser(ctx context.Context, kubeGetter KubeClientGetter, nodeUser *
 	})
 }
 
-func DeleteNodeUser(ctx context.Context, kubeGetter KubeClientGetter) error {
+func DeleteNodeUser(ctx context.Context, kubeGetter KubeClientGetter, name string) error {
 	return retry.NewLoop("Delete dhctl converge NodeUser", 45, 10*time.Second).Run(func() (err error) {
-		err = kubeGetter.KubeClient().Dynamic().Resource(v1.NodeUserGVK).Delete(ctx, global.ConvergeNodeUserName, metav1.DeleteOptions{})
+		err = kubeGetter.KubeClient().Dynamic().Resource(v1.NodeUserGVK).Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				return nil
