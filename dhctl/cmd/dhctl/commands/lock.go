@@ -17,14 +17,14 @@ package commands
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	v1 "k8s.io/api/coordination/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -58,14 +58,14 @@ func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 			return err
 		}
 
-		confirm := func(lease *v1.Lease) error {
+		confirm := func(l *v1.Lease) error {
 			if app.SanityCheck {
 				return nil
 			}
 
-			info, _ := client.LockInfo(lease)
+			info, _ := lease.LockInfo(l)
 
-			if *lease.Spec.HolderIdentity == lock.AutoConvergerIdentity {
+			if *l.Spec.HolderIdentity == lock.AutoConvergerIdentity {
 				return fmt.Errorf(autoConvergerErrorFmt, info)
 			}
 
@@ -79,7 +79,7 @@ func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 		}
 
 		cnf := lock.GetLockLeaseConfig("lock-releaser")
-		return client.RemoveLease(kubeCl, cnf, confirm)
+		return lease.RemoveLease(kubeCl, cnf, confirm)
 	})
 	return cmd
 }

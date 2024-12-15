@@ -76,7 +76,7 @@ func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
 	g.kubeCl = kubeCl
 
 	if !g.CommanderMode {
-		unlockConverge, err := lock.LockConverge(kubeCl, "local-destroyer")
+		unlockConverge, err := lock.LockConverge(kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer")
 		if err != nil {
 			return nil, err
 		}

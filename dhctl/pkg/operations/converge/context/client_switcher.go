@@ -162,7 +162,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	s.ctx.setKubeClient(newKubeClient)
 
 	if s.lockRunner != nil {
-		err := s.lockRunner.ResetLock(newKubeClient)
+		err := s.lockRunner.ResetLock()
 		if err != nil {
 			return fmt.Errorf("failed to reset lock: %w", err)
 		}

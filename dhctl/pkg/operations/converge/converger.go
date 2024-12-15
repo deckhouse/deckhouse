@@ -196,9 +196,9 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
-		convergeCtx = convergectx.NewCommanderContext(ctx, c.Params.KubeClient, stateCache, c.Params.CommanderModeParams, changesSettings)
+		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, changesSettings)
 	} else {
-		convergeCtx = convergectx.NewContext(ctx, c.Params.KubeClient, stateCache, changesSettings)
+		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, changesSettings)
 	}
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
@@ -207,7 +207,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	var inLockRunner *lock.InLockRunner
 	// No need for converge-lock in commander mode for bootstrap and converge operations
 	if !c.CommanderMode {
-		inLockRunner = lock.NewInLockLocalRunner(kubeCl, "local-converger")
+		inLockRunner = lock.NewInLockLocalRunner(convergeCtx, "local-converger")
 	}
 
 	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)
@@ -256,20 +256,20 @@ func (c *Converger) AutoConverge() error {
 		}
 	}
 
-	inLockRunner := lock.NewInLockRunner(kubeCl, lock.AutoConvergerIdentity).
-		// never force lock
-		WithForceLock(false)
-
-	app.DeckhouseTimeout = 1 * time.Hour
-
 	var convergeCtx *convergectx.Context
-	convergeCtx = convergectx.NewContext(context.Background(), c.Params.KubeClient, cache.Global(), terraform.ChangeActionSettings{
+	convergeCtx = convergectx.NewContext(context.Background(), kubeCl, cache.Global(), terraform.ChangeActionSettings{
 		AutoDismissDestructive: c.AutoDismissDestructive,
 		AutoApprove:            c.AutoApprove,
 	})
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
 		WithTerraformContext(c.Params.TerraformContext)
+
+	inLockRunner := lock.NewInLockRunner(convergeCtx, lock.AutoConvergerIdentity).
+		// never force lock
+		WithForceLock(false)
+
+	app.DeckhouseTimeout = 1 * time.Hour
 
 	r := newRunner(inLockRunner, convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)).
 		WithCommanderUUID(c.CommanderUUID).

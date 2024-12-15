@@ -437,7 +437,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			if b.CommanderMode {
 				return action()
 			}
-			return lock.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(action)
+			return lock.NewInLockLocalRunner(kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-bootstraper").Run(action)
 		}
 
 		err := localBootstraper(func() error {
