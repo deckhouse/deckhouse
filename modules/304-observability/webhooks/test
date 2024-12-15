@@ -47,7 +47,8 @@ EOF
 
 function __main__() {
   name=$(context::jq -r '.review.request.object.metadata.name')
-  uid=$(context::jq -r '.review.request.object.spec.definition' | context::jq '.uid')
+  definition=$(context::jq -r '.review.request.object.spec.definition')
+  uid=$(context::jq -r "${definition}.uid")
 
   if ![[ "$uid" =~ '^propagated_.*' ]]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
