@@ -19,16 +19,16 @@ import (
 	"fmt"
 	"time"
 
-	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
-
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func CreateNodeUser(ctx context.Context, kubeGetter KubeClientGetter, nodeUser *v1.NodeUser) error {
+func CreateNodeUser(ctx context.Context, kubeGetter kubernetes.KubeClientGetter, nodeUser *v1.NodeUser) error {
 	nodeUserResource, err := sdk.ToUnstructured(nodeUser)
 	if err != nil {
 		return fmt.Errorf("failed to convert NodeUser to unstructured: %w", err)
@@ -50,7 +50,7 @@ func CreateNodeUser(ctx context.Context, kubeGetter KubeClientGetter, nodeUser *
 	})
 }
 
-func DeleteNodeUser(ctx context.Context, kubeGetter KubeClientGetter, name string) error {
+func DeleteNodeUser(ctx context.Context, kubeGetter kubernetes.KubeClientGetter, name string) error {
 	return retry.NewLoop("Delete dhctl converge NodeUser", 45, 10*time.Second).Run(func() (err error) {
 		err = kubeGetter.KubeClient().Dynamic().Resource(v1.NodeUserGVK).Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil {

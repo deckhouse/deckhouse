@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
@@ -34,14 +35,14 @@ import (
 )
 
 type HookForDestroyPipeline struct {
-	kubeCl            *client.KubernetesClient
+	getter            kubernetes.KubeClientGetter
 	nodeToDestroy     string
 	oldMasterIPForSSH string
 }
 
-func NewHookForDestroyPipeline(kubeCl *client.KubernetesClient, nodeToDestroy string) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(getter kubernetes.KubeClientGetter, nodeToDestroy string) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
-		kubeCl:        kubeCl,
+		getter:        getter,
 		nodeToDestroy: nodeToDestroy,
 	}
 }
@@ -54,7 +55,7 @@ func (h *HookForDestroyPipeline) BeforeAction(runner terraform.RunnerInterface) 
 
 	h.oldMasterIPForSSH = outputs.MasterIPForSSH
 
-	err = removeControlPlaneRoleFromNode(h.kubeCl, h.nodeToDestroy)
+	err = removeControlPlaneRoleFromNode(h.getter.KubeClient(), h.nodeToDestroy)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
@@ -63,7 +64,7 @@ func (h *HookForDestroyPipeline) BeforeAction(runner terraform.RunnerInterface) 
 }
 
 func (h *HookForDestroyPipeline) AfterAction(runner terraform.RunnerInterface) error {
-	cl := h.kubeCl.NodeInterfaceAsSSHClient()
+	cl := h.getter.KubeClient().NodeInterfaceAsSSHClient()
 	if cl == nil {
 		log.DebugLn("Node interface is not ssh")
 		return nil

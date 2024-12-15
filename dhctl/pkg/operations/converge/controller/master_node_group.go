@@ -186,7 +186,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		index++
 	}
 
-	err = entity.WaitForNodesListBecomeReady(ctx.KubeClient(), nodesToWait, controlplane.NewManagerReadinessChecker(ctx.KubeClient()))
+	err = entity.WaitForNodesListBecomeReady(ctx.KubeClient(), nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
 	if err != nil {
 		return err
 	}
@@ -313,7 +313,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		}
 	}
 
-	return controlplane.NewHookForUpdatePipeline(ctx.KubeClient(), nodesToCheck, metaConfig.UUID, ctx.CommanderMode()).
+	return controlplane.NewHookForUpdatePipeline(ctx, nodesToCheck, metaConfig.UUID, ctx.CommanderMode()).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
 		WithConfirm(confirm)
@@ -336,7 +336,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", global.MasterNodeGroupName, c.desiredReplicas)
 	return log.Process("converge", title, func() error {
 		return c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) terraform.InfraActionHook {
-			return controlplane.NewHookForDestroyPipeline(ctx.KubeClient(), nodeName)
+			return controlplane.NewHookForDestroyPipeline(ctx, nodeName)
 		})
 	})
 }
