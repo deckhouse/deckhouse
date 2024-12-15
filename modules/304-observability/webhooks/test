@@ -22,6 +22,7 @@ configVersion: v1
 kubernetesValidating:
 - name: clusterobservabilitypropagateddashboards-policy.deckhouse.io
   group: main
+  queue: "clusterobservabilitypropagateddashboards"
   rules:
   - apiGroups:   ["observability.deckhouse.io"]
     apiVersions: ["v1alpha1"]
@@ -51,7 +52,7 @@ function __main__() {
 
   if ! [[ "$uid" =~ '^propagated_.*' ]]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-      {"allowed":false, "message":"dashboard uid must start with 'propagated_'" }
+      {"allowed":false, "message":"dashboard uid ${uid} must start with 'propagated_'" }
 EOF
       return 0
   fi
