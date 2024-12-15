@@ -21,10 +21,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -59,7 +59,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			entity.NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
+			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
 		},
 	})
 
@@ -96,7 +96,7 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 		LogToBuffer:     saveLogToBuffer,
 
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			entity.NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
+			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
 		},
 	})
 
@@ -218,7 +218,7 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			entity.NewNodeStateSaver(kubeCl, nodeName, global.MasterNodeGroupName, nil),
+			entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, global.MasterNodeGroupName, nil),
 		},
 	})
 

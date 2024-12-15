@@ -247,7 +247,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		CommanderMode:          ctx.CommanderMode(),
 		StateCache:             ctx.StateCache(),
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			entity.NewNodeStateSaver(ctx.KubeClient(), nodeName, global.MasterNodeGroupName, nodeGroupSettingsFromConfig),
+			entity.NewNodeStateSaver(ctx, nodeName, global.MasterNodeGroupName, nodeGroupSettingsFromConfig),
 		},
 		Hook: hook,
 	})

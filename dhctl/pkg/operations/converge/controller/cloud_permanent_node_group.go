@@ -117,7 +117,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		CommanderMode:          ctx.CommanderMode(),
 		StateCache:             ctx.StateCache(),
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
-			entity.NewNodeStateSaver(ctx.KubeClient(), nodeName, nodeGroupName, nodeGroupSettingsFromConfig),
+			entity.NewNodeStateSaver(ctx, nodeName, nodeGroupName, nodeGroupSettingsFromConfig),
 		},
 		Hook: &terraform.DummyHook{},
 	})

@@ -177,7 +177,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			CommanderMode:          ctx.CommanderMode(),
 			StateCache:             ctx.StateCache(),
 			AdditionalStateSaverDestinations: []terraform.SaverDestination{
-				entity.NewNodeStateSaver(ctx.KubeClient(), nodeToDeleteInfo.name, c.name, nil),
+				entity.NewNodeStateSaver(ctx, nodeToDeleteInfo.name, c.name, nil),
 			},
 			Hook: getHookByNodeName(nodeToDeleteInfo.name),
 		})

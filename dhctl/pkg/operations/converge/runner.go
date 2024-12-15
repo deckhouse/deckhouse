@@ -316,7 +316,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			AutoApprove:                      changeSettings.AutoApprove,
 			StateCache:                       ctx.StateCache(),
 			ClusterState:                     clusterState,
-			AdditionalStateSaverDestinations: []terraform.SaverDestination{entity.NewClusterStateSaver(ctx.KubeClient())},
+			AdditionalStateSaverDestinations: []terraform.SaverDestination{entity.NewClusterStateSaver(ctx)},
 		})
 
 		outputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)

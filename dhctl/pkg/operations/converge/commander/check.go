@@ -26,6 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -136,7 +137,7 @@ func checkClusterState(kubeCl *client.KubernetesClient, metaConfig *config.MetaC
 
 	var stateSavers []terraform.SaverDestination
 	if opts.CommanderMode {
-		stateSavers = append(stateSavers, entity.NewClusterStateSaver(kubeCl))
+		stateSavers = append(stateSavers, entity.NewClusterStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl)))
 	}
 
 	baseRunner := terraformContext.GetCheckBaseInfraRunner(metaConfig, terraform.BaseInfraRunnerOptions{
@@ -179,7 +180,7 @@ func checkAbandonedNodeState(kubeCl *client.KubernetesClient, metaConfig *config
 
 	var stateSavers []terraform.SaverDestination
 	if opts.CommanderMode {
-		stateSavers = append(stateSavers, entity.NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nil))
+		stateSavers = append(stateSavers, entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nil))
 	}
 	nodeRunner := terraformContext.GetCheckNodeDeleteRunner(cfg, terraform.NodeDeleteRunnerOptions{
 		AutoDismissDestructive:           false,
@@ -217,7 +218,7 @@ func checkNodeState(kubeCl *client.KubernetesClient, metaConfig *config.MetaConf
 
 	var stateSavers []terraform.SaverDestination
 	if opts.CommanderMode {
-		stateSavers = append(stateSavers, entity.NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
+		stateSavers = append(stateSavers, entity.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
 	}
 
 	nodeRunner := terraformContext.GetCheckNodeRunner(metaConfig, terraform.NodeRunnerOptions{
