@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+# Copyright 2024 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: clusterobservabilitypropagateddashboards-policy.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["observability.deckhouse.io"]
+    apiVersions: ["v1alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["clusterobservabilitypropagateddashboards"]
+    scope:       "Cluster"
+kubernetes:
+- name: clusterobservabilitypropagateddashboards
+  group: main
+  queue: "clusterobservabilitypropagateddashboards"
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  apiVersion: observability.deckhouse.io/v1alpha1
+  kind: ClusterObservabilityPropagatedDashboard
+  jqFilter: |
+    {
+      "name": .metadata.name,
+      "definition": .spec.definition
+    }
+EOF
+}
+
+function __main__() {
+  name=$(context::jq -r '.review.request.object.metadata.name')
+  uid=$(context::jq -r '.review.request.object.spec.definition | fromjson.uid')
+
+  if ![[ "$uid" =~ ^propagated_.* ]]; then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+      {"allowed":false, "message":"dashboard uid must start with 'propagated_'" }
+EOF
+      return 0
+  fi
+
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+  {"allowed":true}
+EOF
+}
+
+hook::run "$@"
