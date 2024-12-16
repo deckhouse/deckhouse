@@ -32,7 +32,7 @@ shell:
   - rm -rf /src/vector/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ $.Images.BASE_ALT_P11 }}
+fromImage: alt-p11-artifact
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
