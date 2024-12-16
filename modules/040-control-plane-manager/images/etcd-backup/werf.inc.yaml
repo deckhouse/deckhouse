@@ -20,14 +20,8 @@ import:
 docker:
   ENTRYPOINT: ["/entrypoint.sh"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_ALT_P11 }}
-git:
-- add: /tools/dev_images/additional_tools/alt/binary_replace.sh
-  to: /binary_replace.sh
-  stageDependencies:
-    install:
-    - '**/*'
+artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromArtifact: common/relocate-artifact
 shell:
   beforeInstall:
   - apt-get update
