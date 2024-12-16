@@ -1,16 +1,21 @@
 diff --git a/operator/pkg/helmreconciler/apply.go b/operator/pkg/helmreconciler/apply.go
-index 9e87cc4446..074470d104 100644
+index 9e87cc4446..ab3af417b0 100644
 --- a/operator/pkg/helmreconciler/apply.go
 +++ b/operator/pkg/helmreconciler/apply.go
-@@ -184,7 +184,12 @@ func (h *HelmReconciler) serverSideApply(obj *unstructured.Unstructured) error {
+@@ -19,6 +19,7 @@ import (
+ 	"fmt"
+ 	"strings"
+ 
++	kerrors "k8s.io/apimachinery/pkg/api/errors"
+ 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ 
+@@ -184,7 +185,9 @@ func (h *HelmReconciler) serverSideApply(obj *unstructured.Unstructured) error {
  	scope.Infof("using server side apply to update obj: %v", objectStr)
  	opts := []client.PatchOption{client.ForceOwnership, client.FieldOwner(fieldOwnerOperator)}
  	if err := h.client.Patch(context.TODO(), obj, client.Apply, opts...); err != nil {
 -		return fmt.Errorf("failed to update resource with server-side apply for obj %v: %v", objectStr, err)
-+		if !(strings.Contains(err.Error(), `cannot patch resource "rolebindings"`) ||
-+			strings.Contains(err.Error(), `cannot patch resource "roles"`) ||
-+			strings.Contains(err.Error(), `cannot patch resource "clusterroles"`) ||
-+			strings.Contains(err.Error(), `cannot patch resource "clusterrolebindings"`)) {
++		if !kerrors.IsForbidden(err) {
 +			return fmt.Errorf("failed to update resource with server-side apply for obj %v: %v", objectStr, err)
 +		}
  	}
