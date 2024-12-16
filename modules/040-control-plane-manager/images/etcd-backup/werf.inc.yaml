@@ -20,7 +20,7 @@ import:
 docker:
   ENTRYPOINT: ["/entrypoint.sh"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromArtifact: common/relocate-artifact
 shell:
   beforeInstall:
