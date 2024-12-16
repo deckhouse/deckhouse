@@ -2,36 +2,31 @@
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 {{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
 ---
-artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromArtifact: relocate-artifact
 shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y conntrack-tools
   install:
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-    - mkdir -p /relocate/sbin
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-      done
-      # broken symlinks are not imported from the artifact
-      touch /sbin/iptables-wrapper
-    - |
-      for mode in legacy nft; do
-        for basecmd in iptables ip6tables; do
-          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
-            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
-          done
-        done
-      done
-  {{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := toString $key }}
-  {{- $patch := $value.patch | toString }}
-  {{- $v := semver $version }}
-  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore iptables-legacy iptables-legacy-save iptables-legacy-restore ip6tables-legacy ip6tables-legacy-save ip6tables-legacy-restore iptables-nft iptables-nft-save iptables-nft-restore ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
+      ln -f -s /iptables-wrapper "/relocate/usr/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /iptables-wrapper
+
+{{- range $key, $value := .CandiVersionMap.k8s }}
+{{- $version := toString $key }}
+{{- $patch := $value.patch | toString }}
+{{- $v := semver $version }}
+{{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
@@ -52,4 +47,4 @@ import:
   before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/kube-proxy"]
-  {{- end }}
+{{- end }}

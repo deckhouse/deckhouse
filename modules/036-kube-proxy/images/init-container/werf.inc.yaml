@@ -1,0 +1,32 @@
+---
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromArtifact: src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/036-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+---
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - go build -ldflags="-s -w" -o entrypoint main.go
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src/entrypoint
+  to: /entrypoint
+  before: setup
+docker:
+  ENTRYPOINT: ["/entrypoint"]
