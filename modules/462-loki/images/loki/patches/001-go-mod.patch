@@ -1,0 +1,351 @@
+diff --git a/go.mod b/go.mod
+index 25150a2..51eee43 100644
+--- a/go.mod
++++ b/go.mod
+@@ -26,7 +26,7 @@ require (
+ 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
+ 	github.com/cristalhq/hedgedhttp v0.7.2
+ 	github.com/davecgh/go-spew v1.1.1
+-	github.com/docker/docker v23.0.8+incompatible
++	github.com/docker/docker v23.0.15+incompatible
+ 	github.com/docker/go-plugins-helpers v0.0.0-20181025120712-1e6269c305b8
+ 	github.com/drone/envsubst v1.0.3
+ 	github.com/dustin/go-humanize v1.0.1
+diff --git a/go.sum b/go.sum
+index 0efcd09..ef2926b 100644
+--- a/go.sum
++++ b/go.sum
+@@ -711,8 +711,8 @@ github.com/docker/distribution v2.6.0-rc.1.0.20170726174610-edc3ab29cdff+incompa
+ github.com/docker/distribution v2.8.2+incompatible h1:T3de5rq0dB1j30rp0sA2rER+m322EBzniBPB6ZIzuh8=
+ github.com/docker/distribution v2.8.2+incompatible/go.mod h1:J2gT2udsDAN96Uj4KfcMRqY0/ypR+oyYUYmja8H+y+w=
+ github.com/docker/docker v17.12.0-ce-rc1.0.20200916142827-bd33bbf0497b+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+-github.com/docker/docker v23.0.8+incompatible h1:z4ZCIwfqHgOEwhxmAWugSL1PFtPQmLP60EVhJYJPaX8=
+-github.com/docker/docker v23.0.8+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
++github.com/docker/docker v23.0.15+incompatible h1:FnANKw0DBmNSfsivQq07CbPsYvahxZwdyfzg5TtPJWQ=
++github.com/docker/docker v23.0.15+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+ github.com/docker/go-connections v0.3.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=
+ github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKohAFqRJQ=
+ github.com/docker/go-connections v0.4.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=
+diff --git a/operator/go.mod b/operator/go.mod
+index 7c8dcdd..1e3b81e 100644
+--- a/operator/go.mod
++++ b/operator/go.mod
+@@ -135,7 +135,7 @@ require (
+ 	golang.org/x/exp v0.0.0-20230124195608-d38c7dcee874 // indirect
+ 	golang.org/x/mod v0.8.0 // indirect
+ 	golang.org/x/net v0.23.0 // indirect
+-	golang.org/x/oauth2 v0.5.0 // indirect
++	golang.org/x/oauth2 v0.7.0 // indirect
+ 	golang.org/x/sync v0.2.0 // indirect
+ 	golang.org/x/sys v0.18.0 // indirect
+ 	golang.org/x/term v0.18.0 // indirect
+@@ -144,9 +144,9 @@ require (
+ 	golang.org/x/tools v0.6.0 // indirect
+ 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
+ 	google.golang.org/appengine v1.6.7 // indirect
+-	google.golang.org/genproto v0.0.0-20230124163310-31e0e69b6fc2 // indirect
+-	google.golang.org/grpc v1.52.3 // indirect
+-	google.golang.org/protobuf v1.30.0 // indirect
++	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
++	google.golang.org/grpc v1.56.3 // indirect
++	google.golang.org/protobuf v1.33.0 // indirect
+ 	gopkg.in/inf.v0 v0.9.1 // indirect
+ 	gopkg.in/yaml.v3 v3.0.1 // indirect
+ 	k8s.io/apiextensions-apiserver v0.26.1 // indirect
+diff --git a/operator/go.sum b/operator/go.sum
+index 2710f89..6481eb7 100644
+--- a/operator/go.sum
++++ b/operator/go.sum
+@@ -974,6 +974,7 @@ golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb/go.mod h1:jaDAt6Dkxork7Lm
+ golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1/go.mod h1:h4gKUeWbJ4rQPri7E0u6Gs4e9Ri2zaLxzw5DI5XGrYg=
+ golang.org/x/oauth2 v0.5.0 h1:HuArIo48skDwlrvM3sEdHXElYslAMsf3KwRkkW4MC4s=
+ golang.org/x/oauth2 v0.5.0/go.mod h1:9/XBHVqLaWO3/BRHs5jbpYCnOZVjj5V0ndyaAM7KB4I=
++golang.org/x/oauth2 v0.7.0/go.mod h1:hPLQkd9LyjfXTiRohC/41GhcFqxisoUQ99sCUOHO9x4=
+ golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+@@ -1323,6 +1324,8 @@ google.golang.org/genproto v0.0.0-20220608133413-ed9918b62aac/go.mod h1:KEWEmljW
+ google.golang.org/genproto v0.0.0-20220616135557-88e70c0c3a90/go.mod h1:KEWEmljWE5zPzLBa/oHl6DaEt9LmfH6WtH1OHIvleBA=
+ google.golang.org/genproto v0.0.0-20230124163310-31e0e69b6fc2 h1:O97sLx/Xmb/KIZHB/2/BzofxBs5QmmR0LcihPtllmbc=
+ google.golang.org/genproto v0.0.0-20230124163310-31e0e69b6fc2/go.mod h1:RGgjbofJ8xD9Sq1VVhDM1Vok1vRONV+rg+CjzG4SZKM=
++google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 h1:KpwkzHKEF7B9Zxg18WzOa7djJ+Ha5DzthMyZYQfEn2A=
++google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1/go.mod h1:nKE/iIaLqn2bQwXBg8f1g2Ylh6r5MN5CmZvuzZCgsCU=
+ google.golang.org/grpc v1.12.0/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
+ google.golang.org/grpc v1.19.0/go.mod h1:mqu4LbDTu4XGKhr4mRzUsmM4RtVoemTSY81AxZiDr8c=
+ google.golang.org/grpc v1.20.1/go.mod h1:10oTOabMzJvdu6/UiuZezV6QK5dSlG84ov/aaiqXj38=
+@@ -1359,6 +1362,8 @@ google.golang.org/grpc v1.46.2/go.mod h1:vN9eftEi1UMyUsIF80+uQXhHjbXYbm0uXoFCACu
+ google.golang.org/grpc v1.47.0/go.mod h1:vN9eftEi1UMyUsIF80+uQXhHjbXYbm0uXoFCACuMGWk=
+ google.golang.org/grpc v1.52.3 h1:pf7sOysg4LdgBqduXveGKrcEwbStiK2rtfghdzlUYDQ=
+ google.golang.org/grpc v1.52.3/go.mod h1:pu6fVzoFb+NBYNAvQL08ic+lvB2IojljRYuun5vorUY=
++google.golang.org/grpc v1.56.3 h1:8I4C0Yq1EjstUzUJzpcRVbuYA2mODtEmpWiQoN/b2nc=
++google.golang.org/grpc v1.56.3/go.mod h1:I9bI3vqKfayGqPUAwGdOSu7kt6oIJLixfffKrpXqQ9s=
+ google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0/go.mod h1:6Kw0yEErY5E/yWrBtf03jp27GLLJujG4z/JK95pnjjw=
+ google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
+ google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
+@@ -1377,6 +1382,8 @@ google.golang.org/protobuf v1.28.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqw
+ google.golang.org/protobuf v1.28.1/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
+ google.golang.org/protobuf v1.30.0 h1:kPPoIgf3TsEvrm0PFe15JQ+570QVxYzEvvHqChK+cng=
+ google.golang.org/protobuf v1.30.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
++google.golang.org/protobuf v1.33.0 h1:uNO2rsAINq/JlFpSdYEKIZ0uKD/R9cpdv0T+yoGwGmI=
++google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
+ gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
+ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+diff --git a/pkg/push/go.mod b/pkg/push/go.mod
+index b69662d..ff5d8df 100644
+--- a/pkg/push/go.mod
++++ b/pkg/push/go.mod
+@@ -6,7 +6,7 @@ require (
+ 	github.com/gogo/protobuf v1.3.2
+ 	github.com/stretchr/testify v1.8.2
+ 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
+-	google.golang.org/grpc v1.53.0
++	google.golang.org/grpc v1.56.3
+ )
+
+ require (
+@@ -17,8 +17,8 @@ require (
+ 	golang.org/x/net v0.23.0 // indirect
+ 	golang.org/x/sys v0.18.0 // indirect
+ 	golang.org/x/text v0.14.0 // indirect
+-	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
+-	google.golang.org/protobuf v1.29.1 // indirect
++	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
++	google.golang.org/protobuf v1.33.0 // indirect
+ 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+ 	gopkg.in/yaml.v3 v3.0.1 // indirect
+ )
+diff --git a/pkg/push/go.sum b/pkg/push/go.sum
+index 3698620..3b26d31 100644
+--- a/pkg/push/go.sum
++++ b/pkg/push/go.sum
+@@ -63,12 +63,20 @@ golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8T
+ golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+ google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 h1:DdoeryqhaXp1LtT/emMP1BRJPHHKFi5akj/nbx/zNTA=
+ google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4/go.mod h1:NWraEVixdDnqcqQ30jipen1STv2r/n24Wb7twVTGR4s=
++google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 h1:KpwkzHKEF7B9Zxg18WzOa7djJ+Ha5DzthMyZYQfEn2A=
++google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1/go.mod h1:nKE/iIaLqn2bQwXBg8f1g2Ylh6r5MN5CmZvuzZCgsCU=
+ google.golang.org/grpc v1.53.0 h1:LAv2ds7cmFV/XTS3XG1NneeENYrXGmorPxsBbptIjNc=
+ google.golang.org/grpc v1.53.0/go.mod h1:OnIrk0ipVdj4N5d9IUoFUx72/VlD7+jUsHwZgwSMQpw=
++google.golang.org/grpc v1.56.3 h1:8I4C0Yq1EjstUzUJzpcRVbuYA2mODtEmpWiQoN/b2nc=
++google.golang.org/grpc v1.56.3/go.mod h1:I9bI3vqKfayGqPUAwGdOSu7kt6oIJLixfffKrpXqQ9s=
+ google.golang.org/protobuf v1.26.0-rc.1/go.mod h1:jlhhOSvTdKEhbULTjvd4ARK9grFBp09yW+WbY/TyQbw=
+ google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
+ google.golang.org/protobuf v1.29.1 h1:7QBf+IK2gx70Ap/hDsOmam3GE0v9HicjfEdAxE62UoM=
+ google.golang.org/protobuf v1.29.1/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
++google.golang.org/protobuf v1.30.0 h1:kPPoIgf3TsEvrm0PFe15JQ+570QVxYzEvvHqChK+cng=
++google.golang.org/protobuf v1.30.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
++google.golang.org/protobuf v1.33.0 h1:uNO2rsAINq/JlFpSdYEKIZ0uKD/R9cpdv0T+yoGwGmI=
++google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
+ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
+ gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c/go.mod h1:JHkPIbrfpd72SG/EVd6muEfDQjcINNoR0C8j2r3qZ4Q=
+diff --git a/tools/lambda-promtail/go.mod b/tools/lambda-promtail/go.mod
+index 22f7df1..d57cfa9 100644
+--- a/tools/lambda-promtail/go.mod
++++ b/tools/lambda-promtail/go.mod
+@@ -44,7 +44,7 @@ require (
+ 	github.com/go-logfmt/logfmt v0.6.0 // indirect
+ 	github.com/gogo/googleapis v1.4.0 // indirect
+ 	github.com/gogo/status v1.1.1 // indirect
+-	github.com/golang/protobuf v1.5.2 // indirect
++	github.com/golang/protobuf v1.5.3 // indirect
+ 	github.com/google/btree v1.1.2 // indirect
+ 	github.com/gorilla/mux v1.8.0 // indirect
+ 	github.com/grafana/loki/pkg/push v0.0.0-20230127102416-571f88bc5765 // indirect
+@@ -102,16 +102,16 @@ require (
+ 	golang.org/x/exp v0.0.0-20221212164502-fae10dda9338 // indirect
+ 	golang.org/x/mod v0.8.0 // indirect
+ 	golang.org/x/net v0.23.0 // indirect
+-	golang.org/x/oauth2 v0.4.0 // indirect
++	golang.org/x/oauth2 v0.7.0 // indirect
+ 	golang.org/x/sync v0.1.0 // indirect
+ 	golang.org/x/sys v0.18.0 // indirect
+ 	golang.org/x/text v0.14.0 // indirect
+ 	golang.org/x/time v0.3.0 // indirect
+ 	golang.org/x/tools v0.6.0 // indirect
+ 	google.golang.org/appengine v1.6.7 // indirect
+-	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
+-	google.golang.org/grpc v1.52.3 // indirect
+-	google.golang.org/protobuf v1.28.1 // indirect
++	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
++	google.golang.org/grpc v1.56.3 // indirect
++	google.golang.org/protobuf v1.33.0 // indirect
+ 	gopkg.in/yaml.v2 v2.4.0 // indirect
+ 	gopkg.in/yaml.v3 v3.0.1 // indirect
+ )
+diff --git a/tools/lambda-promtail/go.sum b/tools/lambda-promtail/go.sum
+index ac1a139..eea59ce 100644
+--- a/tools/lambda-promtail/go.sum
++++ b/tools/lambda-promtail/go.sum
+@@ -240,6 +240,8 @@ github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaS
+ github.com/golang/protobuf v1.5.1/go.mod h1:DopwsBzvsk0Fs44TXzsVbJyPhcCPeIwnvohx4u74HPM=
+ github.com/golang/protobuf v1.5.2 h1:ROPKBNFfQgOUMifHyP+KYbvpjbdoFNs+aK7DXlji0Tw=
+ github.com/golang/protobuf v1.5.2/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
++github.com/golang/protobuf v1.5.3 h1:KhyjKVUg7Usr/dYsdSqoFveMYd5ko72D+zANwlG1mmg=
++github.com/golang/protobuf v1.5.3/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=
+ github.com/golang/snappy v0.0.3/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
+ github.com/golang/snappy v0.0.4 h1:yAGX7huGHXlcLOEtBnF4w7FQwA26wojNCwOYAEhLjQM=
+ github.com/golang/snappy v0.0.4/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
+@@ -702,6 +704,8 @@ golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb/go.mod h1:jaDAt6Dkxork7Lm
+ golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1/go.mod h1:h4gKUeWbJ4rQPri7E0u6Gs4e9Ri2zaLxzw5DI5XGrYg=
+ golang.org/x/oauth2 v0.4.0 h1:NF0gk8LVPg1Ml7SSbGyySuoxdsXitj7TvgvuRxIMc/M=
+ golang.org/x/oauth2 v0.4.0/go.mod h1:RznEsdpjGAINPTOF0UH/t+xJ75L18YO3Ho6Pyn+uRec=
++golang.org/x/oauth2 v0.7.0 h1:qe6s0zUXlPX80/dITx3440hWZ7GwMwgDDyrSGTPJG/g=
++golang.org/x/oauth2 v0.7.0/go.mod h1:hPLQkd9LyjfXTiRohC/41GhcFqxisoUQ99sCUOHO9x4=
+ golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+ golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+@@ -1016,6 +1020,8 @@ google.golang.org/genproto v0.0.0-20220608133413-ed9918b62aac/go.mod h1:KEWEmljW
+ google.golang.org/genproto v0.0.0-20220616135557-88e70c0c3a90/go.mod h1:KEWEmljWE5zPzLBa/oHl6DaEt9LmfH6WtH1OHIvleBA=
+ google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f h1:BWUVssLB0HVOSY78gIdvk1dTVYtT1y8SBWtPYuTJ/6w=
+ google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f/go.mod h1:RGgjbofJ8xD9Sq1VVhDM1Vok1vRONV+rg+CjzG4SZKM=
++google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 h1:KpwkzHKEF7B9Zxg18WzOa7djJ+Ha5DzthMyZYQfEn2A=
++google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1/go.mod h1:nKE/iIaLqn2bQwXBg8f1g2Ylh6r5MN5CmZvuzZCgsCU=
+ google.golang.org/grpc v1.12.0/go.mod h1:yo6s7OP7yaDglbqo1J04qKzAhqBH6lvTonzMVmEdcZw=
+ google.golang.org/grpc v1.19.0/go.mod h1:mqu4LbDTu4XGKhr4mRzUsmM4RtVoemTSY81AxZiDr8c=
+ google.golang.org/grpc v1.20.1/go.mod h1:10oTOabMzJvdu6/UiuZezV6QK5dSlG84ov/aaiqXj38=
+@@ -1051,6 +1057,8 @@ google.golang.org/grpc v1.46.2/go.mod h1:vN9eftEi1UMyUsIF80+uQXhHjbXYbm0uXoFCACu
+ google.golang.org/grpc v1.47.0/go.mod h1:vN9eftEi1UMyUsIF80+uQXhHjbXYbm0uXoFCACuMGWk=
+ google.golang.org/grpc v1.52.3 h1:pf7sOysg4LdgBqduXveGKrcEwbStiK2rtfghdzlUYDQ=
+ google.golang.org/grpc v1.52.3/go.mod h1:pu6fVzoFb+NBYNAvQL08ic+lvB2IojljRYuun5vorUY=
++google.golang.org/grpc v1.56.3 h1:8I4C0Yq1EjstUzUJzpcRVbuYA2mODtEmpWiQoN/b2nc=
++google.golang.org/grpc v1.56.3/go.mod h1:I9bI3vqKfayGqPUAwGdOSu7kt6oIJLixfffKrpXqQ9s=
+ google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0/go.mod h1:6Kw0yEErY5E/yWrBtf03jp27GLLJujG4z/JK95pnjjw=
+ google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
+ google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
+@@ -1068,6 +1076,10 @@ google.golang.org/protobuf v1.27.1/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQ
+ google.golang.org/protobuf v1.28.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
+ google.golang.org/protobuf v1.28.1 h1:d0NfwRgPtno5B1Wa6L2DAG+KivqkdutMf1UhdNx175w=
+ google.golang.org/protobuf v1.28.1/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
++google.golang.org/protobuf v1.30.0 h1:kPPoIgf3TsEvrm0PFe15JQ+570QVxYzEvvHqChK+cng=
++google.golang.org/protobuf v1.30.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
++google.golang.org/protobuf v1.33.0 h1:uNO2rsAINq/JlFpSdYEKIZ0uKD/R9cpdv0T+yoGwGmI=
++google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
+ gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
+ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+ gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+diff --git a/vendor/github.com/docker/docker/client/container_wait.go b/vendor/github.com/docker/docker/client/container_wait.go
+index 2375eb1..b7d8054 100644
+--- a/vendor/github.com/docker/docker/client/container_wait.go
++++ b/vendor/github.com/docker/docker/client/container_wait.go
+@@ -66,8 +66,12 @@ func (cli *Client) ContainerWait(ctx context.Context, containerID string, condit
+ 			//
+ 			// If there's a JSON parsing error, read the real error message
+ 			// off the body and send it to the client.
+-			_, _ = io.ReadAll(io.LimitReader(stream, containerWaitErrorMsgLimit))
+-			errC <- errors.New(responseText.String())
++			if errors.As(err, new(*json.SyntaxError)) {
++				_, _ = io.ReadAll(io.LimitReader(stream, containerWaitErrorMsgLimit))
++				errC <- errors.New(responseText.String())
++			} else {
++				errC <- err
++			}
+ 			return
+ 		}
+
+diff --git a/vendor/github.com/docker/docker/pkg/ioutils/readers.go b/vendor/github.com/docker/docker/pkg/ioutils/readers.go
+index de00b95..d82ae93 100644
+--- a/vendor/github.com/docker/docker/pkg/ioutils/readers.go
++++ b/vendor/github.com/docker/docker/pkg/ioutils/readers.go
+@@ -3,11 +3,15 @@ package ioutils // import "github.com/docker/docker/pkg/ioutils"
+ import (
+ 	"context"
+ 	"io"
++	"runtime/debug"
++	"sync/atomic"
+
+ 	// make sure crypto.SHA256, crypto.sha512 and crypto.SHA384 are registered
+ 	// TODO remove once https://github.com/opencontainers/go-digest/pull/64 is merged.
+ 	_ "crypto/sha256"
+ 	_ "crypto/sha512"
++
++	"github.com/sirupsen/logrus"
+ )
+
+ // ReadCloserWrapper wraps an io.Reader, and implements an io.ReadCloser
+@@ -16,10 +20,15 @@ import (
+ type ReadCloserWrapper struct {
+ 	io.Reader
+ 	closer func() error
++	closed atomic.Bool
+ }
+
+ // Close calls back the passed closer function
+ func (r *ReadCloserWrapper) Close() error {
++	if !r.closed.CompareAndSwap(false, true) {
++		subsequentCloseWarn("ReadCloserWrapper")
++		return nil
++	}
+ 	return r.closer()
+ }
+
+@@ -87,6 +96,7 @@ type cancelReadCloser struct {
+ 	cancel func()
+ 	pR     *io.PipeReader // Stream to read from
+ 	pW     *io.PipeWriter
++	closed atomic.Bool
+ }
+
+ // NewCancelReadCloser creates a wrapper that closes the ReadCloser when the
+@@ -146,6 +156,17 @@ func (p *cancelReadCloser) closeWithError(err error) {
+ // Close closes the wrapper its underlying reader. It will cause
+ // future calls to Read to return io.EOF.
+ func (p *cancelReadCloser) Close() error {
++	if !p.closed.CompareAndSwap(false, true) {
++		subsequentCloseWarn("cancelReadCloser")
++		return nil
++	}
+ 	p.closeWithError(io.EOF)
+ 	return nil
+ }
++
++func subsequentCloseWarn(name string) {
++	logrus.Error("subsequent attempt to close " + name)
++	if logrus.GetLevel() >= logrus.DebugLevel {
++		logrus.Errorf("stack trace: %s", string(debug.Stack()))
++	}
++}
+diff --git a/vendor/github.com/docker/docker/pkg/ioutils/writers.go b/vendor/github.com/docker/docker/pkg/ioutils/writers.go
+index 61c6794..1f50602 100644
+--- a/vendor/github.com/docker/docker/pkg/ioutils/writers.go
++++ b/vendor/github.com/docker/docker/pkg/ioutils/writers.go
+@@ -1,6 +1,9 @@
+ package ioutils // import "github.com/docker/docker/pkg/ioutils"
+
+-import "io"
++import (
++	"io"
++	"sync/atomic"
++)
+
+ // NopWriter represents a type which write operation is nop.
+ type NopWriter struct{}
+@@ -29,9 +32,14 @@ func (f *NopFlusher) Flush() {}
+ type writeCloserWrapper struct {
+ 	io.Writer
+ 	closer func() error
++	closed atomic.Bool
+ }
+
+ func (r *writeCloserWrapper) Close() error {
++	if !r.closed.CompareAndSwap(false, true) {
++		subsequentCloseWarn("WriteCloserWrapper")
++		return nil
++	}
+ 	return r.closer()
+ }
+
+diff --git a/vendor/modules.txt b/vendor/modules.txt
+index 1f3f29e..d2497e3 100644
+--- a/vendor/modules.txt
++++ b/vendor/modules.txt
+@@ -482,7 +482,7 @@ github.com/dimchansky/utfbom
+ ## explicit
+ github.com/docker/distribution/digestset
+ github.com/docker/distribution/reference
+-# github.com/docker/docker v23.0.8+incompatible
++# github.com/docker/docker v23.0.14+incompatible
+ ## explicit
+ github.com/docker/docker/api
+ github.com/docker/docker/api/types
