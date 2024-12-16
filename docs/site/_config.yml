@@ -128,6 +128,7 @@ defaults:
       path: "*/030-cloud-provider-openstack"
       type: "pages"
     values:
+      d8Revision: ee
   - scope:
       path: "*/030-cloud-provider-vsphere"
       type: "pages"
