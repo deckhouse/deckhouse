@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Network policies"
 permalink: en/virtualization-platform/documentation/user/network/network-policies.html
 ---
 

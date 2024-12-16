@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/user/resource-management/vir
 
 For creating a virtual machine, the [VirtualMachine](../../../reference/cr/virtualmachine.html) resource is used. Its parameters allow you to configure:
 
-- [Virtual machine class](../../admin/platform-management/virtualization/virtual_machine_classes.html);
+- [Virtual machine class](../../admin/platform-management/virtualization/virtual-machine-classes.html);
 - Resources required for the virtual machine (CPU, memory, disks, and images);
 - Node placement policies for the virtual machine in the cluster;
 - Bootloader settings and optimal parameters for the guest OS;
@@ -143,7 +143,7 @@ The startup policy of a virtual machine is designed for automated management of 
 The state of the virtual machine can be managed using the following methods:
 
 - Creating a [VirtualMachineOperation](../../../reference/cr/virtualmachineoperation.html) (`vmop`) resource.
-- Using the [`d8`](../../reference/console-utilities/d8.html) utility with the corresponding subcommand.
+- Using the [`d8`](../../../reference/console-utilities/d8.html) utility with the corresponding subcommand.
 
 The `VirtualMachineOperation` resource declaratively defines an action that should be performed on the virtual machine.
 

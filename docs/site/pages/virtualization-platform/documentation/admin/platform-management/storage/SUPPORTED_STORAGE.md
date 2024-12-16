@@ -1,5 +1,5 @@
 ---
-title: "Deckhouse Virtualization Platform"
+title: "Storage configuration"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
 ---
 
