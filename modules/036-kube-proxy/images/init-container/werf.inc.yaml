@@ -1,6 +1,7 @@
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: common/src-artifact
+fromCacheVersion: 2024022701
 git:
 - add: /{{ $.ModulePath }}/modules/036-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
@@ -10,7 +11,6 @@ git:
 ---
 artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
-fromCacheVersion: 2024022701
 import:
 - artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
