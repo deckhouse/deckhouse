@@ -65,7 +65,7 @@ func TestValidateConfigWithVector(t *testing.T) {
 		cmd.Stderr = os.Stderr
 
 		if err := cmd.Run(); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 	})
 }

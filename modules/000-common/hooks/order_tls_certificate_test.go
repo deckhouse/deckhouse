@@ -20,37 +20,31 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/cloudflare/cfssl/helpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: common :: hooks :: order_tls_certificate", func() {
 	f := HookExecutionConfigInit(`{"global":{},"moduleName":{"internal":{}}}`, `{}`)
 
-	var log = logrus.New()
-	log.Level = logrus.InfoLevel
-	log.Out = os.Stdout
-	var logEntry = log.WithContext(context.TODO())
-
-	selfSignedCA, _ := certificate.GenerateCA(logEntry, "kubernetes")
-	tlsCert, _ := certificate.GenerateSelfSignedCert(logEntry,
+	selfSignedCA, _ := certificate.GenerateCA(log.NewNop(), "kubernetes")
+	tlsCert, _ := certificate.GenerateSelfSignedCert(log.NewNop(),
 		"system:node:module-name.d8-module-name",
 		selfSignedCA,
 		certificate.WithGroups("system:nodes"),
 		certificate.WithSANs("module-name.d8-module-name", "module-name.d8-module-name.svc"),
 	)
-	incorrectCert, _ := certificate.GenerateSelfSignedCert(logEntry, "test", selfSignedCA)
+	incorrectCert, _ := certificate.GenerateSelfSignedCert(log.NewNop(), "test", selfSignedCA)
 
 	Context("Cluster without certificate", func() {
 		BeforeEach(func() {

@@ -17,6 +17,7 @@ limitations under the License.
 package errors
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -90,5 +91,5 @@ func (l *LintRuleErrorsList) ConvertToError() error {
 		}
 		builder.WriteString("\n")
 	}
-	return fmt.Errorf(builder.String())
+	return errors.New(builder.String())
 }

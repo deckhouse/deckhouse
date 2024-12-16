@@ -40,7 +40,6 @@ cloudProviderAws:
     exclude:
     - sc\d+
     - bar
-    default: other-bar
 `
 		initValuesExcludeAllString = `
 cloudProviderAws:
@@ -48,6 +47,44 @@ cloudProviderAws:
   storageClass:
     exclude:
     - ".*"
+`
+
+		initValuesWithDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: default-cluster-sc
+cloudProviderAws:
+  internal: {}
+  storageClass:
+    provision:
+    - iopsPerGB: "5"
+      name: iops-foo
+      type: io1
+    - name: gp3
+      type: gp3
+      iops: "6000"
+      throughput: "300"
+    exclude:
+    - sc\d+
+    - bar
+`
+
+		initValuesWithEmptyDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: ""
+cloudProviderAws:
+  internal: {}
+  storageClass:
+    provision:
+    - iopsPerGB: "5"
+      name: iops-foo
+      type: io1
+    - name: gp3
+      type: gp3
+      iops: "6000"
+      throughput: "300"
+    exclude:
+    - sc\d+
+    - bar
 `
 
 		storageClass = `
@@ -73,7 +110,7 @@ parameters:
 			f.RunHook()
 		})
 
-		It("Should discover storageClasses with default set", func() {
+		It("Should discover storageClasses", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderAws.internal.storageClasses").String()).To(MatchJSON(`
 [
@@ -98,7 +135,6 @@ parameters:
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderAws.internal.defaultStorageClass").String()).To(Equal(`other-bar`))
 		})
 
 	})
@@ -114,9 +150,6 @@ parameters:
 		It("Should discover no storageClasses with no default is set", func() {
 			Expect(fb).To(ExecuteSuccessfully())
 			Expect(fb.ValuesGet("cloudProviderAws.internal.storageClasses").String()).To(MatchJSON(`[]`))
-			Expect(fb.ValuesGet("cloudProviderAws.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
-
 	})
-
 })

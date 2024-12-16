@@ -1,0 +1,30 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /dynamix-cloud-controller-manager
+    to: /dynamix-cloud-controller-manager
+    before: setup
+docker:
+  ENTRYPOINT: ["/dynamix-cloud-controller-manager"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  install:
+    - export GO_VERSION=${GOLANG_VERSION}
+    - export GOPROXY={{ $.GOPROXY }}
+    - export VERSION="v0.2.0"
+    - export VERSION_COMMON="v0.2.0"
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/cloud-controller-manager.git /cloud-controller-manager/src
+    - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/dynamix/dynamix-common.git /dynamix-common
+    - cd /cloud-controller-manager/src
+    - go mod tidy
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w " -o /dynamix-cloud-controller-manager cmd/dynamix-cloud-controller-manager/main.go
+    - chown 64535:64535 /dynamix-cloud-controller-manager
+    - chmod 0755 /dynamix-cloud-controller-manager

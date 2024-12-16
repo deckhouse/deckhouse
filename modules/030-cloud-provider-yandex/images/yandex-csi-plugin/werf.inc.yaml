@@ -1,8 +1,11 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.csi.yandex }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /go/bin/yandex-csi-driver
   to: /bin/yandex-csi-driver
   before: setup
@@ -15,24 +18,30 @@ import:
 docker:
   ENTRYPOINT: ["/bin/yandex-csi-driver"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+    {{- end }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /go/src/app
-  - git clone --depth 1 --branch v0.13.0 {{ $.SOURCE_REPO }}/deckhouse/yandex-csi-driver.git /go/src/app
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch {{ $value.csi.yandex }} {{ $.SOURCE_REPO }}/deckhouse/yandex-csi-driver.git /go/src/app
   - cd /go/src/app
   - |
-    VERSION=$(cat VERSION)
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
-    -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version=${VERSION}' \
+    -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version={{ $value.csi.yandex }}' \
     -o /go/bin/yandex-csi-driver \
     github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
+ {{- end }}
+{{- end }}
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
 ---

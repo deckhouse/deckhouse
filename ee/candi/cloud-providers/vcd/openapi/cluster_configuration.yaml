@@ -14,6 +14,8 @@ apiVersions:
         ```shell
         kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
         ```
+
+        > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
       x-doc-search: |
         ProviderClusterConfiguration
       x-examples:
@@ -63,14 +65,12 @@ apiVersions:
             The definition of the master's NodeGroup.
 
             > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
-          x-unsafe-rules: [updateMasterImage]
           properties:
             replicas:
               type: integer
               minimum: 1
               description: |
                 The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
-              x-unsafe-rules: [updateReplicas]
             instanceClass:
               type: object
               additionalProperties: false
@@ -112,7 +112,7 @@ apiVersions:
                 template:
                   description: |
                     Path of the template OVA that is to be used.
-                    
+
                     Consists of organization (optional), catalog, template path. Organization may not match with provider.organization (in case of shared templates).
                   type: string
                   example: Linux/ubuntu2204-cloud-ova
@@ -222,7 +222,7 @@ apiVersions:
                   template:
                     description: |
                       Path of the template OVA that is to be used.
-                      
+
                       Consists of organization (optional), catalog, template path. Organization may not match with provider.organization (in case of shared templates).
                     type: string
                     example: Linux/ubuntu2204-cloud-ova

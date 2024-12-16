@@ -227,7 +227,7 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 	versionsInSecret := ekvProcessSecretSnapshot(input)
 	maxUsedControlPlaneVersion := versionsInSecret.MaxUsed
 	if maxUsedControlPlaneVersion == nil {
-		input.LogEntry.Warn("deckhouse-managed control plane Pods are not yet deployed, setting max_used_control_plane_version to config_version")
+		input.Logger.Warn("deckhouse-managed control plane Pods are not yet deployed, setting max_used_control_plane_version to config_version")
 		maxUsedControlPlaneVersion = configVersion
 	}
 
@@ -321,7 +321,7 @@ func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (
 	}
 
 	if !apiserverExists {
-		input.LogEntry.Warn("deckhouse-managed control plane Pods are not yet deployed, setting control_plane_version to version acquired from kubectl version")
+		input.Logger.Warn("deckhouse-managed control plane Pods are not yet deployed, setting control_plane_version to version acquired from kubectl version")
 		k8sClient, err := dc.GetK8sClient()
 		if err != nil {
 			return nil, nil, err

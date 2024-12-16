@@ -37,6 +37,7 @@ func fromUnstructured(unstructuredObj unstructured.Unstructured, obj interface{}
 
 func TestResourcesOrder(t *testing.T) {
 	unknownAdditionalOrder := []string{
+		"IngressNginxController",
 		"ClusterAuthorizationRule",
 		"YandexInstanceClass",
 		"NodeGroup",

@@ -26,6 +26,7 @@ shell:
     - export GOOS=linux
     - export GOARCH=amd64
     - export CGO_ENABLED=0
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch "v{{ $version }}" {{ $.SOURCE_REPO }}/prometheus-operator/prometheus-operator.git /prometheus-operator
     - cd /prometheus-operator
     - export VERSION=$(cat VERSION | tr -d " \t\n\r")

@@ -87,7 +87,7 @@ func genBashibleAPIServerCertsHandler(input *go_hook.HookInput) error {
 }
 
 func generateNewBashibleCert(input *go_hook.HookInput) (certificate.Certificate, error) {
-	ca, err := certificate.GenerateCA(input.LogEntry,
+	ca, err := certificate.GenerateCA(input.Logger,
 		"node-manager",
 		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
@@ -96,7 +96,7 @@ func generateNewBashibleCert(input *go_hook.HookInput) (certificate.Certificate,
 		return certificate.Certificate{}, err
 	}
 
-	return certificate.GenerateSelfSignedCert(input.LogEntry,
+	return certificate.GenerateSelfSignedCert(input.Logger,
 		"node-manager",
 		ca,
 		certificate.WithSANs("127.0.0.1", "bashible-api.d8-cloud-instance-manager.svc"),

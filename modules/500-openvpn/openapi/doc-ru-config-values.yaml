@@ -82,7 +82,7 @@ properties:
           > **Внимание!** При использовании совместно с модулем user-authn необходимо также добавить разрешенные группы в соответствующее поле в настройках [DexProvider](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
       whitelistSourceRanges:
         description: |
-          Массив адресов в формате CIDR, которым разрешено проходить аутентификацию для доступа в OpenVPN.
+          Список адресов в формате CIDR, которым разрешено проходить аутентификацию для доступа в OpenVPN.
   externalHost:
     description: |
       IP-адрес или домен, по которому клиенты подключаются к OpenVPN-серверу.
@@ -127,12 +127,12 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   pmacctEnabled:
     description: |
       Включить логирование пользовательской активности через VPN в JSON-формате.

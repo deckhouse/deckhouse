@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
-	log "github.com/sirupsen/logrus"
 	coordv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,10 +45,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const defaultDocumentationCheckInterval = 10 * time.Second
@@ -62,18 +61,16 @@ type moduleDocumentationReconciler struct {
 	dc          dependency.Container
 	docsBuilder *docs_builder.Client
 
-	logger logger.Logger
+	logger *log.Logger
 }
 
-func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Container) error {
-	lg := log.WithField("component", "ModuleDocumentation")
-
+func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Container, logger *log.Logger) error {
 	c := &moduleDocumentationReconciler{
-		mgr.GetClient(),
-		d8env.GetDownloadedModulesDir(),
-		dependency.NewDependencyContainer(),
-		docs_builder.NewClient(dc.GetHTTPClient()),
-		lg,
+		client:               mgr.GetClient(),
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		dc:                   dependency.NewDependencyContainer(),
+		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
+		logger:               logger,
 	}
 
 	ctr, err := controller.New("module-documentation", mgr, controller.Options{

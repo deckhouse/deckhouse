@@ -1,10 +1,24 @@
 type: object
 properties:
   storageClass:
-    description: |
-      Имя StorageClass.
+    description: |-
+      Имя StorageClass, который будет использоваться по умолчанию в кластере.
 
-      `false` — принудительное использование `emptyDir`. После установки необходимо вручную удалить старый PVC и перезапустить под.
+      Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
+
+      Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
+
+      **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
+
+      Если указать `false`, будет принудительно использоваться `emptyDir`.
+
+  insecureDbRegistry:
+    description: |
+      Разрешает Trivy скачивать базы данных уязвимостей, используя недоверенные HTTPS-подключения (не прошедшие проверку TLS-сертификата) или подключения по HTTP.
+
+  additionalVulnerabilityReportFields:
+    description: |
+      Список дополнительных полей из базы уязвимостей, добавляемых к отчетам об уязвимостях (VulnerabilityReport).
 
   severities:
     description: |
@@ -20,14 +34,19 @@ properties:
 
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если значение не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   nodeSelector:
     description: |
       Опциональный селектор для компонентов `operator-trivy` и заданий сканирования (Jobs).
 
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  disableSBOMGeneration:
+    description: |
+      Отключает генерацию отчетов SBOM.
+
+      **Внимание.** При установке значения "true", все текущие отчеты SBOM в кластере удаляются (очистка выполняется один раз).
 
   reportResourceLabels:
     description: |
@@ -37,4 +56,10 @@ properties:
 
   insecureRegistries:
     description: |
-      Хранилище образов контейнеров (container registry), к которым разрешены незащищённые соединения.
+      Список адресов хранилищ образов контейнеров (container registry), к которым разрешены недоверенные HTTPS-подключения (не прошедшие проверку TLS-сертификата) и подключения по HTTP.
+
+  additionalRegistryCA:
+    description: |
+      Список корневых сертификатов (CA) приватных хранилищ образов контейнеров (container registry).
+
+      Если требуется указать несколько сертификатов, они перечисляются последовательно, без дополнительных переносов строк.

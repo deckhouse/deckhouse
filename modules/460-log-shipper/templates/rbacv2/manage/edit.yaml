@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-log-shipper
-  name: d8:manage:capability:module:log-shipper:edit
+  name: d8:manage:permission:module:log-shipper:edit
 rules:
 - apiGroups:
   - deckhouse.io

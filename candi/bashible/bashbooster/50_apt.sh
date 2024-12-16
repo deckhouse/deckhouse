@@ -20,19 +20,27 @@
 bb-var BB_APT_UNHANDLED_PACKAGES_STORE "/var/lib/bashible/bashbooster_unhandled_packages"
 
 bb-apt?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     bb-exe? apt-get
 }
 
 bb-apt-repo?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     local REPO_PART=$1
     cat /etc/apt/sources.list /etc/apt/sources.list.d/* 2> /dev/null | grep -v '^#' | grep -qw "$REPO_PART"
 }
 
 bb-apt-key-add() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     apt-key add -
 }
 
 bb-apt-repo-add() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     local REPO_HASH="$(sed -E -e 's/[ \t]+/;;/g' <<< "${@}")"
     local REPO_DOMAIN="$(sed -E -e 's/.*http(s)?:\/\/([^/ \t]+)\/.*/\2/' <<< $2)"
 
@@ -44,6 +52,8 @@ bb-apt-repo-add() {
 }
 
 bb-apt-package?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     IFS='=' read -ra PACKAGE_ARRAY <<< "$1"
     local PACKAGE="${PACKAGE_ARRAY[0]}"
     local VERSION_DESIRED="${PACKAGE_ARRAY[1]-}"
@@ -59,6 +69,8 @@ bb-apt-package?() {
 }
 
 bb-apt-update() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     export DEBIAN_FRONTEND=noninteractive
     bb-flag? apt-updated && return 0
     bb-log-info 'Updating apt cache'
@@ -67,6 +79,8 @@ bb-apt-update() {
 }
 
 bb-apt-dist-upgrade() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     export DEBIAN_FRONTEND=noninteractive
     bb-apt-update
     bb-log-info 'Processing dist-upgrade'
@@ -101,6 +115,8 @@ bb-apt-install() {
     then
         bb-apt-update
         bb-log-info "Installing packages '${PACKAGES_TO_INSTALL[@]}'"
+        bb-set-proxy
+        trap bb-unset-proxy RETURN
         apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install --allow-change-held-packages --allow-downgrades -y ${PACKAGES_TO_INSTALL[@]}
         bb-exit-on-error "Failed to install packages '${PACKAGES_TO_INSTALL[@]}'"
         printf '%s\n' "${PACKAGES_TO_INSTALL[@]}" >> "$BB_APT_UNHANDLED_PACKAGES_STORE"
@@ -112,6 +128,8 @@ bb-apt-install() {
 }
 
 bb-apt-remove() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     export DEBIAN_FRONTEND=noninteractive
     local PACKAGES_TO_REMOVE=( )
 
@@ -134,12 +152,16 @@ bb-apt-remove() {
 }
 
 bb-apt-autoremove() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     export DEBIAN_FRONTEND=noninteractive
     bb-log-info 'Autoremoving unused packages'
     apt -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" --purge -y autoremove
 }
 
 bb-apt-package-upgrade?() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     export DEBIAN_FRONTEND=noninteractive
     bb-apt-update
 
@@ -160,6 +182,8 @@ bb-apt-package-upgrade?() {
 }
 
 bb-apt-upgrade() {
+    bb-set-proxy
+    trap bb-unset-proxy RETURN
     export DEBIAN_FRONTEND=noninteractive
     for PACKAGE in "$@"
     do

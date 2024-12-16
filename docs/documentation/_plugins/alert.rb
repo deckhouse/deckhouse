@@ -6,6 +6,7 @@ module Jekyll
           :tag => 'div',
           :class => 'alert__wrap',
           :active => true,
+          :class_hide => 'hide',
       }
 
       def self.DEFAULTS
@@ -38,7 +39,7 @@ module Jekyll
         rendered_content = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration()).convert(content)
 
         id = @config[:id] ? %Q(id="#{@config[:id]}") : ""
-        %Q(<#{@config[:tag]} markdown="0" #{id} class="#{@config[:level]} #{@config[:class]}">
+        %Q(<#{@config[:tag]} markdown="0" #{id} class="#{@config[:level]} #{@config[:class]} #{@config[:active] == true ? "" : @config[:class_hide]}">
           <svg class="alert__icon icon--#{@config[:level]}">
             <use xlink:href="/images/sprite.svg##{@config[:level]}-icon"></use>
           </svg>

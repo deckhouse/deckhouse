@@ -145,7 +145,7 @@ func setDeckhouseReadyNodes(input *go_hook.HookInput) (err error) {
 	}
 
 	for nodeName, nodeStatus := range deckhouseReadyNodes {
-		input.LogEntry.Infof("Labeling %s node with %s=%v label", nodeName, deckhouseReadyLabel, nodeStatus)
+		input.Logger.Infof("Labeling %s node with %s=%v label", nodeName, deckhouseReadyLabel, nodeStatus)
 		metadata := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"labels": map[string]interface{}{

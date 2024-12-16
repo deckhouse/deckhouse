@@ -192,6 +192,10 @@ spec:
     - 192.168.0.0/24
 ```
 
+{% alert level="warning" %}
+The [`svcSourceRangeCheck`](../cni-cilium/configuration.html#parameters-svcsourcerangecheck) parameter should be enabled in cni-cilium module for correct work.
+{% endalert %}
+
 ## How to add extra log fields to a nginx-controller?
 
 ```yaml

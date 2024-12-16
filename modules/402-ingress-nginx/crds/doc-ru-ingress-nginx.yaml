@@ -66,14 +66,14 @@ spec:
                   description: |
                     Как в `spec.nodeSelector` у подов.
 
-                    Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
                     Как в `spec.tolerations` у подов.
 
-                    Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                 loadBalancer:
@@ -423,20 +423,18 @@ spec:
                 annotationValidationEnabled:
                   description: |
                     Включить валидацию аннотаций Ingress-правил.
-
-                    Требуется версия контроллера 1.9 или выше.
                 nodeSelector:
                   description: |
                     Как в `spec.nodeSelector` у подов.
 
-                    Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список `nodeSelector`. Поды инстанса унаследуют это поле как есть.
                 tolerations:
                   description: |
                     Как в `spec.tolerations` у подов.
 
-                    Если ничего не указано или указано `false`, будет [использоваться автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+                    Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
 
                     **Формат**: стандартный список [toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Поды инстанса унаследуют это поле как есть.
                 loadBalancer:

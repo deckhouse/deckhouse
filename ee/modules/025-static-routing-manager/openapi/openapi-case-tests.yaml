@@ -51,6 +51,8 @@ positive:
               gateway: 192.168.199.1
             - destination: 192.168.0.0/24
               gateway: 192.168.199.1
+            - destination: 192.168.100.0/24
+              dev: eth0
 negative:
   configValues:
   - { somethingInConfig: yes }
@@ -65,6 +67,8 @@ negative:
           routes:
             - destination: 192.168.199.0/33
               gateway: 192.168.199.1
+            - destination: 192.168.199.0/33
+              dev: interfaceWithLongName
   - internal:
       nodeIPRuleSets:
         - rules:

@@ -1,4 +1,4 @@
 module: control-plane-manager
 namespace: kube-system
-scopes:
+subsystems:
   - kubernetes

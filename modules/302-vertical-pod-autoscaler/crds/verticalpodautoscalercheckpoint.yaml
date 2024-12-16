@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes/kubernetes/pull/63797
-    controller-gen.kubebuilder.io/version: v0.4.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: verticalpodautoscalercheckpoints.autoscaling.k8s.io
   labels:
@@ -24,16 +24,24 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema: &schema
-        description: VerticalPodAutoscalerCheckpoint is the checkpoint of the internal
-          state of VPA that is used for recovery after recommender's restart.
+        description: VerticalPodAutoscalerCheckpoint is the checkpoint of the internal state of VPA that is used for recovery after recommender's restart.
         properties:
+          apiVersion:
+            description: APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More information [in the documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
+            type: string
+          kind:
+            description: Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More information [in the documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
+            type: string
+          metadata:
+            type: object
           spec:
+            description: Specification of the checkpoint. More information [in the documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status).
             properties:
               containerName:
                 description: Name of the checkpointed container.
                 type: string
               vpaObjectName:
-                description: Name of the VPA object that stored VerticalPodAutoscalerCheckpoint
+                description: Name of the VPA object that stored VerticalPodAutoscalerCheckpoint.
                   object.
                 type: string
             type: object
@@ -48,14 +56,12 @@ spec:
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                   referenceTimestamp:
-                    description: Reference timestamp for samples collected within
-                      this histogram.
+                    description: Reference timestamp for samples collected within this histogram.
                     format: date-time
                     nullable: true
                     type: string
                   totalWeight:
-                    description: Sum of samples to be used as denominator for weights
-                      from BucketWeights.
+                    description: Sum of samples to be used as denominator for weights from BucketWeights.
                     type: number
                 type: object
               firstSampleStart:
@@ -81,14 +87,12 @@ spec:
                     type: object
                     x-kubernetes-preserve-unknown-fields: true
                   referenceTimestamp:
-                    description: Reference timestamp for samples collected within
-                      this histogram.
+                    description: Reference timestamp for samples collected within this histogram.
                     format: date-time
                     nullable: true
                     type: string
                   totalWeight:
-                    description: Sum of samples to be used as denominator for weights
-                      from BucketWeights.
+                    description: Sum of samples to be used as denominator for weights from BucketWeights.
                     type: number
                 type: object
               totalSamplesCount:
@@ -107,15 +111,3 @@ spec:
     served: true
     storage: false
     deprecated: true
-  - name: v1beta1
-    served: false
-    storage: false
-    deprecated: true
-    schema:
-      openAPIV3Schema: *schema
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

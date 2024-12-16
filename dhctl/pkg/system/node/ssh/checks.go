@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 )
 
 const (
@@ -28,9 +30,19 @@ const (
 	tooManyWarn      = "Too many master SSH-hosts. Maybe you want to delete nodes, but pass hosts for delete via --ssh-host?"
 
 	checkHostsMsg = "Please check, is correct mapping node name to host?"
+	checkWarnMsg  = `Warning! %s
+If you lose connection to node, converge may not be finished.
+Also, SSH connectivity to another nodes will not check before converge node.
+
+And be attentive when you create new control-plane nodes and change another control-plane instances both.
+dhctl can not add new master IP's for connection.
+
+%s
+Do you want to continue?
+`
 )
 
-func CheckSSHHosts(userPassedHosts []string, nodesNames []string, runConfirm func(string) bool) (map[string]string, error) {
+func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, phase string, runConfirm func(string) bool) (map[string]string, error) {
 	userPassedHostsLen := len(userPassedHosts)
 	replicas := len(nodesNames)
 
@@ -46,26 +58,14 @@ func CheckSSHHosts(userPassedHosts []string, nodesNames []string, runConfirm fun
 		warnMsg = notPassedWarn
 	case userPassedHostsLen < replicas:
 		warnMsg = notEnthoughtWarn
+	// Happens only when we make destructive changes to the only master in the cluster and
+	// to avoid reporting a warning that the number of replicas does not match the number
+	// of servers accessed by ssh when the number of masters is reduced.
+	// 1 -> 3 -> update(0) -> (message) -> 1
+	case userPassedHostsLen == 3 && replicas == 1 && phase == "scale-to-single-master":
+		warnMsg = ""
 	case userPassedHostsLen > replicas:
 		warnMsg = tooManyWarn
-	}
-
-	if warnMsg != "" {
-		msg := fmt.Sprintf(`Warning! %s
-If you lose connection to node, converge may not be finished.
-Also, SSH connectivity to another nodes will not check before converge node.
-
-And be attentive when you create new control-plane nodes and change another control-plane instances both.
-dhctl can not add new master IP's for connection.
-
-Do you want to continue?
-`, warnMsg)
-
-		if !runConfirm(msg) {
-			return nil, fmt.Errorf("Hosts warning was not confirmed.")
-		}
-
-		return nodeToHost, nil
 	}
 
 	var nodesSorted []string
@@ -75,16 +75,30 @@ Do you want to continue?
 	forConfirmation := make([]string, userPassedHostsLen)
 
 	for i, host := range userPassedHosts {
-		nodeName := nodesSorted[i]
-		forConfirmation[i] = fmt.Sprintf("%s -> %s", nodeName, host)
-		nodeToHost[nodeName] = host
+		nodeNameTrue := false
+		for _, nodeName := range nodesSorted {
+			if nodeName == host.Name {
+				forConfirmation[i] = fmt.Sprintf("%s -> %s", nodeName, host.Host)
+				nodeToHost[nodeName] = host.Host
+				nodeNameTrue = true
+				break
+			}
+		}
+		if !nodeNameTrue {
+			forConfirmation[i] = fmt.Sprintf("%s -> %s (ignored)", host.Name, host.Host)
+		}
 	}
 
-	msg := fmt.Sprintf("%s\n%s\n", checkHostsMsg, strings.Join(forConfirmation, "\n"))
-
-	if !runConfirm(msg) {
-		return nil, fmt.Errorf("Node name to host mapping was not confirmed. Please pass hosts in order.")
+	if warnMsg != "" {
+		msg := fmt.Sprintf(checkWarnMsg, warnMsg, strings.Join(forConfirmation, "\n"))
+		if !runConfirm(msg) {
+			return nil, fmt.Errorf("Hosts warning was not confirmed.")
+		}
+	} else {
+		msg := fmt.Sprintf("%s\n%s\n", checkHostsMsg, strings.Join(forConfirmation, "\n"))
+		if !runConfirm(msg) {
+			return nil, fmt.Errorf("Node name to host mapping was not confirmed. Please pass hosts in order.")
+		}
 	}
-
 	return nodeToHost, nil
 }

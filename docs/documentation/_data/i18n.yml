@@ -65,6 +65,9 @@ common:
   for_example:
     en: for example
     ru: например
+  dev_menu_message:
+    en: "Menu is not generated in dev build mode"
+    ru: "В режиме dev сборки меню не генерируется"
   example:
     en: example
     ru: пример
@@ -206,6 +209,9 @@ common:
   alert_edition:
     en: The minimum DKP edition in which the alert is available
     ru: Минимальная редакция DKP, в которой доступен алерт
+  note_ce_notguaranteed:
+    en: Functionality in Community Edition is not guaranteed
+    ru: Работоспособность в Community Edition не гарантируется
   module_has_the_following_alerts:
     en: The following alerts are implemented in the module
     ru: В модуле реализованы следующие алерты
@@ -238,7 +244,7 @@ common:
     en: Deckhouse Kubernetes Platform — Custom resources of the <MODULENAME> module.
   description_configuration:
     ru: Deckhouse Kubernetes Platform, параметры конфигурации модуля <MODULENAME>.
-    en: Deckhouse Kubernetes Platform — сonfiguration parameters of the <MODULENAME> module.
+    en: Deckhouse Kubernetes Platform — configuration parameters of the <MODULENAME> module.
   description_examples:
     ru: Deckhouse Kubernetes Platform, примеры конфигурации модуля <MODULENAME>.
     en: Deckhouse Kubernetes Platform — examples of configuring the <MODULENAME> module.
@@ -251,8 +257,11 @@ common:
 
 comparison:
   except_parameters:
-    en: "Except for the following parameters:<br />"
-    ru: "Кроме следующих параметров:<br />"
+    en: "Except for the following parameters:<br />"
+    ru: "Кроме следующих параметров:<br />"
+  module_has_restions:
+    en: "There are limitations to functionality"
+    ru: "Есть ограничения  функциональности"
 
 features:
   experimental:

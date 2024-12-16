@@ -193,7 +193,7 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 		nirs := nirsRaw.(SDNInternalNodeIPRuleSetInfo)
 		actualNodeIPRuleSets[nirs.Name] = nirs
 		if _, ok := allNodes[nirs.NodeName]; !ok && nirs.IsDeleted {
-			input.LogEntry.Infof("An orphan NIRS %v was found. It will be deleted", nirs.Name)
+			input.Logger.Infof("An orphan NIRS %v was found. It will be deleted", nirs.Name)
 			lib.DeleteFinalizer(
 				input,
 				nirs.Name,
@@ -227,7 +227,7 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 			}
 			if iprule.Actions.Lookup.RoutingTableName == "" {
 				errr := fmt.Sprintf("can't get RoutingTableID in IPRuleSet %v for rule %v", irsi.Name, irsi.IPRules)
-				input.LogEntry.Warnf(errr)
+				input.Logger.Warnf(errr)
 				tmpDIRSStatus.localErrors = append(tmpDIRSStatus.localErrors, errr)
 				continue
 			}
@@ -236,7 +236,7 @@ func ipRuleSetsHandler(input *go_hook.HookInput) error {
 				irsi.IPRules[i].Actions.Lookup.IPRoutingTableID = rtID
 			} else {
 				errr := fmt.Sprintf("can't get RoutingTableID in IPRuleSet %v for rule %v", irsi.Name, irsi.IPRules)
-				input.LogEntry.Warnf(errr)
+				input.Logger.Warnf(errr)
 				tmpDIRSStatus.localErrors = append(tmpDIRSStatus.localErrors, errr)
 			}
 		}

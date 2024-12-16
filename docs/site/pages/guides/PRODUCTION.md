@@ -1,6 +1,7 @@
 ---
 title: Going to Production
 permalink: en/guides/production.html
+description: Recommendations for preparing Deckhouse Kubernetes Platform cluster for production environment.
 ---
 
 The following recommendations may be of less importance for a test or development cluster, but they may be critical for a production one.
@@ -13,7 +14,7 @@ Use `Early Access` or `Stable` release channel. Configure [auto-update window](h
 
 Select the [release channel](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-release-channels.html) and [update mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html#parameters-releasechannel) that suit your needs. The more stable the release channel is, the later you will have the chance to use the new features.
 
-If possible, use different release channels for clusters. Use a less stable update channel for a development cluster than for a testing cluster or stage (pre-production) cluster.  
+If possible, use different release channels for clusters. Use a less stable update channel for a development cluster than for a testing cluster or stage (pre-production) cluster.
 
 We recommend using the `Early Access` or `Stable` release channel for production clusters. If you have more than one cluster in a production environment, consider using different release channels for them. For example, `Early Access` for one, and `Stable` for another. If the clusters use the same release channel, we recommend setting update windows so that they do not overlap.
 
@@ -35,7 +36,7 @@ If the automatic Kubernetes version selection is enabled, Deckhouse can upgrade 
 
 You must decide for yourself whether to use automatic version selection or set a specific version and update it manually every now and then.
 
-If your application uses outdated versions of resources or depends on a particular version of Kubernetes for some other reason, check whether it is [supported](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html) and [set it explicitly](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).  
+If your application uses outdated versions of resources or depends on a particular version of Kubernetes for some other reason, check whether it is [supported](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html) and [set it explicitly](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).
 
 ## Resource requirements
 
@@ -44,7 +45,7 @@ Use at least 4 CPUs / 8GB RAM for infrastructure nodes. For master and monitorin
 {% endalert %}
 
 The following resource minimums are recommended for infrastructure nodes, depending on their role in the cluster:
-- **Master node** — 4 CPU, 8GB RAM, 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS);  
+- **Master node** — 4 CPU, 8GB RAM, 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS);
 - **Frontend node** — 2 CPU, 4GB RAM, 50 GB of disk space;
 - **Monitoring node** (for high-load clusters) — 4 CPU, 8GB RAM, 50 GB of disk space on a fast disk (400+ IOPS).
 - **System node**:
@@ -55,7 +56,7 @@ The following resource minimums are recommended for infrastructure nodes, depend
 Estimates of the resources required for the clusters to run:
 - **Regular cluster**: 3 master nodes, 2 frontend nodes, 2 system nodes. Such a configuration requires **at least 24 CPUs and 48GB RAM** along with fast 400+ IOPS disks for the master nodes.
 - **High-load cluster** (with dedicated monitoring nodes): 3 master nodes, 2 frontend nodes, 2 system nodes, 2 monitoring nodes. Such a configuration requires **at least 28 CPUs and 64GB RAM** along with fast 400+ IOPS disks for the master and monitoring nodes.
-- We recommend setting up a dedicated [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) on the fast disks for Deckhouse components.
+- We recommend setting up a dedicated [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass) on the fast disks for Deckhouse components.
 - Add worker nodes to this, taking into account the nature of the workloads.
 
 ## Things to consider when configuring
@@ -88,7 +89,7 @@ Use more than one frontend node. Frontend nodes must be able to still handle tra
 
 For example, if the cluster has two frontend nodes, each frontend node must be able to handle the entire cluster load in case the second frontend node fails. If the cluster has three frontend nodes, each frontend node must be able to handle a load that is at least one and a half times higher.
 
-Select the [inlet type](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) (it defines the way the traffic comes in).  
+Select the [inlet type](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet) (it defines the way the traffic comes in).
 
 When deploying a cluster using Deckhouse in a cloud infrastructure where provisioning of load balancers is supported (e.g., OpenStack-based clouds, AWS, GCP, Azure, etc.), use the `LoadBalancer` or `LoadBalancerWithProxyProtocol` inlet.
 
@@ -112,7 +113,7 @@ Monitoring nodes are used to run Grafana, Prometheus, and other monitoring compo
 
 In high-load clusters, where many alerts are generated and many metrics are collected, we recommend allocating dedicated nodes for monitoring. If not, monitoring components will be deployed to [system nodes](#system-nodes).
 
-When allocating monitoring nodes, it is important to allocate fast disks to them. You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (global parameter [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass)) or allocate a dedicated `storageClass` to monitoring components only [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
+When allocating monitoring nodes, it is important to allocate fast disks to them. You can do so by providing a dedicated `storageClass` on fast disks for all Deckhouse components (global parameter [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass)) or allocate a dedicated `storageClass` to monitoring components only [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module).
 
 If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), it is recommended to explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/configuration.html#parameters-nodeselector).
 
@@ -126,7 +127,7 @@ System nodes are used to run Deckhouse modules. Their [NodeGroup](https://deckh
 
 Set two nodes to be system nodes. This way, Deckhouse modules will run on them without interfering with user applications in the cluster. Read more about [allocating nodes to specific load types...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
-It is recommended to provide the Deckhouse components with fast disks (the [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) global parameter).
+It is recommended to provide the Deckhouse components with fast disks (the [storageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass) global parameter).
 
 ## Configuring alerts
 

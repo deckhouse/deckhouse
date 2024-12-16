@@ -179,7 +179,7 @@ func httpHandlerApiProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// impersonate as current ServiceAccount
-	saToken, _ := os.ReadFile("/run/secrets/kubernetes.io/serviceaccount/token")
+	saToken, _ := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	proxyDirector := func(req *http.Request) {
 		req.Header.Del("Authorization")
 		req.Header.Add("Authorization", "Bearer "+string(saToken))

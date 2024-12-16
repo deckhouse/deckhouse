@@ -9,6 +9,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: cni-cilium
+    backup.deckhouse.io/cluster-config: "true"
   name: ciliumclusterwidenetworkpolicies.cilium.io
 spec:
   group: cilium.io

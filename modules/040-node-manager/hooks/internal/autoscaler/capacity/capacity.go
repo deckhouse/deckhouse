@@ -242,6 +242,47 @@ func (zic zvirtInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha
 	}, nil
 }
 
+type dynamixInstanceClass struct {
+	Cores  int `json:"cores"`
+	Memory int `json:"memory"`
+}
+
+func (d dynamixInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+	cpuStr := strconv.FormatInt(int64(d.Cores), 10)
+	memStr := strconv.FormatInt(int64(d.Memory), 10)
+
+	cpuRes, err := resource.ParseQuantity(cpuStr)
+	if err != nil {
+		return nil, err
+	}
+	memRes, err := resource.ParseQuantity(memStr + "Mi")
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1alpha1.InstanceType{
+		CPU:      cpuRes,
+		Memory:   memRes,
+		RootDisk: resource.MustParse("0"),
+	}, nil
+}
+
+type huaweiCloudInstanceClass struct {
+	FlavorName string `json:"flavorName,omitempty"`
+}
+
+func (c *huaweiCloudInstanceClass) GetCapacity() *Capacity {
+	return nil
+}
+
+func (c *huaweiCloudInstanceClass) GetType() string {
+	return c.FlavorName
+}
+
+func (c *huaweiCloudInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+	return catalog.Get(c)
+}
+
 type testInstanceClass struct {
 	Capacity *Capacity `json:"capacity,omitempty"`
 	Type     string    `json:"type,omitempty"`
@@ -304,6 +345,14 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 
 	case "ZvirtInstanceClass":
 		var spec zvirtInstanceClass
+		extractor = &spec
+
+	case "DynamixInstanceClass":
+		var spec dynamixInstanceClass
+		extractor = &spec
+
+	case "HuaweiCloudInstanceClass":
+		var spec huaweiCloudInstanceClass
 		extractor = &spec
 
 	case "D8TestInstanceClass":

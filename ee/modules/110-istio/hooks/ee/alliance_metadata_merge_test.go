@@ -44,7 +44,7 @@ var _ = Describe("Istio hooks :: alliance_metadata_merge ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`[]`))
 			Expect(f.ValuesGet("istio.internal.multiclusters").String()).To(MatchJSON(`[]`))
@@ -90,7 +90,7 @@ status:
   metadataCache:
     private:
       publicServices:
-      - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123}], "virtualIP": "169.0.0.0"}
+      - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123}]}
     public:
       clusterUUID: aaa-bbb-f2
       rootCA: abc-f2
@@ -109,7 +109,7 @@ status:
       ingressGateways:
       - {"address": "bbb", "port": 222}
       publicServices:
-      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}], "virtualIP": "169.0.0.1"}
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
     public:
       clusterUUID: aaa-bbb-f3
       rootCA: abc-f3
@@ -128,8 +128,8 @@ status:
       ingressGateways:
       - {"address": "ccc", "port": 222}
       publicServices:
-      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}], "virtualIP": "169.0.0.2"}
-      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}], "virtualIP": "169.0.0.3"}
+      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}]}
+      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}]}
     public:
       clusterUUID: aaa-bbb-f4
       rootCA: abc-f4
@@ -147,31 +147,11 @@ status:
     private:
       ingressGateways: []
       publicServices:
-      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}], "virtualIP": "169.0.0.3"}
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
     public:
       clusterUUID: aaa-bbb-f5
       rootCA: abc-f5
       authnKeyPub: xyz-f5
----
-apiVersion: deckhouse.io/v1alpha1
-kind: IstioFederation
-metadata:
-  name: federation-full-no-virtualip-0
-spec:
-  trustDomain: "f5"
-  metadataEndpoint: "https://some-proper-host/"
-status:
-  metadataCache:
-    private:
-      ingressGateways:
-      - {"address": "ccc", "port": 222}
-      publicServices:
-      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}], "virtualIP": "169.0.0.2"}
-      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}]} # no virtualIP, federation should be skipped
-    public:
-      clusterUUID: aaa-bbb-f4
-      rootCA: abc-f4
-      authnKeyPub: xyz-f4
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: IstioMulticluster
@@ -325,10 +305,11 @@ status:
               }
             ],
             "name": "federation-only-full-0",
+            "ca": "",
+            "insecureSkipVerify": false,
             "publicServices": [
               {
                 "hostname": "bbb",
-                "virtualIP": "169.0.0.1",
                 "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]
               }
             ],
@@ -343,15 +324,15 @@ status:
               }
             ],
             "name": "federation-only-full-1",
+            "ca": "",
+            "insecureSkipVerify": false,
             "publicServices": [
               {
                 "hostname": "ccc",
-                "virtualIP": "169.0.0.2",
                 "ports": [{"name": "ppp", "port": 123}]
               },
               {
                 "hostname": "ddd",
-                "virtualIP": "169.0.0.3",
                 "ports": [{"name": "xxx", "port": 555}]
               }
             ],
@@ -427,21 +408,19 @@ status:
 		  "aaa-bbb-m6": {"clusterUUID": "aaa-bbb-m6", "rootCA": "abc-m6", "authnKeyPub": "xyz-m6"}
 		}
 `))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-empty wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-full-empty-ig-0 wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("virtualIP wasn't set for publicService ddd of IstioFederation federation-full-no-virtualip-0"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-only-ingress wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-only-services wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-empty wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-full-empty-ig-0 wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-only-ingress wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-only-services wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-empty-ig weren't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-apiHost wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-no-ig weren't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-networkname wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("public metadata for IstioMulticluster multicluster-no-public wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-only-public wasn't fetched yet"))
 
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-empty-ig weren't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-apiHost wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-no-ig weren't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-networkname wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioMulticluster multicluster-no-public wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-only-public wasn't fetched yet"))
-
-			// there should be 11 log messages
-			Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(11))
+			// there should be 10 log messages
+			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(10))
 		})
 	})
 })

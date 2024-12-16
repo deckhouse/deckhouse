@@ -173,6 +173,7 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 							"MODULE001",
 							fmt.Sprintf("module = %s, image = %s", name, relativeFilePath),
 							fromTrimmed,
+							"%s",
 							message,
 						)
 					}
@@ -194,6 +195,7 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 				"MODULE001",
 				fmt.Sprintf("module = %s, image = %s", name, relativeFilePath),
 				fromInstruction,
+				"%s",
 				message,
 			)
 		}

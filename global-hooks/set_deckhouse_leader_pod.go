@@ -43,7 +43,7 @@ func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) erro
 
 	pods, err := client.CoreV1().Pods(d8Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
-		input.LogEntry.Warnf("Error getting deckhouse pods: %s", err)
+		input.Logger.Warnf("Error getting deckhouse pods: %s", err)
 		return nil
 	}
 

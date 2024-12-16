@@ -41,24 +41,27 @@ shell:
         echo "Gem: $(gem --version)"
         bundle --version
 
-        # "Create modules.yml"
+        echo '[] Creating modules.yml ...'
         cd /srv/jekyll-data/documentation/
 {{ if ne .ModuleName "docs" }}
         export MODULES_DIR=/comparison
 {{ end }}
-        ./modules_list.sh 1>_data/modules.yaml
-        cat modules_menu_skip  | cut -d\- -f 2-  | jq -nRc '[inputs] | map({"name":.}) | {module_names:.}' > _data/exclude.json
+        ./modules_list.sh 1>_data/modules/internal.yaml
+        # Creating list of ALL the modules...
+        cat _data/modules/internal.yaml |yq eval -j | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
-        # "Edition: {{ .Edition }}. Merging modules of different editions"
-        for dir in {be,se,ee,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
+        cat modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
 
-        # "Preparing modules structure"
+        echo '[] Edition - {{ .Edition }}. Merging modules of different editions...'
+        for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
+
+        echo '[] Preparing modules structure...'
         export MODULES_SRC_DIR=/src/modules
         export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
         export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
         bash ./modules_prepare.sh
 
-        # "Adding permalinks..."
+        echo '[] Adding permalinks...'
         for i in $(find . -regex '.*.md' -print); do
           if ! grep -q "^---" "$i"; then continue; fi
           if cat $i | tr -d '\n' | grep -qv "^---.*permalink: .*---"; then
@@ -68,37 +71,42 @@ shell:
           fi
         done
 
-        # "Generating configuration schemas..."
+        echo '[] Generating configuration schemas...'
         export MODULES_DIR=modules_en
         bash ./modules_generate_configuration.sh
         export MODULES_DIR=modules_ru MODULES_LANG=ru
         bash ./modules_generate_configuration.sh
 
-        # "Generating cluster configuration schemas..."
+        echo
+        echo '[] Generating cluster configuration schemas...'
         export MODULES_DIR=modules_en
         bash ./generate_cluster_configuration.sh
         export MODULES_DIR=modules_ru MODULES_LANG=ru
         bash ./generate_cluster_configuration.sh
 
-        # "Generating CR schemas..."
+        echo
+        echo "[] Generating CR schemas..."
         export MODULES_DIR=modules_en
         bash ./modules_generate_cr.sh
         export MODULES_DIR=modules_ru
         bash ./modules_generate_cr.sh
 
-        # "Preparing OSS licence info..."
+        echo
+        echo '[] Preparing OSS license info...'
         export MODULES_DIR=/src/modules
         bash ./modules_generate_ossinfo.sh
 
-        # "Extracting the default Kubernetes version..."
+        echo '[] Extracting the default Kubernetes version...'
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
 
-        # "Filling in the array of supported OS & K8S versions..."
+        echo '[] Filling in the array of supported OS & K8S versions...'
         cd _data
         sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
 
-        # "Convert editions structure"
-        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' > editions.json
+        echo '[] Converting editions structure...'
+        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - editions-addition.json | jq --argfile data modules/be-addition.json '(.[] | select(.name == "BE").excludeModules) += $data.excludeModules' - > editions.json
+        #  yq eval -j | jq  '.editions' | jq --argfile data modules/be-additions.json '(.[] | select(.name == "BE").excludeModules) += $data.excludeModules' -
+
 
 {{ if ne .ModuleName "docs" }}
         # "Converting public documentation links to internal relative..."
@@ -122,7 +130,7 @@ shell:
         echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
 {{ end }}
 
-        # "Generating static files of the documentation part..."
+        echo '[] Generating static files of the documentation part...'
         cd ..
         mkdir -m 777 -p /app/_site/
 {{ if eq .ModuleName "docs" }}
@@ -134,7 +142,7 @@ shell:
 {{ else }}
         JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml
 
-        # "Generating static file's of the main part..."
+        echo '[] Generating static files of the main part...'
         cd /srv/jekyll-data/site/
         JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml
 
@@ -174,6 +182,9 @@ git:
     - site/_includes/footer.html
     - site/_data/topnav.*
     - site/backends
+    - site/_plugins/gs_generator.rb
+    - site/_plugins/dvp_resource_generator.rb
+    - site/pages/virtualization-platform
 {{ end }}
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
@@ -206,6 +217,14 @@ git:
   - modules/**/docs/README.md
 - add: /{{ .ModulePath }}ee/se
   to: /comparison/se
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/se-plus
+  to: /comparison/se-plus
   owner: jekyll
   group: jekyll
   stageDependencies:

@@ -9,6 +9,7 @@
 {{- define "csi_controller_envs" }}
 - name: GOOGLE_APPLICATION_CREDENTIALS
   value: "/etc/credentials.json"
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_controller_volumes" }}
@@ -24,16 +25,31 @@
   subPath: credentials.json
 {{- end }}
 
-{{- $csiControllerImage := include "helm_lib_module_image" (list . "pdCsiPlugin") }}
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $csiImageName := join "" (list "pdCsiPlugin" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
+{{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
+{{- if $csiControllerImage }}
 
-{{- $csiControllerConfig := dict }}
-{{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
-{{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
-{{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
-{{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
-{{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+  {{- $csiControllerConfig := dict }}
+  {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+  {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
 
-{{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+  {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
+
+  {{- $csiNodeConfig := dict }}
+  {{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
+  {{- $_ := set $csiNodeConfig "driverFQDN" "pd.csi.storage.gke.io" }}
+  {{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+
+  {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+
+{{- end }}
 
 ###
 ### node
@@ -46,6 +62,7 @@
 {{- define "csi_node_envs" }}
 - name: GOOGLE_APPLICATION_CREDENTIALS
   value: "/etc/credentials.json"
+{{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
 {{- define "csi_node_volumes" }}
@@ -86,13 +103,3 @@
   readOnly: true
   subPath: credentials.json
 {{- end }}
-
-{{- $csiNodeConfig := dict }}
-{{- $_ := set $csiNodeConfig "nodeImage" $csiControllerImage }}
-{{- $_ := set $csiNodeConfig "driverFQDN" "pd.csi.storage.gke.io" }}
-{{- $_ := set $csiNodeConfig "additionalNodeArgs" (include "csi_node_args" . | fromYamlArray) }}
-{{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
-{{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
-{{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
-
-{{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}

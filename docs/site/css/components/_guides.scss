@@ -25,6 +25,10 @@ div.alert__wrap {
     padding: 16px 0;
   }
 
+  &.hide {
+    display: none;
+  }
+
   &.info {
     border-color: $color-alt;
 

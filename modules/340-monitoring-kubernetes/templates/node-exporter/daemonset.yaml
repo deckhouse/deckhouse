@@ -96,6 +96,9 @@ spec:
         - '/host/textfile*'
         - '--collector.netstat.fields'
         - '^(.*_(InErrors|InErrs)|Ip_Forwarding|Ip(6|Ext)_(InOctets|OutOctets)|Icmp6?_(InMsgs|OutMsgs)|TcpExt_.*|Tcp_(ActiveOpens|InSegs|OutSegs|PassiveOpens|RetransSegs|CurrEstab)|Udp6?_(InDatagrams|OutDatagrams|NoPorts))$'
+# tcp_mem metric collection https://github.com/deckhouse/deckhouse/issues/4605
+        - '--collector.sysctl'
+        - '--collector.sysctl.include=net.ipv4.tcp_mem'
         env:
         - name: HOST_IP
           valueFrom:

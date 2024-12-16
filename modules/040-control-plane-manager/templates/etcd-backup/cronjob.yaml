@@ -37,11 +37,6 @@ spec:
             {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $ | nindent 12 }}
             image: {{ include "helm_lib_module_image" (list $ "etcdBackup") }}
             imagePullPolicy: IfNotPresent
-            command:
-            - /bin/sh
-            - -c
-            - --
-            - set -x; etcdctl --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt --key=/etc/kubernetes/pki/etcd/healthcheck-client.key snapshot save /tmp/etcd-backup.snapshot && [ $(df /var/lib/etcd/ | tail -1 | awk '{print $4}') -ge $(du -k /tmp/etcd-backup.snapshot | awk '{print $1}') ] && cp /tmp/etcd-backup.snapshot /var/lib/etcd/etcd-backup.snapshot || exit 1
             resources:
               requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 16 }}

@@ -131,8 +131,6 @@ Configuring/clearing up a node, joining it to a cluster, and disjoining it can b
 
 - **Automatically** using [Cluster API Provider Static](#cluster-api-provider-static).
 
-  > This feature is available as of Deckhouse version 1.54 and is currently under active development and testing.
-
   Cluster API Provider Static (CAPS) connects to the server (VM) using [StaticInstance](cr.html#staticinstance) and [SSHCredentials](cr.html#sshcredentials) resources, configures, and joins the node into the cluster.
 
   If necessary (for example, if the [StaticInstance](cr.html#staticinstance) resource associated with the server is deleted or the [number of group nodes](cr.html#nodegroup-v1-spec-staticinstances-count) is reduced), the Cluster API Provider Static connects to the cluster node, clears it, and disconnects it from the cluster.
@@ -144,8 +142,6 @@ Configuring/clearing up a node, joining it to a cluster, and disjoining it can b
   To transfer an existing cluster node under CAPS management, it is necessary to prepare the [StaticInstance](cr.html#staticinstance) and [SSHCredentials](cr.html#sshcredentials) resources for this node, as with automatic management in the point above, however the [StaticInstance](cr.html#staticinstance) resource must additionally be annotated as `static.node.deckhouse.io/skip-bootstrap-phase: ""`.
 
 ### Cluster API Provider Static
-
-> Cluster API Provider Static is available starting from Deckhouse version 1.54. The features described are under testing and active development. Functionality and resource specifications are subject to change. Keep this in mind when using it in production clusters.
 
 Cluster API Provider Static (CAPS) is an implementation of a declarative management provider for static nodes (bare metal servers or virtual machines) for the Kubernetes [Cluster API](https://cluster-api.sigs.k8s.io/). Essentially, CAPS is an additional layer of abstraction to the existing Deckhouse functionality that provides automatic static node configuration and cleanup using scripts generated for each node group (see [Working with Static Nodes](#working-with-static-nodes)).
 

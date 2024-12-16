@@ -1,0 +1,40 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "d8-multitenancy-manager" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["*"]
+        apiVersions: ["*"]
+        operations:  ["UPDATE", "DELETE"]
+        resources:   ["*"]
+        scope: "*"
+  validations:
+    - expression: 'request.userInfo.username == "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"'
+      reason: Forbidden
+      messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed
+            by '' + object.metadata.name + '' Project. Manual modification is forbidden.''
+            : ''This resource is managed by '' + object.metadata.namespace + '' Project. Manual modification is forbidden.'''
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        heritage: multitenancy-manager
+    objectSelector:
+      matchLabels:
+        heritage: multitenancy-manager
+{{- end }}

@@ -18,21 +18,49 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+const (
+	ModuleSourceResource = "modulesources"
+	ModuleSourceKind     = "ModuleSource"
+
+	ModuleSourceMessageReady      = "Ready"
+	ModuleSourceMessagePullErrors = "Some errors occurred. Inspect status for details"
+
+	ModuleSourceFinalizerReleaseExists = "modules.deckhouse.io/release-exists"
+	ModuleSourceFinalizerModuleExists  = "modules.deckhouse.io/module-exists"
+
+	ModuleSourceAnnotationForceDelete      = "modules.deckhouse.io/force-delete"
+	ModuleSourceAnnotationRegistryChecksum = "modules.deckhouse.io/registry-spec-checksum"
 )
 
 var (
 	ModuleSourceGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
-		Resource: "modulesources",
+		Resource: ModuleSourceResource,
 	}
 	ModuleSourceGVK = schema.GroupVersionKind{
 		Group:   SchemeGroupVersion.Group,
 		Version: SchemeGroupVersion.Version,
-		Kind:    "ModuleSource",
+		Kind:    ModuleSourceKind,
 	}
 )
+
+var _ runtime.Object = (*ModuleSource)(nil)
+
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModuleSourceList is a list of ModuleSource resources
+type ModuleSourceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleSource `json:"items"`
+}
 
 // +genclient
 // +genclient:nonNamespaced
@@ -55,8 +83,7 @@ type ModuleSource struct {
 }
 
 type ModuleSourceSpec struct {
-	Registry       ModuleSourceSpecRegistry `json:"registry"`
-	ReleaseChannel string                   `json:"releaseChannel"`
+	Registry ModuleSourceSpecRegistry `json:"registry"`
 }
 
 type ModuleSourceSpecRegistry struct {
@@ -70,39 +97,13 @@ type ModuleSourceStatus struct {
 	SyncTime         metav1.Time       `json:"syncTime"`
 	ModulesCount     int               `json:"modulesCount"`
 	AvailableModules []AvailableModule `json:"modules"`
-	Msg              string            `json:"message"`
-	ModuleErrors     []ModuleError     `json:"moduleErrors" patchStrategy:"retainKeys" patchKey:"name"`
+	Message          string            `json:"message"`
 }
 
 type AvailableModule struct {
 	Name       string `json:"name"`
 	Policy     string `json:"policy,omitempty"`
+	Checksum   string `json:"checksum,omitempty"`
+	PullError  string `json:"pullError,omitempty"`
 	Overridden bool   `json:"overridden,omitempty"`
-}
-
-type ModuleError struct {
-	Name  string `json:"name"`
-	Error string `json:"error"`
-}
-
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleSourceList is a list of ModuleSource resources
-type ModuleSourceList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleSource `json:"items"`
-}
-
-type moduleSourceKind struct{}
-
-func (in *ModuleSourceStatus) GetObjectKind() schema.ObjectKind {
-	return &moduleSourceKind{}
-}
-
-func (f *moduleSourceKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *moduleSourceKind) GroupVersionKind() schema.GroupVersionKind {
-	return ModuleSourceGVK
 }

@@ -78,7 +78,7 @@ func generateValidateWebhookCert(input *go_hook.HookInput) error {
 	}
 
 	const cn = "ingress-nginx-validation.webhook.ca"
-	ca, err := certificate.GenerateCA(input.LogEntry, cn,
+	ca, err := certificate.GenerateCA(input.Logger, cn,
 		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",
 			S: 2048,
@@ -90,7 +90,7 @@ func generateValidateWebhookCert(input *go_hook.HookInput) error {
 		return errors.Wrap(err, "generate CA failed")
 	}
 
-	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+	tls, err := certificate.GenerateSelfSignedCert(input.Logger,
 		cn,
 		ca,
 		certificate.WithKeyRequest(&csr.KeyRequest{

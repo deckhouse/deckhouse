@@ -1,4 +1,4 @@
-{{- $binaries := "/bin/sh /bin/chown /bin/chmod /bin/ls /bin/cp /bin/rm /bin/mkdir /bin/nc /bin/sleep" }}
+{{- $binaries := "/bin/sh /bin/chown /bin/chmod /bin/ls /bin/cp /bin/rm /bin/mkdir /bin/nc /bin/sleep /bin/true" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -17,4 +17,4 @@ shell:
   - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-  
+

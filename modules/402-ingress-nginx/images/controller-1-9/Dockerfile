@@ -10,13 +10,17 @@ FROM $BASE_ALT as base-alt
 FROM $BASE_ALPINE_DEV as dumb-init-builder
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
-RUN git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
+RUN apk add --no-cache openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git
+RUN cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 
 # Build opentelemetry assets
 FROM $BASE_ALT_DEV as opentelemetry-artifact
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
 
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 RUN mkdir -p /opt/third_party/install
 COPY ./opentelemetry/ /opt/third_party/
 
@@ -26,21 +30,22 @@ RUN apt-get update && \
 
 ENV NINJA_STATUS "[%p/%f/%t] "
 
-RUN bash /opt/third_party/build.sh -o v1.11.0-flant && \
-         cp -r /opt/third_party/install/* /usr/ && \
-         bash /opt/third_party/build.sh -n
+RUN --mount=type=ssh /opt/third_party/build.sh -o v1.11.0-flant
+RUN cp -r /opt/third_party/install/* /usr/
+RUN --mount=type=ssh /opt/third_party/build.sh -n
 
 # Build luarocks assets
 FROM $BASE_ALT_DEV as luarocks-builder
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
-RUN apt-get install -y lua5.1-devel \
-    && git clone --branch 0.4.1 ${SOURCE_REPO}/starwing/lua-protobuf \
-    && cd lua-protobuf/ \
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN apt-get install -y lua5.1-devel
+RUN --mount=type=ssh git clone --branch 0.4.1 ${SOURCE_REPO}/starwing/lua-protobuf
+RUN cd lua-protobuf/ \
     && luarocks-5.1 make rockspecs/lua-protobuf-scm-1.rockspec
-RUN cd / && \
-    git clone --branch 7-3 ${SOURCE_REPO}/luarocks-sorces/lua-iconv \
-    && cd lua-iconv/ \
+RUN --mount=type=ssh cd / && \
+    git clone --branch 7-3 ${SOURCE_REPO}/luarocks-sorces/lua-iconv
+RUN cd lua-iconv/ \
     && luarocks-5.1 install lua-iconv-7-3.src.rock
 
 # Build ingress controller, debug tool and pre-stop hook
@@ -59,18 +64,21 @@ COPY patches/metrics-SetSSLExpireTime.patch /
 COPY patches/util.patch /
 COPY patches/fix-cleanup.patch /
 COPY patches/geoip.patch /
+COPY patches/new-metrics.patch /
 ENV GOARCH=amd64
-RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
     # jaegertracing hunter deps
-    git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter && \
-    patch -p1 < /lua-info.patch && \
+    git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx-jaegertracing-deps.git /root/.hunter
+RUN patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
     patch -p1 < /metrics-SetSSLExpireTime.patch && \
     patch -p1 < /util.patch && \
     patch -p1 < /fix-cleanup.patch && \
     patch -p1 < /geoip.patch && \
-    make GO111MODULE=on USE_DOCKER=false build
+    patch -p1 < /new-metrics.patch
+RUN make GO111MODULE=on USE_DOCKER=false build
 
 # Build nginx for ingress controller
 FROM $BASE_ALT_DEV as nginx-builder
@@ -81,15 +89,16 @@ ENV SOURCE_REPO=${SOURCE_REPO}
 COPY --from=controller-builder /src/images/nginx/rootfs/ /
 COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
-RUN git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git && \
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --branch 8.45 --depth 1 ${SOURCE_REPO}/pcre/pcre.git
     # build pcre library with jit support due to lack of jit support in standard alt pcre library
-    cd pcre && \
+RUN cd pcre && \
     ./configure --prefix=/usr/local/pcre --enable-utf8 --enable-unicode-properties --enable-pcre8 --enable-pcre16 --enable-pcre32 --with-match-limit-recursion=8192 --enable-jit && \
     make && \
-    make install && \
-    cd / && \
-    patch build.sh < nginx-build.patch && \
-    /build.sh
+    make install
+RUN cd / && \
+    patch build.sh < nginx-build.patch
+RUN --mount=type=ssh /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
 # Based on tag "controller-v1.9.5":

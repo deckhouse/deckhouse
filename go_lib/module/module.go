@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-func getFirstDefined(values *go_hook.PatchableValues, keys ...string) (gjson.Result, bool) {
+func getFirstDefined(values go_hook.PatchableValuesCollector, keys ...string) (gjson.Result, bool) {
 	var (
 		v  gjson.Result
 		ok bool
@@ -108,7 +108,7 @@ func GetHTTPSSecretName(prefix string, moduleName string, input *go_hook.HookInp
 	case "OnlyInURI":
 		return ""
 	default:
-		input.LogEntry.Warnf("ERROR: https.mode must be in [CertManager, CustomCertificate, OnlyInURI], returning %s", prefix)
+		input.Logger.Warnf("ERROR: https.mode must be in [CertManager, CustomCertificate, OnlyInURI], returning %s", prefix)
 		return prefix
 	}
 }

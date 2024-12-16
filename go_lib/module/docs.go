@@ -24,17 +24,22 @@ import (
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
-func ExtractDocs(img v1.Image) io.ReadCloser {
+func ExtractDocs(img v1.Image) (io.ReadCloser, error) {
 	pr, pw := io.Pipe()
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return nil, err
+	}
 
 	go func() {
-		pw.CloseWithError(extractDocumentation(mutate.Extract(img), pw))
+		pw.CloseWithError(extractDocumentation(rc, pw))
 	}()
 
-	return pr
+	return pr, nil
 }
 
 func extractDocumentation(rc io.ReadCloser, output io.Writer) error {

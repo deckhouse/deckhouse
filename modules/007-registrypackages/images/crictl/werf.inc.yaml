@@ -1,6 +1,8 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
   {{- $image_version := $version | replace "." "-" }}
+  {{- $crictlPatch := toString $value.crictlPatch }}
+  {{- $full_version := printf "%s.%s" $version $crictlPatch }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
@@ -32,9 +34,12 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   setup:
   - export GOPROXY={{ $.GOPROXY }}
-  - git clone --depth 1 --branch v{{ $version }}.0 {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch v{{ $full_version }} {{ $.SOURCE_REPO }}/kubernetes-sigs/cri-tools.git
   - cd /cri-tools
   - make install crictl
   - mv /usr/local/bin/crictl /crictl

@@ -88,7 +88,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.check(ctx, message.Start, logWriter)
+					result := s.checkSafe(ctx, message.Start, logWriter)
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
 
@@ -99,6 +99,20 @@ connectionProcessor:
 			}
 		}
 	}
+}
+
+func (s *Service) checkSafe(
+	ctx context.Context,
+	request *pb.CheckStart,
+	logWriter io.Writer,
+) (result *pb.CheckResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.CheckResult{Err: panicMessage(ctx, r)}
+		}
+	}()
+
+	return s.check(ctx, request, logWriter)
 }
 
 func (s *Service) check(

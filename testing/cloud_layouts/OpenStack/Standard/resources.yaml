@@ -27,7 +27,7 @@ metadata:
   name: system
 spec:
   rootDiskSize: 30
-  flavorName: m1.large
+  flavorName: e2e
   imageName: "debian-12-genericcloud-amd64"
 ---
 apiVersion: deckhouse.io/v1

@@ -144,6 +144,8 @@ func (r *Runner) RunConverge() error {
 		if err != nil {
 			return fmt.Errorf("failed to start lock runner: %w", err)
 		}
+
+		return nil
 	}
 
 	return r.converge()
@@ -372,11 +374,15 @@ func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroup
 			return err
 		}
 
+		var nodesIndexToCreate []int
+
 		for i := 0; i < group.Replicas; i++ {
-			err = BootstrapAdditionalNode(r.kubeCl, metaConfig, i, "static-node", group.Name, nodeCloudConfig, true, r.terraformContext)
-			if err != nil {
-				return err
-			}
+			nodesIndexToCreate = append(nodesIndexToCreate, i)
+		}
+
+		_, err = ParallelBootstrapAdditionalNodes(r.kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, r.terraformContext)
+		if err != nil {
+			return err
 		}
 
 		return WaitForNodesBecomeReady(r.kubeCl, group.Name, group.Replicas)

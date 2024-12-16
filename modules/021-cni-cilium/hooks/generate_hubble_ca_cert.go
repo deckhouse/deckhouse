@@ -81,7 +81,7 @@ func generateHubbleCACert(input *go_hook.HookInput) error {
 	}
 
 	const cn = "d8.hubble-ca.cilium.io"
-	ca, err := certificate.GenerateCA(input.LogEntry, cn,
+	ca, err := certificate.GenerateCA(input.Logger, cn,
 		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",
 			S: 2048,

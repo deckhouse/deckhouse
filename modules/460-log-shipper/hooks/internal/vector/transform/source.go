@@ -83,7 +83,6 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 		transforms = append(transforms, OwnerReferenceSourceTransform())
 	}
 
-	transforms = append(transforms, CleanUpAfterSourceTransform())
 	transforms = append(transforms, LocalTimezoneAfterSourceTransform())
 
 	multilineTransforms, err := CreateMultiLineTransforms(cfg.MultilineType, cfg.MultilineCustomConfig)
@@ -104,6 +103,8 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 		return nil, err
 	}
 	transforms = append(transforms, logFilterTransforms...)
+
+	transforms = append(transforms, CleanUpAfterSourceTransform())
 
 	sTransforms, err := BuildFromMapSlice("source", name, transforms)
 	if err != nil {

@@ -17,11 +17,6 @@ if ! bb-flag? reboot; then
   exit 0
 fi
 
-{{- if eq .runType "ImageBuilding" }}
-# Nothing to do on image building
-exit 0
-{{- end }}
-
 bb-deckhouse-get-disruptive-update-approval
 bb-log-info "Rebooting machine after bootstrap process completed"
 bb-flag-unset reboot
@@ -29,7 +24,7 @@ bb-flag-unset reboot
 # If it is first run bashible on bootstrap simple reboot node
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
   bb-flag-unset disruption
-  shutdown -r now
+  shutdown -r -t 5
   exit 0
 fi
 
@@ -42,7 +37,7 @@ fi
 # We want bootstrap the node fully, reboot it and after reboot join the node into the cluster.
 if [ ! -f "/etc/kubernetes/kubelet.conf" ]; then
   bb-flag-unset disruption
-  shutdown -r now
+  shutdown -r -t 5
   exit 0
 fi
 
@@ -108,4 +103,4 @@ while true; do
 done
 
 bb-flag-unset disruption
-shutdown -r now
+shutdown -r -t 5

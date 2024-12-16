@@ -17,11 +17,16 @@ set -Eeuo pipefail
 
 function pause-the-test() {
   while true; do
-    if ! { kubectl get configmap pause-the-test -o json | jq -re '.metadata.name == "pause-the-test"' >/dev/null ; }; then
-      break
-    fi
+    pause_check=$( { kubectl get configmap pause-the-test; } 2>&1 ) || true
 
-    >&2 echo 'Waiting until "kubectl delete cm pause-the-test" before destroying cluster'
+    if [[ $pause_check = *NotFound* ]]; then
+      break
+    elif [[ $pause_check = *pause-the-test* ]]; then
+      echo 'Waiting until "kubectl delete cm pause-the-test" before destroying cluster'
+    else
+      >&2 echo "$pause_check"
+      echo 'Unable to connect to Kubernetes API, waiting'
+    fi
 
     sleep 30
   done
@@ -124,7 +129,7 @@ EOF
         fi
         ;;
       HostPort|HostWithFailover)
-        if master_ip="$(kubectl get node -o json | jq -r '[ .items[] | select(.metadata.labels."node-role.kubernetes.io/master"!=null) | .status.addresses[] | select(.type=="ExternalIP") | .address ] | .[0]')"; then
+        if master_ip="$(kubectl get node -o json | jq -r '[ .items[] | select(.metadata.labels."node-role.kubernetes.io/master"!=null) | .status.addresses[] ] | map(select(.type == "ExternalIP").address) + map(select(.type == "InternalIP").address) | first')"; then
           if ingress_hp_code="$(d8-curl -o /dev/null -s -w "%{http_code}" "$master_ip")"; then
             if [[ "$ingress_hp_code" == "404" ]]; then
               ingress="ok"

@@ -99,36 +99,3 @@ The operation is fully automatic and takes up to one minute. No further action i
 The progress of the process can be observed in events using the command `kubectl describe pvc`.
 
 > After modifying a volume, you must wait at least six hours and ensure that the volume is in the `in-use` or `available` state before you can modify the same volume. This is sometimes referred to as a cooldown period. You can find details in the [official documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-volume-requirements.html).
-
-## How do I configure access to Amazon ECR repository on cluster nodes?
-
-1. Set permissions to read images in [Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html). There must be an existing `Roles` object in `Principal`.
-
-   ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [
-       {
-         "Sid": "RepositoryRead",
-         "Effect": "Allow",
-         "Principal": {
-            "AWS": "arn:aws:iam::xxx:role/xxx-node"
-         },
-         "Action": [
-           "ecr:BatchCheckLayerAvailability",
-           "ecr:BatchGetImage",
-           "ecr:DescribeImages",
-           "ecr:DescribeRepositories",
-           "ecr:GetAuthorizationToken",
-           "ecr:GetDownloadUrlForLayer",
-           "ecr:ListImages",
-           "ecr:ListTagsForResource"
-          ]
-       }
-     ]
-   }
-   ```
-
-   Apply this policy in `Amazon ECR` > `Private registry` > `Repositories` > `{{ name }}` > `Permissions`.
-
-2. Add to [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) `ecr:GetAuthorizationToken`.

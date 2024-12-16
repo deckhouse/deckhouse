@@ -221,12 +221,12 @@ func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
 	currentQuotaBytes, nodeWithMaxQuota := getCurrentEtcdQuotaBytes(input)
 
-	input.LogEntry.Debugf("Current etcd quota: %d. Getting from %s", currentQuotaBytes, nodeWithMaxQuota)
+	input.Logger.Debugf("Current etcd quota: %d. Getting from %s", currentQuotaBytes, nodeWithMaxQuota)
 
 	snaps := input.Snapshots["master_nodes"]
 	node := getNodeWithMinimalMemory(snaps)
 	if node == nil {
-		input.LogEntry.Warnf("Cannot get node with minimal memory")
+		input.Logger.Warnf("Cannot get node with minimal memory")
 		return currentQuotaBytes
 	}
 
@@ -237,7 +237,7 @@ func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
 		if newQuotaBytes < currentQuotaBytes {
 			newQuotaBytes = currentQuotaBytes
 
-			input.LogEntry.Warnf("Cannot decrease quota backend bytes. Current %d; calculated: %d. Use current", currentQuotaBytes, newQuotaBytes)
+			input.Logger.Warnf("Cannot decrease quota backend bytes. Current %d; calculated: %d. Use current", currentQuotaBytes, newQuotaBytes)
 
 			input.MetricsCollector.Set(
 				"d8_etcd_quota_backend_should_decrease",
@@ -246,9 +246,9 @@ func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
 				metrics.WithGroup(etcdBackendBytesGroup))
 		}
 
-		input.LogEntry.Debugf("New backend quota bytes calculated: %d", newQuotaBytes)
+		input.Logger.Debugf("New backend quota bytes calculated: %d", newQuotaBytes)
 	} else {
-		input.LogEntry.Debugf("Found not dedicated control-plane node. Skip calculate backend quota. Use current: %d", newQuotaBytes)
+		input.Logger.Debugf("Found not dedicated control-plane node. Skip calculate backend quota. Use current: %d", newQuotaBytes)
 	}
 
 	return newQuotaBytes

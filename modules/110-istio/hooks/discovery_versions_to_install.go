@@ -112,7 +112,7 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 	for _, ver := range versionsToInstall {
 		fullVer, ok := versionMap[ver]
 		if !ok {
-			input.LogEntry.Warnf("Not found full version for version to install %s", ver)
+			input.Logger.Warnf("Not found full version for version to install %s", ver)
 			continue
 		}
 

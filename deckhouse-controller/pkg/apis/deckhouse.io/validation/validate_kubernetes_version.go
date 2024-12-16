@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -31,14 +30,11 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type clusterConfig struct {
 	KubernetesVersion string `json:"kubernetesVersion"`
-}
-
-type moduleManager interface {
-	IsModuleEnabled(moduleName string) bool
 }
 
 func kubernetesVersionHandler(mm moduleManager) http.Handler {
@@ -58,7 +54,7 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 		clusterConf := new(clusterConfig)
 		if err := yaml.Unmarshal(clusterConfigurationRaw, clusterConf); err != nil {
 			log.Debugf("failed to unmarshal cluster configuration: %v", err)
-			return nil, err
+			return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
 		}
 
 		if clusterConf.KubernetesVersion == "Automatic" {
@@ -71,7 +67,7 @@ func kubernetesVersionHandler(mm moduleManager) http.Handler {
 				return rejectResult(err.Error())
 			}
 			if mm.IsModuleEnabled(moduleName) {
-				log.Debugf("module %s has unsatisfied requierements", moduleName)
+				log.Debugf("the module %q has unsatisfied requirements", moduleName)
 				return rejectResult(err.Error())
 			}
 		}

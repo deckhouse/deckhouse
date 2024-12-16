@@ -1,8 +1,11 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.csi.aws }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver/bin/aws-ebs-csi-driver
   to: /bin/aws-ebs-csi-driver
   before: setup
@@ -15,19 +18,32 @@ import:
 docker:
   ENTRYPOINT: ["/bin/aws-ebs-csi-driver"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare ">=1.31" $version }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+    {{- else if semverCompare "=1.30" $version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+    {{- else if semverCompare "=1.29" $version }}
+from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+    {{- else if semverCompare ">=1.27" $version }}
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+    {{- end }}
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
-  - git clone --depth 1 --branch v1.28.0 {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch {{ $value.csi.aws }} {{ $.SOURCE_REPO }}/kubernetes-sigs/aws-ebs-csi-driver.git /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
   - cd /go/src/github.com/kubernetes-sigs/aws-ebs-csi-driver
   - make default
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
+ {{- end }}
+{{- end }} 
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
 ---

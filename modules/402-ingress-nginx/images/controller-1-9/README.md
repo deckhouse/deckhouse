@@ -15,7 +15,7 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO} \
     CONTROLLER_VERSION=${VECTOR_VERSION}
     
-RUN git clone --depth 1 --branch ${CONTROLLER_VERSION} ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src &&\
+RUN --mount=type=ssh git clone --depth 1 --branch ${CONTROLLER_VERSION} ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src &&\
     cd /src/images/nginx/rootfs/ &&\
     ./build.sh
 ```

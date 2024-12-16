@@ -24,6 +24,7 @@ metadata:
       proxy_ssl_session_reuse on;
   {{- end }}
       rewrite ^/$ /en/platform/ permanent;
+      rewrite ^/((ru|en)/(.+)/modules)/[0-9]+-([^/]+/.*)$ /$1/$4 permanent;
       rewrite ^/(en|ru)/$ /$1/platform/ permanent;
       rewrite ^/modules/(.+) /en/modules/$1 permanent;
       rewrite ^/platform/(.+) /en/platform/$1 permanent;

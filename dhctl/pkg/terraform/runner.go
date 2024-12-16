@@ -36,7 +36,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
-var cloudProvidersDir = "/deckhouse/candi/cloud-providers/"
+var (
+	dhctlPath         = "/"
+	cloudProvidersDir = "/deckhouse/candi/cloud-providers/"
+)
 
 const (
 	deckhouseClusterStateSuffix = "-dhctl.*.tfstate"
@@ -66,6 +69,7 @@ type ChangeActionSettings struct {
 	AutoDismissDestructive bool
 	AutoApprove            bool
 	SkipChangesOnDeny      bool
+	LogToBuffer            bool
 }
 
 type Runner struct {
@@ -228,6 +232,11 @@ func (r *Runner) withTerraformExecutor(t Executor) *Runner {
 	return r
 }
 
+func (r *Runner) WithCatchOutput(flag bool) *Runner {
+	r.changeSettings.LogToBuffer = flag
+	return r
+}
+
 func (r *Runner) switchTerraformIsRunning() {
 	atomic.AddInt32(&r.terraformRunningCounter, 1)
 }
@@ -296,7 +305,7 @@ func (r *Runner) Init() error {
 	return log.Process("default", "terraform init ...", func() error {
 		args := []string{
 			"init",
-			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(os.Getenv("PWD"), "/")),
+			fmt.Sprintf("-plugin-dir=%s/plugins", strings.TrimRight(dhctlPath, "/")),
 			"-get-plugins=false",
 			"-no-color",
 			"-input=false",
@@ -513,13 +522,27 @@ func (r *Runner) Destroy() error {
 		return nil
 	}
 
+	planDestroyArgs := []string{
+		"plan",
+		"-destroy",
+		"-no-color",
+		fmt.Sprintf("-var-file=%s", r.variablesPath),
+		fmt.Sprintf("-state=%s", r.statePath),
+	}
+	planDestroyArgs = append(planDestroyArgs, r.workingDir)
+
+	_, err := r.execTerraform(planDestroyArgs...)
+	if err != nil {
+		return fmt.Errorf("Cannot prepare terrafrom destroy plan: %w", err)
+	}
+
 	if !r.changeSettings.AutoApprove {
 		if !r.confirm().WithMessage("Do you want to DELETE objects from the cloud?").Ask() {
 			return fmt.Errorf("terraform destroy aborted")
 		}
 	}
 
-	err := r.runBeforeActionAndWaitReady()
+	err = r.runBeforeActionAndWaitReady()
 	if err != nil {
 		return err
 	}
@@ -601,6 +624,14 @@ func (r *Runner) GetTerraformExecutor() Executor {
 	return r.terraformExecutor
 }
 
+func (r *Runner) IsLogToBuffer() bool {
+	return r.changeSettings.LogToBuffer
+}
+
+func (r *Runner) GetLog() []string {
+	return r.terraformExecutor.GetStdout()
+}
+
 // Stop interrupts the current runner command and sets
 // a flag to prevent executions of next runner commands.
 func (r *Runner) Stop() {
@@ -627,7 +658,7 @@ func (r *Runner) execTerraform(args ...string) (int, error) {
 	r.switchTerraformIsRunning()
 	defer r.switchTerraformIsRunning()
 
-	exitCode, err := r.terraformExecutor.Exec(args...)
+	exitCode, err := r.terraformExecutor.Exec(r.changeSettings.LogToBuffer, args...)
 	log.InfoF("Terraform runner %q process exited.\n", r.step)
 
 	return exitCode, err
@@ -721,5 +752,6 @@ func buildTerraformPath(provider, layout, step string) string {
 }
 
 func InitGlobalVars(pwd string) {
+	dhctlPath = pwd
 	cloudProvidersDir = pwd + "/deckhouse/candi/cloud-providers/"
 }

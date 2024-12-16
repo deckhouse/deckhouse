@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -27,9 +26,9 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -65,7 +64,7 @@ var _ = Describe("Cert Manager hooks :: generate_webhook_certs ::", func() {
 	})
 	Context("With secrets", func() {
 		caAuthority, _ := genWebhookCa(nil)
-		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{LogEntry: logrus.New().WithContext(context.Background())}, caAuthority)
+		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority)
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(`
@@ -97,7 +96,7 @@ data:
 	})
 })
 
-func genWebhookCa(logEntry *logrus.Entry) (*certificate.Authority, error) {
+func genWebhookCa(logEntry *log.Logger) (*certificate.Authority, error) {
 	const cn = "cert-manager-webhook"
 	ca, err := certificate.GenerateCA(logEntry, cn, func(r *csr.CertificateRequest) {
 		r.KeyRequest = &csr.KeyRequest{
@@ -121,7 +120,7 @@ func genWebhookCa(logEntry *logrus.Entry) (*certificate.Authority, error) {
 }
 
 func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority) (*certificate.Certificate, error) {
-	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+	tls, err := certificate.GenerateSelfSignedCert(input.Logger,
 		"cert-manager-webhook",
 		*ca,
 		certificate.WithGroups(

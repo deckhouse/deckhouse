@@ -1,42 +1,48 @@
-{%- unless page.hide_sidebar or jekyll.environment == "development" %}
-{%- assign sidebar = site.data.sidebars[page.sidebar].entries %}
-
-    <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
-      <div class="channel-menu submenu-parent">
-
-        <!-- documentation-section-badge -->
-        <a data-proofer-ignore="" href="#" class="highlight">{{ site.data.i18n.common.platform[page.lang] | capitalize }}</a>
-        <div class="submenu-container">
-          <ul class="submenu">
-            <li class="submenu-item">
-              <a data-proofer-ignore='' class='submenu-item-link' href='{% if site.mode == "module" %}/{{ page.lang }}{% endif %}/modules/'>
-                <span class="submenu-item-channel">{{ site.data.i18n.common.modules[page.lang] | capitalize }}</span>
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      {% unless site.mode == 'module' %}
-      <!-- module-version-badge -->
-      <div id="doc-versions-menu" class="channel-menu submenu-parent">
-        <!--#include virtual="/includes/channel-menu-v2.html" -->
-      </div>
-      {% endunless %}
+{%- unless page.hide_sidebar %}
+  {%- if jekyll.environment == "development" %}
+    <div class="sidebar__item" style="font-size: 20px; font-weight: bold; color: black;">
+      {{ site.data.i18n.common.dev_menu_message[page.lang] }}
     </div>
-  <div class="sidebar__wrapper-inner">
-    <nav class="sidebar__container">
+  {%- else %}
+      {%- assign sidebar = site.data.sidebars[page.sidebar].entries %}
 
-      <ul class="sidebar" id="mysidebar">
+      <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
+        <div class="channel-menu submenu-parent">
 
-        {%- for entry in sidebar.folders %}
-        {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
-        {%- endfor %}
-      </ul>
+          <!-- documentation-section-badge -->
+          <a data-proofer-ignore="" href="#" class="highlight">{{ site.data.i18n.common.platform[page.lang] | capitalize }}</a>
+          <div class="submenu-container">
+            <ul class="submenu">
+              <li class="submenu-item">
+                <a data-proofer-ignore='' class='submenu-item-link' href='{% if site.mode == "module" %}/{{ page.lang }}{% endif %}/modules/'>
+                  <span class="submenu-item-channel">{{ site.data.i18n.common.modules[page.lang] | capitalize }}</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
 
-    </nav>
-  </div>
+        {% unless site.mode == 'module' %}
+        <!-- module-version-badge -->
+        <div id="doc-versions-menu" class="channel-menu submenu-parent">
+          <!--#include virtual="/includes/channel-menu-v2.html" -->
+        </div>
+        {% endunless %}
+      </div>
+      <div class="sidebar__wrapper-inner">
+        <nav class="sidebar__container">
 
-<!-- this highlights the active parent class in the navgoco sidebar. this is critical so that the parent expands when you're viewing a page. This must appear below the sidebar code above. Otherwise, if placed inside customscripts.js, the script runs before the sidebar code runs and the class never gets inserted.-->
-<script>$("li.active").parents('li').toggleClass("active");</script>
+          <ul class="sidebar" id="mysidebar">
+
+            {%- for entry in sidebar.folders %}
+            {% include sidebar_entry.html entry=entry folder_entry_class="sidebar__item sidebar__item_parent" item_entry_class="sidebar__item" %}
+            {%- endfor %}
+          </ul>
+
+        </nav>
+      </div>
+
+      <!-- this highlights the active parent class in the navgoco sidebar. this is critical so that the parent expands when you're viewing a page. This must appear below the sidebar code above. Otherwise, if placed inside customscripts.js, the script runs before the sidebar code runs and the class never gets inserted.-->
+      <script>$("li.active").parents('li').toggleClass("active");</script>
+    {%- endif %}
 {% endunless %}

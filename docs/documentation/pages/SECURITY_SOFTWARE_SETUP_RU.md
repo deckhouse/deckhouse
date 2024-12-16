@@ -6,255 +6,222 @@ lang: ru
 
 Если узлы кластера Kubernetes анализируются сканерами безопасности (антивирусными средствами), то может потребоваться их настройка для исключения ложноположительных срабатываний.
 
-Deckhouse использует следующие директории при работе ([скачать в csv...](deckhouse-directories.csv)):
+Deckhouse Kubernetes Platform (DKP) использует следующие директории при работе ([скачать в csv](deckhouse-directories.csv)):
 
 {% include security_software_setup.liquid %}
 
-## Рекомендации по настройке KESL (Kaspersky Endpoint Security для Linux) для работы совместно с Deckhouse
+## SIEM
 
-Чтобы KESL не влиял на работоспособность Deckhouse, необходимо выполнить описанные ниже рекомендации по настройке через командную строку непосредственно на хосте или через систему централизованного удалённого управления Kaspersky Security Center.
+Security Information and Event Management («cбор и анализ информации о событиях безопасности», SIEM) — класс программных продуктов, предназначенных для сбора и анализа информации о событиях безопасности.
 
-Управление KESL осуществляется [с помощью задач](https://support.kaspersky.com/KES4Linux/11.2.0/ru-RU/199339.htm), имеющих определённые номера. Ниже рассмотрена общая настройка, и конфигурация основных задач, используемых при настройке KESL c Deckhouse.
+### KUMA
 
-### Общая настройка
+Kaspersky Unified Monitoring and Analysis Platform (KUMA) объединяет продукты «Лаборатории Касперского» и сторонних поставщиков в единую систему информационной безопасности и является ключевым компонентом на пути реализации комплексного защитного подхода, способного обезопасить от актуальных киберугроз корпоративную и индустриальную среду, а также наиболее эксплуатируемый злоумышленниками стык IT/OT-систем.
 
-Измените настройки KESL относительно битов маркировки сетевых пакетов, так как существуют пересечения с маркировкой сетевых пакетов самим Deckhouse. Для этого:
-1. Остановите KESL, если он запущен, и измените настройки:
+#### Описание настроек
 
-   * в параметре `BypassFwMark` измените значение с `0x400` на `0x700`;
-   * в параметре `NtpFwMark` измените значение с `0x200` на `0x600`.
+{% alert level="warning" %}
+Для работы с KUMA должен быть **обязательно включён** модуль [log-shipper](modules/log-shipper/).
+{% endalert %}
 
-1. Запустите KESL.
+Для отправки данных [в KUMA](https://go.kaspersky.com/ru-kuma) необходимо настроить на стороне DKP следующие ресурсы:
 
-   Пример команд для запуска KESL:
-
-   ```shell
-   systemctl stop kesl
-   sed -i "s/NtpFwMark=0x200/NtpFwMark=0x600/" /var/opt/kaspersky/kesl/common/kesl.ini
-   sed -i "s/BypassFwMark=0x400/BypassFwMark=0x700/" /var/opt/kaspersky/kesl/common/kesl.ini
-   systemctl start kesl
-   ```
-
-### Задача №1 «Защита от файловых угроз» (File_Threat_Protection)
-
-Добавьте исключение для директорий Deckhouse, выполнив команды:
-
-```shell
-kesl-control --set-settings 1 --add-exclusion /etc/cni
-kesl-control --set-settings 1 --add-exclusion /etc/Kubernetes
-kesl-control --set-settings 1 --add-exclusion /mnt/kubernetes-data
-kesl-control --set-settings 1 --add-exclusion /mnt/vector-data
-kesl-control --set-settings 1 --add-exclusion /opt/cni/bin
-kesl-control --set-settings 1 --add-exclusion /opt/deckhouse/bin
-kesl-control --set-settings 1 --add-exclusion /var/lib/bashable
-kesl-control --set-settings 1 --add-exclusion /var/lib/containerd
-kesl-control --set-settings 1 --add-exclusion /var/lib/deckhouse
-kesl-control --set-settings 1 --add-exclusion /var/lib/etcd
-kesl-control --set-settings 1 --add-exclusion /var/lib/kubelet
-kesl-control --set-settings 1 --add-exclusion /var/lib/upmeter
-kesl-control --set-settings 1 --add-exclusion /var/log/containers
-kesl-control --set-settings 1 --add-exclusion /var/log/pods
-```
+- [`ClusterLogDestination`](modules/log-shipper/cr.html#clusterlogdestination);
+- [`ClusterLoggingConfig`](modules/log-shipper/cr.html#clusterloggingconfig).
 
 {% alert level="info" %}
-При добавлении может быть показано уведомление, что некоторых директорий не существует. Правило при этом будет добавлено — это нормально.
+На стороне KUMA должны быть настроены необходимые ресурсы для приёма событий.
 {% endalert %}
 
-### Задача №2 «Поиск вредоносного ПО» (Scan_My_Computer)
+Ниже приведены примеры конфигурации отправки файла аудита `/var/log/kube-audit/audit.log` в различных форматах.
 
-Добавьте исключение для директорий Deckhouse, выполнив команды:
+#### Отправка логов в формате JSON по UDP
 
-```shell
-kesl-control --set-settings 2 --add-exclusion /etc/cni
-kesl-control --set-settings 2 --add-exclusion /etc/Kubernetes
-kesl-control --set-settings 2 --add-exclusion /mnt/kubernetes-data
-kesl-control --set-settings 2 --add-exclusion /mnt/vector-data
-kesl-control --set-settings 2 --add-exclusion /opt/cni/bin
-kesl-control --set-settings 2 --add-exclusion /opt/deckhouse/bin
-kesl-control --set-settings 2 --add-exclusion /var/lib/bashable
-kesl-control --set-settings 2 --add-exclusion /var/lib/containerd
-kesl-control --set-settings 2 --add-exclusion /var/lib/deckhouse
-kesl-control --set-settings 2 --add-exclusion /var/lib/etcd
-kesl-control --set-settings 2 --add-exclusion /var/lib/kubelet
-kesl-control --set-settings 2 --add-exclusion /var/lib/upmeter
-kesl-control --set-settings 2 --add-exclusion /var/log/containers
-kesl-control --set-settings 2 --add-exclusion /var/log/pods
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: kuma-udp-json
+spec:
+  type: Socket
+  socket:
+    address: IP_ADDRESS:PORT # Заменить при настройке
+    mode: UDP
+    encoding:
+      codec: "JSON"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: kubelet-audit-logs
+spec:
+  type: File
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
+  destinationRefs:
+    - kuma-udp-json
 ```
+
+#### Отправка логов в формате JSON по TCP
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: kuma-tcp-json
+spec:
+  type: Socket
+  socket:
+    address: IP_ADDRESS:PORT # Заменить при настройке
+    mode: TCP
+    tcp:
+      verifyCertificate: false
+      verifyHostname: false
+    encoding:
+      codec: "JSON"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: kubelet-audit-logs
+spec:
+  type: File
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
+  destinationRefs:
+    - kuma-tcp-json
+```
+
+#### Отправка логов в формате CEF по TCP
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: kuma-tcp-cef
+spec:
+  type: Socket
+  socket:
+    extraLabels:
+      cef.name: d8
+      cef.severity: "1"
+    address: IP_ADDRESS:PORT # Заменить при настройке
+    mode: TCP
+    tcp:
+      verifyCertificate: false
+      verifyHostname: false
+    encoding:
+      codec: "CEF"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: kubelet-audit-logs
+spec:
+  type: File
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
+  logFilter:
+    - field: userAgent
+      operator: Regex
+      values: [ "kubelet.*" ]
+  destinationRefs:
+    - kuma-tcp-cef
+```
+
+#### Отправка логов в формате Syslog по TCP
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: kuma-tcp-syslog
+spec:
+  type: Socket
+  socket:
+    address: IP_ADDRESS:PORT # Заменить при настройке
+    mode: TCP
+    tcp:
+      verifyCertificate: false
+      verifyHostname: false
+    encoding:
+      codec: "Syslog"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: kubelet-audit-logs
+spec:
+  type: File
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
+  logFilter:
+    - field: userAgent
+      operator: Regex
+      values: [ "kubelet.*" ]
+  destinationRefs:
+    - kuma-tcp-syslog
+```
+
+#### Отправка логов в Apache Kafka
 
 {% alert level="info" %}
-При добавлении может быть показано уведомление, что некоторых директорий не существует. Правило при этом будет добавлено — это нормально.
+При условии, что Apache Kafka настроена на приём данных.
 {% endalert %}
 
-### Задача №3 «Выборочная проверка» (Scan_File)
-
-Добавьте исключение для директорий Deckhouse, выполнив команды:
-
-```shell
-kesl-control --set-settings 3 --add-exclusion /etc/cni
-kesl-control --set-settings 3 --add-exclusion /etc/Kubernetes
-kesl-control --set-settings 3 --add-exclusion /mnt/kubernetes-data
-kesl-control --set-settings 3 --add-exclusion /mnt/vector-data
-kesl-control --set-settings 3 --add-exclusion /opt/cni/bin
-kesl-control --set-settings 3 --add-exclusion /opt/deckhouse/bin
-kesl-control --set-settings 3 --add-exclusion /var/lib/bashable
-kesl-control --set-settings 3 --add-exclusion /var/lib/containerd
-kesl-control --set-settings 3 --add-exclusion /var/lib/deckhouse
-kesl-control --set-settings 3 --add-exclusion /var/lib/etcd
-kesl-control --set-settings 3 --add-exclusion /var/lib/kubelet
-kesl-control --set-settings 3 --add-exclusion /var/lib/upmeter
-kesl-control --set-settings 3 --add-exclusion /var/log/containers
-kesl-control --set-settings 3 --add-exclusion /var/log/pods
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: kuma-kafka
+spec:
+  type: Kafka
+  kafka:
+    bootstrapServers:
+      - kafka-address:9092 # Заменить при настройке на актуальное значение
+    topic: k8s-logs
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: kubelet-audit-logs
+  spec:
+  destinationRefs:
+  - kuma-kafka
+  file:
+    include:
+    - /var/log/kube-audit/audit.log
+  logFilter:
+  - field: userAgent
+    operator: Regex
+    values:
+    - kubelet.*
+  type: File
 ```
+
+## ПО безопасности
+
+В разделе приведены примеры настроек для различного ПО безопасности.
+
+### KESL
+
+Далее приведены рекомендации по настройке Kaspersky Endpoint Security for Linux (KESL) для обеспечения корректной работы с платформой Deckhouse Kubernetes Platform, независимо от выбранной редакции.
+
+Для обеспечения совместимости с DKP на стороне KESL необходимо отключить следующие задачи:
+
+- `Firewall_Management (ID: 12)`.
+- `Web Threat Protection (ID: 14)`.
+- `Network Threat protection (ID: 17)`.
+- `Web Control (ID: 26)`.
 
 {% alert level="info" %}
-При добавлении может быть показано уведомление, что некоторых директорий не существует. Правило при этом будет добавлено — это нормально.
+Список задач может отличаться в будущих версиях KESL.
 {% endalert %}
 
-### Задача №4 «Проверка важных областей» (Critical_Areas_Scan)
+Убедитесь, что узлы Kubernetes соответствуют минимальным требованиям к ресурсам, указанным для [DKP](https://deckhouse.ru/products/kubernetes-platform/guides/production.html#требования-к-ресурсам) и [KESL](https://support.kaspersky.com/KES4Linux/12.1.0/ru-RU/197642.htm).
 
-Добавьте исключение для директорий Deckhouse, выполнив команды:
-
-```shell
-kesl-control --set-settings 4 --add-exclusion /etc/cni
-kesl-control --set-settings 4 --add-exclusion /etc/Kubernetes
-kesl-control --set-settings 4 --add-exclusion /mnt/kubernetes-data
-kesl-control --set-settings 4 --add-exclusion /mnt/vector-data
-kesl-control --set-settings 4 --add-exclusion /opt/cni/bin
-kesl-control --set-settings 4 --add-exclusion /opt/deckhouse/bin
-kesl-control --set-settings 4 --add-exclusion /var/lib/bashable
-kesl-control --set-settings 4 --add-exclusion /var/lib/containerd
-kesl-control --set-settings 4 --add-exclusion /var/lib/deckhouse
-kesl-control --set-settings 4 --add-exclusion /var/lib/etcd
-kesl-control --set-settings 4 --add-exclusion /var/lib/kubelet
-kesl-control --set-settings 4 --add-exclusion /var/lib/upmeter
-kesl-control --set-settings 4 --add-exclusion /var/log/containers
-kesl-control --set-settings 4 --add-exclusion /var/log/pods
-```
-
-{% alert level="info" %}
-При добавлении может быть показано уведомление, что некоторых директорий не существует. Правило при этом будет добавлено — это нормально.
-{% endalert %}
-
-### Задача №11 «Контроль целостности системы» (System_Integrity_Monitoring)
-
-Добавьте исключение для директорий Deckhouse, выполнив команды:
-
-```shell
-kesl-control --set-settings 11 --add-exclusion /etc/cni
-kesl-control --set-settings 11 --add-exclusion /etc/Kubernetes
-kesl-control --set-settings 11 --add-exclusion /mnt/kubernetes-data
-kesl-control --set-settings 11 --add-exclusion /mnt/vector-data
-kesl-control --set-settings 11 --add-exclusion /opt/cni/bin
-kesl-control --set-settings 11 --add-exclusion /opt/deckhouse/bin
-kesl-control --set-settings 11 --add-exclusion /var/lib/bashable
-kesl-control --set-settings 11 --add-exclusion /var/lib/containerd
-kesl-control --set-settings 11 --add-exclusion /var/lib/deckhouse
-kesl-control --set-settings 11 --add-exclusion /var/lib/etcd
-kesl-control --set-settings 11 --add-exclusion /var/lib/kubelet
-kesl-control --set-settings 11 --add-exclusion /var/lib/upmeter
-kesl-control --set-settings 11 --add-exclusion /var/log/containers
-kesl-control --set-settings 11 --add-exclusion /var/log/pods
-```
-
-{% alert level="info" %}
-При добавлении может быть показано уведомление, что некоторых директорий не существует. Правило при этом будет добавлено — это нормально.
-{% endalert %}
-
-### Задача №12 «Управление сетевым экраном» (Firewall_Management)
-
-{% alert level="danger" %}
-Задачу необходимо отключить и не включать. Включение задачи приведёт к неработоспособности Deckhouse.
-{% endalert %}
-
-Эта задача удаляет все правила iptables, не относящиеся к KESL ([ссылка на документацию KESL](https://support.kaspersky.com/KES4Linux/11.3.0/ru-RU/234820.htm)).
-
-Если задача включена, отключите её, выполнив команду:
-
-```shell
-kesl-control --stop-task 12
-```
-
-### Задача №13 «Защита от шифрования» (Anti_Cryptor)
-
-Добавьте исключение для директорий Deckhouse, выполнив команды:
-
-```shell
-kesl-control --set-settings 13 --add-exclusion /etc/cni
-kesl-control --set-settings 13 --add-exclusion /etc/Kubernetes
-kesl-control --set-settings 13 --add-exclusion /mnt/kubernetes-data
-kesl-control --set-settings 13 --add-exclusion /mnt/vector-data
-kesl-control --set-settings 13 --add-exclusion /opt/cni/bin
-kesl-control --set-settings 13 --add-exclusion /opt/deckhouse/bin
-kesl-control --set-settings 13 --add-exclusion /var/lib/bashable
-kesl-control --set-settings 13 --add-exclusion /var/lib/containerd
-kesl-control --set-settings 13 --add-exclusion /var/lib/deckhouse
-kesl-control --set-settings 13 --add-exclusion /var/lib/etcd
-kesl-control --set-settings 13 --add-exclusion /var/lib/kubelet
-kesl-control --set-settings 13 --add-exclusion /var/lib/upmeter
-kesl-control --set-settings 13 --add-exclusion /var/log/containers
-kesl-control --set-settings 13 --add-exclusion /var/log/pods
-```
-
-{% alert level="info" %}
-При добавлении может быть показано уведомление, что некоторых директорий не существует. Правило при этом будет добавлено — это нормально.
-{% endalert %}
-
-### Задача №14 «Защита от веб-угроз» (Web_Threat_Protection)
-
-Задачу рекомендуется отключить.
-
-Если есть необходимость включить задачу, выполните настройку таким образом, чтобы не было влияния на работоспособность Deckhouse.
-
-Если задача включена и обнаружено её негативное влияние на Deckhouse, отключите задачу, выполнив команду:
-
-```shell
-kesl-control --stop-task 14
-```
-
-### Задача №17 «Защита от сетевых угроз» (Network_Threat_Protection)
-
-Задачу рекомендуется отключить.
-
-Если есть необходимость включить задачу, выполните настройку таким образом, чтобы не было влияния на работоспособность Deckhouse.
-
-Если задача включена и обнаружено её негативное влияние на Deckhouse, отключите задачу, выполнив команду:
-
-```shell
-kesl-control --stop-task 17
-```
-
-### Задача №20 «Анализ поведения» (Behavior_Detection)
-
-С настройками по умолчанию задача негативного влияния на работоспособность Deckhouse не оказывает.
-
-Если есть необходимость включить задачу, выполните настройку таким образом, чтобы не было влияния на работоспособность Deckhouse.
-
-Если задача включена и обнаружено её негативное влияние на Deckhouse, отключите задачу, выполнив команду:
-
-```shell
-kesl-control --stop-task 20
-```
-
-### Задача №21 «Контроль программ» (Application_Control)
-
-С настройками по умолчанию задача негативного влияния на работоспособность Deckhouse не оказывает.
-
-Если есть необходимость включить задачу, выполните настройку таким образом, чтобы не было влияния на работоспособность Deckhouse.
-
-Если задача включена и обнаружено её негативное влияние на Deckhouse, отключите задачу, выполнив команду:
-
-```shell
-kesl-control --stop-task 21
-```
-
-### Задача №22 «Веб-контроль» (Web_Control)
-
-Задачу рекомендуется отключить.
-
-Если есть необходимость включить задачу, выполните настройку таким образом, чтобы не было влияния на работоспособность Deckhouse.
-
-Если задача включена и обнаружено её негативное влияние на Deckhouse, отключите задачу, выполнив команду:
-
-```shell
-kesl-control --stop-task 22
-```
+При совместной эксплуатации KESL и DKP может потребоваться оптимизация производительности согласно [рекомендациям Kaspersky](https://support.kaspersky.com/KES4Linux/12.1.0/ru-RU/206054.htm).

@@ -113,7 +113,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput) error {
 	}
 
 	if !needMigration {
-		input.LogEntry.Info("Skipping migration diskSizeGB because Deckhouse installation version too ok")
+		input.Logger.Info("Skipping migration diskSizeGB because Deckhouse installation version too ok")
 		return nil
 	}
 
@@ -138,7 +138,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput) error {
 	}
 
 	if !needMigratieMasters && !needMigrateNGs {
-		input.LogEntry.Info("Skipping migration diskSizeGB because migration already done or diskSizeGB already set")
+		input.Logger.Info("Skipping migration diskSizeGB because migration already done or diskSizeGB already set")
 		return nil
 	}
 

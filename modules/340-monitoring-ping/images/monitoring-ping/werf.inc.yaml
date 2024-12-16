@@ -2,6 +2,10 @@
 artifact: {{ .ModuleName }}/build-fping-static-artifact
 from: {{ .Images.BASE_UBUNTU }}
 shell:
+  beforeInstall:
+  - apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - mkdir build && cd build
   - apt update && apt install -y --no-install-recommends git build-essential ca-certificates autoconf autotools-dev automake

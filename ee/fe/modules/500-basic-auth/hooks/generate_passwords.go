@@ -88,7 +88,7 @@ func generatePassword(input *go_hook.HookInput) error {
 
 	pass, err := restorePasswordFromSnapshot(input.Snapshots[secretBinding])
 	if err != nil {
-		input.LogEntry.Infof("Generate default location for basic auth: %s", err)
+		input.Logger.Infof("Generate default location for basic auth: %s", err)
 		pass = pwgen.AlphaNum(generatedPasswdLength)
 	}
 

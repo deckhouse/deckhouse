@@ -609,7 +609,7 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 			continue
 		}
 		if candidate.needUpgrade && candidate.isReady && versionMap.IsFullVersionReady(candidate.desiredFullVersion) {
-			input.LogEntry.Infof("Patch %s '%s' in namespace '%s' with full version '%s'", candidate.kind, candidate.name, candidate.namespace, candidate.desiredFullVersion)
+			input.Logger.Infof("Patch %s '%s' in namespace '%s' with full version '%s'", candidate.kind, candidate.name, candidate.namespace, candidate.desiredFullVersion)
 			input.PatchCollector.MergePatch(fmt.Sprintf(patchTemplate, candidate.desiredFullVersion), "apps/v1", candidate.kind, candidate.namespace, candidate.name)
 			// skip this namespace on next iteration
 			ignoredNamespace[candidate.namespace] = struct{}{}

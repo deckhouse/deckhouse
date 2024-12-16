@@ -45,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, discoveryClusterUUID)
 
-func createConfigMapWithUUID(patch *object_patch.PatchCollector, clusterUUID string) {
+func createConfigMapWithUUID(patch go_hook.PatchCollector, clusterUUID string) {
 	cm := &v1core.ConfigMap{
 		TypeMeta: v1.TypeMeta{
 			APIVersion: "v1",

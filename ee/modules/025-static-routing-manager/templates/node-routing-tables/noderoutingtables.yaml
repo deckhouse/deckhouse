@@ -20,6 +20,11 @@ spec:
   routes:
   {{- range $route := $nrt.routes }}
     - destination: {{ $route.destination }}
+    {{- if $route.gateway }}
       gateway: {{ $route.gateway }}
+    {{- end }}
+    {{- if $route.dev }}
+      dev: {{ $route.dev }}
+    {{- end }}
   {{- end }}
 {{- end }}

@@ -18,7 +18,8 @@ docker:
   ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+from: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
+fromCacheVersion: {{ .CandiVersionMap.d8.d8CliVersion }}
 git:
   - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/static
     to: /static
@@ -31,8 +32,17 @@ import:
     to: /app
     before: setup
 shell:
+  beforeInstall:
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   setup:
+    {{- include "debian packages proxy" . | nindent 4 }}
     - export GOPROXY={{ $.GOPROXY }}
+    - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
+    - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
+    - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
+    - apt-get install -y libbtrfs-dev jq
+    - go install github.com/go-task/task/v3/cmd/task@latest
+    - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
     - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
     - cd /deckhouse-cli
     - task build:dist:all
@@ -40,6 +50,7 @@ shell:
     - mv dist/{{ .CandiVersionMap.d8.d8CliVersion }}/* /app/files/d8-cli
     - jq '[.[] | .version="{{ .CandiVersionMap.d8.d8CliVersion }}"]' /static/tools.json > /app/tools.json
     - mv /static/robots.txt /app
+    - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
 from: {{ .Images.BASE_NODE_20_ALPINE_DEV }}

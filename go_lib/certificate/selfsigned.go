@@ -27,7 +27,7 @@ import (
 	"github.com/cloudflare/cfssl/helpers"
 	"github.com/cloudflare/cfssl/signer"
 	"github.com/cloudflare/cfssl/signer/local"
-	"github.com/sirupsen/logrus"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
 type Certificate struct {
@@ -51,7 +51,7 @@ func WithSigningDefaultUsage(usage []string) SigningOption {
 	}
 }
 
-func GenerateSelfSignedCert(logger *logrus.Entry, cn string, ca Authority, options ...interface{}) (Certificate, error) {
+func GenerateSelfSignedCert(logger go_hook.Logger, cn string, ca Authority, options ...interface{}) (Certificate, error) {
 	logger.Debugf("Generate self-signed cert for %s", cn)
 	request := &csr.CertificateRequest{
 		CN: cn,

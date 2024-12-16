@@ -25,7 +25,6 @@ import (
 
 	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"gopkg.in/yaml.v2"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type deckhouseReleaseService struct {
@@ -40,13 +40,16 @@ type deckhouseReleaseService struct {
 
 	registry        string
 	registryOptions []cr.Option
+
+	logger *log.Logger
 }
 
-func newDeckhouseReleaseService(registryAddress string, registryConfig *utils.RegistryConfig) *deckhouseReleaseService {
+func newDeckhouseReleaseService(registryAddress string, registryConfig *utils.RegistryConfig, logger *log.Logger) *deckhouseReleaseService {
 	return &deckhouseReleaseService{
 		dc:              dependency.NewDependencyContainer(),
 		registry:        registryAddress,
-		registryOptions: utils.GenerateRegistryOptions(registryConfig),
+		registryOptions: utils.GenerateRegistryOptions(registryConfig, logger),
+		logger:          logger,
 	}
 }
 
@@ -94,7 +97,10 @@ func (svc *deckhouseReleaseService) ListDeckhouseReleases(ctx context.Context) (
 func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelease.ReleaseMetadata, error) {
 	var meta = new(dhRelease.ReleaseMetadata)
 
-	rc := mutate.Extract(img)
+	rc, err := cr.Extract(img)
+	if err != nil {
+		return nil, err
+	}
 	defer rc.Close()
 
 	rr := &releaseReader{
@@ -102,7 +108,7 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 		changelogReader: bytes.NewBuffer(nil),
 	}
 
-	err := rr.untarMetadata(rc)
+	err = rr.untarMetadata(rc)
 	if err != nil {
 		return nil, err
 	}

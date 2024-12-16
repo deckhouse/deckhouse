@@ -7,7 +7,7 @@ lang: ru
 Описание ресурсов, используемых при [установке Deckhouse](./).
 
 {% alert level="danger" %}
-Не изменяйте параметры `internalNetworkCIDRs`, `serviceSubnetCIDR`, `podSubnetNodeCIDRPrefix`, `podSubnetCIDR` в работающем кластере. Если изменение параметров необходимо — разверните новый кластер.
+Не изменяйте параметры `serviceSubnetCIDR`, `podSubnetNodeCIDRPrefix`, `podSubnetCIDR` в работающем кластере. Если изменение параметров необходимо — разверните новый кластер.
 {% endalert %}
 
 {{ site.data.schemas.global.cluster_configuration | format_cluster_configuration }}

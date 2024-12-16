@@ -179,7 +179,11 @@ func (s *sleepExecutor) Output(_ ...string) ([]byte, error) {
 	return nil, nil
 }
 
-func (s *sleepExecutor) Exec(_ ...string) (int, error) {
+func (s *sleepExecutor) GetStdout() []string {
+	return nil
+}
+
+func (s *sleepExecutor) Exec(_ bool, _ ...string) (int, error) {
 	ticker := time.NewTicker(time.Second)
 loop:
 	for {

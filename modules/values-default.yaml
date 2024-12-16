@@ -25,6 +25,7 @@ monitoringDeckhouseEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
 monitoringKubernetesEnabled: true
 monitoringPingEnabled: true
+multitenancyManagerEnabled: true
 namespaceConfiguratorEnabled: true
 registryPackagesProxyEnabled: true
 nodeManagerEnabled: true

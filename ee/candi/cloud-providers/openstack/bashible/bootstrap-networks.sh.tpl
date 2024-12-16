@@ -25,7 +25,7 @@ function netplan_configure(){
   count_default_routes=$(ip -4 route show default | wc -l)
   if [[ "$count_default_routes" -gt "1" ]]; then
     CLOUD_INIT_NETPLAN_CFG="/etc/netplan/50-cloud-init.yaml"
-    configured_macs="$(grep -Po '(?<=macaddress: ).+' $CLOUD_INIT_NETPLAN_CFG || test $? = 1;)"
+    configured_macs="$(grep -Po '(?<=macaddress: ).+' $CLOUD_INIT_NETPLAN_CFG | sed 's/"//g' || test $? = 1;)"
     for configured_mac in $configured_macs; do
       ifname="$( (ip -o link show | grep "link/ether $configured_mac" | cut -d ":" -f2 | tr -d " ") || test $? = 1;)"
       if [[ "$ifname" != "" ]]; then

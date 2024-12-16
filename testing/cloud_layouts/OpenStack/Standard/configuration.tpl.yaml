@@ -41,7 +41,7 @@ masterNodeGroup:
   replicas: ${MASTERS_COUNT}
   instanceClass:
     rootDiskSize: 50
-    flavorName: m1.large
+    flavorName: e2e
     imageName: "redos-STD-MINIMAL-8.0.0"
   volumeTypeMap:
     ru-3a: "fast.ru-3a"

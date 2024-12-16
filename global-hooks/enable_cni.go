@@ -111,25 +111,25 @@ func enableCni(input *go_hook.HookInput) error {
 	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
 
 	if len(cniNameSnap) == 0 {
-		input.LogEntry.Warnln("CNI name not found")
+		input.Logger.Warn("CNI name not found")
 		return nil
 	}
 
 	if len(explicitlyEnabledCNIs) > 1 {
 		return fmt.Errorf("more then one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
 	} else if len(explicitlyEnabledCNIs) == 1 {
-		input.LogEntry.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
+		input.Logger.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
 		return nil
 	}
 
 	// nor any CNI enabled directly via MC, found default CNI from secret
 	cniToEnable := cniNameSnap[0].(string)
 	if _, ok := cniNameToModule[cniToEnable]; !ok {
-		input.LogEntry.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
+		input.Logger.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
 		return nil
 	}
 
-	input.LogEntry.Infof("enabled CNI by secret: %s", cniToEnable)
+	input.Logger.Infof("enabled CNI by secret: %s", cniToEnable)
 	input.Values.Set(cniNameToModule[cniToEnable], true)
 	return nil
 }

@@ -162,10 +162,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: CniCiliumOrphanEgressGatewayPolicyFound
-      sourceFile: ee/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
+      sourceFile: ee/se-plus/modules/021-cni-cilium/monitoring/prometheus-rules/egressgatewaypolicies.yaml
       moduleUrl: 021-cni-cilium
       module: cni-cilium
-      edition: ee
+      edition: se-plus
       description: |
         There is orphan EgressGatewayPolicy in the cluster: with the name: `{{$labels.name}}` which has irrelevant EgressGateway name.
 
@@ -240,6 +240,16 @@ alerts:
       summary: |
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
+      markupFormat: markdown
+    - name: CronJobPodsNotCreated
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: ""
+      summary: |
+        CronJob {{$labels.namespace}}/{{$labels.job_name}} pods still not created.
+      severity: "5"
       markupFormat: markdown
     - name: CronJobRegistryUnavailable
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-checks.tpl
@@ -1089,7 +1099,7 @@ alerts:
       description: |
         There is deprecated istio version `{{$labels.version}}` installed.
         Impact — version support will be removed in future deckhouse releases. The higher alert severity — the higher probability of support cancelling.
-        Upgrading instructions — https://deckhouse.io/documentation//modules/110-istio/examples.html#upgrading-istio.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio) on upgrading Istio.
       summary: |
         There is deprecated istio version installed
       severity: undefined
@@ -1230,7 +1240,7 @@ alerts:
       description: |
         The current istio version `{{$labels.istio_version}}` may not work properly with the current k8s version `{{$labels.k8s_version}}`, because it is unsupported officially.
         Please upgrade istio as soon as possible.
-        Upgrading instructions — https://deckhouse.io/documentation//modules/110-istio/examples.html#upgrading-istio.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/110-istio/examples.html#upgrading-istio) on upgrading Istio.
       summary: |
         The installed istio version is incompatible with the k8s version
       severity: "3"
@@ -1271,7 +1281,7 @@ alerts:
       description: |-
         Current kubernetes version "{{ $labels.k8s_version }}" is deprecated, and its support will be removed within 6 months
 
-        Please migrate to the next kubernetes version (at least 1.27)
+        Please migrate to the next kubernetes version (at least 1.28)
 
         Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
       summary: |
@@ -1425,10 +1435,10 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8MetalLBBGPSessionDown
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has BGP session {{ $labels.peer }} down.
         Details are in logs:
@@ -1440,10 +1450,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8MetalLBConfigNotLoaded
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has not loaded.
         To figure out the problem, check controller logs:
@@ -1455,10 +1465,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8MetalLBConfigStale
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has run on a stale configuration, because the latest config failed to load.
         To figure out the problem, check controller logs:
@@ -1468,6 +1478,34 @@ alerts:
       summary: |
         MetalLB running on a stale configuration, because the latest config failed to load.
       severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbNotSupportedServiceAnnotationsDetected
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        Annotation '{{$labels.annotation}}' is deprecated for Service '{{$labels.name}}' located in namespace '{{$labels.namespace}}'
+        Service annotations below don't take effect now:
+          `metallb.universe.tf/ip-allocated-from-pool` — just wipe it out.
+          `metallb.universe.tf/address-pool` — use `.spec.loadBalancerClass` parameter or `network.deckhouse.io/metal-load-balancer-class` annotation with corresponding MetalLoadBalancerClass reference.
+          `metallb.universe.tf/loadBalancerIPs` — use `network.deckhouse.io/load-balancer-ips: <ip>` instead.
+
+          Important! Existing LoadBalancer Services of the Deckhouse were migrated automatically, but the new ones won't.
+      summary: |
+        D8 MetalLB settings is outdated
+      severity: "4"
+      markupFormat: markdown
+    - name: D8MetallbUpdateMCVersionRequired
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
+      description: |
+        ModuleConfig version for MetaLB needs to be increased
+      summary: |
+        D8 MetalLB settings is outdated
+      severity: "5"
       markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
@@ -1630,10 +1668,10 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        The {{ $labels.node }} Node is not managed by the [node-manager](http://documentation.example.com/modules/040-node-manager/) module.
+        The {{ $labels.node }} Node is not managed by the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module.
 
         The recommended actions are as follows:
-        - Follow these instructions to clean up the node and add it to the cluster: http://documentation.example.com/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
+        - Follow these instructions to clean up the node and add it to the cluster: https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
@@ -1808,7 +1846,7 @@ alerts:
         - reserved `metadata.labels` *node-role.deckhouse.io/* with ending not in `(system|frontend|monitoring|_deckhouse_module_name_)`
         - or reserved `spec.taints` *dedicated.deckhouse.io* with values not in `(system|frontend|monitoring|_deckhouse_module_name_)`
 
-        [Get instructions on how to fix it here](http://documentation.example.com/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
+        [Get instructions on how to fix it here](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} needs fixing up
       severity: "6"
@@ -2385,7 +2423,7 @@ alerts:
 
         Some of the objects were left by old upmeter-agent pods due to Upmeter update or downscale.
 
-        Leave only newest objects corresponding to upemter-agent pods, when the reason it investigated.
+        Leave only newest objects corresponding to upmeter-agent pods, when the reason it investigated.
 
         See `kubectl get upmeterhookprobes.deckhouse.io`.
       summary: |
@@ -2560,6 +2598,19 @@ alerts:
         Deckhouse release is waiting for manual approval.
       severity: "9"
       markupFormat: markdown
+    - name: DeckhouseReleaseNotificationNotSent
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Failed to send the Deckhouse release notification webhook.
+
+        Check the notification webhook address by running `kubectl get mc deckhouse -o yaml`.
+      summary: |
+        Deckhouse release notification webhook not sent.
+      severity: "4"
+      markupFormat: markdown
     - name: DeckhouseUpdating
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -2673,7 +2724,7 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](http://documentation.example.com/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
+        There is an IngressNginxController and/or an Ingress object that utilize(s) Nginx GeoIPv1 module's variables. The module is deprecated and its support is discontinued from Ingess Nginx Controller of version 1.10 and higher. It's recommend to upgrade your configuration to use [GeoIPv2 module](https://deckhouse.io/documentation/v1/modules/402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
         Use the following command to get the list of the IngressNginxControllers that contain GeoIPv1 variables:
         `kubectl  get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'`
 
@@ -3516,22 +3567,11 @@ alerts:
         Kube-state-metrics is not working in the cluster.
       severity: "3"
       markupFormat: markdown
-    - name: L2LoadBalancerModuleDeprecated
-      sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
-      moduleUrl: 381-l2-load-balancer
-      module: l2-load-balancer
-      edition: ee
-      description: |
-        The L2LoadBalancer module is deprecated and will be removed in a future release. Disable the module and use MetalLB module in L2 mode.
-      summary: |
-        L2LoadBalancer module is deprecated
-      severity: "3"
-      markupFormat: markdown
     - name: L2LoadBalancerOrphanServiceFound
-      sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
-      moduleUrl: 381-l2-load-balancer
-      module: l2-load-balancer
-      edition: ee
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
       description: |
         There is orphan service in the namespace: `{{$labels.namespace}}` with the name: `{{$labels.name}}` which has irrelevant L2LoadBalancer name.
 
@@ -3588,6 +3628,17 @@ alerts:
         Storage class {{ $labels.storageclass }} uses the deprecated rbd provisioner. It is necessary to migrate the volumes to the Ceph CSI driver.
       severity: "9"
       markupFormat: markdown
+    - name: ModuleAtConflict
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Conflicting sources for the {{ $labels.moduleName }} module. Please specify the proper source in the module configuration.
+      summary: |
+        Conflict detected for module {{ $labels.moduleName }}.
+      severity: "4"
+      markupFormat: markdown
     - name: ModuleConfigDeprecated
       sourceFile: modules/810-documentation/monitoring/prometheus-rules/deprecated-mc.yaml
       moduleUrl: 810-documentation
@@ -3601,13 +3652,47 @@ alerts:
         Deprecated ModuleConfig was found.
       severity: "9"
       markupFormat: markdown
+    - name: ModuleConfigObsoleteVersion
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        ModuleConfig {{ $labels.name }} is outdated. Update ModuleConfig {{ $labels.name }} to the latest version.
+      summary: |
+        ModuleConfig {{ $labels.name }} is outdated.
+      severity: "4"
+      markupFormat: markdown
+    - name: ModuleHasDeprecatedUpdatePolicy
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: "The '{{ $labels.moduleName }}' module has a deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy. \n\nPlease specify the proper update policy in the module configuration to continue get updates.\n"
+      summary: |
+        The '{{ $labels.moduleName }}' module has a deprecated module update policy.
+      severity: "4"
+      markupFormat: markdown
+    - name: ModuleReleaseIsBlockedByRequirements
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module {{ $labels.moduleName }} release is blocked by the requirements.
+
+        Please check the requirements with the following command `kubectl  get mr {{ $labels.name }} -o json | jq .spec.requirements`.
+      summary: |
+        Module release is blocked by the requirements.
+      severity: "6"
+      markupFormat: markdown
     - name: ModuleReleaseIsWaitingManualApproval
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module release is waiting for manual approval.
+        Module {{ $labels.moduleName }} release is waiting for manual approval.
 
         Please run `kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"` for confirmation.
       summary: |
@@ -4170,6 +4255,20 @@ alerts:
       summary: ""
       severity: "4"
       markupFormat: markdown
+    - name: NodeTCPMemoryExhaust
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
+      moduleUrl: 340-monitoring-kubernetes
+      module: monitoring-kubernetes
+      edition: ce
+      description: |-
+        The TCP stack on the {{ $labels.node }} node is experiencing high memory pressure.
+        This could be caused by applications with intensive TCP networking functionality.
+        Investigate the relevant applications and consider adjusting the system's TCP memory configuration
+        or addressing the source of increased network traffic.
+      summary: |
+        The {{ $labels.node }} node has high TCP stack memory usage.
+      severity: "6"
+      markupFormat: markdown
     - name: NodeTimeOutOfSync
       sourceFile: modules/470-chrony/monitoring/prometheus-rules/chrony.yaml
       moduleUrl: 470-chrony
@@ -4488,9 +4587,6 @@ alerts:
       description: |-
         StorageClass having a cloud-provider provisioner shouldn't be deployed manually.
         They are managed by the cloud-provider module, you only need to change the module configuration to fit your needs.
-
-
-        [Find storage configuration documentation for your cloud-provider here](http://documentation.example.com/kubernetes.html).
       summary: |
         Manually deployed StorageClass {{ $labels.name }} found in the cluster
       severity: "6"
@@ -4503,9 +4599,6 @@ alerts:
       description: |-
         More than one StorageClass in the cluster annotated as a default.
         Probably manually deployed StorageClass exists, that overlaps with cloud-provider module default Storage configuration.
-
-
-        [Find storage configuration documentation for your cloud-provider here](http://documentation.example.com/kubernetes.html).
       summary: |
         Multiple default StorageClasses found in the cluster
       severity: "6"
@@ -4591,7 +4684,6 @@ modules-having-alerts:
     - ingress-nginx
     - istio
     - kube-dns
-    - l2-load-balancer
     - log-shipper
     - metallb
     - monitoring-applications

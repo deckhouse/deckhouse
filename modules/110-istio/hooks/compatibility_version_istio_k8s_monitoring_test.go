@@ -41,7 +41,7 @@ istio:
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(0))
@@ -60,7 +60,7 @@ istio:
 
 		It("Hook must execute successfully and generate metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
@@ -92,7 +92,7 @@ istio:
 
 		It("Hook must execute successfully and generate metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
@@ -123,7 +123,7 @@ istio:
 
 		It("Hook must execute successfully and generate metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
+			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
@@ -144,7 +144,7 @@ istio:
 
 		It("Hook must execute successfully and generate metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
+			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))

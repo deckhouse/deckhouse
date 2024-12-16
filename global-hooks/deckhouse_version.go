@@ -35,7 +35,7 @@ func discoverDeckhouseVersion(input *go_hook.HookInput) error {
 	version := "unknown"
 	content, err := os.ReadFile(versionFile)
 	if err != nil {
-		input.LogEntry.Warnf("cannot get deckhouse version: %v", err)
+		input.Logger.Warnf("cannot get deckhouse version: %v", err)
 	} else {
 		version = strings.TrimSuffix(string(content), "\n")
 	}

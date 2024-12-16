@@ -87,7 +87,7 @@ func generateHubbleServerCert(input *go_hook.HookInput) error {
 		Cert: input.Values.Get("cniCilium.internal.hubble.certs.ca.cert").String(),
 	}
 
-	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+	tls, err := certificate.GenerateSelfSignedCert(input.Logger,
 		cn,
 		ca,
 		certificate.WithKeyRequest(&csr.KeyRequest{

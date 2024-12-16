@@ -1,6 +1,6 @@
 module: node-manager
 namespace: d8-cloud-instance-manager
-scopes:
+subsystems:
   - infrastructure
 crds:
   - modules/040-node-manager/crds/*.yaml

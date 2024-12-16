@@ -9,3 +9,4 @@
 "werf/actions/build": "werf/actions/build@43075e4ab81952b181d33e125ef15b9c060a782e"
 "werf/actions/converge": "werf/actions/converge@43075e4ab81952b181d33e125ef15b9c060a782e"
 "dorny/paths-filter": "dorny/paths-filter@v2"
+"ssh-agent": "webfactory/ssh-agent@v0.9.0"

@@ -30,6 +30,22 @@ For the module workflow to run smoothly, adjust the properties of your project o
 
 You can also modify the workflow, use your own container registry, and design a more complex build and publish process (e.g., use separate container registries for development and production).
 
+{% alert level="warning" %}
+When developing **multiple modules** and publishing them to GitHub Packages, you should use your account's [Personal Access Token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic).
+
+**Do not use** `GITHUB_TOKEN` in GitHub Workflows. This way, you can avoid access rights issues when uploading images, as the final release images are stored at `ghcr.io/<OWNER>/modules/` — the address that belongs to the first repository created.
+
+Here is how you can adapt a [module template](https://github.com/deckhouse/modules-template/) to use a PAT:
+- On the _Settings -> Secrets and variables -> Actions_ page create a Secret named `TOKEN` containing a PAT.
+- Replace the `GITHUB_TOKEN` variable with `TOKEN` in `.github/workflows/`:
+
+    ```shell
+    cd <REPO>
+    sed -i -e 's/GITHUB_TOKEN/TOKEN/g' $(find .github/workflows/ -type f)
+    ```
+
+{% endalert %}
+
 {% alert level="info" %}
 You can build module artifacts locally using [werf](https://werf.io/) (this may come in handy, for example, [when debugging](../development/)).
 

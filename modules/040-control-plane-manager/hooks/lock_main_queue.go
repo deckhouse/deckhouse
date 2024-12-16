@@ -124,7 +124,7 @@ func lockQueueFilterDS(unstructured *unstructured.Unstructured) (go_hook.FilterR
 
 func handleLockMainQueue(input *go_hook.HookInput) error {
 	if !input.Values.Get("global.clusterIsBootstrapped").Bool() {
-		input.LogEntry.Info("Cluster is not yet bootstrapped, not locking main queue after control-plane-manager update")
+		input.Logger.Info("Cluster is not yet bootstrapped, not locking main queue after control-plane-manager update")
 		return nil
 	}
 

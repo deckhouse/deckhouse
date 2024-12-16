@@ -13,6 +13,8 @@ apiVersions:
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
     x-doc-search: |
       ProviderClusterConfiguration
     x-examples:
@@ -70,7 +72,6 @@ apiVersions:
           Parameters of the master's NodeGroup.
 
           > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
-        x-unsafe-rules: [updateMasterImage]
         properties:
           replicas:
             type: integer
@@ -79,7 +80,6 @@ apiVersions:
               The number of master nodes to create.
 
               It is important to have an odd number of masters to ensure a quorum.
-            x-unsafe-rules: [updateReplicas]
           instanceClass:
             type: object
             required: [instanceType, ami]
@@ -448,15 +448,6 @@ apiVersions:
           Default IAM role policies actions contain the following roles:
           - `ec2:DescribeTags`
           - `ec2:DescribeInstances`
-      iamNodeRole:
-        type: string
-        pattern: ^[a-zA-Z0-9+=,.@\-_']{1,64}$
-        description: |
-          The name of the IAM role that will be attached to all AWS instances of the cluster nodes.
-
-          DKP always creates and assigns a special IAM role named `<PREFIX>-node` to each AWS instance of the cluster nodes (`<PREFIX>` is the value of the parameter [cloud.prefix](../../installing/configuration.html#clusterconfiguration-cloud-prefix) in the common cluster parameters). You can specify your IAM-role with greater permissions in the `iamNodeRole` parameter, but it is important that it includes the IAM policies of the role created by DKP (the `<PREFIX>-node` role).
-
-          More details about IAM roles for AWS EC2 can be found in the [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).
     allOf:
     - oneOf:
       - required: [layout]

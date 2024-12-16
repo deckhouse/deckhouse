@@ -22,7 +22,7 @@ import (
 
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/cloudflare/cfssl/initca"
-	"github.com/sirupsen/logrus"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
 type Authority struct {
@@ -30,7 +30,7 @@ type Authority struct {
 	Cert string `json:"cert"`
 }
 
-func GenerateCA(logger *logrus.Entry, cn string, options ...Option) (Authority, error) {
+func GenerateCA(logger go_hook.Logger, cn string, options ...Option) (Authority, error) {
 	request := &csr.CertificateRequest{
 		CN: cn,
 		CA: &csr.CAConfig{
@@ -55,7 +55,7 @@ func GenerateCA(logger *logrus.Entry, cn string, options ...Option) (Authority, 
 
 	ca, _, key, err := initca.New(request)
 	if err != nil {
-		logger.Errorln(buf.String())
+		logger.Error(buf.String())
 	}
 
 	return Authority{Cert: string(ca), Key: string(key)}, err

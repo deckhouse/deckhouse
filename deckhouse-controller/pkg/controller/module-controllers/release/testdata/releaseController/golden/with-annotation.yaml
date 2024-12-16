@@ -15,10 +15,8 @@ spec:
     dockerCfg: YXNiCg==
     repo: prod.deckhouse.io/modules
     scheme: HTTPS
-  releaseChannel: ""
 status:
   message: ""
-  moduleErrors: null
   modules: null
   modulesCount: 0
   syncTime: null
