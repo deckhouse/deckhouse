@@ -3,7 +3,7 @@
 {{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromArtifact: relocate-artifact
+fromArtifact: common/relocate-artifact
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
