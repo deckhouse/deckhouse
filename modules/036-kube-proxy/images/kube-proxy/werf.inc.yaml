@@ -1,13 +1,10 @@
 {{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
-{{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
+  {{- $iptables_image_version := $iptables_version | replace "." "-" }}
+  {{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so*" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromArtifact: common/relocate-artifact
+artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
 shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y conntrack-tools
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
   - mkdir -p /relocate/sbin
@@ -25,17 +22,16 @@ shell:
         done
       done
     done
-
-{{- range $key, $value := .CandiVersionMap.k8s }}
-{{- $version := toString $key }}
-{{- $patch := $value.patch | toString }}
-{{- $v := semver $version }}
-{{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
+  {{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $patch := $value.patch | toString }}
+  {{- $v := semver $version }}
+  {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /relocate
   to: /
   before: setup
@@ -56,4 +52,4 @@ import:
   before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/kube-proxy"]
-{{- end }}
+  {{- end }}
