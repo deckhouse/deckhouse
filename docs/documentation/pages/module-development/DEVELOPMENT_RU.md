@@ -11,14 +11,13 @@ lang: ru
 Пример:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ModulePullOverride
 metadata:
   name: <module-name>
 spec:
   imageTag: <tag of the module image>
   scanInterval: <image digest check interval. Default: 15s>
-  source: <ModuleSource ref>
 ```
 
 Требования к параметрам ресурса:
@@ -26,11 +25,50 @@ spec:
 
 * Тег образа контейнера **spec.imageTag** может быть любым. Например, ~pr333~, ~my-branch~.
 
-* Параметр *ModuleSource* **spec.source** выдает данные для авторизации в registry.
-
 Необязательный интервал времени **spec.scanInterval** устанавливает интервал для проверки образов в registry. По умолчанию задан интервал в 15 секунд.
 
 Для принудительного обновления можно задать больший интервал, а также использовать аннотацию `renew=""`.
+
+Требования к модулю:
+* Модуль должен существовать, иначе:
+
+```console
+root@dev-master-0:~# kubectl get modulepulloverrides.deckhouse.io 
+NAME      UPDATED   MESSAGE
+example1  10s       The module not found
+```
+
+* Модуль не должен быть встроенным, иначе:
+
+```console
+root@dev-master-0:~# kubectl get modulepulloverrides.deckhouse.io 
+NAME           UPDATED  MESSAGE
+ingress-nginx  10s      The module is embedded
+```
+
+* Модуль должен быть включен, иначе:
+
+```console
+root@dev-master-0:~# kubectl get modulepulloverrides.deckhouse.io 
+NAME     UPDATED   MESSAGE
+example  7s        The module disabled
+```
+
+* Модуль должен иметь источник, иначе:
+
+```console
+root@dev-master-0:~# kubectl get modulepulloverrides.deckhouse.io 
+NAME       UPDATED   MESSAGE
+example    12s       The module does not have an active source
+```
+
+* Источник модуля должен сущестовать, иначе:
+
+```console
+root@dev-master-0:~# kubectl get modulepulloverrides.deckhouse.io 
+NAME       UPDATED   MESSAGE
+example    12s       The source not found
+```
 
 Пример команды:
 
@@ -40,10 +78,54 @@ kubectl annotate mpo <name> renew=""
 
 ## Принцип действия
 
-При разработке этого ресурса указанный модуль не будет учитывать *ModuleUpdatePolicy*, а также не будет загружать и создавать объекты *ModuleRelease*.
+После создания этого ресурса указанный модуль не будет учитывать *ModuleUpdatePolicy*, а также не будет загружать и создавать объекты *ModuleRelease*.
 
 Вместо этого модуль будет загружаться при каждом изменении параметра `imageDigest` и будет применяться в кластере.
 При этом в статусе ресурса [ModuleSource](../../cr.html#modulesource) этот модуль получит признак `overridden: true`, который укажет на то, что используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
+
+Также ресурс модуля будет иметь в статусе признак `IsOverridden` и версию модуля из `imageTag`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: "2024-11-18T15:34:15Z"
+  generation: 16
+  labels:
+    deckhouse.io/epoch: "1326105356"
+  name: example
+  resourceVersion: "230347744"
+  uid: 7111cee7-50cd-4ecf-ba20-d691b13b0f59
+properties:
+  availableSources:
+  - example
+  releaseChannel: Stable
+  requirements:
+    deckhouse: '> v1.63.0'
+    kubernets: '> v1.30.0'
+  source: example
+  version: mpo-tag
+  weight: 910
+status:
+  conditions:
+  - lastProbeTime: "2024-12-03T15:57:20Z"
+    lastTransitionTime: "2024-12-03T15:57:20Z"
+    status: "True"
+    type: EnabledByModuleConfig
+  - lastProbeTime: "2024-12-03T15:59:58Z"
+    lastTransitionTime: "2024-12-03T15:57:26Z"
+    status: "True"
+    type: EnabledByModuleManager
+  - lastProbeTime: "2024-12-03T15:59:58Z"
+    lastTransitionTime: "2024-12-03T15:56:23Z"
+    status: "True"
+    type: IsReady
+  - lastProbeTime: "2024-12-03T15:59:48Z"
+    lastTransitionTime: "2024-12-03T15:56:47Z"
+    status: "True"
+    type: IsOverridden
+  phase: Ready
+```
 
 После удаления *ModulePullOverride* модуль продолжит функционировать, но если для него применена политика [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), то при наличии загрузятся новые релизы, которые заменят текущую "версию разработчика".
 
@@ -71,34 +153,32 @@ kubectl annotate mpo <name> renew=""
      modulesCount: 2
    ```
 
-1. Создайте ресурс [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
+2. Включите модуль и создайте ресурс [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: ModulePullOverride
    metadata:
      name: echo
    spec:
      imageTag: main-patch-03354
-     source: test
    ```
 
    Этот ресурс будет проверять тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
 
-1. При каждом обновлении статус этого ресурса будет меняться:
+3. При каждом обновлении - статус этого ресурса будет меняться:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: ModulePullOverride
    metadata:
      name: echo
    spec:
      imageTag: main-patch-03354
      scanInterval: 15s
-     source: test
    status:
      imageDigest: sha256:ed958cc2156e3cc363f1932ca6ca2c7f8ae1b09ffc1ce1eb4f12478aed1befbc
-     message: ""
+     message: "Ready"
      updatedAt: "2023-12-07T08:41:21Z"
    ```
 
@@ -106,7 +186,7 @@ kubectl annotate mpo <name> renew=""
    - **imageDigest** — уникальный идентификатор образа контейнера, который был загружен.
    - **lastUpdated** — время последней загрузки образа.
 
-1. При этом *ModuleSource* приобретет вид:
+4. При этом *ModuleSource* приобретет вид:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -162,7 +242,9 @@ registry.example.io
 ```
 
 {% alert level="warning" %}
+
 Container registry должен поддерживать вложенную структуру репозиториев. Подробнее об этом [в разделе требований](../#требования).  
+
 {% endalert %}
 
 Далее приведен список команд для работы с источником модулей. В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее [по инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для macOS воспользуйтесь `brew`.

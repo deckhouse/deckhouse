@@ -175,32 +175,44 @@ lang: ru
 
 1. Посмотрите список доступных модулей:
 
-   ```shell
-   kubectl  get ms ghcr -o jsonpath='{.status.modules[*].name}'
+   ```console
+   $ kubectl get module
+   NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
+   ...
+   helloworld                   Available   False     False     
+   ...
    ```
-
-   В списке должен быть только модуль `helloworld`.
 
 1. Создайте ресурс [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), определяющий политику обновления модуля.
 
-   Выполните следующую команду, чтобы создать политику обновления для модуля `helloworld` с каналом обновления *Alpha* и режимом обновления *Auto*:
+   Выполните следующую команду, чтобы создать политику обновления с каналом обновления *Alpha* и режимом обновления *Auto*:
 
    ```shell
    kubectl apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: ModuleUpdatePolicy
    metadata:
      name: helloworld-policy
    spec:
-     moduleReleaseSelector:
-       labelSelector:
-         matchLabels:
-           source: ghcr
      releaseChannel: Alpha
      update:
        mode: Auto
    EOF
    ```
+   
+1. Создайте модуль конфиг где укажите источник, политику обновления и что модуль нужно включить:
+
+```shell
+kubectl apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: helloworld
+   spec:
+      enabled: true
+      source: ghcr
+      updatePolicy: helloworld-policy
+```
 
 1. Проверьте ресурс *ModuleSource* (в статусе не должно содержаться ошибок и должны быть перечислены доступные модули):
 
@@ -226,12 +238,6 @@ lang: ru
 
    ```shell
    kubectl -n d8-system get pod -l app=deckhouse
-   ```
-
-1. Включите модуль, выполнив следующую команду:
-
-   ```shell
-   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable helloworld
    ```
 
    Через некоторое время объекты модуля появятся в кластере.
