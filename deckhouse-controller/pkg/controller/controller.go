@@ -191,8 +191,8 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 			return "", err
 		}
 
-		// set some version for the embedded and overridden by mpos modules
-		if module.CheckConditionTrue(v1alpha1.ModuleConditionIsOverridden) || module.IsEmbedded() {
+		// set some version for the modules overridden by mpos
+		if module.CheckConditionTrue(v1alpha1.ModuleConditionIsOverridden) {
 			return "v2.0.0", nil
 		}
 

@@ -136,7 +136,30 @@ func errorFormatter(es []error) string {
 	return fmt.Sprintf("%d errors occurred: %s", len(es), strings.Join(errors, "; "))
 }
 
-// parseParentVersion parses a string representing semver.Version and returns a release version without prerelease info
+// removePrereleaseAndMetadata returns a version without prerelease and metadata parts
+func removePrereleaseAndMetadata(version *semver.Version) (*semver.Version, error) {
+	if len(version.Prerelease()) > 0 {
+		woPrerelease, err := version.SetPrerelease("")
+		if err != nil {
+			return nil, err
+		}
+
+		version = &woPrerelease
+	}
+
+	if len(version.Metadata()) > 0 {
+		woMetadata, err := version.SetMetadata("")
+		if err != nil {
+			return nil, err
+		}
+
+		version = &woMetadata
+	}
+
+	return version, nil
+}
+
+// parseParentVersion parses a string representing semver.Version and returns a release version without prerelease and meta info
 // because mastermind semver package doesn't do its job well when comparing versions with prerelease
 func parseParentVersion(parentVersion string) (*semver.Version, error) {
 	parsedParentVersion, err := semver.NewVersion(parentVersion)
@@ -144,16 +167,7 @@ func parseParentVersion(parentVersion string) (*semver.Version, error) {
 		return nil, err
 	}
 
-	if len(parsedParentVersion.Prerelease()) > 0 {
-		newVersion, err := parsedParentVersion.SetPrerelease("")
-		if err != nil {
-			return nil, err
-		}
-
-		parsedParentVersion = &newVersion
-	}
-
-	return parsedParentVersion, nil
+	return removePrereleaseAndMetadata(parsedParentVersion)
 }
 
 func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *semver.Version, value map[string]string) error {
@@ -191,9 +205,14 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 		}
 	}
 
+	sanitizedVersion, err := removePrereleaseAndMetadata(version)
+	if err != nil {
+		validateErr = multierror.Append(validateErr, fmt.Errorf("couldn't get the \"%s\" module version without prerelease and metadata info: %s", moduleName, err.Error()))
+	}
+
 	// check if the new module's version breaks current constraints
 	for dependentModule, constraints := range e.modules {
-		if err := constraints.ValidateModuleVersion(moduleName, version); err != nil {
+		if err := constraints.ValidateModuleVersion(moduleName, sanitizedVersion); err != nil {
 			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" module dependency \"%s\" does not meet the version constraint if the \"%s\" module release is installed: %s", dependentModule, moduleName, moduleRelease, err.Error()))
 		}
 	}
