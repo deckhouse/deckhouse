@@ -116,4 +116,4 @@ roleRef:
 
 Подсистемы для manage-ролей представлены в таблице:
 
-{% include rbac-scopes-list.liquid %}
+{% include rbac/rbac-subsystems-list.liquid %}
