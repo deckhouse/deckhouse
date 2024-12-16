@@ -124,4 +124,4 @@ Subsystem management role names follow the `d8:manage:<SUBSYSTEM>:<ACCESS_LEVEL>
 
 The subsystems available for manage roles are listed in the following table:
 
-{% include rbac-scopes-list.liquid %}
+{% include rbac/rbac-subsystems-list.liquid %}
