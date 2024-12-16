@@ -5,7 +5,7 @@ lang: ru
 d8Revision: ee
 ---
 
-Для управления томами на основе системы хранения данных [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) можно использовать модуль `csi-yadro`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов `YadroStorageClass`.
+Для управления томами на основе системы хранения данных [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) можно использовать модуль `csi-yadro`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов YadroStorageClass.
 
 ## Включение модуля
 
@@ -23,18 +23,23 @@ spec:
 EOF
 ```
 
-Дождитесь, когда модуль `csi-yadro` перейдет в состояние `Ready`:
+Дождитесь, когда модуль `csi-yadro` перейдет в состояние `Ready`.
+Проверить состояние модуля можно, выполнив следующую команду:
 
 ```shell
 d8 k get module csi-yadro -w
+```
 
-# NAME        WEIGHT   STATE     SOURCE     STAGE   STATUS
-# csi-yadro   910      Enabled   Embedded           Ready
+В результате будет выведена информация о модуле:
+
+```console
+NAME        WEIGHT   STATE     SOURCE     STAGE   STATUS
+csi-yadro   910      Enabled   Embedded           Ready
 ```
 
 ## Подключение к системе хранения данных TATLIN.UNIFIED
 
-Чтобы создать подключение к системе хранения данных TATLIN.UNIFIED и иметь возможность настраивать объекты StorageClass, примените следующий ресурс `YadroStorageConnection`:
+Чтобы создать подключение к системе хранения данных TATLIN.UNIFIED и иметь возможность настраивать объекты StorageClass, примените следующий ресурс YadroStorageConnection:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -46,7 +51,7 @@ spec:
   controlPlane:
     address: "172.19.28.184"
     username: "admin"
-    password: "cGFzc3dvcmQ=" # ДОЛЖЕН БЫТЬ ЗАКОДИРОВАН В BASE64
+    password: "cGFzc3dvcmQ=" # Должен быть закодирован в Base64.
     ca: "base64encoded"
     skipCertificateValidation: true
   dataPlane:
@@ -58,8 +63,8 @@ EOF
 
 ## Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс `YadroStorageClass`.
-Ручное создание ресурса StorageClass без `YadroStorageClass` может привести к ошибкам.
+Для создания StorageClass необходимо использовать ресурс YadroStorageClass.
+Ручное создание ресурса StorageClass без YadroStorageClass может привести к ошибкам.
 
 Пример команды для создания класса хранения на основе системы хранения данных TATLIN.UNIFIED:
 

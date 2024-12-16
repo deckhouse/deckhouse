@@ -92,14 +92,16 @@ shell:
         mkdir -m 777 -p /app/_site/
         jekyll build -d /app/_site/ --config  _config.yml
 git:
-- add: /docs/documentation/js
-  to: /srv/jekyll-data/site/js
+- add: /docs/documentation
+  to: /srv/jekyll-data/site
   owner: jekyll
   group: jekyll
   includePaths:
-  - lunr*.js
-  - pdf.worker.min.js
-  - search.js
+  - js/lunr*.js
+  - js/pdf.worker.min.js
+  - js/search.js
+  - _data/rbac/
+  - _includes/rbac/
   stageDependencies:
     setup: '**/*'
 - add: /docs/site
