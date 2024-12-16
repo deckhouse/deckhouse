@@ -65,7 +65,7 @@ resource "aws_volume_attachment" "kubernetes_data" {
 resource "aws_volume_attachment" "system_registry_data" {
   count        = var.systemRegistryEnable ? 1 : 0
   device_name  = "/dev/xvdg"
-  skip_destroy = true
+  skip_destroy = false
   volume_id    = aws_ebs_volume.system_registry_data[0].id
   instance_id  = aws_instance.master.id
 
