@@ -87,7 +87,7 @@ Manage-роль определяет права на доступ:
 
 Таблица состава подсистем ролевой модели.
 
-{% include rbac-subsystems-list.liquid %}
+{% include rbac/rbac-subsystems-list.liquid %}
 
 ## Устаревшая ролевая модель
 
