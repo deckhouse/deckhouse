@@ -14,72 +14,72 @@ docker:
   ENTRYPOINT: ["/usr/bin/vector"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: src-artifact
+fromImage: src-artifact
 final: false
 git:
-  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/reloader
-    to: /src/reloader
-    includePaths:
-      - '**/*'
-    stageDependencies:
-      install:
-        - '**/*'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/reloader
+  to: /src/reloader
+  includePaths:
+  - '**/*'
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
-    - git clone --depth 1 --branch v0.43.1 {{ .SOURCE_REPO }}/vectordotdev/vector.git /src/vector
-    - cd /src/vector
-    # trivy fs . --scanners vuln
-    - rm -r /src/vector/website /src/vector/scripts/integration
+  - git clone --depth 1 --branch v0.43.1 {{ .SOURCE_REPO }}/vectordotdev/vector.git /src/vector
+  # trivy fs . --scanners vuln
+  - rm -rf /src/vector/website /src/vector/scripts/integration
+  - rm -rf /src/vector/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ $.Images.BASE_ALT_P11 }}
 final: false
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-    add: /src/vector
-    to: /src
-    before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/vector
+  to: /src
+  before: install
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y build-essential git openssl-devel wget perl-IPC-Cmd protobuf-compiler libsasl2-devel unzip zlib-devel rust rust-cargo
   install:
-    - export CARGO_NET_GIT_FETCH_WITH_CLI=true
-    - cd /src
-  {{- if $.CargoProxy }}
-- echo '[source.crates-io]' >> .cargo/config.toml
-- echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
-- echo '[registries.crates-io-mirror]' >> .cargo/config.toml
-- echo 'index = "sparse+http://{{ $.CargoProxy }}/index/"' >> .cargo/config.toml
-  {{- end }}
-- sed -i "s|https://github.com|{{ $.SOURCE_REPO }}|g" Cargo.toml
-- git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
-- |
-  cargo build \
-  --release \
-  -j $(($(nproc) /2)) \
-  --no-default-features \
-  --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored"
-- strip target/release/vector
-- mkdir -p /relocate/etc /relocate/usr/bin
-- cp target/release/vector /relocate/usr/bin/vector
-- cp -pr /etc/pki /relocate/etc
+  - export CARGO_NET_GIT_FETCH_WITH_CLI=true
+  - cd /src
+{{- if $.CargoProxy }}
+  - echo '[source.crates-io]' >> .cargo/config.toml
+  - echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
+  - echo '[registries.crates-io-mirror]' >> .cargo/config.toml
+  - echo 'index = "sparse+http://{{ $.CargoProxy }}/index/"' >> .cargo/config.toml
+{{- end }}
+  - sed -i "s|https://github.com|{{ $.SOURCE_REPO }}|g" Cargo.toml
+  - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
+  - |
+    cargo build \
+    --release \
+    -j $(($(nproc) /2)) \
+    --no-default-features \
+    --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,sinks-kafka,sinks-splunk_hec,unix,rdkafka?/gssapi-vendored"
+  - strip target/release/vector
+  - mkdir -p /relocate/etc /relocate/usr/bin
+  - cp target/release/vector /relocate/usr/bin/vector
+  - cp -pr /etc/pki /relocate/etc
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 final: false
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-    add: /src/reloader
-    to: /src
-    before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/reloader
+  to: /src
+  before: install
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
   install:
-    - cd /src
-    - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - go build -ldflags="-s -w" -o /reloader main.go
-    - chown 64535:64535 /reloader
-    - chmod 755 /reloader
+  - cd /src
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o /reloader main.go
+  - chown 64535:64535 /reloader
+  - chmod 755 /reloader
