@@ -6,6 +6,7 @@ metadata:
   labels:
     heritage: deckhouse
 spec:
+  description: A template that covers basic project use cases.
   parametersSchema:
     openAPIV3Schema:
       type: object

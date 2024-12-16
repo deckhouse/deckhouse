@@ -180,21 +180,26 @@ func (m *Manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project
 	})
 }
 
+// prepareProject sets template label, finalizer and deletes sync require annotation
 func (m *Manager) prepareProject(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
 			return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 		}
+
 		if len(project.Labels) == 0 {
 			project.Labels = make(map[string]string, 1)
 		}
 		project.Labels[v1alpha2.ResourceLabelTemplate] = project.Spec.ProjectTemplateName
+
 		if project.Annotations != nil {
 			delete(project.Annotations, v1alpha2.ProjectAnnotationRequireSync)
 		}
+
 		if !controllerutil.ContainsFinalizer(project, v1alpha2.ProjectFinalizer) {
 			controllerutil.AddFinalizer(project, v1alpha2.ProjectFinalizer)
 		}
+
 		return m.client.Update(ctx, project)
 	})
 }

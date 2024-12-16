@@ -70,13 +70,13 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		return true, nil
 	}
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, check); err != nil {
-		return fmt.Errorf("webhook server failed to start: %w", err)
+		return fmt.Errorf("start webhook server: %w", err)
 	}
 	m.log.Info("webhook server started")
 
 	m.log.Info("ensuring virtual projects")
 	if err := m.ensureVirtualProjects(ctx); err != nil {
-		return fmt.Errorf("failed to ensure virtual projects: %w", err)
+		return fmt.Errorf("ensure virtual projects: %w", err)
 	}
 
 	m.log.Info("ensured virtual projects")

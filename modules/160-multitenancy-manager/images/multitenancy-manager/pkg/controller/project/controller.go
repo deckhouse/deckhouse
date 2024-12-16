@@ -76,12 +76,12 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 			},
 		)
 	})); err != nil {
-		return fmt.Errorf("failed to init project manager: %w", err)
+		return fmt.Errorf("init project manager: %w", err)
 	}
 
 	projectController, err := controller.New(controllerName, runtimeManager, controller.Options{Reconciler: r})
 	if err != nil {
-		return fmt.Errorf("failed to create project controller: %w", err)
+		return fmt.Errorf("create project controller: %w", err)
 	}
 
 	r.log.Info("initializing project controller")
@@ -103,6 +103,8 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 		Complete(projectController)
 }
 
+var _ reconcile.Reconciler = &reconciler{}
+
 type reconciler struct {
 	init           *sync.WaitGroup
 	projectManager *projectmanager.Manager
@@ -115,14 +117,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	r.init.Wait()
 
 	r.log.Info("reconciling the project", "project", req.Name)
-	project := &v1alpha2.Project{}
+	project := new(v1alpha2.Project)
 	if err := r.client.Get(ctx, req.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.log.Info("the project not found", "project", req.Name)
 			return reconcile.Result{}, nil
 		}
-		r.log.Error(err, "error getting the project", "project", req.Name)
-		return reconcile.Result{}, nil
+		r.log.Error(err, "failed to get the project", "project", req.Name)
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	// handle virtual projects
@@ -149,11 +151,11 @@ type customPredicate[T metav1.Object] struct {
 
 func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	if isNil(e.ObjectOld) {
-		p.log.Error(nil, "Update event has no old object to update", "event", e)
+		p.log.Error(nil, "update event has no old object to update", "event", e)
 		return false
 	}
 	if isNil(e.ObjectNew) {
-		p.log.Error(nil, "Update event has no new object for update", "event", e)
+		p.log.Error(nil, "update event has no new object for update", "event", e)
 		return false
 	}
 
