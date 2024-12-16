@@ -326,6 +326,9 @@ func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.Pr
 		buf.WriteString(file)
 	}
 
-	_, err = newPostRenderer(project.Name, template.Name, c.log).Run(buf)
-	return fmt.Errorf("run post render: %w", err)
+	if _, err = newPostRenderer(project.Name, template.Name, c.log).Run(buf); err != nil {
+		return fmt.Errorf("post render: %w", err)
+	}
+
+	return nil
 }

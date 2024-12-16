@@ -50,8 +50,8 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (modifiedManifests *
 	var coreFound bool
 	builder := strings.Builder{}
 	for _, manifest := range releaseutil.SplitManifests(renderedManifests.String()) {
-		var object unstructured.Unstructured
-		if err = yaml.Unmarshal([]byte(manifest), &object); err != nil {
+		object := new(unstructured.Unstructured)
+		if err = yaml.Unmarshal([]byte(manifest), object); err != nil {
 			r.log.Info("failed to unmarshal manifest", "project", r.projectName, "manifest", manifest, "error", err.Error())
 			return renderedManifests, err
 		}

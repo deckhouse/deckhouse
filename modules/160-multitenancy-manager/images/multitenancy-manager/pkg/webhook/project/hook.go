@@ -101,12 +101,12 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 	// validate the project against the template
 	if err = validate.Project(project, template); err != nil {
-		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %s", project.Name, err.Error()))
+		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
 	}
 
 	// validate helm render
 	if err = v.helmClient.ValidateRender(project, template); err != nil {
-		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %s", project.Name, err.Error()))
+		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
 	}
 
 	return admission.Allowed("")
