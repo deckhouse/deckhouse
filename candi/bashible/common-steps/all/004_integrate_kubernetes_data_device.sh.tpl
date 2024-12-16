@@ -113,6 +113,7 @@ fi
 
 mkdir -p /mnt/kubernetes-data/var-lib-etcd
 chmod 700 /mnt/kubernetes-data/var-lib-etcd
+chown -R etcd:etcd /mnt/kubernetes-data/var-lib-etcd
 mkdir -p /mnt/kubernetes-data/etc-kubernetes
 
 # if there is kubernetes dir with regular files then we can't delete it
