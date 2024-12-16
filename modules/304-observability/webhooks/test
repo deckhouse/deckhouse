@@ -52,7 +52,7 @@ function __main__() {
 
   if ! [[ "$uid" =~ '^propagated_.*' ]]; then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-      {"allowed":false, "message":"dashboard uid ${uid} must start with 'propagated_'" }
+      {"allowed":false, "message":"propagated dashboard uid ${uid} must start with 'propagated_'" }
 EOF
       return 0
   fi
