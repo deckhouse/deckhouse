@@ -96,13 +96,13 @@ func (e *Extender) SetModulesVersionHelper(f func(moduleName string) (string, er
 
 func (e *Extender) createConstrainstForModule(name string, value map[string]string) (*versionmatcher.Matcher, error) {
 	constraints := versionmatcher.New(false)
-	for dependency, version := range value {
+	for dependency, constraint := range value {
 		if name == dependency {
 			e.logger.Warn(fmt.Sprintf("parent module '%s' is excluded from the '%s' module constraints", dependency, name))
 			continue
 		}
 
-		if err := constraints.AddConstraint(dependency, version); err != nil {
+		if err := constraints.AddConstraint(dependency, constraint); err != nil {
 			return nil, err
 		}
 	}
@@ -136,6 +136,26 @@ func errorFormatter(es []error) string {
 	return fmt.Sprintf("%d errors occurred: %s", len(es), strings.Join(errors, "; "))
 }
 
+// parseParentVersion parses a string representing semver.Version and returns a release version without prerelease info
+// because mastermind semver package doesn't do its job well when comparing versions with prerelease
+func parseParentVersion(parentVersion string) (*semver.Version, error) {
+	parsedParentVersion, err := semver.NewVersion(parentVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(parsedParentVersion.Prerelease()) > 0 {
+		newVersion, err := parsedParentVersion.SetPrerelease("")
+		if err != nil {
+			return nil, err
+		}
+
+		parsedParentVersion = &newVersion
+	}
+
+	return parsedParentVersion, nil
+}
+
 func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *semver.Version, value map[string]string) error {
 	validateErr := &multierror.Error{ErrorFormat: errorFormatter}
 	// check if the new constraints may impose a loop
@@ -160,7 +180,7 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 			}
 		}
 
-		parsedParentVersion, err := semver.NewVersion(parentVersion)
+		parsedParentVersion, err := parseParentVersion(parentVersion)
 		if err != nil {
 			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" module dependency \"%s\" has unparsable version", moduleName, parentModule))
 			continue
@@ -235,7 +255,7 @@ func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error)
 			continue
 		}
 
-		parsedParentVersion, parseErr := semver.NewVersion(parentVersion)
+		parsedParentVersion, parseErr := parseParentVersion(parentVersion)
 		if parseErr != nil {
 			err = multierror.Append(err, fmt.Errorf("the \"%s\" module dependency \"%s\" has unparsable version", moduleName, parentModule))
 			continue
