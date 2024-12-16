@@ -32,7 +32,7 @@ shell:
     - rm -r /src/vector/website /src/vector/scripts/integration
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_ALT_P11 }}
+from: {{ $.Images.BASE_ALT_P11 }}
 final: false
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
