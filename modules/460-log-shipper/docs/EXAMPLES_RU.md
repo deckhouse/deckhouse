@@ -326,6 +326,24 @@ spec:
     syslog.message_id: "{{ request_id }}"
 ```
 
+## Пример интеграции с Graylog
+
+Следующий пример показывает, как настроить интеграцию с Graylog. Убедитесь, что в Graylog настроен входящий поток для приема сообщений по протоколу TCP на указанном порту:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-socket2-dest
+spec:
+  type: Socket
+  socket:
+    address: graylog.svc.cluster.local:9200
+    mode: TCP
+    encoding:
+      codec: GELF
+```
+
 ## Логи в CEF формате
 
 Существует способ формировать логи в формате CEF, используя `codec: CEF`, с переопределением `cef.name` и `cef.severity` по значениям из поля `message` (лога приложения) в формате JSON.

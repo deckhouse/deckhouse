@@ -326,6 +326,24 @@ spec:
     syslog.message_id: "{{ request_id }}"
 ```
 
+## Graylog integration
+
+The following example shows how to configure the integration with Graylog. Make sure that Graylog is configured to receive incoming messages over the TCP protocol on the specified port:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: test-socket2-dest
+spec:
+  type: Socket
+  socket:
+    address: graylog.svc.cluster.local:9200
+    mode: TCP
+    encoding:
+      codec: GELF
+```
+
 ## Logs in CEF Format
 
 There is a way to format logs in CEF format using `codec: CEF`, with overriding `cef.name` and `cef.severity` based on values from the `message` field (application log) in JSON format.
