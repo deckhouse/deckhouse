@@ -55,7 +55,7 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
 {{- if (.Values.global.enabledModules | has "prompp") }}
-  image: {{ include "helm_lib_module_image" (list . "prompp") }}
+  image: {{ include "helm_lib_module_image" (list (dict "Chart" (dict "Name" "prompp")) "prompp") }}
 {{- else }}
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
 {{- end }}
@@ -80,7 +80,7 @@ spec:
 {{- if and (.Values.global.modulesImages.digests | has "prompp") }}
   initContainers:
   - name: prompptool
-    image: {{ include "helm_lib_module_image" (list $ "prompptool") }}
+    image: {{ include "helm_lib_module_image" (list (dict "Chart" (dict "Name" "prompp")) "prompptool") }}
     command:
     - /bin/prompptool
     - "--working-dir=/prometheus"
