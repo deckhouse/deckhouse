@@ -111,7 +111,7 @@ resource "yandex_compute_instance" "nat_instance" {
   zone                      = local.internal_subnet_zone
   network_acceleration_type = "software_accelerated"
 
-  platform_id = "standard-v2"
+  platform_id = var.nat_instance_platform
   resources {
     cores  = var.nat_instance_cores
     memory = var.nat_instance_memory
