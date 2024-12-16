@@ -9,7 +9,7 @@ require (
 	k8s.io/client-go v0.26.3
 	k8s.io/component-base v0.26.3
 	k8s.io/kube-proxy v0.26.3
-	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d
+	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/yaml v1.3.0
 )
 
