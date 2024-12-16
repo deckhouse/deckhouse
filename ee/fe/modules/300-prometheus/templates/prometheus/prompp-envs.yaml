@@ -1,0 +1,11 @@
+{{- if (.Values.global.enabledModules | has "prompp") }}
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: prometheus-pp-envs
+  namespace: d8-monitoring
+data:
+  GOGC: {{ .Values.prompp.gogc | quote }}
+  MALLOC_CONF: {{ .Values.prompp.mallocConf | quote }}
+{{- end }}
