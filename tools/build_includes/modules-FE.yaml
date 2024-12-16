@@ -339,6 +339,11 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/fe/modules/300-prometheus/templates/prometheus
+  to: /deckhouse/modules/300-prometheus/templates/prometheus
+  stageDependencies:
+    setup:
+        - '**/*.go'
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   stageDependencies:
