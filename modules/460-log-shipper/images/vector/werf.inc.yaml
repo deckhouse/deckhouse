@@ -54,6 +54,7 @@ shell:
 {{- end }}
   - sed -i "s|https://github.com|{{ $.SOURCE_REPO }}|g" Cargo.toml
   - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
+  - cat Cargo.toml
   - |
     cargo build \
     --release \
