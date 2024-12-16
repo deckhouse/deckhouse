@@ -29,7 +29,7 @@ shell:
   - git clone --depth 1 --branch v0.43.1 {{ .SOURCE_REPO }}/vectordotdev/vector.git /src/vector
   # trivy fs . --scanners vuln
   - rm -rf /src/vector/website /src/vector/scripts/integration
-  - rm -rf /src/vector/.git
+  #- rm -rf /src/vector/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: alt-p11-artifact
