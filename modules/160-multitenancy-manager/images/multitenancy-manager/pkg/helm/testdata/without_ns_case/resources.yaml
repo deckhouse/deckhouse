@@ -14,6 +14,28 @@ status: {}
 
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: without_ns
+  name: required-requests-9f86d081
+  namespace: test
+spec:
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  policies:
+    requiredResources:
+      requests:
+      - cpu
+      - memory
+
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
   labels:
@@ -25,8 +47,8 @@ metadata:
 spec:
   accessLevel: Admin
   subjects:
-    - kind: User
-      name: user@gmail.com
+  - kind: User
+    name: user@gmail.com
 
 ---
 apiVersion: v1
@@ -55,58 +77,36 @@ metadata:
   namespace: test
 spec:
   egress:
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: test
-    - ports:
-        - port: 53
-          protocol: UDP
-      to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+  - ports:
+    - port: 53
+      protocol: UDP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
   ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: test
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: d8-monitoring
-            podSelector:
-              matchLabels:
-                app.kubernetes.io/name: prometheus
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: d8-ingress-nginx
-            podSelector:
-              matchLabels:
-                app: controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: test
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-monitoring
+        podSelector:
+          matchLabels:
+            app.kubernetes.io/name: prometheus
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-ingress-nginx
+        podSelector:
+          matchLabels:
+            app: controller
   podSelector:
     matchLabels: {}
   policyTypes:
-    - Ingress
-    - Egress
-
----
-apiVersion: deckhouse.io/v1alpha1
-kind: OperationPolicy
-metadata:
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: without_ns
-  name: required-requests-9f86d081
-  namespace: test
-spec:
-  match:
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: test
-  policies:
-    requiredResources:
-      requests:
-        - cpu
-        - memory
+  - Ingress
+  - Egress
