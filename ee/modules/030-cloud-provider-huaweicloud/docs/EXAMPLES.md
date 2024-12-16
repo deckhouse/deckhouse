@@ -17,4 +17,3 @@ spec:
   rootDiskSize: 50
   rootDiskType: SSD
 ```
-
