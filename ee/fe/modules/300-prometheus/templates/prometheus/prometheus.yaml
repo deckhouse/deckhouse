@@ -80,7 +80,7 @@ spec:
 {{- if and (.Values.global.modulesImages.digests | has "prompp") }}
   initContainers:
   - name: prompptool
-    image: {{ include "helm_lib_module_image" (list (dict "Chart" (dict "Name" "prompp")) "prompptool") }}
+    image: {{ include "helm_lib_module_image" (list (dict "Chart" (dict "Name" "prompp") "Values" .Values) "prompptool") }}
     command:
     - /bin/prompptool
     - "--working-dir=/prometheus"
