@@ -22,7 +22,6 @@ configVersion: v1
 kubernetesValidating:
 - name: clusterobservabilitypropagateddashboards-policy.deckhouse.io
   group: main
-  queue: "clusterobservabilitypropagateddashboards"
   rules:
   - apiGroups:   ["observability.deckhouse.io"]
     apiVersions: ["v1alpha1"]
