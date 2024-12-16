@@ -65,19 +65,6 @@ metadata:
   name: etcd
   namespace: kube-system
 spec:
-  initContainers:
-    - name: init-chown
-      image: {{ include "helm_lib_module_common_image" (list . "init") }}
-      imagePullPolicy: Always
-      command: ['sh', '-c', 'chown -R 64530:64530 /var/lib/etcd; chown -R 64530:64530 /etc/kubernetes/pki/etcd/']
-      securityContext:
-        runAsUser: 0
-        runAsNonRoot: false
-      volumeMounts:
-      - mountPath: /var/lib/etcd
-        name: etcd-data
-      - mountPath: /etc/kubernetes/pki/etcd
-        name: etcd-certs
   containers:
     - name: etcd
       securityContext:

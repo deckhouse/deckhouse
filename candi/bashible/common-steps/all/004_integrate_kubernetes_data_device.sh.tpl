@@ -126,6 +126,7 @@ fi
 if [[ "$(find /var/lib/etcd/ -type f 2>/dev/null | wc -l)" == "0" ]]; then
   rm -rf /var/lib/etcd
   ln -s /mnt/kubernetes-data/var-lib-etcd /var/lib/etcd
+  chown -R etcd:etcd /var/lib/etcd
 fi
 
 touch /var/lib/bashible/kubernetes-data-device-installed
