@@ -26,12 +26,18 @@ git:
       - '**/*'
 shell:
   setup:
+  {{- include "debian packages proxy" . | nindent 2 }}
   - export GOPROXY={{ $.GOPROXY }}
+  - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
+  - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
+  - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
+  - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - go install github.com/go-task/task/v3/cmd/task@latest
   - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git
   - cd /deckhouse-cli
-  {{- include "debian packages proxy" . | nindent 2 }}
   - apt-get install -y libbtrfs-dev
   - task build:dist:linux:amd64
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/d8 /d8
   - chmod +x /d8 /install /uninstall
+  - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer

@@ -3,13 +3,13 @@
 {%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' or page.platform_code == 'dynamix' %}
 
 The minimal preset will be used during the installation:
-{%- assign preset=site.data.getting_started.data.presets.minimal %}
+{%- assign preset=site.data.getting_started.dkp_data.presets.minimal %}
 <div id="preset_minimal" markdown="1">
 {{ preset.description[page.lang] }}
 </div>
 
 {%- assign layout_platform_code = page.platform_code | regex_replace: "^(openstack)_.+$", "\1" %}
-{%- assign layout = site.data.getting_started.data.installTypes[layout_platform_code].layout %}
+{%- assign layout = site.data.getting_started.dkp_data.installTypes[layout_platform_code].layout %}
 {%- offtopic title="Used layout..." %}
 {%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
 {%- capture layout_doc_path %}../../documentation/v1/modules/030-cloud-provider-{{ layout_platform_code }}/layouts.html{% endcapture %}

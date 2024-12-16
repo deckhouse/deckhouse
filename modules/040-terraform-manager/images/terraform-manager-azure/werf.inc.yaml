@@ -16,10 +16,11 @@ mount:
     to: /go/pkg
 shell:
   beforeInstall:
-    - apk add --no-cache make patch git bash
+    - apk add --no-cache make patch git bash openssh-client
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ .TF.azure.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-azurerm.git /src
     - cd /src
     - make fmt

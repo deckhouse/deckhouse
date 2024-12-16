@@ -20,6 +20,7 @@ shell:
     - apt-get install -y libpcap-devel
     - apt-get autoclean && apt-get clean
   install:
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
   setup:
     - cd /src

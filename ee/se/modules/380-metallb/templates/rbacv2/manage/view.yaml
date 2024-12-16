@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-metallb
-  name: d8:manage:capability:module:metallb:view
+  name: d8:manage:permission:module:metallb:view
 rules:
 - apiGroups:
   - deckhouse.io

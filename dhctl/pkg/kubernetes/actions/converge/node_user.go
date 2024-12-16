@@ -25,7 +25,7 @@ import (
 
 	"github.com/GehirnInc/crypt"
 	_ "github.com/GehirnInc/crypt/sha512_crypt"
-	"github.com/flant/addon-operator/sdk"
+	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 	"golang.org/x/crypto/ssh"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

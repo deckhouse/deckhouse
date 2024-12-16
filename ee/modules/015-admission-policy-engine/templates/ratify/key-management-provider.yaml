@@ -1,0 +1,20 @@
+{{- if and (.Values.admissionPolicyEngine.internal.bootstrapped) (.Values.admissionPolicyEngine.internal.ratify.imageReferences) }}
+{{- $context := . }}
+{{- range $refid, $ref := .Values.admissionPolicyEngine.internal.ratify.imageReferences }}
+{{- range $keyid, $key := $ref.publicKeys }}
+---
+apiVersion: config.ratify.deislabs.io/v1beta1
+kind: KeyManagementProvider
+metadata:
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "ratify" "app.kubernetes.io/part-of" "gatekeeper")) | nindent 2 }}
+  name: {{ printf "ratify-cosign-inline-key-%d-%d" $refid $keyid }}
+spec:
+  refreshInterval: ""
+  type: inline
+  parameters:
+    contentType: key
+    value: |
+{{ $key | indent 6 }}
+{{- end }}
+{{- end }}
+{{- end }}

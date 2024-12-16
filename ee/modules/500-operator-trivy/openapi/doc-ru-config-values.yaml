@@ -14,7 +14,7 @@ properties:
 
   insecureDbRegistry:
     description: |
-      Разрешает Trivy скачивать базы данных уязвимостей используя недоверенные HTTPS-подключения (не прошедшие проверку TLS-сертификата) или подключения по HTTP.
+      Разрешает Trivy скачивать базы данных уязвимостей, используя недоверенные HTTPS-подключения (не прошедшие проверку TLS-сертификата) или подключения по HTTP.
 
   additionalVulnerabilityReportFields:
     description: |
@@ -42,6 +42,11 @@ properties:
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
       Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+  disableSBOMGeneration:
+    description: |
+      Отключает генерацию отчетов SBOM.
+
+      **Внимание.** При установке значения "true", все текущие отчеты SBOM в кластере удаляются (очистка выполняется один раз).
 
   reportResourceLabels:
     description: |
@@ -52,3 +57,9 @@ properties:
   insecureRegistries:
     description: |
       Список адресов хранилищ образов контейнеров (container registry), к которым разрешены недоверенные HTTPS-подключения (не прошедшие проверку TLS-сертификата) и подключения по HTTP.
+
+  additionalRegistryCA:
+    description: |
+      Список корневых сертификатов (CA) приватных хранилищ образов контейнеров (container registry).
+
+      Если требуется указать несколько сертификатов, они перечисляются последовательно, без дополнительных переносов строк.

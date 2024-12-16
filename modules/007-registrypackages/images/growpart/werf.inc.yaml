@@ -29,7 +29,8 @@ artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version 
 from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
   install:
-    - apk update && apk add gettext-dev
+    - apk update && apk add --no-cache openssh-client gettext-dev
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   setup:
     - git clone -b v2.40.1 --depth 1 {{ $.SOURCE_REPO }}/util-linux/util-linux.git  /src
     - cd /src
@@ -49,6 +50,9 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   setup:
     - git clone -b {{ $version }} --depth 1 {{ $.SOURCE_REPO }}/canonical/cloud-utils.git /src
     - mv /src/bin/growpart /growpart

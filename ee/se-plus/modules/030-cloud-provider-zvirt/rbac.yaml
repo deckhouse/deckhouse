@@ -1,0 +1,3 @@
+module: cloud-provider-zvirt
+subsystems:
+  - infrastructure

@@ -15,7 +15,7 @@ ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO} \
     FALCO_VERSION=${FALCO_VERSION}
     
-RUN git clone --branch ${FALCO_VERSION} --depth 1 ${SOURCE_REPO}/falcosecurity/falco.git && \
+RUN --mount=type=ssh git clone --branch ${FALCO_VERSION} --depth 1 ${SOURCE_REPO}/falcosecurity/falco.git && \
     mkdir -p /falco/build && \
     cd /falco/build && \
     rm -f /usr/bin/clang && \

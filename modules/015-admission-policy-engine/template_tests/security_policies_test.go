@@ -24,7 +24,7 @@ import (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security policies", func() {
-	f := SetupHelmConfig(`{admissionPolicyEngine: {podSecurityStandards: {}, internal: {"bootstrapped": true, "podSecurityStandards": {"enforcementActions": ["deny"]}, "securityPolicies": [
+	f := SetupHelmConfig(`{admissionPolicyEngine: {denyVulnerableImages: {}, podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "securityPolicies": [
 {
 	"metadata":{"name":"genpolicy"},
 	"spec":{
@@ -49,7 +49,8 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security p
 				"runAsUser": {"ranges": [{"max": 500,"min": 300}],"rule": "MustRunAs"},
 				"seLinux": [{"role": "role","user": "user"},{"level": "level","type": "type"}],
 				"seccompProfiles": {"allowedLocalhostFiles": ["*"],"allowedProfiles": ["RuntimeDefault","Localhost"]},
-				"supplementalGroups": {"ranges": [{"max": 1000,"min": 500}],"rule": "MustRunAs"}
+				"supplementalGroups": {"ranges": [{"max": 1000,"min": 500}],"rule": "MustRunAs"},
+				"verifyImageSignatures": [{"dockerCfg": "zxc=", "reference": "*", "publicKeys": ["someKey1", "someKey2"]}]
 		},
 		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
 		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
@@ -83,6 +84,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security p
 			Expect(f.KubernetesGlobalResource("D8AutomountServiceAccountTokenPod", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8SeLinux", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8AppArmor", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8VerifyImageSignatures", testPolicyName).Exists()).To(BeTrue())
 		})
 	})
 })

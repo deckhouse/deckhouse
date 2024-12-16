@@ -104,6 +104,7 @@ spec:
     allowHostNetwork: true
     allowHostPID: false
     allowPrivileged: false
+    allowPrivilegeEscalation: false
     allowedFlexVolumes:
     - driver: vmware
     allowedHostPorts:

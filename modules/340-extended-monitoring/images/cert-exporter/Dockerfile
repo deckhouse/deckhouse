@@ -12,8 +12,9 @@ ENV SOURCE_REPO=${SOURCE_REPO}
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
 
-RUN apk add --no-cache go git make
-RUN git clone --depth 1 --branch v2.0.1 ${SOURCE_REPO}/giantswarm/cert-exporter.git /cert-exporter
+RUN apk add --no-cache go git make openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --depth 1 --branch v2.0.1 ${SOURCE_REPO}/giantswarm/cert-exporter.git /cert-exporter
 
 WORKDIR /cert-exporter
 RUN make && \
