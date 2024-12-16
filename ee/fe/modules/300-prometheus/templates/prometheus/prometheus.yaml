@@ -77,7 +77,7 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
-{{- if (.Values.global.modulesImages.digests | has "prompp") }}
+{{- if hasKey .Values.global.modulesImages.digests "prompp") }}
   initContainers:
   - name: prompptool
     image: {{ include "helm_lib_module_image" (list (dict "Chart" (dict "Name" "prompp") "Values" .Values) "prompptool") }}
