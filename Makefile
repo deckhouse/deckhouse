@@ -343,6 +343,9 @@ set-build-envs:
   ifeq ($(SOURCE_REPO),)
  		export SOURCE_REPO=https://github.com
   endif
+  ifeq ($(CLOUD_PROVIDERS_SOURCE_REPO),)
+ 		export CLOUD_PROVIDERS_SOURCE_REPO=https://github.com
+  endif
   ifeq ($(GOPROXY),)
  		export GOPROXY=https://proxy.golang.org/
   endif
@@ -370,6 +373,13 @@ set-build-envs:
   ifeq ($(OBSERVABILITY_SOURCE_REPO),)
   	export OBSERVABILITY_SOURCE_REPO=https://example.com
   endif
+  ifeq ($(DECKHOUSE_PRIVATE_REPO),)
+  	export DECKHOUSE_PRIVATE_REPO=https://github.com
+  endif
+  ifeq ($(STRONGHOLD_PULL_TOKEN=),)
+  	export STRONGHOLD_PULL_TOKEN="token"
+  endif
+
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
@@ -416,4 +426,4 @@ build: set-build-envs ## Build Deckhouse images.
   endif
 
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
-	werf config render
+	werf config render --dev

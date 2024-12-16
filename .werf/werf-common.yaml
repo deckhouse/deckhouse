@@ -62,3 +62,14 @@ shell:
   - cd /tini/
   - export CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
   - cmake . && make
+---
+image: src-artifact
+from: {{ .Images.BASE_ALT_P11 }}
+final: false
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y git
+  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
+  - mkdir -p /src
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
