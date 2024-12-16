@@ -16,9 +16,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Parameters of a group of HuaweiCloud servers used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module).
+            Huawei Cloud server group parameters used by `machine-controller-manager` (the ['node-manager'](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module).
 
-            The `CloudInstanceClass` resource of the `node-manager` module refers to this resource.
+            The CloudInstanceClass resource of the `node-manager` module refers to this resource.
           required:
             - spec
           properties:
@@ -29,14 +29,13 @@ spec:
               properties:
                 flavorName:
                   description: |
-                    Flavor of HuaweiCloud servers.
+                    Flavor of Huawei Cloud servers.
 
-                    Get a list of all available flavors: `huaweicloud flavor list`.
+                    To get a list of all available flavors, run the following command: `huaweicloud flavor list`.
 
-                    For all non-master nodes it is advisable to use flavor's with a local disk. If cloud provider supports local disks they are usually faster and cheaper. The disadvantage of using such flavors is the inability to migrate nodes between hypervisors.
+                    For all non-master nodes, it's recommended that you use a flavor that includes a local disk. If the cloud provider supports local disks, they're usually faster and cheaper. The disadvantage of using such a flavor is the inability to migrate nodes between hypervisors.
 
-                    Flavor create example: `huaweicloud flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`
-
+                    Example of the flavor creation command: `huaweicloud flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`.
                   x-doc-examples: ['m1.medium']
                   type: string
                 imageName:
@@ -45,16 +44,17 @@ spec:
 
                     Use this command to get a list of available images: `huaweicloud image list`.
 
-                    The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                    For the list of operating systems and specific versions supported by Deckhouse, refer to [Supported Kubernetes and OS versions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version you use).
 
-                    **By default:** either `HuaweiCloudCloudDiscoveryData` value or `instances.imageName` is used.
+                    **By default**, either the `HuaweiCloudCloudDiscoveryData` value or `instances.imageName` is used.
                   x-doc-required: false
                   x-doc-examples: ['ubuntu-18-04-cloud-amd64']
                   type: string
                 rootDiskSize:
                   description: |
-                    The size of a root disk (in gigabytes).
-                    This parameter also has influence on type of volume that will be used for root disk; the ["How to use rootDiskSize and when it is preferred"](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred) section describes how to use it.
+                    The size of a root disk in gigabytes.
+                    
+                    This parameter also affects the type of a root disk. For details on how to use it, refer to [How to use rootDiskSize and when it is preferred](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#how-to-use-rootdisksize-and-when-it-is-preferred).
                   x-doc-examples: [20]
                   type: integer
                   x-doc-required: false
@@ -62,17 +62,17 @@ spec:
                   description: |
                     The type of a root disk.
 
-                    The parameter is used to specify the type of volume that will be used for the root disk.
+                    The parameter is used to specify the type of a volume that will be used for the root disk.
 
-                    **By default:** the value from `HuaweiCloudCloudDiscoveryData` is used.
+                    **By default**, the value from `HuaweiCloudCloudDiscoveryData` is used.
                   x-doc-examples: ['GPSSD']
                   type: string
                   x-doc-required: false
                 subnets:
                   description: |
-                    Paths to networks that VirtualMachines' secondary NICs will connect to.
+                    Paths to networks that the secondary VirtualMachines NICs will connect to.
 
-                    **By default:** the value from `HuaweiCloudCloudDiscoveryData` is used.
+                    **By default**, the value from `HuaweiCloudCloudDiscoveryData` is used.
                   x-doc-examples:
                   - ['BGP-network-VLAN-3894', 'External-VLAN-3699']
                   type: array
@@ -83,9 +83,9 @@ spec:
                   description: |
                     Security groups that will be applied to VM's network ports in addition to security groups set in a cloud provider configuration.
 
-                    They allow you to set firewall rules for provisioned instances.
+                    These security groups allow you to set firewall rules for provisioned instances.
 
-                    The `SecurityGroups` may not be supported by the cloud provider.
+                    The `SecurityGroups` group may not be supported by the cloud provider.
                   x-doc-examples:
                     - ["security-group-1", "security-group-2"]
                   type: array
@@ -93,7 +93,7 @@ spec:
                     type: string
                   x-doc-required: false
                 serverGroupID:
-                  description: The server group to assign the machine to
+                  description: The server group to assign the machine to.
                   type: string
                   x-doc-examples: ['server-group-1']
                   x-doc-required: false
@@ -107,7 +107,7 @@ spec:
       additionalPrinterColumns:
         - name: "Node Groups"
           type: string
-          description: NodeGroups which use this instance class.
+          description: NodeGroups that use this instance class.
           jsonPath: .status.nodeGroupConsumers
         - name: Age
           type: date

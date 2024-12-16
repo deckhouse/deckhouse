@@ -4,9 +4,9 @@ apiVersions:
   openAPISpec:
     type: object
     description: |
-      Описывает конфигурацию облачного кластера в Базис.DynamiX.
+      Описывает конфигурацию облачного кластера в Huawei Cloud.
 
-      Используется cloud-провайдером, если control plane кластера размещен в облаке.
+      Используется cloud-провайдером, если control plane кластера размещён в облаке.
 
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
@@ -26,14 +26,14 @@ apiVersions:
         description: |
           Спецификация для описания NodeGroup master-узлов.
 
-          > Внимание! После изменения параметров секции `masterNodeGroup` необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу.
+          > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
         properties:
           replicas:
             description: |
               Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
           instanceClass:
             description: |
-              Частичное содержимое полей [HuaweiCloudInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass).
+              Частичное содержимое полей [HuaweiCloudInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass).
             properties: &instanceClassProperties_ru
               flavorName: &instanceClassFlavorName_ru
                 description: |
@@ -41,10 +41,13 @@ apiVersions:
               imageName: &instanceClassImageName_ru
                 description: |
                   Имя образа виртуальной машины, который будет использоваться для инстанса.
-                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти на странице [Поддерживаемые версии Kubernetes и ОС](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
               rootDiskSize: &instanceClassRootDiskSize_ru
                 description: |
                   Размер root-диска. Значение указывается в гигабайтах.
+
+                  Параметр также влияет на тип диска. Особенности применения параметра описаны в разделе [Как использовать rootDiskSize и когда он предпочтителен](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен).
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd. Значение указывается в гигабайтах.
@@ -69,7 +72,7 @@ apiVersions:
                 description: |
                   Политика распределения инстансов:
 
-                  - `AntiAffinity` — размещает инстансы на разных гипервизорах.
+                  - `AntiAffinity` — размещает инстансы на разных гипервизорах. Данной политикой управляет Deckhouse.
       nodeGroups:
         description: |
           Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
@@ -89,7 +92,7 @@ apiVersions:
                   description: |
                     Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
 
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.labels`.
+                    Аналогично [стандартному полю `metadata.labels`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
 
                     Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
                   x-doc-example: |
@@ -100,7 +103,7 @@ apiVersions:
                     ```
                 annotations:
                   description: |
-                    Аналогично стандартному [полю](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta) `metadata.annotations`.
+                    Аналогично [стандартному полю `metadata.annotations`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
                   x-doc-example: |
                     ```yaml
                     annotations:
@@ -108,9 +111,9 @@ apiVersions:
                     ```
                 taints:
                   description: |
-                    Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
+                    Аналогично [полю `.spec.taints`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) из объекта Node.
 
-                    > **Внимание!** Доступны только поля `effect`, `key`, `values`.
+                    > Доступны только поля `effect`, `key`, `values`.
                   x-doc-example: |
                     ```yaml
                     taints:
@@ -127,11 +130,11 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробние](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html) about possible provider layouts.
+          Возможные схемы размещения провайдера описаны на странице [Схемы размещения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html).
       standard:
         type: object
         description: |
-          Настройки для схемы размещения [`Standard`](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html#standard) layout.
+          Настройки для [схемы размещения `Standard`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html#standard).
         properties:
           internalNetworkCIDR: &internalNetworkCIDR_ru
             description: |
@@ -141,28 +144,28 @@ apiVersions:
               Список адресов рекурсивных DNS внутренней сети.
           internalNetworkSecurity: &internalNetworkSecurity_ru
             description: |
-              Флаг, который определяет необходимость настройки
+              Флаг, который определяет необходимость настройки [SecurityGroups](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) на портах внутренней сети.
           enableEIP:
             description: |
                 Включите Elastic IP для мастер узлов.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/environment.html) to the HuaweiCloud API.
+          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/environment.html) к API Huawei Cloud.
 
-          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-huaweicloud](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/configuration.html#parameters) module.
+          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-huaweicloud](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/configuration.html#parameters).
         properties:
           cloud:
             description: |
               Конечная точка поставщика облачных услуг.
           region:
             description: |
-              Регион HuaweiCloud, в котором будет развернут кластер.
+              Регион Huawei Cloud, в котором будет развернут кластер.
           accessKey:
             description: |
-              Ключ доступа к облаку HuaweiCloud, который необходимо использовать.
+              Ключ доступа к облаку Huawei Cloud, который необходимо использовать.
           secretKey:
             description: |
-              Секретный ключ облака HuaweiCloud для использования.
+              Секретный ключ облака Huawei Cloud для использования.
           insecure:
             description: |
               Доверяйте самоподписанным сертификатам SSL.
