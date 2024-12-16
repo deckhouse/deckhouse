@@ -154,6 +154,7 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 
 tests-matrix: bin/promtool bin/gator bin/dmt
   ##~ Options: FOCUS=module-name
+	bin/dmt --version
 	bin/dmt lint -l INFO ./modules
 
 tests-openapi: ## Run tests against modules openapi values schemas.
@@ -324,6 +325,8 @@ bin/dmt: bin ## Install dmt cli
 	curl -sSfL https://github.com/deckhouse/dmt/releases/download/v$(DMT_VERSION)/dmt-$(DMT_VERSION)-$(DMT_PLATFORM)-$(DMT_ARCH).tar.gz -o bin/dmt.tar.gz
 	tar -zxvf bin/dmt.tar.gz --strip-components=1 -C bin dmt-$(DMT_VERSION)-$(DMT_PLATFORM)-$(DMT_ARCH)/dmt
 	rm bin/dmt.tar.gz
+	rm -f bin/dmt
+	GOBIN=$$PWD/bin go install github.com/deckhouse/dmt/cmd/dmt@f41f7a62cd2b52c91998ec447172772560ba350a
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
