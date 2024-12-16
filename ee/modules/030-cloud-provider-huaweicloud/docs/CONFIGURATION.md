@@ -7,4 +7,4 @@ The module is automatically enabled for all cloud clusters deployed in HuaweiClo
 
 {% include module-alerts.liquid %}
 
-{% include module-settings.liquid %}
+The module does not have any settings.
