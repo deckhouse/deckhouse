@@ -331,6 +331,51 @@ entries:
                     ru: FAQ
                   url: /modules/cloud-provider-openstack/faq.html
             - title:
+                en: Huawei Cloud
+                ru: Huawei Cloud
+              d8Revision: ee
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/cloud-provider-huaweicloud/
+                - title:
+                    en: Installation
+                    ru: Установка
+                  folders:
+                    - title:
+                        en: Preparing environment
+                        ru: Подготовка окружения
+                      url: /modules/cloud-provider-huaweicloud/environment.html
+                    - title:
+                        en: Layouts
+                        ru: Схемы размещения
+                      url: /modules/cloud-provider-huaweicloud/layouts.html
+                    - title:
+                        en: Provider configuration
+                        ru: Настройка провайдера
+                      url: /modules/cloud-provider-huaweicloud/cluster_configuration.html
+                - title:
+                    en: Reference
+                    ru: Справка
+                  folders:
+                    - title:
+                        en: Configuration
+                        ru: Настройки
+                      url: /modules/cloud-provider-huaweicloud/configuration.html
+                    - title:
+                        en: Custom Resources
+                        ru: Custom Resources
+                      url: /modules/cloud-provider-huaweicloud/cr.html
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/cloud-provider-huaweicloud/examples.html
+                - title:
+                    en: FAQ
+                    ru: FAQ
+                  url: /modules/cloud-provider-huaweicloud/faq.html      
+            - title:
                 en: VMware Cloud Director
                 ru: VMware Cloud Director
               d8Revision: ee
