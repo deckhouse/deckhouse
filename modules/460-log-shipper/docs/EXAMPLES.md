@@ -328,7 +328,7 @@ spec:
 
 ## Graylog integration
 
-The following example shows how to configure the integration with Graylog. Make sure that Graylog is configured to receive incoming messages over the TCP protocol on the specified port:
+This example shows how to configure the integration with Graylog. Make sure that Graylog is configured to receive incoming messages over the TCP protocol on the specified port:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
