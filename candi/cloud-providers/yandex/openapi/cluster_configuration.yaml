@@ -145,9 +145,9 @@ apiVersions:
                 description: |
                   A list of external addresses.
 
-                  If `externalSubnetID` is not set, you have to use either [reserved public IP addresses](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) or the `Auto` constant.
+                  If the `externalSubnetIDs` parameter is not set, you have to use either [reserved public IP addresses](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) or the `Auto` constant.
 
-                  If `externalSubnetID` is set, you must select specific unallocated IP addresses from the specified subnet.
+                  If the `externalSubnetIDs` parameter is set, you must select specific unallocated IP addresses from the specified subnets.
 
                   If the number of array elements is less than the number of nodes in the group (the value of the `replicas` parameter), the value `Auto` (automatic public IP address reservation) is used.
 
