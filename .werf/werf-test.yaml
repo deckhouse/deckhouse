@@ -57,7 +57,7 @@ import:
   after: setup
 - image: dev-prebuild
   add: /deckhouse/modules
-  to: /deckhouse/modules
+  to: /modules
   after: setup
 - artifact: deckhouse-controller
   add: /out/deckhouse-controller
