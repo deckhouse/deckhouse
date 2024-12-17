@@ -1411,7 +1411,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 - В Deckhouse SE не поддерживается работа облачных провайдеров `dynamix`, `openstack`, `VCD`, `VSphere` и ряда модулей.
 {% endalert %}
 
-Для переключения кластера Deckhouse Community Edition на Enterprise Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
+Для переключения кластера Deckhouse Enterprise Edition на Standard Edition выполните следующие действия (все команды выполняются на master-узле действующего кластера):
 
 1. Подготовьте переменные с токеном лицензии:
 
