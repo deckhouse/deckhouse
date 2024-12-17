@@ -17,8 +17,9 @@ package destroy
 import (
 	"github.com/google/uuid"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -75,7 +76,7 @@ func (g *DeckhouseDestroyer) GetKubeClient() (*client.KubernetesClient, error) {
 	g.kubeCl = kubeCl
 
 	if !g.CommanderMode {
-		unlockConverge, err := converge.LockConvergeFromLocal(kubeCl, "local-destroyer")
+		unlockConverge, err := lock.LockConverge(kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer")
 		if err != nil {
 			return nil, err
 		}

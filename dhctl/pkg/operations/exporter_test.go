@@ -22,9 +22,9 @@ import (
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -60,10 +60,10 @@ func TestExporterGetStatistic(t *testing.T) {
 	})
 
 	t.Run("Should increment only specified statuses", func(t *testing.T) {
-		statistic := converge.Statistics{
-			Node: []converge.NodeCheckResult{
-				{Group: "test", Name: "test-0", Status: converge.OKStatus},
-				{Group: "test", Name: "test-1", Status: converge.ChangedStatus},
+		statistic := commander.Statistics{
+			Node: []commander.NodeCheckResult{
+				{Group: "test", Name: "test-0", Status: commander.OKStatus},
+				{Group: "test", Name: "test-1", Status: commander.ChangedStatus},
 			},
 		}
 
@@ -71,7 +71,7 @@ func TestExporterGetStatistic(t *testing.T) {
 		firstNodesStatus, err := exporter.GaugeMetrics["node_status"].GetMetricWith(prometheus.Labels{
 			"node_group": "test",
 			"name":       "test-0",
-			"status":     converge.OKStatus,
+			"status":     commander.OKStatus,
 		})
 		require.NoError(t, err)
 		collected := io_prometheus_client.Metric{}
@@ -81,7 +81,7 @@ func TestExporterGetStatistic(t *testing.T) {
 		secondNodeStatus, err := exporter.GaugeMetrics["node_status"].GetMetricWith(prometheus.Labels{
 			"node_group": "test",
 			"name":       "test-1",
-			"status":     converge.ChangedStatus,
+			"status":     commander.ChangedStatus,
 		})
 		require.NoError(t, err)
 		collected = io_prometheus_client.Metric{}
@@ -90,9 +90,9 @@ func TestExporterGetStatistic(t *testing.T) {
 
 		require.Equal(t, exporter.existedEntities.Nodes, map[string]string{"test-0": "test", "test-1": "test"})
 
-		statisticWithoutOneNode := converge.Statistics{
-			Node: []converge.NodeCheckResult{
-				{Group: "test", Name: "test-0", Status: converge.OKStatus},
+		statisticWithoutOneNode := commander.Statistics{
+			Node: []commander.NodeCheckResult{
+				{Group: "test", Name: "test-0", Status: commander.OKStatus},
 			},
 		}
 
@@ -102,7 +102,7 @@ func TestExporterGetStatistic(t *testing.T) {
 		secondNodeStatus, err = exporter.GaugeMetrics["node_status"].GetMetricWith(prometheus.Labels{
 			"node_group": "test",
 			"name":       "test-1",
-			"status":     converge.ChangedStatus,
+			"status":     commander.ChangedStatus,
 		})
 		require.NoError(t, err)
 

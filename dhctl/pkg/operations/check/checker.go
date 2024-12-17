@@ -23,9 +23,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	convergecommander "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
@@ -95,7 +96,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		res.Status = res.Status.CombineStatus(status)
 
 		if status == CheckStatusDestructiveOutOfSync {
-			res.DestructiveChangeID, err = converge.DestructiveChangeID(statusDetails)
+			res.DestructiveChangeID, err = convergecommander.DestructiveChangeID(statusDetails)
 			if err != nil {
 				return nil, fmt.Errorf("unable to generate destructive change id: %w", err)
 			}
@@ -124,7 +125,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("unable to get provider cluster config yaml: %w", err)
 	}
 
-	inClusterMetaConfig, err := converge.GetMetaConfig(kubeCl)
+	inClusterMetaConfig, err := entity.GetMetaConfig(kubeCl)
 	if err != nil {
 		return "", fmt.Errorf("unable to get in-cluster meta config: %w", err)
 	}
@@ -143,10 +144,10 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 	return CheckStatusOutOfSync, nil
 }
 
-func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *converge.Statistics, error) {
-	stat, err := converge.CheckState(
+func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *convergecommander.Statistics, error) {
+	stat, err := convergecommander.CheckState(
 		kubeCl, metaConfig, terraformContext,
-		converge.CheckStateOptions{
+		convergecommander.CheckStateOptions{
 			CommanderMode: c.CommanderMode,
 			StateCache:    c.StateCache,
 		},
@@ -172,21 +173,21 @@ func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient,
 
 func resolveStatisticsStatus(status string) CheckStatus {
 	switch status {
-	case converge.OKStatus:
+	case convergecommander.OKStatus:
 		return CheckStatusInSync
-	case converge.ChangedStatus:
+	case convergecommander.ChangedStatus:
 		// NOTE: Regular out-of-sync state, which can be fixed by the converge run
 		return CheckStatusOutOfSync
-	case converge.DestructiveStatus:
+	case convergecommander.DestructiveStatus:
 		// NOTE: Something will be destroyed by the converge run, such change should be approved
 		return CheckStatusDestructiveOutOfSync
-	case converge.AbandonedStatus:
+	case convergecommander.AbandonedStatus:
 		// NOTE: Excess node — treat as destructive out-of-sync, because this node will be destroyed during converge run
 		return CheckStatusDestructiveOutOfSync
-	case converge.AbsentStatus:
+	case convergecommander.AbsentStatus:
 		// NOTE: Lost node — treat as out-of-sync for now
 		return CheckStatusOutOfSync
-	case converge.ErrorStatus:
+	case convergecommander.ErrorStatus:
 		// NOTE: Unknown error, probably can be healed by the retry
 		return CheckStatusDestructiveOutOfSync
 	}

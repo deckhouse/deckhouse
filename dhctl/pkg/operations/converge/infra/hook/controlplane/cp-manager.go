@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -32,18 +32,18 @@ import (
 var ErrControlPlaneIsNotReady = errors.New("Control plane is not ready\n")
 
 type ManagerReadinessChecker struct {
-	kubeCl *client.KubernetesClient
+	getter kubernetes.KubeClientGetter
 }
 
-func NewManagerReadinessChecker(kubeCl *client.KubernetesClient) *ManagerReadinessChecker {
+func NewManagerReadinessChecker(getter kubernetes.KubeClientGetter) *ManagerReadinessChecker {
 	return &ManagerReadinessChecker{
-		kubeCl: kubeCl,
+		getter: getter,
 	}
 }
 
 func (c *ManagerReadinessChecker) IsReadyAll() error {
 	return retry.NewLoop("Control-plane manager pods readiness", 50, 10*time.Second).Run(func() error {
-		nodes, err := c.kubeCl.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
+		nodes, err := c.getter.KubeClient().CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
 			LabelSelector: "node.deckhouse.io/group=master",
 		})
 		if err != nil {
@@ -51,7 +51,7 @@ func (c *ManagerReadinessChecker) IsReadyAll() error {
 			return ErrControlPlaneIsNotReady
 		}
 
-		cpmPodsList, err := c.kubeCl.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{
+		cpmPodsList, err := c.getter.KubeClient().CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{
 			LabelSelector: "app=d8-control-plane-manager",
 		})
 		if err != nil {
@@ -92,7 +92,7 @@ func (c *ManagerReadinessChecker) IsReadyAll() error {
 }
 
 func (c *ManagerReadinessChecker) IsReady(nodeName string) (bool, error) {
-	cpmPodsList, err := c.kubeCl.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{
+	cpmPodsList, err := c.getter.KubeClient().CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "app=d8-control-plane-manager",
 		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
 	})

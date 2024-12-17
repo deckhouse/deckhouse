@@ -1,0 +1,188 @@
+// Copyright 2024 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package context
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+)
+
+type KubeClientSwitcher struct {
+	ctx        *Context
+	lockRunner *lock.InLockRunner
+}
+
+func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner) *KubeClientSwitcher {
+	return &KubeClientSwitcher{
+		ctx:        ctx,
+		lockRunner: lockRunner,
+	}
+}
+
+func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) error {
+	if s.ctx.CommanderMode() {
+		log.DebugLn("Switch to node user skipped. In commander mode")
+		return nil
+	}
+
+	convergeState, err := s.ctx.ConvergeState()
+	if err != nil {
+		return err
+	}
+
+	if convergeState.NodeUserCredentials == nil {
+		nodeUser, nodeUserCredentials, err := generateNodeUser()
+		if err != nil {
+			return fmt.Errorf("failed to generate NodeUser: %w", err)
+		}
+
+		c, cancel := s.ctx.WithTimeout(10 * time.Second)
+		defer cancel()
+		err = entity.CreateNodeUser(c, s.ctx, nodeUser)
+		if err != nil {
+			return fmt.Errorf("failed to create or update NodeUser: %w", err)
+		}
+
+		convergeState.NodeUserCredentials = nodeUserCredentials
+
+		err = s.ctx.SetConvergeState(convergeState)
+		if err != nil {
+			return fmt.Errorf("failed to set converge state: %w", err)
+		}
+	}
+
+	return s.replaceKubeClient(convergeState, nodesState)
+}
+
+func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[string][]byte) (err error) {
+	tmpDir := filepath.Join(app.CacheDir, "converge")
+
+	err = os.MkdirAll(tmpDir, 0o755)
+	if err != nil {
+		return fmt.Errorf("failed to create cache directory for NodeUser: %w", err)
+	}
+
+	privateKeyPath := filepath.Join(tmpDir, "id_rsa_converger")
+
+	privateKey := session.AgentPrivateKey{
+		Key:        privateKeyPath,
+		Passphrase: convergeState.NodeUserCredentials.Password,
+	}
+
+	err = os.WriteFile(privateKeyPath, []byte(convergeState.NodeUserCredentials.PrivateKey), 0o600)
+	if err != nil {
+		return fmt.Errorf("failed to write private key for NodeUser: %w", err)
+	}
+
+	kubeCl := s.ctx.KubeClient()
+
+	sshCl := kubeCl.NodeInterfaceAsSSHClient()
+	if sshCl == nil {
+		panic("Node interface is not ssh")
+	}
+
+	settings := sshCl.Settings
+
+	for nodeName, stateBytes := range state {
+		statePath := filepath.Join(tmpDir, fmt.Sprintf("%s.tfstate", nodeName))
+
+		err := os.WriteFile(statePath, stateBytes, 0o644)
+		if err != nil {
+			return fmt.Errorf("failed to write terraform state: %w", err)
+		}
+
+		ipAddress, err := terraform.GetMasterIPAddressForSSH(statePath)
+		if err != nil {
+			log.WarnF("failed to get master IP address: %s", err)
+
+			continue
+		}
+
+		settings.AddAvailableHosts(session.Host{Host: ipAddress, Name: nodeName})
+	}
+
+	if s.lockRunner != nil {
+		s.lockRunner.Stop()
+	}
+
+	kubeCl.KubeProxy.StopAll()
+
+	newSSHClient := ssh.NewClient(session.NewSession(session.Input{
+		User:           convergeState.NodeUserCredentials.Name,
+		Port:           settings.Port,
+		BastionHost:    settings.BastionHost,
+		BastionPort:    settings.BastionPort,
+		BastionUser:    settings.BastionUser,
+		ExtraArgs:      settings.ExtraArgs,
+		AvailableHosts: settings.AvailableHosts(),
+		BecomePass:     convergeState.NodeUserCredentials.Password,
+	}), []session.AgentPrivateKey{privateKey})
+	// Avoid starting a new ssh agent
+	newSSHClient.InitializeNewAgent = false
+
+	_, err = newSSHClient.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start SSH client: %w", err)
+	}
+
+	err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys)
+	if err != nil {
+		return fmt.Errorf("failed to add keys to ssh agent: %w", err)
+	}
+
+	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))
+	if err != nil {
+		return fmt.Errorf("failed to connect to Kubernetes API: %w", err)
+	}
+
+	s.ctx.setKubeClient(newKubeClient)
+
+	if s.lockRunner != nil {
+		err := s.lockRunner.ResetLock()
+		if err != nil {
+			return fmt.Errorf("failed to reset lock: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *KubeClientSwitcher) CleanupNodeUser() error {
+	if s.ctx.CommanderMode() {
+		log.DebugLn("Cleanup node user skipped. In commander mode")
+		return nil
+	}
+
+	err := s.ctx.deleteConvergeState()
+	if err != nil {
+		return err
+	}
+
+	c, cancel := s.ctx.WithTimeout(10 * time.Second)
+	defer cancel()
+	return entity.DeleteNodeUser(c, s.ctx, global.ConvergeNodeUserName)
+}
