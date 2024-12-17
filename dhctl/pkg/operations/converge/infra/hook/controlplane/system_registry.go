@@ -42,6 +42,7 @@ const (
 	registryDataDeviceNodeLabel     = "node.deckhouse.io/registry-data-device-ready"
 	registryTerraformEnableFlagVar  = "systemRegistryEnable"
 	registryPodsNamespace           = "d8-system"
+	registryModuleName              = "system-registry"
 )
 
 type MountPointInfo struct {
@@ -90,6 +91,17 @@ func waitForRegistryPodsDeletion(kubeClient *client.KubernetesClient, nodeName s
 			},
 		); err != nil {
 			result = multierror.Append(result, err)
+		}
+
+		if result.ErrorOrNil() != nil {
+			result = multierror.Append(
+				result,
+				fmt.Errorf(
+					"pods of module '%s' have been detected. Before disconnecting the disks, you need to disable module '%s'",
+					registryModuleName,
+					registryModuleName,
+				),
+			)
 		}
 
 		return result.ErrorOrNil()
@@ -151,22 +163,29 @@ func tryUnlockRegistryDataDeviceMount(kubeClient *client.KubernetesClient, nodeN
 
 func isMountPointPresent(mountPoint string, sshClient *ssh.Client) (bool, error) {
 	cmd := sshClient.Command(
-		"bash", "-c",
-		"lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '[.blockdevices[] | select(.mountpoint != null) ]'",
+		"bash", "-c", "lsblk -o path,type,mountpoint,fstype --tree --json",
 	)
+	cmd.Sudo()
 	stdout, _, err := cmd.Output()
 	if err != nil {
-		return false, fmt.Errorf("failed to get lsblk output: %s", err)
+		return false, fmt.Errorf("failed to get lsblk output: %v", err)
 	}
-	var mountPoints []MountPointInfo
-	if err := json.Unmarshal(stdout, &mountPoints); err != nil {
-		return false, fmt.Errorf("failed to unmarshal lsblk output: %s", err)
+
+	var result map[string][]MountPointInfo
+	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+		return false, fmt.Errorf("failed to unmarshal lsblk output: %v", err)
 	}
-	for _, mountInfo := range mountPoints {
-		if mountInfo.Mountpoint != nil && *mountInfo.Mountpoint == mountPoint {
-			return true, nil
+
+	if blockdevices, ok := result["blockdevices"]; ok {
+		for _, mountInfo := range blockdevices {
+			if mountInfo.Mountpoint != nil && *mountInfo.Mountpoint == mountPoint {
+				return true, nil
+			}
 		}
+	} else {
+		return false, fmt.Errorf("cannot get blockdevices field from lsblk output")
 	}
+
 	return false, nil
 }
 
@@ -198,7 +217,7 @@ func checkRegistryPodsExistence(kubeClient *client.KubernetesClient, nodeName, p
 			podNames = append(podNames, pod.Name)
 		}
 		return fmt.Errorf(
-			"found '%s' pod '%v' on node '%s'. Please delete them before proceeding",
+			"found '%s' pod '%v' on node '%s'",
 			podName,
 			podNames,
 			nodeName,
