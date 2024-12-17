@@ -418,6 +418,7 @@ apiVersions:
                 description: |
                   Processor platform type on the NAT instance.
                 type: string
+                default: "standard-v2"
       provider:
         type: object
         description: |
