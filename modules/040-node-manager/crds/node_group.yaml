@@ -1567,7 +1567,7 @@ spec:
                   type: object
                   x-kubernetes-validations:
                     - message: "spec.staticInstances.labelSelector is immutable and cannot be changed once set"
-                      rule: "!has(oldSelf.spec.staticInstances.labelSelector) || self.spec.staticInstances.labelSelector == oldSelf.spec.staticInstances.labelSelector"
+                      rule: "!has(oldSelf.labelSelector) || self.labelSelector == oldSelf.labelSelector"
                   properties:
                     labelSelector:
                       description: A label selector is a label query over a set
