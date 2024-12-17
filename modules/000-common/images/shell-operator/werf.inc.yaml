@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "v1.5.1"}}
+{{- $shellOperatorVersion := "validating-webhooks-add-match-conditions"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALT_P11 }}
