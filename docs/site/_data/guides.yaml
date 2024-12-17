@@ -3,7 +3,7 @@
     en: "Going to Production"
   link: "production.html"
   description:
-    ru: Руководство по подготовка кластера к работе в продакшене.
+    ru: Руководство по подготовке кластера к работе в продакшене.
     en: Guidelines for preparing a cluster for work in production.
 - name:
     ru: "Аппаратные требования к узлам кластера на bare metal"
