@@ -81,3 +81,4 @@ linters:
   - unparam
   - whitespace
   - copyloopvar
+  - nonamedreturns

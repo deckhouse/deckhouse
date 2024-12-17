@@ -101,7 +101,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
 			case "/api/v1/doc/testmodule/v1.0.0":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
@@ -124,7 +124,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
 			case "/api/v1/doc/testmodule/v1.0.0":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
@@ -147,7 +147,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.0.0", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			if strings.HasPrefix(req.Host, "10-111-111-11") {
 				return &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(strings.NewReader("I'm broken"))}, nil
 			}
@@ -174,7 +174,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
 			case "/api/v1/doc/testmodule/v1.1.1":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
@@ -197,7 +197,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "v1.1.1", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
 			case "/api/v1/doc/testmodule/v1.1.1":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
@@ -220,7 +220,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_ = os.MkdirAll(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi"), 0777)
 		_ = os.WriteFile(filepath.Join(suite.tmpDir, "testmodule", "dev", "openapi", "config-values.yaml"), []byte("{}"), 0666)
 
-		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (rp1 *http.Response, err error) {
+		dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
 			switch req.URL.Path {
 			case "/api/v1/doc/testmodule/mpo-tag":
 				return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil

@@ -219,15 +219,17 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-func splitManifests(doc []byte) (result []string) {
+func splitManifests(doc []byte) []string {
 	splits := manifestsDelimiter.Split(string(doc), -1)
 
+	result := make([]string, 0, len(splits))
 	for i := range splits {
 		if splits[i] != "" {
 			result = append(result, splits[i])
 		}
 	}
-	return
+
+	return result
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {

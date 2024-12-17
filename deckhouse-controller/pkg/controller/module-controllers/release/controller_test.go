@@ -588,15 +588,17 @@ func (s stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error 
 	return nil
 }
 
-func singleDocToManifests(doc []byte) (result []string) {
+func singleDocToManifests(doc []byte) []string {
 	split := mDelimiter.Split(string(doc), -1)
 
+	result := make([]string, 0, len(split))
 	for i := range split {
 		if split[i] != "" {
 			result = append(result, split[i])
 		}
 	}
-	return
+
+	return result
 }
 
 func TestValidateModule(t *testing.T) {
