@@ -72,6 +72,7 @@ shell:
   - apt-get install -y git
   - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
   - mkdir -p /src
+  # ssh auth to 3p repos
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 ---
 image: alt-p11-artifact
@@ -84,4 +85,5 @@ shell:
   - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64-i586 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/2024/12/14/ x86_64-i586 classic|g" /etc/apt/sources.list.d/alt.list
   - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/noarch classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/2024/12/14/ noarch classic|g" /etc/apt/sources.list.d/alt.list
   {{- include "alt packages proxy" . | nindent 2 }}
-
+  # ssh auth to 3p repos
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
