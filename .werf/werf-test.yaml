@@ -2,7 +2,7 @@
 ---
 image: dmt-artifact
 final: false
-from: common-base
+fromImage: common-base
 shell:
   install:
   - curl -sL https://github.com/deckhouse/dmt/releases/download/v{{ $dmtVersion }}/dmt-{{ $dmtVersion }}-linux-amd64.tar.gz | tar -zx --strip-components 1 -C /tmp
