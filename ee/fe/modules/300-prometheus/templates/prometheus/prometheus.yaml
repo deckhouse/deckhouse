@@ -8,6 +8,17 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- define "prompp-context" -}}
+  {{- with .Values.global.modulesImages }}
+    {{- $ctx := dict "Chart" (dict "Name" "prompp") }}
+    {{- $promppDigests := dict "prompp" .digests.prompp }}
+    {{- $registry := dict "base" (printf "%s/modules" .registry.base) }}
+    {{- $values := dict "global" (dict "modulesImages" (dict "digests" $promppDigests "registry" $registry)) }}
+    {{- $_ := set $ctx "Values" $values }}
+    {{- $ctx | toYaml }}
+  {{- end }}
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -55,7 +66,7 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
 {{- if (.Values.global.enabledModules | has "prompp") }}
-  image: {{ include "helm_lib_module_image" (list (dict "Chart" (dict "Name" "prompp") "Values" .Values) "prompp") }}
+  image: {{ include "helm_lib_module_image" (list (include "prompp-context" . | fromYaml) "prompp") }}
 {{- else }}
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
 {{- end }}
@@ -80,7 +91,7 @@ spec:
 {{- if hasKey .Values.global.modulesImages.digests "prompp" }}
   initContainers:
   - name: prompptool
-    image: {{ include "helm_lib_module_image" (list (dict "Chart" (dict "Name" "prompp") "Values" .Values) "prompptool") }}
+    image: {{ include "helm_lib_module_image" (list (include "prompp-context" . | fromYaml) "prompptool") }}
     command:
     - /bin/prompptool
     - "--working-dir=/prometheus"
