@@ -62,9 +62,9 @@ apiVersions:
                 description: |
                   Список внешних IP-адресов.
 
-                  При отсутствии опции `externalSubnetID` необходимо использовать или [зарезервированные публичные IP-адреса](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес), или константу `Auto`.
+                  Если параметр `externalSubnetIDs` не определен, то необходимо использовать или [зарезервированные публичные IP-адреса](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес), или константу `Auto`.
 
-                  При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP-адреса из указанной подсети.
+                  Если параметр `externalSubnetIDs` определен необходимо выбрать конкретные свободные IP-адреса из соответствующих указанных подсетей.
 
                   Если количество элементов массива меньше количества узлов в группе (значение параметра `replicas`), то используется значение `Auto` (автоматический заказ публичных IP-адресов).
 
