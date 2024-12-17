@@ -1,8 +1,8 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: {{ .Images.BASE_SCRATCH }}
+from: {{ .Images.BASE_SCRATCH }}
 import:
-  - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /relocate
     to: /
     before: setup
