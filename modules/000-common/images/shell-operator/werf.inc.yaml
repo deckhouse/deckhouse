@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "v1.5.1"}}
+{{- $shellOperatorVersion := "validating-webhooks-add-match-conditions"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALT_P11 }}
@@ -34,6 +34,7 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: common/src-artifact
+fromCacheVersion: 1
 shell:
   install:
   - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ $.SOURCE_REPO }}/flant/shell-operator.git /src/shell-operator
