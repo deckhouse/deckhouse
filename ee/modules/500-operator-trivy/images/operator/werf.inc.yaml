@@ -28,8 +28,8 @@ git:
       - '**/*'
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache patch
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install patch
   install:
   - git clone --depth 1 --branch v0.22.0 {{ $.SOURCE_REPO }}/aquasecurity/trivy-operator.git /src
   - cd /src
