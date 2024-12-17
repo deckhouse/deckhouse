@@ -300,6 +300,10 @@ The `labelSelector` field in the `NodeGroup` resource is immutable. To update th
 
 ### Cluster API Provider Static: Moving Instances Between Node Groups
 
+{% alert level="warning" %}
+During the process of transferring instances between node groups, the instance will be cleaned and re-bootstrapped, and the `Node` object will be recreated.
+{% endalert %}
+
 This section describes the process of moving static instances between different node groups (`NodeGroup`) using the Cluster API Provider Static (CAPS). The process involves modifying the `NodeGroup` configuration and updating the labels (`labels`) of the corresponding `StaticInstance`.
 
 #### Initial Configuration
