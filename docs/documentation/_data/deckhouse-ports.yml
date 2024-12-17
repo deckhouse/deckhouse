@@ -2,7 +2,7 @@ groups:
 - group: MastersToMasters
   description:
     en: Master to master nodes traffic
-    ru: Трафик между мастер-узлами
+    ru: Трафик между master-узлами
   destinations:
   - ports: "2379, 2380"
     protocol: TCP
@@ -13,22 +13,22 @@ groups:
     protocol: TCP
     description:
       en: Cluster API webhook handler
-      ru: Webhook-обработчик Cluster API
+      ru: Вебхук-обработчик Cluster API
   - ports: "4201"
     protocol: TCP
     description:
       en: VMware Cloud Director cloud provider webhook handler
-      ru: Webhook-обработчик для cloud-провайдера VMware Cloud Director
+      ru: Вебхук-обработчик для cloud-провайдера VMware Cloud Director
   - ports: "4223"
     protocol: TCP
     description:
       en: Deckhouse controller webhook handler
-      ru: Webhook-обработчик контроллера Deckhouse
+      ru: Вебхук-обработчик контроллера Deckhouse
 
 - group: MastersToNodes
   description:
     en: Master to nodes traffic
-    ru: Трафик между мастер-узлами и остальными узлами
+    ru: Трафик от master-узлов к узлам
   destinations:
   - ports: "22"
     protocol: TCP
@@ -49,12 +49,12 @@ groups:
     protocol: TCP
     description:
       en: "runtime-audit-engine webhook handler"
-      ru: "Webhook-обработчик компонента runtime-audit-engine"
+      ru: "Вебхук-обработчик компонента runtime-audit-engine"
 
 - group: NodesToMasters
   description:
     en: Nodes to masters traffic
-    ru: Трафик между любыми узлами и мастер-узлами
+    ru: Трафик от узлов к master-узлам
   destinations:
   - ports: "4234"
     protocol: UDP
@@ -85,7 +85,7 @@ groups:
 - group: NodesToNodes
   description:
     en: Nodes to nodes traffic
-    ru: Трафик между любыми узлами
+    ru: Трафик между узлами
   destinations:
   - ports: ""
     protocol: ICMP
@@ -211,7 +211,7 @@ groups:
 - group: ExternalToMaster
   description:
     en: External traffic to masters
-    ru: Внешний трафик на мастер-узлы
+    ru: Внешний трафик к master-узлам
   destinations:
   - ports: "22, 22322"
     protocol: TCP
@@ -221,13 +221,13 @@ groups:
   - ports: "6443"
     protocol: TCP
     description:
-      en: "*kube-apiserver* for local administrators"
-      ru: "*kube-apiserver* для местных администраторов"
+      en: Direct access to the apiserver
+      ru: Прямой доступ к apiserver`у
 
 - group: ExternalToFrontends
   description:
     en: External traffic to frontends
-    ru: Внешний трафик на фронтенд-узлы
+    ru: Внешний трафик к фронтенд-узлам
   destinations:
   - ports: "80, 443"
     protocol: TCP
@@ -258,7 +258,7 @@ groups:
 - group: NodesToExternal
   description:
     en: External traffic for all nodes
-    ru: Внешний трафик для каждого узла
+    ru: Внешний трафик для всех узлов
   destinations:
   - ports: "53"
     protocol: UDP
