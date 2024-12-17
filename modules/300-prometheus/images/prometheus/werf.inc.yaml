@@ -55,7 +55,6 @@ git:
     - '**/*'
 shell:
   install:
-  - mkdir /src
   - git clone --depth 1 --branch v0.17.0 {{ .SOURCE_REPO }}/prometheus/promu.git /src/promu
   - git clone --depth 1 --branch v2.45.6 {{ .SOURCE_REPO }}/prometheus/prometheus.git /src/prometheus
   - cd /src/prometheus
