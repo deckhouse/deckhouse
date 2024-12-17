@@ -303,6 +303,83 @@ spec:
    EOF
    ```
 
+### Cluster API Provider Static: перемещение инстансов между группами нод
+
+В данном разделе описывается процесс перемещения статических инстансов между различными группами узлов (`NodeGroup`) с использованием Cluster API Provider Static (CAPS). Процесс включает изменение конфигурации `NodeGroup` и обновление меток (`labels`) у соответствующих `StaticInstance`.
+
+#### Исходная конфигурация
+
+Предположим, что в кластере уже существует `NodeGroup` с именем `worker`, настроенный для управления одним статическим инстансом с меткой `role: worker`.
+
+`NodeGroup` worker:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: worker
+```
+
+`StaticInstance` static-0:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static-worker-1
+  labels:
+    role: worker
+spec:
+  address: "192.168.1.100"
+  credentialsRef:
+    kind: SSHCredentials
+    name: credentials
+```
+
+#### Шаги по перемещению инстанса между группами узлов
+
+##### Создаем новую `NodeGroup` для целевой группы узлов
+
+Создайте новый ресурс `NodeGroup`, например, с именем `front`, который будет управлять статическим инстансом с меткой `role: front`.
+
+```shell
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: front
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: front
+EOF
+```
+##### Обновляем метку у `StaticInstance`
+
+Измените метку `role` у существующего `StaticInstance` с `worker` на `front`. Это позволит новой `NodeGroup` `front` начать управлять этим инстансом.
+
+```shell
+kubectl label staticinstance static-worker-1 role=front --overwrite
+```
+
+##### Уменьшаем количество статических инстансов в исходной `NodeGroup`
+
+Необходимо обновить ресурс `NodeGroup` `worker`, уменьшив значение параметра `count` с `1` до `0`. 
+
+```shell
+kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
+```
+
 ## Пример описания `NodeUser`
 
 ```yaml

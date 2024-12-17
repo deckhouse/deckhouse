@@ -72,9 +72,6 @@ spec:
             Defines the runtime parameters of a node group.
           required:
             - spec
-          x-kubernetes-validations:
-            - message: spec.staticInstances.labelSelector is immutable and cannot be changed
-              rule: "!has(oldSelf.spec.staticInstances.labelSelector) || self.spec.staticInstances.labelSelector == oldSelf.spec.staticInstances.labelSelector"
           properties:
             metadata:
               type: object
@@ -1568,6 +1565,9 @@ spec:
                   description: |
                     Parameter for provisioning static machines to the cluster.
                   type: object
+                  x-kubernetes-validations:
+                    - message: "spec.staticInstances.labelSelector is immutable and cannot be changed once set"
+                      rule: "!has(oldSelf.spec.staticInstances.labelSelector) || self.spec.staticInstances.labelSelector == oldSelf.spec.staticInstances.labelSelector"
                   properties:
                     labelSelector:
                       description: A label selector is a label query over a set

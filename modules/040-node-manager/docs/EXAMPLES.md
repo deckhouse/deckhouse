@@ -298,6 +298,84 @@ The `labelSelector` field in the `NodeGroup` resource is immutable. To update th
    EOF
    ```
 
+### Cluster API Provider Static: Moving Instances Between Node Groups
+
+This section describes the process of moving static instances between different node groups (`NodeGroup`) using the Cluster API Provider Static (CAPS). The process involves modifying the `NodeGroup` configuration and updating the labels (`labels`) of the corresponding `StaticInstance`.
+
+#### Initial Configuration
+
+Assume that there is already a `NodeGroup` named `worker` in the cluster, configured to manage one static instance with the label `role: worker`.
+
+**`NodeGroup` worker:**
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: worker
+```
+
+**`StaticInstance` static-worker-1:**
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: static-worker-1
+  labels:
+    role: worker
+spec:
+  address: "192.168.1.100"
+  credentialsRef:
+    kind: SSHCredentials
+    name: credentials
+```
+
+#### Steps to Move an Instance Between Node Groups
+
+##### 1. Create a New `NodeGroup` for the Target Node Group
+
+Create a new `NodeGroup` resource, for example, named `front`, which will manage a static instance with the label `role: front`.
+
+```shell
+kubectl create -f - <<EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: front
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: front
+EOF
+```
+
+##### 2. Update the Label on the `StaticInstance`
+
+Change the `role` label of the existing `StaticInstance` from `worker` to `front`. This will allow the new `NodeGroup` `front` to manage this instance.
+
+```shell
+kubectl label staticinstance static-worker-1 role=front --overwrite
+```
+
+##### 3. Decrease the Number of Static Instances in the Original `NodeGroup`
+
+Update the `NodeGroup` resource `worker` by reducing the `count` parameter from `1` to `0`.
+
+```shell
+kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
+```
+
 ## An example of the `NodeUser` configuration
 
 ```yaml
