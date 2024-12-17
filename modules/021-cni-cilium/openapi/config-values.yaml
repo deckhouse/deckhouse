@@ -28,8 +28,11 @@ properties:
     default: "BPF"
     description: |
       Cilium masquerade work mode.
+      * - `BPF` - use cilium BPF. Basic operation mode.
       * - `Netfilter` - use kernel Netfilter(iptables/nf_tables).
-      * - `BPF` - use cilium BPF.
+          In cloud clusters where VXLAN is disabled, the external IP addresses of nodes are not available from the pod network.
+          This mode allows you to work around this issue, but some other features may stop working, such as the EgressGateway.
+      > Note! This option is only available for compatibility with older clusters that were deployed in the cloud (e.g., on OpenStack) without using VXLAN.
   tunnelMode:
     type: string
     enum: ["Disabled", "VXLAN"]
