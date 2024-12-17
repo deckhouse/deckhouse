@@ -16,38 +16,27 @@
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
 
-# Function to discover the device path based on the cloud disk name
 function discover_device_path() {
   local cloud_disk_name="$1"
-  # Use lsblk to find the device name associated with the given cloud disk serial
-  device_name="$(lsblk -lo name,serial | grep "$cloud_disk_name" | cut -d " " -f1)"
-
-  # Check if a device name was discovered
+  local device_name="$(lsblk -lo name,serial | grep "$cloud_disk_name" | cut -d " " -f1)"
   if [ -z "$device_name" ]; then
-    >&2 echo "Failed to discover system-registry-data device for cloud disk name: $cloud_disk_name"
+    >&2 echo "failed to discover system-registry-data device"
     exit 1
   fi
-
-  # Return the full device path
   echo "/dev/$device_name"
 }
 
 # The system registry file is always created in step 000_create_system_registry_data_device_path.sh.tpl
 system_registry_file="/var/lib/bashible/system_registry_data_device_path"
 
-# Read the cloud disk name from the system registry file
-cloud_disk_name=$(cat "$system_registry_file")
+# Get system registry data device
+CLOUD_DISK_NAME_OR_DATA_DEVICE=$(cat "$system_registry_file")
 
-# Proceed only if the cloud_disk_name is non-empty and doesn't already start with /dev
-if [ -n "$cloud_disk_name" ] && [[ "$cloud_disk_name" != /dev/* ]]; then
-  # Discover the device path using the cloud disk name
-  dataDevice=$(discover_device_path "$cloud_disk_name")
-  echo "system_registry_data_device: $dataDevice"
-  echo "$dataDevice" > /var/lib/bashible/system_registry_data_device_path
+if [ -n "$CLOUD_DISK_NAME_OR_DATA_DEVICE" ] && [[ "$CLOUD_DISK_NAME_OR_DATA_DEVICE" != /dev/* ]]; then
+  DATA_DEVICE=$(discover_device_path "$CLOUD_DISK_NAME_OR_DATA_DEVICE")
+  echo "system-registry-data device: $DATA_DEVICE"
+  echo "$DATA_DEVICE" > "$system_registry_file"
 fi
-
-# List block devices for diagnostic purposes
-blkid
 
   {{- end  }}
 {{- end  }}

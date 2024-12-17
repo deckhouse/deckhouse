@@ -91,7 +91,7 @@ if [ -f /var/lib/bashible/kubernetes-data-device-installed ]; then
 fi
 
 # Get Kubernetes data device
-DATA_DEVICE=$(bb-get-kubernetes-data-device-from-terraform-output)
+DATA_DEVICE=$(bb-get-kubernetes-data-device-from-file-or-secret)
 if [ -z "$DATA_DEVICE" ]; then
   >&2 echo "failed to get kubernetes data device path"
   exit 1

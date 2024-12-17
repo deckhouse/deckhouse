@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-get-kubernetes-data-device-from-terraform-output() {
-  if [ "$RUN_TYPE" = "Normal" ]; then
-    # other nodes
-    __bb-fetch-data-from-secret "d8-system" "d8-masters-kubernetes-data-device-path" | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
+bb-get-kubernetes-data-device-from-file-or-secret() {
+  # for bootstrap first master node or for providers overrides
+  file="/var/lib/bashible/kubernetes_data_device_path"
+  if [ -f "$file" ]; then
+    cat $file
   else
-    # for bootstrap first master node
-    file="/var/lib/bashible/kubernetes_data_device_path"
-    if [ -f "$file" ]; then
-      cat $file
-    fi
+    # for other cases
+    __bb-fetch-data-from-secret "d8-system" "d8-masters-kubernetes-data-device-path" | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d
   fi
 }
 
@@ -102,7 +100,7 @@ __bb-fetch-data-from-secret() {
       for server in "${SERVERS[@]}"; do
         local http_status
         # Check HTTP status without outputting error details
-        http_status=$(d8-curl -s -w "%{http_code}" -o /dev/null \
+        http_status=$(bb-rp-curl -s -w "%{http_code}" -o /dev/null \
           -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
           --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
           --cacert "$BOOTSTRAP_DIR/ca.crt" 2>/dev/null)
@@ -113,7 +111,7 @@ __bb-fetch-data-from-secret() {
         fi
 
         # Try to retrieve the secret; if successful, output the result
-        if output=$(d8-curl -s -f \
+        if output=$(bb-rp-curl -s -f \
               -X GET "https://$server/api/v1/namespaces/$namespace/secrets/$secret_name" \
               --header "Authorization: Bearer $(<"$BOOTSTRAP_DIR/bootstrap-token")" \
               --cacert "$BOOTSTRAP_DIR/ca.crt" 2>/dev/null); then
