@@ -101,7 +101,7 @@ withNATInstance:
   natInstanceResources:
     cores: 2
     memory: 2048
-	platform: "standard-v2"
+    platform: "standard-v2"
 nodeNetworkCIDR: 84.201.160.148/31
 sshPublicKey: ssh-rsa AAAAAbbbb
 `
