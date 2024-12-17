@@ -92,9 +92,9 @@ spec:
     - /bin/prompptool
     - "--working-dir=/prometheus"
     {{- if (.Values.global.enabledModules | has "prompp") }}
-    - "--walpp"
+    - "walpp"
     {{- else }}
-    - "--walvanila"
+    - "walvanilla"
     {{- end }}
     volumeMounts:
     - name: prometheus-main-db
