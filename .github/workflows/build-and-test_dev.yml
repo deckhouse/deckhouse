@@ -1157,6 +1157,7 @@ jobs:
     needs:
     - git_info
     - pull_request_info
+    - build_deckhouse
 
     # <template: tests_before_build_template>
     runs-on: [self-hosted, regular]

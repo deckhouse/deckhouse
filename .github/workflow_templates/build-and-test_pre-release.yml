@@ -96,6 +96,7 @@ jobs:
     name: DMT Lint
     needs:
     - git_info
+    - build_deckhouse
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "dmtlint") | strings.Indent 4 }!}
 
   dhctl_tests:

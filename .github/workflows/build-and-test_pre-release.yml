@@ -873,6 +873,7 @@ jobs:
     name: DMT Lint
     needs:
     - git_info
+    - build_deckhouse
 
     # <template: tests_before_build_template>
     runs-on: [self-hosted, regular]
