@@ -846,7 +846,7 @@ entries:
             - title:
                 en: Description
                 ru: Описание
-              url: /modules/610-service-with-healthchecks/
+              url: /modules/service-with-healthchecks/
             - title:
                 en: Reference
                 ru: Справка
@@ -854,15 +854,15 @@ entries:
                 - title:
                     en: Configuration
                     ru: Настройки
-                  url: /modules/610-service-with-healthchecks/configuration.html
+                  url: /modules/service-with-healthchecks/configuration.html
                 - title:
                     en: Custom Resources
                     ru: Custom Resources
-                  url: /modules/610-service-with-healthchecks/cr.html
+                  url: /modules/service-with-healthchecks/cr.html
             - title:
                 en: Examples
                 ru: Примеры
-              url: /modules/610-service-with-healthchecks/examples.html
+              url: /modules/service-with-healthchecks/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг
