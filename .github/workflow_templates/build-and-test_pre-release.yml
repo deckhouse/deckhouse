@@ -91,6 +91,13 @@ jobs:
       - git_info
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
 
+  dmt_lint:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: DMT Lint
+    needs:
+    - git_info
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "dmtlint") | strings.Indent 4 }!}
+
   dhctl_tests:
     name: Dhctl Tests
     needs:

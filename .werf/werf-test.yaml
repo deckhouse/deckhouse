@@ -1,3 +1,12 @@
+{{- $dmtVersion := "0.0.20" }}
+---
+image: dmt-artifact
+final: false
+from: common-base
+shell:
+  install:
+  - curl -sL https://github.com/deckhouse/dmt/releases/download/v{{ $dmtVersion }}/dmt-{{ $dmtVersion }}-linux-amd64.tar.gz | tar -zx --strip-components 1 -C /tmp
+  - chmod +x /tmp/dmt
 ---
 image: tests-prebuild
 fromImage: base-for-go
@@ -42,6 +51,14 @@ git:
   {{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
+- image: dmt-artifact
+  add: /tmp/dmt
+  to: /usr/bin/dmt
+  after: setup
+- image: dev-prebuild
+  add: /deckhouse/modules
+  to: /deckhouse/modules
+  after: setup
 - artifact: deckhouse-controller
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
