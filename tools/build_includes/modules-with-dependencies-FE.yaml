@@ -1041,29 +1041,11 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus
-  to: /deckhouse/modules/300-prometheus/templates/prometheus
-  excludePaths:
-    - images
-    - templates
-    - charts
-    - crds
-    - docs
-    - monitoring
-    - openapi
-    - oss.yaml
-    - cloud-instance-manager
-    - values_matrix_test.yaml
-    - values.yaml
-    - .helmignore
-    - candi
-    - Chart.yaml
-    - .namespace
-    - '**/*_test.go'
-    - '**/*.sh'
+- add: /ee/fe/modules/300-prometheus/templates/prometheus/prometheus.yaml
+  to: /deckhouse/modules/300-prometheus/templates/prometheus/prometheus.yaml
   stageDependencies:
     setup:
-        - '**/*.go'
+        - '**/*'
 - add: /ee/fe/modules/340-monitoring-applications
   to: /deckhouse/modules/340-monitoring-applications
   excludePaths:
