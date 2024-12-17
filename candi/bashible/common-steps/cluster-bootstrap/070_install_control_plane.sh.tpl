@@ -17,6 +17,7 @@ cp /var/lib/bashible/kubeadm/patches/* /etc/kubernetes/deckhouse/kubeadm/patches
 kubeadm init phase certs all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase kubeconfig all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase etcd local --config /var/lib/bashible/kubeadm/config.yaml
+chown -R etcd:etcd /etc/kubernetes/pki/etcd/
 kubeadm init phase control-plane all --config /var/lib/bashible/kubeadm/config.yaml
 kubeadm init phase mark-control-plane --config /var/lib/bashible/kubeadm/config.yaml
 

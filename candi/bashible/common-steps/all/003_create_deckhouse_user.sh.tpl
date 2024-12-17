@@ -39,3 +39,4 @@ create_user_and_group() {
 }
 
 create_user_and_group deckhouse 64535 deckhouse 64535 /sbin/nologin
+create_user_and_group etcd 64530 etcd 64530 /sbin/nologin
