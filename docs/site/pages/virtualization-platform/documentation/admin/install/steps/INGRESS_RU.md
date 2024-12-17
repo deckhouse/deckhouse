@@ -6,7 +6,7 @@ lang: ru
 
 ## Настройка Ingress
 
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](https://TODO) запустился и находится в статусе `Ready`.
+Убедитесь, что под Kruise controller manager модуля [ingress-nginx](https://TODO) запустился и находится в статусе `Running`.
 Выполните на **master-узле** следующую команду:
 
   ```shell
@@ -41,7 +41,7 @@ spec:
 EOF
 ```
 
-Запуск Ingress-контроллера может занять какое-то время. Убедитесь что поды Ingress-контроллера перешли в статус  `Running`, выполнив команду:
+Запуск Ingress-контроллера может занять какое-то время. Убедитесь что поды Ingress-контроллера перешли в статус `Running`, выполнив команду:
 
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
@@ -54,16 +54,15 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {% endofftopic %}
 
-
 ## Настройка DNS
 
 Для доступа к веб-интерфейсам платформы необходимо настроить DNS-записи для домена кластера.
 
-**Важно:** Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре clusterDomain и внутренней сервисной зоне сети. Например, если используется `clusterDomain: cluster.local` (значение по умолчанию), а сервисная зона сети — `ru-central1.internal`, то `publicDomainTemplate` не может быть `%s.cluster.local` или `%s.ru-central1.internal`.
+**Важно:** Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре `clusterDomain` и внутренней сервисной зоне сети. Например, если используется `clusterDomain: cluster.local` (значение по умолчанию), а сервисная зона сети — `ru-central1.internal`, то `publicDomainTemplate` не может быть `%s.cluster.local` или `%s.ru-central1.internal`.
 
 ### Wildcard-домен
 
-Поддомены должны резолвиться в IP адрес узла, где запускается nginx-controller. В нашем случае это master-0. Так же убедитесь, что шаблон имён имеет вид %s.<домен>:
+Поддомены должны резолвиться в IP-адрес узла, где запускается nginx-controller. В нашем случае это master-0. Так же убедитесь, что шаблон имён имеет вид `%s.<домен>`:
 
 ```shell
 sudo -i d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
@@ -84,7 +83,7 @@ sudo -i d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTe
 
 Если в шаблоне указан не wildcard-домен, то нужно создать дополнительные А или CNAME-записи со значением публичного IP-адреса, где запускается nginx-controller. Записи нужны для всех сервисов Deckhouse.
 
-Например, для домена my-dvp-cluster.example.com и шаблона с поддоменами %s.my-dvp-cluster.example.com, записи будут выглядеть так:
+Например, для домена `my-dvp-cluster.example.com` и шаблона с поддоменами `%s.my-dvp-cluster.example.com`, записи будут выглядеть так:
 
 ```
 api.my-dvp-cluster.example.com
@@ -103,7 +102,7 @@ status.my-dvp-cluster.example.com
 upmeter.my-dvp-cluster.example.com
 ```
 
-Для домена my-dvp-cluster.example.com и шаблона с индивидуальными доменами `%s-my-dvp-cluster.example.com`, записи будут выглядеть так:
+Для домена `my-dvp-cluster.example.com` и шаблона с индивидуальными доменами `%s-my-dvp-cluster.example.com`, записи будут выглядеть так:
 
 ```
 api-my-dvp-cluster.example.com
@@ -157,38 +156,37 @@ EOF
 
 1. Сгенерируйте пароль
 
-  ```shell
-  echo "<USER-PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
-  ```
-
-  здесь `<USER-PASSWORD>` — пароль, который нужно установить пользователю.
+   ```shell
+   echo "<USER-PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+   ```
+ 
+   здесь `<USER-PASSWORD>` — пароль, который нужно установить пользователю.
 
 2. Создайте пользователя
 
-
-```shell
-sudo -i d8 k create -f - <<EOF
----
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
-metadata:
-  name: admin
-spec:
-  subjects:
-  - kind: User
-    name: admin@deckhouse.io
-  accessLevel: SuperAdmin
-  portForwarding: true
----
-apiVersion: deckhouse.io/v1
-kind: User
-metadata:
-  name: admin
-spec:
-  email: admin@my-dvp-cluster.example.com
-  password: '<BASE64 СТРОКА С ПРЕДЫДУЩЕГО ШАГА>'
-
-EOF
-```
+   ```shell
+   sudo -i d8 k create -f - <<EOF
+   ---
+   apiVersion: deckhouse.io/v1
+   kind: ClusterAuthorizationRule
+   metadata:
+     name: admin
+   spec:
+     subjects:
+     - kind: User
+       name: admin@deckhouse.io
+     accessLevel: SuperAdmin
+     portForwarding: true
+   ---
+   apiVersion: deckhouse.io/v1
+   kind: User
+   metadata:
+     name: admin
+   spec:
+     email: admin@my-dvp-cluster.example.com
+     password: '<BASE64 СТРОКА С ПРЕДЫДУЩЕГО ШАГА>'
+   
+   EOF
+   ```
 
 Теперь возможен вход по почте и паролю в веб интерфейсы кластера. Далее рекомендуется настроить пользователей по разделу [Разграничение доступа / Ролевая модель](../../platform-management/access-control/role-model.html).

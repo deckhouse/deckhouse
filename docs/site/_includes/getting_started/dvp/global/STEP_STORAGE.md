@@ -1,6 +1,6 @@
 At this step, the cluster is deployed in a minimal configuration. Configure the storage that will be used to create storage for metrics of the cluster components and virtual machine disks.
 
-Enable `sds-replicated-volume` module — a module for the software-defined storage:
+Enable `sds-replicated-volume` module — a module for the software-defined storage. Run the following commands on the **master node**:
 
 {% snippetcut %}
 ```shell
