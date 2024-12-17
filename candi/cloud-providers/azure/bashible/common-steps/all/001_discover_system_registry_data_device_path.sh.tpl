@@ -2,49 +2,46 @@
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
 
-# The file always exists (created in step 000_create_system_registry_data_device_path.sh.tpl)
-system_registry_file="/var/lib/bashible/system_registry_data_device_path"
+function discover_device_path() {
+  local lun_name="$1"
 
-# Read the device path from the file
-dataDevice=$(cat "$system_registry_file")
-
-# If $dataDevice is empty, exit the script
-if [ -z "$dataDevice" ]; then
-  # Nothing to do
-  exit 0
-fi
-
-# If dataDevice is non-empty and begins with /dev, log it and exit
-if [[ "$dataDevice" == /dev/* ]]; then
-  # Nothing to do
-  echo "system_registry_data_device: $dataDevice"
-  exit 0
-fi
-
-# Attempt to list devices at a specific LUN path
-get_disks_by_lun_id="$(ls /dev/disk/azure/*/lun11 -l 2>/dev/null)"
-
-# Check if the result is empty
-if [ -z "$get_disks_by_lun_id" ]; then
-  # If no devices are found, clear the file
-  : > "$system_registry_file"
-else
-  # Ensure only one device is found; otherwise, report failure
-  if [ "$(wc -l <<< "$get_disks_by_lun_id")" -ne 1 ]; then
-    >&2 echo "Failed to discover system-registry-data device"
+  # Full device path via /dev/disk/azure/*/$lun_name
+  local device_path="$(ls -1 /dev/disk/azure/*/$lun_name)"
+  if [ "$(wc -l <<< "$device_path")" -ne 1 ]; then
+    >&2 echo "Failed to discover device by lun: $lun_name"
     exit 1
   fi
 
-  # Extract the device path from the listing
-  new_device_path="$(awk '{gsub("../../..", "/dev"); print $11}' <<< "$get_disks_by_lun_id")"
+  # Check if the symbolic link exists
+  if [ ! -e "$device_path" ]; then
+    >&2 echo "Failed to discover device: $device_path not found"
+    exit 1
+  fi
+  
+  # Resolve the symbolic link to the real path
+  device_path=$(readlink -f "$device_path")
 
-  # Log the discovered device path and write it to the file
-  echo "system_registry_data_device: $new_device_path"
-  echo "$new_device_path" > "$system_registry_file"
+  # Check that the path is resolved and exists
+  if [ -z "$device_path" ] || [ ! -b "$device_path" ]; then
+    >&2 echo "Failed to resolve device path for: $lun_name"
+    exit 1
+  fi
+  
+  # Return the real device path
+  echo "$device_path"
+}
+
+# The system registry file is always created in step 000_create_system_registry_data_device_path.sh.tpl
+system_registry_file="/var/lib/bashible/system_registry_data_device_path"
+
+# Get system registry data device
+DATA_DEVICE=$(cat "$system_registry_file")
+
+if [ -n "$DATA_DEVICE" ] && [[ "$DATA_DEVICE" != /dev/* ]]; then
+  DATA_DEVICE=$(discover_device_path "lun11")
+  echo "system-registry-data device: $DATA_DEVICE"
+  echo "$DATA_DEVICE" > "$system_registry_file"
 fi
-
-# List block devices for diagnostic purposes
-blkid
 
   {{- end  }}
 {{- end  }}
