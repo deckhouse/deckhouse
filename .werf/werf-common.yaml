@@ -75,15 +75,17 @@ shell:
   # ssh auth to 3p repos
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 ---
+{{ $date := "2024-12-14" }}
 image: alt-p11-artifact
 from: {{ .Images.BASE_ALT_P11 }}
 final: false
 shell:
   beforeInstall:
-  # fix alt packages on 2024-10-31 to get rust version 1.79
-  - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/2024/12/14/ x86_64 classic|g" /etc/apt/sources.list.d/alt.list
-  - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64-i586 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/2024/12/14/ x86_64-i586 classic|g" /etc/apt/sources.list.d/alt.list
-  - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/noarch classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/2024/12/14/ noarch classic|g" /etc/apt/sources.list.d/alt.list
+  - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ x86_64 classic|g" /etc/apt/sources.list.d/alt.list
+  - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/x86_64-i586 classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ x86_64-i586 classic|g" /etc/apt/sources.list.d/alt.list
+  - sed -i "s|http://ftp.altlinux.org/pub/distributions/ALTLinux p11/branch/noarch classic|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/ noarch classic|g" /etc/apt/sources.list.d/alt.list
   {{- include "alt packages proxy" . | nindent 2 }}
   # ssh auth to 3p repos
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+docker:
+  USER: 64535
