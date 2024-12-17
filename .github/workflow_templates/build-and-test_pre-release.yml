@@ -97,7 +97,7 @@ jobs:
     needs:
     - git_info
     - build_deckhouse
-{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "dmtlint") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_template" (slice $ctx "dmtlint" "build_deckhouse") | strings.Indent 4 }!}
 
   dhctl_tests:
     name: Dhctl Tests
