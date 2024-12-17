@@ -203,7 +203,7 @@ spec:
       volumes:
       - configMap:
           defaultMode: 420
-          name: istio-ca-root-cert
+          name: d8-istio-ca
         name: istiod-ca-cert
       - downwardAPI:
           defaultMode: 420

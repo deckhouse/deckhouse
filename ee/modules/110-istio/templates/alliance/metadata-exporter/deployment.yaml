@@ -108,7 +108,7 @@ spec:
             {{- include "metadata_discovery_resources" . | nindent 12 }}
   {{- end }}
         volumeMounts:
-        - name: istio-ca-root-cert
+        - name: d8-istio-ca
           mountPath: /certs/
         - name: authn-keypair
           mountPath: /keys/pub.pem
@@ -140,9 +140,9 @@ spec:
         - name: tmp
           mountPath: /tmp/
       volumes:
-      - name: istio-ca-root-cert
+      - name: d8-istio-ca
         configMap:
-          name: istio-ca-root-cert
+          name: d8-istio-ca
       - name: authn-keypair
         secret:
           defaultMode: 420
