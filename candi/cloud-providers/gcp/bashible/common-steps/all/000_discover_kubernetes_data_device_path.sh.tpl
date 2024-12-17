@@ -17,13 +17,28 @@
   {{- if eq .nodeGroup.name "master" }}
 
 function discover_device_path() {
-  local cloud_disk_name="$1"
-  local device_name="$(lsblk -lo name,serial | grep "$cloud_disk_name" | cut -d " " -f1)"
-  if [ -z "$device_name" ]; then
-    >&2 echo "failed to discover kubernetes-data device"
-    exit 1
-  fi
-  echo "/dev/$device_name"
+   local cloud_disk_name="$1"
+
+   # Full device path via /dev/disk/by-id/
+   local device_path="/dev/disk/by-id/google-${cloud_disk_name}"
+
+   # Check if the symbolic link exists
+   if [ ! -e "$device_path" ]; then
+     >&2 echo "Failed to discover device: $device_path not found"
+     exit 1
+   fi
+   
+   # Resolve the symbolic link to the real path
+   device_path=$(readlink -f "$device_path")
+
+   # Check that the path is resolved and exists
+   if [ -z "$device_path" ] || [ ! -b "$device_path" ]; then
+     >&2 echo "Failed to resolve device path for: $cloud_disk_name"
+     exit 1
+   fi
+   
+   # Return the real device path
+   echo "$device_path"
 }
 
 # Skip for
