@@ -106,6 +106,8 @@ locals {
 resource "yandex_compute_instance" "nat_instance" {
   count = local.is_with_nat_instance ? 1 : 0
 
+  allow_stopping_for_update = true
+
   name                      = join("-", [var.prefix, "nat"])
   hostname                  = join("-", [var.prefix, "nat"])
   zone                      = local.internal_subnet_zone

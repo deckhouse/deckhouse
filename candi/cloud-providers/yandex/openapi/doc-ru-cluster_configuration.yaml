@@ -208,7 +208,7 @@ apiVersions:
                   Количество оперативной памяти (в мегабайтах) у создаваемого NAT-инстанса.
               platform:
                 description: |
-                  Тип платформы процессора.
+                  Тип платформы процессора у создаваемого NAT-инстанса.
       provider:
         description: |
           [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/environment.html) к API Yandex Cloud.

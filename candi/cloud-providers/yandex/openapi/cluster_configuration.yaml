@@ -416,7 +416,7 @@ apiVersions:
                 default: 2048
               platform:
                 description: |
-                  Processor platform type.
+                  Processor platform type on the NAT instance.
                 type: string
       provider:
         type: object
