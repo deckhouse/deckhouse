@@ -1,121 +1,121 @@
 ---
-title: Аппаратные требования к узлам кластера на bare metal
+title: Hardware requirements for bare metal cluster nodes
 permalink: en/guides/hardware-requirements.html
-description: Аппаратные требования к узлам кластера под управлением Deckhouse Kubernetes Platform.
+description: Hardware requirements for cluster nodes managed by Deckhouse Kubernetes Platform.
 lang: en
 ---
 
-Перед развертыванием кластера под управлением Deckhouse Kubernetes Platform необходимо определиться с конфигурацией будущего кластера и выбрать параметры для будущих узлов кластера, такие как количество RAM, CPU и так далее.
+Before deploying a cluster running Deckhouse Kubernetes Platform, you have to decide on the configuration of the future cluster and select parameters for its nodes (e. g., RAM, CPU, etc.).
 
-## Планирование установки
+## Installation Planning
 
-Прежде чем приступить к развертыванию кластера необходимо провести планирование ресурсов, которые могут потребоваться для его работы. Для этого следует ответить на несколько вопросов:
+Before deploying a cluster, you need to plan for the resources that you might need to run the cluster. The following questions will help you plan ahead:
 
-* Какая нагрузка планируется на кластер?
-* Требуется ли кластеру режим повышенной нагрузки?
-* Требуется ли кластеру режим высокой доступности?
-* Какие модули DKP планируется использовать?
-
-{% alert level="info" %}
-Все описанное дальше применимо к установке Deckhouse Kubernetes Platform [с набором модулей Default](/products/kubernetes-platform/documentation/v1/#наборы-модулей).
-{% endalert %}
-
-Из ответов на эти вопросы следует выбор количества узлов, рекомендуемых для развертывания кластера. См. подробнее [в разделе «Сценарии развертывания»](#сценарии-развертывания).
-
-## Сценарии развертывания
-
-{% alert level="warning" %}
-В разделе приведен примерный расчет ресурсов, необходимых для кластера в зависимости от предполагаемой нагрузки.
-{% endalert %}
-
-В состав любого сценария могут входить следующие типы узлов:
-
-* **master-узел** — узлы, управляющие кластером;
-* **frontend-узлы** — узлы, балансирующие входящий трафик, на них работают Ingress-контроллеры;
-* **узлы мониторинга** — служат для запуска Grafana, Prometheus и других компонентов мониторинга;
-* **системные узлы** — предназначены для запуска модулей Deckhouse;
-* **worker-узлы** — предназначены для запуска пользовательских приложений.
-
-Подробнее с этими типами узлов можно ознакомиться [в секции «Особенности конфигурации»](https://deckhouse.ru/products/kubernetes-platform/guides/production.html#%D0%BE%D1%81%D0%BE%D0%B1%D0%B5%D0%BD%D0%BD%D0%BE%D1%81%D1%82%D0%B8-%D0%BA%D0%BE%D0%BD%D1%84%D0%B8%D0%B3%D1%83%D1%80%D0%B0%D1%86%D0%B8%D0%B8) раздела «Подготовка к production».
-
-### Минимальная конфигурация кластера
-
-Кластер в такой конфигурации подходит для небольших проектов с невысокой нагрузкой и надежностью. В такой кластер входят:
-
-* **master-узел** — 1 шт.;
-* **worker-узлы** — от 1 шт;.
-
-Такая конфигурация потребует **от 8 CPU и 16 ГБ RAM**, плюс быстрые **диски с 400+ IOPS** и объемом минимум 50 Гб для master-узлов.
-
-Характеристики worker-узла выбираются самостоятельно исходя из предполагаемой пользовательской нагрузки. Также следует учитывать, что в такой конфигурации некоторые из компонентов DKP также будут работать на worker-узле.
-
-{% alert level="warning" %}
-Использование такого кластера может быть небезопасно, т.к. в случае выхода из строя единственного master-узла пострадает весь кластер.
-{% endalert %}
-
-### Типовая конфигурация кластера
-
-Рекомендуемая конфигурация. Устойчива к отказам до двух мастер-узлов. Значительно повышает доступность сервисов.
-В типовой кластер входят:
-
-* **master-узлы** — 3 шт.;
-* **frontend-узлы** — 2 шт;
-* **системные узлы** — 2 шт.;
-* **worker-узлы** — от 1 шт. в зависимости от предполагаемой нагрузки.
-
-Такая конфигурация потребует **от 24 CPU и 48 ГБ RAM**, плюс быстрые **диски с 400+ IOPS** и объемом минимум 50 Гб для master-узлов.
+* What is the expected load?
+* Does your cluster require a high load mode?
+* Does your cluster require a high availability mode?
+* Which DKP modules do you intend to use?
 
 {% alert level="info" %}
-Для компонентов Deckhouse желательно выделить отдельный [storageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) на быстрых дисках.
+The information below applies to a Deckhouse Kubernetes Platform installation running the [Default module set](/products/kubernetes-platform/documentation/v1/#module-sets).
 {% endalert %}
 
-### Конфигурация для кластера с повышенной нагрузкой
+The answers to these questions can help you estimate the number of nodes recommended for your cluster deployment. See [Deployment Scenarios](#deployment-scenarios) to learn more.
 
-Отличается от типовой конфигурации выделенными узлами мониторинга. Позволяет обеспечить высокий уровень наблюдаемости в кластере даже при высоких нагрузках.
-В кластере с повышенной нагрузкой входят:
-
-* **master-узлы** — 3 шт.;
-* **frontend-узлы** — 2 шт;
-* **системные узлы** — 2 шт.;
-* **узлы мониторинга** — 2 шт;
-* **worker-узлы** — от 1 шт. в зависимости от предполагаемой нагрузки.
-
-Такая конфигурация потребует **от 28 CPU и 64 ГБ RAM**, плюс быстрые **диски с 400+ IOPS** и объемом минимум 50 Гб для master-узлов и узлов мониторинга.
-
-Для компонентов Deckhouse желательно выделить отдельный [storageClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) на быстрых дисках.
-
-## Требования к узлам кластера
-
-Каждый из узлов кластера должен соответствовать следующим требованиям:
-
-* [поддерживаемая ОС](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (для некоторых ОС могут быть особенности, см. «Примечания» в таблице поддерживаемых версий);
-* ядро Linux версии 5.7 или новее;
-* **уникальный hostname** в пределах серверов (виртуальных машин) кластера;
-* HTTP(S)-доступ до хранилища образов контейнеров `registry.deckhouse.ru` или корпоративному registry в случае установки в закрытом окружении;
-* доступ к стандартным для используемой ОС репозиториям пакетов;
-* на узле не должно быть установлено пакетов container runtime, например containerd или Docker;
-* на узле должны быть установлены пакеты `cloud-utils` и `cloud-init` **и запущены соответствующим им службы**.
-* все узлы должны иметь доступ к серверам времени (NTP), чтобы модуль [Chrony](../documentation/v1/modules/chrony/) мог выполнить синхронизацию времени.
-
-### Минимальные требования к ресурсам узлов
-
-Вне зависимости от условий эксплуатации будущего кластера и планируемых нагрузок рекомендуются следующие **минимальные ресурсы** для инфраструктурных узлов в зависимости от их роли в кластере:
-
-* **Мастер-узел** — 4 CPU, 8 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS);
-* **Frontend-узел** — 2 CPU, 4 ГБ RAM, 50 ГБ дискового пространства.
-* **Узел мониторинга** (для нагруженных кластеров) — 4 CPU, 8 ГБ RAM; 50 ГБ дискового пространства на быстром диске (400+ IOPS).
-* **Системный узел**:
-  * 2 CPU, 4 ГБ RAM, 50 ГБ дискового пространства — если в кластере есть выделенные узлы мониторинга;
-  * 4 CPU, 8 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS) — если в кластере нет выделенных узлов мониторинга.
-* **Worker-узел** — требования аналогичны требованиям к master-узлу, но во многом зависят от характера запускаемой на узле (узлах) нагрузки.
+## Deployment Scenarios
 
 {% alert level="warning" %}
-Работа кластера на узлах с минимальными требованиями сильно зависит от набора включенных модулей DKP.
-
-При большом количестве включенных модулей ресурсы узлов лучше увеличить.
+This section helps you estimate the resources required for the cluster based on the expected load.
 {% endalert %}
 
-### Требования к ресурсам для production
+In general, your cluster might include the following node types:
+
+* **master nodes** — cluster management nodes
+* **frontend nodes** — nodes that balance incoming traffic; Ingress controllers run on them
+* **monitoring nodes** — these nodes are used to run Grafana, Prometheus and other monitoring tools
+* **system nodes** — these nodes are intended to run Deckhouse modules
+* **worker nodes** — these nodes are used to run user applications
+
+See [Configuration Features](https://deckhouse.io/products/kubernetes-platform/guides/production.html#things-to-consider-when-configuring) of the "Going to Production" section for details on these node types.
+
+### Minimum Сluster Сonfiguration
+
+Minimum cluster configuration is suitable for small projects with low load and low reliability requirements. Such a cluster includes:
+
+* **master node** — 1 pc
+* **worker nodes** — 1 pc or more
+
+Such a configuration requires **8+ CPUs and 16+GB RAM** as well as speedy **400+ IOPS disks** and a minimum of 50GB for the master nodes.
+
+It is up to you to define the characteristics of the worker node based on the expected user load. Note that in this configuration, some of the DKP components will also run on the worker node.
+
+{% alert level="warning" %}
+Such a cluster configuration is risky because if a single master node fails, the entire cluster will be affected.
+{% endalert %}
+
+### Typical Сluster Сonfiguration
+
+This is the recommended configuration that can tolerate the failure of two master nodes. It greatly improves service availability.
+A typical cluster includes:
+
+* **master nodes** — 3 pcs
+* **frontend nodes** — 2 pcs
+* **system nodes** — 2 pcs
+* **worker nodes** — 1+ pcs depending on the expected load
+
+Such a configuration requires **24+ CPUs and 48+GB RAM** as well as speedy **400+ IOPS disks** and a minimum of 50GB for the master nodes.
+
+{% alert level="info" %}
+It is recommended to allocate a dedicated [StorageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) on fast disks for Deckhouse components.
+{% endalert %}
+
+### High-load Cluster Configuration
+
+Unlike the typical configuration, this configuration includes dedicated monitoring nodes, enabling a high level of observability in the cluster even under high loads.
+The cluster with high load includes:
+
+* **master nodes** — 3 pcs
+* **frontend nodes** — 2 pcs
+* **system nodes** — 2 pcs
+* **monitoring nodes** — 2 pcs
+* **worker nodes** — 1+ pcs depending on the expected load
+
+Such a configuration requires **28+ CPUs and 64+GB RAM** as well as speedy **400+ IOPS disks** and a minimum of 50GB for the master and monitoring nodes.
+
+It is recommended to allocate a dedicated [StorageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-storageclass) on fast disks for Deckhouse components.
+
+## Cluster Node Requirements
+
+Each cluster node must comply with the following requirements:
+
+* [supported OS version](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html) (Limitations apply for some operating systems, see the "Notes" section in the supported versions table.)
+* Linux kernel version 5.7 or later
+* **unique hostname** within the cluster servers (virtual machines)
+* access over HTTP(S) to the `registry.deckhouse.io` container image repository or the corporate registry if installed in a private environment
+* access to the default package repositories for the operating system in use
+* no container runtime packages (e.g., containerd or Docker) must be present on the node
+* the `cloud-utils` and `cloud-init` packages must be installed on the node **and their corresponding services must be running**
+* all nodes must have access to time servers (NTP) so that the [Chrony](../documentation/v1/modules/chrony/) module can synchronize time
+
+### Minimum Node Resource Requirements
+
+Regardless of the way the cluster will be operated and the workloads expected to be run in it, the following **minimum resources** are recommended for infrastructure nodes depending on their role in the cluster:
+
+* **Master node** — 4 CPUs, 8GB of RAM, 60GB of disk space on performant disk (400+ IOPS)
+* **Frontend node** — 2 CPUs, 4GB of RAM, 50GB of disk space
+* **Monitoring node** (for high-load clusters) — 4 CPUs, 8GB of RAM, 50GB of disk space on performant disk (400+ IOPS)
+* **System node**:
+  * 2 CPUs, 4GB of RAM, 50GB of disk space — if there are dedicated monitoring nodes in the cluster
+  * 4 CPUs, 8GB of RAM, 60GB of disk space on performant disk (400+ IOPS) — if no dedicated monitoring nodes are running in the cluster
+* **Worker node** — the requirements are similar to those for the master node, but largely depend on the nature of the workload running on the node(s).
+
+{% alert level="warning" %}
+The way the cluster will run on minimum requirement nodes largely depends on which DKP modules are enabled.
+
+We recommend to increase the node resources if the number of enabled modules is large.
+{% endalert %}
+
+### Resource Requirements for Nodes Running Production Workloads
 
 Для того чтобы в production-среде кластер не столкнулся с нехваткой ресурсов на узлах, а все модули в любых конфигурациях могли нормально работать, рекомендуются следующие системные требования для узлов:
 
@@ -127,10 +127,10 @@ lang: en
   * 8 CPU, 16 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS) — если в кластере нет выделенных узлов мониторинга.
 * **Worker-узел** — 4 CPU, 12 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS).
 
-### Кластер с одним и единственным master-узлом
+### Cluster With a Single Master Node
 
 {% alert level="warning" %}
-У такого кластера отсутствует отказоустойчивость. Его использование не рекомендуется в production-окружениях.
+Such a cluster lacks fault tolerance. We highly advise you against using this kind of clusters in production environments.
 {% endalert %}
 
 В некоторых случаях может быть достаточно всего одного единственного узла, который будет выполнять все описанные выше роли узлов в одиночку. Например, это может быть полезно в ознакомительных целях или для каких-то совсем простых задач, не требовательных к ресурсам.
