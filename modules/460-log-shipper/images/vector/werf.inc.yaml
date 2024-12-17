@@ -47,13 +47,13 @@ shell:
   - export CARGO_NET_GIT_FETCH_WITH_CLI=true
   - cd /src
 {{- if $.CargoProxy }}
-#  - echo '[source.crates-io]' >> .cargo/config.toml
-#  - echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
-#  - echo '[registries.crates-io-mirror]' >> .cargo/config.toml
-#  - echo 'index = "sparse+http://{{ $.CargoProxy }}/index/"' >> .cargo/config.toml
+  - echo '[source.crates-io]' >> .cargo/config.toml
+  - echo 'replace-with = "crates-io-mirror"' >> .cargo/config.toml
+  - echo '[registries.crates-io-mirror]' >> .cargo/config.toml
+  - echo 'index = "sparse+http://{{ $.CargoProxy }}/index/"' >> .cargo/config.toml
 {{- end }}
 #  - sed -i "s|https://github.com|{{ $.SOURCE_REPO }}|g" Cargo.toml
-#  - git config --global url."{{ $.SOURCE_REPO }}".insteadOf https://github.com
+  - git config --global url."{{ $.SOURCE_REPO }}".insteadOf https://github.com
   - |
     cargo build \
     --release \
