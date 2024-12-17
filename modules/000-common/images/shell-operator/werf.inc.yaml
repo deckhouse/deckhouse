@@ -2,7 +2,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ $.Images.BASE_ALT_P11 }}
-fromCacheVersion: 1
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell-operator
@@ -35,6 +34,7 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromArtifact: common/src-artifact
+fromCacheVersion: 1
 shell:
   install:
   - git clone --branch {{ $shellOperatorVersion }} --depth 1 {{ $.SOURCE_REPO }}/flant/shell-operator.git /src/shell-operator
