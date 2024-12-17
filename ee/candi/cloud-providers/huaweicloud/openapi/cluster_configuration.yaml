@@ -281,11 +281,11 @@ apiVersions:
           accessKey:
             type: string
             description: |
-              The Huawei Cloud access key to use.
+              The Huawei Cloud access key.
           secretKey:
             type: string
             description: |
-              The Huawei Cloud secret key to use.
+              The Huawei Cloud secret key.
           insecure:
             type: boolean
             description: |
