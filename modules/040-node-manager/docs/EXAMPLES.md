@@ -227,7 +227,6 @@ This example shows how you can use filters in the StaticInstance [label selector
 The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
 {% endalert %}
 
-
    ```shell
    kubectl create -f - <<EOF
    apiVersion: deckhouse.io/v1
