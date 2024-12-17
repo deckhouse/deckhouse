@@ -187,7 +187,9 @@ spec:
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
    metadata:
-     name: static-0
+     name: static-worker-1
+     labels:
+       role: worker
    spec:
      # Укажите IP-адрес сервера статического узла.
      address: "<SERVER-IP>"
@@ -196,6 +198,10 @@ spec:
        name: credentials
    EOF
    ```
+
+{% alert level="warning" %}
+Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их метки (labels).
+{% endalert %}
 
 1. Создайте в кластере ресурс [NodeGroup](cr.html#nodegroup):
 
@@ -209,16 +215,23 @@ spec:
      nodeType: Static
      staticInstances:
        count: 1
+       labelSelector:
+         matchLabels:
+           role: worker
    EOF
    ```
 
-### С помощью Cluster API Provider Static и фильтрами в label selector
+### С помощью Cluster API Provider Static для нескольких групп узлов
 
 Пример использования фильтров в [label selector](cr.html#nodegroup-v1-spec-staticinstances-labelselector) StaticInstance, для группировки статических узлов и использования их в разных NodeGroup. В примере используются две группы узлов (`front` и `worker`), предназначенные для разных задач, которые должны содержать разные по характеристикам узлы — два сервера для группы `front` и один для группы `worker`.
 
 1. Подготовьте необходимые ресурсы (3 сервера или виртуальные машины) и создайте ресурс `SSHCredentials`, аналогично п.1 и п.2 [примера](#с-помощью-cluster-api-provider-static).
 
 1. Создайте в кластере два ресурса [NodeGroup](cr.html#nodegroup) (здесь и далее используйте `kubectl`, настроенный на управление кластером):
+
+{% alert level="warning" %}
+Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их метки (labels).
+{% endalert %}
 
    ```shell
    kubectl create -f - <<EOF

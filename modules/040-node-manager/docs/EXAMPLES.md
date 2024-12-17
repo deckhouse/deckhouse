@@ -181,7 +181,9 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
    metadata:
-     name: static-0
+     name: static-worker-1
+     labels:
+       role: worker
    spec:
      # Specify the IP address of the static node server.
      address: "<SERVER-IP>"
@@ -190,6 +192,10 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
        name: credentials
    EOF
    ```
+
+{% alert level="warning" %}
+The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
+{% endalert %}
 
 1. Create a [NodeGroup](cr.html#nodegroup) resource in the cluster:
 
@@ -203,16 +209,24 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
      nodeType: Static
      staticInstances:
        count: 1
+       labelSelector:
+         matchLabels:
+           role: worker
    EOF
    ```
 
-### Using the Cluster API Provider Static and label selector filters
+### Using Cluster API Provider Static for multiple node groups
 
 This example shows how you can use filters in the StaticInstance [label selector](cr.html#nodegroup-v1-spec-staticinstances-labelselector) to group static nodes and use them in different NodeGroups. Here, two node groups (`front` and `worker`) are used for different tasks. Each group includes nodes with different characteristics — the `front` group has two servers and the `worker` group has one.
 
 1. Prepare the required resources (3 servers or virtual machines) and create the `SSHCredentials` resource in the same way as step 1 and step 2 [of the example](#using-the-cluster-api-provider-static).
 
 1. Create two [NodeGroup](cr.html#nodegroup) in the cluster (from this point on, use `kubectl` configured to manage the cluster):
+
+{% alert level="warning" %}
+The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
+{% endalert %}
+
 
    ```shell
    kubectl create -f - <<EOF

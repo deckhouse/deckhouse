@@ -72,6 +72,9 @@ spec:
             Defines the runtime parameters of a node group.
           required:
             - spec
+          x-kubernetes-validations:
+            - message: spec.staticInstances.labelSelector is immutable and cannot be changed
+              rule: "!has(oldSelf.spec.staticInstances.labelSelector) || self.spec.staticInstances.labelSelector == oldSelf.spec.staticInstances.labelSelector"
           properties:
             metadata:
               type: object
