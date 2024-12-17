@@ -9,14 +9,10 @@ memory: 25Mi
 {{- end }}
 
 {{- define "prompp-context" -}}
-  {{- with .Values.global.modulesImages }}
-    {{- $ctx := dict "Chart" (dict "Name" "prompp") }}
-    {{- $promppDigests := dict "prompp" .digests.prompp }}
-    {{- $registry := dict "base" (printf "%s/modules" .registry.base) }}
-    {{- $values := dict "global" (dict "modulesImages" (dict "digests" $promppDigests "registry" $registry)) }}
-    {{- $_ := set $ctx "Values" $values }}
-    {{- $ctx | toYaml }}
-  {{- end }}
+{{- $values := deepCopy .Values | merge dict }}
+{{- $_ := set $values.global.modulesImages.registry "base" (printf "%s/modules/prompp" .Values.global.modulesImages.registry.base) }}
+{{- $ctx := dict "Chart" (dict "Name" "prompp") "Values" $values }}
+{{- $ctx | toYaml }}
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
