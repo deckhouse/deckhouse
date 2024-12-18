@@ -37,6 +37,14 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 80Mi
+    {{- range $name, $imageDigest := $images }}
+    - containerName: image-holder-{{ $name | kebabcase }}
+      minAllowed:
+        {{- include "image_holder_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 10m
+        memory: 10Mi
+    {{- end }}
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 
