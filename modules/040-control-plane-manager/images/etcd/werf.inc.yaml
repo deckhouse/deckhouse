@@ -9,7 +9,7 @@ git:
     install:
     - '**/*'
 shell:
-  beforeInstall:
+  install:
   - git clone -b v3.5.17 --depth 1 {{ $.SOURCE_REPO }}/etcd-io/etcd.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
