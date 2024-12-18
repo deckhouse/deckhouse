@@ -1,9 +1,9 @@
 module stale-dns-connections-cleaner
 
-go 1.21
+go 1.22.8
 
 require (
-	github.com/sirupsen/logrus v1.9.3
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241203083636-caa103ce9ee1
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240221172127-ec7bcb248e94
 	golang.org/x/sys v0.17.0
 	k8s.io/api v0.29.2
@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.3 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect

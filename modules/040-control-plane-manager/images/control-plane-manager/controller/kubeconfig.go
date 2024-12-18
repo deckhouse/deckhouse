@@ -28,8 +28,8 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -105,7 +105,7 @@ func renewKubeconfig(componentName string) error {
 
 		err := validateKubeconfig(path, tmpPath)
 		if err != nil {
-			log.Error(err)
+			log.Error(err.Error())
 		}
 		if shouldRecreateKubeConfig(err) {
 			removeFile(path)
