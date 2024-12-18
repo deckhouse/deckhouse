@@ -58,6 +58,10 @@ linters-settings:
         - time
       # Enforce putting arguments on separate lines.
       args-on-sep-lines: false
+  nonamedreturns:
+    # Report named error if it is assigned inside defer.
+    # Default: false
+    report-error-in-defer: false
 
 linters:
   disable-all: true

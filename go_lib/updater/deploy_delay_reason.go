@@ -114,10 +114,12 @@ func (r deployDelayReason) GoString() string {
 	return fmt.Sprintf("deployDelayReason(0b%b)", byte(r))
 }
 
-func (r deployDelayReason) splitReasons() (reasons []string) {
+func (r deployDelayReason) splitReasons() []string {
 	if r == noDelay {
 		return []string{"noDelay"}
 	}
+
+	reasons := make([]string, 0)
 
 	if r.contains(cooldownDelayReason) {
 		reasons = append(reasons, "cooldownDelayReason")
