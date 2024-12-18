@@ -12,11 +12,18 @@ docker:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ .ModulePath }}modules/462-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch flant-v2 {{ $.SOURCE_REPO }}/aquasecurity/trivy-db.git /src/trivy-db
   - git clone --depth 1 --branch v0.55.0-flant {{ $.SOURCE_REPO }}/aquasecurity/trivy.git /src/trivy
   - cd /src/trivy
+  - git apply /patches/trivy/*.patch --verbose
   - find . -type d -name "testdata" | xargs rm -rf
   - rm -rf docs
   - rm -rf .git
