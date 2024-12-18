@@ -41,6 +41,8 @@ spec:
     env:
     - name: PATH
       value: /opt/nginx-static/sbin
+    securityContext:
+      privileged: true
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf
@@ -53,6 +55,8 @@ spec:
     env:
     - name: PATH
       value: /opt/nginx-static/sbin
+    securityContext:
+      privileged: true
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf

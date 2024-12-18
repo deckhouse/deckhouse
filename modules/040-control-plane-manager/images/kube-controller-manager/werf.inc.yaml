@@ -21,5 +21,4 @@ import:
   before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/kube-controller-manager"]
-  USER: 0
 {{- end }}

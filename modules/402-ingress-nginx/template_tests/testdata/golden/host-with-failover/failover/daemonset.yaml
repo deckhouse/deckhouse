@@ -100,12 +100,8 @@ spec:
             cpu: 10m
             ephemeral-storage: 50Mi
             memory: 20Mi
-        securityContext:
-          capabilities:
-            add:
-            - NET_RAW
-            - NET_ADMIN
-          runAsNonRoot: false
+        # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
+        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         volumeMounts:
         - mountPath: /run/xtables.lock
           name: xtables-lock
