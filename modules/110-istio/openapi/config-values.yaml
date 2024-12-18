@@ -5,14 +5,14 @@ properties:
     type: string
     pattern: '^[0-9]+\.[0-9]+$'
     description: Specific version of Istio control-plane which handles unspecific versions of data plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`).
-    examples: ["1.16"]
-    default: "1.19"
+    examples: ["1.19"]
+    default: "1.21"
   additionalVersions:
     type: array
     description: |
       Additional versions of Istio control plane to install. You can use specific namespace labels (`istio.io/rev=`) to switch between installed revisions.
     examples:
-    - ["1.16"]
+    - ["1.19"]
     default: []
     items:
       type: string
