@@ -7,3 +7,4 @@ shell:
   - apt-get install -y git
   - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
   - mkdir -p /src
+  - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config

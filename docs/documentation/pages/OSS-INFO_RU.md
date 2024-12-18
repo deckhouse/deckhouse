@@ -24,7 +24,7 @@ lang: ru
                     {{ item.description }}
                 </div>
                 <div class="oss__item-license">
-                    {{ item.licence }}
+                    {{ item.license }}
                 </div>
             </div>
         {% endfor %}

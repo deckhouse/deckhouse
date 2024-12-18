@@ -92,7 +92,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.bootstrap(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
 					sendCh <- &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}}
 				}()
 
@@ -121,6 +121,21 @@ connectionProcessor:
 			}
 		}
 	}
+}
+
+func (s *Service) bootstrapSafe(
+	ctx context.Context,
+	request *pb.BootstrapStart,
+	switchPhase phases.DefaultOnPhaseFunc,
+	logWriter io.Writer,
+) (result *pb.BootstrapResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.BootstrapResult{Err: panicMessage(ctx, r)}
+		}
+	}()
+
+	return s.bootstrap(ctx, request, switchPhase, logWriter)
 }
 
 func (s *Service) bootstrap(

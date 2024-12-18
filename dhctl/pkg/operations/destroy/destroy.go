@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -235,7 +236,7 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
 	for _, host := range mastersHosts {
 		settings := d.SSHClient.Settings.Copy()
-		settings.SetAvailableHosts([]string{host})
+		settings.SetAvailableHosts([]session.Host{host})
 		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).Run(func() error {
 			cmd := frontend.NewCommand(settings, cmd)
 			cmd.Sudo()

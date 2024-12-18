@@ -62,10 +62,10 @@ func (c *MasterNodeGroupController) populateNodeToHost() error {
 		return nil
 	}
 
-	var userPassedHosts []string
+	var userPassedHosts []session.Host
 	sshCl := c.client.NodeInterfaceAsSSHClient()
 	if sshCl != nil {
-		userPassedHosts = append(make([]string, 0), sshCl.Settings.AvailableHosts()...)
+		userPassedHosts = append(make([]session.Host, 0), sshCl.Settings.AvailableHosts()...)
 	}
 
 	nodesNames := make([]string, 0, len(c.state.State))
@@ -73,7 +73,7 @@ func (c *MasterNodeGroupController) populateNodeToHost() error {
 		nodesNames = append(nodesNames, nodeName)
 	}
 
-	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, func(msg string) bool {
+	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
 		if c.commanderMode {
 			return true
 		}
@@ -112,9 +112,15 @@ func (c *MasterNodeGroupController) Run() error {
 		}
 	}
 
-	err := c.replaceKubeClient(c.state.State)
-	if err != nil {
-		return fmt.Errorf("failed to replace kube client: %w", err)
+	if !c.commanderMode {
+		if err := c.replaceKubeClient(c.state.State); err != nil {
+			return fmt.Errorf("failed to replace kube client: %w", err)
+		}
+	}
+
+	c.lockRunner = NewInLockLocalRunner(c.client, "local-converger")
+	if err := c.lockRunner.Run(c.run); err != nil {
+		return fmt.Errorf("failed to run lock runner: %w", err)
 	}
 
 	return nil
@@ -168,6 +174,11 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 
 	privateKeyPath := filepath.Join(tmpDir, "id_rsa_converger")
 
+	privateKey := session.AgentPrivateKey{
+		Key:        privateKeyPath,
+		Passphrase: c.convergeState.NodeUserCredentials.Password,
+	}
+
 	err = os.WriteFile(privateKeyPath, []byte(c.convergeState.NodeUserCredentials.PrivateKey), 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to write private key for NodeUser: %w", err)
@@ -190,10 +201,12 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 
 		ipAddress, err := terraform.GetMasterIPAddressForSSH(statePath)
 		if err != nil {
-			return fmt.Errorf("failed to get master IP address: %w", err)
+			log.WarnF("failed to get master IP address: %s", err)
+
+			continue
 		}
 
-		settings.AddAvailableHosts(ipAddress)
+		settings.AddAvailableHosts(session.Host{Host: ipAddress, Name: nodeName})
 	}
 
 	if c.lockRunner != nil {
@@ -201,12 +214,8 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 	}
 
 	c.client.KubeProxy.StopAll()
-	if sshCl != nil {
-		sshCl.Stop()
 
-	}
-
-	newSSHClient, err := ssh.NewClient(session.NewSession(session.Input{
+	newSSHClient := ssh.NewClient(session.NewSession(session.Input{
 		User:           c.convergeState.NodeUserCredentials.Name,
 		Port:           settings.Port,
 		BastionHost:    settings.BastionHost,
@@ -215,14 +224,18 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 		ExtraArgs:      settings.ExtraArgs,
 		AvailableHosts: settings.AvailableHosts(),
 		BecomePass:     c.convergeState.NodeUserCredentials.Password,
-	}), []session.AgentPrivateKey{
-		{
-			Key:        privateKeyPath,
-			Passphrase: c.convergeState.NodeUserCredentials.Password,
-		},
-	}).Start()
+	}), []session.AgentPrivateKey{privateKey})
+	// Avoid starting a new ssh agent
+	newSSHClient.InitializeNewAgent = false
+
+	_, err = newSSHClient.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
+	}
+
+	err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys)
+	if err != nil {
+		return fmt.Errorf("failed to add keys to ssh agent: %w", err)
 	}
 
 	kubeClient, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(newSSHClient))
@@ -231,16 +244,6 @@ func (c *MasterNodeGroupController) replaceKubeClient(state map[string][]byte) (
 	}
 
 	c.client = kubeClient
-
-	if c.lockRunner != nil {
-		c.lockRunner = NewInLockLocalRunner(c.client, "local-converger")
-
-		err := c.lockRunner.Run(c.run)
-		if err != nil {
-			return fmt.Errorf("failed to start lock runner: %w", err)
-		}
-	}
-
 	return nil
 }
 
@@ -257,7 +260,7 @@ func (c *MasterNodeGroupController) addNodes() error {
 
 	var (
 		nodesToWait        []string
-		masterIPForSSHList []string
+		masterIPForSSHList []session.Host
 		nodeInternalIPList []string
 	)
 
@@ -270,7 +273,7 @@ func (c *MasterNodeGroupController) addNodes() error {
 				return err
 			}
 
-			masterIPForSSHList = append(masterIPForSSHList, output.MasterIPForSSH)
+			masterIPForSSHList = append(masterIPForSSHList, session.Host{Host: output.MasterIPForSSH, Name: candidateName})
 			nodeInternalIPList = append(nodeInternalIPList, output.NodeInternalIP)
 
 			count++
@@ -286,12 +289,14 @@ func (c *MasterNodeGroupController) addNodes() error {
 	}
 
 	if len(masterIPForSSHList) > 0 {
-		sshCl := c.client.NodeInterfaceAsSSHClient()
-		if sshCl == nil {
-			panic("NodeInterface is not ssh")
-		}
+		if !c.commanderMode {
+			sshCl := c.client.NodeInterfaceAsSSHClient()
+			if sshCl == nil {
+				panic("NodeInterface is not ssh")
+			}
 
-		sshCl.Settings.AddAvailableHosts(masterIPForSSHList...)
+			sshCl.Settings.AddAvailableHosts(masterIPForSSHList...)
+		}
 
 		// we hide deckhouse logs because we always have config
 		nodeCloudConfig, err := GetCloudConfig(c.client, c.name, HideDeckhouseLogs, nodeInternalIPList...)
@@ -400,7 +405,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(convergedNode strin
 		}
 	}
 
-	return controlplane.NewHookForUpdatePipeline(c.client, nodesToCheck, c.config.UUID).
+	return controlplane.NewHookForUpdatePipeline(c.client, nodesToCheck, c.config.UUID, c.commanderMode).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
 		WithConfirm(confirm)

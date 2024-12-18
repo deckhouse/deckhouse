@@ -33,7 +33,7 @@ const (
 var ErrAuthSSHFailed = errors.New("authentication failed")
 
 func (pc *Checker) CheckSSHTunnel() error {
-	if app.PreflightSkipSSHForword {
+	if app.PreflightSkipSSHForward {
 		log.InfoLn("SSH forward preflight check was skipped (via skip flag)")
 		return nil
 	}

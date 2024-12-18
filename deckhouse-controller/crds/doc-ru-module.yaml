@@ -4,20 +4,27 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Отображает базовую информацию о модуле Deckhouse.
+            Репрезентация модуля
 
-            Ресурс предназначен **только для получения информации** о модуле, его нельзя изменить (ресурс только для чтения).
           properties:
             properties:
               properties:
                 weight:
                   description: |
                     _Вес_ (приоритет) модуля.
-                state:
-                  description: 'Состояние модуля (включен или выключен).'
+                availableSources:
+                  description: Доступные источники скачивания модуля.
                 source:
-                  description: 'Имя ModuleSource, если модуль скачан из него (иначе пусто).'
+                  description: Источник из которого скачен модуль (иначе пусто).
+                releaseChannel:
+                  description: Релизный канал модуля.
+                updatePolicy:
+                  description: Имя политики обновления модуля.
                 stage: 
-                  description: 'Текущая стадия жизненного цикла модуля.'
+                  description: Текущая стадия жизненного цикла модуля.
+                version:
+                  description: Версия модуля.
+                requirements:
+                   description: Зависимости модуля.
                 description:
-                  description: 'Описание модуля.'
+                  description: Описание модуля.

@@ -1,0 +1,46 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /discoverer
+    to: /discoverer
+    before: setup
+docker:
+  ENTRYPOINT: ["/discoverer"]
+---
+{{ $discovererRelPath := printf "%s/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer" .ModulePath }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_22_ALPINE_DEV }}
+shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+    - export GOPROXY={{ $.GOPROXY }}
+    - export VERSION="v0.1.0"
+    - export VERSION_COMMON="v0.3.0"
+    - git clone --depth 1 --branch ${VERSION} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/huaweicloud/cloud-data-discoverer.git /deckhouse/ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer
+    - git clone --depth 1 --branch ${VERSION_COMMON} {{ $.CLOUD_PROVIDERS_SOURCE_REPO }}/huaweicloud/huaweicloud-common.git /deckhouse/ee/modules/030-cloud-provider-huaweicloud/images/huaweicloud-common
+    - cd /deckhouse/ee/modules/030-cloud-provider-huaweicloud/images/cloud-data-discoverer
+    - go mod tidy
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /discoverer
+    - chown 64535:64535 /discoverer
+    - chmod 0755 /discoverer
+
+git:
+- add: /go_lib/cloud-data
+  to: /deckhouse/go_lib/cloud-data
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+    - hack
+    - {{ $discovererRelPath }}
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg

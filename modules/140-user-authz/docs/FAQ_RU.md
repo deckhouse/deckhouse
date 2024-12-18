@@ -70,10 +70,10 @@ spec:
 [Новая ролевая модель](./#новая-ролевая-модель) построена на принципе агрегации, она собирает более мелкие роли в более обширные,
 тем самым предоставляя лёгкие способы расширения модели собственными ролями.
 
-### Создание новой роли области
+### Создание новой роли подсистемы
 
-Предположим, что текущие области не подходят под ролевое распределение в компании и требуется создать новую [область](./#области-ролевой-модели),
-которая будет включать в себя роли из области `deckhouse`, области `kubernetes` и модуля user-authn.
+Предположим, что текущие подсистемы не подходят под ролевое распределение в компании и требуется создать новую [подсистему](./#подсистемы-ролевой-модели),
+которая будет включать в себя роли из подсистемы `deckhouse`, подсистемы `kubernetes` и модуля user-authn.
 
 Для решения этой задачи создайте следующую роль:
 
@@ -81,21 +81,21 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: custom:manage:mycustomscope:admin
+  name: custom:manage:mycustom:manager
   labels:
     rbac.deckhouse.io/use-role: admin
     rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: scope
-    rbac.deckhouse.io/scope: custom
-    rbac.deckhouse.io/aggregate-to-all-as: admin
+    rbac.deckhouse.io/level: subsystem
+    rbac.deckhouse.io/subsystem: custom
+    rbac.deckhouse.io/aggregate-to-all-as: manager
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         rbac.deckhouse.io/kind: manage
-        rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+        rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
     - matchLabels:
         rbac.deckhouse.io/kind: manage
-        rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
+        rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
     - matchLabels:
         rbac.deckhouse.io/kind: manage
         module: user-authn
@@ -118,31 +118,31 @@ rules: []
 
   > Этот лейбл должен быть обязательно указан!
 
-- показывает, что роль является ролью области, и обрабатываться будет соответственно:
+- показывает, что роль является ролью подсистемы, и обрабатываться будет соответственно:
 
   ```yaml
-  rbac.deckhouse.io/level: scope
+  rbac.deckhouse.io/level: subsystem
   ```
 
-- указывает область, за которую отвечает роль:
+- указывает подсистему, за которую отвечает роль:
 
   ```yaml
-  rbac.deckhouse.io/scope: custom
+  rbac.deckhouse.io/subsystem: custom
   ```
 
 - позволяет `manage:all`-роли сагрегировать эту роль:
 
   ```yaml
-  rbac.deckhouse.io/aggregate-to-all-as: admin
+  rbac.deckhouse.io/aggregate-to-all-as: manager
   ```
 
 Далее указаны селекторы, именно они реализуют агрегацию:
 
-- агрегирует роль админа из области `deckhouse`:
+- агрегирует роль менеджера из подсистемы `deckhouse`:
 
   ```yaml
   rbac.deckhouse.io/kind: manage
-  rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+  rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
   ```
 
 - агрерирует все правила от модуля user-authn:
@@ -152,12 +152,12 @@ rules: []
    module: user-authn
   ```
 
-Таким образом роль получает права от областей `deckhouse`, `kubernetes` и от модуля user-authn.
+Таким образом роль получает права от подсистем `deckhouse`, `kubernetes` и от модуля user-authn.
 
 Особенности:
 
 * ограничений на имя роли нет, но для читаемости лучше использовать этот стиль;
-* use-роли будут созданы в пространстве имён агрегированных областях и модуля, тип роли выбран лейблом.
+* use-роли будут созданы в пространстве имён агрегированных подсистем и модуля, тип роли выбран лейблом.
 
 ### Расширение пользовательской роли
 
@@ -167,36 +167,36 @@ rules: []
 
 ```yaml
 rbac.deckhouse.io/kind: manage
-rbac.deckhouse.io/aggregate-to-custom-as: admin
+rbac.deckhouse.io/aggregate-to-custom-as: manager
 ```
 
-Этот селектор позволит агрегировать роли к новой области через указание этого лейбла. После добавления нового селектора роль будет выглядеть так:
+Этот селектор позволит агрегировать роли к новой подсистеме через указание этого лейбла. После добавления нового селектора роль будет выглядеть так:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
  kind: ClusterRole
  metadata:
-   name: custom:manage:mycustomscope:admin
+   name: custom:manage:mycustom:manager
    labels:
      rbac.deckhouse.io/use-role: admin
      rbac.deckhouse.io/kind: manage
-     rbac.deckhouse.io/level: scope
-     rbac.deckhouse.io/scope: custom
-     rbac.deckhouse.io/aggregate-to-all-as: admin
+     rbac.deckhouse.io/level: subsystem
+     rbac.deckhouse.io/subsystem: custom
+     rbac.deckhouse.io/aggregate-to-all-as: manager
  aggregationRule:
    clusterRoleSelectors:
      - matchLabels:
          rbac.deckhouse.io/kind: manage
-         rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+         rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
      - matchLabels:
          rbac.deckhouse.io/kind: manage
-         rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
+         rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
      - matchLabels:
          rbac.deckhouse.io/kind: manage
          module: user-authn
      - matchLabels:
          rbac.deckhouse.io/kind: manage
-         rbac.deckhouse.io/aggregate-to-custom-as: admin
+         rbac.deckhouse.io/aggregate-to-custom-as: manager
  rules: []
  ```
 
@@ -207,9 +207,9 @@ rbac.deckhouse.io/aggregate-to-custom-as: admin
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-custom-as: admin
+     rbac.deckhouse.io/aggregate-to-custom-as: manager
      rbac.deckhouse.io/kind: manage
-   name: custom:manage:capability:mycustommodule:superresource:view
+   name: custom:manage:permission:mycustom:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -221,26 +221,26 @@ rbac.deckhouse.io/aggregate-to-custom-as: admin
    - watch
  ```
 
-Роль дополнит своими правами роль области, дав права на просмотр нового объекта.
+Роль дополнит своими правами роль подсистемы, дав права на просмотр нового объекта.
 
 Особенности:
 
 * ограничений на имя роли нет, но для читаемости лучше использовать этот стиль.
 
-### Расширение существующих manage scope-ролей
+### Расширение существующих manage subsystem-ролей
 
 Если необходимо расширить существующую роль, нужно выполнить те же шаги, что и в пункте выше, но изменив лейблы и название роли.
 
-Пример для расширения роли админа из области `deckhouse`(`d8:manage:deckhouse:admin`):
+Пример для расширения роли менеджера из подсистемы `deckhouse`(`d8:manage:deckhouse:manager`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+    rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
     rbac.deckhouse.io/kind: manage
-  name: custom:manage:capability:mycustommodule:superresource:view
+  name: custom:manage:permission:mycustommodule:superresource:view
 rules:
 - apiGroups:
   - mygroup.io
@@ -254,7 +254,7 @@ rules:
 
 Таким образом новая роль расширит роль `d8:manage:deckhouse`.
 
-### Расширение manage scope-ролей с добавлением нового пространства имён
+### Расширение manage subsystem-ролей с добавлением нового пространства имён
 
 Если необходимо добавить новое пространство имён (для создания в нём use-роли с помощью хука), потребуется добавить лишь один лейбл:
 
@@ -269,10 +269,10 @@ rules:
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-deckhouse-as: admin
+     rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
      rbac.deckhouse.io/kind: manage
      rbac.deckhouse.io/namespace: namespace
-   name: custom:manage:capability:mycustommodule:superresource:view
+   name: custom:manage:permission:mycustom:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -295,9 +295,9 @@ rules:
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-role: user
+     rbac.deckhouse.io/aggregate-to-kubernetes-as: user
      rbac.deckhouse.io/kind: use
-   name: custom:use:capability:mycustommodule:superresource:view
+   name: custom:use:capability:mycustom:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -309,4 +309,4 @@ rules:
    - watch
  ```
 
-Эта роль дополнит роль `d8:use:role:user`.
+Эта роль дополнит роль `d8:use:role:user:kubernetes`.

@@ -105,7 +105,12 @@ func NewLogger(opts Options) *Logger {
 					return slog.Attr{}
 				}
 
-				s := a.Value.Any().(*slog.Source)
+				s, ok := a.Value.Any().(*slog.Source)
+				if !ok {
+					a.Key = "_source"
+
+					return a
+				}
 
 				a.Value = slog.StringValue(fmt.Sprintf(sourceFormat,
 					// trim all folders before project root

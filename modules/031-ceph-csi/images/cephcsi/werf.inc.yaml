@@ -6,6 +6,7 @@ shell:
   install:
     - mkdir -p /src
     - cd /src
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --branch v3.7.2 --depth 1 {{ $.SOURCE_REPO }}/ceph/ceph-csi.git .
     - export GOPROXY={{ $.GOPROXY }}
     - export CGO_ENABLED=1

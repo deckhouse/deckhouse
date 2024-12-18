@@ -22,23 +22,43 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	ModuleConfigResource = "moduleconfigs"
+	ModuleConfigKind     = "ModuleConfig"
+
+	ModuleConfigAnnotationAllowDisable = "modules.deckhouse.io/allow-disable"
+
+	ModuleConfigFinalizer = "modules.deckhouse.io/module-config"
+
+	ModuleConfigMessageUnknownModule = "Ignored: unknown module name"
+)
+
 var (
 	// ModuleConfigGVR GroupVersionResource
 	ModuleConfigGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
-		Resource: "moduleconfigs",
+		Resource: ModuleConfigResource,
 	}
 	ModuleConfigGVK = schema.GroupVersionKind{
 		Group:   SchemeGroupVersion.Group,
 		Version: SchemeGroupVersion.Version,
-		Kind:    "ModuleConfig",
+		Kind:    ModuleConfigKind,
 	}
 )
 
-const AllowDisableAnnotation = "modules.deckhouse.io/allow-disable"
-
 var _ runtime.Object = (*ModuleConfig)(nil)
+
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModuleConfigList is a list of ModuleConfig resources
+type ModuleConfigList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleConfig `json:"items"`
+}
 
 // +genclient
 // +genclient:nonNamespaced
@@ -83,9 +103,11 @@ func (v SettingsValues) DeepCopyInto(out *SettingsValues) {
 }
 
 type ModuleConfigSpec struct {
-	Version  int            `json:"version,omitempty"`
-	Settings SettingsValues `json:"settings,omitempty"`
-	Enabled  *bool          `json:"enabled,omitempty"`
+	Version      int            `json:"version,omitempty"`
+	Settings     SettingsValues `json:"settings,omitempty"`
+	Enabled      *bool          `json:"enabled,omitempty"`
+	UpdatePolicy string         `json:"updatePolicy,omitempty"`
+	Source       string         `json:"source,omitempty"`
 }
 
 type ModuleConfigStatus struct {
@@ -93,24 +115,9 @@ type ModuleConfigStatus struct {
 	Message string `json:"message"`
 }
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleConfigList is a list of ModuleConfig resources
-type ModuleConfigList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleConfig `json:"items"`
-}
-
-type moduleConfigKind struct{}
-
-func (in *ModuleConfigStatus) GetObjectKind() schema.ObjectKind {
-	return &moduleConfigKind{}
-}
-
-func (f *moduleConfigKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *moduleConfigKind) GroupVersionKind() schema.GroupVersionKind {
-	return ModuleConfigGVK
+func (m *ModuleConfig) IsEnabled() bool {
+	if m.Spec.Enabled != nil {
+		return *m.Spec.Enabled
+	}
+	return false
 }

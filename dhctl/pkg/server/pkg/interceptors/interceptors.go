@@ -37,7 +37,7 @@ func PanicRecoveryHandler() func(ctx context.Context, p any) error {
 		logger.L(ctx).Error(
 			"recovered from panic",
 			slog.Any("panic", p),
-			slog.Any("stack", string(debug.Stack())),
+			slog.String("stack", string(debug.Stack())),
 		)
 		return status.Errorf(codes.Internal, "%s", p)
 	}

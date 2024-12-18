@@ -2,4 +2,4 @@
   link: https://github.com/gardener/machine-controller-manager
   description: An operator that manages VMs as a kubernetes custom resource.
   logo: https://raw.githubusercontent.com/gardener/gardener/master/logo/gardener-large.png
-  licence: Apache License 2.0
+  license: Apache License 2.0

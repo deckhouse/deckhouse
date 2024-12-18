@@ -18,7 +18,7 @@ data:
     tls-auth /etc/openvpn/certs/pki/ta.key
     client-config-dir /etc/openvpn/ccd
     key-direction 0
-    cipher AES-128-CBC
+    data-ciphers AES-256-GCM:AES-128-GCM:AES-128-CBC
     keepalive 10 60
     persist-key
     persist-tun

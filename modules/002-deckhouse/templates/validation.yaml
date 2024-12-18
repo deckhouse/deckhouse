@@ -18,9 +18,7 @@ spec:
     - expression: '!(request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
         && (object.metadata.name.startsWith("d8-") || object.metadata.name.startsWith("kube-")))'
       reason: Forbidden
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
       messageExpression: '''Creation of system namespaces is forbidden'''
-{{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -29,9 +27,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny]
-{{- end }}
 
 ---
 {{- $policyName := "label-objects.deckhouse.io" }}
@@ -48,7 +44,6 @@ spec:
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE", "DELETE"]
         resources:   ["*"]
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
@@ -56,6 +51,17 @@ spec:
       expression: '!(["system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-kinds'
       expression: '!(has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
+    - name: 'exclude-restartedAt'
+      expression: '!((!has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+                    && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
+                    || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+                    && !("kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations)
+                    && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
+                    || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
+                    && "kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations
+                    && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
+                    && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
+                    != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]))'
   validations:
     - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-")'
       reason: Forbidden
@@ -63,11 +69,6 @@ spec:
   auditAnnotations:
     - key: 'source-user'
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the heritage label'"
-{{- else }}
-  validations:
-    - expression: 'request.userInfo.username.startsWith("system:serviceaccount:d8-") || ["system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)) || ["system:nodes", "system:serviceaccounts:kube-system"].exists(e, (e in request.userInfo.groups)) || (has(request.kind) && ["StorageClass"].exists(e, (e == request.kind.kind)))'
-      reason: Forbidden
-{{- end }}
 
 {{- if ne .Values.global.deckhouseVersion "dev" }}
 ---
@@ -78,9 +79,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
-{{- end }}
   matchResources:
     objectSelector:
       matchLabels:
@@ -107,9 +106,7 @@ spec:
         || ! ("modules.deckhouse.io/update-policy" in oldObject.metadata.labels)
         || object.metadata.labels["modules.deckhouse.io/update-policy"] == oldObject.metadata.labels["modules.deckhouse.io/update-policy"]
       reason: Forbidden
-      {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
       messageExpression: "'Manual update-policy change is forbidden. Please, remove the update-policy label to automatically find a new suitable policy'"
-      {{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -118,9 +115,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   policyName: "update-policy-label-objects.deckhouse.io"
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny]
-{{- end }}
 
 ---
 {{/* Check update windows in the deckhouse ModuleConfig */}}
@@ -138,7 +133,6 @@ spec:
       apiVersions: ["*"]
       operations:  ["CREATE", "UPDATE"]
       resources:   ["moduleconfigs"]
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'deckhouse-mc'
       expression: 'object.metadata.name == "deckhouse"'
@@ -151,16 +145,6 @@ spec:
     - expression: 'object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))'
       reason: Forbidden
       messageExpression: "'Invalid update windows. Start time (windows.from) should be less than the end time of the update window (windows.to)'"
-{{- else }}
-  validations:
-    - expression: |
-        !(object.metadata.name == "deckhouse" &&
-        has(object.spec.settings.update) &&
-        has(object.spec.settings.update.windows) &&
-        object.spec.settings.update.windows.size() > 0 &&
-        object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) >= int(string(w.to).replace(":", ""))))
-      reason: Forbidden
-{{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -169,9 +153,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
-{{- end }}
 {{/* End deckhouse windows validation */}}
 
 ---
@@ -190,7 +172,6 @@ spec:
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE"]
         resources:   ["moduleupdatepolicies"]
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'windows-are-set'
       expression: |
@@ -201,15 +182,6 @@ spec:
     - expression: 'object.spec.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))'
       reason: Forbidden
       messageExpression: "'Invalid update windows. Start time (windows.from) should be less than the end time of the update window (windows.to)'"
-{{- else }}
-  validations:
-    - expression: |
-        has(object.spec.update) &&
-        has(object.spec.update.windows) &&
-        object.spec.update.windows.size() > 0 &&
-        object.spec.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))
-      reason: Forbidden
-{{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -218,9 +190,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
-{{- end }}
 {{/* End mup windows validation */}}
 ---
 {{- $policyName := "default-cluster-storage-class.deckhouse.io" }}
@@ -237,7 +207,6 @@ spec:
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE"]
         resources:   ["storageclasses"]
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-users'
       expression: |
@@ -260,21 +229,6 @@ spec:
   auditAnnotations:
     - key: 'source-user'
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to add StorageClass with the `is-default-class` annotation'"
-{{- else }}
-  validations:
-    - expression: |
-        request.userInfo.username.startsWith("system:serviceaccount:d8-system") ||
-        !(
-          (
-            oldObject == null &&
-            object != null && has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations
-          ) || (
-            (oldObject != null && has(oldObject.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in oldObject.metadata.annotations) !=
-            (object != null && has(object.metadata.annotations) && 'storageclass.kubernetes.io/is-default-class' in object.metadata.annotations)
-          )
-        )
-      reason: Forbidden
-{{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -283,8 +237,6 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   validationActions: [Deny, Audit]
-{{- end }}
 
 {{- end }}

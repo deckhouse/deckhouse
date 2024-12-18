@@ -7,9 +7,9 @@ metadata:
     module: user-authz
     rbac.deckhouse.io/use-role: viewer
     rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: scope
-    rbac.deckhouse.io/scope: networking
-    rbac.deckhouse.io/aggregate-to-networking-as: user
+    rbac.deckhouse.io/level: subsystem
+    rbac.deckhouse.io/subsystem: networking
+    rbac.deckhouse.io/aggregate-to-networking-as: manager
     rbac.deckhouse.io/aggregate-to-all-as: viewer
 aggregationRule:
   clusterRoleSelectors:

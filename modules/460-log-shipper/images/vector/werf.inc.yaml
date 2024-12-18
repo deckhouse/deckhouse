@@ -27,6 +27,7 @@ shell:
   - apt-get install -y build-essential git openssl-devel wget perl-IPC-Cmd protobuf-compiler libsasl2-devel unzip zlib-devel rust rust-cargo
   install:
   - export CARGO_NET_GIT_FETCH_WITH_CLI=true
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.40.1 {{ $.SOURCE_REPO }}/vectordotdev/vector.git
   - cd /vector
   - git apply /patches/*.patch --verbose

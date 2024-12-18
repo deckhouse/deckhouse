@@ -2,5 +2,5 @@
   link: https://github.com/kubernetes/dashboard
   description: A general purpose, web-based UI for Kubernetes clusters.
   logo: /images/logos/kubernetes.svg
-  licence: Apache License 2.0
+  license: Apache License 2.0
 

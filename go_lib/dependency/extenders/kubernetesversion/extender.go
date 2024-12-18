@@ -165,7 +165,7 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	}
 	e.mtx.Unlock()
 	if err := e.versionMatcher.Validate(name); err != nil {
-		e.logger.Errorf("requirements of the '%s' module are not satisfied: current kubernetes version is not suitable: %s", name, err.Error())
+		e.logger.Debugf("requirements of the '%s' module are not satisfied: current kubernetes version is not suitable: %s", name, err.Error())
 		return ptr.To(false), fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
 	}
 	e.logger.Debugf("requirements of the '%s' module are satisfied", name)
@@ -175,10 +175,10 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 func (e *Extender) ValidateBaseVersion(baseVersion string) (string, error) {
 	if name, err := e.versionMatcher.ValidateBaseVersion(baseVersion); err != nil {
 		if name != "" {
-			e.logger.Errorf("requirements of the '%s' module are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
+			e.logger.Debugf("requirements of the '%s' module are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
 			return name, fmt.Errorf("requirements of the '%s' module are not satisfied: %s kubernetes version is not suitable: %s", name, baseVersion, err.Error())
 		}
-		e.logger.Errorf("requirements cannot be checked: kubernetes version is invalid: %s", err.Error())
+		e.logger.Debugf("requirements cannot be checked: kubernetes version is invalid: %s", err.Error())
 		return "", fmt.Errorf("requirements cannot be checked: kubernetes version is invalid: %s", err.Error())
 	}
 	e.logger.Debugf("modules requirements for '%s' kubernets version are satisfied", baseVersion)
@@ -195,7 +195,7 @@ func (e *Extender) ValidateRelease(releaseName, rawConstraint string) error {
 	e.mtx.Unlock()
 	e.logger.Debugf("validate requirements for %s", releaseName)
 	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
-		e.logger.Errorf("requirements of the '%s' module release are not satisfied: current kubernetes version is not suitable: %s", releaseName, err.Error())
+		e.logger.Debugf("requirements of the '%s' module release are not satisfied: current kubernetes version is not suitable: %s", releaseName, err.Error())
 		return fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
 	}
 	e.logger.Debugf("requirements of the '%s' module release are satisfied", releaseName)

@@ -12,10 +12,13 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - mkdir -p /go/src/github.com/google/gops
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch {{ $gopsVersion }} {{ $.SOURCE_REPO }}/google/gops.git /go/src/github.com/google/gops
   - cd /go/src/github.com/google/gops
   - mkdir -p "/out/linux/amd64/bin"

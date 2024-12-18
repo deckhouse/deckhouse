@@ -11,7 +11,9 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 WORKDIR /src
-RUN git clone --depth 1 --branch v0.3.1 ${SOURCE_REPO}/aquasecurity/k8s-node-collector.git .
+RUN apk add --no-cache openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --depth 1 --branch v0.3.1 ${SOURCE_REPO}/aquasecurity/k8s-node-collector.git .
 
 RUN go build -ldflags '-s -w -extldflags "-static"' -o node-collector ./cmd/node-collector/main.go
 

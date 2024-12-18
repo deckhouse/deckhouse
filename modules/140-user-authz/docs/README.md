@@ -21,7 +21,7 @@ The module implements a role-based access model based on the standard RBAC Kuber
 Unlike the [obsolete DKP role-based model](#the-obsolete-role-based-model), the new role-based one does not use `ClusterAuthorizationRule` and `AuthorizationRule` resources. All access rights are configured in the standard Kubernetes RBAC way, i.e., by creating `RoleBinding` or `ClusterRoleBinding` resources and specifying one of the roles prepared by the `user-authz` module in them.
 
 The module creates special aggregated cluster roles (`ClusterRole`). By using these roles in `RoleBinding` or `ClusterRoleBinding`, you can do the following:
-- Manage access to modules of a specific [scope](#scopes-of-the-role-based-model).
+- Manage access to modules of a specific [subsystem](#subsystems-of-the-role-based-model).
 
   For example, you can use the `d8:manage:networking:manager` role in `ClusterRoleBinding` to allow a network administrator to configure *network* modules (such as `cni-cilium`, `ingress-nginx`, `istio`, etc.).
 - Manage access to *user* resources of modules within the namespace.
@@ -42,7 +42,7 @@ Use roles are intended to assign rights to a user **in a specific namespace**. U
 
 The use role defines permissions for accessing namespaced resources of modules and standard namespaced resources of Kubernetes (`Pod`, `Deployment`, `Secret`, `ConfigMap`, etc.).
 
-The module creates the following use roles for each [scope](#scopes-of-the-role-based-model):
+The module creates the following use roles:
 - `d8:use:role:viewer` — allows viewing standard Kubernetes resources in a specific namespace, except for Secrets and RBAC resources, as well as authenticating in the cluster;
 - `d8:use:role:user` — in addition to the role `d8:use:role:viewer` it allows viewing secrets and RBAC resources in a specific namespace, connecting to pods, deleting pods (but not creating or modifying them), executing `kubectl port-forward` and `kubectl proxy`, as well as changing the number of replicas of controllers;
 - `d8:use:role:manager` — in addition to the role `d8:use:role:user` it allows managing module resources (for example, `Certificate`, `PodLoggingConfig`, etc.) and standard namespaced Kubernetes resources (`Pod`, `ConfigMap`, `CronJob`, etc.) in a specific namespace;
@@ -53,49 +53,43 @@ The module creates the following use roles for each [scope](#scopes-of-the-role-
 {% alert level="warning" %}
 The manage role does not grant access to the namespace of user applications.
 
-The manage role grants access only to system namespaces (starting with `d8-` or `kube-`), and only to those system namespaces where the modules of the corresponding role scope are running.
+The manage role grants access only to system namespaces (starting with `d8-` or `kube-`), and only to those system namespaces where the modules of the corresponding role subsystem are running.
 {% endalert %}
 
-Manage roles are intended for assigning rights to manage the entire platform or a part of it (the [scope](#scopes-of-the-role-based-model)), but not the users applications themselves. The manage role, for example, can allow a security administrator to manage security modules (responsible for the security functions of the cluster). Thus, the security administrator will be able to configure authentication, authorization, security policies, etc., but will not be able to manage other cluster functions (such as network and monitoring settings) or change settings in the namespaces of users applications.
+Manage roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. The manage role, for example, can allow a security administrator to manage security modules (responsible for the security functions of the cluster). Thus, the security administrator will be able to configure authentication, authorization, security policies, etc., but will not be able to manage other cluster functions (such as network and monitoring settings) or change settings in the namespaces of users applications.
 
 The manage role defines access rights:
 - to cluster-wide Kubernetes resources;
-- to manage DKP modules (`moduleConfig` resource) within the [scope](#scopes-of-the-role-based-model) of the role, or to all DKP modules for the role `d8:manage:all:*`;
-- to manage cluster-wide resources of DKP modules within the [scope](#scopes-of-the-role-based-model) of the role, or to all resources of DKP modules for the role `d8:manage:all:*`;
-- to system namespaces (starting with `d8-` or `kube-`) in which the modules of the [scope](#scopes-of-the-role-based-model) of the role operate, or to all system namespaces for the role `d8:manage:all:*`.
+- to manage DKP modules (`moduleConfig` resource) within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all DKP modules for the role `d8:manage:all:*`;
+- to manage cluster-wide resources of DKP modules within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all resources of DKP modules for the role `d8:manage:all:*`;
+- to system namespaces (starting with `d8-` or `kube-`) in which the modules of the [subsystem](#subsystems-of-the-role-based-model) of the role operate, or to all system namespaces for the role `d8:manage:all:*`.
 
-The manage role name format is `d8:manage:<SCOPE>:<ACCESS_LEVEL>`, where:
-- `SCOPE` is the role's scope. It can be one of the [scope](#scopes-of-the-role-based-model), or `all`, for access across all scopes;
+The manage role name format is `d8:manage:<SUBSYSTEM>:<ACCESS_LEVEL>`, where:
+- `SUBSYSTEM` is the role's subsystem. It can be one of the [subsystem](#subsystems-of-the-role-based-model), or `all`, for access across all subsystems;
 - `ACCESS_LEVEL` is the [access level](#access-levels-of-the-role-based-model).
 
   Examples of manage roles:
   - `d8:manage:all:viewer` — access to view the configuration of all DKP modules (`moduleConfig` resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in all system namespaces (starting with `d8-` or `kube-`);
-  - `d8:manage:all:admin` — similar to the role `d8:manage:all:user`, but with admin-level access, i.e., view/create/modify/delete the configuration of all DKP modules (`moduleConfig` resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects in all system namespaces (starting with `d8-` or `kube-`);
+  - `d8:manage:all:manager` — similar to the role `d8:manage:all:viewer`, but with admin-level access, i.e., view/create/modify/delete the configuration of all DKP modules (`moduleConfig` resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects in all system namespaces (starting with `d8-` or `kube-`);
   - `d8:manage:observability:viewer` — access to view the configuration of DKP modules (`moduleConfig` resource) from the `observability` area, their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except secrets and RBAC resources) in the system namespaces `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
 
-### Access levels of the role-based model
+The module provides two access level for administrators:
+- `viewer` — allows viewing standard Kubernetes resources, the configuration of modules (resources `moduleConfig`), cluster-wide resources of modules, and namespaced resources of modules in the module namespace;
+- `manager` — in addition to the role `viewer` it allows managing standard Kubernetes resources, the configuration of modules (resources `moduleConfig`), cluster-wide resources of modules, and namespaced resources of modules in the module namespace;
 
-The following access levels are provided in the role-based model (in order of increasing rights):
-- `viewer` — allows viewing standard Kubernetes resources (except for Secrets and RBAC resources). In manage roles, it allows viewing the configuration of modules (resources `moduleConfig`), cluster-wide resources of modules, and namespaced resources of modules;
-- `user` — in addition to the role `viewer` it allows viewing Secrets, connecting to Pods, deleting pods, executing `kubectl port-forward` and `kubectl proxy`, modifying the number of replicas of controllers; 
-- `manager` — in addition to the role `user` it allows managing module resources (for example, `Certificate`, `PodLoggingConfig`, etc.). In manage roles, it allows managing the configuration of modules (resources `moduleConfig`), cluster-wide resources of modules, and namespaced resources of modules;
-- `admin` — in addition to the role `manager` it allows managing resources such as `CustomResourceDefinition`, `Namespace`, `Node`, `ClusterRole`, `ClusterRoleBinding`, `PersistentVolume`, `MutatingWebhookConfiguration`, `ValidatingAdmissionPolicy`, etc., depending on the scope of the role.
+### Subsystems of the role-based model
 
-### Scopes of the role-based model
+Each DKP module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
 
-Each DKP module belongs to a specific scope. For each scope, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
-
-For example, for the `networking` scope, there are the following manage roles that can be used in `ClusterRoleBinding`: 
+For example, for the `networking` subsystem, there are the following manage roles that can be used in `ClusterRoleBinding`: 
 - `d8:manage:networking:viewer`
-- `d8:manage:networking:user`
 - `d8:manage:networking:manager`
-- `d8:manage:networking:admin`
 
-The scope of the role restricts its action to all system namespaces of the cluster (scope `all`) or to those namespaces in which the area modules operate (see the table of area compositions).
+The subsystem of the role restricts its action to all system namespaces of the cluster (subsystem `all`) or to those namespaces in which the area modules operate (see the table of area compositions).
 
-Role-based model scopes composition table.
+Role-based model subsystems composition table.
 
-{% include rbac-scopes-list.liquid %}
+{% include rbac/rbac-subsystems-list.liquid %}
 
 ## The obsolete role-based model
 

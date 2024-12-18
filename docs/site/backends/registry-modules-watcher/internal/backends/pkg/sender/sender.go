@@ -19,9 +19,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"registry-modules-watcher/internal/backends"
+	url2 "net/url"
 	"strings"
 	"time"
+
+	"registry-modules-watcher/internal/backends"
 
 	"github.com/cenkalti/backoff"
 	"k8s.io/klog"
@@ -54,6 +56,14 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 
 		go func(backend string) {
 			for _, version := range versions {
+				if version.ToDelete {
+					err := s.delete(ctx, backend, version.Module, version.ReleaseChannels)
+					if err != nil {
+						klog.Errorf("send delete error: %v", err)
+					}
+
+					continue
+				}
 				url := "http://" + backend + "/loadDocArchive/" + version.Module + "/" + version.Version + "?channels=" + strings.Join(version.ReleaseChannels, ",")
 				err := s.loadDocArchive(ctx, url, version.TarFile)
 				if err != nil {
@@ -73,7 +83,41 @@ func (s *sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 	return nil
 }
 
-func (s *sender) loadDocArchive(ctx context.Context, url string, tarFile []byte) error {
+func (s *sender) delete(_ context.Context, backend, moduleName string, releaseChannels []string) error {
+	url := fmt.Sprintf("http://%s/api/v1/doc/%s", backend, moduleName)
+	if len(releaseChannels) > 0 {
+		params := url2.Values{}
+		params.Add("channels", strings.Join(releaseChannels, ","))
+		url += "?" + params.Encode()
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		return fmt.Errorf("client: could not create request: %s", err)
+	}
+
+	operation := func() error {
+		resp, err := s.client.Do(req)
+		if err != nil {
+			return fmt.Errorf("client: error making http request: %s", err)
+		}
+
+		klog.V(2).Infof("Delete resp: %s", resp.Status)
+		return nil
+	}
+
+	b := backoff.NewExponentialBackOff()
+	b.MaxElapsedTime = maxElapsedTime * time.Minute
+	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func (s *sender) loadDocArchive(_ context.Context, url string, tarFile []byte) error {
 	klog.V(2).Infof("send loadDoc url: %s", url)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(tarFile))
 	if err != nil {

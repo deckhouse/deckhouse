@@ -5,8 +5,11 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
   install:
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.14.0 {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
   - cd /promu
   - go build -ldflags="-s -w" -o promu ./main.go
@@ -34,8 +37,10 @@ shell:
   install:
   - export NODE_MAJOR=20
   - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 PROMETHEUS_VERSION=v2.45.2
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus-deps
   - mkdir /prometheus && cd /prometheus
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus
   - cd /prometheus/prometheus/web/ui
   - mv /prometheus-deps/* .
@@ -43,7 +48,7 @@ shell:
   - cd /prometheus/prometheus
   - scripts/compress_assets.sh
   - go mod tidy
-  - find /patches -name '*.patch' | xargs git apply --verbose
+  - git apply /patches/*.patch --verbose
   - go generate -tags plugins ./plugins
   - /bin/promu build --prefix /prometheus/prometheus
   - mkdir -p /consoles

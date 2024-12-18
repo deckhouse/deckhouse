@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	appsv1 "k8s.io/api/apps/v1"
@@ -41,7 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
@@ -49,8 +48,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -69,7 +66,7 @@ type deckhouseReleaseReconciler struct {
 	moduleManager moduleManager
 
 	updateSettings *helpers.DeckhouseSettingsContainer
-	metricStorage  *metric_storage.MetricStorage
+	metricStorage  *metricstorage.MetricStorage
 
 	preflightCountDown      *sync.WaitGroup
 	clusterUUID             string
@@ -77,15 +74,13 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage,
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metricstorage.MetricStorage,
 	preflightCountDown *sync.WaitGroup, logger *log.Logger,
 ) error {
-	lg := logger.With("component", "DeckhouseRelease")
-
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
 		dc:                 dc,
-		logger:             lg,
+		logger:             logger,
 		moduleManager:      moduleManager,
 		updateSettings:     updateSettings,
 		metricStorage:      metricStorage,
@@ -119,11 +114,11 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		return err
 	}
 
-	lg.Info("Controller started")
+	r.logger.Info("Controller started")
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DeckhouseRelease{}).
-		WithEventFilter(logWrapper{lg, newEventFilter()}).
+		WithEventFilter(logWrapper{r.logger, newEventFilter()}).
 		Complete(ctr)
 }
 
@@ -191,10 +186,10 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 
 	// prepare releases
 	switch dr.Status.Phase {
-	// thees phases should be ignored by predicate, but let's check it
+	// these phases should be ignored by predicate, but let's check it
 	case "":
 		// initial state
-		dr.Status.Phase = v1alpha1.PhasePending
+		dr.Status.Phase = v1alpha1.ModuleReleasePhasePending
 		dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		if e := r.client.Status().Update(ctx, dr); e != nil {
 			return ctrl.Result{Requeue: true}, e
@@ -202,11 +197,11 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
 
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended:
+	case v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended:
 		r.logger.Debugf("release phase: %s", dr.Status.Phase)
 		return result, nil
 
-	case v1alpha1.PhaseDeployed:
+	case v1alpha1.ModuleReleasePhaseDeployed:
 		// don't think we have to do anything with Deployed release
 		// probably, we have to move the Deployment's image update logic here
 		return r.reconcileDeployedRelease(ctx, dr)
@@ -238,7 +233,6 @@ func (r *deckhouseReleaseReconciler) patchManualRelease(dr *v1alpha1.DeckhouseRe
 	} else {
 		dr.SetApprovedStatus(true)
 	}
-	dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 
 	return r.client.Status().Update(context.Background(), dr)
 }
@@ -263,36 +257,6 @@ func (r *deckhouseReleaseReconciler) patchSuspendAnnotation(dr *v1alpha1.Deckhou
 
 func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {
 	var result ctrl.Result
-
-	if moduleName, err := deckhouseversion.Instance().ValidateBaseVersion(dr.Spec.Version); err != nil {
-		// invalid deckhouse version in deckhouse release
-		if moduleName == "" {
-			return ctrl.Result{}, err
-		}
-		if r.moduleManager.IsModuleEnabled(moduleName) {
-			dr.Status.Message = err.Error()
-			if e := r.client.Status().Update(ctx, dr); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
-			return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
-		}
-	}
-
-	if r.isKubernetesVersionAutomatic(ctx) && len(dr.Spec.Requirements["autoK8sVersion"]) > 0 {
-		if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(dr.Spec.Requirements["autoK8sVersion"]); err != nil {
-			// invalid auto kubernetes version in deckhouse release
-			if moduleName == "" {
-				return ctrl.Result{}, err
-			}
-			if r.moduleManager.IsModuleEnabled(moduleName) {
-				dr.Status.Message = err.Error()
-				if e := r.client.Status().Update(ctx, dr); e != nil {
-					return ctrl.Result{Requeue: true}, e
-				}
-				return ctrl.Result{RequeueAfter: defaultCheckInterval}, err
-			}
-		}
-	}
 
 	clusterBootstrapping := true
 	var imagesRegistry string
@@ -322,13 +286,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		Windows:                us.Update.Windows,
 	}
 	releaseData := getReleaseData(dr)
-	deckhouseUpdater, err := d8updater.NewDeckhouseUpdater(
-		r.logger, r.client, r.dc, dus, releaseData, r.metricStorage, podReady,
+	deckhouseUpdater := d8updater.NewDeckhouseUpdater(
+		ctx, r.logger, r.client, r.dc, dus, releaseData, r.metricStorage, podReady,
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
 	)
-	if err != nil {
-		return result, fmt.Errorf("initializing deckhouse updater: %w", err)
-	}
 
 	if podReady {
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
@@ -337,10 +298,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 			_ = deckhouseUpdater.ChangeUpdatingFlag(false)
 		}
 	} else if releaseData.IsUpdating {
-		labels := map[string]string{
-			"releaseChannel": r.updateSettings.Get().ReleaseChannel,
-		}
-		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, labels)
+		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
 	}
 	{
 		var releases v1alpha1.DeckhouseReleaseList
@@ -362,7 +320,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	// predict next patch for Deploy
-	deckhouseUpdater.PredictNextRelease()
+	deckhouseUpdater.PredictNextRelease(dr)
 
 	// has already Deployed the latest release
 	if deckhouseUpdater.LastReleaseDeployed() {
@@ -370,23 +328,16 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		return result, nil
 	}
 
-	skipped := deckhouseUpdater.GetSkippedPatchReleases()
-	if len(skipped) > 0 {
-		for _, sk := range skipped {
-			sk.Status.Phase = v1alpha1.PhaseSkipped
-			sk.Status.Message = ""
-			sk.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
-			if e := r.client.Status().Update(ctx, sk); e != nil {
-				return ctrl.Result{Requeue: true}, e
-			}
-		}
+	// set skipped releases to PhaseSkipped
+	if err = deckhouseUpdater.CommitSkippedReleases(); err != nil {
+		return result, err
 	}
 
 	if rel := deckhouseUpdater.GetPredictedRelease(); rel != nil {
 		if rel.GetName() != dr.GetName() {
-			// don't requeue releases other than predicted one
+			// requeue all releases to keep syncing releases' metrics
 			r.logger.Debugf("processing wrong release (current: %s, predicted: %s)", dr.Name, rel.Name)
-			return result, nil
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
 	}
 
@@ -623,27 +574,6 @@ func (r *deckhouseReleaseReconciler) updateByImageHashLoop(ctx context.Context) 
 			r.logger.Errorf("deckhouse image tag update failed: %s", err)
 		}
 	}, 15*time.Second)
-}
-
-func (r *deckhouseReleaseReconciler) isKubernetesVersionAutomatic(ctx context.Context) bool {
-	secret := new(corev1.Secret)
-	if err := r.client.Get(ctx, types.NamespacedName{Name: "d8-cluster-configuration", Namespace: "kube-system"}, secret); err != nil {
-		r.logger.Warnf("check kubernetes version: failed to get secret: %s", err.Error())
-		return false
-	}
-	var clusterConf struct {
-		KubernetesVersion string `json:"kubernetesVersion"`
-	}
-	clusterConfigurationRaw, ok := secret.Data["cluster-configuration.yaml"]
-	if !ok {
-		r.logger.Warnf("check kubernetes version: expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
-		return false
-	}
-	if err := yaml.Unmarshal(clusterConfigurationRaw, &clusterConf); err != nil {
-		r.logger.Warnf("check kubernetes version: failed to unmarshal cluster configuration: %s", err)
-		return false
-	}
-	return clusterConf.KubernetesVersion == "Automatic"
 }
 
 func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (ctrl.Result, error) {

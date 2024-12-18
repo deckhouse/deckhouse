@@ -9,7 +9,7 @@ Deckhouse завершил процесс установки кластера. �
 Подключитесь к master-узлу по SSH (IP-адрес master-узла был выведен инсталлятором по завершении установки, но вы также можете найти его используя веб-интерфейс или CLI&#8209;утилиты облачного провайдера):
 {% snippetcut %}
 ```shell
-ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
+ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
 
@@ -71,14 +71,14 @@ nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TC
 
 Для того чтобы получить доступ к веб-интерфейсам компонентов Deckhouse, нужно:
 - настроить работу DNS
-- указать в параметрах Deckhouse [шаблон DNS-имен](../../products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
+- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
 
 *Шаблон DNS-имен* используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом Grafana закреплено имя `grafana`. Тогда, для шаблона `%s.kube.company.my` Grafana будет доступна по адресу `grafana.kube.company.my`, и т.д.
 
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 Чтобы упростить настройку, далее будет использоваться сервис [sslip.io](https://sslip.io/).
 
-На **master-узле** выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить [шаблон DNS-имен](../../products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io*:
+На **master-узле** выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io*:
 {% if page.platform_code == 'aws' %}
 {% snippetcut %}
 {% raw %}

@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
-	f.RegisterCRD("deckhouse.io", "v1", "DexAuthenticator", true)
+	f.RegisterCRD("deckhouse.io", "v2alpha1", "DexAuthenticator", true)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -37,6 +37,7 @@ var _ = Describe("User Authn hooks :: get dex authenticator crds ::", func() {
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 		})
 	})
+
 	Context("With dex credentials secret after deploying DexAuthenticator object", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
@@ -53,7 +54,7 @@ data:
   client-secret: dGVzdA==
   cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2alpha1
 kind: DexAuthenticator
 metadata:
   name: test
@@ -61,9 +62,10 @@ metadata:
   annotations:
     dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
-  applicationDomain: test
+  applications:
+  - domain: test
+    ingressClassName: "nginx"
   sendAuthorizationHeader: false
-  applicationIngressClassName: "nginx"
   nodeSelector:
     testnode: ""
   tolerations:
@@ -83,13 +85,16 @@ spec:
   "name": "test",
   "namespace": "test",
   "spec": {
-    "applicationDomain": "test",
-    "applicationIngressClassName": "nginx",
-    "sendAuthorizationHeader": false,
-    "nodeSelector":
+    "applications": [
       {
-        "testnode": ""
-      },
+        "domain": "test",
+        "ingressClassName": "nginx"
+      }
+    ],
+    "sendAuthorizationHeader": false,
+    "nodeSelector": {
+      "testnode": ""
+    },
     "tolerations": [
       {
         "key": "foo",
@@ -124,7 +129,7 @@ data:
   client-secret: dGVzdA==
   cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2alpha1
 kind: DexAuthenticator
 metadata:
   name: test
@@ -132,9 +137,10 @@ metadata:
   annotations:
     dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
-  applicationDomain: test
+  applications:
+  - domain: test
+    ingressClassName: "nginx"
   sendAuthorizationHeader: false
-  applicationIngressClassName: "nginx"
 `))
 			f.RunHook()
 		})
@@ -148,8 +154,12 @@ spec:
   "name": "test",
   "namespace": "d8-dashboard",
   "spec": {
-    "applicationDomain": "test",
-    "applicationIngressClassName": "nginx",
+    "applications": [
+      {
+        "domain": "test",
+        "ingressClassName": "nginx"
+      }
+    ],
     "sendAuthorizationHeader": false
   },
   "allowAccessToKubernetes": true,
@@ -178,7 +188,7 @@ data:
   client-secret: dGVzdA==
   cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2alpha1
 kind: DexAuthenticator
 metadata:
   name: test
@@ -186,9 +196,10 @@ metadata:
   annotations:
     dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
 spec:
-  applicationDomain: test
+  applications:
+  - domain: test
+    ingressClassName: "nginx"
   sendAuthorizationHeader: false
-  applicationIngressClassName: "nginx"
 ---
 apiVersion: v1
 kind: Secret
@@ -214,8 +225,12 @@ data:
   "name": "test",
   "namespace": "d8-monitoring",
   "spec": {
-    "applicationDomain": "test",
-    "applicationIngressClassName": "nginx",
+    "applications": [
+      {
+        "domain": "test",
+        "ingressClassName": "nginx"
+      }
+    ],
     "sendAuthorizationHeader": false
   },
   "allowAccessToKubernetes": true,

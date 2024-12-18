@@ -12,16 +12,30 @@ import:
 docker:
   ENTRYPOINT: ["/bin/vsphere-syncer"]
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+fromArtifact: common/src-artifact
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.csi.vsphere }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src
+  - rm -r /src/.git
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
-  - git clone --depth 1 --branch {{ $value.csi.vsphere }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags="-w -s -extldflags=static -X sigs.k8s.io/vsphere-csi-driver/v3/pkg/syncer.Version={{ $version }}" -o vsphere-syncer ./cmd/syncer
   {{- end }}

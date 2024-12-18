@@ -64,6 +64,7 @@ func TestDeleteCRDs(t *testing.T) {
 	cluster := fake.NewFakeCluster(fake.ClusterVersionV125)
 	cluster.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleSource", true)
 
+	client := cluster.Client.Dynamic()
 	inst, err := NewCRDsInstaller(cluster.Client, "./test_data/single.crd")
 	require.NoError(t, err)
 
@@ -86,11 +87,11 @@ func TestDeleteCRDs(t *testing.T) {
 		},
 	}
 
-	_, err = inst.k8sClient.Dynamic().Resource(gvr).Create(context.TODO(), msObject, apimachineryv1.CreateOptions{})
+	_, err = client.Resource(gvr).Create(context.TODO(), msObject, apimachineryv1.CreateOptions{})
 	require.NoError(t, err)
 
 	// one cr is in the cluster
-	list, err := cluster.Client.Dynamic().Resource(crdGVR).List(context.TODO(), apimachineryv1.ListOptions{})
+	list, err := client.Resource(crdGVR).List(context.TODO(), apimachineryv1.ListOptions{})
 	require.NoError(t, err)
 	require.Len(t, list.Items, 1)
 
@@ -99,7 +100,7 @@ func TestDeleteCRDs(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, deleted, 0)
 
-	list, err = cluster.Client.Dynamic().Resource(crdGVR).List(context.TODO(), apimachineryv1.ListOptions{})
+	list, err = client.Resource(crdGVR).List(context.TODO(), apimachineryv1.ListOptions{})
 	require.NoError(t, err)
 	require.Len(t, list.Items, 1)
 
@@ -115,7 +116,7 @@ func TestDeleteCRDs(t *testing.T) {
 	assert.Equal(t, expected, result)
 
 	// no cr in the cluster
-	err = inst.k8sClient.Dynamic().Resource(gvr).Delete(context.TODO(), msObject.GetName(), apimachineryv1.DeleteOptions{})
+	err = client.Resource(gvr).Delete(context.TODO(), msObject.GetName(), apimachineryv1.DeleteOptions{})
 	require.NoError(t, err)
 
 	// one crd should be deleted
@@ -129,7 +130,7 @@ func TestDeleteCRDs(t *testing.T) {
 	assert.Equal(t, expected, deleted)
 
 	// no crds left
-	list, err = cluster.Client.Dynamic().Resource(crdGVR).List(context.TODO(), apimachineryv1.ListOptions{})
+	list, err = client.Resource(crdGVR).List(context.TODO(), apimachineryv1.ListOptions{})
 	require.NoError(t, err)
 	require.Len(t, list.Items, 0)
 }

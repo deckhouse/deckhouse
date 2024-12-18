@@ -120,78 +120,16 @@ cleanup:
 # Source repo with observability private code
 {{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
 
+# Stronghold repo access for building d8 cli
+{{- $_ := set . "STRONGHOLD_PULL_TOKEN" (env "STRONGHOLD_PULL_TOKEN") }}
+{{- $_ := set . "DECKHOUSE_PRIVATE_REPO" (env "DECKHOUSE_PRIVATE_REPO") }}
+
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY") }}
 ---
-artifact: jq
-from: {{ $.Images.BASE_ALPINE_DEV }}
-git:
-- url: {{ .SOURCE_REPO }}/jqlang/jq
-  add: /
-  to: /src
-  commit: b6be13d5de6dd7d8aad5fd871eb6b0b30fc7d7f6
-  stageDependencies:
-    install:
-    - "**/*"
-shell:
-  install:
-  - |
-      cd /src
-      autoreconf -fi
-      ./configure \
-        --prefix=/usr \
-        --sysconfdir=/etc \
-        --mandir=/usr/share/man \
-        --localstatedir=/var \
-        --disable-docs
-      make LDFLAGS=-all-static
-      make prefix=/usr install
-
----
-artifact: yq4-artifact
-from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
-shell:
-  install:
-  - export GOPROXY={{ .GOPROXY }}
-  - git clone {{ .SOURCE_REPO }}/mikefarah/yq --branch "v4.9.6"
-  - cd yq/
-  - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/yq
-
----
-artifact: yq-artifact
-from: {{ $.Images.BASE_GOLANG_19_ALPINE_DEV }}
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
-shell:
-  install:
-  - export GOPROXY={{ .GOPROXY }}
-  - git clone {{ .SOURCE_REPO }}/mikefarah/yq --branch v2.4.1
-  - cd yq/
-  - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/yq
-
----
-artifact: semver-artifact
-from: {{ $.Images.BASE_ALPINE_DEV }}
-shell:
-  install:
-  - git clone {{ .SOURCE_REPO }}/fsaintjacques/semver-tool --branch 2.1.0
-  - cd /semver-tool/
-  - make install
-
----
-artifact: tini-artifact
-from: {{ $.Images.BASE_ALPINE_DEV }}
-shell:
-  install:
-  - git clone {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0
-  - cd /tini/
-  - export CFLAGS="-DPR_SET_CHILD_SUBREAPER=36 -DPR_GET_CHILD_SUBREAPER=37"
-  - cmake . && make
-
+{{ range $path, $content := .Files.Glob ".werf/werf-**.yaml" }}
+{{ tpl $content $ }}
+{{ end }}
 ---
 {{- define "base components imports" }}
 - artifact: tini-artifact
@@ -327,186 +265,14 @@ artifact: golangci-lint-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
 shell:
   beforeInstall:
-  - apk add --no-cache git
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   # Use v1.60.1 for go1.23 - https://github.com/golangci/golangci-lint/issues/4837
   - export GOPROXY={{ .GOPROXY }}
   - git clone --depth 1 {{ .SOURCE_REPO }}/golangci/golangci-lint --branch v1.60.1
   - cd golangci-lint/
   - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
-
----
-image: dev-prebuild
-fromImage: common-base
-git:
-- add: /
-  to: /deckhouse
-  stageDependencies:
-    setup:
-      - '**/*'
-  includePaths:
-  - candi
-  - modules
-  - global-hooks
-  - shell_lib.sh
-  - shell_lib
-  - deckhouse-controller/entrypoint.sh
-  - deckhouse-controller/crds/*.yaml
-  - jq_lib
-  - helm_lib
-  - python_lib
-  excludePaths:
-{{- include "exclude_modules_dir_from_images" .  | nindent 2}}
-{{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
-- url: {{ .SOURCE_REPO }}/flant/shell-operator
-  tag: v1.4.10
-  add: /frameworks/shell
-  to: /deckhouse/shell-operator/frameworks/shell
-{{ .Files.Get (printf "tools/build_includes/modules-with-exclude-%s.yaml" .Env) }}
-{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
-import:
-- artifact: deckhouse-controller
-  add: /out/deckhouse-controller
-  to: /usr/bin/deckhouse-controller
-  after: setup
-- artifact: jq
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  after: setup
-- artifact: version-map-artifact
-  add: /version_map_{{ $.Env }}.yml
-  to: /deckhouse/candi/version_map.yml
-  after: setup
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  setup:
-  - |
-{{- range $key := list "default" "managed" "minimal" }}
-    # Add bundle {{ $key }}
-    cat <<"EOD" > /deckhouse/modules/values-{{ $key }}.yaml
-      {{- range $_, $edition := $.Editions }}
-    {{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 4 }}
-        {{- if eq $.Env $edition.name }}
-           {{- break -}}
-        {{- end }}
-     {{- end }}
-    EOD
-{{- end }}
-    # Add version info
-    cat <<"EOD" > /deckhouse/version
-    {{- env "CI_COMMIT_TAG" | default "dev" | nindent 4 }}
-    EOD
-    # Add edition info
-    cat <<"EOD" > /deckhouse/edition
-    {{- .Env | default "unknown" | nindent 4 }}
-    EOD
-    # Override deckhouse entrypoint to use tini as supervisor
-    cat <<"EOD" > /deckhouse/deckhouse
-    #!/bin/bash
-    exec tini -- /deckhouse/deckhouse-controller/entrypoint.sh
-    EOD
-    chmod +x /deckhouse/deckhouse
-    # Create symlink to grant entrypoint.sh write permission
-    ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
-    # Create deckhouse group
-    groupadd -g 64535 deckhouse
-    # Create deckhouse user
-    useradd -d / -u 64535 -g deckhouse -s /sbin/nologin deckhouse
-    # Run deckhouse from dedicated user
-    chown deckhouse:deckhouse -R /deckhouse
-    # Create symlink to vim-console
-    ln -fs /usr/bin/vim-console /usr/bin/vim
-    ln -fs /usr/bin/vim-console /usr/bin/vi
-docker:
-  ENV:
-    MODULES_DIR: /deckhouse/modules
-    GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
-    PYTHONPATH: /deckhouse/python_lib
-    LC_ALL: C
-
----
-image: tests-prebuild
-fromImage: base-for-go
-git:
-- add: /
-  to: /deckhouse
-  stageDependencies:
-    install:
-    - go.mod
-    - go.sum
-  includePaths:
-  - deckhouse-controller
-  - dhctl
-  - candi
-  - modules
-  - global-hooks
-  - go_lib
-  - pkg
-  - shell_lib.sh
-  - shell_lib
-  - jq_lib
-  - helm_lib
-  - testing
-  - go.mod
-  - go.sum
-  - editions.yaml
-  excludePaths:
-  {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
-  - docs
-  - modules/*/docs
-  - modules/*/README.md
-  - modules/*/images
-  - modules/*/webhooks
-  - modules/0[1-9][1-9]-*/crds     # we need here only the 000-common/crds
-  - modules/[1-9][0-9][0-9]-*/crds
-  - candi/cloud-providers/*/layouts
-  - candi/cloud-providers/*/terraform-modules
-- url: https://github.com/flant/shell-operator
-  tag: v1.1.3
-  add: /frameworks/shell
-  to: /deckhouse/shell-operator/frameworks/shell
-{{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
-{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
-import:
-- artifact: deckhouse-controller
-  add: /out/deckhouse-controller
-  to: /usr/bin/deckhouse-controller
-  after: setup
-- artifact: jq
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  after: setup
-- artifact: version-map-artifact
-  add: /version_map_{{ $.Env }}.yml
-  to: /deckhouse/candi/version_map.yml
-  after: setup
-- artifact: golangci-lint-artifact
-  add: /usr/local/bin/golangci-lint
-  to: /usr/local/bin/golangci-lint
-  before: install
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  install:
-  - go install github.com/onsi/ginkgo/ginkgo@latest
-  - go install github.com/go-delve/delve/cmd/dlv@latest
-  setup:
-      {{- range $_, $edition := $.Editions }}
-        {{- if not $edition.skipFixingImports }}
-  - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
-        {{- end }}
-      {{- end }}
-
-docker:
-  ENV:
-    ADDON_OPERATOR_NAMESPACE: tests
-    DECKHOUSE_POD: tests
-    MODULES_DIR: /deckhouse/modules
-    GLOBAL_HOOKS_DIR: /deckhouse/global-hooks
-    PATH: ${PATH}:/usr/local/go/bin:/root/go/bin
 
 ---
 artifact: deckhouse-controller
@@ -519,9 +285,9 @@ git:
     - deckhouse-controller
     - global-hooks/**/*.go
     - modules/**/*.go
-    - ee/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
-    - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
-    - ee/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
+    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/**/*.go
+    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/go.mod
+    - ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/go.sum
     - go_lib/**/*.go
     - go_lib/**/go.mod
     - go_lib/**/go.sum
@@ -574,6 +340,20 @@ shell:
   - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
   {{- end }}
 {{- end }}
+  - |
+    if [ -z "$CI_COMMIT_TAG" ]; then
+        latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/deckhouse/deckhouse.git 'v*.*.*' | tail --lines=1 | cut --delimiter='/' --fields=3)
+        IFS='.' read -r -a version_parts <<< "$latest_tag"
+
+        major=${version_parts[0]}
+        minor=${version_parts[1]}
+        new_minor=$((minor + 1))
+        new_patch=0
+        prerelease={{- env "CI_COMMIT_REF_SLUG" "main" }}
+
+        new_version="${major}.${new_minor}.${new_patch}-${prerelease}+${WERF_COMMIT_HASH::7}"
+        export CI_COMMIT_TAG=${new_version}
+    fi
   - cd /deckhouse
   # Generate hooks imports for particular edition
   - go generate ./tools/register.go
@@ -581,9 +361,8 @@ shell:
   # into separate phases.
   - go mod download
   - cd /deckhouse/deckhouse-controller
-  - D8_VERSION={{- env "CI_COMMIT_TAG" | env "CI_COMMIT_REF_SLUG" | default "dev" }} ./go-build.sh
+  - D8_VERSION=${CI_COMMIT_TAG} ./go-build.sh
   - mv deckhouse-controller /out
-
 ---
 artifact: dhctl
 fromImage: base-for-go
@@ -599,6 +378,14 @@ git:
     - Makefile
 - add: /go_lib/registry-packages-proxy
   to: /go_lib/registry-packages-proxy
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+    setup:
+      - "**/*.go"
+- add: /go_lib/dependency/k8s/drain
+  to: /go_lib/dependency/k8s/drain
   stageDependencies:
     install:
       - go.mod
@@ -626,6 +413,9 @@ shell:
 artifact: ssh-static
 from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - mkdir /src
   - cd /src
@@ -633,192 +423,6 @@ shell:
   - autoreconf
   - ./configure LDFLAGS="-static $(LDFLAGS)" --prefix /ssh
   - make install
-
----
-image: dev/install
-from: {{ .Images.BASE_ALT }}
-git:
-- add: /
-  to: /deckhouse
-  includePaths:
-  - candi
-{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
-import:
-- artifact: dhctl
-  add: /dhctl/bin/dhctl
-  to: /dhctl
-  after: setup
-- image: dev-prebuild
-  add: /deckhouse
-  to: /deckhouse
-  includePaths:
-  - modules/*/openapi/config-values.yaml
-  - global-hooks/openapi/config-values.yaml
-  after: setup
-- artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-  add: /terraform/terraform
-  to: /bin/terraform
-  before: setup
-{{- range $_, $edition := $.Editions }}
-  {{- if $edition.terraformProviders }}
-    {{- range $_, $tfProvider := $edition.terraformProviders }}
-      {{- $tf := index $.TF $tfProvider }}
-- artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-  add: /{{ $tf.artifactBinary }}
-  to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
-  before: setup
-    {{- end }}
-  {{- end }}
-  {{- if eq $.Env $edition.name }}
-    {{- break -}}
-  {{- end }}
-{{- end }}
-- artifact: dev-alt-artifact
-  add: /relocate
-  to: /
-  before: setup
-- artifact: ssh-static
-  add: /ssh/bin
-  to: /bin
-  before: setup
-  includePaths:
-  - ssh
-  - ssh-add
-  - ssh-agent
-  - scp
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/candi/images_digests.json
-  after: setup
-- artifact: version-map-artifact
-  add: /version_map_{{ $.Env }}.yml
-  to: /deckhouse/candi/version_map.yml
-  after: setup
-- image: deckhouse-image-hash
-  add: /deckhouse_digest.txt
-  to: /deckhouse/image_digest
-  after: setup
-- artifact: dev-alt-artifact
-  add: /
-  to: /
-  before: setup
-  includePaths:
-  - etc/pki
-  - usr/share/ca-certificates/ca-bundle.crt
-  - usr/share/vim
-  - etc/vim
-  - etc/bash_completion.d
-  - etc/bashrc.d/bash_completion.sh
-  - usr/share/bash-completion
-  - usr/bin/vim-console
-docker:
-  ENV:
-    EDITOR: vim
-shell:
-  setup:
-  - |
-    ln -fs /dhctl /usr/bin/dhctl
-    cat <<"EOD" > /etc/inputrc
-    {{- .Files.Get "deckhouse-controller/files/inputrc" | nindent 4 }}
-    EOD
-
-    cat <<"EOD" > /etc/bashrc
-    PS1='\[\033[01;30m\][deckhouse]\[\033[00m\] \[\033[01;33m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
-
-    source /etc/bashrc.d/bash_completion.sh
-    EOD
-
-    rm -f /root/.bashrc
-    ln -s /etc/bashrc /root/.bashrc
-    rm -f  /.bashrc
-    ln -s /etc/bashrc /.bashrc
-
-    ln -fs /usr/bin/vim-console /usr/bin/vim
-    ln -fs /usr/bin/vim-console /usr/bin/vi
-
-    mkdir -p /etc/vim
-    cat <<"EOD" > /etc/vim/vimrc.local
-    {{- .Files.Get "deckhouse-controller/files/vimrc.local" | nindent 4 }}
-    EOD
-
-    echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
-    echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /deckhouse/version
-
----
-artifact: install-standalone-builder
-from: {{ .Images.BASE_ALPINE }}
-git:
-- add: /
-  to: /image/deckhouse
-  includePaths:
-  - candi
-  {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
-import:
-- artifact: dhctl
-  add: /dhctl/bin/dhctl
-  to: /image/dhctl
-  before: setup
-- image: dev-prebuild
-  add: /deckhouse
-  to: /image/deckhouse
-  includePaths:
-    - modules/*/openapi/config-values.yaml
-    - global-hooks/openapi/config-values.yaml
-  before: setup
-- artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-  add: /terraform/terraform
-  to: /image/bin/terraform
-  before: setup
-  {{- range $_, $edition := $.Editions }}
-    {{- if $edition.terraformProviders }}
-      {{- range $_, $tfProvider := $edition.terraformProviders }}
-        {{- $tf := index $.TF $tfProvider }}
-- artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-  add: /{{ $tf.artifactBinary }}
-  to: /image/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
-  before: setup
-    {{- end }}
-  {{- end }}
-  {{- if eq $.Env $edition.name }}
-    {{- break -}}
-  {{- end }}
-{{- end }}
-
-- image: images-digests
-  add: /images_digests.json
-  to: /image/deckhouse/candi/images_digests.json
-  before: setup
-- artifact: version-map-artifact
-  add: /version_map_{{ $.Env }}.yml
-  to: /image/deckhouse/candi/version_map.yml
-  before: setup
-- image: deckhouse-image-hash
-  add: /deckhouse_digest.txt
-  to: /image/deckhouse/image_digest
-  before: setup
-- artifact: ssh-static
-  add: /ssh/bin
-  to: /image/bin
-  before: setup
-  includePaths:
-    - ssh
-    - ssh-add
-    - ssh-agent
-    - scp
-shell:
-  setup:
-  - echo '{{- env "CI_COMMIT_TAG" | default "dev" }}' > /image/deckhouse/version
-  - cd /image
-  - tar -czf /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz *
-
----
-image: dev/install-standalone
-from: {{ .Images.BASE_SCRATCH }}
-import:
-  - artifact: install-standalone-builder
-    add: /dhctl-{{- env "CI_COMMIT_TAG" | default "dev" }}.x86_64.tar.gz
-    to: /
-    before: setup
 
 ---
 image: release-channel-version-prebuild
@@ -830,15 +434,15 @@ dependencies:
   - type: ImageDigest
     targetEnv: deckhouseImageDigest
 import:
-- artifact: yq-artifact
+- artifact: yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
 shell:
   install:
   - |
-    version="{{ env "CI_COMMIT_REF_NAME" }}"
-    yq w /deckhouse/release.yaml version $version digest $deckhouseImageDigest | yq r - -j > version.json
+    export version="{{ env "CI_COMMIT_REF_NAME" }}"
+    yq eval '.version = env(version)' /deckhouse/release.yaml | yq eval -j > version.json
     # changelog exists only for tags, we have to skip it for branches
     {{- $changelog := index (.Files.Glob "CHANGELOG/CHANGELOG-*") (printf "CHANGELOG/CHANGELOG-%s.yml" (env "CI_COMMIT_REF_NAME")) }}
     {{ if $changelog }}
@@ -863,232 +467,11 @@ import:
   includePaths:
   - version.json
   - changelog.yaml
-
-# modules_images
-{{- define "module_image_template" }}
-{{- if eq .ImageInstructionType "Dockerfile" }}
----
-image: {{ .ModuleName }}/{{ .ImageName }}
-context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
-dockerfile: Dockerfile
-args:
-  BASE_ALPINE: {{ .Images.BASE_ALPINE }}
-  BASE_ALPINE_DEV: {{ .Images.BASE_ALPINE_DEV }}
-  BASE_ALT: {{ .Images.BASE_ALT }}
-  BASE_ALT_DEV: {{ .Images.BASE_ALT_DEV }}
-  BASE_GOLANG_ALPINE: {{ .Images.BASE_GOLANG_ALPINE }}
-  BASE_GOLANG_ALPINE_DEV: {{ .Images.BASE_GOLANG_ALPINE_DEV }}
-  BASE_GOLANG_16_ALPINE: {{ .Images.BASE_GOLANG_16_ALPINE }}
-  BASE_GOLANG_16_ALPINE_DEV: {{ .Images.BASE_GOLANG_16_ALPINE_DEV }}
-  BASE_GOLANG_17_ALPINE: {{ .Images.BASE_GOLANG_17_ALPINE }}
-  BASE_GOLANG_17_ALPINE_DEV: {{ .Images.BASE_GOLANG_17_ALPINE_DEV }}
-  BASE_GOLANG_BUSTER: {{ .Images.BASE_GOLANG_BUSTER }}
-  BASE_GOLANG_BUSTER_DEV: {{ .Images.BASE_GOLANG_BUSTER_DEV }}
-  BASE_GOLANG_16_BUSTER: {{ .Images.BASE_GOLANG_16_BUSTER }}
-  BASE_GOLANG_17_BUSTER: {{ .Images.BASE_GOLANG_17_BUSTER }}
-  BASE_GOLANG_18_ALPINE: {{ .Images.BASE_GOLANG_18_ALPINE }}
-  BASE_GOLANG_18_ALPINE_DEV: {{ .Images.BASE_GOLANG_18_ALPINE_DEV }}
-  BASE_GOLANG_19_ALPINE: {{ .Images.BASE_GOLANG_19_ALPINE }}
-  BASE_GOLANG_19_ALPINE_DEV: {{ .Images.BASE_GOLANG_19_ALPINE_DEV }}
-  BASE_GOLANG_19_BULLSEYE: {{ .Images.BASE_GOLANG_19_BULLSEYE }}
-  BASE_GOLANG_19_BULLSEYE_DEV: {{ .Images.BASE_GOLANG_19_BULLSEYE_DEV }}
-  BASE_GOLANG_19_BUSTER: {{ .Images.BASE_GOLANG_19_BUSTER }}
-  BASE_GOLANG_20_ALPINE: {{ .Images.BASE_GOLANG_20_ALPINE }}
-  BASE_GOLANG_20_ALPINE_DEV: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
-  BASE_GOLANG_20_BULLSEYE: {{ .Images.BASE_GOLANG_20_BULLSEYE }}
-  BASE_GOLANG_20_BULLSEYE_DEV: {{ .Images.BASE_GOLANG_20_BULLSEYE_DEV }}
-  BASE_GOLANG_20_BUSTER: {{ .Images.BASE_GOLANG_20_BUSTER }}
-  BASE_GOLANG_21_ALPINE: {{ .Images.BASE_GOLANG_21_ALPINE }}
-  BASE_GOLANG_21_ALPINE_DEV: {{ .Images.BASE_GOLANG_21_ALPINE_DEV }}
-  BASE_GOLANG_21_BULLSEYE: {{ .Images.BASE_GOLANG_21_BULLSEYE }}
-  BASE_GOLANG_21_BULLSEYE_DEV: {{ .Images.BASE_GOLANG_21_BULLSEYE_DEV }}
-  BASE_GOLANG_22_ALPINE: {{ .Images.BASE_GOLANG_22_ALPINE }}
-  BASE_GOLANG_22_ALPINE_DEV: {{ .Images.BASE_GOLANG_22_ALPINE_DEV }}
-  BASE_GOLANG_22_BULLSEYE: {{ .Images.BASE_GOLANG_22_BULLSEYE }}
-  BASE_GOLANG_23_ALPINE: {{ .Images.BASE_GOLANG_23_ALPINE }}
-  BASE_GOLANG_23_ALPINE_DEV: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
-  BASE_GOLANG_23_BULLSEYE: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
-  BASE_NGINX_ALPINE:  {{ .Images.BASE_NGINX_ALPINE }}
-  BASE_NGINX_ALPINE_DEV:  {{ .Images.BASE_NGINX_ALPINE_DEV }}
-  BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}
-  BASE_NODE_16_ALPINE_DEV: {{ .Images.BASE_NODE_16_ALPINE_DEV }}
-  BASE_PYTHON_ALPINE:  {{ .Images.BASE_PYTHON_ALPINE }}
-  BASE_PYTHON_ALPINE_DEV:  {{ .Images.BASE_PYTHON_ALPINE_DEV }}
-  BASE_UBUNTU: {{ .Images.BASE_UBUNTU }}
-  BASE_UBUNTU_BIONIC: {{ .Images.BASE_UBUNTU_BIONIC }}
-  BASE_UBUNTU_DEV: {{ .Images.BASE_UBUNTU_DEV }}
-  BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
-  BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
-  SOURCE_REPO: {{ .SOURCE_REPO }}
-  CLOUD_PROVIDERS_SOURCE_REPO: {{ .CLOUD_PROVIDERS_SOURCE_REPO }}
-  OBSERVABILITY_SOURCE_REPO: {{ .OBSERVABILITY_SOURCE_REPO }}
-  # proxies for various packages
-  GOPROXY: {{ .GOPROXY }}
-  {{- if not (has (list .ModuleName .ImageName | join "/") (list "common/distroless")) }}
-dependencies:
-- image: common/distroless
-  imports:
-  - type: ImageName
-    targetBuildArg: BASE_DISTROLESS
-- image: common/iptables-wrapper
-  imports:
-  - type: ImageName
-    targetBuildArg: BASE_IPTABLES_WRAPPER
-  {{- end }}
-{{- else }}
-{{ tpl .ImageBuildData . }}
-{{- end }}
-{{- end }}
-
-{{- $Root := . }}
-{{- $ModulesImagesDigestList := list }}
-{{- $ExcludedModulesDict := dict }}
-
-# Collect images if desired for editions
-{{- $ModulesImagesBuildFiles := dict }}
-{{- range $_, $edition := $.Editions }}
-  {{- if not $edition.skipCollectImages }}
-    {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles ($.Files.Glob (printf "%s/*/images/*/{Dockerfile,werf.inc.yaml}" $edition.modulesDir)) }}
-  {{- end }}
-
-  {{- if eq $.Env $edition.name }}
-    {{- if $edition.excludeModules }}
-      {{- range $_, $exludeModuleName := $edition.excludeModules }}
-        {{- $_ := set $ExcludedModulesDict (printf "%s" $exludeModuleName) "true" }}
-      {{- end }}
-    {{- end }}
-
-    {{- break -}}
-  {{- end }}
-{{- end }}
-
-{{- range $path, $content := $ModulesImagesBuildFiles  }}
-  {{- $ctx := dict }}
-  {{- if regexMatch "/werf.inc.yaml$" $path }}
-  {{- $_ := set $ctx "ImageInstructionType" "Stapel" }}
-  {{- else }}
-  {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
-  {{- end }}
-  {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z0-9-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
-  {{- $moduleName := $ImageData._2 }}
-  # exclude modules and images from editions
-  {{- if hasKey $ExcludedModulesDict $moduleName }}
-    {{- continue -}}
-  {{- end }}
-
-  {{- $_ := set $ctx "CandiVersionMap" $.CandiVersionMap }}
-  {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
-  {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
-  {{- $_ := set $ctx "ModuleName" $moduleName }}
-  {{- $_ := set $ctx "ImageName" $ImageData._3 }}
-  {{- $_ := set $ctx "ImageBuildData" $content }}
-  {{- $_ := set $ctx "Files" $Root.Files }}
-  {{- $_ := set $ctx "Env" $Root.Env }}
-
-  {{- $_ := set $ctx "Images" $Root.Images }}
-  {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
-  {{- $_ := set $ctx "TF" $Root.TF }}
-  {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
-  {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
-  {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
-  {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
-  {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
-  {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
----
-{{ include "module_image_template" $ctx }}
-  {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
-    {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
-    {{- if $ImageManifest.image }}
-      {{- if ne $ImageManifest.final false }}
-        {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
-      {{- end }}
-    {{- end }}
-  {{- end }}
-{{- end }}
-
----
-image: images-digests
-from: {{ .Images.BASE_ALPINE }}
-dependencies:
-{{- range $imageDigest := $ModulesImagesDigestList }}
-  {{- $ModuleNameCamel := $imageDigest | splitList "/" | first | camelcase | untitle }}
-  {{- $ImageDigestCamel  := $imageDigest | splitList "/" | last  | camelcase | untitle }}
-- image: {{ $imageDigest }}
-  before: setup
-  imports:
-  - type: ImageDigest
-    targetEnv: MODULE_IMAGE_DIGEST_{{ $ModuleNameCamel }}_{{ $ImageDigestCamel }}
-{{- end }}
-import:
-- artifact: jq
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: setup
-shell:
-  setup:
-  - |
-    touch digests_full.lst
-    # Here we have list of records like "MODULE_IMAGE_DIGEST_moduleName_sha256:imageDigest", which we parse
-    for line in `printenv | grep MODULE_IMAGE_DIGEST_ | cut -d "=" -f 1`
-    do
-      digestKey=`echo $line | cut -f 4- -d '_'`
-      imageDigest=`printenv $line | grep -Eo "sha256:[a-f0-9]+"`
-      echo $digestKey'='$imageDigest >> digests_full.lst
-    done
-    cat digests_full.lst | jq -Rn '
-      reduce inputs as $i (
-        {};
-        . * (
-          $i | sub("=";"_") |
-          split("_") as [$moduleName, $imageName, $digest] |
-          {($moduleName): {($imageName): $digest}}
-        )
-      )
-    ' > /images_digests.json
-
----
-image: deckhouse-image-hash
-from: {{ .Images.BASE_ALPINE }}
-dependencies:
-- image: dev
-  before: setup
-  imports:
-  - type: ImageDigest
-    targetEnv: MODULE_IMAGE_DIGEST
-shell:
-  setup:
-  - echo ${MODULE_IMAGE_DIGEST} >> /deckhouse_digest.txt
-
----
-image: dev
-fromImage: dev-prebuild
-import:
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/modules/images_digests.json
-  after: setup
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/modules/040-node-manager/images_digests.json
-  after: setup
----
-image: tests
-fromImage: tests-prebuild
-import:
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/modules/images_digests.json
-  after: setup
-- image: images-digests
-  add: /images_digests.json
-  to: /deckhouse/modules/040-node-manager/images_digests.json
-  after: setup
-
 ---
 artifact: version-map-artifact
 from: {{ .Images.BASE_ALPINE }}
 import:
-- artifact: yq-artifact
+- artifact: yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
@@ -1118,7 +501,7 @@ shell:
 
      {{- if $previousEditionFile }}
   - cp {{ $edition.versionMapFile }} {{ $tmpEditionFile }}
-  - yq m {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
+  - yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' {{ $previousEditionFile }} {{ $tmpEditionFile }} > {{ $curEditionFile }}
 
       {{- else }}
 
@@ -1134,96 +517,3 @@ shell:
 
   {{- $previousEditionFile = $curEditionFile }}
 {{- end }}
-
----
-# use image for actual terraform version for infra deployment in e2e
-image: e2e-terraform
-# we use artifact with ubuntu because alpine can not unzip with `unzip` and `tar` command
-# current openstack zip-archive with error: "unzip: zip flag 8 (streaming) is not supported"
-from: {{ .Images.BASE_UBUNTU }}
-import:
-  {{- $k8sVersion := "1.27"}}
-  {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
-  - artifact: common/kubernetes-artifact-{{ $image_version }}
-    add: /src/_output/bin/kubectl
-    to: /usr/local/bin/kubectl
-    before: setup
-  - artifact: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-    add: /terraform/terraform
-    to: /image/bin/terraform
-    before: setup
-    {{- range $_, $edition := $.Editions }}
-      {{- if $edition.terraformProviders }}
-        {{- range $_, $tfProvider := $edition.terraformProviders }}
-          {{- $tf := index $.TF $tfProvider }}
-  - artifact: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-    add: /{{ $tf.artifactBinary }}
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
-    before: setup
-      {{- end }}
-    {{- end }}
-    {{- if eq $.Env $edition.name }}
-      {{- break -}}
-    {{- end }}
-  {{- end }}
-  - artifact: e2e-eks-terraform-plugins
-    add: /terraform-provider-random
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
-    before: setup
-  - artifact: e2e-eks-terraform-plugins
-    add: /terraform-provider-tls
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/tls/4.0.5/linux_amd64/terraform-provider-tls_v4.0.5_x5
-    before: setup
-  - artifact: e2e-eks-terraform-plugins
-    add: /terraform-provider-cloudinit
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/cloudinit/2.2.0/linux_amd64/terraform-provider-cloudinit_v2.2.0_x5
-    before: setup
-  - artifact: e2e-eks-terraform-plugins
-    add: /terraform-provider-kubernetes
-    to: /usr/local/share/terraform/plugins/registry.terraform.io/hashicorp/kubernetes/2.31.0/linux_amd64/terraform-provider-kubernetes_v2.31.0_x5
-    before: setup
-shell:
-  beforeInstall:
-  - apt-get update
-  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget unzip git python3 python3-pip jq curl gettext-base bsdextrautils
-  - pip3 install awscli
-  - |
-    mkdir /terraform
-    mkdir -p /usr/local/share/terraform/plugins
-    cat << EOD > /root/.terraformrc
-    provider_installation {
-      filesystem_mirror {
-        path    = "/usr/local/share/terraform/plugins"
-        include = ["*/*/*"]
-      }
-    }
-    EOD
-    touch /terraform.log
-    chmod 755 /terraform.log
----
-artifact: e2e-eks-terraform-plugins
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
-shell:
-  install:
-    - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch v3.4.3 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-random.git /src-provider-random
-    - cd /src-provider-random
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\""
-    - git clone --depth 1 --branch v4.0.4 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-tls.git /src-provider-tls
-    - cd /src-provider-tls
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\""
-    - git clone --depth 1 --branch v2.2.0 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-cloudinit.git /src-provider-cloudinit
-    - cd /src-provider-cloudinit
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\""
-    - git clone --depth 1 --branch v2.31.0 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src-provider-kubernetes
-    - cd /src-provider-kubernetes
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\""
-    - mv /src-provider-random/terraform-provider-random /terraform-provider-random
-    - mv /src-provider-tls/terraform-provider-tls /terraform-provider-tls
-    - mv /src-provider-cloudinit/terraform-provider-cloudinit /terraform-provider-cloudinit
-    - mv /src-provider-kubernetes/terraform-provider-kubernetes /terraform-provider-kubernetes
-    - chmod 755 /terraform-provider-*
-    - chown 64535:64535 /terraform-provider-*

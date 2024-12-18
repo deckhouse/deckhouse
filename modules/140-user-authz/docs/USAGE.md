@@ -8,7 +8,7 @@ title: "The user-authz module: usage"
 The example uses the [new role-based](./#the-new-role-based-model).
 {% endalert %}
 
-To grant access to a cluster administrator, use the role `d8:manage:all:admin` in `ClusterRoleBinding`.
+To grant access to a cluster administrator, use the role `d8:manage:all:manager` in `ClusterRoleBinding`.
 
 Example of assigning rights to a cluster administrator (User `joe`):
 
@@ -23,7 +23,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:admin
+  name: d8:manage:all:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -46,7 +46,7 @@ The user will be able to:
 The example uses the [new role-based](./#the-new-role-based-model).
 {% endalert %}
 
-To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:manage:networking:admin` in `ClusterRoleBinding`.
+To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:manage:networking:manager` in `ClusterRoleBinding`.
 
 Example of assigning rights to a network administrator (User `joe`):
 
@@ -61,12 +61,12 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:networking:admin
+  name: d8:manage:networking:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
 {% offtopic title="The rights that the user will get" %}
-The rights that the user will get will be limited to the following list of DKP module namespaces from the `networking` scope (the actual list depends on the list of modules included in the cluster):
+The rights that the user will get will be limited to the following list of DKP module namespaces from the `networking` subsystem (the actual list depends on the list of modules included in the cluster):
 - `d8-cni-cilium`
 - `d8-cni-flannel`
 - `d8-cni-simple-bridge`
@@ -80,7 +80,7 @@ The rights that the user will get will be limited to the following list of DKP m
 - `kube-system`
 
 The user will be able to:
-- View, modify, delete, and create *standard* Kubernetes resources in the module namespace from the `networking` scope.
+- View, modify, delete, and create *standard* Kubernetes resources in the module namespace from the `networking` subsystem.
 
   Example of resources that the user will be able to manage (the list is not exhaustive):
   - `Certificate`
@@ -113,7 +113,7 @@ The user will be able to:
   - `VerticalPodAutoscaler`
   - `VolumeSnapshot`
 
-- View, modify, delete, and create the following resources in the modules namespace from the `networking` scope:
+- View, modify, delete, and create the following resources in the modules namespace from the `networking` subsystem:
 
   A list of resources that the user will be able to manage:
   - `EgressGateway`
@@ -127,7 +127,7 @@ The user will be able to:
   - `IstioMulticluster`
   - `RoutingTable`
 
-- Modify the configuration of modules (view, change, delete, and create moduleConfig resources) from the `networking` scope.
+- Modify the configuration of modules (view, change, delete, and create moduleConfig resources) from the `networking` subsystem.
 
   List of modules that the user will be able to manage:
   - `cilium-hubble`
@@ -146,7 +146,7 @@ The user will be able to:
   - `openvpn`
   - `static-routing-manager`
   
-- Execute the following commands with pods and services in the modules namespace from the `networking` scope:
+- Execute the following commands with pods and services in the modules namespace from the `networking` subsystem:
   - `kubectl attach`
   - `kubectl exec`
   - `kubectl port-forward`

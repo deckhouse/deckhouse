@@ -2,25 +2,18 @@
 title: "The dashboard module: configuration"
 ---
 
+## Authentication
+
+By default, the [user-authn](/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module is used. Alternatively, authentication can be configured using [`externalAuthentication`](examples.html).
+
+If neither of these methods is enabled, the `dashboard` module will be disabled.
+
+{% alert level="warning" %}
+The parameters `auth.password` and `accessLevel` are no longer supported.
+{% endalert %}
+
+## Settings
+
 The module does not have any mandatory parameters.
 
 <!-- SCHEMA -->
-
-## Authentication
-
-[user-authn](/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
-If these options are disabled, the module will use basic auth with the auto-generated password.
-
-Use kubectl to see password:
-
-```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values dashboard -o json | jq '.dashboard.internal.auth.password'
-```
-
-Delete the Secret to re-generate password:
-
-```shell
-kubectl -n d8-dashboard delete secret/basic-auth
-```
-
-> **Note!** The `auth.password` parameter is deprecated.

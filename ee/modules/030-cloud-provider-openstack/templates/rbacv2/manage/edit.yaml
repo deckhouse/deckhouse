@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-cloud-provider-openstack
-  name: d8:manage:capability:module:cloud-provider-openstack:edit
+  name: d8:manage:permission:module:cloud-provider-openstack:edit
 rules:
 - apiGroups:
   - deckhouse.io
