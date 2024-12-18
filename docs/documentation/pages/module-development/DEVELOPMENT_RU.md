@@ -8,7 +8,7 @@ lang: ru
 
 При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
 
-Пример:
+Пример ModulePullOverride:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -30,47 +30,57 @@ spec:
 Для принудительного обновления можно задать больший интервал, а также использовать аннотацию `renew=""`.
 
 Требования к модулю:
-* Модуль должен существовать, иначе:
+* Модуль должен существовать, иначе у модуля будет ошибка `The module not found`.
 
-```console
-root@dev-master-0:~# kubectl get modulepulloverrides.deckhouse.io 
-NAME      UPDATED   MESSAGE
-example1  10s       The module not found
-```
+  Пример:
 
-* Модуль не должен быть встроенным, иначе:
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME      UPDATED   MESSAGE
+  example1  10s       The module not found
+  ```
 
-```console
-root@dev-master-0:~# kubectl get modulepulloverrides.deckhouse.io 
-NAME           UPDATED  MESSAGE
-ingress-nginx  10s      The module is embedded
-```
+* Модуль не должен быть встроенным, иначе у модуля будет ошибка `The module is embedded`. 
 
-* Модуль должен быть включен, иначе:
+  Пример:
 
-```console
-root@dev-master-0:~# kubectl get modulepulloverrides.deckhouse.io 
-NAME     UPDATED   MESSAGE
-example  7s        The module disabled
-```
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME           UPDATED  MESSAGE
+  ingress-nginx  10s      The module is embedded
+  ```
 
-* Модуль должен иметь источник, иначе:
+* Модуль должен быть включен, иначе у модуля будет ошибка `The module disabled`:
 
-```console
-root@dev-master-0:~# kubectl get modulepulloverrides.deckhouse.io 
-NAME       UPDATED   MESSAGE
-example    12s       The module does not have an active source
-```
+  Пример:
 
-* Источник модуля должен сущестовать, иначе:
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME     UPDATED   MESSAGE
+  example  7s        The module disabled
+  ```
 
-```console
-root@dev-master-0:~# kubectl get modulepulloverrides.deckhouse.io 
-NAME       UPDATED   MESSAGE
-example    12s       The source not found
-```
+* Модуль должен иметь источник, иначе у модуля будет ошибка `The module does not have an active source`:
+  
+  Пример:
 
-Пример команды:
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME       UPDATED   MESSAGE
+  example    12s       The module does not have an active source
+  ```
+
+* Источник модуля должен существовать, иначе у модуля будет ошибка `The source not found`:
+
+  Пример:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME       UPDATED   MESSAGE
+  example    12s       The source not found
+  ```
+
+Чтобы обновить модуль не дожидаясь начала следующего цикла обновления, можно выполнить следующую команду: 
 
 ```sh
 kubectl annotate mpo <name> renew=""
@@ -83,7 +93,7 @@ kubectl annotate mpo <name> renew=""
 Вместо этого модуль будет загружаться при каждом изменении параметра `imageDigest` и будет применяться в кластере.
 При этом в статусе ресурса [ModuleSource](../../cr.html#modulesource) этот модуль получит признак `overridden: true`, который укажет на то, что используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
 
-Также ресурс модуля будет иметь в статусе признак `IsOverridden` и версию модуля из `imageTag`:
+Также ресурс модуля будет иметь в статусе признак `IsOverridden` и версию модуля из `imageTag`. Пример:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

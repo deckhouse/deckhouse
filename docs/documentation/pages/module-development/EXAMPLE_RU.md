@@ -200,19 +200,19 @@ lang: ru
    EOF
    ```
    
-1. Создайте модуль конфиг где укажите источник, политику обновления и что модуль нужно включить:
+1. Создайте ModuleConfig, где укажите источник модуля (параметр `source`), политику обновления (параметр `updatePolicy`) и установите параметр `enabled` в `true`:
 
-```shell
-kubectl apply -f - <<EOF
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: helloworld
-   spec:
-      enabled: true
-      source: ghcr
-      updatePolicy: helloworld-policy
-```
+   ```shell
+   kubectl apply -f - <<EOF
+      apiVersion: deckhouse.io/v1alpha1
+      kind: ModuleConfig
+      metadata:
+        name: helloworld
+      spec:
+         enabled: true
+         source: ghcr
+         updatePolicy: helloworld-policy
+   ```
 
 1. Проверьте ресурс *ModuleSource* (в статусе не должно содержаться ошибок и должны быть перечислены доступные модули):
 
@@ -254,27 +254,15 @@ kubectl apply -f - <<EOF
    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
-## Миграция на новую политику обновления
+## Миграция ModuleUpdatePolicy на версию v1alpha2
 
-Если в кластере существует и используется политика обновления версии v1alpha1 то вам необходимо провести миграцию.
+Если в кластере существует ModuleUpdatePolicy версии v1alpha1, то необходимо выполнить следующие шаги по миграции на версию v1alpha2:
 
-Если в старой политики у вас указан селектор то для всех модулей которые подходят под этот селектор будут гореть алерт.
+Если в кластере в каком-либо ModuleUpdatePolicy версии v1alpha1 определен `moduleReleaseSelector`, то для всех модулей, которые подходят под этот селектор, в системе мониторинга будут гореть алерты [ModuleHasDeprecatedUpdatePolicy](../../alerts.html#monitoring-deckhouse-modulehasdeprecatedupdatepolicy). В этом случае выполните следующие шаги по миграции на версию v1alpha2 ModuleUpdatePolicy:
+- Укажите политику обновления для соответствующих модулей в параметре `properties.updatePolicy` moduleConfig. 
+- Выполните следующую команду, указав необходимый ModuleUpdatePolicy:
 
-Чтобы мигрировть и убрать алерт, вам нужно явно проставить политику обновления с помощью модуль конфига для всех модулей(которые это требуют).
-
-Затем вам нужно указать пустой селектор через команду:
-
-```shell
-kubectl edit moduleupdatepolicies.v1alpha1.deckhouse.io название_политики
-```
-
-Заменить старый селектор в ModuleUpdatePolicy на пустой, чтобы селектор не мог найти модули:
-
-```yaml
- moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        "": ""
-```
-
+  ```shell
+  kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io <MUP_NAME> --type='json' -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
+  ```
 {% endraw %}
