@@ -212,17 +212,16 @@ render-workflow: ## Generate CI workflow instructions.
 bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 	cd tools/regcopy; go build -o bin/regcopy
 
-bin/trivy-test/trivy:
+bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
 	# curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
 	curl --header "PRIVATE-TOKEN: ${TRIVY_TOKEN}" https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
-bin/trivy: bin bin/trivy-test/trivy
+bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
 	rm -rf bin/trivy
-	ln -s bin/trivy-${TRIVY_VERSION}/trivy bin/trivy
-	ls  -l bin/trivy-${TRIVY_VERSION}/trivy
-	cat bin/trivy-${TRIVY_VERSION}/trivy
+	chmod u+x bin/trivy-${TRIVY_VERSION}/trivy
+	ln -s ${PWD}/bin/trivy-${TRIVY_VERSION}/trivy bin/trivy
 
 .PHONY: cve-report cve-base-images
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
