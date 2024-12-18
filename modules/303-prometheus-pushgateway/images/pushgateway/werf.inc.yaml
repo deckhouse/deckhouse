@@ -5,7 +5,7 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- artifact: prometheus/prometheus-promu-artifact
+- image: prometheus/prometheus-promu-artifact
   add: /promu/promu
   to: /bin/promu
   before: install
@@ -25,11 +25,11 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /prometheus/pushgateway/pushgateway
   to: /bin/pushgateway
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /empty/
   to: /pushgateway/
   before: setup
