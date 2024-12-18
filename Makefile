@@ -220,7 +220,7 @@ bin/trivy-${TRIVY_VERSION}/trivy:
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
 	rm -f trivy
-	ln -s trivy-${TRIVY_VERSION}/trivy bin/trivy
+	ln -s trivy-${TRIVY_VERSION}/trivy trivy
 
 .PHONY: cve-report cve-base-images
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
