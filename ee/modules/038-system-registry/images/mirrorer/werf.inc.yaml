@@ -1,0 +1,48 @@
+{{ $appRelPath := printf "%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}"
+fromImage: common/distroless
+import:
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: /tmp-tmp
+    to: /tmp
+    before: setup
+  - artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+    add: "/mirrorer"
+    to: /mirrorer
+    before: setup
+
+docker:
+  ENTRYPOINT: ["/mirrorer"]
+---
+artifact: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+shell:
+  beforeInstall:
+    - mkdir -m 1777 /tmp-tmp
+  install:
+    - cd /src
+    - export GOPROXY={{ $.GOPROXY }}
+    - go mod download
+  setup:
+    - cd /src
+    - go test ./...
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /mirrorer ./cmd/mirrorer
+    - chown 64535:64535 /mirrorer
+    - chmod 0755 /mirrorer
+git:
+  - add: /{{ $appRelPath }}/app
+    to:  /src
+    includePaths:
+      - '**/*.mod'
+      - '**/*.sum'
+      - '**/*.go'
+    stageDependencies:
+      install:
+        - '**/*.mod'
+        - '**/*.sum'
+      setup:
+        - "**/*.go"
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
