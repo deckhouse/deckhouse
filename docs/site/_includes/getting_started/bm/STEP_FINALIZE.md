@@ -2,7 +2,7 @@
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["bcrypt.js"].digest_path }}'></script>
 
-At this point, you have created a cluster that consists of a **single** master node. Only a limited set of system components run on the master node by default. You have to either add at least one worker node to the cluster for the cluster to work properly, or allow the rest of the Deckhouse components to work on the master node.
+At this point, you have created a cluster consisting of a **single node** — the master node. By default, only a limited set of system components runs on the master node. To ensure the full functionality of the cluster, you need to either add at least one worker node to the cluster or allow the remaining Deckhouse components to run on the master node.
 
 Select one of the two options below to continue installing the cluster:
 
@@ -27,7 +27,7 @@ Select one of the two options below to continue installing the cluster:
 
 {% snippetcut %}
 ```bash
-sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
+sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
 ```
 {% endsnippetcut %}
   </li>
@@ -35,7 +35,7 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
 <p>Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
@@ -51,7 +51,7 @@ EOF
 <p>Make the created StorageClass as the default one in the cluster:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
+sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 {% endsnippetcut %}
@@ -70,7 +70,7 @@ sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
   Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: LocalPathProvisioner
 metadata:
@@ -86,7 +86,7 @@ EOF
   <p>Make the created StorageClass as the default one in the cluster:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
+sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 {% endsnippetcut %}
@@ -95,7 +95,7 @@ sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
     <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
-sudo /opt/deckhouse/bin/kubectl create -f - << EOF
+sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -123,7 +123,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
     <p>Create an <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
-kubectl create -f - <<EOF
+sudo -i d8 k -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
 metadata:
@@ -166,7 +166,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 ```bash
 # Specify the IP address of the node you want to connect to the cluster.
 export NODE=<NODE-IP-ADDRESS>
-kubectl create -f - <<EOF
+sudo -i d8 k -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: StaticInstance
 metadata:
@@ -186,13 +186,13 @@ EOF
 <p>On the <strong>master node</strong>, run the following command to get nodes list:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl get no
+sudo -i d8 k get no
 ```
 {% endsnippetcut %}
 
 {% offtopic title="Example of the output..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl get no
+sudo -i d8 k get no
 NAME               STATUS   ROLES                  AGE    VERSION
 d8cluster          Ready    control-plane,master   30m   v1.23.17
 d8cluster-worker   Ready    worker                 10m   v1.23.17
@@ -210,13 +210,13 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=kruise
+sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
 {% endsnippetcut %}
 
 {% offtopic title="Example of the output..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=kruise
+$ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 ```
@@ -232,7 +232,7 @@ Next, you will need to create an Ingress controller, a user to access the web in
   <p>Apply it using the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl create -f ingress-nginx-controller.yml
+sudo -i d8 k create -f ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
 
@@ -240,7 +240,7 @@ It may take some time to start the Ingress controller after installing Deckhouse
 
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 {% endsnippetcut %}
 
@@ -248,7 +248,7 @@ Wait for the Ingress controller pods to switch to <code>Ready</code> state.
 
 {% offtopic title="Example of the output..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
@@ -262,7 +262,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 <p>Apply it using the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl create -f user.yml
+sudo -i d8 k create -f user.yml
 ```
 {% endsnippetcut %}
 </li>

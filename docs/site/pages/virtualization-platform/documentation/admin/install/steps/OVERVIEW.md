@@ -7,11 +7,11 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/overview
 
 Deckhouse Virtualization Platform should be installed with these steps:
 
-1. [Planning and preparing](prepare.html)
-2. [Base platform installation](base-cluster.html)
-3. [Adding nodes](nodes.html)
-4. [Setup storage](storage.html)
-5. [Setup virtualization](virtualization.html)
-6. [Setup Ingress and DNS](ingress.html)
-7. [Настройка доступа](access.html)
-
+1. [Planning and preparing](prepare.html);
+1. [Base platform installation](base-cluster.html);
+1. [Initial access configuration](access.html);
+1. [Adding nodes](nodes.html);
+1. [Setup storage](storage.html);
+1. [Setup virtualization](virtualization.html);
+1. [Setup Ingress and DNS](ingress.html);
+1. [Настройка доступа](access.html).

@@ -6,16 +6,17 @@ lang: ru
 
 ## Настройка Ingress
 
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](https://TODO) запустился и находится в статусе `Running`.
+Убедитесь, что под Kruise controller manager модуля [ingress-nginx](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) запустился и находится в статусе `Running`.
+
 Выполните на **master-узле** следующую команду:
 
-  ```shell
-  sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
-  ```
-
-Создайте ресурс IngressNginxController, описывающий параметры NGINX Ingress controller.
-
 ```shell
+sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
+```
+
+Создайте ресурс IngressNginxController, описывающий параметры NGINX Ingress controller:
+
+```yaml
 sudo -i d8 k apply -f - <<EOF
 # Секция, описывающая параметры NGINX Ingress controller.
 # https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
@@ -41,7 +42,7 @@ spec:
 EOF
 ```
 
-Запуск Ingress-контроллера может занять какое-то время. Убедитесь что поды Ingress-контроллера перешли в статус `Running`, выполнив команду:
+Запуск Ingress-контроллера может занять какое-то время. Убедитесь, что поды Ingress-контроллера перешли в статус `Running`, выполнив команду:
 
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
@@ -58,34 +59,37 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 
 Для доступа к веб-интерфейсам платформы необходимо настроить DNS-записи для домена кластера.
 
-**Важно:** Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре `clusterDomain` и внутренней сервисной зоне сети. Например, если используется `clusterDomain: cluster.local` (значение по умолчанию), а сервисная зона сети — `ru-central1.internal`, то `publicDomainTemplate` не может быть `%s.cluster.local` или `%s.ru-central1.internal`.
+{% alert level="warning" %}
+Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре `clusterDomain`, и внутренней сервисной зоной сети. Например, если используется `clusterDomain: cluster.local` (значение по умолчанию),, а сервисная зона сети — `ru-central1.internal`, то `publicDomainTemplate` не может быть `%s.cluster.local` или `%s.ru-central1.internal`.
+{% endalert %}
 
-### Wildcard-домен
+### Использование Wildcard-домена
 
-Поддомены должны резолвиться в IP-адрес узла, где запускается nginx-controller. В нашем случае это master-0. Так же убедитесь, что шаблон имён имеет вид `%s.<домен>`:
+Убедитесь, что поддомены резолвятся на IP-адрес узла, на котором работает nginx-controller. В данном случае это `master-0`. Также проверьте, что шаблон имён соответствует формату `%s.<домен>`:
 
 ```shell
 sudo -i d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 ```
 
-Пример вывода, если использовался свой wildcard-домен:
-```
+Пример вывода, если использовался свой Wildcard-домен:
+
+```console
 %s.my-dvp-cluster.example.com
 ```
 
 Пример вывода, если использовался домен от сервиса ssslip.io:
 
-```
+```console
 %s.54.43.32.21.sslip.io
 ```
 
-### Не wildcard-домен
+### Использование отдельных доменов вместо Wildcard-домена
 
-Если в шаблоне указан не wildcard-домен, то нужно создать дополнительные А или CNAME-записи со значением публичного IP-адреса, где запускается nginx-controller. Записи нужны для всех сервисов Deckhouse.
+Если в шаблоне используется не Wildcard-домен, необходимо вручную добавить дополнительные A или CNAME-записи, указывающие на публичный IP-адрес узла, где работает nginx-controller. Эти записи требуются для всех сервисов Deckhouse.
 
 Например, для домена `my-dvp-cluster.example.com` и шаблона с поддоменами `%s.my-dvp-cluster.example.com`, записи будут выглядеть так:
 
-```
+```console
 api.my-dvp-cluster.example.com
 argocd.my-dvp-cluster.example.com
 dashboard.my-dvp-cluster.example.com
@@ -104,7 +108,7 @@ upmeter.my-dvp-cluster.example.com
 
 Для домена `my-dvp-cluster.example.com` и шаблона с индивидуальными доменами `%s-my-dvp-cluster.example.com`, записи будут выглядеть так:
 
-```
+```console
 api-my-dvp-cluster.example.com
 argocd-my-dvp-cluster.example.com
 dashboard-my-dvp-cluster.example.com
@@ -121,11 +125,10 @@ status-my-dvp-cluster.example.com
 upmeter-my-dvp-cluster.example.com
 ```
 
-Для тестовых целей возможно добавить записи в файл `/etc/hosts` на локальной машине (для Windows  `%SystemRoot%\system32\drivers\etc\hosts`).
+Для тестирования можно добавить необходимые записи в файл `/etc/hosts` на локальной машине (для Windows в файл `%SystemRoot%\system32\drivers\etc\hosts`).
 
-Например, для Linux можно воспользоваться командами:
+Для Linux можно использовать следующие команды для добавления записей в файл `/etc/hosts`:
 
-{% snippetcut %}
 ```shell
 export PUBLIC_IP="<PUBLIC_IP>"
 export CLUSTER_DOMAIN="my-dvp-cluster.example.com"
@@ -147,24 +150,22 @@ $PUBLIC_IP upmeter.$CLUSTER_DOMAIN
 EOF
 "
 ```
-{% endsnippetcut %}
-
 
 ## Создание пользователя
 
 Для доступа в веб-интерфейсы кластера можно создать статического пользователя:
 
-1. Сгенерируйте пароль
+1. Сгенерируйте пароль:
 
    ```shell
    echo "<USER-PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
    ```
- 
-   здесь `<USER-PASSWORD>` — пароль, который нужно установить пользователю.
 
-2. Создайте пользователя
+   `<USER-PASSWORD>` — пароль, который нужно установить пользователю.
 
-   ```shell
+1. Создайте пользователя:
+
+   ```yaml
    sudo -i d8 k create -f - <<EOF
    ---
    apiVersion: deckhouse.io/v1
@@ -189,4 +190,4 @@ EOF
    EOF
    ```
 
-Теперь возможен вход по почте и паролю в веб интерфейсы кластера. Далее рекомендуется настроить пользователей по разделу [Разграничение доступа / Ролевая модель](../../platform-management/access-control/role-model.html).
+Теперь можно авторизоваться в веб-интерфейсах кластера, используя электронную почту и пароль. Для дальнейшей настройки рекомендуется ознакомиться с разделом [Разграничение доступа / Ролевая модель](../../platform-management/access-control/role-model.html).

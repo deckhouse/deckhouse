@@ -16,13 +16,13 @@ ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code =
 Проверьте работу kubectl, выведя список узлов кластера:
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl get nodes
+sudo -i d8 k get nodes
 ```
 {% endsnippetcut %}
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl get nodes
+sudo -i d8 k get nodes
 NAME                                     STATUS   ROLES                  AGE   VERSION
 cloud-demo-master-0                      Ready    control-plane,master   12h   v1.23.9
 cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v1.23.9
@@ -33,7 +33,7 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+sudo -i d8 k -n d8-ingress-nginx get po
 ```
 {% endsnippetcut %}
 
@@ -41,7 +41,7 @@ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po
+sudo -i d8 k -n d8-ingress-nginx get po
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          16h
 kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
@@ -52,7 +52,7 @@ kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
 Также дождитесь готовности балансировщика:
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer
+sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 ```
 {% endsnippetcut %}
 
@@ -60,7 +60,7 @@ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer
 
 {% offtopic title="Пример вывода..." %}
 ```
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer
+sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP     PORT(S)                      AGE
 nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TCP,443:30618/TCP   1m
 ```
@@ -83,10 +83,10 @@ nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TC
 {% snippetcut %}
 {% raw %}
 ```shell
-BALANCER_IP=$(dig $(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
-echo "Balancer IP is '${BALANCER_IP}'." && sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
+BALANCER_IP=$(dig $(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
+echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
-echo "Domain template is '$(sudo /opt/deckhouse/bin/kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
+echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
 {% endsnippetcut %}
@@ -94,10 +94,10 @@ echo "Domain template is '$(sudo /opt/deckhouse/bin/kubectl get mc global -o=jso
 {% snippetcut %}
 {% raw %}
 ```shell
-BALANCER_IP=$(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
-echo "Balancer IP is '${BALANCER_IP}'." && sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
+BALANCER_IP=$(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
+echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type merge \
   -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"%s.${BALANCER_IP}.sslip.io\"}}}}" && echo && \
-echo "Domain template is '$(sudo /opt/deckhouse/bin/kubectl get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
+echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
 {% endsnippetcut %}
@@ -124,7 +124,7 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 {% snippetcut %}
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
+sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endsnippetcut %}
 </div>
@@ -141,7 +141,7 @@ sudo /opt/deckhouse/bin/kubectl patch mc global --type merge -p "{\"spec\": {\"s
 {% raw %}
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
-sudo /opt/deckhouse/bin/kubectl patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
+sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endraw %}
 {% endsnippetcut %}

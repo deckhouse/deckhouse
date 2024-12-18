@@ -6,15 +6,15 @@ lang: ru
 
 ## Добавление узлов
 
-После базовой установки кластер состоит из *единственного* узла — master-узла. Чтобы запускать виртуальные машины на подготовленных worker-узлах, их нужно добавить в кластер.
+После первоначальной установки кластер состоит только из одного узла — master-узла. Для того чтобы запускать виртуальные машины на подготовленных worker-узлах, их необходимо добавить в кластер.
 
-Далее будет рассмотрено добавление _двух_ worker-узлов. Подробнее о добавлении статических узлов в кластер читайте [в документации](../../platform-management/node-management/adding-node.html)).
+Далее будет рассмотрено добавление двух worker-узлов. Более подробную информацию о добавлении статических узлов в кластер можно найти [в документации](../../platform-management/node-management/adding-node.html)).
 
-Убедитесь, что все шаги подготовки выполнены (см. [подготовка worker-узлов](../prepare.html))
+Убедитесь, что все шаги подготовки выполнены (см. [подготовка worker-узлов](http://deckhouse.ru/products/virtualization-platform/documentation/admin/install/steps/prepare.html))
 
-Создайте ресурс [NodeGroup](../../reference/cr/nodegroup.html) `worker`. Для этого выполните на **master-узле** следующую команду:
+Создайте ресурс [NodeGroup](http://deckhouse.ru/products/virtualization-platform/reference/cr/nodegroup.html) `worker`. Для этого выполните на **master-узле** следующую команду:
 
-```shell
+```yaml
 sudo -i d8 k create -f - << EOF
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -36,9 +36,9 @@ EOF
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
 
-Создайте в кластере ресурс [SSHCredentials](/virtualization-platform/reference/cr/sshcredentials.html). Для этого выполните на **master-узле** следующую команду:
+Создайте в кластере ресурс [SSHCredentials](https://deckhouse.ru/products/virtualization-platform/reference/cr/sshcredentials.html). Для этого выполните на **master-узле** следующую команду:
 
-```shell
+```yaml
 sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: SSHCredentials
@@ -50,7 +50,7 @@ spec:
 EOF
 ```
 
-Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на **master-узле** следующую команду:
+Получите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на **master-узле** следующую команду:
 
 ```shell
 cat /dev/shm/caps-id.pub
@@ -76,10 +76,10 @@ chmod 600 /home/caps/.ssh/authorized_keys
 pdpl-user -i 63 caps
 ```
 
-Создайте ресурcы [StaticInstance](../../reference/cr/staticinstance.html).
+Создайте ресурcы [StaticInstance](http://deckhouse.ru/products/virtualization-platform/reference/cr/staticinstance.html).
 Выполните на **master-узле** следующие команды с указанием IP-адреса и уникального имени каждого узла:
 
-```shell
+```yaml
 export NODE_IP=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.
 export NODE_NAME=<NODE-NAME> # Укажите уникальное имя узла, например, dvp-worker-1.
 sudo -i d8 k create -f - <<EOF
@@ -107,8 +107,7 @@ sudo -i d8 k get no
 
 Пример вывода:
 
-```
-user@master-0:~$ sudo -i d8 k get no
+```console
 NAME            STATUS   ROLES                  AGE    VERSION
 master-0        Ready    control-plane,master   40m    v1.29.10
 dvp-worker-1    Ready    worker                 3m     v1.29.10

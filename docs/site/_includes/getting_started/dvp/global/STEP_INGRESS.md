@@ -1,6 +1,6 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-Make sure the Kruise controller manager is `Ready`.
+Make sure the Kruise controller manager is `Running`.
   Run the following command on the **master node**:
 
 {% snippetcut %}
@@ -50,7 +50,7 @@ sudo d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 {% endsnippetcut %}
 
-<p>Wait for the Ingress controller pods to switch to <code>Ready</code> state.</p>
+<p>Wait for the Ingress controller pods to switch to <code>Running</code> state.</p>
 
 {% offtopic title="Example of the output..." %}
 ```console
