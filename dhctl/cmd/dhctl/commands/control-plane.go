@@ -28,8 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
-func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Test control plane manager is ready.")
+func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -68,8 +67,7 @@ func DefineTestControlPlaneManagerReadyCommand(parent *kingpin.CmdClause, comman
 	return cmd
 }
 
-func DefineTestControlPlaneNodeReadyCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Test control plane node is ready.")
+func DefineTestControlPlaneNodeReadyCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)

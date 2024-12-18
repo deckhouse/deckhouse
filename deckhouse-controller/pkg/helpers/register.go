@@ -53,9 +53,8 @@ func DefineHelperCommands(kpApp *kingpin.Application, logger *log.Logger) {
 			return changeregistry.ChangeRegistry(*newRegistry, *user, *password, *caFile, *newImageTag, *scheme, *dryRun, logger)
 		})
 	}
-	const parseClusterConfigurationSubcommand = "cluster-configuration"
-	const parseCloudDiscoveryDataSubcommand = "cloud-discovery-data"
+
 	// dhctl parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
-	dhctlapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand, parseClusterConfigurationSubcommand)
-	dhctlapp.DefineCommandParseCloudDiscoveryData(kpApp, helpersCommand, parseCloudDiscoveryDataSubcommand)
+	dhctlapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand, kingpin.Command("cluster-configuration", "Parse configuration and print it."))
+	dhctlapp.DefineCommandParseCloudDiscoveryData(kpApp, helpersCommand, kingpin.Command("cloud-discovery-data", "Parse cloud discovery data and print it."))
 }

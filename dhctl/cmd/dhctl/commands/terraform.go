@@ -31,8 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Run terraform converge exporter.")
+func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
@@ -46,8 +45,7 @@ func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause, command s
 	return cmd
 }
 
-func DefineTerraformCheckCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Check differences between state of Kubernetes cluster and Terraform state.")
+func DefineTerraformCheckCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
