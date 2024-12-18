@@ -3,13 +3,13 @@
 ---
 # Based on https://github.com/istio/istio/blob/1.21.6/operator/docker/Dockerfile.operator
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ $.Images.BASE_DISTROLESS }}
+fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/operator
   to: /usr/local/bin/
   after: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /var/lib/istio/manifests/
   to: /var/lib/istio/manifests/
   after: setup
