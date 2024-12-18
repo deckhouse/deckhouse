@@ -192,4 +192,3 @@ metadata:
     - kubelet.*
   type: File
 ```
-
