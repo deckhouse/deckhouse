@@ -35,6 +35,20 @@ shell:
     - cd /src
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint main.go
 ---
+artifact: {{ .ModuleName }}/wrapper-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+git:
+- add: /{{ .ModulePath }}modules/035-cni-flannel/images/flanneld/wrapper
+  to: /src
+  stageDependencies:
+    install:
+      - '**/*'
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }}
+    - cd /src
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /wrapper main.go
+---
 artifact: {{ .ModuleName }}/flanneld-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
@@ -75,5 +89,9 @@ import:
   add: /entrypoint
   to: /entrypoint
   before: setup
+- artifact: {{ .ModuleName }}/wrapper-artifact
+  add: /wrapper
+  to: /wrapper
+  before: setup
 docker:
-  ENTRYPOINT: ["/entrypoint"]
+  ENTRYPOINT: ["/wrapper"]
