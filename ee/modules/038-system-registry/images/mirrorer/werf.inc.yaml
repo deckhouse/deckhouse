@@ -31,7 +31,7 @@ shell:
     - chown 64535:64535 /mirrorer
     - chmod 0755 /mirrorer
 git:
-  - add: /{{ $appRelPath }}/app
+  - add: /{{ $appRelPath }}
     to:  /src
     includePaths:
       - '**/*.mod'
