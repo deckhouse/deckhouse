@@ -15,8 +15,9 @@ import (
 
 type templateModel struct {
 	Config
-	Address string
-	Hashes  ConfigHashes
+	Address  string
+	NodeName string
+	Hashes   ConfigHashes
 }
 
 // Config represents the configuration

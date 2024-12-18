@@ -72,9 +72,9 @@ spec:
     imagePullPolicy: IfNotPresent
     env:
       - name: HOST_IP
-        valueFrom:
-          fieldRef:
-            fieldPath: status.hostIP
+        value: {{ .Address }}
+      - name: NODE_NAME
+        value: {{ .NodeName }}
     volumeMounts:
       - mountPath: /config
         name: mirrorer-config-volume

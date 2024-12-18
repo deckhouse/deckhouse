@@ -34,9 +34,10 @@ type apiServer struct {
 	requestMutex sync.Mutex
 	log          *dlog.Logger
 	hostIP       string
+	nodeName     string
 }
 
-func Run(ctx context.Context, hostIP string) error {
+func Run(ctx context.Context, hostIP, nodeName string) error {
 	log := dlog.Default().
 		With("component", "static pod manager")
 
@@ -44,8 +45,9 @@ func Run(ctx context.Context, hostIP string) error {
 	defer log.Info("Stopped")
 
 	api := &apiServer{
-		log:    log,
-		hostIP: hostIP,
+		log:      log,
+		hostIP:   hostIP,
+		nodeName: nodeName,
 	}
 
 	logConfig := slogchi.Config{
@@ -112,8 +114,9 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 	}
 
 	model := templateModel{
-		Config:  data,
-		Address: s.hostIP,
+		Config:   data,
+		Address:  s.hostIP,
+		NodeName: s.nodeName,
 	}
 
 	// Lock the requestMutex to prevent concurrent requests and release it after the request is processed

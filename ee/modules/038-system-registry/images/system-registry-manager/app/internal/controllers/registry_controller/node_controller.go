@@ -52,11 +52,12 @@ type NodeController = nodeController
 var _ reconcile.Reconciler = &nodeController{}
 
 type NodeControllerSettings struct {
-	RegistryAddress   string
-	RegistryPath      string
-	ImageAuth         string
-	ImageDistribution string
-	ImageMirrorer     string
+	RegistryAddress       string
+	RegistryPath          string
+	ImageAuth             string
+	ImageDistribution     string
+	ImageMirrorer         string
+	ImageMirrorerOverride string
 }
 
 type nodeController struct {
@@ -447,6 +448,10 @@ func (nc *nodeController) contructStaticPodConfig(moduleConfig state.ModuleConfi
 			DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
 			DistributionKey:  string(distributionKey),
 		},
+	}
+
+	if nc.Settings.ImageMirrorerOverride != "" {
+		config.Images.Mirrorer = nc.Settings.ImageMirrorerOverride
 	}
 
 	if moduleConfig.Settings.Mode == state.RegistryModeProxy {

@@ -31,6 +31,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	log = log.With("hostIP", hostIP)
+
 	log.Info("Starting mirrorer")
 	defer log.Info("Stopped")
 

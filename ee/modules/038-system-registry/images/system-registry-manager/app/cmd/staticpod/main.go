@@ -64,7 +64,7 @@ func main() {
 	}()
 
 	log.Info("Starting manager")
-	err := staticpod.Run(ctx, hostIP)
+	err := staticpod.Run(ctx, hostIP, nodeName)
 	if err != nil {
 		log.Error("Manager run error", "error", err)
 	}
