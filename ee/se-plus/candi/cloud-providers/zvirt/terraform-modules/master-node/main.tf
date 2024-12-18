@@ -59,8 +59,6 @@ resource "ovirt_disk" "master-kubernetes-data" {
   storage_domain_id = local.storage_domain_id
   alias             = join("-", [local.master_node_name, "kubernetes-data"])
   sparse            = false
-
-  depends_on        = [ data.ovirt_disk_attachments.master-vm-boot-disk-attachment ]
 }
 
 resource "ovirt_disk_attachment" "master-kubernetes-data-attachment" {
@@ -69,6 +67,8 @@ resource "ovirt_disk_attachment" "master-kubernetes-data-attachment" {
   vm_id          = ovirt_vm.master_vm.id
   bootable       = false
   active         = true
+
+  depends_on        = [ ovirt_disk_resize.master_boot_disk_resize ]
 }
 
 resource "ovirt_vm_start" "master_vm" {
