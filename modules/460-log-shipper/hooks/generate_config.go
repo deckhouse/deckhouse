@@ -233,27 +233,68 @@ func getTLSSecretRef(dest v1alpha1.ClusterLogDestination) string {
 		if dest.Spec.Elasticsearch.TLS.SecretRef != nil {
 			return dest.Spec.Elasticsearch.TLS.SecretRef.Name
 		}
+	case "Vector":
+		if dest.Spec.Vector.TLS.SecretRef != nil {
+			return dest.Spec.Vector.TLS.SecretRef.Name
+		}
+	case "Loki":
+		if dest.Spec.Loki.TLS.SecretRef != nil {
+			return dest.Spec.Loki.TLS.SecretRef.Name
+		}
+	case "Splunk":
+		if dest.Spec.Splunk.TLS.SecretRef != nil {
+			return dest.Spec.Splunk.TLS.SecretRef.Name
+		}
+	case "Logstash":
+		if dest.Spec.Logstash.TLS.SecretRef != nil {
+			return dest.Spec.Logstash.TLS.SecretRef.Name
+		}
+	case "Socket":
+		if dest.Spec.Socket.TCP.TLS.SecretRef != nil {
+			return dest.Spec.Socket.TCP.TLS.SecretRef.Name
+		}
+	case "Kafka":
+		if dest.Spec.Kafka.TLS.SecretRef != nil {
+			return dest.Spec.Kafka.TLS.SecretRef.Name
+		}
 	}
 	return ""
 }
 
 func applyTLSConfig(dest *v1alpha1.ClusterLogDestination, tlsConfig *tlsConfigFromSecret) error {
-	switch dest.Spec.Type {
-	case "Elasticsearch":
-		if len(tlsConfig.CACert) > 0 {
-			dest.Spec.Elasticsearch.TLS.CAFile = base64.RawStdEncoding.EncodeToString((tlsConfig.CACert))
-		}
-		if len(tlsConfig.ClientCert) > 0 {
-			dest.Spec.Elasticsearch.TLS.CommonTLSClientCert.CertFile = base64.StdEncoding.EncodeToString(tlsConfig.ClientCert)
-		}
-		if len(tlsConfig.ClientKey) > 0 {
-			dest.Spec.Elasticsearch.TLS.CommonTLSClientCert.KeyFile = base64.StdEncoding.EncodeToString(tlsConfig.ClientKey)
-		}
-		if len(tlsConfig.KeyPass) > 0 {
-			dest.Spec.Elasticsearch.TLS.CommonTLSClientCert.KeyPass = base64.StdEncoding.EncodeToString(tlsConfig.KeyPass)
-		}
-		dest.Spec.Elasticsearch.TLS.CommonTLSClientCert.KeyPass = base64.StdEncoding.EncodeToString(tlsConfig.KeyPass)
+	accessors := map[string]func() *v1alpha1.CommonTLSSpec{
+		"Elasticsearch": func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Elasticsearch.TLS },
+		"Vector":        func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Vector.TLS },
+		"Loki":          func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Loki.TLS },
+		"Splunk":        func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Splunk.TLS },
+		"Logstash":      func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Logstash.TLS },
+		"Socket":        func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Socket.TCP.TLS },
+		"Kafka":         func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Kafka.TLS },
 	}
+
+	getTLSSpec := accessors[dest.Spec.Type]
+	if getTLSSpec == nil {
+		return nil
+	}
+
+	tls := getTLSSpec()
+	if tls.SecretRef == nil {
+		return nil
+	}
+
+	if len(tlsConfig.CACert) > 0 {
+		tls.CAFile = base64.RawStdEncoding.EncodeToString(tlsConfig.CACert)
+	}
+	if len(tlsConfig.ClientCert) > 0 {
+		tls.CommonTLSClientCert.CertFile = base64.StdEncoding.EncodeToString(tlsConfig.ClientCert)
+	}
+	if len(tlsConfig.ClientKey) > 0 {
+		tls.CommonTLSClientCert.KeyFile = base64.StdEncoding.EncodeToString(tlsConfig.ClientKey)
+	}
+	if len(tlsConfig.KeyPass) > 0 {
+		tls.CommonTLSClientCert.KeyPass = base64.StdEncoding.EncodeToString(tlsConfig.KeyPass)
+	}
+
 	return nil
 }
 
