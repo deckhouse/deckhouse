@@ -9,7 +9,7 @@ import:
   add: /tmp/istio/out/operator
   to: /usr/local/bin/
   after: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /var/lib/istio/manifests/
   to: /var/lib/istio/manifests/
   after: setup
