@@ -18,7 +18,7 @@ spec:
           description: |
             Huawei Cloud server group parameters used by `machine-controller-manager` (the [node-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/) module).
 
-            The CloudInstanceClass resource of the node-manager module refers to this resource.
+            The CloudInstanceClass resource of the `node-manager` module refers to this resource.
           required:
             - spec
           properties:
