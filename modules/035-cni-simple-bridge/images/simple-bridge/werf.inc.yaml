@@ -1,10 +1,10 @@
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
@@ -15,7 +15,7 @@ import:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /usr/lib64
   to: /usr/lib64
   before: setup
@@ -25,16 +25,20 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-cni-wrapper-artifact
+  add: /cni-wrapper
+  to: /cni-wrapper
+  before: setup
 docker:
   ENTRYPOINT: ["/sbin/iptables-wrapper"]
 ---
 {{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
 final: false
-from: {{ .Images.BASE_ALT_DEV }}
+from: common/relocate-artifact
 git:
-- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
+- add: /{{ .ModulePath }}modules/035-{{ .ModuleName }}/images/{{ .ImageName }}/rootfs
   to: /relocate
   stageDependencies:
     install:
@@ -44,6 +48,34 @@ shell:
     - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate
     - |
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        rm -f "/relocate/sbin/${cmd}"
-        ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+        ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
       done
+      # broken symlinks are not imported from the artifact
+      touch /sbin/iptables-wrapper
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/035-{{ .ModuleName }}/images/{{ .ImageName }}/cni-wrapper
+  to: /src/cni-wrapper
+  stageDependencies:
+    install:
+    - '**/*'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-cni-wrapper-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/cni-wrapper
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+    - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+    - cd /src
+    - go build -ldflags="-s -w" -o /cni-wrapper main.go

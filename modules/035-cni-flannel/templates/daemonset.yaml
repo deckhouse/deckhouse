@@ -49,8 +49,7 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
     spec:
-      # https://github.com/coreos/flannel/issues/1002 workaround
-      terminationGracePeriodSeconds: 0
+      terminationGracePeriodSeconds: 30
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}

@@ -6,11 +6,19 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "flannel")) | nindent 2 }}
 rules:
   - apiGroups:
+      - deckhouse.io
+    resources:
+      - moduleconfigs
+    verbs:
+      - get
+  - apiGroups:
       - ""
     resources:
       - pods
     verbs:
       - get
+      - list
+      - delete
   - apiGroups:
       - ""
     resources:

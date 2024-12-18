@@ -340,7 +340,25 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/035-cni-flannel/images/flanneld/cni-wrapper"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/035-cni-flannel/images/flanneld/entrypoint"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/035-cni-simple-bridge/images/simple-bridge/cni-wrapper"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

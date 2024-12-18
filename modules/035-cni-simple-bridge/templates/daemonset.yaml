@@ -47,6 +47,7 @@ spec:
       labels:
         app: simple-bridge
     spec:
+      terminationGracePeriodSeconds: 30
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
@@ -73,7 +74,7 @@ spec:
           runAsNonRoot: false
           runAsUser: 0
         command:
-        - /bin/simple-bridge
+        - /cni-wrapper
         env:
         {{- if hasKey .Values.global "clusterConfiguration" }}
           {{- if .Values.global.clusterConfiguration.cloud }}
