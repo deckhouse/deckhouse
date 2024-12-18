@@ -14,7 +14,7 @@ docker:
   ENTRYPOINT: ["/entrypoint"]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: src-artifact
+fromArtifact: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
   to: /src/entrypoint

@@ -46,7 +46,7 @@ docker:
   - "--web.console.templates=/usr/share/prometheus/consoles"
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: src-artifact
+fromArtifact: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches

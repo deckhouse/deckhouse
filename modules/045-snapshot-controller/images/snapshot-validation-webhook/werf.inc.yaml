@@ -5,11 +5,12 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-  - artifact: common/csi-external-snapshotter-artifact-{{ $version | replace "." "-" }}
-    add: /snapshot-validation-webhook
-    to: /snapshot-validation-webhook
-    before: setup
+- image: common/csi-external-snapshotter-artifact-{{ $version | replace "." "-" }}
+  add: /snapshot-validation-webhook
+  to: /snapshot-validation-webhook
+  before: setup
 docker:
   ENTRYPOINT: ["/snapshot-validation-webhook"]
   {{- end }}
 {{- end }}
+

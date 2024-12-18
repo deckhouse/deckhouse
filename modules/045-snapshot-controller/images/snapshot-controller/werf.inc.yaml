@@ -5,11 +5,11 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-  - artifact: common/csi-external-snapshotter-artifact-{{ $version | replace "." "-" }}
-    add: /snapshot-controller
-    to: /snapshot-controller
-    before: setup
+- image: common/csi-external-snapshotter-artifact-{{ $version | replace "." "-" }}
+  add: /snapshot-controller
+  to: /snapshot-controller
+  before: setup
 docker:
   ENTRYPOINT: ["/snapshot-controller"]
   {{- end }}
-  {{- end }}
+{{- end }}
