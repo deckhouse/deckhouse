@@ -98,7 +98,7 @@ function prepareImageArgs() {
 
 function trivyGetCVEListForImage() (
   prepareImageArgs "$@"
-  trivy i --severity=$SEVERITY --ignorefile "$IGNORE" --format json --quiet "$IMAGE_ARGS" | jq -r ".Results[]?.Vulnerabilities[]?.VulnerabilityID" | uniq | sort
+  bin/trivy i --severity=$SEVERITY --ignorefile "$IGNORE" --format json --quiet "$IMAGE_ARGS" | jq -r ".Results[]?.Vulnerabilities[]?.VulnerabilityID" | uniq | sort
 )
 
 function htmlReportHeader() (
@@ -108,7 +108,7 @@ function htmlReportHeader() (
 function trivyGetHTMLReportPartForImage() (
   prepareImageArgs "$@"
   echo -n "    <h1>$LABEL</h1>"
-  trivy i --severity=$SEVERITY --ignorefile "$IGNORE" --format template --template "@tools/cve/html/body-part.tpl" --quiet "$IMAGE_ARGS"
+  bin/trivy i --severity=$SEVERITY --ignorefile "$IGNORE" --format template --template "@tools/cve/html/body-part.tpl" --quiet "$IMAGE_ARGS"
   echo -n "    <br/>"
 )
 
