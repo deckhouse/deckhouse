@@ -101,6 +101,11 @@ spec:
     - name: prometheus-main-db
       mountPath: /prometheus
       subPath: prometheus-db
+    securityContext:
+      fsGroup: 64535
+      runAsGroup: 64535
+      runAsNonRoot: true
+      runAsUser: 64535
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
