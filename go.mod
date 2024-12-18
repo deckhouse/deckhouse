@@ -11,6 +11,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
+	github.com/flant/addon-operator v0.0.0-20241213133444-cc7128a26f51
 	github.com/flant/kube-client v1.2.2
 	github.com/flant/shell-operator v1.5.3-0.20241209162655-7e40c61f7666
 	github.com/gammazero/deque v0.0.0-20190521012701-46e4ffb7a622
@@ -62,7 +63,6 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.7.0+incompatible
-	github.com/flant/addon-operator v1.5.4-0.20241211151735-95c8f23c5091
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-openapi/errors v0.19.7
