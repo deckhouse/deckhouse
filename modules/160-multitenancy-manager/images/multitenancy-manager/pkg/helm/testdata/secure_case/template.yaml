@@ -317,6 +317,7 @@ spec:
     {{ end }}
     {{ end }}
 
+    {{- if or .parameters.allowedUIDs .parameters.allowedGIDs }}
     ---
     # Allowed uids/gids with the SecurityPolicy
     # Refer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/cr.html#securitypolicy
@@ -346,3 +347,4 @@ spec:
           labelSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .projectName }}
+    {{- end }}
