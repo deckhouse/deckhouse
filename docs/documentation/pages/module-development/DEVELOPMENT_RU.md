@@ -153,7 +153,7 @@ status:
      modulesCount: 2
    ```
 
-2. Включите модуль и создайте ресурс [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
+1. Включите модуль и создайте ресурс [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -166,7 +166,7 @@ status:
 
    Этот ресурс будет проверять тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
 
-3. При каждом обновлении - статус этого ресурса будет меняться:
+1. При каждом обновлении - статус этого ресурса будет меняться:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -186,7 +186,7 @@ status:
    - **imageDigest** — уникальный идентификатор образа контейнера, который был загружен.
    - **lastUpdated** — время последней загрузки образа.
 
-4. При этом *ModuleSource* приобретет вид:
+1. При этом *ModuleSource* приобретет вид:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
