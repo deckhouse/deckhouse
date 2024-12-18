@@ -184,10 +184,7 @@ metadata:
   name: kube-apiserver
   namespace: kube-system
 spec:
-  containers:
-  - name: kube-apiserver
-    securityContext:
-      privileged: true
-  - name: healthcheck
-    securityContext:
-      privileged: true
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0

@@ -82,7 +82,7 @@ metadata:
   name: kube-controller-manager
   namespace: kube-system
 spec:
-  containers:
-    - name: kube-controller-manager
-      securityContext:
-        privileged: true
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0

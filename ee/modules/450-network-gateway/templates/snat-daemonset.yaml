@@ -59,8 +59,6 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: snat
-        # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
-        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "snat") }}
         command: ["/usr/bin/python3", "/iptables-loop.py"]
         env:

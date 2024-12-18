@@ -32,6 +32,10 @@ metadata:
 spec:
   dnsPolicy: ClusterFirstWithHostNet
   hostNetwork: true
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
   shareProcessNamespace: true
   containers:
   - name: kubernetes-api-proxy
@@ -41,8 +45,6 @@ spec:
     env:
     - name: PATH
       value: /opt/nginx-static/sbin
-    securityContext:
-      privileged: true
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf
@@ -55,8 +57,6 @@ spec:
     env:
     - name: PATH
       value: /opt/nginx-static/sbin
-    securityContext:
-      privileged: true
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf

@@ -65,8 +65,8 @@ metadata:
   name: etcd
   namespace: kube-system
 spec:
-  containers:
-    - name: etcd
-      securityContext:
-        privileged: true
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
 

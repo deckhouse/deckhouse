@@ -144,7 +144,7 @@ spec:
 {{- if not (.Values.global.enabledModules | has "cni-cilium" )}}
       - name: iptables-loop
         # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_pod_security_context_run_as_user_root . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "iptablesLoop") }}
         env:
         - name: KUBE_DNS_SVC_IP

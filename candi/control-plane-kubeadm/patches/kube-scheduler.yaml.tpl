@@ -82,7 +82,7 @@ metadata:
   name: kube-scheduler
   namespace: kube-system
 spec:
-  containers:
-    - name: kube-scheduler
-      securityContext:
-        privileged: true
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
