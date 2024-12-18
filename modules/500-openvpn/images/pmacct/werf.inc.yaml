@@ -10,7 +10,7 @@ docker:
   ENTRYPOINT: ["/usr/sbin/pmacctd"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: src-artifact
+fromImage: common/src-artifact
 final: false
 shell:
   install:

@@ -10,7 +10,7 @@ docker:
   ENTRYPOINT: [ "/usr/bin/loki" ]
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: src-artifact
+fromArtifact: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/462-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches

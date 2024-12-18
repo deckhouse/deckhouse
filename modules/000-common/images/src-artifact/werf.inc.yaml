@@ -1,10 +1,12 @@
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}
+image: {{ $.ModuleName }}/src-artifact
 from: {{ .Images.BASE_ALT_P11 }}
+final: false
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y git
   - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
   - mkdir -p /src
+  # ssh auth to 3p repos
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config

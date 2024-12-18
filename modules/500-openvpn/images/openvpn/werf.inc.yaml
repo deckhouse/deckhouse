@@ -33,7 +33,7 @@ import:
   before: setup
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: src-artifact
+fromImage: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
