@@ -38,6 +38,7 @@ import (
 	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -114,38 +115,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 
 	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.TerraformContext, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	kubeCl, err := d8Destroyer.GetKubeClient()
-	if err != nil {
-		log.DebugF("Cannot get kubernetes client. Got error: %v", err)
-		return nil, err
-	}
-
-	nodes, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
-	if err != nil {
-		log.DebugF("Cannot get nodes. Got error: %v", err)
-		return nil, err
-	}
-
-	var nodeIPs []NodeIP
-	for _, node := range nodes.Items {
-		var ip NodeIP
-
-		for _, addr := range node.Status.Addresses {
-			if addr.Type == "InternalIP" {
-				ip.internalIP = addr.Address
-			}
-			if addr.Type == "ExternalIP" {
-				ip.externalIP = addr.Address
-			}
-		}
-
-		nodeIPs = append(nodeIPs, ip)
-	}
-
-	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client(), nodeIPs)
+	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client(), []NodeIP{})
 
 	return &ClusterDestroyer{
 		state:           state,
@@ -196,6 +166,47 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	case config.CloudClusterType:
 		infraDestroyer = d.cloudClusterInfra
 	case config.StaticClusterType:
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		kubeCl, err := d.d8Destroyer.GetKubeClient()
+		if err != nil {
+			log.DebugF("Cannot get kubernetes client. Got error: %v", err)
+			return err
+		}
+
+		var nodes *v1.NodeList
+		err = retry.NewLoop("Get control plane nodes from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
+			nodes, err = kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
+			if err != nil {
+				log.DebugF("Cannot get nodes. Got error: %v", err)
+				return err
+			}
+			return nil
+		})
+
+		if err != nil {
+			log.DebugF("Cannot get nodes after 5 attemts")
+			return err
+		}
+
+		var nodeIPs []NodeIP
+		for _, node := range nodes.Items {
+			var ip NodeIP
+
+			for _, addr := range node.Status.Addresses {
+				if addr.Type == "InternalIP" {
+					ip.internalIP = addr.Address
+				}
+				if addr.Type == "ExternalIP" {
+					ip.externalIP = addr.Address
+				}
+			}
+
+			nodeIPs = append(nodeIPs, ip)
+		}
+
+		d.staticDestroyer.IPs = nodeIPs
 		infraDestroyer = d.staticDestroyer
 	default:
 		return fmt.Errorf("Unknown cluster type '%s'", clusterType)
