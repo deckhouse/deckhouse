@@ -261,8 +261,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"descheduler": "imageHash-descheduler-descheduler",
 	},
 	"documentation": map[string]interface{}{
-		"docsBuilder": "imageHash-documentation-docsBuilder",
-		"web":         "imageHash-documentation-web",
+		"web": "imageHash-documentation-web",
 	},
 	"extendedMonitoring": map[string]interface{}{
 		"certExporter":               "imageHash-extendedMonitoring-certExporter",
@@ -466,8 +465,16 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller": "imageHash-serviceWithHealthchecks-controller",
 	},
 	"snapshotController": map[string]interface{}{
-		"snapshotController":        "imageHash-snapshotController-snapshotController",
-		"snapshotValidationWebhook": "imageHash-snapshotController-snapshotValidationWebhook",
+		"snapshotController127":        "imageHash-snapshotController-snapshotController127",
+		"snapshotController128":        "imageHash-snapshotController-snapshotController128",
+		"snapshotController129":        "imageHash-snapshotController-snapshotController129",
+		"snapshotController130":        "imageHash-snapshotController-snapshotController130",
+		"snapshotController131":        "imageHash-snapshotController-snapshotController131",
+		"snapshotValidationWebhook127": "imageHash-snapshotController-snapshotValidationWebhook127",
+		"snapshotValidationWebhook128": "imageHash-snapshotController-snapshotValidationWebhook128",
+		"snapshotValidationWebhook129": "imageHash-snapshotController-snapshotValidationWebhook129",
+		"snapshotValidationWebhook130": "imageHash-snapshotController-snapshotValidationWebhook130",
+		"snapshotValidationWebhook131": "imageHash-snapshotController-snapshotValidationWebhook131",
 	},
 	"staticRoutingManager": map[string]interface{}{
 		"agent": "imageHash-staticRoutingManager-agent",

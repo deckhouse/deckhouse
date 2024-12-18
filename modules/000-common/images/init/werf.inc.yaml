@@ -3,13 +3,14 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /relocate
   to: /
   before: setup
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromArtifact: common/relocate-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: relocate-artifact
+final: false
 shell:
   beforeInstall:
   - apt-get update
