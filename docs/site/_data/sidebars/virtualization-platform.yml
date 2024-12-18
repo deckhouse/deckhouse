@@ -171,16 +171,17 @@ entries:
                         ru: Внешние
                       folders:
                         - title:
+                            en: Yadro
                             ru: Yadro
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/hardware/yadro.html
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
                         - title:
                             en: NFS storage
                             ru: NFS-хранилище
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/nfs.html
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
                         - title:
                             en: CEPH storage
                             ru: CEPH-хранилище
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/ceph.html
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
             - title:
                 en: Virtualization
                 ru: Виртуализация
@@ -317,7 +318,9 @@ entries:
             en: Modules settings
             ru: Настройки модулей
           url: /virtualization-platform/reference/mc.html
-        - title: Custom Resources
+        - title:
+            en: Custom Resources
+            ru: Custom Resources
           url: /virtualization-platform/reference/cr/
         - title:
             en: Console utilities

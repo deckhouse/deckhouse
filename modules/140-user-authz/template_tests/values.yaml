@@ -10,7 +10,3 @@ global:
       mode: CertManager
       certManager:
         clusterIssuerName: letsencrypt
-    resourcesRequests:
-      everyNode:
-        cpu: 300m
-        memory: 512Mi

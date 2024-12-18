@@ -13,29 +13,30 @@ properties:
         description: |
           Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/).
+          Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/).
+
+          > **Внимание.** Из соображений безопасности этот режим работает только при условии, что параметр `https.mode` (глобальный или в модуле) не установлен в значение `Disabled`.
         properties:
           authURL:
             description: |
-              URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
+              URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа `HTTP 200`.
           authSignInURL:
             description: |
-              URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
+              URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от `HTTP 200`).
           useBearerTokens:
             description: |
-              Токены авторизации. dashboard должен работать с Kubernetes API от имени пользователя (сервис аутентификации при этом должен обязательно возвращать в своих ответах HTTP-заголовок Authorization, в котором должен быть bearer-token — именно под этим токеном dashboard будет производить запросы к API-серверу Kubernetes).
+              Токены авторизации. Dashboard должен взаимодействовать с Kubernetes API от имени пользователя. Для этого сервис аутентификации обязан возвращать HTTP-заголовок `Authorization` в своих ответах, содержащий bearer-token. Этот токен будет использоваться dashboard для выполнения запросов к API-серверу Kubernetes.
+      allowedUserGroups:
+        items:
+        description: |
+          Массив групп пользователей, которые могут иметь доступ к dashboard.
 
-              * Значение по умолчанию: `false`.
+          Этот параметр используется, если модуль `user-authn` включён или настроен параметр `externalAuthentication`.
 
-              > **Важно!** Из соображений безопасности этот режим работает только если `https.mode` (глобальный или в модуле) не установлен в значение `Disabled`.
+          > **Внимание.** Если модуль используется вместе с [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/), не забудьте добавить эти группы в соответствующее поле конфигурации DexProvider.        
       whitelistSourceRanges:
         description: |
           Список адресов в формате CIDR, которым разрешено проходить аутентификацию для доступа в dashboard.
-      allowScale:
-        description: |
-          Активация возможности скейлить Deployment и StatefulSet из веб-интерфейса.
-
-          Не используется, если включен параметр `externalAuthentication`.
   https:
     description: |
       Тип сертификата, используемого для dashboard.
@@ -47,26 +48,23 @@ properties:
           Режим работы HTTPS:
           * `CertManager` — dashboard будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
           * `CustomCertificate` — dashboard будет работать по HTTPS, используя сертификат из пространства имен `d8-system`;
-          * `Disabled` — в данном режиме dashboard будет работать только по HTTP;
-          * `OnlyInURI` — dashboard будет работать по HTTP (подразумевая, что перед ними стоит внешний HTTPS-балансировщик, который терминирует HTTPS) и се ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          * `Disabled` — в данном режиме dashboard не будет работать;
+          * `OnlyInURI` — это режим, при котором dashboard работает через HTTP (с учетом того, что перед ним настроен внешний HTTPS-балансировщик, который завершает HTTPS-соединение). В этом случае все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) будут генерироваться с использованием схемы HTTPS. Балансировщик должен обеспечивать автоматическое перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
             description: |
-              Тип используемого ClusterIssuer. В данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
-
-            x-doc-default: "letsencrypt"
+              Тип используемого ClusterIssuer. Доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои значения.
       customCertificate:
         properties:
           secretName:
             description: |
-              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для dashboard (данный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
-            x-doc-default: 'false'
+              Имя секрета (Secret) в пространстве имен `d8-system`, который будет использоваться для dashboard (данный секрет должен быть в формате [tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets)).
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.
 
-      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры).
   nodeSelector:
     description: |
       Аналогично параметру Kubernetes `spec.nodeSelector` у подов.
@@ -77,11 +75,3 @@ properties:
       Аналогично параметру Kubernetes `spec.tolerations` у подов.
 
       Если значение не указано или указано `false`, будет использоваться [автоматика](../../#выделение-узлов-под-определенный-вид-нагрузки).
-
-  accessLevel:
-    description: |
-      Уровень доступа в dashboard, если отключен модуль `user-authn` и не включена внешняя аутентификация (`externalAuthentication`). Возможные значения описаны [в user-authz](../../modules/140-user-authz/).
-
-      По умолчанию используется уровень `User`.
-
-      В случае использования модуля `user-authn` или другой внешней аутентификации (`externalAuthentication`) права доступа необходимо настраивать с помощью модуля `user-authz`.

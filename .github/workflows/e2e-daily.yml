@@ -32,6 +32,9 @@ env:
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
+  # Need for ssh: default.
+  DOCKER_BUILDKIT: "1"
+  WERF_LOG_TERMINAL_WIDTH: "200"
   # </template: werf_envs>
 
 # Always run a single job at a time.
@@ -131,8 +134,8 @@ jobs:
 
   # </template: git_info_job>
   # <template: e2e_run_job_template>
-  run_aws_containerd_1_27:
-    name: "AWS, Containerd, Kubernetes 1.27"
+  run_aws_containerd_1_29:
+    name: "AWS, Containerd, Kubernetes 1.29"
     needs:
       - git_info
     outputs:
@@ -141,7 +144,7 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "aws;WithoutNAT;containerd;1.27"
+      ran_for: "aws;WithoutNAT;containerd;1.29"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
@@ -149,15 +152,10 @@ jobs:
       PROVIDER: AWS
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -353,14 +351,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: AWS/Containerd/1.27"
+      - name: "Run e2e test: AWS/Containerd/1.29"
         id: e2e_test_run
         timeout-minutes: 80
         env:
           PROVIDER: AWS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -432,7 +430,7 @@ jobs:
           PROVIDER: AWS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -500,7 +498,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_aws_containerd_1_27
+          name: failed_cluster_state_aws_containerd_1_29
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -510,7 +508,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_aws_containerd_1_27
+          name: test_output_aws_containerd_1_29
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -561,7 +559,7 @@ jobs:
           {
             "labels": {
               "cri": "Containerd",
-              "kube_version": "1.27",
+              "kube_version": "1.29",
               "layout": "WithoutNAT",
               "provider": "AWS",
               "trigger": "CloudLayoutTestFailed",
@@ -598,8 +596,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_eks_containerd_1_27:
-    name: "EKS, Containerd, Kubernetes 1.27"
+  run_eks_containerd_1_29:
+    name: "EKS, Containerd, Kubernetes 1.29"
     needs:
       - git_info
     outputs:
@@ -608,7 +606,7 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "eks;WithoutNAT;containerd;1.27"
+      ran_for: "eks;WithoutNAT;containerd;1.29"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
@@ -616,15 +614,10 @@ jobs:
       PROVIDER: EKS
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -826,14 +819,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: EKS/Containerd/1.27"
+      - name: "Run e2e test: EKS/Containerd/1.29"
         id: e2e_test_run
         timeout-minutes: 80
         env:
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -945,7 +938,7 @@ jobs:
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -1012,7 +1005,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_eks_containerd_1_27
+          name: failed_cluster_state_eks_containerd_1_29
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -1022,7 +1015,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_eks_containerd_1_27
+          name: test_output_eks_containerd_1_29
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -1073,7 +1066,7 @@ jobs:
           {
             "labels": {
               "cri": "Containerd",
-              "kube_version": "1.27",
+              "kube_version": "1.29",
               "layout": "WithoutNAT",
               "provider": "EKS",
               "trigger": "CloudLayoutTestFailed",
@@ -1110,8 +1103,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_azure_containerd_1_27:
-    name: "Azure, Containerd, Kubernetes 1.27"
+  run_azure_containerd_1_29:
+    name: "Azure, Containerd, Kubernetes 1.29"
     needs:
       - git_info
     outputs:
@@ -1120,7 +1113,7 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "azure;Standard;containerd;1.27"
+      ran_for: "azure;Standard;containerd;1.29"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
@@ -1128,15 +1121,10 @@ jobs:
       PROVIDER: Azure
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -1332,14 +1320,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: Azure/Containerd/1.27"
+      - name: "Run e2e test: Azure/Containerd/1.29"
         id: e2e_test_run
         timeout-minutes: 80
         env:
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -1415,7 +1403,7 @@ jobs:
           PROVIDER: Azure
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -1487,7 +1475,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_azure_containerd_1_27
+          name: failed_cluster_state_azure_containerd_1_29
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -1497,7 +1485,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_azure_containerd_1_27
+          name: test_output_azure_containerd_1_29
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -1548,7 +1536,7 @@ jobs:
           {
             "labels": {
               "cri": "Containerd",
-              "kube_version": "1.27",
+              "kube_version": "1.29",
               "layout": "Standard",
               "provider": "Azure",
               "trigger": "CloudLayoutTestFailed",
@@ -1585,8 +1573,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_gcp_containerd_1_27:
-    name: "GCP, Containerd, Kubernetes 1.27"
+  run_gcp_containerd_1_29:
+    name: "GCP, Containerd, Kubernetes 1.29"
     needs:
       - git_info
     outputs:
@@ -1595,7 +1583,7 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "gcp;WithoutNAT;containerd;1.27"
+      ran_for: "gcp;WithoutNAT;containerd;1.29"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
@@ -1603,15 +1591,10 @@ jobs:
       PROVIDER: GCP
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -1807,14 +1790,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: GCP/Containerd/1.27"
+      - name: "Run e2e test: GCP/Containerd/1.29"
         id: e2e_test_run
         timeout-minutes: 80
         env:
           PROVIDER: GCP
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -1884,7 +1867,7 @@ jobs:
           PROVIDER: GCP
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -1950,7 +1933,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_gcp_containerd_1_27
+          name: failed_cluster_state_gcp_containerd_1_29
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -1960,7 +1943,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_gcp_containerd_1_27
+          name: test_output_gcp_containerd_1_29
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -2011,7 +1994,7 @@ jobs:
           {
             "labels": {
               "cri": "Containerd",
-              "kube_version": "1.27",
+              "kube_version": "1.29",
               "layout": "WithoutNAT",
               "provider": "GCP",
               "trigger": "CloudLayoutTestFailed",
@@ -2048,8 +2031,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_yandex_cloud_containerd_1_27:
-    name: "Yandex.Cloud, Containerd, Kubernetes 1.27"
+  run_yandex_cloud_containerd_1_29:
+    name: "Yandex.Cloud, Containerd, Kubernetes 1.29"
     needs:
       - git_info
     outputs:
@@ -2058,7 +2041,7 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "yandex-cloud;WithoutNAT;containerd;1.27"
+      ran_for: "yandex-cloud;WithoutNAT;containerd;1.29"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
@@ -2066,15 +2049,10 @@ jobs:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -2270,14 +2248,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: Yandex.Cloud/Containerd/1.27"
+      - name: "Run e2e test: Yandex.Cloud/Containerd/1.29"
         id: e2e_test_run
         timeout-minutes: 80
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2351,7 +2329,7 @@ jobs:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2421,7 +2399,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_yandex-cloud_containerd_1_27
+          name: failed_cluster_state_yandex-cloud_containerd_1_29
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -2431,7 +2409,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_yandex-cloud_containerd_1_27
+          name: test_output_yandex-cloud_containerd_1_29
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -2482,7 +2460,7 @@ jobs:
           {
             "labels": {
               "cri": "Containerd",
-              "kube_version": "1.27",
+              "kube_version": "1.29",
               "layout": "WithoutNAT",
               "provider": "Yandex.Cloud",
               "trigger": "CloudLayoutTestFailed",
@@ -2519,8 +2497,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_openstack_containerd_1_27:
-    name: "OpenStack, Containerd, Kubernetes 1.27"
+  run_openstack_containerd_1_29:
+    name: "OpenStack, Containerd, Kubernetes 1.29"
     needs:
       - git_info
     outputs:
@@ -2529,7 +2507,7 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "openstack;Standard;containerd;1.27"
+      ran_for: "openstack;Standard;containerd;1.29"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
@@ -2537,15 +2515,10 @@ jobs:
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -2741,14 +2714,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: OpenStack/Containerd/1.27"
+      - name: "Run e2e test: OpenStack/Containerd/1.29"
         id: e2e_test_run
         timeout-minutes: 80
         env:
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2818,7 +2791,7 @@ jobs:
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -2884,7 +2857,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_openstack_containerd_1_27
+          name: failed_cluster_state_openstack_containerd_1_29
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -2894,7 +2867,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_openstack_containerd_1_27
+          name: test_output_openstack_containerd_1_29
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -2945,7 +2918,7 @@ jobs:
           {
             "labels": {
               "cri": "Containerd",
-              "kube_version": "1.27",
+              "kube_version": "1.29",
               "layout": "Standard",
               "provider": "OpenStack",
               "trigger": "CloudLayoutTestFailed",
@@ -2982,8 +2955,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_vsphere_containerd_1_27:
-    name: "vSphere, Containerd, Kubernetes 1.27"
+  run_vsphere_containerd_1_29:
+    name: "vSphere, Containerd, Kubernetes 1.29"
     needs:
       - git_info
     outputs:
@@ -2992,7 +2965,7 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "vsphere;Standard;containerd;1.27"
+      ran_for: "vsphere;Standard;containerd;1.29"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
@@ -3000,15 +2973,10 @@ jobs:
       PROVIDER: vSphere
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -3204,14 +3172,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: vSphere/Containerd/1.27"
+      - name: "Run e2e test: vSphere/Containerd/1.29"
         id: e2e_test_run
         timeout-minutes: 80
         env:
           PROVIDER: vSphere
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -3283,7 +3251,7 @@ jobs:
           PROVIDER: vSphere
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -3351,7 +3319,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_vsphere_containerd_1_27
+          name: failed_cluster_state_vsphere_containerd_1_29
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -3361,7 +3329,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_vsphere_containerd_1_27
+          name: test_output_vsphere_containerd_1_29
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -3412,7 +3380,7 @@ jobs:
           {
             "labels": {
               "cri": "Containerd",
-              "kube_version": "1.27",
+              "kube_version": "1.29",
               "layout": "Standard",
               "provider": "vSphere",
               "trigger": "CloudLayoutTestFailed",
@@ -3449,8 +3417,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_vcd_containerd_1_27:
-    name: "VCD, Containerd, Kubernetes 1.27"
+  run_vcd_containerd_1_29:
+    name: "VCD, Containerd, Kubernetes 1.29"
     needs:
       - git_info
     outputs:
@@ -3459,7 +3427,7 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "vcd;Standard;containerd;1.27"
+      ran_for: "vcd;Standard;containerd;1.29"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
@@ -3467,15 +3435,10 @@ jobs:
       PROVIDER: VCD
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -3671,14 +3634,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: VCD/Containerd/1.27"
+      - name: "Run e2e test: VCD/Containerd/1.29"
         id: e2e_test_run
         timeout-minutes: 80
         env:
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -3756,7 +3719,7 @@ jobs:
           PROVIDER: VCD
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -3830,7 +3793,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_vcd_containerd_1_27
+          name: failed_cluster_state_vcd_containerd_1_29
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -3840,7 +3803,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_vcd_containerd_1_27
+          name: test_output_vcd_containerd_1_29
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -3891,7 +3854,7 @@ jobs:
           {
             "labels": {
               "cri": "Containerd",
-              "kube_version": "1.27",
+              "kube_version": "1.29",
               "layout": "Standard",
               "provider": "VCD",
               "trigger": "CloudLayoutTestFailed",
@@ -3928,8 +3891,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
-  run_static_containerd_1_27:
-    name: "Static, Containerd, Kubernetes 1.27"
+  run_static_containerd_1_29:
+    name: "Static, Containerd, Kubernetes 1.29"
     needs:
       - git_info
     outputs:
@@ -3938,7 +3901,7 @@ jobs:
       run_id: ${{ github.run_id }}
       # need for find state in artifact
       cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
-      ran_for: "static;Static;containerd;1.27"
+      ran_for: "static;Static;containerd;1.29"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ steps.setup.outputs.install-image-path }}
@@ -3946,15 +3909,10 @@ jobs:
       PROVIDER: Static
       CRI: Containerd
       LAYOUT: Static
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -4150,14 +4108,14 @@ jobs:
 
           echo '::echo::off'
 
-      - name: "Run e2e test: Static/Containerd/1.27"
+      - name: "Run e2e test: Static/Containerd/1.29"
         id: e2e_test_run
         timeout-minutes: 80
         env:
           PROVIDER: Static
           CRI: Containerd
           LAYOUT: Static
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -4227,7 +4185,7 @@ jobs:
           PROVIDER: Static
           CRI: Containerd
           LAYOUT: Static
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -4293,7 +4251,7 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: failed_cluster_state_static_containerd_1_27
+          name: failed_cluster_state_static_containerd_1_29
           path: |
             ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
             ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
@@ -4303,7 +4261,7 @@ jobs:
         if: ${{ steps.setup.outputs.dhctl-log-file }}
         uses: actions/upload-artifact@v4.4.0
         with:
-          name: test_output_static_containerd_1_27
+          name: test_output_static_containerd_1_29
           path: |
             ${{ steps.setup.outputs.dhctl-log-file}}*
             ${{ steps.setup.outputs.tmp-dir-path}}/logs
@@ -4354,7 +4312,7 @@ jobs:
           {
             "labels": {
               "cri": "Containerd",
-              "kube_version": "1.27",
+              "kube_version": "1.29",
               "layout": "Static",
               "provider": "Static",
               "trigger": "CloudLayoutTestFailed",
@@ -4394,7 +4352,7 @@ jobs:
   send_alert_about_workflow_problem:
     name: Send alert about workflow problem
     runs-on: ubuntu-latest
-    needs: ["skip_tests_repos","git_info","run_aws_containerd_1_27","run_eks_containerd_1_27","run_azure_containerd_1_27","run_gcp_containerd_1_27","run_yandex_cloud_containerd_1_27","run_openstack_containerd_1_27","run_vsphere_containerd_1_27","run_vcd_containerd_1_27","run_static_containerd_1_27"]
+    needs: ["skip_tests_repos","git_info","run_aws_containerd_1_29","run_eks_containerd_1_29","run_azure_containerd_1_29","run_gcp_containerd_1_29","run_yandex_cloud_containerd_1_29","run_openstack_containerd_1_29","run_vsphere_containerd_1_29","run_vcd_containerd_1_29","run_static_containerd_1_29"]
     if: ${{ failure() }}
     steps:
 

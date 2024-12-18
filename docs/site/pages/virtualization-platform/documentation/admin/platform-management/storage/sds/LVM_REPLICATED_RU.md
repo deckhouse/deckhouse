@@ -14,7 +14,7 @@ lang: ru
 
 Перед тем как приступить к созданию объектов StorageClass на базе LVM (Logical Volume Manager), необходимо обнаружить доступные на узлах блочные устройства и группы томов и получить актуальную информацию об их состоянии.
 
-Для этого включите модуль sds-node-configurator:
+Для этого включите модуль `sds-node-configurator`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -28,18 +28,23 @@ spec:
 EOF
 ```
 
-Дождитесь, когда модуль sds-node-configurator перейдет в состояние `Ready`.
+Дождитесь, когда модуль `sds-node-configurator` перейдет в состояние `Ready`.
+Проверить состояние можно, выполнив следующую команду:
 
 ```shell
 d8 k get modules sds-node-configurator -w
+```
 
-# NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
-# sds-node-configurator   900      Enabled   deckhouse           Ready
+В результате будет выведена информация о модуле `sds-node-configurator`:
+
+```console
+NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
+sds-node-configurator   900      Enabled   deckhouse           Ready
 ```
 
 ### Подключение DRBD
 
-Чтобы включить модуль sds-replicated-volume с настройками по умолчанию, выполните команду:
+Чтобы включить модуль `sds-replicated-volume` с настройками по умолчанию, выполните команду:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -53,15 +58,20 @@ spec:
 EOF
 ```
 
-Это приведет к тому, что на всех узлах кластера будет установлен модуль ядра DRBD, зарегистрирован CSI драйвер и запущены служебные поды компонентов sds-replicated-volume.
+Это приведет к тому, что на всех узлах кластера будет установлен модуль ядра DRBD, зарегистрирован CSI драйвер и запущены служебные поды компонентов `sds-replicated-volume`.
 
 Дождитесь, когда модуль `sds-replicated-volume` перейдет в состояние `Ready`.
+Проверить состояние можно, выполнив следующую команду:
 
 ```shell
 d8 k get modules sds-replicated-volume -w
+```
 
-# NAME                    WEIGHT   STATE     SOURCE     STAGE   STATUS
-# sds-replicated-volume   915      Enabled   Embedded           Ready
+В результате будет выведена информация о модуле `sds-replicated-volume`:
+
+```console
+NAME                    WEIGHT   STATE     SOURCE     STAGE   STATUS
+sds-replicated-volume   915      Enabled   Embedded           Ready
 ```
 
 Чтобы проверить, что в пространстве имен `d8-sds-replicated-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:
@@ -81,14 +91,18 @@ d8 k -n d8-sds-node-configurator get pod -w
 
 ```shell
 d8 k get bd
+```
 
-# NAME                                           NODE       CONSUMABLE   SIZE           PATH
-# dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
-# dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
-# dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
-# dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
-# dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
-# dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
+В результате будет выведен список доступных блочных устройств:
+
+```console
+NAME                                           NODE       CONSUMABLE   SIZE           PATH
+dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa   worker-0   false        976762584Ki    /dev/nvme1n1
+dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd   worker-0   false        894006140416   /dev/nvme0n1p6
+dev-7e4df1ddf2a1b05a79f9481cdf56d29891a9f9d0   worker-1   false        976762584Ki    /dev/nvme1n1
+dev-b103062f879a2349a9c5f054e0366594568de68d   worker-1   false        894006140416   /dev/nvme0n1p6
+dev-53d904f18b912187ac82de29af06a34d9ae23199   worker-2   false        976762584Ki    /dev/nvme1n1
+dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
 ```
 
 В примере выполнения команды выше, в наличии имеется шесть блочных устройств, расположенных на трёх узлах.
@@ -117,22 +131,27 @@ spec:
           - dev-0cfc0d07f353598e329d34f3821bed992c1ffbcd
   # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
   actualVGNameOnTheNode: "vg"
-  # Раскомментируйте, если важно иметь возмоность создавать Thin-пулы, детали будут раскрыты далее.
+  # Раскомментируйте, если важно иметь возможность создавать Thin-пулы, детали будут раскрыты далее.
   # thinPools:
   #   - name: thin-pool-0
   #     size: 70%
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса `LVMVolumeGroup` описаны в разделе [«Справка»](../../../../reference/cr.html#lvmvolumegroup).
+Подробности о возможностях конфигурации ресурса `LVMVolumeGroup` описаны в разделе [«Справка»](../../../../../reference/cr/lvmvolumegroup.html).
 
 Дождитесь, когда созданный ресурс `LVMVolumeGroup` перейдет в состояние `Ready`.
+Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
+```
 
-# NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-# vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+В результате будет выведена информация о состоянии ресурса:
+
+```console
+NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
 Если ресурс перешел в состояние `Ready`, то это значит, что на узле worker-0
@@ -140,18 +159,22 @@ d8 k get lvg vg-on-worker-0 -w
 
 Далее необходимо повторить создание ресурсов `LVMVolumeGroup` для оставшихся узлов (worker-1 и worker-2), изменив в примере выше имя ресурса `LVMVolumeGroup`, имя узла и имена блочных устройств, соответствующих узлу.
 
-Убедитесь, что группы томов LVM созданы на всех узлах, где планируется их использовать:
+Убедитесь, что группы томов LVM созданы на всех узлах, где планируется их использовать, выполнив следующую команду:
 
 ```shell
 d8 k get lvg -w
-
-# NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-# vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
-# vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
-# vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
 ```
 
-### Создание реплицированых Thick-пулов
+В результате будет выведен список созданных групп томов:
+
+```console
+NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-worker-0   0/0         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+vg-on-worker-1   0/0         True                    Ready   worker-1   360484Mi   30064Mi          vg   1h
+vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi   30064Mi          vg   1h
+```
+
+### Создание реплицированных Thick-пулов
 
 Теперь, когда на узлах созданы нужные группы томов LVM, необходимо объединить их в единое логическое пространство. Это можно сделать, объединив их в реплицированные пулы хранения в бэкенде LINSTOR через интерфейс в виде ресурса `ReplicatedStoragePool`.
 
@@ -174,18 +197,23 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса `ReplicatedStoragePool` описаны в разделе [«Справка»](../../../../../reference/cr/replicatedstoragespool.html).
+Подробности о возможностях конфигурации ресурса `ReplicatedStoragePool` описаны в разделе [«Справка»](../../../../../reference/cr/replicatedstoragepool.html).
 
-Дождитесь, когда созданный ресурс `ReplicatedStoragePool` перейдет в состояние `Completed`:
+Дождитесь, когда созданный ресурс `ReplicatedStoragePool` перейдет в состояние `Completed`.
+Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
-
-# NAME         PHASE       TYPE   AGE
-# thick-pool   Completed   LVM    87d
 ```
 
-### Создание реплицированых Thin-пулов
+В результате будет выведена информация о состоянии созданного ресурса:
+
+```console
+NAME         PHASE       TYPE   AGE
+thick-pool   Completed   LVM    87d
+```
+
+### Создание реплицированных Thin-пулов
 
 Созданные ранее `LVMVolumeGroup` подходят для создания Thick-пулов. Если вам важно иметь возможность создавать реплицированные Thin-пулы, обновите конфигурацию ресурсов `LVMVolumeGroup`, добавив определение для Thin-пула:
 
@@ -227,15 +255,20 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса `ReplicatedStoragePool` описаны в разделе [«Справка»](../../../../../reference/cr/replicatedstoragespool.html).
+Подробности о возможностях конфигурации ресурса `ReplicatedStoragePool` описаны в разделе [«Справка»](../../../../../reference/cr/replicatedstoragepool.html).
 
-Дождитесь, когда созданный ресурс `ReplicatedStoragePool` перейдет в состояние `Completed`:
+Дождитесь, когда созданный ресурс `ReplicatedStoragePool` перейдет в состояние `Completed`.
+Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
+```
 
-# NAME        PHASE       TYPE      AGE
-# thin-pool   Completed   LVMThin   87d
+В результате будет выведена информация о состоянии созданного ресурса:
+
+```console
+NAME        PHASE       TYPE      AGE
+thin-pool   Completed   LVMThin   87d
 ```
 
 ## Создание объектов StorageClass
@@ -265,20 +298,32 @@ spec:
 EOF
 ```
 
-Подробности о возможностях конфигурации ресурса `ReplicatedStorageClass` описаны в разделе [«Справка»](../../../../../reference/cr/replicatedstoragesclass.html).
+Подробности о возможностях конфигурации ресурса `ReplicatedStorageClass` описаны в разделе [«Справка»](../../../../../reference/cr/replicatedstorageclass.html).
 
-Проверьте, что созданный ресурс `ReplicatedStorageClass` перешел в состояние `Created` и соответствующий StorageClass создался:
+Проверьте, что созданный ресурс `ReplicatedStorageClass` перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get rsc replicated-storage-class -w
+```
 
-# NAME                       PHASE     AGE
-# replicated-storage-class   Created   1h
+В результате будет выведена информация о созданном `ReplicatedStorageClass`:
 
+```console
+NAME                       PHASE     AGE
+replicated-storage-class   Created   1h
+```
+
+ Убедитесь, что был создан соответствующий StorageClass, выполнив следующую команду:
+
+```shell
 d8 k get sc replicated-storage-class
+```
 
-# NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-# replicated-storage-class   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
+В результате будет выведена информация о созданном StorageClass:
+
+```console
+NAME                       PROVISIONER                      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+replicated-storage-class   local.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
 Если StorageClass с именем `replicated-storage-class` появился, значит настройка модуля sds-replicated-volume завершена.

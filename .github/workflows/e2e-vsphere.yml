@@ -45,10 +45,15 @@ on:
       test_config:
         description: 'JSON string of parameters of current test'
         required: false
-        default: '{"cri":"Containerd","ver":"1.27","edition":"FE"}'
+        default: '{"cri":"Containerd","ver":"1.29","edition":"FE"}'
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'
         required: false
+      autodelete:
+        description: 'Should the cluster be deleted regardless of the test result'
+        required: true
+        default: false
+        type: boolean
 env:
 
   # <template: werf_envs>
@@ -59,6 +64,9 @@ env:
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
+  # Need for ssh: default.
+  DOCKER_BUILDKIT: "1"
+  WERF_LOG_TERMINAL_WIDTH: "200"
   # </template: werf_envs>
 
 # Note: no concurrency section for e2e workflows.
@@ -187,7 +195,7 @@ jobs:
         with:
           script: |
             const provider = 'vsphere';
-            const kubernetesDefaultVersion = '1.27';
+            const kubernetesDefaultVersion = '1.29';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
@@ -220,11 +228,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -544,7 +547,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -717,11 +720,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -1041,7 +1039,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1214,11 +1212,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -1538,7 +1531,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1711,11 +1704,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -2035,7 +2023,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -2208,11 +2196,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -2532,7 +2515,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -2705,11 +2688,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -3029,7 +3007,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -3202,11 +3180,6 @@ jobs:
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-vsphere]
     steps:
-      - name: Print data
-        run: |
-          echo "WERF_ENV is ${WERF_ENV}"
-          echo "test_config is ${{ inputs.test_config }}"
-          echo "output edition is ${{ needs.check_e2e_labels.outputs.edition }}"
 
       # <template: started_at_output>
       - name: Job started timestamp
@@ -3526,7 +3499,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:

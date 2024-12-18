@@ -59,6 +59,7 @@ steps:
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_git_step" $ctx | strings.Indent 2 }!}
 
   - name: Build and push deckhouse images
     id: build
@@ -115,6 +116,10 @@ steps:
       # CE/EE/FE -> ce/ee/fe
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
+      #temporary: move temp dir
+      TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
+      mkdir -p "$TEMP_WORKDIR"
+
       # Registry path to publish images for Git branches.
       BRANCH_REGISTRY_PATH=
       # Registry path to publish images for Git tags.
@@ -134,6 +139,7 @@ steps:
           ${SECONDARY_REPO} \
           --parallel=true --parallel-tasks-limit=5 \
           --save-build-report=true \
+          --tmp-dir="$TEMP_WORKDIR" \
           --build-report-path images_tags_werf.json
         BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
         SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
@@ -145,11 +151,14 @@ steps:
         werf build \
           --parallel=true --parallel-tasks-limit=5 \
           --save-build-report=true \
+          --tmp-dir="$TEMP_WORKDIR" \
           --build-report-path images_tags_werf.json
         BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
         SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
         echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
       fi
+
+      cp images_tags_werf.json "$TEMP_WORKDIR"
 
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -200,7 +209,9 @@ steps:
             --secondary-repo $WERF_REPO \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
+            --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
+          cp images_tags_werf.json "$TEMP_WORKDIR"
         fi
         # Note: do not run second werf build for test repo, as it has no secondary repo.
 

@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testGetClusterDomainValues(t *testing.T, domain string) *go_hook.PatchableValues {
+func testGetClusterDomainValues(t *testing.T, domain string) go_hook.PatchableValuesCollector {
 	patchableValues, err := go_hook.NewPatchableValues(map[string]interface{}{
 		"global": map[string]interface{}{
 			"discovery": map[string]interface{}{

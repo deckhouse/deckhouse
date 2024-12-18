@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"sort"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -64,19 +66,24 @@ func handleSP(input *go_hook.HookInput) error {
 			}
 		}
 	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Metadata.Name < result[j].Metadata.Name
+	})
 
 	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", result)
 
-	if len(refs) > 0 {
-		imageReferences := make([]ratifyReference, 0, len(refs))
-		for k, v := range refs {
-			imageReferences = append(imageReferences, ratifyReference{
-				Reference:  k,
-				PublicKeys: v.Slice(),
-			})
-		}
-		input.Values.Set("admissionPolicyEngine.internal.ratify.imageReferences", imageReferences)
+	imageReferences := make([]ratifyReference, 0, len(refs))
+	for k, v := range refs {
+		imageReferences = append(imageReferences, ratifyReference{
+			Reference:  k,
+			PublicKeys: v.Slice(),
+		})
 	}
+
+	sort.Slice(imageReferences, func(i, j int) bool {
+		return imageReferences[i].Reference > imageReferences[j].Reference
+	})
+	input.Values.Set("admissionPolicyEngine.internal.ratify.imageReferences", imageReferences)
 
 	return nil
 }

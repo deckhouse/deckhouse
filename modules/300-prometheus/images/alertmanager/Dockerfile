@@ -12,7 +12,9 @@ ENV GOPROXY=${GOPROXY} \
     GOOS=linux \
     GOARCH=amd64
 
-RUN git clone --depth 1 --branch v0.25.0 ${SOURCE_REPO}/prometheus/alertmanager.git /alertmanager
+RUN apk add --no-cache openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --depth 1 --branch v0.25.0 ${SOURCE_REPO}/prometheus/alertmanager.git /alertmanager
 WORKDIR /alertmanager/
 
 RUN go mod edit -go 1.20 \

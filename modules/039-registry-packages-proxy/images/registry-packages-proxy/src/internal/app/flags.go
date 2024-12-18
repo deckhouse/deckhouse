@@ -17,7 +17,7 @@ package app
 import (
 	"flag"
 
-	"github.com/sirupsen/logrus"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -27,7 +27,7 @@ type Config struct {
 	DisableCache       bool
 	CacheDirectory     string
 	CacheRetentionSize resource.Quantity
-	LogLevel           logrus.Level
+	LogLevel           log.Level
 }
 
 func InitFlags() (*Config, error) {
@@ -39,7 +39,7 @@ func InitFlags() (*Config, error) {
 	flag.StringVar(&config.CacheDirectory, "cache-directory", "/cache", "Path to cache directory")
 
 	crs := flag.String("cache-retention-size", "1Gi", "Cache retention size")
-	v := flag.Int("v", 4, "Log verbosity")
+	v := flag.String("log-level", "info", "Log verbosity")
 
 	flag.Parse()
 
@@ -48,8 +48,10 @@ func InitFlags() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	config.LogLevel = logrus.Level(uint32(*v))
+	config.LogLevel, err = log.ParseLevel(*v)
+	if err != nil {
+		return nil, err
+	}
 
 	return config, nil
 }

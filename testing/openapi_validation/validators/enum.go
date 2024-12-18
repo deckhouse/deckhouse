@@ -151,6 +151,11 @@ var (
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 		},
+		"modules/030-cloud-provider-huaweicloud/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+		},
 		"ee/modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
@@ -168,13 +173,9 @@ var (
 			// ignore internal values
 			"properties.internal.properties.podNetworkMode",
 		},
-		"modules/040-node-manager/openapi/config-values.yaml": {
-			// ignore internal values
-			"properties.allowedBundles.items",
-		},
-		"ee/modules/040-node-manager/openapi/config-values.yaml": {
-			// ignore internal values
-			"properties.allowedBundles.items",
+		"modules/040-node-manager/crds/nodegroupconfiguration.yaml": {
+			// ignore bundles name values
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.bundles.items",
 		},
 		"modules/042-kube-dns/openapi/values.yaml": {
 			// ignore internal values

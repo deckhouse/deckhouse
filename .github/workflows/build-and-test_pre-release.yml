@@ -34,16 +34,24 @@ env:
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
+  # Need for ssh: default.
+  DOCKER_BUILDKIT: "1"
+  WERF_LOG_TERMINAL_WIDTH: "200"
   # </template: werf_envs>
 
   # <template: git_source_envs>
-  # source repo should contain creds for repo for ex https://user:password@my-repo.com/group
-  SOURCE_REPO: "${{secrets.SOURCE_REPO}}"
+  # source repo git@my-repo.com:group
+  SOURCE_REPO: "${{secrets.SOURCE_REPO_GIT}}"
   # cloud providers source repo should contain creds for repo for ex https://user:password@my-repo.com/group
   CLOUD_PROVIDERS_SOURCE_REPO: "${{secrets.CLOUD_PROVIDERS_SOURCE_REPO}}"
   GOPROXY: "${{secrets.GOPROXY}}"
   # observability source repo should contain creds for repo for ex https://user:password@my-repo.com/group
   OBSERVABILITY_SOURCE_REPO: "${{secrets.OBSERVABILITY_SOURCE_REPO}}"
+  # Next two are required for accessing the stronghold repo during d8 cli builds.
+  # Stronghold pull token should contain CI token with read access to stronghold repos.
+  STRONGHOLD_PULL_TOKEN: "${{secrets.STRONGHOLD_PULL_TOKEN}}"
+  # deckhouse private repo should contain the host address of proprietary parts of deckhouse ecosystem. Ex repo.my-repo.com
+  DECKHOUSE_PRIVATE_REPO: "${{secrets.DECKHOUSE_PRIVATE_REPO}}"
   # </template: git_source_envs>
 
 # Cancel in-progress jobs for the same branch.
@@ -349,6 +357,31 @@ jobs:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
 
+      # <template: login_git_step>
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
+      - name: Add ssh_known_hosts
+        run: |
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
+      # </template: login_git_step>
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -400,6 +433,10 @@ jobs:
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
+          #temporary: move temp dir
+          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
+          mkdir -p "$TEMP_WORKDIR"
+
           # Registry path to publish images for Git branches.
           BRANCH_REGISTRY_PATH=
           # Registry path to publish images for Git tags.
@@ -419,6 +456,7 @@ jobs:
               ${SECONDARY_REPO} \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
+              --tmp-dir="$TEMP_WORKDIR" \
               --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
@@ -430,11 +468,14 @@ jobs:
             werf build \
               --parallel=true --parallel-tasks-limit=5 \
               --save-build-report=true \
+              --tmp-dir="$TEMP_WORKDIR" \
               --build-report-path images_tags_werf.json
             BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
             echo "⚓️ 🧪 [$(date -u)] DECKHOUSE_REGISTRY_HOST is empty. Publish to Github Container Registry '${PROD_REGISTRY_PATH}'"
           fi
+
+          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -715,6 +756,34 @@ jobs:
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
           docker run -w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} make tests-controller tests-modules
     # </template: tests_before_build_template>
+
+  tests_python_webhooks:
+    name: Tests python webhooks
+    needs:
+      - git_info
+
+    # <template: tests_webhooks_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+      - name: Run python webhook tests
+        run: |
+          make tests-webhooks
+    # </template: tests_webhooks_template>
 
   matrix_tests:
     name: Matrix tests

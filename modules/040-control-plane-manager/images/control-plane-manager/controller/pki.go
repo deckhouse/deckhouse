@@ -26,8 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
-	log "github.com/sirupsen/logrus"
 )
 
 func installBasePKIfiles() error {
@@ -122,10 +122,10 @@ func renewCertificate(componentName, f string) error {
 
 		if remove {
 			if err := removeFile(path); err != nil {
-				log.Warn(err)
+				log.Warn(err.Error())
 			}
 			if err := removeFile(keyPath); err != nil {
-				log.Warn(err)
+				log.Warn(err.Error())
 			}
 		}
 	}

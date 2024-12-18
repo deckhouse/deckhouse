@@ -18,9 +18,26 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
+)
+
+const (
+	ModulePullOverrideAnnotationDeployedOn = "modules.deckhouse.io/deployed-on"
+
+	ModulePullOverrideFinalizer = "modules.deckhouse.io/mpo-finalizer"
+
+	ModulePullOverrideMessageReady          = "Ready"
+	ModulePullOverrideMessageModuleEmbedded = "The module is embedded"
+	ModulePullOverrideMessageModuleDisabled = "The module disabled"
+	ModulePullOverrideMessageModuleNotFound = "The module not found"
+	ModulePullOverrideMessageSourceNotFound = "The source not found"
+	ModulePullOverrideMessageNoSource       = "The module does not have an active source"
+	ModulePullOverrideMessageNoDef          = "The module does not have a module definition"
+
+	ModulePullOverrideAnnotationRenew = "renew"
 )
 
 var (
@@ -35,6 +52,19 @@ var (
 		Kind:    "ModulePullOverride",
 	}
 )
+
+var _ runtime.Object = (*ModulePullOverride)(nil)
+
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModulePullOverrideList is a list of ModulePullOverride resources
+type ModulePullOverrideList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModulePullOverride `json:"items"`
+}
 
 // +genclient
 // +genclient:nonNamespaced
@@ -57,7 +87,7 @@ type ModulePullOverride struct {
 }
 
 type ModulePullOverrideSpec struct {
-	Source       string          `json:"source"`
+	Source       string          `json:"source,omitempty"`
 	ImageTag     string          `json:"imageTag"`
 	ScanInterval libapi.Duration `json:"scanInterval"`
 }
@@ -67,28 +97,6 @@ type ModulePullOverrideStatus struct {
 	Message     string      `json:"message"`
 	ImageDigest string      `json:"imageDigest"`
 	Weight      uint32      `json:"weight,omitempty"`
-}
-
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModulePullOverrideList is a list of ModulePullOverride resources
-type ModulePullOverrideList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModulePullOverride `json:"items"`
-}
-
-type ModulePullOverrideKind struct{}
-
-func (in *ModulePullOverrideStatus) GetObjectKind() schema.ObjectKind {
-	return &ModulePullOverrideKind{}
-}
-
-func (f *ModulePullOverrideKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-func (f *ModulePullOverrideKind) GroupVersionKind() schema.GroupVersionKind {
-	return ModulePullOverrideGVK
 }
 
 // GetModuleSource returns the module source of the related module

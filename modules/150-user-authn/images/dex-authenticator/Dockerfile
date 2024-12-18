@@ -11,7 +11,9 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 WORKDIR /src
 
-RUN git clone --depth 1 --branch v7.5.1 ${SOURCE_REPO}/oauth2-proxy/oauth2-proxy.git .
+RUN apk add --no-cache openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --depth 1 --branch v7.5.1 ${SOURCE_REPO}/oauth2-proxy/oauth2-proxy.git .
 ADD patches/cookie-refresh.patch patches/remove-groups.patch /
 RUN patch -p1 < /cookie-refresh.patch && \
   patch -p1 < /remove-groups.patch && \

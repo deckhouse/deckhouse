@@ -28,7 +28,7 @@ on:
       test_config:
         description: 'JSON string of parameters which was tested'
         required: false
-        default: '{"cri":"Containerd","ver":"1.27","edition":"FE"}'
+        default: '{"cri":"Containerd","ver":"1.29","edition":"FE"}'
       # needs for run correct installer image for abort
       installer_image_path:
         description: 'Installer image without host'
@@ -47,6 +47,9 @@ env:
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
+  # Need for ssh: default.
+  DOCKER_BUILDKIT: "1"
+  WERF_LOG_TERMINAL_WIDTH: "200"
   # </template: werf_envs>
 
 # Note: no concurrency section for e2e workflows.
@@ -96,7 +99,7 @@ jobs:
         with:
           script: |
             const provider = 'eks';
-            const kubernetesDefaultVersion = '1.27';
+            const kubernetesDefaultVersion = '1.29';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
@@ -1870,7 +1873,7 @@ jobs:
       PROVIDER: EKS
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -2028,7 +2031,7 @@ jobs:
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}

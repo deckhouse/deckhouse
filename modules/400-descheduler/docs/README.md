@@ -31,11 +31,11 @@ Descheduler uses parameters with the `labelSelector` syntax from Kubernetes to f
 
 {% alert level="info" %}
 More compactly places pods. Requires scheduler configuration and enabling auto-scaling.
+
+To use `HighNodeUtilization`, you must explicitly specify the [high-node-utilization](../control-plane-manager/faq.html#scheduler-profiles) scheduler profile for each pod (this profile cannot be set as the default).
 {% endalert %}
 
 This strategy identifies *under utilized nodes* and evicts pods from them to redistribute them more compactly across fewer nodes.
-
-The strategy is designed to be used in conjunction with auto-scaling, aiming to reduce the number of under utilized nodes. When using this strategy, the scheduler's evaluation strategy should also be configured as `MostAllocated`.
 
 **Under utilized node** — A node whose resource usage is below all the threshold values specified in the [strategies.highNodeUtilization.thresholds](cr.html#descheduler-v1alpha2-spec-strategies-highnodeutilization-thresholds) section.
 

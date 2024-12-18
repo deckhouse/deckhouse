@@ -1,5 +1,5 @@
 module: priority-class
 namespace: none
-scopes:
+subsystems:
   - kubernetes
 

@@ -14,6 +14,8 @@
 
 package log
 
+import "encoding/json"
+
 type LogOutput struct {
 	Level      string `json:"level"`
 	Name       string `json:"logger"`
@@ -51,7 +53,12 @@ func (lo *LogOutput) MarshalJSON() ([]byte, error) {
 	}
 
 	if lo.Stacktrace != "" {
-		render.JSONKeyValue("stacktrace", lo.Stacktrace)
+		if json.Valid([]byte(lo.Stacktrace)) {
+			render.RawJsonKeyValue("stacktrace", lo.Stacktrace)
+		} else {
+			render.JSONKeyValue("stacktrace", lo.Stacktrace)
+		}
+
 		render.buf = append(render.buf, ',')
 	}
 
@@ -85,6 +92,13 @@ func (r *Render) JSONKeyValue(key, value string) {
 	r.buf = append(r.buf, '"', ':', '"')
 	r.string(value)
 	r.buf = append(r.buf, '"')
+}
+
+func (r *Render) RawJsonKeyValue(key, value string) {
+	r.buf = append(r.buf, '"')
+	r.string(key)
+	r.buf = append(r.buf, '"', ':')
+	r.buf = append(r.buf, []byte(value)...)
 }
 
 func (r *Render) string(s string) {

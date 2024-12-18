@@ -48,6 +48,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p /src
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch {{ $value.csi.gcp }} {{ $.SOURCE_REPO }}/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver.git /src
   - cd /src
   - GCE_PD_CSI_STAGING_VERSION={{ $value.csi.gcp }} make gce-pd-driver

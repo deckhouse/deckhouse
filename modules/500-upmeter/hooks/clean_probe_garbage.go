@@ -17,7 +17,6 @@ package hooks
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // This hook deletes abandoned objects produced by upmeter.
@@ -62,7 +62,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		for _, r := range repos {
 			if err := cleanGarbage(ctx, r); err != nil {
 				// The queue shouldn't be stopped event if there is an API error
-				input.Logger.Warn("clean garbage", slog.String("error", err.Error()))
+				input.Logger.Warn("clean garbage", log.Err(err))
 			}
 		}
 

@@ -48,6 +48,9 @@ env:
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
+  # Need for ssh: default.
+  DOCKER_BUILDKIT: "1"
+  WERF_LOG_TERMINAL_WIDTH: "200"
   # </template: werf_envs>
   DEPLOY_CHANNEL: stable
 
@@ -529,6 +532,8 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
+              # add date label to pushed image
+              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -660,6 +665,8 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
+              # add date label to pushed image
+              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -791,6 +798,8 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
+              # add date label to pushed image
+              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -922,6 +931,8 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
+              # add date label to pushed image
+              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -1053,6 +1064,8 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
+              # add date label to pushed image
+              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."
@@ -1184,6 +1197,8 @@ jobs:
             if [[ ${enable_push} == "true" ]] ; then
               echo "⚓️ 📤 [$(date -u)] Push '${SRC_NAME}' image as ${DST}."
               docker image push ${DST}
+              # add date label to pushed image
+              crane mutate -l io.deckhouse.${RELEASE_CHANNEL}-released="$(date -u +%Y-%m-%dT%H:%M:%SZ)" ${DST}
             fi
 
             echo "⚓️ 🧹 [$(date -u)] Remove local tag for '${SRC_NAME}'."

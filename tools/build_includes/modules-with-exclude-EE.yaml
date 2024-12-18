@@ -14,6 +14,11 @@
   stageDependencies:
     setup:
         - '**/*'
+- add: /ee/be/modules/040-node-manager/openapi/values.yaml
+  to: /deckhouse/modules/040-node-manager/openapi/values.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/be/modules/140-user-authz/templates/webhook
   to: /deckhouse/modules/140-user-authz/templates/webhook
   excludePaths:
@@ -247,6 +252,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/modules/030-cloud-provider-huaweicloud
+  to: /deckhouse/modules/030-cloud-provider-huaweicloud
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/modules/030-cloud-provider-openstack
   to: /deckhouse/modules/030-cloud-provider-openstack
   excludePaths:
@@ -288,6 +306,19 @@
     - .build.yaml
 - add: /ee/modules/040-node-manager/capi/dynamix
   to: /deckhouse/modules/040-node-manager/capi/dynamix
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/040-node-manager/capi/huaweicloud
+  to: /deckhouse/modules/040-node-manager/capi/huaweicloud
   excludePaths:
     - docs
     - README.md
@@ -399,8 +430,70 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/381-l2-load-balancer
-  to: /deckhouse/modules/381-l2-load-balancer
+- add: /ee/modules/380-metallb/images/metallb
+  to: /deckhouse/modules/380-metallb/images/metallb
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/380-metallb/templates/controller
+  to: /deckhouse/modules/380-metallb/templates/controller
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/380-metallb/templates/rbac-for-us.yaml
+  to: /deckhouse/modules/380-metallb/templates/rbac-for-us.yaml
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/templates/speaker
+  to: /deckhouse/modules/380-metallb/templates/speaker
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/380-metallb/template_tests/bgp_test.go
+  to: /deckhouse/modules/380-metallb/template_tests/bgp_test.go
+  stageDependencies:
+    setup:
+        - '**/*'
+- add: /ee/modules/380-metallb/monitoring/grafana-dashboards
+  to: /deckhouse/modules/380-metallb/monitoring/grafana-dashboards
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/380-metallb/monitoring/prometheus-rules
+  to: /deckhouse/modules/380-metallb/monitoring/prometheus-rules
   excludePaths:
     - docs
     - README.md
@@ -440,6 +533,19 @@
     - .build.yaml
 - add: /ee/modules/500-operator-trivy
   to: /deckhouse/modules/500-operator-trivy
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/modules/610-service-with-healthchecks
+  to: /deckhouse/modules/610-service-with-healthchecks
   excludePaths:
     - docs
     - README.md

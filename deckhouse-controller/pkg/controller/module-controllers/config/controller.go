@@ -55,8 +55,8 @@ const (
 
 func RegisterController(
 	runtimeManager manager.Manager,
-	handler *confighandler.Handler,
 	mm moduleManager,
+	handler *confighandler.Handler,
 	ms *metricstorage.MetricStorage,
 	loader *moduleloader.Loader,
 	bundle string,
@@ -76,9 +76,9 @@ func RegisterController(
 
 	r.init.Add(1)
 
-	// sync module configs
+	// sync modules
 	if err := runtimeManager.Add(manager.RunnableFunc(r.syncModules)); err != nil {
-		return err
+		return fmt.Errorf("add preflight: %w", err)
 	}
 
 	configController, err := controller.New(controllerName, runtimeManager, controller.Options{
@@ -87,7 +87,7 @@ func RegisterController(
 		Reconciler:              r,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("create controller: %w", err)
 	}
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
@@ -130,7 +130,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, nil
 		}
 		r.log.Errorf("failed to get the '%s' module config: %v", req.Name, err)
-		return ctrl.Result{}, err
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// handle delete event
@@ -139,12 +139,13 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.deleteModuleConfig(ctx, moduleConfig)
 	}
 
+	// handle create/update events
 	return r.handleModuleConfig(ctx, moduleConfig)
 }
 
 func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
 	// send event to addon-operator(it is not necessary for NotInstalled modules)
-	r.handler.HandleEvent(ctx, moduleConfig, config.EventUpdate)
+	r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
 		return ctrl.Result{Requeue: true}, nil
@@ -153,7 +154,17 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.Warnf("the module '%s' not found", moduleConfig.Name)
+			if moduleConfig.Name != moduleGlobal {
+				r.log.Warnf("the module '%s' not found", moduleConfig.Name)
+				err = utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+					moduleConfig.Status.Message = v1alpha1.ModuleConfigMessageUnknownModule
+					return true
+				})
+				if err != nil {
+					r.log.Errorf("failed to update the '%s' module config: %v", moduleConfig.Name, err)
+					return ctrl.Result{Requeue: true}, nil
+				}
+			}
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{Requeue: true}, nil
@@ -164,6 +175,10 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha1.Module) (ctrl.Result, error) {
 	defer r.log.Debugf("the '%s' module config reconciled", moduleConfig.Name)
+
+	// clear conflict metrics
+	metricGroup := fmt.Sprintf("module_%s_at_conflict", module.Name)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	enabled := module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)
 
@@ -186,6 +201,18 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 				r.log.Errorf("failed to disable the '%s' module: %v", module.Name, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
+		}
+
+		err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+			if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
+				delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
+				return true
+			}
+			return false
+		})
+		if err != nil {
+			r.log.Errorf("failed to remove allow disabled annotation for the '%s' module config: %v", moduleConfig.Name, err)
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 		// skip disabled modules
@@ -269,6 +296,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 				r.log.Errorf("failed to set conlflict to the '%s' module: %v", module.Name, err)
 				return ctrl.Result{Requeue: true}, nil
 			}
+			// fire alert at Conflict
+			r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_at_conflict", 1.0, map[string]string{
+				"moduleName": module.Name,
+			})
 		}
 	}
 
@@ -290,7 +321,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
 	// send event to addon-operator
-	r.handler.HandleEvent(ctx, moduleConfig, config.EventDelete)
+	r.handler.HandleEvent(moduleConfig, config.EventDelete)
 
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
@@ -298,6 +329,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 			r.log.Warnf("the module '%s' not found", moduleConfig.Name)
 			return ctrl.Result{}, nil
 		}
+		r.log.Errorf("failed to get the '%s' module: %v", moduleConfig.Name, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -339,11 +371,16 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	err = utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+		var needsUpdate bool
 		if controllerutil.ContainsFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer) {
 			controllerutil.RemoveFinalizer(moduleConfig, v1alpha1.ModuleConfigFinalizer)
-			return true
+			needsUpdate = true
 		}
-		return false
+		if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
+			delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
+			needsUpdate = true
+		}
+		return needsUpdate
 	})
 	if err != nil {
 		r.log.Errorf("failed to remove finalizer from the '%s' module config: %v", moduleConfig.Name, err)

@@ -2,47 +2,40 @@
 title: "The metallb module"
 ---
 
-This module implements the `LoadBalancer` mechanism for services in bare metal clusters.
+This module implements the `LoadBalancer` mechanism for services in bare-metal clusters.
 
-It is based on the [MetalLB](https://metallb.universe.tf/) load balancer implementation.
+Supports the following operating modes:
+
+- **Layer 2 Mode (L2 LoadBalancer)** – introduces an improved load-balancing mechanism for bare-metal clusters (compared to the standard L2 mode in MetalLB), enabling the use of multiple IP addresses for cluster services.
+- **BGP Mode (BGP LoadBalancer)**  – fully based on the [MetalLB](https://metallb.universe.tf/) solution.
 
 ## Layer 2 mode
 
-In layer 2 mode, one of the nodes is responsible of advertising the service to the local network. From a network perspective, it looks as if the machine has multiple IP addresses assigned to its network interface.
-Under the hood, MetalLB responds to ARP requests for IPv4 services and NDP requests for IPv6.
-The major advantage of the layer 2 mode is its versatility: it works on any Ethernet network, and no special hardware is required — not even fancy routers.
+In Layer 2 mode, one or more nodes take responsibility for providing the service within the local network. From the network’s perspective, it appears as if each of these nodes has multiple IP addresses assigned to its network interface. Technically, this is achieved by the module responding to ARP requests for IPv4 services and NDP requests for IPv6 services. The primary advantage of Layer 2 mode is its versatility: it works in any Ethernet network without requiring specialized hardware.
 
-### Load-Balancing Behavior
+## Principle of operation compared to L2 mode in MetalLB module
 
-In layer 2 mode, all traffic for a service IP goes to a single node. Then kube-proxy distributes it to all service Pods.
-As such, layer 2 does not implement load balancing. Rather, it implements a failover mechanism so that a different node can take over should the current leader node fail for some reason.
-When a leader node fails for some reason, failover occurs automatically: the failed node gets detected using memberlist, and then the new nodes take over ownership of the IP addresses from the failed one.
+MetalLB in L2 mode allows ordering _Service_ with `LoadBalancer` type, the operation of which is based on the fact that balancing nodes simulate ARP-responses from the "public" IP in a peering network. This mode has a significant limitation — only one balancing node handles all the incoming traffic of this service at a time. Therefore:
 
-### Limitations
+- The node selected as the leader for the "public" IP becomes a "bottleneck", with no possibility of horizontal scaling.
+- If the balancer node fails, all current connections will be dropped while switching to a new balancing node that will be selected as the leader.
 
-Layer 2 mode has two main limitations you should be aware of: 
-- **Single-node bottlenecking.**
+<div data-presentation="../../presentations/380-metallb/basics_metallb_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/18vcVJ1cY2yn19vBM_dTNW3hF0w9SE4S81VZc2P6fVFM/ --->
 
-  In layer 2 mode, a single leader-elected node receives all traffic for the service IP. This means that your service’s Ingress bandwidth is limited to the bandwidth of a single node. This is a fundamental limitation of using ARP and NDP to direct traffic.
-- **Potentially slow failover.** 
+This module helps to overcome these limitations. It introduces a new resource, _MetalLoadBalancerClass_, which allows associating a group of nodes with an IP address pool using a `nodeSelector`. Afterward, a standard _Service_ resource of type `LoadBalancer` can be created, specifying the name of the corresponding _MetalLoadBalancerClass_. Additionally, annotations can be used to define the required number of IP addresses for L2 advertisement.
 
-  In the current implementation, failover between nodes depends on client cooperation. When failover occurs, MetalLB sends some gratuitous layer 2 packets (a bit of a misnomer — it should really be called “unsolicited layer 2 packets”) to notify clients that the MAC address associated with the service IP has changed. Most operating systems correctly handle “gratuitous” packets and promptly update their neighbor caches. In that case, failover occurs within seconds. However, some systems either don’t implement gratuitous handling or have buggy implementations that delay cache updates.
+<div data-presentation="../../presentations/380-metallb/basics_metallb_l2balancer_en.pdf"></div>
+<!--- Source: https://docs.google.com/presentation/d/1FYbc7jUhvJFy8x592ihm644i0qpeQSJFUc4Ly2coWFQ/ --->
 
-  All modern versions of major OSes (Windows, Mac, Linux) implement layer 2 failover correctly, so problems may only arise in older or less common operating systems. To minimize the impact of a planned failover on buggy clients, you should keep the old leader node running for a couple of minutes after the leader change so that it can continue forwarding traffic to the old clients until their caches are updated. During an unplanned failover, the service IPs will be unreachable until the buggy clients update their cache entries.
+Thus:
 
-### Comparison To Keepalived
-
-MetalLB’s layer 2 mode has a lot in common with Keepalived, so if you’re familiar with Keepalived, all this should sound pretty familiar. However, there are a few differences worth mentioning.
-
-Keepalived relies on the Virtual Router Redundancy Protocol (VRRP). Keepalived instances continuously exchange VRRP messages with each other, both to select a leader and to detect when that leader fails.
-On the other hand, MetalLB relies on memberlist as a way to learn that a node in the cluster is no longer reachable and the service IPs from that node should be moved elsewhere.
-
-Still, Keepalived and MetalLB “look” the same from the client’s perspective: the service IP address sort of migrates from one machine to another when a failover occurs, and the rest of the time, it just looks as if machines have multiple IP addresses.
-Since it doesn’t use VRRP, MetalLB isn’t subject to some limitations of that protocol. For example, the VRRP limit of 255 load balancers per network doesn’t exist in MetalLB. You can have as many load-balanced IPs as you want as long as there are free IPs in your network. MetalLB is also easier to configure than VRRP — for example, there are no Virtual Router IDs.
-
-The flip side is that MetalLB cannot interoperate with third-party VRRP-aware routers and infrastructure since it relies on memberlist for cluster membership information. That's the idea: MetalLB is purpose-built to provide load balancing and failover within a Kubernetes cluster, and there is no interoperability with third-party LB software in such a scenario.
+- The application will receive not a single, but several (according to the number of balancer nodes) "public" IPs. These IPs will need to be configured as A-records for the application's public domain. For further horizontal scaling, additional balancer nodes will need to be added, the corresponding _Service_ will be created automatically, you just need to add them to the list of A-records for the application domain.
+- If one of the balancer nodes fails, only part of the connections will fail over to the healthy node.
 
 ## BGP mode
+
+> Available in Enterprise Edition only.
 
 In BGP mode, each node in your cluster establishes a BGP peering session with your network routers and uses this peering session for advertising the IPs of the external cluster services.
 Assuming your routers are configured to support multipath, this enables true load balancing: the routes published by MetalLB are equivalent to each other, except for their nexthop. This means that routers will use all the nexthops together and load balance between them.
@@ -53,6 +46,7 @@ Once packets arrive at a node, kube-proxy does the final hop of traffic routing,
 The exact load balancing behavior depends on your specific router model and configuration, but the general behavior is to balance per-connection based on the packet hash.
 
 Per-connection means that all packets for a single TCP or UDP session will be routed to a single machine in your cluster. The traffic spreading happens only between different connections and not for packets within a single connection. This is good because spreading packets across multiple cluster nodes would result in poor behavior on several levels:
+
 - Spreading the same connection over multiple paths would result in packet reordering on the wire, drastically impacting the end host's performance.
 - On-node traffic routing in Kubernetes is not guaranteed to be consistent across nodes. This means that two different nodes may decide to route packets for the same connection to different Pods, resulting in connection failures.
 
@@ -71,6 +65,7 @@ The problem is that the hashes used in routers are usually not stable, so whenev
 The consequence is that whenever the IP→Node mapping gets changed for your service, you should expect to see a one-time hit with the active connections to the service being dropped. There’s no ongoing packet loss or blackholing, just a one-time clean break.
 
 Depending on what your services do, there are several mitigation strategies you can employ:
+
 - Your BGP routers might provide the option to use a more stable ECMP hashing algorithm. This is sometimes called “resilient ECMP” or “resilient LAG”. This algorithm massively reduces the number of affected connections when the backend set gets changed.
 - Pin your service deployments to specific nodes to minimize the pool of nodes you must be “careful” about.
 - Schedule changes to your service deployments during “trough” times when most users sleep, and traffic is low.

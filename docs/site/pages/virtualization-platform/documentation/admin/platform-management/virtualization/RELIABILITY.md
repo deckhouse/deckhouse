@@ -15,17 +15,22 @@ Virtual machine migration is a key feature in managing virtualized infrastructur
 
 Below is an example of migrating a selected virtual machine.
 
-Before starting the migration, check the current status of the virtual machine:
+Before starting the migration, check the current status of the virtual machine with the following command:
 
 ```bash
 d8 k get vm
-# NAME                                   PHASE     NODE           IPADDRESS     AGE
-# linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
+```
+
+In the output, you should see information about the virtual machine:
+
+```console
+NAME                                   PHASE     NODE           IPADDRESS     AGE
+linux-vm                              Running   virtlab-pt-1   10.66.10.14   79m
 ```
 
 As seen, the virtual machine is currently running on the `virtlab-pt-1` node.
 
-To migrate the virtual machine from one node to another, taking into account placement requirements, use the [VirtualMachineOperations](../../../../reference/cr.html#virtualmachineoperations) (`vmop`) resource with the `Evict` type:
+To migrate the virtual machine from one node to another, taking into account placement requirements, use the [VirtualMachineOperation](../../../../reference/cr/virtualmachineoperation.html) (`vmop`) resource with the `Evict` type:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -45,11 +50,16 @@ After creating the `vmop` resource, run the following command:
 
 ```bash
 d8 k get vm -w
-# NAME                                   PHASE       NODE           IPADDRESS     AGE
-# linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
-# linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
-# linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
+```
+
+In the output, you should see information about the phase of the virtual machine:
+
+```console
+NAME                                   PHASE       NODE           IPADDRESS     AGE
+linux-vm                              Running     virtlab-pt-1   10.66.10.14   79m
+linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
+linux-vm                              Migrating   virtlab-pt-1   10.66.10.14   79m
+linux-vm                              Running     virtlab-pt-2   10.66.10.14   79m
 ```
 
 This command shows the status of the virtual machine during migration. It allows you to observe the movement of the virtual machine from one node to another.
@@ -78,7 +88,7 @@ If you only need to evict virtual machines from the node, you can use a more pre
 d8 k uncordon <nodename>
 ```
 
-![Maintenance mode, schema](/images/virtualization-platform/drain.com.png)
+![Maintenance mode, diagram](/images/virtualization-platform/drain.png)
 
 ### Recovery after failure
 
@@ -87,7 +97,7 @@ ColdStandby provides a mechanism to restore a virtual machine's operation in cas
 To make this mechanism work, the following requirements must be met:
 
 - The virtual machine's launch policy (`.spec.runPolicy`) must be set to one of the following values: `AlwaysOnUnlessStoppedManually`, `AlwaysOn`.
-- The fencing mechanism should be enabled on the nodes where virtual machines are running [fencing](../../../../reference/cr.html#nodegroup-v1-spec-fencing-mode).
+- The fencing mechanism should be enabled on the nodes where virtual machines are running [fencing](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode).
 
 How the ColdStandby mechanism works with an example:
 
@@ -97,3 +107,5 @@ How the ColdStandby mechanism works with an example:
 1. The Kubernetes controller checks the availability of nodes and detects that `workerA` is unavailable.
 1. The controller removes the unavailable `workerA` node from the cluster.
 1. The virtual machine `linux-vm` is automatically started on another available node — `workerB`.
+
+![Failure recovery, diagram](/images/virtualization-platform/coldstandby.png)

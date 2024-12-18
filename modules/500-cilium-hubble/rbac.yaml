@@ -1,4 +1,4 @@
 module: cilium-hubble
 namespace: d8-cni-cilium
-scopes:
+subsystems:
   - networking

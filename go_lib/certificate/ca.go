@@ -30,7 +30,7 @@ type Authority struct {
 	Cert string `json:"cert"`
 }
 
-func GenerateCA(logger go_hook.ILogger, cn string, options ...Option) (Authority, error) {
+func GenerateCA(logger go_hook.Logger, cn string, options ...Option) (Authority, error) {
 	request := &csr.CertificateRequest{
 		CN: cn,
 		CA: &csr.CAConfig{

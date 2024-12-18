@@ -63,7 +63,6 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "operator") }}
         env:
-          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           - name: OPERATOR_NAMESPACE
             value: d8-operator-trivy
           {{- $enabledNamespaces := .Values.operatorTrivy | dig "internal" "enabledNamespaces" (list) }}
@@ -79,13 +78,27 @@ spec:
             value: "false"
           - name: OPERATOR_SCAN_JOB_TIMEOUT
             value: "5m"
-          {{- if $.Values.global.modulesImages.registry.CA }}
+          {{- if or $.Values.global.modulesImages.registry.CA .Values.operatorTrivy.additionalRegistryCA }}
           - name: OPERATOR_SCAN_JOB_REGISTRY_CA
-            value: | {{ $.Values.global.modulesImages.registry.CA | nindent 14 }}
-          {{- end }}
-          {{- if $.Values.global.modulesImages.registry.CA }}
+            value: |-
+            {{- if $.Values.global.modulesImages.registry.CA -}}
+            {{- trim $.Values.global.modulesImages.registry.CA | nindent 14 -}}
+            {{- end -}}
+            {{- if .Values.operatorTrivy.additionalRegistryCA -}}
+            {{- range .Values.operatorTrivy.additionalRegistryCA }} 
+            {{- trim .ca | nindent 14 }}
+            {{- end -}}
+            {{- end }}
           - name: TRIVY_REGISTRY_CA
-            value: | {{ $.Values.global.modulesImages.registry.CA | nindent 14 }}
+            value: |-
+            {{- if $.Values.global.modulesImages.registry.CA -}}
+            {{- trim $.Values.global.modulesImages.registry.CA | nindent 14 -}}
+            {{- end -}}
+            {{- if .Values.operatorTrivy.additionalRegistryCA -}}
+            {{- range .Values.operatorTrivy.additionalRegistryCA }} 
+            {{- trim .ca | nindent 14 }}
+            {{- end -}}
+            {{- end -}}
           {{- end }}
           - name: OPERATOR_CONCURRENT_SCAN_JOBS_LIMIT
             value: "10"
@@ -106,7 +119,11 @@ spec:
           - name: OPERATOR_VULNERABILITY_SCANNER_ENABLED
             value: "true"
           - name: OPERATOR_SBOM_GENERATION_ENABLED
+          {{- if .Values.operatorTrivy.disableSBOMGeneration }}
+            value: "false"
+          {{- else }}
             value: "true"
+          {{- end }}
           - name: OPERATOR_CLUSTER_SBOM_CACHE_ENABLED
             value: "false"
           - name: OPERATOR_VULNERABILITY_SCANNER_SCAN_ONLY_CURRENT_REVISIONS

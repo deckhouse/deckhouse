@@ -5,11 +5,11 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/vi
 
 ## Images
 
-The [`ClusterVirtualImage`](../../../../reference/cr.html#clustervirtualimage) resource is used to upload virtual machine images to the in-cluster storage, enabling the creation of disks for virtual machines. This resource is available in any namespace or project within the cluster.
+The [`ClusterVirtualImage`](../../../../reference/cr/clustervirtualimage.html) resource is used to upload virtual machine images to the in-cluster storage, enabling the creation of disks for virtual machines. This resource is available in any namespace or project within the cluster.
 
 The process of creating an image involves the following steps:
 
-1. The user creates a [`ClusterVirtualImage`](../../reference/cr.html#clustervirtualimage) resource.
+1. The user creates a [`ClusterVirtualImage`](../../../reference/cr/clustervirtualimage.html) resource.
 1. After creation, the image is automatically downloaded from the source specified in the specification to the storage (DVCR).
 1. Once the download is complete, the resource becomes available for disk creation.
 
@@ -30,7 +30,7 @@ Images can be downloaded from various sources, such as HTTP servers hosting imag
 
 Images can also be created based on other images or virtual machine disks.
 
-For a complete description of the configuration parameters for the `ClusterVirtualImage` resource, refer to [the documentation](../../reference/cr.html#clustervirtualimage).
+For a complete description of the configuration parameters for the `ClusterVirtualImage` resource, refer to [the documentation](../../../../reference/cr/clustervirtualimage.html).
 
 ### Creating an image from an HTTP server
 
@@ -53,15 +53,20 @@ spec:
 EOF
 ```
 
-Check the result of creating the `ClusterVirtualImage`:
+Check the result of creating the `ClusterVirtualImage` with the following command:
 
 ```shell
 d8 k get clustervirtualimage ubuntu-22.04
-# or
-d8 k get cvi ubuntu-22.04
 
-# NAME           PHASE   CDROM   PROGRESS   AGE
-# ubuntu-22.04   Ready   false   100%       23h
+# A shorter version of the command
+d8 k get cvi ubuntu-22.04
+```
+
+In the output, you should see information about the `ClusterVirtualImage` resource:
+
+```console
+NAME           PHASE   CDROM   PROGRESS   AGE
+ubuntu-22.04   Ready   false   100%       23h
 ```
 
 After creation, the `ClusterVirtualImage` resource may have the following states (phases):
@@ -81,15 +86,19 @@ You can track the image creation process by adding the `-w` flag to the previous
 
 ```shell
 d8 k get cvi ubuntu-22.04 -w
+```
 
-# NAME           PHASE          CDROM   PROGRESS   AGE
-# ubuntu-22.04   Provisioning   false              4s
-# ubuntu-22.04   Provisioning   false   0.0%       4s
-# ubuntu-22.04   Provisioning   false   28.2%      6s
-# ubuntu-22.04   Provisioning   false   66.5%      8s
-# ubuntu-22.04   Provisioning   false   100.0%     10s
-# ubuntu-22.04   Provisioning   false   100.0%     16s
-# ubuntu-22.04   Ready          false   100%       18s
+In the output, you should see information about the image creation progress:
+
+```console
+NAME           PHASE          CDROM   PROGRESS   AGE
+ubuntu-22.04   Provisioning   false              4s
+ubuntu-22.04   Provisioning   false   0.0%       4s
+ubuntu-22.04   Provisioning   false   28.2%      6s
+ubuntu-22.04   Provisioning   false   66.5%      8s
+ubuntu-22.04   Provisioning   false   100.0%     10s
+ubuntu-22.04   Provisioning   false   100.0%     16s
+ubuntu-22.04   Ready          false   100%       18s
 ```
 
 Additional information about the downloaded image can be retrieved by describing the `ClusterVirtualImage` resource:
@@ -186,10 +195,15 @@ Then upload the image using the following command:
 curl https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm --progress-bar -T cirros.img | cat
 ```
 
-After the upload is complete, the image should be created and transition to the `Ready` phase. To check the image's status, run the command:
+After the upload is complete, the image should be created and transition to the `Ready` phase. To check the image's phase, run the command:
 
 ```shell
 d8 k get cvi some-image
-# NAME         PHASE   CDROM   PROGRESS   AGE
-# some-image   Ready   false   100%       1m
+```
+
+In the output, you should see information about the image's phase:
+
+```console
+NAME         PHASE   CDROM   PROGRESS   AGE
+some-image   Ready   false   100%       1m
 ```

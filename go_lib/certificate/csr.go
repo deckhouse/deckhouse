@@ -24,7 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
-func GenerateCSR(logger go_hook.ILogger, cn string, options ...Option) (csrPEM, key []byte, err error) {
+func GenerateCSR(logger go_hook.Logger, cn string, options ...Option) (csrPEM, key []byte, err error) {
 	request := &csr.CertificateRequest{
 		CN:         cn,
 		KeyRequest: csr.NewKeyRequest(),
