@@ -1,8 +1,6 @@
 module embeded-registry-manager
 
-go 1.22.8
-
-toolchain go1.23.3
+go 1.23
 
 require (
 	github.com/cloudflare/cfssl v1.6.5
