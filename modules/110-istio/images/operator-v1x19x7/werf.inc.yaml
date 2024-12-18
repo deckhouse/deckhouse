@@ -35,7 +35,7 @@ shell:
   - git clone --depth 1 --branch {{ $istioOperatorVersion }} https://github.com/istio/istio.git /tmp/istio/
   - cd /tmp/istio/
   - find /patches -name '*.patch' | xargs git apply --verbose
-  - echo 1.19.7 > version
+  - echo {{ $istioOperatorVersion }} > version
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/operator/cmd/operator/
   - chown 0700 /tmp/istio/out/operator
