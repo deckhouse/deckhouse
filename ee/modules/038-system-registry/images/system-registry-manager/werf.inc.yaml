@@ -16,7 +16,10 @@ import:
     add: "/staticpod"
     to: /staticpod
     before: setup
-
+  - image: common/pause
+    add: /pause
+    to: /pause
+    before: setup
 docker:
   ENTRYPOINT: ["/manager"]
 ---
