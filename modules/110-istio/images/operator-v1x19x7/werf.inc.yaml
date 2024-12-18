@@ -5,7 +5,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ $.Images.BASE_ALT }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/operator
   to: /usr/local/bin/
   after: setup
