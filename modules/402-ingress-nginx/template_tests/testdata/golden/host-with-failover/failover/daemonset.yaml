@@ -180,7 +180,7 @@ spec:
         value: frontend
       - key: drbd.linbit.com/lost-quorum
       - key: drbd.linbit.com/force-io-error
-      - key: drbd.linbit.com/ignore-fail-overф
+      - key: drbd.linbit.com/ignore-fail-over
       volumes:
       - configMap:
           name: proxy-solid-failover-config
