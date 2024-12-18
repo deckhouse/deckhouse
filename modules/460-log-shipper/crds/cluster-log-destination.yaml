@@ -283,6 +283,13 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: string
+                          description: |
+                            Name of the Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), and private key (key.pem) in Base64-encoded PEM format.
+                            If specified, TLS settings are overridden with values from secret.
+                            Should be located in `d8-log-shipper` namespace.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
