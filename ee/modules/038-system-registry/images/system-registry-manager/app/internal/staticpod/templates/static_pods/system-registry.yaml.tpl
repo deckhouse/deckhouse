@@ -75,10 +75,6 @@ spec:
         valueFrom:
           fieldRef:
             fieldPath: status.hostIP
-      - name: NODE_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
     volumeMounts:
       - mountPath: /config
         name: mirrorer-config-volume
