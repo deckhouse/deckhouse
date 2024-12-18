@@ -79,8 +79,9 @@ func NewHookForUpdatePipeline(
 	checker := NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
 
 	return &HookForUpdatePipeline{
-		Checker: checker,
-		kubeCl:  kubeCl,
+		Checker:       checker,
+		kubeCl:        kubeCl,
+		commanderMode: commanderMode,
 	}
 }
 
