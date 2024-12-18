@@ -3,6 +3,17 @@ cpu: 25m
 memory: 40Mi
 {{- end }}
 
+{{- define "image_holder_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
+{{- $images := dict }}
+{{- $_ := set $images "dockerAuth" $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
+{{- $_ := set $images "dockerDistribution" $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
+{{- $_ := set $images "seaweedfs" $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
+{{- $_ := set $images "mirrorer" $.Values.global.modulesImages.digests.systemRegistry.mirrorer }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -83,6 +94,12 @@ spec:
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
         - name: IMAGE_SEAWEEDFS
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
+        - name: IMAGE_MIRRORER
+          {{- if and (hasKey $.Values.systemRegistry "imagesOverride") (hasKey $.Values.systemRegistry.imagesOverride "mirrorer") (ne $.Values.systemRegistry.imagesOverride.mirrorer "") }}
+          value: "{{ $.Values.systemRegistry.imagesOverride.mirrorer }}"
+          {{- else }}
+          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.mirrorer }}"
+          {{- end }}
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz
@@ -107,6 +124,17 @@ spec:
           {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "system_registry_manager_resources" . | nindent 12 }}
           {{- end }}
+{{- range $name, $imageDigest := $images }}
+      - name: image-holder-{{ $name | kebabcase }}
+        image: "{{ $.Values.global.modulesImages.registry.base }}@{{ $imageDigest }}"
+        command:
+        - /pause
+  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+        resources:
+          requests:
+            {{- include "image_holder_resources" $ | nindent 12 }}
+  {{- end }}
+{{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}

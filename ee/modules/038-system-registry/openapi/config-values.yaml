@@ -25,6 +25,12 @@ properties:
           Registry manager img full path
         x-example:
           - dev-registry.deckhouse.io/registryManager:latest
+      mirrorer:
+        type: string
+        description: |
+          Mirroper img full path
+        x-example:
+          - dev-registry.deckhouse.io/mirrorer:latest
   enableRegistryManager:
     type: boolean
     description: |

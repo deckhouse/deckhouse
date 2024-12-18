@@ -145,12 +145,14 @@ func (u UpstreamRegistry) Validate() error {
 type Images struct {
 	Distribution string `json:"distribution,omitempty"`
 	Auth         string `json:"auth,omitempty"`
+	Mirrorer     string `json:"mirrorer,omitempty"`
 }
 
 func (im Images) Validate() error {
 	return validation.ValidateStruct(&im,
 		validation.Field(&im.Auth, validation.Required),
 		validation.Field(&im.Distribution, validation.Required),
+		validation.Field(&im.Mirrorer, validation.Required),
 	)
 }
 

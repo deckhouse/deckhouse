@@ -12,6 +12,7 @@ memory: 10Mi
 {{- $_ := set $images "dockerAuth" $.Values.global.modulesImages.digests.systemRegistry.dockerAuth }}
 {{- $_ := set $images "dockerDistribution" $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}
 {{- $_ := set $images "seaweedfs" $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}
+{{- $_ := set $images "mirrorer" $.Values.global.modulesImages.digests.systemRegistry.mirrorer }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -129,6 +130,12 @@ spec:
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.dockerDistribution }}"
         - name: IMAGE_SEAWEEDFS
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
+        - name: IMAGE_MIRRORER
+          {{- if and (hasKey $.Values.systemRegistry "imagesOverride") (hasKey $.Values.systemRegistry.imagesOverride "mirrorer") (ne $.Values.systemRegistry.imagesOverride.mirrorer "") }}
+          value: "{{ $.Values.systemRegistry.imagesOverride.mirrorer }}"
+          {{- else }}
+          value: "{{ $.Values.global.modulesImages.digests.systemRegistry.mirrorer }}"
+          {{- end }}
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz

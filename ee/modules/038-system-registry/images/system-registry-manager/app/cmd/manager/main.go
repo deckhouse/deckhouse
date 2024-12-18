@@ -78,6 +78,7 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, httpClient *htt
 	registryPath := os.Getenv("REGISTRY_PATH")
 	imageAuth := os.Getenv("IMAGE_DOCKER_AUTH")
 	imageDistribution := os.Getenv("IMAGE_DOCKER_DISTRIBUTION")
+	imageMirrorer := os.Getenv("IMAGE_MIRRORER")
 
 	if registryAddress == "" {
 		return fmt.Errorf("REGISTRY_ADDRESS enviroment variable is not set")
@@ -90,6 +91,9 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, httpClient *htt
 	}
 	if imageDistribution == "" {
 		return fmt.Errorf("IMAGE_DOCKER_DISTRIBUTION enviroment variable is not set")
+	}
+	if imageMirrorer == "" {
+		return fmt.Errorf("IMAGE_MIRRORER enviroment variable is not set")
 	}
 
 	// Set up the manager with leader election and other options
@@ -130,6 +134,7 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, httpClient *htt
 			RegistryPath:      registryPath,
 			ImageAuth:         imageAuth,
 			ImageDistribution: imageDistribution,
+			ImageMirrorer:     imageMirrorer,
 		},
 	}
 

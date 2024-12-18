@@ -56,6 +56,7 @@ type NodeControllerSettings struct {
 	RegistryPath      string
 	ImageAuth         string
 	ImageDistribution string
+	ImageMirrorer     string
 }
 
 type nodeController struct {
@@ -423,6 +424,7 @@ func (nc *nodeController) contructStaticPodConfig(moduleConfig state.ModuleConfi
 		Images: staticpod.Images{
 			Auth:         fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageAuth),
 			Distribution: fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageDistribution),
+			Mirrorer:     fmt.Sprintf("%s@%s", registryHostPath, nc.Settings.ImageMirrorer),
 		},
 		Registry: staticpod.RegistryConfig{
 			Mode:       staticpod.RegistryMode(moduleConfig.Settings.Mode),

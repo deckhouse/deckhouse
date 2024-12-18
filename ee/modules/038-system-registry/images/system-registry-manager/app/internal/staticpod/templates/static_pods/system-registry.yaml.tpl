@@ -67,6 +67,21 @@ spec:
         name: auth-config-volume
       - mountPath: /system_registry_pki
         name: system-registry-pki-volume
+  - name: mirrorer
+    image: {{ .Images.Mirrorer }}
+    imagePullPolicy: IfNotPresent
+    env:
+      - name: HOST_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.hostIP
+      - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+    volumeMounts:
+      - mountPath: /config
+        name: mirrorer-config-volume
   priorityClassName: system-node-critical
   volumes:
   # PKI volumes
@@ -86,6 +101,10 @@ spec:
   - name: distribution-config-volume
     hostPath:
       path: /etc/kubernetes/system-registry/distribution_config
+      type: DirectoryOrCreate
+  - name: mirrorer-config-volume
+    hostPath:
+      path: /etc/kubernetes/system-registry/mirrorer
       type: DirectoryOrCreate
   # Data volume
   - name: distribution-data-volume
