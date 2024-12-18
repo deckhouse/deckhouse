@@ -6,6 +6,10 @@ entries:
         ru: Введение
       url: /stronghold/documentation/
     - title:
+        en: Configuration
+        ru: Настройка
+      url: /stronghold/documentation/configuration.html
+    - title:
         en: Administration guide
         ru: Руководство администратора
       folders:
