@@ -25,9 +25,7 @@ for schema_path in $(find $MODULES_RAW_DIR/crds $MODULES_RAW_DIR/external -type 
   #cp -f $schema_path _data/schemas/${CRD_PATH}/${module_name}/
   cp -f $schema_path _data/schemas/${CRD_PATH}/
   if [ -f "${module_path}/doc-ru-${module_file_name}" ]; then
-#     echo -e "\ni18n:\n  ru:" >> _data/schemas/${CRD_PATH}/${module_name}/${module_file_name}
      echo -e "\ni18n:\n  ru:" >> _data/schemas/${CRD_PATH}/${module_file_name}
-#     cat ${module_path}/doc-ru-${module_file_name} | sed '1{/^---$/d}; s/^/    /' >> _data/schemas/${CRD_PATH}/${module_name}/${module_file_name}
      cat ${module_path}/doc-ru-${module_file_name} | sed '1{/^---$/d}; s/^/    /' >> _data/schemas/${CRD_PATH}/${module_file_name}
   fi
 done
