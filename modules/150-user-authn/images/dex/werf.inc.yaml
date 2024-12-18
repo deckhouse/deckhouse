@@ -50,7 +50,7 @@ import:
     to: /usr/local/bin/dex
     before: setup
   - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-    add: /src/web/
+    add: /src/dex/web/
     to: /web
     before: setup
 docker:
