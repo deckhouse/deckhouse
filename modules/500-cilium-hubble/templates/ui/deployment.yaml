@@ -13,7 +13,7 @@ cpu: 10m
 memory: 20Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -82,7 +82,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "frontend_resources" . | nindent 12 }}
 {{- end }}
         volumeMounts:
@@ -119,7 +119,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "backend_resources" . | nindent 12 }}
 {{- end }}
         volumeMounts:
@@ -128,7 +128,7 @@ spec:
           readOnly: true
       - name: kube-rbac-proxy
       {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+        image: {{ include "helm_lib_module_image" (list $ "kubeRbacProxy" "cniCilium") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
         - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
@@ -167,7 +167,7 @@ spec:
         resources:
           requests:
           {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
           {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
         volumeMounts:

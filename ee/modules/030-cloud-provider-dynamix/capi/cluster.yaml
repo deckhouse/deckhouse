@@ -1,0 +1,11 @@
+{{- $prefix := .Values.global.clusterConfiguration.cloud.prefix | required "global.clusterConfiguration.cloud.prefix is required" }}
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: DynamixCluster
+metadata:
+  name: "dynamix"
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capd-controller-manager")) | nindent 2 }}
+spec:
+  {{- if $prefix }}
+  resourceGroup: "{{ $prefix }}-rg"
+  {{- end }}

@@ -4,13 +4,15 @@ apiVersions:
     description: |
       Описывает конфигурацию облачного кластера в AWS.
 
-      Используется cloud-провайдером, если control plane кластера размещен в облаке.
+      Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
 
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
     x-doc-search: |
       ProviderClusterConfiguration
     properties:
@@ -29,7 +31,7 @@ apiVersions:
             description: Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
           instanceClass:
             description: |
-              Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+              Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
             properties:
               instanceType:
                 type: string
@@ -103,7 +105,7 @@ apiVersions:
                     **Внимание!** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+                Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
               properties:
                 instanceType:
                   type: string
@@ -142,7 +144,7 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-aws/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/layouts.html) о возможных схемах размещения провайдера.
 
           > Схема размещения `Standard` считается **устаревшей**, не используйте ее.
       standard:
@@ -158,7 +160,7 @@ apiVersions:
                   По умолчанию будет использоваться первая доступная зона в регионе или первая из списка глобального параметра `zones`.
               instanceClass:
                 description: |
-                  Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
+                  Частичное содержимое полей [AWSInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
                 properties:
                   instanceType:
                     type: string
@@ -222,7 +224,7 @@ apiVersions:
           Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-aws/environment.html) к API AWS.
+          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-aws/environment.html) к API AWS.
         properties:
           providerAccessKeyId:
             description: |
@@ -236,7 +238,7 @@ apiVersions:
       zones:
         description: |
           Глобальное ограничение набора зон, с которыми работает cloud provider.
-          
+
           Ограничивает только **создание** узлов в кластере.
       additionalRolePolicies:
         description: |

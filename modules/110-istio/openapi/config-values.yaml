@@ -299,10 +299,8 @@ properties:
                   Resource requests settings for pods.
                 properties:
                   cpu:
-                    oneOf:
-                      - type: string
-                        pattern: "^[0-9]+m?$"
-                      - type: number
+                    type: string
+                    pattern: '^[0-9]+m?$'
                     default: '100m'
                     description: |
                       Configuring CPU requests.
@@ -320,10 +318,8 @@ properties:
                   Configuring CPU and memory limits.
                 properties:
                   cpu:
-                    oneOf:
-                      - type: string
-                        pattern: "^[0-9]+m?$"
-                      - type: number
+                    type: string
+                    pattern: '^[0-9]+m?$'
                     default: '2000m'
                     description: |
                       Configuring CPU limits.
@@ -413,13 +409,13 @@ properties:
         description: |
           Optional `nodeSelector` for istiod. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
       tolerations:
         type: array
         description: |
           Optional `tolerations` for istiod. The same as `spec.tolerations` for the Kubernetes pod.
 
-          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+          If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
         items:
           type: object
           properties:
@@ -632,10 +628,8 @@ properties:
                   Resource requests settings for pods.
                 properties:
                   cpu:
-                    oneOf:
-                    - type: string
-                      pattern: "^[0-9]+m?$"
-                    - type: number
+                    type: string
+                    pattern: "^[0-9]+m?$"
                     description: |
                       Configuring CPU requests.
                   memory:
@@ -651,10 +645,8 @@ properties:
                   Configuring CPU and memory limits.
                 properties:
                   cpu:
-                    oneOf:
-                    - type: string
-                      pattern: "^[0-9]+m?$"
-                    - type: number
+                    type: string
+                    attern: "^[0-9]+m?$"
                     description: |
                       Configuring CPU limits.
                   memory:
@@ -684,13 +676,13 @@ properties:
     description: |
       Optional `nodeSelector` for istio-operator, metadata-exporter and Kiali. The same as the `spec.nodeSelector` pod parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     description: |
       Optional `tolerations` for istio-operator, metadata-exporter and Kiali. The same as `spec.tolerations` for the Kubernetes pod.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
     items:
       type: object
       properties:
@@ -777,7 +769,7 @@ properties:
         description: |
           Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) module is enabled.
+          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -799,7 +791,7 @@ properties:
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/) one.
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:

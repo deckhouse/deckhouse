@@ -34,7 +34,7 @@ You can specify a longer interval to force a refresh, and use the `renew=“”`
 Below is an example of the command:
 
 ```sh
-kubectl annotate mop <name> renew=""
+kubectl annotate mpo <name> renew=""
 ```
 
 ## How it works

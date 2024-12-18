@@ -13,7 +13,7 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       plk_create_group_if_not_exists__d8_early_oom_malfunctioning: "EarlyOOMPodIsNotReadyGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_early_oom_malfunctioning: "EarlyOOMPodIsNotReadyGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes" 
+      plk_grouped_by__d8_early_oom_malfunctioning: "EarlyOOMPodIsNotReadyGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "pod"
       summary: >
         The {{`{{$labels.pod}}`}} Pod has detected unavailable PSI subsystem.
@@ -21,5 +21,5 @@
         Possible actions to resolve the problem:
         * Upgrade kernel to version 4.20 or higher.
         * Enable [Pressure Stall Information](https://docs.kernel.org/accounting/psi.html).
-        * [Disable](https://deckhouse.io/documentation/v1/modules/040-node-manager/configuration.html#parameters-earlyoomenabled) early oom.
+        * [Disable]({{ if .Values.global.modules.publicDomainTemplate }}{{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}{{- else }}https://deckhouse.io{{- end }}/products/kubernetes-platform/documentation/v1/modules/040-node-manager/configuration.html#parameters-earlyoomenabled) early oom.
 {{- end }}

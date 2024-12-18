@@ -3,7 +3,7 @@ cpu: 50m
 memory: 50Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -63,7 +63,6 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "operator") }}
         env:
-          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           - name: OPERATOR_NAMESPACE
             value: d8-operator-trivy
           {{- $enabledNamespaces := .Values.operatorTrivy | dig "internal" "enabledNamespaces" (list) }}
@@ -79,9 +78,27 @@ spec:
             value: "false"
           - name: OPERATOR_SCAN_JOB_TIMEOUT
             value: "5m"
-          {{- if $.Values.global.modulesImages.registry.CA }}
+          {{- if or $.Values.global.modulesImages.registry.CA .Values.operatorTrivy.additionalRegistryCA }}
           - name: OPERATOR_SCAN_JOB_REGISTRY_CA
-            value: | {{ $.Values.global.modulesImages.registry.CA | nindent 14 }}
+            value: |-
+            {{- if $.Values.global.modulesImages.registry.CA -}}
+            {{- trim $.Values.global.modulesImages.registry.CA | nindent 14 -}}
+            {{- end -}}
+            {{- if .Values.operatorTrivy.additionalRegistryCA -}}
+            {{- range .Values.operatorTrivy.additionalRegistryCA }} 
+            {{- trim .ca | nindent 14 }}
+            {{- end -}}
+            {{- end }}
+          - name: TRIVY_REGISTRY_CA
+            value: |-
+            {{- if $.Values.global.modulesImages.registry.CA -}}
+            {{- trim $.Values.global.modulesImages.registry.CA | nindent 14 -}}
+            {{- end -}}
+            {{- if .Values.operatorTrivy.additionalRegistryCA -}}
+            {{- range .Values.operatorTrivy.additionalRegistryCA }} 
+            {{- trim .ca | nindent 14 }}
+            {{- end -}}
+            {{- end -}}
           {{- end }}
           - name: OPERATOR_CONCURRENT_SCAN_JOBS_LIMIT
             value: "10"
@@ -101,10 +118,20 @@ spec:
             value: ":9090"
           - name: OPERATOR_VULNERABILITY_SCANNER_ENABLED
             value: "true"
+          - name: OPERATOR_SBOM_GENERATION_ENABLED
+          {{- if .Values.operatorTrivy.disableSBOMGeneration }}
+            value: "false"
+          {{- else }}
+            value: "true"
+          {{- end }}
+          - name: OPERATOR_CLUSTER_SBOM_CACHE_ENABLED
+            value: "false"
           - name: OPERATOR_VULNERABILITY_SCANNER_SCAN_ONLY_CURRENT_REVISIONS
             value: "true"
           - name: OPERATOR_SCANNER_REPORT_TTL
             value: "24h"
+          - name: OPERATOR_CACHE_REPORT_TTL
+            value: "120h"
           - name: OPERATOR_CLUSTER_COMPLIANCE_ENABLED
             value: "true"
           - name: OPERATOR_CONFIG_AUDIT_SCANNER_ENABLED
@@ -131,11 +158,20 @@ spec:
             value: "10h"
           - name: OPERATOR_MERGE_RBAC_FINDING_WITH_CONFIG_AUDIT
             value: "false"
+          - name: OPERATOR_USE_LOCAL_POLICIES
+            value: "true"
         ports:
           - name: metrics
             containerPort: 8080
           - name: probes
             containerPort: 9090
+        volumeMounts:
+          - mountPath: /tmp
+            name: tmp-data
+            readOnly: false
+          - mountPath: /.docker
+            name: docker-config
+            readOnly: true
         readinessProbe:
           httpGet:
             path: /readyz/
@@ -155,7 +191,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "operator_trivy_operator_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
@@ -190,6 +226,16 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
+      volumes:
+        - name: tmp-data
+          emptyDir: { }
+        - name: docker-config
+          secret:
+            defaultMode: 420
+            items:
+              - key: .dockerconfigjson
+                path: config.json
+            secretName: deckhouse-registry

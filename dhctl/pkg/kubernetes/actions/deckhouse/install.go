@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -30,7 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1alpha1"
@@ -159,75 +157,29 @@ func UnlockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl *client.KubernetesCli
 	})
 }
 
-func ConfigureReleaseChannel(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
-	// if we have correct semver version we should create Deckhouse Release for prevent rollback on previous version
-	// if installer version > version in release channel
-	if tag, found := config.ReadVersionTagFromInstallerContainer(); found {
-		deckhouseRelease := unstructured.Unstructured{}
-		deckhouseRelease.SetUnstructuredContent(map[string]interface{}{
-			"apiVersion": "deckhouse.io/v1alpha1",
-			"kind":       "DeckhouseRelease",
-			"metadata": map[string]interface{}{
-				"name": tag,
-			},
-			"spec": map[string]interface{}{
-				"version": tag,
-			},
-		})
-
-		err := retry.NewLoop(fmt.Sprintf("Create deckhouse release for version %s", tag), 15, 5*time.Second).
-			BreakIf(apierrors.IsAlreadyExists).
-			Run(func() error {
-				_, err := kubeCl.Dynamic().Resource(v1alpha1.DeckhouseReleaseGVR).Create(context.TODO(), &deckhouseRelease, metav1.CreateOptions{})
-				if err != nil {
-					return err
-				}
-
-				return nil
-			})
-		if err != nil {
-			return err
-		}
-	}
-
-	if cfg.ReleaseChannel == "" {
-		return nil
-	}
-	// save release channel into module config we do not set it in Deckhouse mc because we want to install deckhouse only one release
-	return retry.NewLoop("Set release channel to deckhouse module config", 15, 5*time.Second).
-		BreakIf(apierrors.IsNotFound).
-		Run(func() error {
-			cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), "deckhouse", metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-
-			err = unstructured.SetNestedField(cm.Object, cfg.ReleaseChannel, "spec", "settings", "releaseChannel")
-			if err != nil {
-				return err
-			}
-
-			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Update(context.TODO(), cm, metav1.UpdateOptions{})
-			if err != nil {
-				return err
-			}
-
-			return nil
-		})
+type ManifestsResult struct {
+	WithResourcesMCTasks []actions.ModuleConfigTask
+	PostBootstrapMCTasks []actions.ModuleConfigTask
 }
 
-func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) error {
+func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.DeckhouseInstaller) (*ManifestsResult, error) {
 	tasks := []actions.ManifestTask{
 		{
 			Name:     `Namespace "d8-system"`,
 			Manifest: func() interface{} { return manifests.DeckhouseNamespace("d8-system") },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Namespaces().Get(context.TODO(), manifest.(*apiv1.Namespace).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Namespaces().Create(context.TODO(), manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Namespaces().Update(context.TODO(), manifest.(*apiv1.Namespace), metav1.UpdateOptions{})
-				return err
+				return nil
 			},
 		},
 		{
@@ -458,81 +410,24 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 
 	lockCmTask, err := LockDeckhouseQueueBeforeCreatingModuleConfigs(kubeCl)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	if lockCmTask != nil {
 		tasks = append(tasks, *lockCmTask)
 	}
 
 	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
+	result := &ManifestsResult{}
+
 	if len(cfg.ModuleConfigs) > 0 {
-		createTask := func(mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
-			mcUnstructMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(mc)
-			if err != nil {
-				panic(err)
-			}
-			mcUnstruct := &unstructured.Unstructured{Object: mcUnstructMap}
-			return actions.ManifestTask{
-				Name: fmt.Sprintf(`ModuleConfig "%s"`, mc.GetName()),
-				Manifest: func() interface{} {
-					return mcUnstruct
-				},
-				CreateFunc: func(manifest interface{}) error {
-					if createMsg != "" {
-						log.InfoLn(createMsg)
-					}
-					// fake client does not support cache
-					if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
-						// need for invalidate cache
-						_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
-						if err != nil {
-							log.DebugF("Error getting mc api resource: %v\n", err)
-						}
-					}
-
-					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
-						Create(context.TODO(), manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
-					if err != nil {
-						log.DebugF("Do not create mc: %v\n", err)
-					}
-
-					return err
-				},
-				UpdateFunc: func(manifest interface{}) error {
-					// fake client does not support cache
-					if _, ok := os.LookupEnv("DHCTL_TEST"); !ok {
-						// need for invalidate cache
-						_, err := kubeCl.APIResource(config.ModuleConfigGroup+"/"+config.ModuleConfigVersion, config.ModuleConfigKind)
-						if err != nil {
-							log.DebugF("Error getting mc api resource: %v\n", err)
-						}
-					}
-
-					newManifest := manifest.(*unstructured.Unstructured)
-
-					oldManifest, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), newManifest.GetName(), metav1.GetOptions{})
-					if err != nil && !apierrors.IsNotFound(err) {
-						log.DebugF("Error getting mc: %v\n", err)
-					} else {
-						newManifest.SetResourceVersion(oldManifest.GetResourceVersion())
-					}
-
-					_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
-						Update(context.TODO(), newManifest, metav1.UpdateOptions{})
-					if err != nil {
-						log.InfoF("Do not updating mc: %v\n", err)
-					}
-
-					return err
-				},
-			}
-		}
-
-		tasks = append(tasks, createTask(cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
+		prepareModuleConfig(cfg.ModuleConfigs[0], result)
+		tasks = append(tasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[0], "Waiting for creating ModuleConfig CRD..."))
 
 		for i := 1; i < len(cfg.ModuleConfigs); i++ {
-			tasks = append(tasks, createTask(cfg.ModuleConfigs[i], ""))
+			prepareModuleConfig(cfg.ModuleConfigs[i], result)
+			tasks = append(tasks, createModuleConfigManifestTask(kubeCl, cfg.ModuleConfigs[i], ""))
 		}
 	}
 
@@ -545,12 +440,11 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 		}
 		return nil
 	})
-
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return UnlockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl)
+	return result, UnlockDeckhouseQueueAfterCreatingModuleConfigs(kubeCl)
 }
 
 func WaitForReadiness(kubeCl *client.KubernetesClient) error {
@@ -598,24 +492,13 @@ func CreateDeckhouseDeployment(kubeCl *client.KubernetesClient, cfg *config.Deck
 }
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
-	// TODO remove this after integrating external-module-manager into deckhouse-controller
-	externalModuleManagerEnabled := strings.ToLower(cfg.Bundle) != "minimal"
-	for _, mc := range cfg.ModuleConfigs {
-		if mc != nil && mc.GetName() == "external-module-manager" {
-			if mc.Spec.Enabled != nil {
-				externalModuleManagerEnabled = *mc.Spec.Enabled
-			}
-		}
-	}
-
 	return manifests.DeckhouseDeploymentParams{
-		Registry:               cfg.GetImage(true),
-		LogLevel:               cfg.LogLevel,
-		Bundle:                 cfg.Bundle,
-		IsSecureRegistry:       cfg.IsRegistryAccessRequired(),
-		KubeadmBootstrap:       cfg.KubeadmBootstrap,
-		MasterNodeSelector:     cfg.MasterNodeSelector,
-		ExternalModulesEnabled: externalModuleManagerEnabled,
+		Registry:           cfg.GetImage(true),
+		LogLevel:           cfg.LogLevel,
+		Bundle:             cfg.Bundle,
+		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),
+		KubeadmBootstrap:   cfg.KubeadmBootstrap,
+		MasterNodeSelector: cfg.MasterNodeSelector,
 	}
 }
 
@@ -633,4 +516,38 @@ func WaitForKubernetesAPI(kubeCl *client.KubernetesClient) error {
 		}
 		return fmt.Errorf("kubernetes API is not Ready: %w", err)
 	})
+}
+
+func ConfigureDeckhouseRelease(kubeCl *client.KubernetesClient) error {
+	// if we have correct semver version we should create Deckhouse Release for prevent rollback on previous version
+	// if installer version > version in release channel
+	if tag, found := config.ReadVersionTagFromInstallerContainer(); found {
+		deckhouseRelease := unstructured.Unstructured{}
+		deckhouseRelease.SetUnstructuredContent(map[string]interface{}{
+			"apiVersion": "deckhouse.io/v1alpha1",
+			"kind":       "DeckhouseRelease",
+			"metadata": map[string]interface{}{
+				"name": tag,
+			},
+			"spec": map[string]interface{}{
+				"version": tag,
+			},
+		})
+
+		err := retry.NewLoop(fmt.Sprintf("Create deckhouse release for version %s", tag), 15, 5*time.Second).
+			BreakIf(apierrors.IsAlreadyExists).
+			Run(func() error {
+				_, err := kubeCl.Dynamic().Resource(v1alpha1.DeckhouseReleaseGVR).Create(context.TODO(), &deckhouseRelease, metav1.CreateOptions{})
+				if err != nil {
+					return err
+				}
+
+				return nil
+			})
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+	}
+
+	return nil
 }

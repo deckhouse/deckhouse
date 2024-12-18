@@ -1,0 +1,129 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:use:capability:kubernetes:manage_resources
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: use
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+      - persistentvolumeclaims
+      - replicationcontrollers
+      - services
+      - pods
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - ""
+      - events.k8s.io
+    resources:
+      - events
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - apps
+    resources:
+      - controllerrevisions
+      - daemonsets
+      - deployments
+      - replicasets
+      - statefulsets
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - autoscaling.k8s.io
+    resources:
+      - verticalpodautoscalers
+      - verticalpodautoscalercheckpoints
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - batch
+    resources:
+      - cronjobs
+      - jobs
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+      - networkpolicies
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - localsubjectaccessreviews
+    verbs:
+      - create
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
+      - snapshot.storage.k8s.io
+    resources:
+      - volumesnapshots
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection

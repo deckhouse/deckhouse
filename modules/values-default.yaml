@@ -7,9 +7,9 @@ cloudDataCrdEnabled: true
 containerizedDataImporterEnabled: true
 controlPlaneManagerEnabled: true
 dashboardEnabled: true
-externalModuleManagerEnabled: true
 deckhouseEnabled: true
 documentationEnabled: true
+deckhouseToolsEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
 flowSchemaEnabled: true
@@ -25,6 +25,7 @@ monitoringDeckhouseEnabled: true
 monitoringKubernetesControlPlaneEnabled: true
 monitoringKubernetesEnabled: true
 monitoringPingEnabled: true
+multitenancyManagerEnabled: true
 namespaceConfiguratorEnabled: true
 registryPackagesProxyEnabled: true
 nodeManagerEnabled: true

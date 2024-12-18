@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -43,6 +44,9 @@ type DexClient struct {
 	//   basic auth credentials part
 	LegacyID        string `json:"legacyID"`
 	LegacyEncodedID string `json:"legacyEncodedID"`
+
+	Labels      map[string]string `json:"labels"`
+	Annotations map[string]string `json:"annotations"`
 }
 
 type DexClientSecret struct {
@@ -67,6 +71,40 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	id := fmt.Sprintf("dex-client-%s@%s", name, namespace)
 	legacyID := fmt.Sprintf("dex-client-%s:%s", name, namespace)
 
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	// Secrets with that label lead to D8CertmanagerOrphanSecretsChecksFailed alerts.
+	// argocd.argoproj.io is used by ArgoCD to identify secrets managed by it.
+	// app.kubernetes.io/managed-by is used by Helm to identify secrets managed by it.
+	// Delete labels that should not be transferred to the secret
+	labelKeysToIgnore := []string{
+		"app",
+		"heritage",
+		"module",
+		"name",
+		"app.kubernetes.io/managed-by",
+		"argocd.argoproj.io/secret-type",
+		"argocd.argoproj.io/instance",
+		"certmanager.k8s.io/certificate-name",
+	}
+	for _, key := range labelKeysToIgnore {
+		delete(labels, key)
+	}
+
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+	for key := range annotations {
+		if strings.Contains(key, "werf.io/") || strings.Contains(key, "helm.sh/") {
+			delete(annotations, key)
+		}
+	}
+
 	return DexClient{
 		ID:              id,
 		LegacyID:        legacyID,
@@ -75,6 +113,8 @@ func applyDexClientFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		Name:            name,
 		Namespace:       namespace,
 		Spec:            spec,
+		Labels:          labels,
+		Annotations:     annotations,
 	}, nil
 }
 

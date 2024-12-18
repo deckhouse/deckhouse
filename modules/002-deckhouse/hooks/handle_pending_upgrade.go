@@ -24,7 +24,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // We have to delete last release in pending state
@@ -46,8 +46,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{"name": "deckhouse", "owner": "helm"},
 			},
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   filterDeckhouseHelmRelease,
 		},
 	},

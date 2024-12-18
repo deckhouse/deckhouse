@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/square/go-jose/v3"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -48,7 +48,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
@@ -65,7 +65,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
@@ -123,8 +123,8 @@ status:
       - {"address": "some-outdatad.host-2", "port": 111} # should be deleted
       publicServices:
       - {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111}]} # should be saved
-      - {"hostname": "some-outdated.host-2", "ports": [{"name": "ppp", "port": 111}], virtualIP: "169.254.0.42"} # should be deleted
-      - {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 111}], virtualIP: "169.254.0.1"} # virtualIP should be saved, port should be changed to 222
+      - {"hostname": "some-outdated.host-2", "ports": [{"name": "ppp", "port": 111}]} # should be deleted
+      - {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 111}]} # port should be changed to 222
 `))
 
 			respMap := map[string]map[string]HTTPMockResponse{
@@ -217,7 +217,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			tPub0, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.publicLastFetchTimestamp").String())
 			Expect(err).ShouldNot(HaveOccurred())
@@ -282,20 +282,20 @@ status:
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.private.publicServices").String()).To(MatchJSON(`
             [
-              {"hostname": "a.b.c", "ports": [{"name": "ppp", "port": 123}], "virtualIP": "169.254.0.2"},
-              {"hostname": "1.2.3.4", "ports": [{"name": "ppp", "port": 234}], "virtualIP": "169.254.0.3"}
+              {"hostname": "a.b.c", "ports": [{"name": "ppp", "port": 123}]},
+              {"hostname": "1.2.3.4", "ports": [{"name": "ppp", "port": 234}]}
             ]
 `))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-1").Field("status.metadataCache.private.publicServices").String()).To(MatchJSON(`
             [
-              {"hostname": "some-actual.host", "ports": [{"name": "ppp", "port": 111}], "virtualIP": "169.254.0.4"}
+              {"hostname": "some-actual.host", "ports": [{"name": "ppp", "port": 111}]}
             ]
 `))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-2").Field("status.metadataCache.private.publicServices").String()).To(MatchJSON(`
             [
-              {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111}], "virtualIP": "169.254.0.5"},
-              {"hostname": "some-actual.host-2", "ports": [{"name": "ppp", "port": 111}], "virtualIP": "169.254.0.6"},
-              {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 222}], "virtualIP": "169.254.0.1"}
+              {"hostname": "some-actual.host-1", "ports": [{"name": "ppp", "port": 111}]},
+              {"hostname": "some-actual.host-2", "ports": [{"name": "ppp", "port": 111}]},
+              {"hostname": "some-actual.host-3", "ports": [{"name": "ppp", "port": 222}]}
             ]
 `))
 
@@ -371,7 +371,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-0",
 					"endpoint":        "https://proper-hostname-0/metadata/public/public.json",
@@ -381,7 +381,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-0",
 					"endpoint":        "https://proper-hostname-0/metadata/private/federation.json",
@@ -391,7 +391,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-1",
 					"endpoint":        "https://proper-hostname-1/metadata/public/public.json",
@@ -401,7 +401,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-1",
 					"endpoint":        "https://proper-hostname-1/metadata/private/federation.json",
@@ -411,7 +411,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-2",
 					"endpoint":        "https://proper-hostname-2/metadata/public/public.json",
@@ -421,7 +421,7 @@ status:
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-2",
 					"endpoint":        "https://proper-hostname-2/metadata/private/federation.json",
@@ -580,14 +580,14 @@ status: {}
 		It("Hook must execute successfully with proper warnings", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(string(f.LogrusOutput.Contents())).To(Not(ContainSubstring("local-federation")))
+			Expect(string(f.LoggerOutput.Contents())).To(Not(ContainSubstring("local-federation")))
 
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot fetch public metadata endpoint https://public-internal-error/metadata/public/public.json for IstioFederation public-internal-error (HTTP Code 500)"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot unmarshal public metadata endpoint https://public-bad-json/metadata/public/public.json for IstioFederation public-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("bad public metadata format in endpoint https://public-wrong-format/metadata/public/public.json for IstioFederation public-wrong-format"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot fetch private metadata endpoint https://private-internal-error/metadata/private/federation.json for IstioFederation private-internal-error (HTTP Code 500)"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot unmarshal private metadata endpoint https://private-bad-json/metadata/private/federation.json for IstioFederation private-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("bad private metadata format in endpoint https://private-wrong-format/metadata/private/federation.json for IstioFederation private-wrong-format"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch public metadata endpoint https://public-internal-error/metadata/public/public.json for IstioFederation public-internal-error (HTTP Code 500)"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal public metadata endpoint https://public-bad-json/metadata/public/public.json for IstioFederation public-bad-json, error: unexpected end of JSON input"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("bad public metadata format in endpoint https://public-wrong-format/metadata/public/public.json for IstioFederation public-wrong-format"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch private metadata endpoint https://private-internal-error/metadata/private/federation.json for IstioFederation private-internal-error (HTTP Code 500)"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal private metadata endpoint https://private-bad-json/metadata/private/federation.json for IstioFederation private-bad-json, error: unexpected end of JSON input"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("bad private metadata format in endpoint https://private-wrong-format/metadata/private/federation.json for IstioFederation private-wrong-format"))
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "local-federation").Field("status").String()).To(MatchJSON("{}"))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "public-internal-error").Field("status").String()).To(MatchJSON("{}"))
@@ -624,7 +624,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "private-bad-json",
 					"endpoint":        "https://private-bad-json/metadata/public/public.json",
@@ -634,7 +634,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "private-bad-json",
 					"endpoint":        "https://private-bad-json/metadata/private/federation.json",
@@ -644,7 +644,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "private-internal-error",
 					"endpoint":        "https://private-internal-error/metadata/public/public.json",
@@ -654,7 +654,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "private-internal-error",
 					"endpoint":        "https://private-internal-error/metadata/private/federation.json",
@@ -664,7 +664,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "private-wrong-format",
 					"endpoint":        "https://private-wrong-format/metadata/public/public.json",
@@ -674,7 +674,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "private-wrong-format",
 					"endpoint":        "https://private-wrong-format/metadata/private/federation.json",
@@ -684,7 +684,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "public-bad-json",
 					"endpoint":        "https://public-bad-json/metadata/public/public.json",
@@ -694,7 +694,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "public-internal-error",
 					"endpoint":        "https://public-internal-error/metadata/public/public.json",
@@ -704,7 +704,7 @@ status: {}
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "public-wrong-format",
 					"endpoint":        "https://public-wrong-format/metadata/public/public.json",

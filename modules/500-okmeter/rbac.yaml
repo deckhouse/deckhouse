@@ -1,0 +1,3 @@
+module: okmeter
+subsystems:
+  - observability

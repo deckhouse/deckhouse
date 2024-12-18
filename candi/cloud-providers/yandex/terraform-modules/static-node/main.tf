@@ -88,7 +88,7 @@ resource "yandex_compute_instance" "static" {
 
   boot_disk {
     initialize_params {
-      type     = "network-ssd"
+      type     = local.disk_type
       image_id = local.image_id
       size     = local.disk_size_gb
     }

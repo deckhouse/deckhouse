@@ -24,7 +24,7 @@
 {{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
 
-{{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -52,6 +52,10 @@ spec:
       maxAllowed:
         cpu: {{ $resourcesRequestsVPA_CPU.max | default "50m" | quote }}
         memory: {{ $resourcesRequestsVPA_Memory.max | default "200Mi" | quote }}
+      {{- if $crd.spec.enableIstioSidecar }}
+    - containerName: istio-proxy
+      mode: "Off"
+      {{- end }}
     {{- else }}
   updatePolicy:
     updateMode: "Off"
@@ -218,7 +222,7 @@ spec:
         {{- if eq "nginx" $crd.spec.ingressClass }}
         - --watch-ingress-without-class=true
         {{- end }}
-        {{- if and $crd.spec.annotationValidationEnabled (eq $controllerVersion "1.9") }}
+        {{- if and $crd.spec.annotationValidationEnabled (or (eq $controllerVersion "1.9") (eq $controllerVersion "1.10")) }}
         - --enable-annotation-validation=true
         {{- end }}
   {{- if $crd.spec.customErrors }}
@@ -253,6 +257,9 @@ spec:
   {{- end }}
         ports:
         - containerPort: 80
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+          hostPort: 80
+  {{- end }}
   {{- if eq $crd.spec.inlet "HostPort"}}
     {{- if $hostPort.httpPort }}
           hostPort: {{ $hostPort.httpPort }}
@@ -270,6 +277,9 @@ spec:
   {{- end }}
         - containerPort: 443
           protocol: TCP
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+          hostPort: 443
+  {{- end }}
   {{- if eq $crd.spec.inlet "HostPort"}}
     {{- if $hostPort.httpsPort }}
           hostPort: {{ $hostPort.httpsPort }}
@@ -287,6 +297,9 @@ spec:
   {{- end }}
         - containerPort: 443
           protocol: UDP
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+          hostPort: 443
+  {{- end }}
   {{- if eq $crd.spec.inlet "HostPort"}}
     {{- if $hostPort.httpsPort }}
           hostPort: {{ $hostPort.httpsPort }}
@@ -303,7 +316,7 @@ spec:
           name: webhook
   {{- end }}
         volumeMounts:
-  {{- if eq $controllerVersion "1.9" }}
+  {{- if or (eq $controllerVersion "1.9") (eq $controllerVersion "1.10") }}
         - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path
         - mountPath: /chroot/var/lib/nginx/fastcgi
@@ -396,6 +409,9 @@ spec:
               - 127.0.0.1:10254
         ports:
         - containerPort: 4207
+  {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
+          hostPort: 4207
+  {{- end }}
           name: https-metrics
         resources:
           requests:

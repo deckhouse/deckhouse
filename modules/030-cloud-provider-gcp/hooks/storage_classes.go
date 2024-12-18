@@ -100,11 +100,5 @@ func storageClasses(input *go_hook.HookInput) error {
 
 	input.Values.Set("cloudProviderGcp.internal.storageClasses", storageClassesFiltered)
 
-	if input.Values.Exists("cloudProviderGcp.storageClass.default") {
-		input.Values.Set("cloudProviderGcp.internal.defaultStorageClass", input.Values.Get("cloudProviderGcp.storageClass.default").String())
-	} else {
-		input.Values.Remove("cloudProviderGcp.internal.defaultStorageClass")
-	}
-
 	return nil
 }

@@ -4,6 +4,9 @@
 
 | Table of contents |
 |---|
+| **Api Version And Kind** |
+| [helm_lib_kind_exists](#helm_lib_kind_exists) |
+| [helm_lib_get_api_version_by_kind](#helm_lib_get_api_version_by_kind) |
 | **Enable Ds Eviction** |
 | [helm_lib_prevent_ds_eviction_annotation](#helm_lib_prevent_ds_eviction_annotation) |
 | **Envs For Proxy** |
@@ -104,6 +107,37 @@
 | [helm_lib_deployment_on_master_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
+
+## Api Version And Kind
+
+### helm_lib_kind_exists
+
+ returns true if the specified resource kind (case-insensitive) is represented in the cluster 
+
+#### Usage
+
+`{{ include "helm_lib_kind_exists" (list . "<kind-name>") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Kind name portion 
+
+
+### helm_lib_get_api_version_by_kind
+
+ returns current apiVersion string, based on available helm capabilities, for the provided kind (not all kinds are supported) 
+
+#### Usage
+
+`{{ include "helm_lib_get_api_version_by_kind" (list . "<kind-name>") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Kind name portion 
 
 ## Enable Ds Eviction
 

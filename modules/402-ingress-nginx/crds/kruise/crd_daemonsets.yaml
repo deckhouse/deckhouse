@@ -4,8 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.7.0
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: daemonsets.apps.kruise.io
 spec:
   group: apps.kruise.io
@@ -81,6 +80,7 @@ spec:
                   type: integer
                   description: Replicas value equals to the number of desired pods and is set by the controller for compatibility with PDB requirements.
                   default: 1
+                  type: integer
                 burstReplicas:
                   anyOf:
                     - type: integer
@@ -130,6 +130,27 @@ spec:
                           - Pod will be restored to ''Ready'' at Updated state if
                           it was set to ''NotReady'' at preparingUpdate state. Default
                           to false.'
+                          type: boolean
+                      type: object
+                    preNormal:
+                      description: PreNormal is the hook after Pod to be created and
+                        ready to be Normal.
+                      properties:
+                        finalizersHandler:
+                          items:
+                            type: string
+                          type: array
+                        labelsHandler:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        markPodNotReady:
+                          description: |-
+                            MarkPodNotReady = true means:
+                            - Pod will be set to 'NotReady' at preparingDelete/preparingUpdate state.
+                            - Pod will be restored to 'Ready' at Updated state if it was set to 'NotReady' at preparingUpdate state.
+                            Currently, MarkPodNotReady only takes effect on InPlaceUpdate & PreDelete hook.
+                            Default to false.
                           type: boolean
                       type: object
                   type: object
@@ -192,6 +213,7 @@ spec:
                         are ANDed.
                       type: object
                   type: object
+                  x-kubernetes-map-type: atomic
                 template:
                   description: 'An object that describes the pod that will be created.
                   The DaemonSet will create exactly one copy of this pod on every
@@ -314,6 +336,7 @@ spec:
                                 only "value". The requirements are ANDed.
                               type: object
                           type: object
+                          x-kubernetes-map-type: atomic
                       type: object
                     type:
                       description: Type of daemon set update. Can be "RollingUpdate"
@@ -430,9 +453,3 @@ spec:
           specReplicasPath: .spec.replicas
           statusReplicasPath: .status.numberAvailable
           labelSelectorPath: .status.labelSelector
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

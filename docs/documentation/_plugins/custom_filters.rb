@@ -11,6 +11,10 @@ module Jekyll
       %r#[:+-= ]{4,}#,
       %r{\|\|+}
     )
+    STRIP_LIQUID_TAGS       = Regexp.union(
+      /\{{.*?}}/m,
+      /\{%.*?%}/m
+    )
     STRIP_HTML_TAGS = /<.*?>/m
 
     def true_relative_url(path)
@@ -41,6 +45,7 @@ module Jekyll
       return text.to_s.gsub(STRIP_HTML_BLOCKS, ' ').
                        gsub(STRIP_HTML_TAGS, ' ').
                        gsub(STRIP_MD_TABLES,' ').
+                       gsub(STRIP_LIQUID_TAGS, ' ').
                        gsub(/\n/,' ').
                        gsub(/\s\s+/,' ').strip
     end

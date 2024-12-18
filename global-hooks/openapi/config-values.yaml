@@ -1,3 +1,4 @@
+x-config-version: 2
 type: object
 default: {}
 additionalProperties: false
@@ -5,11 +6,30 @@ properties:
   storageClass:
     type: string
     default: null
+    deprecated: true
+    x-doc-deprecated: true
     description: |
-      The storage class to use with all Deckhouse components (Prometheus, Grafana, OpenVPN, etc.).
-        * If not defined, components use `global.discovery.defaultStorageClass` (which is determined automatically) or `emptyDir` (if `global.discovery.defaultStorageClass` isn't defined).
+      > **DEPRECATED**. Moved to [global.modules.storageClass](#parameters-modules-storageclass).
+
+      The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
+
+        * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
         * Use this parameter only in exceptional circumstances.
         * This parameter is applied during module activation.
+  defaultClusterStorageClass:
+    type: string
+    default: null
+    description: |-
+      The name of the StorageClass that DKP will define as the default StorageClass used in the cluster.
+
+      DKP prohibits manually adding or modifying the default annotation (`storageclass.kubernetes.io/is-default-class='true'`) for StorageClass. Use the parameter to define or change the StorageClass that is used as the default in the cluster.
+
+      If the parameter is omitted, the default StorageClass is either:
+
+       * A StorageClass in the cluster that has the default annotation (`storageclass.kubernetes.io/is-default-class='true'`);
+       * The first (alphabetically) StorageClass created by the cloud provider module (if any cloud provider module is used).
+
+      Use this parameter to change the default StorageClass in the cluster, as manually adding the default annotation to a StorageClass is not allowed.
   highAvailability:
     type: boolean
     description: |
@@ -44,10 +64,10 @@ properties:
           **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
 
           **Pay attention to the following:**
-          - Domain must be different from [clusterDomain](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
-          - Domain used in the template must not match the domain specified in the [clusterDomain](https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
-
-          If this parameter is omitted, no Ingress resources will be created.
+          - Domain must be different from [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
+          - Domain used in the template must not match the domain specified in the [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
+          - Domain used in the template should not match the domain specified in the [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter and the internal service network zone. For example, if clusterDomain is set to cluster.local (default value) and the service network zone is ru-central1.internal, then publicDomainTemplate cannot be %s.cluster.local or %s.ru-central1.internal.
+          - If this parameter is omitted, no Ingress resources will be created.
         x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
         x-examples: [ "%s.kube.company.my" ]
       placement:
@@ -93,7 +113,7 @@ properties:
               The HTTPS usage mode:
               * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
               * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
-              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/));
+              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/));
               * `OnlyInURI` — Deckhouse modules use HTTP in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS. Load balancer should provide a redirect from HTTP to HTTPS.
             default: CertManager
             enum:
@@ -113,7 +133,7 @@ properties:
                 description: |
                   Name of a `ClusterIssuer` to use for Deckhouse modules.
 
-                  The [cert-manager](https://deckhouse.io/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
+                  The [cert-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/101-cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
           customCertificate:
             type: object
             additionalProperties: false
@@ -156,88 +176,12 @@ properties:
                   The combined memory requests for control-plane components on each master node.
                 type: string
                 pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-          everyNode:
-            type: object
-            default: {}
-            additionalProperties: false
-            description: |
-              The amount of resources (CPU and memory) allocated to Deckhouse components running on each node of the cluster.
-            x-examples:
-            - cpu: 100m
-              memory: 150M
-            x-doc-deprecated: true
-            properties:
-              cpu:
-                description: |
-                  The combined CPU requests for all the Deckhouse components on each node.
-                default: "300m"
-                oneOf:
-                  - type: string
-                    pattern: "^[0-9]+m?$"
-                  - type: number
-              memory:
-                description: |
-                  The combined memory requests for all the Deckhouse components on each node.
-                type: string
-                default: "512Mi"
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-          masterNode:
-            type: object
-            additionalProperties: false
-            description: |
-              The amount of resources (CPU and memory) allocated to Deckhouse components running on the master nodes (including control plane components, if they are managed by Deckhouse).
-
-              > **Caution!** Deckhouse may not manage control plane components in KaaS clusters (Kubernetes as a Service, managed Kubernetes service, etc.). In such cases, all the specified resources are allocated to the Deckhouse components except the control plane.
-            x-examples:
-            - cpu: "1"
-              memory: 150Mi
-            x-doc-deprecated: true
-            properties:
-              cpu:
-                description: |
-                  The combined CPU requests for Deckhouse components on master nodes **in addition** to `everyNode.cpu`.
-                    * For a Deckhouse-controlled cluster, the default value is calculated automatically: `.status.allocatable.cpu` of the smallest master node (no more than `4` (CPU cores)) minus `everyNode.cpu`.
-                    * For a managed cluster, the default value is `1` (CPU core) minus `everyNode.cpu`.
-                oneOf:
-                  - type: string
-                    pattern: "^[0-9]+m?$"
-                  - type: number
-              memory:
-                description: |
-                  The total amount of memory allocated to Deckhouse components on master nodes **in addition** to `everyNode.memory`.
-                    * For a Deckhouse-managed cluster, the default value is calculated automatically: `.status.allocatable.memory` of the smallest master node (no more than `8Gi`) minus `everyNode.memory`.
-                    * For a managed cluster, the default value is `1Gi` minus `everyNode.memory`.
-                type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-# TODO remove after 1.42 release
-      proxy:
-        deprecated: true
-        additionalProperties: false
+      storageClass:
+        type: string
+        default: null
         description: |
-          Global proxy setup for modules.
-        type: object
-        properties:
-          httpProxy:
-            deprecated: true
-            type: string
-            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
-            description: |
-              Proxy URL for HTTP requests.
-          httpsProxy:
-            deprecated: true
-            type: string
-            pattern: '^(http|https)://[0-9a-zA-Z\.\-:]+$'
-            description: |
-              Proxy URL for HTTPS requests.
-          noProxy:
-            deprecated: true
-            description: |
-              List of no proxy IP and domain entries. Use a domain name with a dot prefix for wildcard domains (e.g., `.example.com`).
-            type: array
-            items:
-              type: string
-              pattern: '^[a-z0-9\-\./]+$'
-        x-examples:
-        - httpProxy: http://1.2.3.4:80
-          httpsProxy: https://1.2.3.4:443
-          noProxy: ["127.0.0.1", "192.168.0.0/24", "example.com", ".example.com"]
+          The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
+
+            * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+            * Use this parameter only in exceptional circumstances.
+            * This parameter is applied during module activation.

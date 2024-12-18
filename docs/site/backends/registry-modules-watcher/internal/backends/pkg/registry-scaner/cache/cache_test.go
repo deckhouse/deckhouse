@@ -15,8 +15,9 @@
 package cache
 
 import (
-	"registry-modules-watcher/internal/backends"
 	"testing"
+
+	"registry-modules-watcher/internal/backends"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -55,5 +56,5 @@ func TestSetTar(t *testing.T) {
 
 	rng = cache.GetRange()
 	// "stable" tag in 1.0.0, "beta" in 1.0.1 and "alpha" in 1.0.2
-	assert.Equal(t, 3, len(rng), "Unexpected version range. Expected %v, got %v", 3, len(rng))
+	assert.Equal(t, 4, len(rng), "Unexpected version range. Expected %v, got %v", 3, len(rng))
 }

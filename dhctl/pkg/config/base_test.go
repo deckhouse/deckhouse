@@ -18,8 +18,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -42,7 +43,8 @@ kind: InitConfiguration
 deckhouse:
    imagesRepo: test
    devBranch: test
-   configOverrides: {}
+   # {"auths": { "test": {}}}
+   registryDockerCfg: eyJhdXRocyI6IHsgInRlc3QiOiB7fX19
 `
 	staticConfig := `
 ---

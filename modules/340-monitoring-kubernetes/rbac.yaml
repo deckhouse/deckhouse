@@ -1,0 +1,4 @@
+module: monitoring-kubernetes
+namespace: d8-monitoring
+subsystems:
+  - observability

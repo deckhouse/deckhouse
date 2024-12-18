@@ -1,0 +1,78 @@
+{{- $version := "6.11" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+shell:
+  install:
+  - cd /src
+  - git clone -b libmnl-1.0.5 --depth 1 {{ $.SOURCE_REPO }}/netfilter/libmnl ./src-libmnl
+  - rm -r src-libmnl/.git
+  - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/ethtool/ethtool.git ./src-ethtool
+  - rm -r src-ethtool/.git
+---
+artifact: {{ $.ModuleName }}/ethtool-artifact
+from: {{ $.Images.BASE_ALPINE }}
+import:
+  - artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+  - fromPath: ~/go-pkg-cache
+    to: /go/pkg
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache autoconf automake make libtool g++ linux-headers pkgconfig
+  setup:
+    - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
+    - cd /src/src-libmnl
+    - ./autogen.sh
+    - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
+    - make && make install
+    - cd /src/src-ethtool
+    - ./autogen.sh
+    - ./configure LDFLAGS=-static --libdir=/opt/deckhouse/bin/.libs
+    - make
+    - ls -la
+    - strip ./ethtool
+    - chown 64535:64535 ./ethtool
+    - chmod 0755 ./ethtool
+    - cp ./ethtool /ethtool
+---
+artifact: {{ $.ModuleName }}/vxlan-offloading-fixer-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+git:
+  - add: /{{ $.ModulePath }}modules/000-{{ $.ModuleName }}/images/{{ $.ImageName }}
+    to: /src
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+    - export "CGO_ENABLED=0"
+    - export "GOOS=linux"
+    - export "GOARCH=amd64"
+    - cd /src
+    - go build -o /tmp/vxlan-offloading-fixer main.go
+    - chown 64535:64535 /tmp/vxlan-offloading-fixer
+    - chmod 0755 /tmp/vxlan-offloading-fixer
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+  - artifact: {{ $.ModuleName }}/ethtool-artifact
+    add: /ethtool
+    to: /ethtool
+    before: setup
+  - artifact: {{ $.ModuleName }}/vxlan-offloading-fixer-artifact
+    add: /tmp/vxlan-offloading-fixer
+    to: /vxlan-offloading-fixer
+    before: setup
+  - image: common/pause
+    add: /pause
+    to: /pause
+    before: install
+docker:
+  ENTRYPOINT: ["/vxlan-offloading-fixer"]

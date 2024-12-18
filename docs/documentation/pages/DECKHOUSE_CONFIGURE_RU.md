@@ -146,10 +146,8 @@ user-authn   false     1         12h
 <td>
 <ul style="columns: 3">
 {%- for moduleName in site.data.bundles.bundleModules[bundle] %}
-{%- assign isExcluded = site.data.exclude.module_names | where: "name", moduleName %}
-{%- if isExcluded.size > 0 %}{% continue %}{% endif %}
-<li>
-{{ moduleName }}</li>
+{%- if site.data.excludedModules contains moduleName %}{% continue %}{% endif %}
+<li>{{ moduleName }}</li>
 {%- endfor %}
 </ul>
 </td>
@@ -158,7 +156,24 @@ user-authn   false     1         12h
 </tbody>
 </table>
 
-> **Обратите внимание,** что в наборе модулей `Minimal` не включен ряд базовых модулей (например, модуль работы с CNI). Deckhouse с набором модулей `Minimal` без включения базовых модулей сможет работать только в уже развернутом кластере.
+### Особенности работы с набором модулей Minimal
+
+{% alert level="warning" %}
+**Обратите внимание,** что в наборе модулей `Minimal` не включен ряд базовых модулей (например, модуль работы с CNI).
+
+Deckhouse с набором модулей `Minimal` без включения базовых модулей сможет работать только в уже развернутом кластере.
+{% endalert %}
+
+Для установки Deckhouse с набором модулей `Minimal` включите как минимум следующие модули, указав их в конфигурационном файле установщика:
+
+* cloud-data-crd;
+* cni-cilium или другой модуль управления CNI (при необходимости);
+* control-plane-manager;
+* kube-dns;
+* terraform-manager, в случае развертывания облачного кластера;
+* node-manager;
+* registry-packages-proxy;
+* модуль облачного провайдера (например, `cloud-provider-aws` для AWS), в случае развертывания облачного кластера).
 
 ## Управление размещением компонентов Deckhouse
 

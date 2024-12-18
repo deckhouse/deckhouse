@@ -26,18 +26,19 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
-type DeckhouseUpdateSettings struct {
-	NotificationConfig     *NotificationConfig
-	DisruptionApprovalMode string
-	Mode                   string
-	ClusterUUID            string
-}
+type ReleaseType string
+
+const (
+	ReleaseTypeMinor ReleaseType = "Minor"
+	ReleaseTypeAll   ReleaseType = "All"
+)
 
 type NotificationConfig struct {
 	WebhookURL              string          `json:"webhook"`
 	SkipTLSVerify           bool            `json:"tlsSkipVerify"`
 	MinimalNotificationTime libapi.Duration `json:"minimalNotificationTime"`
 	Auth                    *Auth           `json:"auth,omitempty"`
+	ReleaseType             ReleaseType     `json:"releaseType"`
 }
 
 type Auth struct {
@@ -63,7 +64,7 @@ func (a *Auth) Fill(req *http.Request) {
 	}
 }
 
-func sendWebhookNotification(config *NotificationConfig, data WebhookData) error {
+func sendWebhookNotification(config NotificationConfig, data WebhookData) error {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
 	}

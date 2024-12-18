@@ -738,7 +738,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\".*\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type, name)",
+          "expr": "group(d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"}) by (violating_kind, violating_namespace, violating_name, kind, violation_enforcement, violation_msg, source_type, name)",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -852,9 +852,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count by (violating_name) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
+          "expr": "count by (violating_name,violating_namespace) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
           "interval": "",
-          "legendFormat": "{{violating_name}}",
+          "legendFormat": "{{violating_namespace }}/{{violating_name}}",
           "refId": "A"
         }
       ],
@@ -866,7 +866,7 @@
         "sort": 0,
         "value_type": "individual"
       },
-      "type": "graph",
+      "type": "timeseries",
       "xaxis": {
         "mode": "time",
         "show": true,
@@ -1552,7 +1552,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "sum by (mutation_status, pod) (rate(gatekeeper_mutation_request_count[20m]))",
+          "expr": "sum by (mutation_status, pod) (rate(gatekeeper_mutation_request_count{namespace=~\"$namespace\"}[20m]))",
           "interval": "",
           "legendFormat": "{{mutation_status}}",
           "refId": "A"
@@ -2060,12 +2060,11 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [
-      "5s",
       "10s",
       "30s",
       "1m",
@@ -2088,9 +2087,9 @@
       "30d"
     ]
   },
-  "timezone": "UTC",
+  "timezone": "browser",
   "title": "Admission policy engine",
   "uid": "YBgRZG6Ms",
-  "version": 3,
+  "version": 1,
   "weekStart": ""
 }

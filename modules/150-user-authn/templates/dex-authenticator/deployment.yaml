@@ -10,7 +10,7 @@ memory: 25Mi
 
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
-  {{- if $context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd" }}
+  {{- if $context.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -126,7 +126,7 @@ spec:
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
         - --cookie-secure=false
     {{- end }}
-        - --redirect-url=https://{{ $crd.spec.applicationDomain }}
+        - --redirect-url=/dex-authenticator/callback
         - --oidc-issuer-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
         # Skip oidc issuer validation and discovery to avoid CrashLoopBackoffs
         - --skip-oidc-discovery
@@ -137,11 +137,13 @@ spec:
         - --set-authorization-header=true
     {{- end }}
         - --set-xauthrequest
-        - --scope=groups email openid offline_access{{- if $crd.allowAccessToKubernetes }} audience:server:client_id:kubernetes{{- end }}
+        - --scope=groups email openid profile offline_access{{- if $crd.allowAccessToKubernetes }} audience:server:client_id:kubernetes{{- end }}
         - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
-        - --whitelist-domain={{ $crd.spec.applicationDomain }}
+    {{- range $app := $crd.spec.applications }}
+        - --whitelist-domain={{ $app.domain }}
+    {{- end }}
         - --upstream=file:///dev/null
         - --https-address=0.0.0.0:8443
         - --tls-cert-file=/opt/dex-authenticator/tls/tls.crt
@@ -161,6 +163,7 @@ spec:
     {{- end }}
         - --insecure-oidc-allow-unverified-email=true
         - --approval-prompt=basic
+        - --reverse-proxy
         env:
         - name: OAUTH2_PROXY_CLIENT_SECRET
           valueFrom:
@@ -196,7 +199,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "dex_authenticator_resources" . | nindent 12 }}
   {{- end }}
         ports:
@@ -216,7 +219,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "redis_resources" . | nindent 12 }}
   {{- end }}
 {{- end }}

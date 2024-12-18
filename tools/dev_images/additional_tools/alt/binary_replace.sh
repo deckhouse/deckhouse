@@ -21,6 +21,14 @@ FILE_TEMPLATE_BINS=""
 TEMPLATE_BINS=""
 RDIR=""
 
+tools=("ldd" "readlink" "awk" "dirname" "ls" "cat")
+for tool in "${tools[@]}"; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "$tool is not installed."
+    exit 1
+  fi
+done
+
 function Help() {
    # Display Help
    echo "Copy binaries and their libraries to a folder"
@@ -95,7 +103,8 @@ function get_binary_path () {
 
   for bin in "$@"; do
     if [[ ! -f $bin ]] || [ "${bin}" == "${RDIR}" ]; then
-      continue
+      echo "Not found $bin"
+      exit 1
     fi
     BINARY_LIST+=$(ls -la $bin 2>/dev/null | awk '{print $9}')" "
   done

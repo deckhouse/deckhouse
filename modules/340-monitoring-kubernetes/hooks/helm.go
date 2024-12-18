@@ -32,7 +32,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/golang/protobuf/proto" // nolint: staticcheck
@@ -178,7 +177,7 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 
 	k8sCurrentVersionRaw, ok := input.Values.GetOk("global.discovery.kubernetesVersion")
 	if !ok {
-		input.LogEntry.Warn("kubernetes version not found")
+		input.Logger.Warn("kubernetes version not found")
 		return nil
 	}
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
@@ -198,7 +197,7 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	ctx, cancel := context.WithCancelCause(context.Background())
 
 	processor := &helmDeprecatedAPIsProcessor{
-		logger: input.LogEntry,
+		logger: input.Logger,
 		ctx:    ctx,
 		cancel: cancel,
 	}
@@ -376,7 +375,7 @@ func (ua unsupportedAPIVersions) isUnsupportedByAPIAndKind(resourceAPI, resource
 type helmDeprecatedAPIsProcessor struct {
 	totalHelm3Releases uint32
 	totalHelm2Releases uint32
-	logger             logger.Logger
+	logger             go_hook.Logger
 
 	ctx    context.Context
 	cancel context.CancelCauseFunc

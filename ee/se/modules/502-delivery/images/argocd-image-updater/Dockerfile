@@ -1,1 +1,0 @@
-FROM registry.werf.io/werf/argocd-image-updater@sha256:2037ecef459e1f41010a0ceee95335b5a9d84e5de2d1a29f1b1fdcfa840da9b1

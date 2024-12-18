@@ -33,7 +33,7 @@ func Test(t *testing.T) {
 const (
 	globalValues = `
 deckhouseVersion: test
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "operator-prometheus-crd", "cert-manager"]
+enabledModules: ["vertical-pod-autoscaler", "prometheus", "operator-prometheus", "cert-manager"]
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   kind: ClusterConfiguration

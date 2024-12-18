@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -36,7 +37,7 @@ import (
 )
 
 type nodeGroupGetter interface {
-	NodeGroups() ([]*NodeGroup, error)
+	NodeGroups() ([]*v1.NodeGroup, error)
 	MachineFailedEvents() ([]eventsv1.Event, error)
 }
 
@@ -44,7 +45,7 @@ type kubeNgGetter struct {
 	kubeCl *client.KubernetesClient
 }
 
-func (n *kubeNgGetter) NodeGroups() ([]*NodeGroup, error) {
+func (n *kubeNgGetter) NodeGroups() ([]*v1.NodeGroup, error) {
 	var ngs []unstructured.Unstructured
 	err := retry.NewSilentLoop("get machine failed events", 3, 3*time.Second).Run(func() error {
 		var err error
@@ -56,7 +57,7 @@ func (n *kubeNgGetter) NodeGroups() ([]*NodeGroup, error) {
 		return nil, err
 	}
 
-	nodegroups := make([]*NodeGroup, 0)
+	nodegroups := make([]*v1.NodeGroup, 0)
 	var errs error
 	for _, n := range ngs {
 		nn := n
@@ -164,12 +165,6 @@ func (n *clusterIsBootstrapCheck) hasBootstrappedCM() (bool, error) {
 	return hasCm, err
 }
 
-func (n *clusterIsBootstrapCheck) outputProgressInfo() {
-	n.outputNodeGroups()
-
-	n.outputMachineFailures()
-}
-
 func (n *clusterIsBootstrapCheck) outputNodeGroups() {
 	if n.attempts%4 != 0 {
 		return
@@ -225,7 +220,11 @@ func (n *clusterIsBootstrapCheck) Name() string {
 	return "Waiting for the cluster to become bootstrapped."
 }
 
-func (n *clusterIsBootstrapCheck) IsBootstrapped() (bool, error) {
+func (n *clusterIsBootstrapCheck) Single() bool {
+	return true
+}
+
+func (n *clusterIsBootstrapCheck) IsReady() (bool, error) {
 	defer func() {
 		n.attempts++
 		n.logger.LogInfoF("\n")
@@ -249,62 +248,56 @@ func (n *clusterIsBootstrapCheck) IsBootstrapped() (bool, error) {
 
 	n.logger.LogInfoF(notBootstrappedMsg)
 
+	n.outputNodeGroups()
+
+	n.outputMachineFailures()
+
 	return false, nil
 }
 
-func tryToGetClusterIsBootstrappedChecker(kubeCl *client.KubernetesClient, resources template.Resources, metaConfig *config.MetaConfig) (*clusterIsBootstrapCheck, error) {
-	if metaConfig != nil {
-		for _, terraNg := range metaConfig.GetTerraNodeGroups() {
-			if terraNg.Replicas > 0 {
-				return newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl), nil
-			}
-		}
+func tryToGetClusterIsBootstrappedChecker(
+	kubeCl *client.KubernetesClient,
+	_ *config.MetaConfig,
+	r *template.Resource) (Checker, error) {
+	if !(r.GVK.Kind == "NodeGroup" && r.GVK.Group == "deckhouse.io" && r.GVK.Version == "v1") {
+		log.DebugF("tryToGetClusterIsBootstrappedChecker: skip GVK (%s %s %s)",
+			r.GVK.Version, r.GVK.Group, r.GVK.Kind)
+		return nil, nil
 	}
 
-	for _, r := range resources {
-		if !(r.GVK.Kind == "NodeGroup" && r.GVK.Group == "deckhouse.io" && r.GVK.Version == "v1") {
-			log.DebugF("tryToGetClusterIsBootstrappedChecker: skip GVK (%s %s %s)",
-				r.GVK.Version, r.GVK.Group, r.GVK.Kind)
-			continue
-		}
-
-		ng, err := unstructuredToNodeGroup(&r.Object)
-		if err != nil {
-			return nil, err
-		}
-
-		if ng.Spec.NodeType != "CloudEphemeral" {
-			log.DebugF("Skip nodegroup %s, because type %s is not supported", ng.GetName(), ng.Spec.NodeType)
-			continue
-		}
-
-		if ng.Spec.CloudInstances.MinPerZone == nil || ng.Spec.CloudInstances.MaxPerZone == nil {
-			log.DebugF("Skip nodegroup %s, because type min and max per zone is not set", ng.GetName())
-			continue
-		}
-
-		if *ng.Spec.CloudInstances.MinPerZone < 0 || *ng.Spec.CloudInstances.MaxPerZone < 1 {
-			log.DebugF("Skip nodegroup %s, because type min (%d) and max (%d) per zone is incorrect",
-				ng.GetName(), *ng.Spec.CloudInstances.MinPerZone, *ng.Spec.CloudInstances.MaxPerZone)
-			continue
-		}
-
-		log.DebugF("Got readiness checker for nodegroup %s\n", ng.GetName())
-
-		return newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl), nil
+	ng, err := unstructuredToNodeGroup(&r.Object)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, nil
+	if ng.Spec.NodeType != "CloudEphemeral" {
+		log.DebugF("Skip nodegroup %s, because type %s is not supported", ng.GetName(), ng.Spec.NodeType)
+		return nil, nil
+	}
+
+	if ng.Spec.CloudInstances.MinPerZone == nil || ng.Spec.CloudInstances.MaxPerZone == nil {
+		log.DebugF("Skip nodegroup %s, because type min and max per zone is not set", ng.GetName())
+		return nil, nil
+	}
+
+	if *ng.Spec.CloudInstances.MinPerZone < 0 || *ng.Spec.CloudInstances.MaxPerZone < 1 {
+		log.DebugF("Skip nodegroup %s, because type min (%d) and max (%d) per zone is incorrect",
+			ng.GetName(), *ng.Spec.CloudInstances.MinPerZone, *ng.Spec.CloudInstances.MaxPerZone)
+		return nil, nil
+	}
+
+	log.DebugF("Got readiness checker for nodegroup %s\n", ng.GetName())
+	return newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl), nil
 }
 
-func unstructuredToNodeGroup(o *unstructured.Unstructured) (*NodeGroup, error) {
+func unstructuredToNodeGroup(o *unstructured.Unstructured) (*v1.NodeGroup, error) {
 	content, err := o.MarshalJSON()
 	if err != nil {
 		log.ErrorF("Can not marshal nodegroup %s: %v", o.GetName(), err)
 		return nil, err
 	}
 
-	var ng NodeGroup
+	var ng v1.NodeGroup
 
 	err = json.Unmarshal(content, &ng)
 	if err != nil {
@@ -313,4 +306,19 @@ func unstructuredToNodeGroup(o *unstructured.Unstructured) (*NodeGroup, error) {
 	}
 
 	return &ng, nil
+}
+
+func tryToGetClusterIsBootstrappedCheckerFromStaticNGS(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (Checker, error) {
+	if metaConfig == nil {
+		return nil, nil
+	}
+
+	for _, terraNg := range metaConfig.GetTerraNodeGroups() {
+		if terraNg.Replicas > 0 {
+			checker := newClusterIsBootstrapCheck(&kubeNgGetter{kubeCl: kubeCl}, kubeCl)
+			return checker, nil
+		}
+	}
+
+	return nil, nil
 }

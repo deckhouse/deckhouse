@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: chrony
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-chrony
+  name: d8:manage:permission:module:chrony:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - chrony
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

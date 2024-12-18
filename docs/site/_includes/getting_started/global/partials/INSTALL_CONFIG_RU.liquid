@@ -2,7 +2,7 @@
 
 {% if revision == 'ee' %}
 {% include getting_started/global/EE_ACCESS_RU.md %}
-<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
+<div class="dimmer-block-content{% if page.ee_only %} TODOdisabled{% endif %}">
 {% endif %}
 
 <div markdown="1">
@@ -29,25 +29,37 @@
 
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
-Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью указания `nodeSelector`/`tolerations` в параметре `configOverrides.deckhouse` конфигурации установки. Также, вы можете перечислить необходимые taint'ы узлов кластера в массиве `configOverrides.global.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие `toleration` своим компонентам.
+Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью параметра `spec.setting.nodeSelector` в ModuleConfig `deckhouse` в конфигурации установки.
 
-> Пример указания `nodeSelector`/`tolerations` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
+> Пример указания `nodeSelector` для модуля `deckhouse` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
 > ```yaml
-> deckhouse:
->   configOverrides:
->     # ...
->     deckhouse:
->       tolerations:
->         - key: dedicated.deckhouse.io
->           operator: Exists
->     # ...
->     global:
->       modules:
->         # ...
->         placement:
->           customTolerationKeys:
->           - SystemLoad
->           - app.kubernetes.io/instance
+> apiVersion: deckhouse.io/v1alpha1
+> kind: ModuleConfig
+> metadata:
+>   name: deckhouse
+>   spec:
+>     version: 1
+>     enabled: true
+>   settings:
+>     nodeSelector:
+>       node-role.kubernetes.io/master: master
+> ```
+
+Также, вы можете перечислить необходимые taint'ы узлов кластера в ModuleConfig `global` в массиве `spec.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие toleration своим компонентам.
+
+> Пример указания `customTolerationKeys` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
+> ```yaml
+> apiVersion: deckhouse.io/v1alpha1
+> kind: ModuleConfig
+> metadata:
+>   name: global
+> spec:
+>   settings:
+>     modules:
+>       placement:
+>         customTolerationKeys:
+>         - Systemload
+>         - kubernetes.io/instance
 > ```
 {% endofftopic %}
 {% endif %}

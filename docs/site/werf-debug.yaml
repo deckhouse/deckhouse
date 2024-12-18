@@ -18,25 +18,22 @@ configVersion: 1
 ---
 artifact: web-static
 from: {{ .Images.BASE_JEKYLL }}
-ansible:
+shell:
   install:
-    - shell: |
-        apk add rsync
-        gem update bundler
-    - name: "Install Dependencies"
-      shell: bundle install
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/site/
+  - |
+      apk add rsync
+      gem update bundler
+
+      # "Install Dependencies"
+      cd /srv/jekyll-data/site/
+      bundle install
   beforeSetup:
-    - name: "Build static files"
-      shell: |
-        export JEKYLL_ENV=production
-        mkdir -m 777 -p /app/_site/
-        jekyll build -d /app/_site/ --config _config.yml --trace
-      args:
-        executable: /bin/bash
-        chdir: /srv/jekyll-data/site/
+  - |
+      # "Build static files"
+      cd /srv/jekyll-data/site/
+      export JEKYLL_ENV=production
+      mkdir -m 777 -p /app/_site/
+      jekyll build -d /app/_site/ --config _config.yml --trace
 git:
 - add: /docs/site
   to: /srv/jekyll-data/site
@@ -57,24 +54,17 @@ git:
 ---
 image: web-backend
 from: {{ $BASE_GOLANG_16_BUSTER }}
-fromCacheVersion: 20210701
 docker:
   WORKDIR: /app
-ansible:
+shell:
   install:
-    - shell: apt update && apt install -yq git curl jq
-    - shell: |
-        go mod tidy
-        go get github.com/go-delve/delve/cmd/dlv
-      args:
-        executable: /bin/sh
-        chdir: /go/src/app
+  - apt update && apt install -yq git curl jq
+  - cd /go/src/app
+  - go mod tidy
+  - go get github.com/go-delve/delve/cmd/dlv
   setup:
-    - shell: |
-        go build -gcflags "all=-N -l" -v -o /app/server /go/src/app/cmd/v-router
-      args:
-        executable: /bin/sh
-        chdir: /go/src/app
+  - cd /go/src/app
+  - go build -gcflags "all=-N -l" -v -o /app/server /go/src/app/cmd/v-router
 git:
   - url: https://github.com/flant/web-router.git
     tag: v1.0.14
@@ -93,13 +83,12 @@ image: web-frontend
 docker:
   WORKDIR: /app
 from: {{ .Images.BASE_NGINX_ALPINE }}
-ansible:
+shell:
   setup:
-  - name: "Copy nginx.conf"
-    copy:
-      content: |
-        {{- .Files.Get ".werf/nginx.conf" | nindent 8 }}
-      dest: /etc/nginx/nginx.conf
+  - |
+      cat <<"EOD" > /etc/nginx/nginx.conf
+      {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
+      EOD
 import:
 - artifact: web-static
   add: /app/_site

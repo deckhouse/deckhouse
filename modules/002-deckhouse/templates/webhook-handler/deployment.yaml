@@ -3,7 +3,7 @@ cpu: 50m
 memory: 100Mi
 {{- end }}
 
-{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -35,7 +35,12 @@ metadata:
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
 spec:
-  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -109,7 +114,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "handler_resources" . | nindent 12 }}
 {{- end }}
         volumeMounts:
@@ -130,7 +135,8 @@ spec:
           secretName: webhook-handler-certs
       - emptyDir: {}
         name: run
-      - emptyDir: {}
+      - emptyDir:
+          medium: Memory
         name: tmp
       - emptyDir: {}
         name: hooks

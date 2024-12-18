@@ -397,20 +397,19 @@
 
           Some of the objects were left by old upmeter-agent pods due to Upmeter update or downscale.
 
-          Leave only newest objects corresponding to upemter-agent pods, when the reason it investigated.
+          Leave only newest objects corresponding to upmeter-agent pods, when the reason it investigated.
 
           See `kubectl get upmeterhookprobes.deckhouse.io`.
 
     - alert: D8UpmeterSmokeMiniMoreThanOnePVxPVC
       expr: |
-        max (
-          count by (volumename, persistentvolumeclaim) (
-            0 * (label_replace(kube_persistentvolume_status_phase{ phase!="Bound" }, "volumename", "$1", "persistentvolume", "^(.*)$" ))
-            +
-            on (volumename) group_left (persistentvolumeclaim)
-            (kube_persistentvolumeclaim_info{namespace="d8-upmeter", persistentvolumeclaim=~"disk-smoke-mini-.*"})
-          )
-        ) > 1
+        count(
+          (
+            kube_persistentvolume_status_phase{phase!="Bound"}
+            + on(persistentvolume) group_left(name)
+            0 * label_replace(kube_persistentvolume_claim_ref{name=~"disk-smoke-mini-.*"}, "persistentvolume", "$1", "volumename", "(.+)")
+          ) > 0
+        )
       for: 1h
       labels:
         severity_level: "9"
@@ -425,7 +424,7 @@
         plk_labels_as_annotations: "volume"
         summary: Unnecessary smoke-mini volumes in cluster
         description: |
-          PV count per smoke-mini PVC: {{ $value }}.
+          The number of unnecessary smoke-mini PVs: {{ $value }}.
 
           Smoke-mini PVs should be deleted when released. Probably smoke-mini storage class has Retain policy by default,
           or there is CSI/cloud issue.

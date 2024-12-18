@@ -41,7 +41,7 @@ def clean_scripts(text):
 
 
 def clean_preamble(text):
-    text = re.sub(r'---[\s\S]+?---', ' ', text)
+    text = re.sub(r'---[\s\S]+?---', ' ', text, 1)
     return text
 
 

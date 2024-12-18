@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -148,7 +149,7 @@ func getFsInfo(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (
 	command := "df -PB1 /prometheus/"
 	output, _, err := execToPodThroughAPI(kubeClient, command, containerName, pod.Name, pod.Namespace)
 	if err != nil {
-		input.LogEntry.Warnf("%s: %s", pod.Name, err.Error())
+		input.Logger.Warnf("%s: %s", pod.Name, err.Error())
 	} else {
 		for _, s := range strings.Split(output, "\n") {
 			if strings.Contains(s, "prometheus") {
@@ -164,6 +165,7 @@ func getFsInfo(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (
 
 func execToPodThroughAPI(kubeClient k8s.Client, command, containerName, podName, namespace string) (string, string, error) {
 	req := kubeClient.CoreV1().RESTClient().Post().
+		Timeout(time.Duration(10) * time.Second).
 		Resource("pods").
 		Name(podName).
 		Namespace(namespace).

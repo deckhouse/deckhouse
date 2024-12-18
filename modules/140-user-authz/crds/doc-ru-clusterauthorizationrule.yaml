@@ -5,6 +5,8 @@ spec:
         openAPIV3Schema:
           description: |
             Cluster-wide-ресурс для управления настройками RBAC и авторизацией
+
+            > Ресурс `ClusterAuthorizationRule` используется в [устаревшей ролевой модели](./#устаревшая-ролевая-модель), которая будет удалена в будущих версиях Deckhouse. Рекомендуем использовать [новую ролевую модель](./#новая-ролевая-модель).
           properties:
             spec:
               properties:
@@ -48,9 +50,9 @@ spec:
 
                     [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
-                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) обратите внимание на следующие нюансы:
+                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) обратите внимание на следующие нюансы:
                     - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
-                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
                   items:
                     properties:
                       kind:
@@ -162,9 +164,9 @@ spec:
 
                     [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
-                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/documentation/v1/modules/150-user-authn/) обратите внимание на следующие нюансы:
+                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/) обратите внимание на следующие нюансы:
                     - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
-                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/cr.html#dexprovider).
                   items:
                     properties:
                       kind:

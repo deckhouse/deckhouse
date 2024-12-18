@@ -32,7 +32,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimtypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	capiv1beta1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
@@ -64,12 +64,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                   "ngs",
 			Kind:                   "NodeGroup",
 			ApiVersion:             "deckhouse.io/v1",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			FilterFunc:             updStatusFilterNodeGroup,
 		},
 		{
 			Name:                   "zones_count",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			ApiVersion:             "v1",
 			Kind:                   "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -84,7 +84,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "mds",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			ApiVersion:             "machine.sapcloud.io/v1alpha1",
 			Kind:                   "MachineDeployment",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -96,7 +96,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "instances",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			ApiVersion:             "machine.sapcloud.io/v1alpha1",
 			Kind:                   "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -108,7 +108,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "capi_instances",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			ApiVersion:             "cluster.x-k8s.io/v1beta1",
 			Kind:                   "Machine",
 			NamespaceSelector: &types.NamespaceSelector{
@@ -120,7 +120,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                   "nodes",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			LabelSelector: &v1.LabelSelector{

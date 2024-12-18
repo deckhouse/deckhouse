@@ -1,0 +1,31 @@
+candi:
+  fixes:
+    - summary: Fix bootstrap network script for nodes with many interfaces for cloud-provider Yandex Cloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9408
+deckhouse:
+  fixes:
+    - summary: Allow admins to change objects with `kind=StorageClass`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9398
+    - summary: Allow admins to change objects with `kind=StorageClass`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9362
+dhctl:
+  features:
+    - summary: Count logical CPU cores instead of physical in system requirements preflight check.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9386
+docs:
+  fixes:
+    - summary: Fix the docs about how to exec into the deckhouse leader pod.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9355
+global-hooks:
+  fixes:
+    - summary: Fixed the Services with multiple ports broken by Helm.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9392
+log-shipper:
+  fixes:
+    - summary: Fix JSON codec for socket destination.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9385
+multitenancy-manager:
+  fixes:
+    - summary: Fix templates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9358
+

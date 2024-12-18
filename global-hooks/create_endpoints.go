@@ -26,7 +26,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	discv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -84,7 +84,7 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 				Addresses: []v1.EndpointAddress{
 					{
 						IP:       address,
-						NodeName: pointer.String(nodeName),
+						NodeName: ptr.To(nodeName),
 						TargetRef: &v1.ObjectReference{
 							Kind:       "Pod",
 							Namespace:  d8Namespace,
@@ -137,32 +137,32 @@ func generateDeckhouseEndpoints(input *go_hook.HookInput, dc dependency.Containe
 			{
 				Addresses: []string{address},
 				Conditions: discv1.EndpointConditions{
-					Ready:       pointer.Bool(true),
-					Serving:     pointer.Bool(true),
-					Terminating: pointer.Bool(false),
+					Ready:       ptr.To(true),
+					Serving:     ptr.To(true),
+					Terminating: ptr.To(false),
 				},
 				TargetRef: &v1.ObjectReference{
 					Kind:      "Pod",
 					Namespace: d8Namespace,
 					Name:      podName,
 				},
-				NodeName: pointer.String(nodeName),
+				NodeName: ptr.To(nodeName),
 				Zone:     nil,
 				Hints:    nil,
 			},
 		},
 		Ports: []discv1.EndpointPort{
 			{
-				Name: pointer.String("self"),
-				Port: pointer.Int32(4222),
+				Name: ptr.To("self"),
+				Port: ptr.To(int32(4222)),
 			},
 			{
-				Name: pointer.String("webhook"),
-				Port: pointer.Int32(4223),
+				Name: ptr.To("webhook"),
+				Port: ptr.To(int32(4223)),
 			},
 			{
-				Name: pointer.String("debug-server"),
-				Port: pointer.Int32(9652),
+				Name: ptr.To("debug-server"),
+				Port: ptr.To(int32(9652)),
 			},
 		},
 	}

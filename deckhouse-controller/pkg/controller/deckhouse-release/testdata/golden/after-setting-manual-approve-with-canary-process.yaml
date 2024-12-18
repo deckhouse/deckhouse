@@ -23,7 +23,7 @@ metadata:
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.36.0
-  resourceVersion: "1004"
+  resourceVersion: "1002"
 spec:
   applyAfter: "2222-11-11T23:23:23Z"
   version: v1.36.0
@@ -77,16 +77,3 @@ spec:
         name: deckhouse
         resources: {}
 status: {}
----
-apiVersion: v1
-data:
-  isUpdating: "true"
-  notified: "false"
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-  name: d8-release-data
-  namespace: d8-system
-  resourceVersion: "3"

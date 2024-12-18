@@ -1,0 +1,4 @@
+module: monitoring-ping
+namespace: d8-monitoring
+subsystems:
+  - observability

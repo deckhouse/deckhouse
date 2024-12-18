@@ -31,6 +31,13 @@ module "security-groups" {
 
 data "aws_availability_zones" "available" {}
 
+data "aws_availability_zones" "available_except_local_zone" {
+  filter {
+    name   = "opt-in-status"
+    values = ["opt-in-not-required"]
+  }
+}
+
 locals {
   az_count    = length(data.aws_availability_zones.available.names)
   subnet_cidr = lookup(var.providerClusterConfiguration, "nodeNetworkCIDR", module.vpc.cidr_block)

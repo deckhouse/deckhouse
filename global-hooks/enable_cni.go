@@ -22,7 +22,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -69,8 +69,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"cni-flannel", "cni-cilium", "cni-simple-bridge"},
 			},
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   applyMCFilter,
 		},
 	},
@@ -111,25 +111,25 @@ func enableCni(input *go_hook.HookInput) error {
 	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
 
 	if len(cniNameSnap) == 0 {
-		input.LogEntry.Warnln("CNI name not found")
+		input.Logger.Warn("CNI name not found")
 		return nil
 	}
 
 	if len(explicitlyEnabledCNIs) > 1 {
 		return fmt.Errorf("more then one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
 	} else if len(explicitlyEnabledCNIs) == 1 {
-		input.LogEntry.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
+		input.Logger.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
 		return nil
 	}
 
 	// nor any CNI enabled directly via MC, found default CNI from secret
 	cniToEnable := cniNameSnap[0].(string)
 	if _, ok := cniNameToModule[cniToEnable]; !ok {
-		input.LogEntry.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
+		input.Logger.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
 		return nil
 	}
 
-	input.LogEntry.Infof("enabled CNI by secret: %s", cniToEnable)
+	input.Logger.Infof("enabled CNI by secret: %s", cniToEnable)
 	input.Values.Set(cniNameToModule[cniToEnable], true)
 	return nil
 }

@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: cni-simple-bridge
+    rbac.deckhouse.io/aggregate-to-networking-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-cni-simple-bridge
+  name: d8:manage:permission:module:cni-simple-bridge:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - cni-simple-bridge
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

@@ -1,0 +1,78 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
+  add: /src/vsphere-csi
+  to: /bin/vsphere-csi
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+docker:
+  ENTRYPOINT: ["/bin/vsphere-csi"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/cloud-provider-vsphere-patches
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
+  includePaths:
+  - 001-support-fcd-disk-resize.patch
+  - 002-find-by-converted-uuid.patch
+shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+  - mkdir -p /src
+  - git clone --depth 1 --branch v0.2.1 {{ $.SOURCE_REPO }}/flant/cloud-provider-vsphere.git /src
+  - cd /src
+  - git apply /patches/*.patch --verbose
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-csi-artifact
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-cloud-provider-vsphere-artifact
+  add: /src
+  to: /cloud-provider-vsphere
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /patches
+  includePaths:
+  - 001-csi-metrics-and-volume-expansion.patch
+  stageDependencies:
+    install:
+      - '**/*'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /src
+  - git clone {{ $.SOURCE_REPO }}/flant/vsphere-csi-driver.git /src
+  - cd /src
+  - git checkout 6189afc2522d83a96d3857110c61478710110347
+  - git apply /patches/*.patch --verbose
+  - go mod edit -replace=k8s.io/cloud-provider-vsphere=/cloud-provider-vsphere
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsphere-csi cmd/vsphere-csi/main.go
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs* /sbin/mount.nfs* /sbin/umount.nfs*" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  setup:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

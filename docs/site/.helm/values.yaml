@@ -44,6 +44,7 @@ vrouter:
     _default: "latest"
   showLatestChannel: "true"
   i18nType: "separate-domain"
+  locationVersions: "/products/kubernetes-platform/documentation"
   logLevel:
     web-stage: trace
     _default: debug

@@ -18,6 +18,7 @@ import (
 	"context"
 	"log/slog"
 	"net"
+	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -32,12 +33,17 @@ import (
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	rc "github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/requests_counter"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/status"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-// full method example: /dhctl.DHCTL/Check
+// Full method example: /dhctl.DHCTL/Check
 const singlethreadedMethodsPrefix = "/dhctl.DHCTL"
+
+// The period during which data on the number of recent endpoint requests is collected
+const requestsCounterMaxDuration = time.Hour * 2
 
 // Serve starts GRPC server
 func Serve(network, address string, parallelTasksLimit int) error {
@@ -51,7 +57,10 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	defer close(done)
 	sem := make(chan struct{}, parallelTasksLimit)
 
-	director := NewStreamDirector(log, singlethreadedMethodsPrefix)
+	dhctlProxy := NewStreamDirector(log, singlethreadedMethodsPrefix)
+
+	requestsCounter := rc.New(requestsCounterMaxDuration)
+	requestsCounter.Run(ctx)
 
 	log.Info(
 		"starting grpc server",
@@ -70,20 +79,23 @@ func Serve(network, address string, parallelTasksLimit int) error {
 		log.Error("failed to listen", logger.Err(err))
 		return err
 	}
+
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			interceptors.UnaryLogger(log),
 			logging.UnaryServerInterceptor(interceptors.Logger()),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
 			interceptors.UnaryParallelTasksLimiter(sem, singlethreadedMethodsPrefix),
+			interceptors.UnaryRequestsCounter(requestsCounter),
 		),
 		grpc.ChainStreamInterceptor(
 			interceptors.StreamLogger(log),
 			logging.StreamServerInterceptor(interceptors.Logger()),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
 			interceptors.StreamParallelTasksLimiter(sem, singlethreadedMethodsPrefix),
+			interceptors.StreamRequestsCounter(requestsCounter),
 		),
-		grpc.UnknownServiceHandler(proxy.TransparentHandler(director.Director())),
+		grpc.UnknownServiceHandler(proxy.TransparentHandler(dhctlProxy.Director())),
 	)
 
 	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe
@@ -95,9 +107,11 @@ func Serve(network, address string, parallelTasksLimit int) error {
 
 	// init services
 	validationService := validation.New(config.NewSchemaStore())
+	statusService := status.New(requestsCounter)
 
 	// register services
 	pbdhctl.RegisterValidationServer(s, validationService)
+	pbdhctl.RegisterStatusServer(s, statusService)
 
 	go func() {
 		<-ctx.Done()
@@ -109,5 +123,9 @@ func Serve(network, address string, parallelTasksLimit int) error {
 		log.Error("failed to serve", logger.Err(err))
 		return err
 	}
+
+	// wait for all dhctl instances to complete
+	dhctlProxy.Wait()
+
 	return nil
 }

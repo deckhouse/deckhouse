@@ -3,14 +3,9 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 {{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," }}
-{{- if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare "< 1.30" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "ValidatingAdmissionPolicy=true" | join "," }}
-{{- end }}
-{{- if semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "AdmissionWebhookMatchConditions=true" | join "," }}
-{{- end }}
-{{- if semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion }}
-    {{- $featureGates = list $featureGates "DaemonSetUpdateSurge=true" | join "," }}
 {{- end }}
 {{- if semverCompare "< 1.28" .clusterConfiguration.kubernetesVersion }}
     {{- $featureGates = list $featureGates "EndpointSliceTerminatingCondition=true" | join "," }}
@@ -48,7 +43,15 @@ apiServer:
 {{- end }}
   extraArgs:
 {{- if .apiserver.serviceAccount }}
-    api-audiences: https://kubernetes.default.svc.{{ .clusterConfiguration.clusterDomain }}{{ with .apiserver.serviceAccount.additionalAPIAudiences }},{{ . | join "," }}{{ end }}
+    {{- $defaultAud := printf "https://kubernetes.default.svc.%s" .clusterConfiguration.clusterDomain }}
+    {{- $uniqueAdditionalAuds := (default (list) .apiserver.serviceAccount.additionalAPIAudiences) | uniq }}
+    {{- $filteredAuds := list }}
+    {{- range $uniqueAdditionalAuds }}
+      {{- if ne . $defaultAud }}
+        {{- $filteredAuds = append $filteredAuds . }}
+      {{- end }}
+    {{- end }}
+    api-audiences: {{ $defaultAud }}{{- if gt (len $filteredAuds) 0 }},{{ $filteredAuds | join "," }}{{ end }}
     {{- if .apiserver.serviceAccount.issuer }}
     service-account-issuer: {{ .apiserver.serviceAccount.issuer }}
     service-account-jwks-uri: {{ .apiserver.serviceAccount.issuer }}/openid/v1/jwks
@@ -74,16 +77,15 @@ apiServer:
     feature-gates: {{ $featureGates | quote }}
 {{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true"
-{{- else if semverCompare ">= 1.26" .clusterConfiguration.kubernetesVersion }}
+{{- else if semverCompare "= 1.27" .clusterConfiguration.kubernetesVersion }}
     runtime-config: "admissionregistration.k8s.io/v1alpha1=true"
 {{- end }}
 {{- if hasKey . "arguments" }}
   {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
     default-unreachable-toleration-seconds: {{ .arguments.defaultUnreachableTolerationSeconds | quote }}
   {{- end }}
-  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare "> 1.26" .clusterConfiguration.kubernetesVersion) }}
-    default-not-ready-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
-    default-unreachable-toleration-seconds: "{{ .arguments.podEvictionTimeout }}"
+  {{- if hasKey .arguments "podEvictionTimeout" }}
+    default-not-ready-toleration-seconds: {{ .arguments.podEvictionTimeout | quote }}
   {{- end }}
 {{- end }}
 {{- if hasKey . "apiserver" }}
@@ -140,7 +142,7 @@ apiServer:
   {{- end }}
     profiling: "false"
     request-timeout: "300s"
-    tls-cipher-suites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+    tls-cipher-suites: "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256"
   {{- if hasKey .apiserver "certSANs" }}
   certSANs:
     {{- range $san := .apiserver.certSANs }}
@@ -168,9 +170,6 @@ controllerManager:
   {{- if hasKey .arguments "nodeMonitorPeriod" }}
     node-monitor-period: "{{ .arguments.nodeMonitorPeriod }}s"
     node-monitor-grace-period: "{{ .arguments.nodeMonitorGracePeriod }}s"
-  {{- end }}
-  {{- if and (hasKey .arguments "podEvictionTimeout") (semverCompare "< 1.27" .clusterConfiguration.kubernetesVersion) }}
-    pod-eviction-timeout: "{{ .arguments.podEvictionTimeout }}s"
   {{- end }}
 {{- end }}
 scheduler:

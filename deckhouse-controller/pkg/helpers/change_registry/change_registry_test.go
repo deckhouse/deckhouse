@@ -247,7 +247,7 @@ func TestCheckResponseForBearerSupport(t *testing.T) {
 			resp.Header.Add("WWW-Authenticate", tt.headerValue)
 			resp.Request.URL = u
 
-			if err := checkResponseForBearerSupport(resp, tt.host); (err != nil) != tt.wantErr {
+			if err := checkResponseForAuthSupport(resp, tt.host); (err != nil) != tt.wantErr {
 				t.Errorf("checkResponseForBearerSupport() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -279,8 +279,40 @@ func TestAuthHeaderWithBearer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			header := http.Header{}
 			header.Set("WWW-Authenticate", tt.headerValue)
-			if !authHeaderWithBearer(header) && !tt.wantFalse {
+			if !authHeader(header) && !tt.wantFalse {
 				t.Error("Unexpected scheme in auth header: must be 'bearer'")
+			}
+		})
+	}
+}
+
+func TestAuthHeaderWithBasic(t *testing.T) {
+	tests := []struct {
+		name        string
+		headerValue string
+		wantFalse   bool
+	}{
+		{
+			name:        "full header",
+			headerValue: `BASIC realm="Sonatype Nexus Repository Manager"`,
+		},
+		{
+			name:        "short header",
+			headerValue: "BASIC;",
+		},
+		{
+			name:        "no auth",
+			headerValue: "anonymous;",
+			wantFalse:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			header := http.Header{}
+			header.Set("WWW-Authenticate", tt.headerValue)
+			if !authHeader(header) && !tt.wantFalse {
+				t.Error("Unexpected scheme in auth header: must be 'basic'")
 			}
 		})
 	}
@@ -293,7 +325,7 @@ func testDeckhouseDeploy() *appsv1.Deployment {
 				Spec: v1.PodSpec{
 					InitContainers: []v1.Container{
 						{
-							Name:  "init-external-modules",
+							Name:  "init-downloaded-modules",
 							Image: "registry.example.com@sha256:79ed551f4d0ec60799a9bd67f35441df6d86443515dd8337284fb68d97a01b3d",
 						},
 					},
@@ -344,7 +376,7 @@ func Test_checkBearerSupport(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := checkBearerSupport(tt.args.ctx, reg, http.DefaultTransport); (err != nil) != tt.wantErr {
+			if err := checkAuthSupport(tt.args.ctx, reg, http.DefaultTransport); (err != nil) != tt.wantErr {
 				t.Errorf("checkBearerSupport() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

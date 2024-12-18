@@ -1,7 +1,7 @@
 # [<en>] General cluster parameters.
-# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
 # [<ru>] Общие параметры кластера.
-# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
@@ -17,9 +17,9 @@ kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 ---
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/documentation/v1/modules/002-deckhouse/configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/002-deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/002-deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -31,17 +31,17 @@ spec:
     bundle: Default
     # [<ru>] Канал обновлений Deckhouse. Канал Early Access достаточно стабилен, его можно использовать в продуктивных окружениях.
     # [<ru>] Если планируется использовать несколько кластеров, то рекомендуется установить на них разные каналы обновлений.
-    # [<ru>] Подробнее: https://deckhouse.ru/documentation/v1/deckhouse-release-channels.html
+    # [<ru>] Подробнее: https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-release-channels.html
     # [<en>] Deckhouse release channel. The Early Access channel is stable enough to be used in productive environments.
     # [<en>] If you plan to use several clusters, it is recommended to use different release channels on them.
-    # [<en>] More info: https://deckhouse.io/documentation/v1/deckhouse-release-channels.html
+    # [<en>] More info: https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-release-channels.html
     releaseChannel: EarlyAccess
     logLevel: Info
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#parameters
+# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
-# [<ru>] https://deckhouse.ru/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -61,9 +61,9 @@ spec:
       publicDomainTemplate: "%s.example.com"
 ---
 # [<en>] user-authn module settings.
-# [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -75,9 +75,9 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -86,9 +86,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] cni-cilium module settings.
-# [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/021-cni-cilium/configuration.html
 # [<ru>] Настройки модуля cni-cilium.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/021-cni-cilium/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -100,24 +100,24 @@ spec:
   enabled: true
   settings:
     # [<en>] cni-cilium module settings
-    # [<en>] https://deckhouse.io/documentation/v1/modules/021-cni-cilium/configuration.html
+    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/021-cni-cilium/configuration.html
     # [<ru>] Настройки модуля cni-cilium
-    # [<ru>] https://deckhouse.ru/documentation/v1/modules/021-cni-cilium/configuration.html
+    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/021-cni-cilium/configuration.html
     tunnelMode: VXLAN
 ---
 # [<en>] Static cluster settings.
-# [<en>] https://deckhouse.io/documentation/v1/installing/configuration.html#staticclusterconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#staticclusterconfiguration
 # [<ru>] Параметры статического кластера.
-# [<ru>] https://deckhouse.ru/documentation/v1/installing/configuration.html#staticclusterconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#staticclusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 # [<en>] List of internal cluster networks (e.g., '10.0.4.0/24'), which is
 # [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.).
-# [<en>] If every node in cluster has only one network interface
-# [<en>] StaticClusterConfiguration resource can be skipped.
+# [<en>] Specify, if the cluster nodes have more than one network interface or if you are using the virtualization module.
+# [<en>] If only one interface is used on the nodes of the cluster, the StaticClusterConfiguration resource does not need to be created.
 # [<ru>] Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
 # [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
-# [<ru>] Если каждый узел в кластере имеет только один сетевой интерфейс,
-# [<ru>] ресурс StaticClusterConfiguration можно не создавать.
+# [<ru>] Укажите, если используете модуль virtualization или узлы кластера имеют более одного сетевого интерфейса.
+# [<ru>] Если на узлах кластера используется только один интерфейс, ресурс StaticClusterConfiguration можно не создавать.
 internalNetworkCIDRs:
 - *!CHANGE_internalNetworkCIDRs*

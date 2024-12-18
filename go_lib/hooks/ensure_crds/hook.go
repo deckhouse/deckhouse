@@ -17,15 +17,14 @@ limitations under the License.
 package ensure_crds
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"os"
+	"log/slog"
 	"path/filepath"
 	"reflect"
 	"strings"
 
+	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/hashicorp/go-multierror"
@@ -33,20 +32,21 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimachineryv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	apimachineryYaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
-var (
-	crdGVR = schema.GroupVersionResource{
-		Group:    "apiextensions.k8s.io",
-		Version:  "v1",
-		Resource: "customresourcedefinitions",
-	}
-)
+var crdGVR = schema.GroupVersionResource{
+	Group:    "apiextensions.k8s.io",
+	Version:  "v1",
+	Resource: "customresourcedefinitions",
+}
+
+var defaultLabels = map[string]string{
+	"heritage": "deckhouse",
+}
 
 func RegisterEnsureCRDsHook(crdsGlob string) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
@@ -59,7 +59,7 @@ func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc depend
 		result := EnsureCRDs(crdsGlob, dc)
 
 		if result.ErrorOrNil() != nil {
-			input.LogEntry.WithError(result).Error("ensure_crds failed")
+			input.Logger.Error("ensure_crds failed", slog.String("error", result.Error()))
 		}
 
 		return result.ErrorOrNil()
@@ -88,92 +88,54 @@ func EnsureCRDs(crdsGlob string, dc dependency.Container) *multierror.Error {
 type CRDsInstaller struct {
 	k8sClient    k8s.Client
 	crdFilesPath []string
-	buffer       []byte
+	installer    *addonoperator.CRDsInstaller
 
 	// concurrent tasks to create resource in a k8s cluster
 	k8sTasks *multierror.Group
 }
 
-func (cp *CRDsInstaller) Run(ctx context.Context) *multierror.Error {
-	result := new(multierror.Error)
-
-	for _, crdFilePath := range cp.crdFilesPath {
-		if match := strings.HasPrefix(filepath.Base(crdFilePath), "doc-"); match {
+func (cp *CRDsInstaller) DeleteCRDs(ctx context.Context, crdsToDelete []string) ([]string, error) {
+	var deletedCRDs []string
+	// delete crds listed in crdsToDelete if there are no related custom resources in the cluster
+	for _, crdName := range crdsToDelete {
+		deleteCRD := true
+		crd, err := cp.getCRDFromCluster(ctx, crdName)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("error occurred during %s CRD clean up: %w", crdName, err)
+			}
 			continue
 		}
 
-		err := cp.processCRD(ctx, crdFilePath)
-		if err != nil {
-			err = fmt.Errorf("error occurred during processing %q file: %w", crdFilePath, err)
-			result = multierror.Append(result, err)
-			continue
-		}
-	}
-
-	errs := cp.k8sTasks.Wait()
-	if errs.ErrorOrNil() != nil {
-		result = multierror.Append(result, errs.Errors...)
-	}
-
-	return result
-}
-
-func (cp *CRDsInstaller) processCRD(ctx context.Context, crdFilePath string) error {
-	crdFileReader, err := os.Open(crdFilePath)
-	if err != nil {
-		return err
-	}
-	defer crdFileReader.Close()
-
-	crdReader := apimachineryYaml.NewDocumentDecoder(crdFileReader)
-
-	for {
-		n, err := crdReader.Read(cp.buffer)
-		if err != nil {
-			if err == io.EOF {
+		for _, version := range crd.Spec.Versions {
+			gvr := schema.GroupVersionResource{
+				Group:    crd.Spec.Group,
+				Version:  version.Name,
+				Resource: crd.Spec.Names.Plural,
+			}
+			list, err := cp.k8sClient.Dynamic().Resource(gvr).List(ctx, apimachineryv1.ListOptions{})
+			if err != nil {
+				return nil, fmt.Errorf("error occurred listing %s CRD objects of version %s: %w", crdName, version.Name, err)
+			}
+			if len(list.Items) > 0 {
+				deleteCRD = false
 				break
 			}
-
-			return err
 		}
 
-		data := cp.buffer[:n]
-		if len(data) == 0 {
-			// some empty yaml document, or empty string before separator
-			continue
-		}
-		rd := bytes.NewReader(data)
-		err = cp.putCRDToCluster(ctx, rd, n)
-		if err != nil {
-			return err
+		if deleteCRD {
+			err := cp.k8sClient.Dynamic().Resource(crdGVR).Delete(ctx, crdName, apimachineryv1.DeleteOptions{})
+			if err != nil {
+				return nil, fmt.Errorf("error occurred deleting %s CRD: %w", crdName, err)
+			}
+			deletedCRDs = append(deletedCRDs, crdName)
 		}
 	}
-
-	return nil
+	return deletedCRDs, nil
 }
 
-func (cp *CRDsInstaller) putCRDToCluster(ctx context.Context, crdReader io.Reader, bufferSize int) error {
-	var crd *v1.CustomResourceDefinition
-
-	err := apimachineryYaml.NewYAMLOrJSONDecoder(crdReader, bufferSize).Decode(&crd)
-	if err != nil {
-		return err
-	}
-
-	// it could be a comment or some other peace of yaml file, skip it
-	if crd == nil {
-		return nil
-	}
-
-	if crd.APIVersion != v1.SchemeGroupVersion.String() && crd.Kind != "CustomResourceDefinition" {
-		return fmt.Errorf("invalid CRD document apiversion/kind: '%s/%s'", crd.APIVersion, crd.Kind)
-	}
-
-	cp.k8sTasks.Go(func() error {
-		return cp.updateOrInsertCRD(ctx, crd)
-	})
-
-	return nil
+func (cp *CRDsInstaller) Run(ctx context.Context) *multierror.Error {
+	return cp.installer.Run(ctx)
 }
 
 func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomResourceDefinition) error {
@@ -197,11 +159,16 @@ func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomRe
 			crd.Spec.Conversion = existCRD.Spec.Conversion
 		}
 
-		if reflect.DeepEqual(existCRD.Spec, crd.Spec) {
+		if existCRD.GetObjectMeta().GetLabels()["heritage"] == "deckhouse" &&
+			reflect.DeepEqual(existCRD.Spec, crd.Spec) {
 			return nil
 		}
 
 		existCRD.Spec = crd.Spec
+		if len(existCRD.ObjectMeta.Labels) == 0 {
+			existCRD.ObjectMeta.Labels = make(map[string]string, 1)
+		}
+		existCRD.ObjectMeta.Labels["heritage"] = "deckhouse"
 
 		ucrd, err := sdk.ToUnstructured(existCRD)
 		if err != nil {
@@ -234,16 +201,20 @@ func (cp *CRDsInstaller) getCRDFromCluster(ctx context.Context, crdName string) 
 func NewCRDsInstaller(client k8s.Client, crdsGlob string) (*CRDsInstaller, error) {
 	crds, err := filepath.Glob(crdsGlob)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("glob %q: %w", crdsGlob, err)
 	}
 
 	return &CRDsInstaller{
-		k8sClient:    client,
+		k8sClient: client,
+		installer: addonoperator.NewCRDsInstaller(
+			client.Dynamic(),
+			crds,
+			addonoperator.WithExtraLabels(defaultLabels),
+			addonoperator.WithFileFilter(func(crdFilePath string) bool {
+				return !strings.HasPrefix(filepath.Base(crdFilePath), "doc-")
+			}),
+		),
 		crdFilesPath: crds,
-		// 1Mb - maximum size of kubernetes object
-		// if we take less, we have to handle io.ErrShortBuffer error and increase the buffer
-		// take more does not make any sense due to kubernetes limitations
-		buffer:   make([]byte, 1*1024*1024),
-		k8sTasks: &multierror.Group{},
+		k8sTasks:     new(multierror.Group),
 	}, nil
 }

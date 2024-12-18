@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/flant/shell-operator/pkg/hook/binding_context"
+	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
 	. "github.com/flant/shell-operator/pkg/hook/types"
 	"github.com/flant/shell-operator/test/hook/context"
 	"github.com/tidwall/gjson"
@@ -30,12 +30,12 @@ import (
 
 type BindingContextsSlice struct {
 	JSON            string
-	BindingContexts []binding_context.BindingContext
+	BindingContexts []bindingcontext.BindingContext
 }
 
 func (bcs *BindingContextsSlice) Set(contexts ...context.GeneratedBindingContexts) {
 	bcs.JSON = `""`
-	bcs.BindingContexts = make([]binding_context.BindingContext, 0)
+	bcs.BindingContexts = make([]bindingcontext.BindingContext, 0)
 
 	if len(contexts) == 0 {
 		return
@@ -81,13 +81,13 @@ func (bcs *BindingContextsSlice) String() string {
 
 // SimpleBindingGeneratedBindingContext is a helper to create empty binding contexts for OnStartup/Schedule/AfterHelm/etc.
 func SimpleBindingGeneratedBindingContext(binding BindingType) context.GeneratedBindingContexts {
-	bc := binding_context.BindingContext{
+	bc := bindingcontext.BindingContext{
 		Binding: string(binding),
 	}
 	bc.Metadata.BindingType = binding
 
 	return context.GeneratedBindingContexts{
 		Rendered:        fmt.Sprintf(`[{"binding":"%s"}]`, string(binding)),
-		BindingContexts: []binding_context.BindingContext{bc},
+		BindingContexts: []bindingcontext.BindingContext{bc},
 	}
 }

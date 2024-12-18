@@ -1,0 +1,3 @@
+module: network-gateway
+subsystems:
+  - networking

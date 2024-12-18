@@ -1,0 +1,3 @@
+module: openvpn
+subsystems:
+  - networking

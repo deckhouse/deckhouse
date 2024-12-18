@@ -23,7 +23,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -58,7 +58,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 				Name:   "d8_admission_policy_engine_not_bootstrapped",
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
 				Action: "set",
-				Value:  pointer.Float64(1),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{},
 			}))
 		})
@@ -86,7 +86,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 				Name:   "d8_admission_policy_engine_not_bootstrapped",
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
 				Action: "set",
-				Value:  pointer.Float64(1),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{},
 			}))
 		})
@@ -114,7 +114,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 				Name:   "d8_admission_policy_engine_not_bootstrapped",
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
 				Action: "set",
-				Value:  pointer.Float64(1),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{},
 			}))
 		})
@@ -142,7 +142,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 				Name:   "d8_admission_policy_engine_not_bootstrapped",
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
 				Action: "set",
-				Value:  pointer.Float64(1),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{},
 			}))
 		})

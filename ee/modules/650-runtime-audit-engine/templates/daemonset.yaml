@@ -13,7 +13,7 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -69,30 +69,24 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
-
       - name: falco
-        # TODO(nabokihms): Fix 'Error response from daemon: invalid CapAdd: unknown capability: "CAP_BPF"'
-        # Migrate to capabilities: "BPF" "SYS_RESOURCE" "PERFMON" "SYS_PTRACE"
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falco") }}
         args:
         - /usr/bin/falco
-        - -K
-        - /var/run/secrets/kubernetes.io/serviceaccount/token
-        - -k
-        - https://$(KUBERNETES_SERVICE_HOST)
-        - --k8s-node
-        - $(FALCO_K8S_NODE_NAME)
         - -pk
-        - --modern-bpf
-        - --unbuffered
+        - -U
         env:
+        - name: HOST_ROOT
+          value: /host
+        - name: FALCO_HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         - name: FALCO_K8S_NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        - name: SKIP_DRIVER_LOADER
-          value: ""
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -116,7 +110,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "falco_resources" . | nindent 14 }}
           {{- end }}
         volumeMounts:
@@ -129,19 +123,19 @@ spec:
           readOnly: true
         - mountPath: /etc/falco
           name: config-volume
-        - mountPath: /sys/kernel/debug
-          name: debug-fs
         - mountPath: /etc/falco/webhook
           name: webhook-tls
           readOnly: true
         - name: rules-data
           mountPath: /etc/falco/rules.d
         - name: containerdsock
-          mountPath: /run/containerd/containerd.sock
+          mountPath: /host/run/containerd/containerd.sock
 
       - name: falcosidekick
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "falcosidekick") }}
+        command:
+        - /falcosidekick
         env:
         - name: LISTENADDRESS
           value: "127.0.0.1"
@@ -169,7 +163,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "falcosidekick_resources" . | nindent 14 }}
           {{- end }}
 
@@ -192,7 +186,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "falco_rules_loader" . | nindent 12 }}
 {{- end }}
         volumeMounts:
@@ -200,6 +194,8 @@ spec:
           name: webhook-tls
         - name: rules-data
           mountPath: /etc/falco/rules.d
+        - name: proc-fs
+          mountPath: /host/proc
         - name: tmp
           mountPath: /tmp
         - mountPath: /etc/falco
@@ -260,7 +256,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
           {{- end }}
 
@@ -273,29 +269,14 @@ spec:
       - emptyDir: {}
         name: tmp
       - hostPath:
-          path: /boot
-        name: boot-fs
-      - hostPath:
-          path: /lib/modules
-        name: lib-modules
-      - hostPath:
-          path: /usr
-        name: usr-fs
-      - hostPath:
           path: /run/containerd/containerd.sock
         name: containerdsock
-      - hostPath:
-          path: /etc
-        name: etc-fs
       - hostPath:
           path: /dev
         name: dev-fs
       - hostPath:
           path: /proc
         name: proc-fs
-      - hostPath:
-          path: /sys/kernel/debug
-        name: debug-fs
       - name: config-volume
         configMap:
           defaultMode: 420

@@ -27,7 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
@@ -45,8 +45,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "for_delete",
 			ApiVersion:                   "v1",
 			Kind:                         "Pod",
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(true),
 			NamespaceSelector:            internal.NsSelector(),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -60,8 +60,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "apps.kruise.io/v1alpha1",
 			Kind:                         "DaemonSet",
 			NamespaceSelector:            internal.NsSelector(),
-			ExecuteHookOnEvents:          pointer.Bool(true),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "proxy-failover",
@@ -74,8 +74,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:                   "apps.kruise.io/v1alpha1",
 			Kind:                         "DaemonSet",
 			NamespaceSelector:            internal.NsSelector(),
-			ExecuteHookOnEvents:          pointer.Bool(true),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"ingress-nginx-failover": "",
@@ -109,7 +109,7 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 
 		proxy, ok := proxyMap[ds.ControllerName]
 		if !ok {
-			input.LogEntry.Warnf("Proxy DaemonSets not found for %q controller", ds.ControllerName)
+			input.Logger.Warnf("Proxy DaemonSets not found for %q controller", ds.ControllerName)
 			continue
 		}
 
@@ -132,13 +132,13 @@ func safeControllerUpdate(input *go_hook.HookInput) (err error) {
 		podForDelete := sn.(ingressControllerPod)
 
 		if !controllers.Has(podForDelete.ControllerName) {
-			input.LogEntry.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
+			input.Logger.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
 			continue
 		}
 
 		// postpone main controller's pod update for the first time so that failover controller could catch up with the hook
 		if !podForDelete.PostponedUpdate {
-			input.LogEntry.Infof("Assuring that %s/%s has met update conditions", podForDelete.ControllerName, podForDelete.Name)
+			input.Logger.Infof("Assuring that %s/%s has met update conditions", podForDelete.ControllerName, podForDelete.Name)
 			metadata := map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"annotations": map[string]interface{}{

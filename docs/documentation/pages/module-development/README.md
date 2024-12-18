@@ -1,20 +1,22 @@
 ---
 title: "Deckhouse Kubernetes Platform module development"
 permalink: en/module-development/
+lang: en
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports both built-in modules and modules that can be fetched from a _module source_. This section describes how to create and run a custom module in the cluster using the module source.
+Deckhouse Kubernetes Platform (DKP) supports both built-in modules and modules that can be fetched from a [module source](../cr.html#modulesource). This section details what the DKP module is and how it works.
 
-There are three key stages in the life of a module:
+There are four stages in the module lifecycle:
 
-
-* **Development**: creating module code and its structure in the Git repository. The [**Module structure**](structure/) section describes the required components and the directories where they are located.
-* **Building and publishing**: creating a module artifact and pushing it to the container registry. The [**Building and publishing**](build/) section describes where images are stored in the registry and what images are available.
-* **Running in a cluster**: installing a module in a DKP cluster, enabling it, configuring it, and making sure it works as expected. The [**Running in a cluster**](run/) section describes how to run a configured module in a cluster.
+* **Development**: creating module code and its structure in the Git repository. The [**Module structure**](structure/) section outlines which components there are and in which directories they are located.
+* **Building**: creating a module artifact and pushing it to the container registry. The [**Building and publishing**](build/) section describes where images are stored in the registry and at what paths they are available.
+* **Running in a cluster**: delivering the module to a cluster managed by the DKP. The [**Running in a cluster**](run/) section describes how to activate the module, configure its parameters, and test its functionality (including handling CRDs and troubleshooting).
+* **Dependencies**: configuring module dependencies, including DKP versions, Kubernetes, and other critical components. This stage is covered in the [**Module dependencies**](dependencies/) section.
 
 ## Requirements
 
 You will need the following tools to develop DKP modules:
+
 * [git](https://git-scm.com) — version control system;
 * [sed](https://github.com/mirror/sed) — stream editor;
 * [yq](https://github.com/mikefarah/yq) — CLI tool for processing data in JSON, YAML, and XML formats;

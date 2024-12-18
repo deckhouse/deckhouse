@@ -1,4 +1,4 @@
-{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
   {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
     {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
     {{- $revision := get $versionInfo "revision" }}

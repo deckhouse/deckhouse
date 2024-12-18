@@ -31,7 +31,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-enabledModules: ["vertical-pod-autoscaler-crd", "openvpn"]
+enabledModules: ["vertical-pod-autoscaler", "openvpn"]
 modules:
   https:
     mode: CustomCertificate

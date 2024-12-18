@@ -24,7 +24,9 @@ var _ = Describe("Module :: runtime-audit-engine :: helm template :: runtime-aud
 
 	BeforeEach(func() {
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.25.0")
-		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd"})
+		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler"})
+		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.master", "3")
+		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.worker", "1")
 	})
 	Context("With Static mode set", func() {
 		BeforeEach(func() {

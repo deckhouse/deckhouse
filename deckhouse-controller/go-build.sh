@@ -16,7 +16,7 @@
 
 set -e
 
-deckhouseVer="dev"
+deckhouseVer=${D8_VERSION:-"dev"}
 shellOpVer=$(go list -m all | grep shell-operator | cut -d' ' -f 2-)
 addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 

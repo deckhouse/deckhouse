@@ -37,7 +37,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-enabledModules: ["vertical-pod-autoscaler-crd"]
+enabledModules: ["vertical-pod-autoscaler"]
 modules:
   placement: {}
 discovery:
@@ -52,7 +52,7 @@ clusterConfiguration:
     provider: vSphere
   clusterDomain: cluster.local
   clusterType: Cloud
-  defaultCRI: Docker
+  defaultCRI: Containerd
   kind: ClusterConfiguration
   kubernetesVersion: "1.29"
   podSubnetCIDR: 10.111.0.0/16
@@ -67,16 +67,6 @@ clusterConfiguration:
 
 // Defaults from openapi/config-values.yaml.
 const nodeManagerConfigValues = `
-allowedBundles:
-  - "ubuntu-lts"
-  - "centos"
-  - "debian"
-allowedKubernetesVersions:
-  - "1.26"
-  - "1.27"
-  - "1.28"
-  - "1.29"
-  - "1.30"
 mcmEmergencyBrake: false
 `
 
@@ -90,6 +80,10 @@ internal:
     ca: string
     key: string
     crt: string
+  allowedBundles:
+    - "ubuntu-lts"
+    - "centos"
+    - "debian"
 `
 
 const nodeManagerAWS = `
@@ -175,7 +169,7 @@ internal:
     type: azure
     machineClassKind: AzureMachineClass
     azure:
-      sshPublicKey: sshPublicKey
+      sshPublicKey: ssh-rsa AAAAB...==
       clientId: clientId
       clientSecret: clientSecret
       subscriptionId: subscriptionId
@@ -199,7 +193,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: AzureInstanceClass
@@ -259,7 +253,7 @@ internal:
     machineClassKind: GCPMachineClass
     gcp:
       region: region
-      sshKey: privatekey
+      sshKey: cert-authority,principals="test" ssh-rsa AAAAB...==
       networkName: mynetwork
       subnetworkName: mysubnetwork
       disableExternalIP: true
@@ -336,7 +330,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -422,7 +416,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -460,7 +454,7 @@ internal:
       regionTagCategory: myregtagcat #
       zoneTagCategory: myzonetagcateg #
       region: myreg
-      sshKeys: [key1, key2] #
+      sshKeys: ['cert-authority,principals="test" ssh-rsa AAAAB...==', key2] #
       vmFolderPath: dev/test
   nodeGroups:
   - name: worker
@@ -542,7 +536,7 @@ internal:
       serviceAccountJSON: '{"my":"svcacc"}'
       region: myreg
       folderID: myfolder
-      sshKey: mysshkey
+      sshKey: cert-authority,principals="test" ssh-rsa AAAAB...==
       sshUser: mysshuser
       nameservers: ["4.2.2.2"]
       dns:
@@ -573,7 +567,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.29"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: YandexInstanceClass
@@ -667,6 +661,7 @@ metadata:
   namespace: d8-cloud-instance-manager
   name: worker
   labels:
+    app: caps-controller
     heritage: deckhouse
     module: node-manager
     node-group: worker
@@ -688,7 +683,7 @@ spec:
 
 const openstackCIMPath = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
 const openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
-const vsphereCIMPath = "/deckhouse/ee/modules/030-cloud-provider-vsphere/cloud-instance-manager"
+const vsphereCIMPath = "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager"
 const vsphereCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
 const vcdCAPIPath = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
 const vcdCAPISymlink = "/deckhouse/modules/040-node-manager/capi/vcd"
@@ -723,7 +718,9 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerValues)
 			setBashibleAPIServerTLSValues(f)
-			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
+			// fake *-crd modules are required for backward compatibility with lib_helm library
+			// TODO: remove fake crd modules
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "operator-prometheus", "vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
 		})
 
 		assertSpecDotGroupsArray := func(rule object_store.KubeObject, shouldEmpty bool) {
@@ -1778,7 +1775,7 @@ internal:
     capiMachineTemplateKind: "VCDMachineTemplate"
     capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
     vcd:
-      sshPublicKey: ssh-rsa AAAAA
+      sshPublicKey: cert-authority,principals="test" ssh-rsa AAAAB...==
       organization: org
       virtualDataCenter: dc
       virtualApplicationName: app
@@ -1800,7 +1797,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.24"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass
@@ -1823,7 +1820,7 @@ internal:
     nodeType: CloudEphemeral
     kubernetesVersion: "1.24"
     cri:
-      type: "Docker"
+      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass

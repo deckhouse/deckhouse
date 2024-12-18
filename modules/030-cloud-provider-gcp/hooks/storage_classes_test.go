@@ -32,7 +32,28 @@ cloudProviderGcp:
     exclude:
     - .*standard.*
     - bar
-    default: pd-ssd-replicated
+`
+
+		initValuesWithDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: default-cluster-sc
+cloudProviderGcp:
+  internal: {}
+  storageClass:
+    exclude:
+    - .*standard.*
+    - bar
+`
+
+		initValuesWithEmptyDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: ""
+cloudProviderGcp:
+  internal: {}
+  storageClass:
+    exclude:
+    - .*standard.*
+    - bar
 `
 	)
 
@@ -44,7 +65,7 @@ cloudProviderGcp:
 			f.RunHook()
 		})
 
-		It("Should discover storageClasses with default set", func() {
+		It("Should discover storageClasses", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderGcp.internal.storageClasses").String()).To(MatchJSON(`
 [
@@ -70,9 +91,7 @@ cloudProviderGcp:
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderGcp.internal.defaultStorageClass").String()).To(Equal(`pd-ssd-replicated`))
 		})
 
 	})
-
 })

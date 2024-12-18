@@ -24,7 +24,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
 
@@ -60,7 +60,7 @@ func RegisterHook(params *HookParams) bool {
 						MatchNames: []string{secretNs},
 					},
 				},
-				ExecuteHookOnEvents: pointer.Bool(false),
+				ExecuteHookOnEvents: ptr.To(false),
 				FilterFunc:          providerConfigurationSecretFilter,
 			},
 			{
@@ -75,7 +75,7 @@ func RegisterHook(params *HookParams) bool {
 						MatchNames: []string{"d8-system"},
 					},
 				},
-				ExecuteHookOnEvents: pointer.Bool(false),
+				ExecuteHookOnEvents: ptr.To(false),
 				FilterFunc:          installDataCMFilter,
 			},
 		},
@@ -120,7 +120,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) erro
 	}
 
 	if !needMigration {
-		input.LogEntry.Info("Skipping migration of root disk volume")
+		input.Logger.Info("Skipping migration of root disk volume")
 		return nil
 	}
 
@@ -153,7 +153,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) erro
 	}
 
 	if !needMigratieMasters && !needMigrateNGs {
-		input.LogEntry.Info("Skipping migration diskSizeGB because migration already done or diskSizeGB already set")
+		input.Logger.Info("Skipping migration diskSizeGB because migration already done or diskSizeGB already set")
 		return nil
 	}
 
@@ -263,10 +263,9 @@ func needMigrateForDeckhouseInstallVersion(snaps go_hook.Snapshots) (bool, error
 	}
 
 	versionStr := is[0].(string)
-	// for dev build migrate always
+	// do not migrate for dev build
 	if versionStr == "dev" {
-		// for dev branches always run migration for testing purposes
-		return true, nil
+		return false, nil
 	}
 
 	version, err := semver.NewVersion(versionStr)

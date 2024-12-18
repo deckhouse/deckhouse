@@ -5,6 +5,7 @@ package cr
 //go:generate minimock -i github.com/deckhouse/deckhouse/go_lib/dependency/cr.Client -o ./cr_mock.go
 
 import (
+	"context"
 	"sync"
 	mm_atomic "sync/atomic"
 	mm_time "time"
@@ -162,7 +163,7 @@ func (e *ClientMockDigestExpectation) Then(s1 string, err error) *ClientMock {
 }
 
 // Digest implements Client
-func (mmDigest *ClientMock) Digest(tag string) (s1 string, err error) {
+func (mmDigest *ClientMock) Digest(_ context.Context, tag string) (s1 string, err error) {
 	mm_atomic.AddUint64(&mmDigest.beforeDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmDigest.afterDigestCounter, 1)
 
@@ -378,7 +379,7 @@ func (e *ClientMockImageExpectation) Then(i1 v1.Image, err error) *ClientMock {
 }
 
 // Image implements Client
-func (mmImage *ClientMock) Image(tag string) (i1 v1.Image, err error) {
+func (mmImage *ClientMock) Image(_ context.Context, tag string) (i1 v1.Image, err error) {
 	mm_atomic.AddUint64(&mmImage.beforeImageCounter, 1)
 	defer mm_atomic.AddUint64(&mmImage.afterImageCounter, 1)
 
@@ -558,7 +559,7 @@ func (mmListTags *mClientMockListTags) Set(f func() (sa1 []string, err error)) *
 }
 
 // ListTags implements Client
-func (mmListTags *ClientMock) ListTags() (sa1 []string, err error) {
+func (mmListTags *ClientMock) ListTags(_ context.Context) (sa1 []string, err error) {
 	mm_atomic.AddUint64(&mmListTags.beforeListTagsCounter, 1)
 	defer mm_atomic.AddUint64(&mmListTags.afterListTagsCounter, 1)
 

@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/gookit/color"
 	"github.com/sirupsen/logrus"
@@ -724,7 +725,10 @@ func (d *TeeLogger) writeToFile(content string) {
 		return
 	}
 
-	if _, err := d.buf.Write([]byte(content)); err != nil {
+	timestamp := time.Now().Format(time.DateTime)
+	contentWithTimestamp := fmt.Sprintf("%s - %s", timestamp, content)
+
+	if _, err := d.buf.Write([]byte(contentWithTimestamp)); err != nil {
 		d.l.LogDebugF("Cannot write to TeeLog: %v", err)
 	}
 

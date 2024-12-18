@@ -51,7 +51,7 @@ var _ = Describe("Module :: prometheus :: helm template :: render data sources",
 
 		return fmt.Sprintf(`
 %s
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
+enabledModules: ["vertical-pod-autoscaler", "prometheus"]
 modules:
   https:
     mode: CustomCertificate

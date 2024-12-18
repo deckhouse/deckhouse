@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/square/go-jose/v3"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -48,7 +48,7 @@ var _ = Describe("Istio hooks :: multicluster_discovery ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
@@ -65,7 +65,7 @@ var _ = Describe("Istio hooks :: multicluster_discovery ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
@@ -206,7 +206,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			tPub0, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-0").Field("status.metadataCache.publicLastFetchTimestamp").String())
 			Expect(err).ShouldNot(HaveOccurred())
@@ -349,7 +349,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-0",
 					"endpoint":          "https://proper-hostname-0/metadata/public/public.json",
@@ -359,7 +359,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-0",
 					"endpoint":          "https://proper-hostname-0/metadata/private/multicluster.json",
@@ -369,7 +369,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-1",
 					"endpoint":          "https://proper-hostname-1/metadata/public/public.json",
@@ -379,7 +379,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-1",
 					"endpoint":          "https://proper-hostname-1/metadata/private/multicluster.json",
@@ -389,7 +389,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-2",
 					"endpoint":          "https://proper-hostname-2/metadata/public/public.json",
@@ -399,7 +399,7 @@ status:
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-multicluster-2",
 					"endpoint":          "https://proper-hostname-2/metadata/private/multicluster.json",
@@ -549,12 +549,12 @@ status: {}
 		It("Hook must execute successfully with proper warnings", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot fetch public metadata endpoint https://public-internal-error/metadata/public/public.json for IstioMulticluster public-internal-error (HTTP Code 500)"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot unmarshal public metadata endpoint https://public-bad-json/metadata/public/public.json for IstioMulticluster public-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("bad public metadata format in endpoint https://public-wrong-format/metadata/public/public.json for IstioMulticluster public-wrong-format"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot fetch private metadata endpoint https://private-internal-error/metadata/private/multicluster.json for IstioMulticluster private-internal-error (HTTP Code 500)"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot unmarshal private metadata endpoint https://private-bad-json/metadata/private/multicluster.json for IstioMulticluster private-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("bad private metadata format in endpoint https://private-wrong-format/metadata/private/multicluster.json for IstioMulticluster private-wrong-format"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch public metadata endpoint https://public-internal-error/metadata/public/public.json for IstioMulticluster public-internal-error (HTTP Code 500)"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal public metadata endpoint https://public-bad-json/metadata/public/public.json for IstioMulticluster public-bad-json, error: unexpected end of JSON input"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("bad public metadata format in endpoint https://public-wrong-format/metadata/public/public.json for IstioMulticluster public-wrong-format"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch private metadata endpoint https://private-internal-error/metadata/private/multicluster.json for IstioMulticluster private-internal-error (HTTP Code 500)"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal private metadata endpoint https://private-bad-json/metadata/private/multicluster.json for IstioMulticluster private-bad-json, error: unexpected end of JSON input"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("bad private metadata format in endpoint https://private-wrong-format/metadata/private/multicluster.json for IstioMulticluster private-wrong-format"))
 
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "public-internal-error").Field("status").String()).To(MatchJSON("{}"))
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "public-bad-json").Field("status").String()).To(MatchJSON("{}"))
@@ -590,7 +590,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-bad-json",
 					"endpoint":          "https://private-bad-json/metadata/public/public.json",
@@ -600,7 +600,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-bad-json",
 					"endpoint":          "https://private-bad-json/metadata/private/multicluster.json",
@@ -610,7 +610,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-internal-error",
 					"endpoint":          "https://private-internal-error/metadata/public/public.json",
@@ -620,7 +620,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-internal-error",
 					"endpoint":          "https://private-internal-error/metadata/private/multicluster.json",
@@ -630,7 +630,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(0.0),
+				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-wrong-format",
 					"endpoint":          "https://private-wrong-format/metadata/public/public.json",
@@ -640,7 +640,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "private-wrong-format",
 					"endpoint":          "https://private-wrong-format/metadata/private/multicluster.json",
@@ -650,7 +650,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "public-bad-json",
 					"endpoint":          "https://public-bad-json/metadata/public/public.json",
@@ -660,7 +660,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "public-internal-error",
 					"endpoint":          "https://public-internal-error/metadata/public/public.json",
@@ -670,7 +670,7 @@ status: {}
 				Name:   multiclusterMetricName,
 				Group:  multiclusterMetricsGroup,
 				Action: "set",
-				Value:  pointer.Float64(1.0),
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "public-wrong-format",
 					"endpoint":          "https://public-wrong-format/metadata/public/public.json",

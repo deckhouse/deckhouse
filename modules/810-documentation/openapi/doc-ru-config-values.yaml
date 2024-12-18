@@ -13,7 +13,7 @@ properties:
         description: |
           Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/documentation/v1/modules/150-user-authn/).
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/150-user-authn/).
         properties:
           authURL:
             description: |
@@ -61,10 +61,10 @@ properties:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, `nodeSelector` будет определяться [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, `nodeSelector` будет определяться [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   tolerations:
     type: array
     description: |
       Структура, аналогичная `spec.tolerations` пода Kubernetes.
 
-      Если ничего не указано или указано `false`, `tolerations` будет определяться [автоматически](https://deckhouse.ru/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
+      Если значение не указано или указано `false`, `tolerations` будет определяться [автоматически](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).

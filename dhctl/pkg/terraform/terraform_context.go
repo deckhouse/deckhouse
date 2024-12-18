@@ -88,7 +88,7 @@ func (f *TerraformContext) GetCheckNodeRunner(metaConfig *config.MetaConfig, opt
 					WithName(opts.NodeName).
 					WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
 					WithAutoApprove(opts.AutoApprove).
-					WithHook(opts.ReadinessChecker)
+					WithHook(opts.Hook)
 
 				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
@@ -108,10 +108,10 @@ func (f *TerraformContext) GetCheckNodeRunner(metaConfig *config.MetaConfig, opt
 
 func (f *TerraformContext) GetCheckNodeDeleteRunner(metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions) RunnerInterface {
 	return f.getOrCreateRunner(
-		fmt.Sprintf("check.node-delete.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
+		fmt.Sprintf("check.node-delete.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.LayoutStep),
 		func() RunnerInterface {
 			if opts.CommanderMode {
-				r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, opts.StateCache).
+				r := NewRunnerFromConfig(metaConfig, opts.LayoutStep, opts.StateCache).
 					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 					WithName(opts.NodeName).
 					WithAllowedCachedState(true).
@@ -124,7 +124,7 @@ func (f *TerraformContext) GetCheckNodeDeleteRunner(metaConfig *config.MetaConfi
 				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
 				return r
 			} else {
-				r := NewImmutableRunnerFromConfig(metaConfig, opts.NodeGroupStep).
+				r := NewImmutableRunnerFromConfig(metaConfig, opts.LayoutStep).
 					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 					WithName(opts.NodeName).
 					WithState(opts.NodeState).
@@ -184,7 +184,7 @@ type NodeRunnerOptions struct {
 	CommanderMode                    bool
 	StateCache                       dstate.Cache
 	AdditionalStateSaverDestinations []SaverDestination
-	ReadinessChecker                 InfraActionHook
+	Hook                             InfraActionHook
 }
 
 func (f *TerraformContext) GetConvergeNodeRunner(metaConfig *config.MetaConfig, opts NodeRunnerOptions) RunnerInterface {
@@ -197,7 +197,7 @@ func (f *TerraformContext) GetConvergeNodeRunner(metaConfig *config.MetaConfig, 
 				WithName(opts.NodeName).
 				WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
 				WithAutoApprove(opts.AutoApprove).
-				WithHook(opts.ReadinessChecker)
+				WithHook(opts.Hook)
 
 			if opts.NodeState != nil {
 				r = r.WithState(opts.NodeState)
@@ -217,7 +217,7 @@ type NodeDeleteRunnerOptions struct {
 
 	NodeName        string
 	NodeGroupName   string
-	NodeGroupStep   string
+	LayoutStep      string
 	NodeIndex       int
 	NodeState       []byte
 	NodeCloudConfig string
@@ -225,19 +225,21 @@ type NodeDeleteRunnerOptions struct {
 	CommanderMode                    bool
 	StateCache                       dstate.Cache
 	AdditionalStateSaverDestinations []SaverDestination
+	Hook                             InfraActionHook
 }
 
 func (f *TerraformContext) GetConvergeNodeDeleteRunner(metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions) RunnerInterface {
 	return f.getOrCreateRunner(
-		fmt.Sprintf("converge.node-delete.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
+		fmt.Sprintf("converge.node-delete.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.LayoutStep),
 		func() RunnerInterface {
-			r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, opts.StateCache).
+			r := NewRunnerFromConfig(metaConfig, opts.LayoutStep, opts.StateCache).
 				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
 				WithName(opts.NodeName).
 				WithAllowedCachedState(true).
 				WithSkipChangesOnDeny(true).
 				WithAutoDismissDestructiveChanges(opts.AutoDismissDestructive).
-				WithAutoApprove(opts.AutoApprove)
+				WithAutoApprove(opts.AutoApprove).
+				WithHook(opts.Hook)
 
 			if opts.NodeState != nil {
 				r = r.WithState(opts.NodeState)
@@ -274,6 +276,7 @@ type BootstrapNodeRunnerOptions struct {
 	NodeIndex                        int
 	NodeCloudConfig                  string
 	AdditionalStateSaverDestinations []SaverDestination
+	LogToBuffer                      bool
 }
 
 func (f *TerraformContext) GetBootstrapNodeRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts BootstrapNodeRunnerOptions) RunnerInterface {
@@ -288,7 +291,8 @@ func (f *TerraformContext) GetBootstrapNodeRunner(metaConfig *config.MetaConfig,
 				WithVariables(nodeConfig).
 				WithName(opts.NodeName).
 				WithAutoApprove(opts.AutoApprove).
-				WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+				WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...).
+				WithCatchOutput(opts.LogToBuffer)
 
 			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
 

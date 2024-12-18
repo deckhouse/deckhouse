@@ -1,0 +1,9 @@
+module: operator-trivy
+subsystems:
+  - security
+crds:
+  - ee/modules/500-operator-trivy/crds/native/*.yaml
+allowedResources:
+  - group: aquasecurity.github.io
+    resources:
+      - all

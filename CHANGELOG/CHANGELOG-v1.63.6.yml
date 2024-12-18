@@ -1,0 +1,10 @@
+cni-cilium:
+  fixes:
+    - summary: Fixing masquerading between DVP virtual machines.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9529
+      impact: This fix disables masquerading between virtual machines.
+istio:
+  fixes:
+    - summary: Fixed graph display issue in Kiali.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9523
+

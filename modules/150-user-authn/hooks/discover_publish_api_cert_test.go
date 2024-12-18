@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -123,7 +123,7 @@ data:
 				manifests:          "",
 				publishAPIMode:     "SelfSigned",
 				httpMode:           "CertManager",
-				kubeconfigMasterCA: pointer.String("test"),
+				kubeconfigMasterCA: ptr.To("test"),
 			},
 			"discoveredKubernetesCA",
 		),
@@ -180,7 +180,7 @@ data:
 				manifests:          "",
 				publishAPIMode:     "Global",
 				httpMode:           "OnlyInURI",
-				kubeconfigMasterCA: pointer.String("testMasterCA"),
+				kubeconfigMasterCA: ptr.To("testMasterCA"),
 			},
 			"testMasterCA",
 		),
@@ -189,7 +189,7 @@ data:
 				manifests:          "",
 				publishAPIMode:     "Global",
 				httpMode:           "OnlyInURI",
-				kubeconfigMasterCA: pointer.String(""),
+				kubeconfigMasterCA: ptr.To(""),
 			},
 			"",
 		),

@@ -5,7 +5,7 @@ metadata:
   name: solid
 spec:
   ingressClass: solid
-  controllerVersion: "1.6"
+  controllerVersion: "1.9"
   inlet: "HostWithFailover"
   acceptRequestsFrom:
     - 67.34.56.23/32

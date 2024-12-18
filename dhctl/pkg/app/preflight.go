@@ -18,7 +18,7 @@ import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
 	PreflightSkipAll                       = false
-	PreflightSkipSSHForword                = false
+	PreflightSkipSSHForward                = false
 	PreflightSkipAvailabilityPorts         = false
 	PreflightSkipResolvingLocalhost        = false
 	PreflightSkipDeckhouseVersionCheck     = false
@@ -31,6 +31,7 @@ var (
 	PreflightSkipSudoIsAllowedForUserCheck = false
 	PreflightSkipSystemRequirementsCheck   = false
 	PreflightSkipOneSSHHost                = false
+	PreflightSkipCloudAPIAccessibility     = false
 )
 
 const (
@@ -46,8 +47,36 @@ const (
 	PythonChecksArgName              = "preflight-skip-python-checks"
 	SudoAllowedCheckArgName          = "preflight-skip-sudo-allowed"
 	SystemRequirementsArgName        = "preflight-skip-system-requirements-check"
+	CloudAPIAccessibilityArgName     = "preflight-cloud-api-accesibility-check"
 	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
 )
+
+var (
+	PreflightSkipOptionsMap = map[string]*bool{
+		SSHForwardArgName:                &PreflightSkipSSHForward,
+		PortsAvailabilityArgName:         &PreflightSkipAvailabilityPorts,
+		ResolvingLocalhostArgName:        &PreflightSkipResolvingLocalhost,
+		DeckhouseVersionCheckArgName:     &PreflightSkipDeckhouseVersionCheck,
+		RegistryThroughProxyCheckArgName: &PreflightSkipRegistryThroughProxy,
+		PublicDomainTemplateCheckArgName: &PreflightSkipPublicDomainTemplateCheck,
+		SSHCredentialsCheckArgName:       &PreflightSkipSSHCredentialsCheck,
+		RegistryCredentialsCheckArgName:  &PreflightSkipRegistryCredentials,
+		CloudAPIAccessibilityArgName:     &PreflightSkipCloudAPIAccessibility,
+		ContainerdExistCheckArgName:      &PreflightSkipContainerdExistCheck,
+		PythonChecksArgName:              &PreflightSkipPythonChecks,
+		SudoAllowedCheckArgName:          &PreflightSkipSudoIsAllowedForUserCheck,
+		SystemRequirementsArgName:        &PreflightSkipSystemRequirementsCheck,
+		OneSSHHostCheckArgName:           &PreflightSkipOneSSHHost,
+	}
+)
+
+func ApplyPreflightSkips(skips []string) {
+	for _, skip := range skips {
+		if arg, hasKey := PreflightSkipOptionsMap[skip]; hasKey {
+			*arg = true
+		}
+	}
+}
 
 func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag("preflight-skip-all-checks", "Skip all preflight checks").
@@ -55,41 +84,44 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 		BoolVar(&PreflightSkipAll)
 	cmd.Flag(SSHForwardArgName, "Skip SSH forward preflight check").
 		Envar(configEnvName("PREFLIGHT_SKIP_SSH_FORWARD_CHECK")).
-		BoolVar(&PreflightSkipSSHForword)
+		BoolVar(PreflightSkipOptionsMap[SSHForwardArgName])
 	cmd.Flag(PortsAvailabilityArgName, "Skip availability ports preflight check").
 		Envar(configEnvName("PREFLIGHT_SKIP_AVAILABILITY_PORTS_CHECK")).
-		BoolVar(&PreflightSkipAvailabilityPorts)
+		BoolVar(PreflightSkipOptionsMap[PortsAvailabilityArgName])
 	cmd.Flag(ResolvingLocalhostArgName, "Skip resolving the localhost domain").
 		Envar(configEnvName("PREFLIGHT_SKIP_RESOLVING_LOCALHOST_CHECK")).
-		BoolVar(&PreflightSkipResolvingLocalhost)
+		BoolVar(PreflightSkipOptionsMap[ResolvingLocalhostArgName])
 	cmd.Flag(DeckhouseVersionCheckArgName, "Skip verifying deckhouse version").
 		Envar(configEnvName("PREFLIGHT_SKIP_INCOMPATIBLE_VERSION_CHECK")).
-		BoolVar(&PreflightSkipDeckhouseVersionCheck)
+		BoolVar(PreflightSkipOptionsMap[DeckhouseVersionCheckArgName])
 	cmd.Flag(RegistryThroughProxyCheckArgName, "Skip verifying deckhouse version").
 		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_THROUGH_PROXY")).
-		BoolVar(&PreflightSkipRegistryThroughProxy)
+		BoolVar(PreflightSkipOptionsMap[RegistryThroughProxyCheckArgName])
 	cmd.Flag(PublicDomainTemplateCheckArgName, "Skip verifying PublicDomainTemplate check").
 		Envar(configEnvName("PREFLIGHT_SKIP_PUBLIC_DOMAIN_TEMPLATE")).
-		BoolVar(&PreflightSkipPublicDomainTemplateCheck)
+		BoolVar(PreflightSkipOptionsMap[PublicDomainTemplateCheckArgName])
 	cmd.Flag(SSHCredentialsCheckArgName, "Skip verifying PublicDomainTemplate check").
 		Envar(configEnvName("PREFLIGHT_SKIP_SSH_CREDENTIAL_CHECK")).
-		BoolVar(&PreflightSkipSSHCredentialsCheck)
+		BoolVar(PreflightSkipOptionsMap[SSHCredentialsCheckArgName])
 	cmd.Flag(RegistryCredentialsCheckArgName, "Skip verifying registry credentials").
 		Envar(configEnvName("PREFLIGHT_SKIP_REGISTRY_CREDENTIALS")).
-		BoolVar(&PreflightSkipRegistryCredentials)
+		BoolVar(PreflightSkipOptionsMap[RegistryCredentialsCheckArgName])
+	cmd.Flag(CloudAPIAccessibilityArgName, "Skip verifying Cloud API").
+		Envar(configEnvName("PREFLIGHT_SKIP_CLOUD_API_CHECK")).
+		BoolVar(PreflightSkipOptionsMap[CloudAPIAccessibilityArgName])
 	cmd.Flag(ContainerdExistCheckArgName, "Skip verifying contanerd exist").
 		Envar(configEnvName("PREFLIGHT_SKIP_CONTAINERD_EXIST")).
-		BoolVar(&PreflightSkipContainerdExistCheck)
+		BoolVar(PreflightSkipOptionsMap[ContainerdExistCheckArgName])
 	cmd.Flag(PythonChecksArgName, "Skip verifying python installation").
 		Envar(configEnvName("PREFLIGHT_SKIP_PYTHON_CHECKS")).
-		BoolVar(&PreflightSkipPythonChecks)
+		BoolVar(PreflightSkipOptionsMap[PythonChecksArgName])
 	cmd.Flag(SudoAllowedCheckArgName, "Skip verifying sudo is allowed for user").
 		Envar(configEnvName("PREFLIGHT_SKIP_SUDO_ALLOWED_CHECK")).
-		BoolVar(&PreflightSkipSudoIsAllowedForUserCheck)
+		BoolVar(PreflightSkipOptionsMap[SudoAllowedCheckArgName])
 	cmd.Flag(SystemRequirementsArgName, "Skip verifying system requirements").
 		Envar(configEnvName("PREFLIGHT_SKIP_SYSTEM_REQUIREMENTS_CHECK")).
-		BoolVar(&PreflightSkipSystemRequirementsCheck)
+		BoolVar(PreflightSkipOptionsMap[SystemRequirementsArgName])
 	cmd.Flag(OneSSHHostCheckArgName, "Skip verifying one ssh-host parametr").
 		Envar(configEnvName("PREFLIGHT_SKIP_ONE_SSH_HOST")).
-		BoolVar(&PreflightSkipOneSSHHost)
+		BoolVar(PreflightSkipOptionsMap[OneSSHHostCheckArgName])
 }

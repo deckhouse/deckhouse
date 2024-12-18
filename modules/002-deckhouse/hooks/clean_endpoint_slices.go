@@ -22,7 +22,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // this hook clean orphan EndpointSlices from the previous version of the `deckhouse` Service
@@ -35,8 +35,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "endpointslices",
 			ApiVersion:                   "discovery.k8s.io/v1",
 			Kind:                         "EndpointSlice",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":                                    "deckhouse",

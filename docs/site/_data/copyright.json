@@ -3,44 +3,46 @@
     {
       "title": "Privacy Policy",
       "url": "/privacy-policy/",
-      "target": ""
+      "target": "",
+      "rel": ""
     },
     {
       "title": "Terms of service",
       "url": "/terms-of-service/",
-      "target": ""
+      "target": "",
+      "rel": ""
     },
     {
       "title": "Cookie Policy",
       "url": "/cookie-policy/",
-      "target": ""
-    },
-    {
-      "title": "Technical support regulations",
-      "url": "/regulations-en/",
-      "target": ""
+      "target": "",
+      "rel": ""
     }
   ],
   "ru": [
     {
-      "title": "Политика конфиденциальности",
+      "title": "Политика обработки персональных данных",
       "url": "/security-policy/",
-      "target": ""
+      "target": "",
+      "rel": ""
     },
     {
       "title": "Лицензионное соглашение",
       "url": "/license/",
-      "target": "_blank"
+      "target": "",
+      "rel": ""
     },
     {
       "title": "Правила лицензирования",
       "url": "/license-rules/",
-      "target": "_blank"
+      "target": "",
+      "rel": ""
     },
     {
       "title": "Регламент технической поддержки",
       "url": "/regulations/",
-      "target": "_blank"
+      "target": "",
+      "rel": ""
     }
   ]
 }

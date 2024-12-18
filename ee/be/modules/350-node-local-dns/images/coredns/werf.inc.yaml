@@ -1,3 +1,6 @@
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
@@ -5,12 +8,12 @@ import:
   add: /relocate
   to: /
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
-  to: /
+  to: /sbin
   includePaths:
-  - lib64/iptables
-  - lib64/libm*
+  - xtables-legacy-multi
+  - xtables-nft-multi
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
@@ -29,6 +32,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
@@ -39,7 +45,7 @@ shell:
   - chmod -R 0700 /src/coredns
   - chown -R 64535:64535 /src/coredns
 ---
-{{ $corednsBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables*" }}
+{{ $corednsBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
@@ -58,4 +64,12 @@ shell:
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         rm -f "/relocate/sbin/${cmd}"
         ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+      done
+    - |
+      for mode in legacy nft; do
+        for basecmd in iptables ip6tables; do
+          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+          done
+        done
       done

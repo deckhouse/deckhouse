@@ -1,0 +1,5 @@
+module: upmeter
+subsystems:
+  - observability
+crds:
+  - modules/500-upmeter/crds/*.yaml

@@ -30,11 +30,20 @@ terraform {
 provider "openstack" {
   auth_url = "https://api.selvpc.ru/identity/v3"
   domain_name = "48348"
-  tenant_id = "80625ad45e604fbe86679e63b704f3b8"
+  tenant_id = "ceda80a1b33844adb1cbddd20ee93585"
   user_name = "deckhouse-e2e"
   password = "${OS_PASSWORD}"
   region = var.region
 }
+
+locals {
+  worker_images = {
+    "redos" = data.openstack_images_image_v2.redos_image.id
+    "opensuse" = data.openstack_images_image_v2.opensuse_image.id
+    "rosa" = data.openstack_images_image_v2.rosa_image.id
+  }
+}
+
 
 data "openstack_networking_network_v2" "external" {
   name = "external-network"
@@ -85,6 +94,7 @@ resource "openstack_networking_port_v2" "system_internal_without_security" {
 }
 
 resource "openstack_networking_port_v2" "worker_internal_without_security" {
+  for_each = { for image_name, image_id in local.worker_images : image_name => image_id }
   network_id = openstack_networking_network_v2.internal.id
   admin_state_up = "true"
   fixed_ip {
@@ -111,7 +121,7 @@ resource "openstack_compute_keypair_v2" "ssh" {
 data "openstack_images_image_v2" "astra_image" {
   most_recent = true
   visibility  = "shared"
-  name        = "alse-vanilla-1.7.5-cloud-adv-mg12.1.2"
+  name        = "alse-1.8.1-base"
 }
 
 data "openstack_images_image_v2" "alt_image" {
@@ -126,6 +136,18 @@ data "openstack_images_image_v2" "redos_image" {
   name        = "redos-STD-MINIMAL-8.0.0"
 }
 
+data "openstack_images_image_v2" "opensuse_image" {
+  most_recent = true
+  visibility  = "shared"
+  name        = "openSUSE-Leap-15.6"
+}
+
+data "openstack_images_image_v2" "rosa_image" {
+  most_recent = true
+  visibility  = "shared"
+  name        = "rosa-server-cobalt-20240613"
+}
+
 resource "openstack_blockstorage_volume_v3" "master" {
   name                 = "candi-${PREFIX}-master-0"
   size                 = "30"
@@ -133,7 +155,6 @@ resource "openstack_blockstorage_volume_v3" "master" {
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
   enable_online_resize = true
-
   lifecycle {
     ignore_changes = [image_id]
   }
@@ -144,7 +165,7 @@ resource "openstack_compute_instance_v2" "master" {
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
-  user_data            = "${file("astra-instance-bootstrap.sh")}"
+  user_data = file("astra-instance-bootstrap.sh")
 
   network {
     port = openstack_networking_port_v2.master_internal_without_security.id
@@ -157,7 +178,6 @@ resource "openstack_compute_instance_v2" "master" {
     boot_index       = 0
     delete_on_termination = true
   }
-
 }
 
 resource "openstack_blockstorage_volume_v3" "bastion" {
@@ -188,7 +208,6 @@ resource "openstack_compute_instance_v2" "bastion" {
     boot_index       = 0
     delete_on_termination = true
   }
-
 }
 
 resource "openstack_blockstorage_volume_v3" "system" {
@@ -208,7 +227,7 @@ resource "openstack_compute_instance_v2" "system" {
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
-  user_data            = "${file("alt-instance-bootstrap.sh")}"
+  user_data = file("alt-instance-bootstrap.sh")
 
   network {
     port = openstack_networking_port_v2.system_internal_without_security.id
@@ -221,13 +240,13 @@ resource "openstack_compute_instance_v2" "system" {
     boot_index       = 0
     delete_on_termination = true
   }
-
 }
 
 resource "openstack_blockstorage_volume_v3" "worker" {
-  name                 = "candi-${PREFIX}-worker-0"
+  for_each = { for image_name, image_id in local.worker_images : image_name => image_id }
+  name                 = "candi-${PREFIX}-worker-${each.key}"
   size                 = "30"
-  image_id             = data.openstack_images_image_v2.redos_image.id
+  image_id             = each.value
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
   enable_online_resize = true
@@ -237,24 +256,24 @@ resource "openstack_blockstorage_volume_v3" "worker" {
 }
 
 resource "openstack_compute_instance_v2" "worker" {
-  name = "candi-${PREFIX}-worker-0"
+  for_each = { for image_name, image_id in local.worker_images : image_name => image_id }
+  name = "candi-${PREFIX}-worker-${each.key}"
   flavor_name = var.flavor_name_large
   key_pair = "candi-${PREFIX}-key"
   availability_zone = var.az_zone
-  user_data            = "${file("redos-instance-bootstrap.sh")}"
+  user_data = file("${each.key}-instance-bootstrap.sh")
 
   network {
-    port = openstack_networking_port_v2.worker_internal_without_security.id
+    port = openstack_networking_port_v2.worker_internal_without_security[each.key].id
   }
 
   block_device {
-    uuid             = openstack_blockstorage_volume_v3.worker.id
+    uuid             = openstack_blockstorage_volume_v3.worker[each.key].id
     source_type      = "volume"
     destination_type = "volume"
     boot_index       = 0
     delete_on_termination = true
   }
-
 }
 
 resource "openstack_compute_floatingip_v2" "bastion" {
@@ -274,8 +293,16 @@ output "system_ip_address_for_ssh" {
   value = lookup(openstack_compute_instance_v2.system.network[0], "fixed_ip_v4")
 }
 
-output "worker_ip_address_for_ssh" {
-  value = lookup(openstack_compute_instance_v2.worker.network[0], "fixed_ip_v4")
+output "worker_redos_ip_address_for_ssh" {
+  value = lookup(openstack_compute_instance_v2.worker["redos"].network[0], "fixed_ip_v4")
+}
+
+output "worker_opensuse_ip_address_for_ssh" {
+  value = lookup(openstack_compute_instance_v2.worker["opensuse"].network[0], "fixed_ip_v4")
+}
+
+output "worker_rosa_ip_address_for_ssh" {
+  value = lookup(openstack_compute_instance_v2.worker["rosa"].network[0], "fixed_ip_v4")
 }
 
 output "bastion_ip_address_for_ssh" {

@@ -26,7 +26,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
@@ -53,8 +53,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:                         "Secret",
 			FilterFunc:                   applyIngressSecretFilter,
 			NamespaceSelector:            internal.NsSelector(),
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -131,7 +131,7 @@ func orderCertificate(input *go_hook.HookInput) error {
 			}
 		}
 
-		info, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+		info, err := certificate.GenerateSelfSignedCert(input.Logger,
 			fmt.Sprintf("nginx-ingress:%s", controller.Name),
 			caAuthority,
 			certificate.WithGroups("ingress-nginx:auth"),

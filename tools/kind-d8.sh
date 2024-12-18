@@ -147,7 +147,7 @@ os_detect() {
   OS_NAME="${OS_NAME// /}"
 
   # Supported on ...
-  if [[ ("$OS_NAME" == "Ubuntu") || ("$OS_NAME" == "Debian") ]]; then
+  if [[ ("$OS_NAME" == "Ubuntu") || ("$OS_NAME" == "ubuntu") || ("$OS_NAME" == "Debian") || ("$OS_NAME" == "debian") ]]; then
     OS_NAME=linux
   elif [[ ("$OS_NAME" != "mac") && ("$OS_NAME" != "linux") ]]; then
     OS_NAME=
@@ -364,6 +364,10 @@ configs_create() {
   cat <<EOF >${CONFIG_DIR}/kind.cfg
 apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
+featureGates:
+  "ValidatingAdmissionPolicy": true
+runtimeConfig:
+  "admissionregistration.k8s.io/v1alpha1": true
 nodes:
 - role: control-plane
   extraPortMappings:
@@ -406,6 +410,20 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
+  name: operator-prometheus-crd
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus-crd
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
   name: prometheus
 spec:
   version: 2
@@ -423,13 +441,6 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: operator-prometheus-crd
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
   name: operator-prometheus
 spec:
   enabled: true
@@ -437,7 +448,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: prometheus-crd
+  name: operator-prometheus
 spec:
   enabled: true
 ---
@@ -466,6 +477,10 @@ EOF
   if [[ -n "$D8_LICENSE_KEY" ]]; then
     generate_ee_access_string "$D8_LICENSE_KEY"
     cat <<EOF >>${CONFIG_DIR}/config.yml
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
   imagesRepo: $D8_REGISTRY_PATH
   registryDockerCfg: $D8_EE_ACCESS_STRING
 EOF
@@ -531,6 +546,12 @@ deckhouse_install() {
   fi
 }
 
+macos_force_qemu() {
+  if [ "$OS_NAME" = "mac" ]
+  then ${KUBECTL_PATH} --context kind-"${KIND_CLUSTER_NAME}" patch daemonset node-exporter -n d8-monitoring --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/1/env/-", "value": {"name": "EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU", "value": "1"}}]' 2>/dev/null
+  fi
+}
+
 ingress_check() {
   local retries_max=100
   local retries_count=0
@@ -577,8 +598,9 @@ ingress_check() {
 }
 
 generate_ee_access_string() {
-  auth_part=$(echo -n "license-token:$1" | base64 -w0)
-  D8_EE_ACCESS_STRING=$(echo -n "{\"auths\": { \"$D8_REGISTRY_ADDRESS\": { \"username\": \"license-token\", \"password\": \"$1\", \"auth\": \"$auth_part\"}}}" | base64 -w0)
+  if [ "$OS_NAME" != "mac" ]; then B64_ARG="-w0"; else B64_ARG=""; fi
+  auth_part=$(echo -n "license-token:$1" | base64 $B64_ARG)
+  D8_EE_ACCESS_STRING=$(echo -n "{\"auths\": { \"$D8_REGISTRY_ADDRESS\": { \"username\": \"license-token\", \"password\": \"$1\", \"auth\": \"$auth_part\"}}}" | base64 $B64_ARG)
 
   if [ "$?" -ne "0" ]; then
     echo "Error generation container registry access string for Deckhouse Kubernetes Platform Enterprise Edition"
@@ -638,6 +660,7 @@ main() {
   configs_create
   cluster_create
   deckhouse_install
+  macos_force_qemu
   ingress_check
   installation_finish
 }

@@ -11,7 +11,6 @@ apiVersions:
     - apiVersion: deckhouse.io/v1
       kind: InitConfiguration
       deckhouse:
-        releaseChannel: Stable
         imagesRepo: nexus.company.my/deckhouse/ee
         registryDockerCfg: eyJhdXRocyI6IHsgIm5leHVzLmNvbXBhbnkubXkiOiB7InVzZXJuYW1lIjoibmV4dXMtdXNlciIsInBhc3N3b3JkIjoibmV4dXMtcEBzc3cwcmQiLCJhdXRoIjoiYm1WNGRYTXRkWE5sY2pwdVpYaDFjeTF3UUhOemR6QnlaQW89In19fQo=
         registryScheme: HTTPS
@@ -19,13 +18,6 @@ apiVersions:
           -----BEGIN CERTIFICATE-----
           ...
           -----END CERTIFICATE-----
-        configOverrides:
-          global:
-            modules:
-              publicDomainTemplate: "%s.kube.company.my"
-          cniFlannelEnabled: true
-          cniFlannel:
-            podNetworkMode: VXLAN
     properties:
       apiVersion:
         type: string
@@ -66,74 +58,8 @@ apiVersions:
             description: Registry access scheme (HTTP or HTTPS).
             enum: [HTTP, HTTPS]
             default: HTTPS
-          releaseChannel:
-            type: string
-            deprecated: true
-            description: |
-              Instead of this parameter, use the [releaseChannel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter of the ModuleConfig 'deckhouse'.
-
-              The release channel to use in the cluster.
-            enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
           devBranch:
             type: string
             deprecated: true
             description: |
               The parameter is used for development needs. Will be replaced with the CLI-tools.
-          bundle:
-            type: string
-            deprecated: true
-            description: |
-              Instead of this parameter, use the [bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) parameter of the ModuleConfig 'deckhouse'.
-
-              The Deckhouse bundle to use in the cluster.
-            enum: [Minimal, Managed, Default]
-            default: Default
-          logLevel:
-            type: string
-            deprecated: true
-            description: |
-              Instead of this parameter, use the [logLevel](../modules/002-deckhouse/configuration.html#parameters-loglevel) parameter of the ModuleConfig 'deckhouse'.
-
-              Deckhouse logging Level.
-            enum: [Debug, Info, Error]
-            default: Info
-          configOverrides:
-            type: object
-            deprecated: true
-            description: |
-              Instead of this parameter, use ModuleConfig resources to configure modules.
-
-              Initial [Deckhouse configuration](/documentation/v1/#deckhouse-configuration).
-
-              Specify here Deckhouse configuration parameters with which it should start after installation.
-
-              The structure specified in the parameter will be used to create a [global Deckhouse configuration](../deckhouse-configure-global.html) (moduleConfig `global`) and [module settings](../#configuring-the-module) (moduleConfig `<module-name>`).
-
-              Structure format
-              ```yaml
-              configOverrides:
-                global:
-                  ... global parameters section
-                <moduleName>Enabled: true|false
-                <moduleName>:
-                  ... the module parameters section
-              ```
-
-              **Caution!** The module name in **camelCase** is used to enable/disable the module and specify its settings (for example, `userAuthn`) in the `configOverrides` structure. After installing Deckhouse, the moduleConfig resource is used to manage the module with the module name in **snake-case** (for example, `user-authn`).
-            x-doc-example: |
-              ```yaml
-              configOverrides:
-                global:
-                  modules:
-                    publicDomainTemplate: "%s.k8s.company.my"
-                monitoringPingEnabled: false
-                userAuthn:
-                  publishAPI:
-                    enable: true
-                    https:
-                      mode: Global
-                prometheus:
-                  longtermRetentionDays: 5
-              ```
-
-

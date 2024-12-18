@@ -12,8 +12,10 @@ apiVersions:
         Run the following command to change the configuration in a running cluster:
 
         ```shell
-        kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
+        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
         ```
+
+        > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
       x-doc-search: |
         ProviderClusterConfiguration
       x-examples:
@@ -63,20 +65,18 @@ apiVersions:
             The definition of the master's NodeGroup.
 
             > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
-          x-unsafe-rules: [updateMasterImage]
           properties:
             replicas:
               type: integer
               minimum: 1
               description: |
                 The number of master nodes to create. It is important to have an odd number of masters to ensure a quorum.
-              x-unsafe-rules: [updateReplicas]
             instanceClass:
               type: object
               additionalProperties: false
               required: [template, storageProfile, sizingPolicy]
               description: |
-                Partial contents of the fields of the [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
+                Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
               properties:
                 rootDiskSizeGb:
                   description: |
@@ -111,7 +111,9 @@ apiVersions:
                   example: ssd
                 template:
                   description: |
-                    Path of the template OVA that is to be used. Consists of organization (optional), catalog, template path.
+                    Path of the template OVA that is to be used.
+
+                    Consists of organization (optional), catalog, template path. Organization may not match with provider.organization (in case of shared templates).
                   type: string
                   example: Linux/ubuntu2204-cloud-ova
                 mainNetworkIPAddresses:
@@ -190,7 +192,7 @@ apiVersions:
                 additionalProperties: false
                 required: [template, storageProfile, sizingPolicy]
                 description: |
-                  Partial contents of the fields of the [VCDInstanceClass](../cluster_configuration.html#vcdinstanceclass).
+                  Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
                 properties:
                   rootDiskSizeGb:
                     description: |
@@ -219,7 +221,9 @@ apiVersions:
                     example: ssd
                   template:
                     description: |
-                      Path of the template OVA that is to be used. Consists of organization (optional), catalog, template path.
+                      Path of the template OVA that is to be used.
+
+                      Consists of organization (optional), catalog, template path. Organization may not match with provider.organization (in case of shared templates).
                     type: string
                     example: Linux/ubuntu2204-cloud-ova
                   mainNetworkIPAddresses:
@@ -271,7 +275,7 @@ apiVersions:
           description: |
             The way resources are located in the cloud.
 
-            Read [more](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-vcd/layouts.html) about possible provider layouts.
+            Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vcd/layouts.html) about possible provider layouts.
         provider:
           type: object
           additionalProperties: false

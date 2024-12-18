@@ -29,7 +29,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -47,8 +47,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "controller",
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "IngressNginxController",
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(false),
 			FilterFunc:                   inletHostWithFailoverFilter,
 		},
 	},
@@ -130,7 +130,7 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
 		})
 		if err != nil {
-			input.LogEntry.Warnf("couldn't list ingresses: %v", err)
+			input.Logger.Warnf("couldn't list ingresses: %v", err)
 			return nil
 		}
 		ingressList.GetRemainingItemCount()
@@ -165,7 +165,7 @@ func checkControllerConfigMaps(client k8s.Client, input *go_hook.HookInput, cont
 	for _, cmName := range configMaps {
 		configMap, err := client.CoreV1().ConfigMaps(ingressNamespace).Get(context.Background(), cmName, metav1.GetOptions{})
 		if err != nil {
-			input.LogEntry.Warnf("couldn't get %s controller's configmap %s: %v", controllerName, cmName, err)
+			input.Logger.Warnf("couldn't get %s controller's configmap %s: %v", controllerName, cmName, err)
 			continue
 		}
 		for k, v := range configMap.Data {

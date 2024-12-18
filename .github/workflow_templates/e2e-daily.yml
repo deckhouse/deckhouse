@@ -48,8 +48,8 @@ jobs:
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{- $criName := "Containerd" -}!}
-{!{- $kubernetesVersion := "1.27" -}!}
-{!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" -}!}
+{!{- $kubernetesVersion := "1.29" -}!}
+{!{- $providerNames := slice "AWS" "EKS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" -}!}
 {!{- if $enableWorkflowOnTestRepos -}!}
 {!{-   $providerNames = slice "AWS" "OpenStack" "Azure" -}!}
 {!{- end -}!}
@@ -80,3 +80,5 @@ jobs:
 {!{- $annotations = coll.Merge $annotations (dict "description" "Check Daily e2e workflow log for more information or see another alerts in this group.") -}!}
 
 {!{- tmpl.Exec "e2e_send_alert_template" (slice (dict "labels" $labels "annotations" $annotations )) | strings.Indent 4 -}!}
+
+{!{- tmpl.Exec "send_alert_loop_template" (slice (dict "labels" $labels "annotations" $annotations )) | strings.Indent 4 -}!}

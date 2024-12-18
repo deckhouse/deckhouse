@@ -81,12 +81,37 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
+      # <template: login_git_step>
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
+      - name: Add ssh_known_hosts
+        run: |
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
+      # </template: login_git_step>
       - name: Download custom trivy-db binary and copy image
         run: |
-          rm -rf ./trivy-db && git clone --depth 1 --branch flant-latest ${{secrets.SOURCE_REPO}}/aquasecurity/trivy-db.git && cd trivy-db 
-          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-db:2 >/dev/null 2>&1
-          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-db:2 >/dev/null 2>&1
-          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-db:2 >/dev/null 2>&1
+          rm -rf ./trivy-db && git clone --depth 1 --branch flant-v2 ${{secrets.SOURCE_REPO_GIT}}/aquasecurity/trivy-db.git && cd trivy-db
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee >/dev/null 2>&1
+          ./update.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe >/dev/null 2>&1
+          ./update.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss >/dev/null 2>&1
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/ee/security/trivy-bdu:1 >/dev/null 2>&1
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_REGISTRY_HOST}}/deckhouse/fe/security/trivy-bdu:1 >/dev/null 2>&1
           ./update-vulnerability-references.sh ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}/sys/deckhouse-oss/security/trivy-bdu:1 >/dev/null 2>&1

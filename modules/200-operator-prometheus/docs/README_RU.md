@@ -122,7 +122,7 @@ title: "Модуль operator-prometheus"
 * С помощью механизма CRD (Custom Resource Definitions) определяет четыре custom ресурса:
   * [prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheus) — определяет инсталляцию (кластер) Prometheus
   * [servicemonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor) — определяет, как "мониторить" (собирать метрики) набор сервисов
-  * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanager) — определяет кластер Alertmanager'ов (мы не пользуемся, так как шлем метрики напрямую в [madison](https://madison.flant.com/))
+  * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanager) — определяет кластер Alertmanager'ов
   * [prometheusrule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusrule) — определяет список Prometheus rules
 * Следит за ресурсами `prometheus` и генерирует для каждого:
   * StatefulSet (с самим Prometheus'ом)

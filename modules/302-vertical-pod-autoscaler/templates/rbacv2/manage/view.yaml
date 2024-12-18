@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: vertical-pod-autoscaler
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: kube-system
+  name: d8:manage:permission:module:vertical-pod-autoscaler:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - vertical-pod-autoscaler
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

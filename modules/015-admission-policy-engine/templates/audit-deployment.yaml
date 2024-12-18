@@ -4,7 +4,7 @@ memory: 32Mi
 {{- end }}
 
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -67,7 +67,7 @@ spec:
         args:
         - --audit-interval=60
         - --log-level=INFO
-        - --constraint-violations-limit=20
+        - --constraint-violations-limit=200
         - --audit-from-cache=false
         - --audit-chunk-size=500
         - --audit-match-kind-only=true
@@ -118,7 +118,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-            {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "manager_resources" . | nindent 12 }}
             {{- end }}
         volumeMounts:
@@ -139,7 +139,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-            {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+            {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "exporter_resources" . | nindent 12 }}
             {{- end }}
       - name: kube-rbac-proxy
@@ -184,7 +184,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
       dnsPolicy: ClusterFirst

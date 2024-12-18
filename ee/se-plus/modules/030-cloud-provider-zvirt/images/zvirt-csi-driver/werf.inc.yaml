@@ -1,0 +1,67 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- if $value.csi.zvirt }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+fromImage: common/distroless
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /ovirt-csi-driver
+  to: /ovirt-csi-driver
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - 'libresolv*'
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /lib/udev/scsi_id
+  to: /lib/udev/scsi_id
+  before: setup
+docker:
+  ENTRYPOINT: ["/ovirt-csi-driver"]
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+    {{- if semverCompare ">=1.27" $version }}
+from: {{ $.Images.BASE_GOLANG_19_BULLSEYE_DEV }}
+    {{- end }}
+git:
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  includePaths:
+  - '**/*.patch'
+  stageDependencies:
+    install:
+    - '**/*.patch'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p /src
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch {{ $value.csi.zvirt }} {{ $.SOURCE_REPO }}/openshift/ovirt-csi-driver.git /src
+  - cd /src
+  - rm -rf vendor
+  - git apply /patches/*.patch --verbose
+  - go mod tidy
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X version.Version={{ $value.csi.zvirt }}" -o /ovirt-csi-driver ./cmd/ovirt-csi-driver/ovirt-csi-driver.go
+ {{- end }}
+{{- end }}
+---
+{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  setup:
+    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

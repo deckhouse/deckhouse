@@ -1,0 +1,44 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /relocate
+  to: /
+  before: setup
+docker:
+  ENTRYPOINT: ["/usr/sbin/pmacctd"]
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 -b 1.7.9 {{ .SOURCE_REPO }}/pmacct/pmacct.git .
+  - |
+    cat > .gitmodules <<"EOF"
+    [submodule "src/external_libs/libcdada"]
+      path = src/external_libs/libcdada
+      url = {{ .SOURCE_REPO }}/msune/libcdada.git
+    EOF
+  - git submodule update --init
+  - rm -rf /src/.git
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromArtifact: common/relocate-artifact
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y build-essential libpcap-devel libjansson-devel
+  install:
+  - cd /src
+  - ./autogen.sh
+  - ./configure --prefix=/usr --enable-jansson
+  - make
+  - make install
+  - /binary_replace.sh -i "/usr/sbin/pmacctd" -o /relocate

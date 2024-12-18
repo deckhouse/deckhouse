@@ -1,4 +1,4 @@
-- name: cni-cilium
+- name: d8.cni-cilium.agent
   rules:
   - alert: CiliumAgentUnreachableHealthEndpoints
     # Select all current `cilium_unreachable_health_endpoints` if the condition is met:

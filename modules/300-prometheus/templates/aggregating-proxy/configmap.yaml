@@ -39,7 +39,7 @@ data:
                 {{- end }}
           ignore_error: false
           anti_affinity: 30s
-          timeout: 5s
+          timeout: 30s
           remote_read: false
           prefer_max: true
           scheme: https

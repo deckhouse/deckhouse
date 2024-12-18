@@ -1,0 +1,4 @@
+module: monitoring-custom
+namespace: d8-monitoring
+subsystems:
+  - observability

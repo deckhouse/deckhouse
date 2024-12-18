@@ -1,0 +1,19 @@
+candi:
+  features:
+    - summary: >-
+        Stricter permissions (0700/0600) applied to kubelet configuration and PKI files to improve
+        security.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10037
+dhctl:
+  fixes:
+    - summary: Fix sshBastionPort spec type
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9990
+docs:
+  fixes:
+    - summary: Added Information About Openstack API Access Requirement.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9969
+istio:
+  fixes:
+    - summary: Improved validation of the ModuleConfig
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9912
+

@@ -132,6 +132,7 @@ spec:
                       description: InstancePhase is a label detailing the state of the instance
                           at the current point in time.
                       enum:
+                        - Error
                         - Pending
                         - Bootstrapping
                         - Running

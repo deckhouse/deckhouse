@@ -3,15 +3,14 @@ title: "Managing nodes: FAQ"
 search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in a cluster. Changing the CRI of the node.
 ---
-{% raw %}
 
 ## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
 
-See [the control-plane-manager module FAQ...](../040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+See [the control-plane-manager module FAQ.](../040-control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
 
 ## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
 
-See [the control-plane-manager module FAQ...](../040-control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
+See [the control-plane-manager module FAQ.](../040-control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
 
 ## Static nodes
 
@@ -23,7 +22,51 @@ You can add a static node to the cluster manually ([an example](examples.html#ma
 
 To add a static node to a cluster (bare metal server or virtual machine), follow these steps:
 
-1. Prepare the required resources — servers/virtual machines, install specific OS packages, add mount points, configure the network, etc.
+1. Prepare the required resources:
+
+   - Allocate a server or virtual machine and ensure that the node has the necessary network connectivity with the cluster.
+
+   - If necessary, install additional operating system packages and configure the mount points that will be used on the node.
+
+1. Create a user with `s`udo` privileges:
+
+   - Add a new user (in this example, `caps`) with s`udo` privileges:
+
+     ```shell
+     useradd -m -s /bin/bash caps
+     usermod -aG sudo caps
+     ```
+
+   - Allow the user to run `sudo` commands without having to enter a password. For this, add the following line to the `sudo` configuration on the server (you can either edit the `/etc/sudoers` file, or run the `sudo visudo` command, or use some other method):
+
+     ```shell
+     caps ALL=(ALL) NOPASSWD: ALL
+     ```
+
+1. Set `UsePAM` to `yes` in `/etc/ssh/sshd_config` on server and restart sshd service:
+
+   ```shell
+   sudo systemctl restart sshd
+   ```
+
+1. Generate a pair of SSH keys with an empty passphrase on the server:
+
+   ```shell
+   ssh-keygen -t rsa -f caps-id -C "" -N ""
+   ```
+
+   The public and private keys of the caps user will be stored in the `caps-id.pub` and `caps-id` files in the current directory on the server.
+
+1. Add the generated public key to the `/home/caps/.ssh/authorized_keys` file of the `caps` user by executing the following commands in the keys directory on the server:
+
+   ```shell
+   mkdir -p /home/caps/.ssh
+   cat caps-id.pub >> /home/caps/.ssh/authorized_keys
+   chmod 700 /home/caps/.ssh
+   chmod 600 /home/caps/.ssh/authorized_keys
+   chown -R caps:caps /home/caps/
+   ```
+
 1. Create the [SSHCredentials](cr.html#sshcredentials) resource.
 1. Create the [StaticInstance](cr.html#staticinstance) resource.
 1. Create the [NodeGroup](cr.html#nodegroup) resource with the `Static` [nodeType](cr.html#nodegroup-v1-spec-nodetype), specify the [desired number of nodes](cr.html#nodegroup-v1-spec-staticinstances-count) in the group and, if necessary, the [filter](cr.html#nodegroup-v1-spec-staticinstances-labelselector) for `StaticInstance`.
@@ -58,6 +101,8 @@ You can automate the bootstrap process with any automation platform you prefer. 
    ```
 
 1. Create Ansible playbook with `vars` replaced with values from previous steps:
+
+{% raw %}
 
    ```yaml
    - hosts: all
@@ -95,6 +140,8 @@ You can automate the bootstrap process with any automation platform you prefer. 
          when: bootstrapped.stat.exists == False
    ```
 
+{% endraw %}
+
 1. Specify one more `node_group` variable. This variable must be the same as the name of `NodeGroup` to which node will belong. Variable can be passed in different ways, for example, by using an inventory file.:
 
    ```text
@@ -117,7 +164,9 @@ You can automate the bootstrap process with any automation platform you prefer. 
 
 ### How do I clean up a static node manually?
 
-> This method is valid for both manually configured nodes (using the bootstrap script) and nodes configured using CAPS.
+{% alert level="info" %}
+This method is valid for both manually configured nodes (using the bootstrap script) and nodes configured using CAPS.
+{% endalert %}
 
 To decommission a node from the cluster and clean up the server (VM), run the following command on the node:
 
@@ -130,6 +179,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 A `StaticInstance` that is in the `Pending` state can be deleted with no adverse effects.
 
 To delete a `StaticInstance` in any state other than `Pending` (`Runnig`, `Cleaning`, `Bootstraping`), you need to:
+
 1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the `StaticInstance`.
 1. Wait until the `StaticInstance` status becomes `Pending`.
 1. Delete the `StaticInstance`.
@@ -160,7 +210,9 @@ Applying the changes will take some time.
 
 This is only needed if you have to move a static node from one cluster to another. Be aware these operations remove local storage data. If you just need to change a NodeGroup, follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).
 
-> **Note!** Evict resources from the node and remove the node from LINSTOR/DRBD using the [instruction](/modules/sds-replicated-volume/stable/faq.html#how-do-i-evict-resources-from-a-node) if the node you are cleaning up has LINSTOR/DRBD storage pools.
+{% alert level="warning" %}
+Evict resources from the node and remove the node from LINSTOR/DRBD using the [instruction](/modules/sds-replicated-volume/stable/faq.html#how-do-i-evict-resources-from-a-node) if the node you are cleaning up has LINSTOR/DRBD storage pools.
+{% endalert %}
 
 1. Delete the node from the Kubernetes cluster:
 
@@ -360,21 +412,26 @@ To force the redeployment of all Machines, you need to add/modify the `manual-ro
 
 ## How do I allocate nodes to specific loads?
 
-> **Note!** You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for **Deckhouse** components. Please, use the `dedicated` or `dedicated.client.com` keys.
+{% alert level="warning" %}
+You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the `NodeGroup`. It is reserved for Deckhouse components. Please, use the `dedicated` or `dedicated.client.com` keys.
+{% endalert %}
 
 There are two ways to solve this problem:
 
 1. You can set labels to `NodeGroup`'s `spec.nodeTemplate.labels`, to use them in the `Pod`'s [spec.nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) or [spec.affinity.nodeAffinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) parameters. In this case, you select nodes that the scheduler will use for running the target application.
 2. You cat set taints to `NodeGroup`'s `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
-> Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
-> To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the [modules.placement.customTolerationKeys](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
+{% alert level="info" %}
+Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
+
+To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the [modules.placement.customTolerationKeys](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
+{% endalert %}
 
 ## How to allocate nodes to system components?
 
 ### Frontend
 
-For **Ingress** controllers, use the `NodeGroup` with the following configuration:
+For Ingress controllers, use the `NodeGroup` with the following configuration:
 
 ```yaml
 nodeTemplate:
@@ -407,7 +464,7 @@ The most efficient way is to have some extra nodes "ready". In this case, you ca
 Here is how you should configure the target `NodeGroup`:
 
 1. Specify the number of "ready" nodes (or a percentage of the maximum number of nodes in the group) using the `cloudInstances.standby` paramter.
-1. If there are additional service components (not maintained by Deckhouse, such as `filebeat` DaemonSet) for these nodes, you need to specify their combined resource consumption via the `standbyHolder.notHeldResources` parameter.
+1. If there are additional service components on nodes that are not handled by Deckhouse (e.g., the `filebeat` DaemonSet), you can specify the percentage of node resources they can consume via the `standbyHolder.overprovisioningRate` parameter.
 1. This feature requires that at least one group node is already running in the cluster. In other words, there must be either a single replica of the application, or the `cloudInstances.minPerZone` parameter must be set to `1`.
 
 An example:
@@ -418,14 +475,14 @@ cloudInstances:
   minPerZone: 1
   standby: 10%
   standbyHolder:
-    notHeldResources:
-      cpu: 300m
-      memory: 2Gi
+    overprovisioningRate: 30%
 ```
 
 ## How do I disable machine-controller-manager in the case of potentially cluster-damaging changes?
 
-> **Note!** Use this switch only if you know what you are doing and clearly understand the consequences.
+{% alert level="danger" %}
+Use this switch only if you know what you are doing and clearly understand the consequences.
+{% endalert %}
 
 Set the `mcmEmergencyBrake` parameter to true:
 
@@ -449,7 +506,8 @@ jq -r '.data.".dockerconfigjson"' | base64 -d |
 jq -r '.auths."registry.deckhouse.io".auth'
 ```
 
-Copy the command's output and use it for setting the AUTH variable on the corrupted master.
+Copy the command's output and use it for setting the `AUTH` variable on the corrupted master.
+
 Next, you need to pull images of `control plane` components to the corrupted master:
 
 ```shell
@@ -462,7 +520,9 @@ You need to restart `kubelet` after pulling the images.
 
 ## How to change CRI for NodeGroup?
 
-> **Note!** CRI can only be switched from `Containerd` to `NotManaged` and back (the [cri.type](cr.html#nodegroup-v1-spec-cri-type) parameter).
+{% alert level="warning" %}
+CRI can only be switched from `Containerd` to `NotManaged` and back (the [cri.type](cr.html#nodegroup-v1-spec-cri-type) parameter).
+{% endalert %}
 
 Set NodeGroup `cri.type` to `Containerd` or `NotManaged`.
 
@@ -493,7 +553,9 @@ Also, this operation can be done with patch:
   kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
-> **Note!** While changing `cri.type` for NodeGroups, created using `dhctl`, you must change it in `dhctl config edit provider-cluster-configuration` and in `NodeGroup` object.
+{% alert level="warning" %}
+While changing `cri.type` for NodeGroups, created using `dhctl`, you must change it in `dhctl config edit provider-cluster-configuration` and in `NodeGroup` object.
+{% endalert %}
 
 After setting up a new CRI for NodeGroup, the node-manager module drains nodes one by one and installs a new CRI on them. Node update
 is accompanied by downtime (disruption). Depending on the `disruption` setting for NodeGroup, the node-manager module either automatically allows
@@ -501,11 +563,14 @@ node updates or requires manual confirmation.
 
 ## How to change CRI for the whole cluster?
 
-> **Note!** CRI can only be switched from `Containerd` to `NotManaged` and back (the [cri.type](cr.html#nodegroup-v1-spec-cri-type) parameter).
+{% alert level="warning" %}
+CRI can only be switched from `Containerd` to `NotManaged` and back (the [cri.type](cr.html#nodegroup-v1-spec-cri-type) parameter).
+{% endalert %}
 
 It is necessary to use the `dhctl` utility to edit the `defaultCRI` parameter in the `cluster-configuration` config.
 
 Also, this operation can be done with the following patch:
+
 * For `Containerd`:
 
   ```shell
@@ -523,9 +588,11 @@ Also, this operation can be done with the following patch:
 If it is necessary to leave some NodeGroup on another CRI, then before changing the `defaultCRI` it is necessary to set CRI for this NodeGroup,
 as described [here](#how-to-change-cri-for-nodegroup).
 
-> **Note!** Changing `defaultCRI` entails changing CRI on all nodes, including master nodes.
-> If there is only one master node, this operation is dangerous and can lead to a complete failure of the cluster!
-> The preferred option is to make a multi-master and change the CRI type!
+{% alert level="danger" %}
+Changing `defaultCRI` entails changing CRI on all nodes, including master nodes.
+If there is only one master node, this operation is dangerous and can lead to a complete failure of the cluster!
+The preferred option is to make a multi-master and change the CRI type.
+{% endalert %}
 
 When changing the CRI in the cluster, additional steps are required for the master nodes:
 
@@ -644,6 +711,7 @@ spec:
       curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
     fi
     bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
+    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place 
   nodeGroups:
   - gpu
   weight: 30
@@ -679,6 +747,7 @@ spec:
       curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
     fi
     bb-yum-install nvidia-container-toolkit nvidia-driver
+    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
   nodeGroups:
   - gpu
   weight: 30
@@ -772,7 +841,54 @@ Done
 
 ## How to deploy custom containerd configuration?
 
-Bashible on nodes merges main deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
+{% alert level="info" %}
+The example of `NodeGroupConfiguration` uses functions of the script [032_configure_containerd.sh](./#features-of-writing-scripts).
+{% endalert %}
+
+{% alert level="danger" %}
+Adding custom settings causes a restart of the `containerd` service.
+{% endalert %}
+
+Bashible on nodes merges main Deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
+
+{% alert level="warning" %}
+You can override the values of the parameters that are specified in the file `/etc/containerd/deckhouse.toml`, but you will have to ensure their functionality on your own. Also, it is better not to change the configuration for the master nodes (nodeGroup `master`).
+{% endalert %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-option-config.sh
+spec:
+  bundles:
+    - '*'
+  content: |
+    # Copyright 2024 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/additional_option.toml - << EOF
+    oom_score = 500
+    [metrics]
+    address = "127.0.0.1"
+    grpc_histogram = true
+    EOF
+  nodeGroups:
+    - "worker"
+  weight: 31
+```
 
 ### How to add additional registry auth?
 
@@ -801,24 +917,118 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
 
     mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << "EOF"
+    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
     [plugins]
       [plugins."io.containerd.grpc.v1.cri"]
         [plugins."io.containerd.grpc.v1.cri".registry]
           [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
             [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
               endpoint = ["https://registry-1.docker.io"]
-            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."artifactory.proxy"]
-              endpoint = ["https://artifactory.proxy"]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
+              endpoint = ["https://${REGISTRY_URL}"]
           [plugins."io.containerd.grpc.v1.cri".registry.configs]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs."artifactory.proxy".auth]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
               auth = "AAAABBBCCCDDD=="
     EOF
   nodeGroups:
     - "*"
-  weight: 49
+  weight: 31
+```
+
+### How to configure a certificate for an additional registry?
+
+{% alert level="info" %}
+In addition to containerd, the certificate can be [simultaneously added](examples.html#adding-a-certificate-to-the-os-and-containerd) into the OS.
+{% endalert %}
+
+Example of the `NodeGroupConfiguration` resource for configuring a certificate for an additional registry:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: configure-cert-containerd.sh
+spec:
+  bundles:
+  - '*'
+  content: |-
+    # Copyright 2024 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    REGISTRY_URL=private.registry.example
+    CERT_FILE_NAME=${REGISTRY_URL}
+    CERTS_FOLDER="/var/lib/containerd/certs/"
+    CERT_CONTENT=$(cat <<"EOF"
+    -----BEGIN CERTIFICATE-----
+    MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
+    JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
+    MTAzMjA4WhcNMjQxMDMwMTAzMjA4WjAlMSMwIQYDVQQDExpuZXh1cy41MS4yNTAu
+    NDEuMi5zc2xpcC5pbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL1p
+    WLPr2c4SZX/i4IS59Ly1USPjRE21G4pMYewUjkSXnYv7hUkHvbNL/P9dmGBm2Jsl
+    WFlRZbzCv7+5/J+9mPVL2TdTbWuAcTUyaG5GZ/1w64AmAWxqGMFx4eyD1zo9eSmN
+    G2jis8VofL9dWDfUYhRzJ90qKxgK6k7tfhL0pv7IHDbqf28fCEnkvxsA98lGkq3H
+    fUfvHV6Oi8pcyPZ/c8ayIf4+JOnf7oW/TgWqI7x6R1CkdzwepJ8oU7PGc0ySUWaP
+    G5bH3ofBavL0bNEsyScz4TFCJ9b4aO5GFAOmgjFMMUi9qXDH72sBSrgi08Dxmimg
+    Hfs198SZr3br5GTJoAkCAwEAAaN1MHMwDgYDVR0PAQH/BAQDAgWgMAwGA1UdEwEB
+    /wQCMAAwUwYDVR0RBEwwSoIPbmV4dXMuc3ZjLmxvY2FsghpuZXh1cy41MS4yNTAu
+    NDEuMi5zc2xpcC5pb4IbZG9ja2VyLjUxLjI1MC40MS4yLnNzbGlwLmlvMA0GCSqG
+    SIb3DQEBCwUAA4IBAQBvTjTTXWeWtfaUDrcp1YW1pKgZ7lTb27f3QCxukXpbC+wL
+    dcb4EP/vDf+UqCogKl6rCEA0i23Dtn85KAE9PQZFfI5hLulptdOgUhO3Udluoy36
+    D4WvUoCfgPgx12FrdanQBBja+oDsT1QeOpKwQJuwjpZcGfB2YZqhO0UcJpC8kxtU
+    by3uoxJoveHPRlbM2+ACPBPlHu/yH7st24sr1CodJHNt6P8ugIBAZxi3/Hq0wj4K
+    aaQzdGXeFckWaxIny7F1M3cIWEXWzhAFnoTgrwlklf7N7VWHPIvlIh1EYASsVYKn
+    iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
+    -----END CERTIFICATE-----
+    EOF
+    )
+
+    CONFIG_CONTENT=$(cat <<EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+        ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
+    EOF
+    )
+
+    mkdir -p ${CERTS_FOLDER}
+    mkdir -p /etc/containerd/conf.d
+
+    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
+
+    CERT_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
+    
+    CONFIG_TMP_FILE="$( bb-tmp-file )"
+    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
+
+    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
+    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
+    ##  ${CERT_TMP_FILE}                          - Source file
+
+    bb-sync-file \
+      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
+      ${CERT_TMP_FILE} 
+
+    bb-sync-file \
+      "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
+      ${CONFIG_TMP_FILE} 
+  nodeGroups:
+  - '*'  
+  weight: 31
 ```
 
 ## How to use NodeGroup's priority feature
@@ -977,15 +1187,14 @@ metadata:
 An Instance resource contains a description of an implementation-independent ephemeral machine resource. For example, machines created by MachineControllerManager or Cluster API Provider Static will have a corresponding Instance resource.
 
 The object does not contain a specification. The status contains:
+
 1. A link to the InstanceClass if it exists for this implementation;
 1. A link to the Kubernetes Node object;
 1. Current machine status;
 1. Information on how to view [machine creation logs](#how-do-i-know-what-is-running-on-a-node-while-it-is-being-created) (at the machine creation stage).
 
 When a machine is created/deleted, the Instance object is created/deleted accordingly.
-You cannot create an Instance resource yourself, but you can delete it. In this case, the machine will be removed from the cluster (the removal process depends on implementation details.
-
-{% endraw %}
+You cannot create an Instance resource yourself, but you can delete it. In this case, the machine will be removed from the cluster (the removal process depends on implementation details).
 
 ## When is a node reboot required?
 

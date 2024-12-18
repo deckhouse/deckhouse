@@ -122,31 +122,34 @@
   {{- end }}
 
 <p class="resources__attrs"><span class="resources__attrs_name">{{ $title }}:</span>
+  <div class="language-yaml highlighter-rouge">
 
   {{- if and $isArray }}<br>
     {{- range $example }}
       {{- if reflect.IsMap . }}
-         {{- transform.Highlight ( transform.Remarshal "yaml" ( . | jsonify ) ) "yaml" $hl_opts }}
+          {{- transform.Highlight ( transform.Remarshal "yaml" ( . | jsonify ) ) "yaml" $hl_opts }}
       {{- else if reflect.IsSlice . }}
-         {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
+          {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
       {{- else }}
          {{- if hasPrefix . "```" }}
            {{- . | markdownify }}
          {{- else }}
-           {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
+             {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name . ) ) "yaml" $hl_opts }}
          {{- end }}
       {{- end }}
     {{- end }}
   {{- else if reflect.IsMap $example }}
-     {{- transform.Highlight ( transform.Remarshal "yaml" ( $example | jsonify ) ) "yaml" $hl_opts }}
+      {{- transform.Highlight ( transform.Remarshal "yaml" ( $example | jsonify ) ) "yaml" $hl_opts }}
   {{- else if reflect.IsSlice $example }}
-     {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
+      {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
   {{- else }}
-     {{- if hasPrefix $example "```" }}
-       {{- $example | markdownify }}
-     {{- else }}
-       {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
+    {{- if hasPrefix $example "```" }}
+      {{- $example | markdownify }}
+    {{- else }}
+        {{- transform.Highlight ( transform.Remarshal "yaml" (dict $name $example ) ) "yaml" $hl_opts }}
      {{- end }}
   {{- end }}
+  </div>
+
 {{- end }}
 

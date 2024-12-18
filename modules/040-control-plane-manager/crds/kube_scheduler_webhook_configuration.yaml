@@ -1,0 +1,129 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: kubeschedulerwebhookconfigurations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: control-plane-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: kubeschedulerwebhookconfigurations
+    singular: kubeschedulerwebhookconfiguration
+    kind: KubeSchedulerWebhookConfiguration
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['webhooks']
+          description: |
+            Defines the configuration for connecting a third-party kube-scheduler extender webhook.
+
+            An external kube-scheduler webhook allows expanding the capabilities of the scheduler and consider more complex conditions when planning the load in the  Kubernetes cluster.
+          properties:
+            webhooks:
+              type: array
+              items:
+                type: object
+                required: ['weight', 'clientConfig']
+                properties:
+                  weight:
+                    type: integer
+                    description: |
+                      The numeric multiplier for the node scores that the prioritize call generates.
+                    minimum: 1
+                  failurePolicy:
+                    type: string
+                    enum: ['Fail', 'Ignore']
+                    description: |
+                      Specifies scheduling should fail or not fail when the extender returns an error or is not reachable.
+                    default: Fail
+                  clientConfig:
+                    type: object
+                    required: ['service', 'caBundle']
+                    description: |
+                      ClientConfig defines how to communicate with the webhook.
+                    properties:
+                      service:
+                        type: object
+                        required: ['name', 'namespace', 'port', 'path']
+                        description: |
+                          Access to webhook via cluster service.
+                        properties:
+                          name:
+                            type: string
+                            description: |
+                              Service name.
+                            pattern: '^[0-9a-z\-]+$'
+                            minLength: 1
+                            maxlength: 255
+                          namespace:
+                            type: string
+                            description: |
+                              Service namespace.
+                            pattern: '^[0-9a-z\-]+$'
+                            minLength: 1
+                            maxlength: 255
+                          port:
+                            type: integer
+                            description: |
+                              Service port.
+                            minimal: 1
+                            maximal: 65535
+                          path:
+                            type: string
+                            description: |
+                              URI path.
+                            pattern: '^[0-9a-zA-Z._\/-]+$'
+                            minLength: 1
+                            maxlength: 255
+                            x-kubernetes-validations:
+                            - message: check uri format
+                              rule: 'isURL(self)'
+                      caBundle:
+                        type: string
+                        description: |
+                          caBundle is a PEM encoded CA bundle which will be used to validate the webhook's server certificate.
+                        pattern: '^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{2}={2})$'
+                        minLength: 4
+                  timeoutSeconds:
+                    type: integer
+                    description: |
+                      Webhook timeout in seconds.
+                    default: 10
+                    minimal: 1
+                    maximal: 60
+      additionalPrinterColumns:
+        - jsonPath: .webhooks[0].clientConfig.service.name
+          name: Name
+          description: 'Name of the webhook.'
+          type: string
+        - jsonPath: .webhooks[0].clientConfig.service.namespace
+          name: Namespace
+          description: 'Webhook namespace.'
+          type: string
+        - jsonPath: .webhooks[0].clientConfig.service.port
+          name: Port
+          description: 'Webhook port.'
+          type: integer
+        - jsonPath: .webhooks[0].clientConfig.service.path
+          name: Path
+          description: 'Webhook path.'
+          type: string
+        - jsonPath: .webhooks[0].timeoutSeconds
+          name: Timeout
+          description: 'Webhook timeout.'
+          type: string
+        - jsonPath: .webhooks[0].weight
+          name: Weight
+          description: 'Webhook weight.'
+          type: integer
+        - jsonPath: .webhooks[0].failurePolicy
+          name: Failure policy
+          description: 'Webhook failure policy.'
+          type: string

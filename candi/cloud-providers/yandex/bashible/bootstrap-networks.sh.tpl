@@ -52,8 +52,14 @@ function netplan_configure(){
     exit 1
   fi
 
-  primary_mac="$(grep -m 1 -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml)"
-  primary_ifname="$(ip -o link show | grep "link/ether $primary_mac" | cut -d ":" -f2 | tr -d " ")"
+  primary_mac="$(grep -m 1 -Po '(?<=macaddress: ).+' /etc/netplan/50-cloud-init.yaml | sed 's/"//g' || test $? = 1;)"
+
+  if [ -z "$primary_mac" ]; then
+    primary_ifname=$(grep -Po '(ens|eth|eno|enp)[0-9]+(?=:)' /etc/netplan/50-cloud-init.yaml | head -n1)
+  else
+    primary_ifname="$(ip -o link show | grep "link/ether $primary_mac" | cut -d ":" -f2 | tr -d " ")"
+  fi
+
   for i in /sys/class/net/!($primary_ifname); do
     if ! udevadm info "$i" 2>/dev/null | grep -Po '(?<=E: ID_NET_DRIVER=)virtio_net.*' 1>/dev/null 2>&1; then
       continue
@@ -65,11 +71,12 @@ function netplan_configure(){
     ip="$(echo "$metadata" | python3 -c 'import json; import sys; jsonDoc = sys.stdin.read(); parsed = json.loads(jsonDoc);[print(iface["ip"]) for iface in parsed["networkInterfaces"] if iface["mac"]==sys.argv[1]]' "$mac")"
     route_settings=""
     if ip_in_subnet "$ip" "$network_cidr"; then
-      read -r -d '' route_settings <<ROUTE_EOF
-        routes:
-        - to: $network_cidr
-          scope: link
+      route_settings=$(cat <<ROUTE_EOF
+routes:
+      - to: $network_cidr
+        scope: link
 ROUTE_EOF
+    )
     fi
 
   {{- /* # Configure the internal interface to route all vpc to all vm */}}

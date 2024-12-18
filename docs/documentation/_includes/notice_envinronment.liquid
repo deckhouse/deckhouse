@@ -1,0 +1,17 @@
+{% alert level="warning" %}
+{%- if page.lang == "ru" %}
+На виртуальных машинах должен быть установлен пакет `cloud-init`.
+После запуска виртуальной машины должны быть запущены следующие службы, связанные с этим пакетом:
+
+* `cloud-config.service`;
+* `cloud-final.service`;
+* `cloud-init.service`.
+{%- else %}
+The `cloud-init` package must be installed on the VMs.
+After the virtual machine is started, the following services associated with this package must be started:
+
+* `cloud-config.service`;
+* `cloud-final.service`;
+* `cloud-init.service`.
+{%- endif %}
+{% endalert %}

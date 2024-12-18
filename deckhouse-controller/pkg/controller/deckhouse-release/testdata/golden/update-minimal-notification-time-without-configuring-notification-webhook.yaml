@@ -26,13 +26,13 @@ metadata:
   name: v1.26.0
   resourceVersion: "1002"
 spec:
-  applyAfter: "2021-01-01T15:30:00Z"
+  applyAfter: "2019-10-17T17:33:00Z"
   version: v1.26.0
 status:
-  approved: true
-  message: ""
+  approved: false
+  message: Release is postponed by notification until 17 Oct 19 17:33 UTC
   phase: Pending
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null
 ---
 apiVersion: v1
 kind: Pod
@@ -78,16 +78,3 @@ spec:
         name: deckhouse
         resources: {}
 status: {}
----
-apiVersion: v1
-data:
-  isUpdating: "false"
-  notified: "true"
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-  name: d8-release-data
-  namespace: d8-system
-  resourceVersion: "1"

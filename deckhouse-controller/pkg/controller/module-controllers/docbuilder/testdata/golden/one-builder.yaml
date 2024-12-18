@@ -3,8 +3,10 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleDocumentation
 metadata:
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/documentation-exists
   name: testmodule
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   checksum: abc
   path: /testmodule/v1.0.0

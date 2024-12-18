@@ -1,4 +1,4 @@
-{{- $version := "1.4.0" }}
+{{- $version := "1.7.2" }}
 
 ---
 artifact: kruise
@@ -17,9 +17,10 @@ mount:
 shell:
   setup:
     - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch v{{ $version }} {{ $.SOURCE_REPO }}/openkruise/kruise.git
     - cd kruise
-    - find /patches -name '*.patch' -exec git apply {} \;
+    - git apply /patches/*.patch --verbose
     - go mod tidy
     - go mod vendor
     - go build -a -mod=vendor -o /tmp/manager main.go

@@ -58,7 +58,9 @@ function check_python() {
 bb-package-fetch-blob() {
   local REPOSITORY="${REPOSITORY:-}"
   local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
-
+  local no_proxy=${PACKAGES_PROXY_ADDRESSES}
+  local NO_PROXY=${PACKAGES_PROXY_ADDRESSES}
+  
   check_python
 
   cat - <<EOF | $python_binary
@@ -78,6 +80,7 @@ try:
     response = urlopen(request, timeout=300)
 except HTTPError as e:
     print("HTTP Error {}: {}".format(e.getcode(), e.read()[:255]))
+    print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))
     raise SystemExit
 with open('$2', 'wb') as f:
     f.write(response.read())
@@ -169,6 +172,8 @@ bb-package-module-install() {
 # Fetch packages by digest
 # bb-package-fetch package1:digest1 [package2:digest2 ...]
 bb-package-fetch() {
+  bb-set-proxy
+  trap bb-unset-proxy RETURN
   mkdir -p "${BB_FETCHED_PACKAGES_STORE}"
 
   declare -A PACKAGES_MAP

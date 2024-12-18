@@ -11,7 +11,6 @@ locals {
   root_disk_size       = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", "") # Openstack can have disks predefined within vm flavours, so we do not set any defaults here
   etcd_volume_size     = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
   additional_tags      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
-  server_group         = lookup(var.providerClusterConfiguration.masterNodeGroup, "serverGroup", {})
 }
 
 module "network_security_info" {

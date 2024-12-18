@@ -11,7 +11,10 @@ The control-plane-manager:
 - **Upgrades/downgrades components**. Makes sure that the versions of the components in the cluster are the same.
 - **Manages the configuration of the etcd cluster** and its members. The CPM module scales master nodes and migrates the cluster from single-master to multi-master (and vice versa).
 - **Configures kubeconfig**. The CPM module maintains an up-to-date configuration for smooth kubectl operation. It generates, renews, updates kubeconfig with the cluster-admin rights, and creates a symlink for the root user so that kubeconfig can be used by default.
-
+- **Extends scheduler functionality** by integrating external plugins via webhooks. Manages by [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration) resource. Allows more complex logic to be used in workload scheduling tasks within the cluster. For example:
+  - placing data storage application pods closer to the data itself,
+  - state-based node prioritization (network load, storage subsystem status, etc.),
+  - dividing nodes into zones, etc.
 ## Managing certificates
 
 The CPM module manages certificates of the `control-plane` components, such as:
@@ -47,11 +50,11 @@ In the *multi-master* mode, `control plane` components are automatically deploye
 
 ### Scaling master nodes
 
-The `control-plane` nodes are scaled automatically using the `node-role.kubernetes.io/control-plane=””` label:
-- Attaching the `node-role.kubernetes.io/control-plane=””` label to a node results in deploying `control plane` components on this node, connecting the new `etcd` node to the etcd cluster, and regenerating all the necessary certificates and config files.
-- Removing the `node-role.kubernetes.io/control-plane=””` label results in deleting all `control plane` components on a node, gracefully removing it from the etcd cluster, and regenerating all the necessary config files and certificates.
+The `control-plane` nodes are scaled automatically using the `node-role.kubernetes.io/control-plane=""` label:
+- Attaching the `node-role.kubernetes.io/control-plane=""` label to a node results in deploying `control plane` components on this node, connecting the new `etcd` node to the etcd cluster, and regenerating all the necessary certificates and config files.
+- Removing the `node-role.kubernetes.io/control-plane=""` label results in deleting all `control plane` components on a node, gracefully removing it from the etcd cluster, and regenerating all the necessary config files and certificates.
 
-> **Note!** Manual `etcd` actions are required when decreasing the number of nodes from two to one. In all other cases, all the necessary actions are performed automatically.
+> **Note!** Manual `etcd` [actions](./faq.html#what-if-the-etcd-cluster-fails) are required when decreasing the number of nodes from two to one. In all other cases, all the necessary actions are performed automatically. Please note that when scaling from any number of master nodes to one, sooner or later at the last step, the situation of scaling nodes from two to one will arise.
 
 ## Version control
 

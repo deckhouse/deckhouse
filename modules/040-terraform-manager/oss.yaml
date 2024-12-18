@@ -2,4 +2,4 @@
   link: https://github.com/hashicorp/terraform
   description: A tool for building, changing, and versioning infrastructure safely and efficiently.
   logo: /images/logos/terraform.png
-  licence: Mozilla Public License 2.0
+  license: Mozilla Public License 2.0

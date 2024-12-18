@@ -21,10 +21,10 @@ import (
 	"log"
 
 	"github.com/cloudflare/cfssl/csr"
-	"github.com/sirupsen/logrus"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
-func GenerateCSR(logger *logrus.Entry, cn string, options ...Option) (csrPEM, key []byte, err error) {
+func GenerateCSR(logger go_hook.Logger, cn string, options ...Option) (csrPEM, key []byte, err error) {
 	request := &csr.CertificateRequest{
 		CN:         cn,
 		KeyRequest: csr.NewKeyRequest(),
@@ -45,7 +45,7 @@ func GenerateCSR(logger *logrus.Entry, cn string, options ...Option) (csrPEM, ke
 
 	csrPEM, key, err = g.ProcessRequest(request)
 	if err != nil && logger != nil {
-		logger.Errorln(buf.String())
+		logger.Error(buf.String())
 	}
 
 	return

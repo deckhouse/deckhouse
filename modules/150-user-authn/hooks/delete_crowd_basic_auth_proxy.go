@@ -22,7 +22,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 // TODO(ipaqsa): can be deleted after 1.65
@@ -34,8 +34,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "crowd-proxy-ingress",
 			ApiVersion:                   "networking.k8s.io/v1",
 			Kind:                         "Ingress",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"crowd-basic-auth-proxy"},
 			},

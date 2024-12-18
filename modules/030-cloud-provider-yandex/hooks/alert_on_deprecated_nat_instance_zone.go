@@ -36,7 +36,7 @@ func alertOnDeprecatedNatInstanceZone(input *go_hook.HookInput) error {
 
 	layout, ok := input.Values.GetOk("cloudProviderYandex.internal.providerClusterConfiguration.layout")
 	if !ok {
-		input.LogEntry.Warn("No providerClusterConfiguration values received, skipping zone check for NAT Instance")
+		input.Logger.Warn("No providerClusterConfiguration values received, skipping zone check for NAT Instance")
 		return nil
 	}
 	if layout.String() != "WithNATInstance" {
@@ -45,12 +45,12 @@ func alertOnDeprecatedNatInstanceZone(input *go_hook.HookInput) error {
 
 	natInstanceName, ok := input.Values.GetOk("cloudProviderYandex.internal.providerDiscoveryData.natInstanceName")
 	if !ok {
-		input.LogEntry.Warn("No natInstanceName value received, skipping zone check for NAT Instance")
+		input.Logger.Warn("No natInstanceName value received, skipping zone check for NAT Instance")
 		return nil
 	}
 	natInstanceZone, ok := input.Values.GetOk("cloudProviderYandex.internal.providerDiscoveryData.natInstanceZone")
 	if !ok {
-		input.LogEntry.Warn("No natInstanceZone value received, skipping zone check for NAT Instance")
+		input.Logger.Warn("No natInstanceZone value received, skipping zone check for NAT Instance")
 		return nil
 	}
 

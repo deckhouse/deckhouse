@@ -99,7 +99,7 @@
 
         Excessive cluster-autoscaler restarts indicate that something is wrong. Normally, it should be up and running all the time.
 
-        Please, refer to the corresponding logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c controller`.
+        Please, refer to the corresponding logs: `kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler`.
 
   - alert: D8ClusterAutoscalerTooManyErrors
     expr: sum by(instance) (increase(cluster_autoscaler_errors_total[20m]) > 5)

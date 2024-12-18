@@ -35,24 +35,26 @@ function bb-event-error-create() {
     eventName="$(echo -n "${D8_NODE_HOSTNAME}")-$(echo $step | sed 's#.*/##; s/_/-/g')"
     nodeName="${D8_NODE_HOSTNAME}"
     eventLog="/var/lib/bashible/step.log"
-    kubectl_exec apply -f - <<EOF || true
-        apiVersion: events.k8s.io/v1
-        kind: Event
-        metadata:
-          name: bashible-error-${eventName}
-        regarding:
-          apiVersion: v1
-          kind: Node
-          name: ${nodeName}
-          uid: ${nodeName}
-        note: '$(tail -c 500 ${eventLog})'
-        reason: BashibleStepFailed
-        type: Warning
-        reportingController: bashible
-        reportingInstance: '${D8_NODE_HOSTNAME}'
-        eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
-        action: "BashibleStepExecution"
+    if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
+      kubectl_exec apply -f - <<EOF || true
+          apiVersion: events.k8s.io/v1
+          kind: Event
+          metadata:
+            name: bashible-error-${eventName}
+          regarding:
+            apiVersion: v1
+            kind: Node
+            name: ${nodeName}
+            uid: ${nodeName}
+          note: '$(tail -c 500 ${eventLog})'
+          reason: BashibleStepFailed
+          type: Warning
+          reportingController: bashible
+          reportingInstance: '${D8_NODE_HOSTNAME}'
+          eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
+          action: "BashibleStepExecution"
 EOF
+    fi
 }
 
 function annotate_node() {
@@ -172,22 +174,7 @@ function main() {
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
-{{- if .proxy }}
-  {{- if .proxy.httpProxy }}
-  export HTTP_PROXY={{ .proxy.httpProxy | quote }}
-  export http_proxy=${HTTP_PROXY}
-  {{- end }}
-  {{- if .proxy.httpsProxy }}
-  export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
-  export https_proxy=${HTTPS_PROXY}
-  {{- end }}
-  {{- if .proxy.noProxy }}
-  export NO_PROXY={{ .proxy.noProxy | join "," | quote }}
-  export no_proxy=${NO_PROXY}
-  {{- end }}
-{{- else }}
-  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
-{{- end }}
+unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
   export D8_NODE_HOSTNAME=$(hostname -s)
 {{- else }}

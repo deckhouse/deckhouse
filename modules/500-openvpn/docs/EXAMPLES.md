@@ -1,5 +1,6 @@
 ---
 title: "The openvpn module: examples"
+description: "Examples of the configuration of the openvpn Deckhouse Kubernetes Platform module for various scenarios, including bare metal clusters, AWS, Google Cloud, and public IP addresses on an external load balancer."
 ---
 
 ## An example for bare metal clusters

@@ -35,39 +35,51 @@ locals {
 }
 
 data "yandex_vpc_subnet" "existing" {
-  for_each = local.mapping
+  for_each  = local.mapping
   subnet_id = each.value
 }
 
 data "yandex_vpc_subnet" "kube_a" {
   count = length(local.mapping) == 0 ? 1 : 0
-  name = "${local.prefix}-a"
+  name  = "${local.prefix}-a"
 }
 
 data "yandex_vpc_subnet" "kube_b" {
   count = length(local.mapping) == 0 ? 1 : 0
-  name = "${local.prefix}-b"
+  name  = "${local.prefix}-b"
 }
 
 data "yandex_vpc_subnet" "kube_d" {
   count = length(local.mapping) == 0 ? 1 : 0
-  name = "${local.prefix}-d"
+  name  = "${local.prefix}-d"
 }
 
 resource "yandex_vpc_address" "addr" {
-  count = var.nodeIndex < length(local.external_ip_addresses) ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0 : 0
+  count = (var.nodeIndex < length(local.external_ip_addresses)
+    ? (local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0)
+    : (length(local.external_ip_addresses) > 0 ? 1 : 0))
   name  = join("-", [local.prefix, "master", var.nodeIndex])
 
   external_ipv4_address {
     zone_id = local.internal_subnet.zone
   }
+
+#   If we specify this flag and change the zone_id, terraform will exit with an error.
+#   lifecycle {
+#     create_before_destroy = true
+#   }
 }
 
 locals {
-  # null if var.nodeIndex < length(local.external_ip_addresses)
-  # yandex_vpc_address.addr[0].external_ipv4_address[0].address if local.external_ip_addresses == Auto
-  # local.external_ip_addresses[var.nodeIndex] if local.external_ip_addresses contain IP-addresses
-  external_ip_address = var.nodeIndex < length(local.external_ip_addresses) ? local.external_ip_addresses[var.nodeIndex] == "Auto" ? yandex_vpc_address.addr[0].external_ipv4_address[0].address : local.external_ip_addresses[var.nodeIndex] : null
+  external_ip_address = (var.nodeIndex < length(local.external_ip_addresses)
+    ? (local.external_ip_addresses[var.nodeIndex] == "Auto"
+      ? yandex_vpc_address.addr[0].external_ipv4_address[0].address
+      : local.external_ip_addresses[var.nodeIndex])
+    : (length(local.external_ip_addresses) > 0
+      ? yandex_vpc_address.addr[0].external_ipv4_address[0].address
+      : null
+      )
+    )
 }
 
 resource "yandex_compute_disk" "kubernetes_data" {

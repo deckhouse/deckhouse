@@ -2,8 +2,8 @@
 title: "Модуль keepalived"
 ---
 
-<div class="docs__information warning active">
+{% alert level="warning" %}
 Данный модуль не работает с модулем <a href="../021-cni-cilium/">cilium</a>.
-</div>
+{% endalert %}
 
 Модуль с управлением через custom resources для настройки keepalived-кластеров на узлах.

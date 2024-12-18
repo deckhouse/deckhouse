@@ -22,7 +22,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -85,12 +86,12 @@ func (op *Detacher) Detach(ctx context.Context) error {
 			return fmt.Errorf("unable to get kube client: %w", err)
 		}
 
-		checkers, err := resources.GetCheckers(kubeClient, detachResources)
+		checkers, err := resources.GetCheckers(kubeClient, detachResources, nil)
 		if err != nil {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(kubeClient, nil, detachResources, checkers)
+		err = resources.CreateResourcesLoop(kubeClient, detachResources, checkers, nil)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}

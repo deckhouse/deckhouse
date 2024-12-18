@@ -22,7 +22,7 @@ properties:
     enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
     x-examples: ["Stable"]
     description: |
-      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/documentation/v1/deckhouse-faq.html#what-happens-when-the-release-channel-changes) to it when such an opportunity appears).
+      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#what-happens-when-the-release-channel-changes) to it when such an opportunity appears).
 
       The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
   update:
@@ -46,16 +46,27 @@ properties:
     properties:
       mode:
         type: string
-        default: 'Auto'
+        default: 'AutoPatch'
         description: |
-          Deckhouse minor version update mode (release change). **Does not affect patch version updates.**
-          - `Auto` — all updates are applied automatically.
+          Update mode of Deckhouse on the selected [release channel](#parameters-releasechannel).
 
-            Deckhouse minor version updates (release updates, for example, from `v1.26.*` to `v1.27.*`), are applied according to the update windows or (if no update windows are set) as they appear on the corresponding release channel;
-          - `Manual` — to change a minor version of Deckhouse (for example, from `v1.26.*` to `v1.27.*`), manual confirmation is required.
+          - `AutoPatch` — automatic update mode for patch releases.
 
-            To confirm the update, edit [custom resource 'DeckhouseRelease'](../../cr.html#deckhouserelease), which corresponds to the version by setting the `approved' field to 'true'.
+            To change a minor version (for example, from `v1.65.*` to `v1.66.*`), confirmation is required.
+
+            A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied according to the [update windows](#parameters-update-windows), if they are set.
+          - `Auto` — automatic update mode for all versions.
+
+            A minor version update (for example, from `v1.65.*` to `v1.66.*`) is applied according to the [update windows](#parameters-update-windows), if they are set.
+
+            A patch version update (for example, from `v1.65.1` to `v1.65.4`) is applied regardless of the [update windows](#parameters-update-windows) (immediately).
+          - `Manual` — manual update mode for all versions.
+
+            Confirmation is required for updating both minor and patch versions.
+
+          To confirm the version  update, it is necessary to set the `approved` field to `true` in the corresponding resource [DeckhouseRelease](../../cr.html#deckhouserelease).
         enum:
+          - 'AutoPatch'
           - 'Auto'
           - 'Manual'
       disruptionApprovalMode:
@@ -115,7 +126,7 @@ properties:
         description: |
           Settings for notifications of scheduled Deckhouse updates.
 
-          Has the effect **only** when the [automatic update mode](#parameters-update-mode) is set and **only** for Deckhouse minor version changes (for patch version changes the `notifications` parameter settings are ignored).
+          Has the effect **only** when the [automatic update mode](#parameters-update-mode) is set.
         x-examples:
         - webhook: https://release-webhook.mydomain.com
           minimalNotificationTime: 8h
@@ -127,7 +138,10 @@ properties:
             description: |
               URL for an external webhook handler.
 
-              The POST request will be sent on the webhook URL after a new minor version of Deckhouse appears on the update channel before it is applied to the cluster.
+              The POST request will be sent to the webhook URL after a new minor version of Deckhouse appears on the update channel before it is applied to the cluster.
+
+              > **Caution!**
+              > If you specify an invalid webhook address, Deckhouse update will be blocked.
 
               > Use the [minimalNotificationTime](#parameters-update-notification-minimalnotificationtime) parameter if necessary to set the minimum time that must pass before updating from the moment a new minor version appears on the release channel used.
 
@@ -136,18 +150,18 @@ properties:
               ```json
               {
                 "subject":"Deckhouse",
-                "version": "1.36",
+                "version": "1.36.0",
                 "requirements":  {"k8s": "1.20.0"},
                 "changelogLink": "https://github.com/deckhouse/deckhouse/changelog/1.36.md",
                 "applyTime": "2023-01-01T14:30:00Z00:00",
-                "message": "New Deckhouse Release 1.36 is available. Release will be applied at: Friday, 01-Jan-23 14:30:00 UTC"
+                "message": "New Deckhouse Release 1.36.0 is available. Release will be applied at: Friday, 01-Jan-23 14:30:00 UTC"
               }
               ```
 
               Description of POST request fields:
               - `subject` — string, the update event type. Possible values: `Deckhouse`, `Module`;
               - `moduleName` — string, the name of the module. Set only if `subject: Module`.
-              - `version` - string, minor version number;
+              - `version` - string, x.y.z (semantic versioning);
               - `requirements` - object, version requirements;
               - `changelogLink` - string, a URL to the minor version changelog;
               - `applyTime` - string, date and time of the scheduled update (taking into account the configured update windows) in RFC3339 format;
@@ -206,6 +220,17 @@ properties:
                     The token for the webhook.
 
                     The token will be sent in the `Authorization` header in the format `Bearer <token>`.
+          releaseType:
+            type: string
+            description: |
+              Defines the type of version for which the notification will be sent:
+              - `Minor` — only for updating the minor version.
+              - `All` — for any updates, including updating a patch version.
+            x-examples: ["All"]
+            enum:
+              - "All"
+              - "Minor"
+            default: "Minor"
   nodeSelector:
     type: object
     additionalProperties:
@@ -213,7 +238,7 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `nodeSelector` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
       **Cation!** Deckhouse will stop working if there is a nonexistent label in `nodeSelector`. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
   tolerations:
@@ -221,7 +246,7 @@ properties:
     description: |
       The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
 
-      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted or `false`, `tolerations` will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
 
       **Cation!**  Deckhouse will stop working if `tolerations` specified are incorrect. You need to change the values to the correct ones in `ModuleConfig/deckhouse` and `deployment/deckhouse` to get Deckhouse back on track.
     items:

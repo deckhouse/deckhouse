@@ -61,13 +61,13 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 		return err
 	}
 	if !errors.IsNotFound(err) {
-		input.LogEntry.Infof("Migration cm %s already exists, skipping migration", migrationCM)
+		input.Logger.Infof("Migration cm %s already exists, skipping migration", migrationCM)
 		return nil
 	}
 
 	moduleConfig, err := kubeCl.Dynamic().Resource(mcGVR).Get(context.TODO(), "descheduler", metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		input.LogEntry.Info("ModuleConfig for descheduler does not exists, migrating with default config")
+		input.Logger.Info("ModuleConfig for descheduler does not exists, migrating with default config")
 	} else if err != nil {
 		return err
 	}

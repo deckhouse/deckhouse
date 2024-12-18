@@ -192,6 +192,10 @@ spec:
     - 192.168.0.0/24
 ```
 
+{% alert level="warning" %}
+Для работы необходимо включить параметр [`svcSourceRangeCheck`](../cni-cilium/configuration.html#parameters-svcsourcerangecheck) в модуле cni-cilium.
+{% endalert %}
+
 ## Как добавить дополнительные поля для логирования в nginx-controller?
 
 ```yaml
@@ -260,4 +264,19 @@ kubectl label ns review-1 ingress.deckhouse.io/discard-metrics=true
 
 ```shell
 kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
+```
+
+## Как корректно вывести из эксплуатации (drain) узел с запущенным IngressNginxController?
+
+Доступно два способа вывода такого узла из эксплуатации - или с помощью аннотации узла (аннотация будет удалена после завершения операции):
+
+```shell
+kubectl annotate node <node_name> update.node.deckhouse.io/draining=user
+```
+
+или с помощью базового функционала kubectl drain (тут стоит отметить, что необходимо указать флаг --force, несмотря на то, что указан флаг --ignore-daemonsets, так как IngressNginxController
+разворачивается с помощью Advanced DaemonSet):
+
+```shell
+kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
 ```

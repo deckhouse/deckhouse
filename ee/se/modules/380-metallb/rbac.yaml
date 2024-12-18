@@ -1,0 +1,7 @@
+module: metallb
+subsystems:
+  - networking
+crds:
+  - ee/se/modules/380-metallb/crds/*.yaml
+  - ee/se/modules/380-metallb/crds/internal/*.yaml
+  - ee/se/modules/380-metallb/crds/native/*.yaml

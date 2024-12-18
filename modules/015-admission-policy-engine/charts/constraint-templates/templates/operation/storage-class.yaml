@@ -1,0 +1,39 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8storageclass
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Required Storage Class"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: "Required Storage Class"
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8StorageClass
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            storageClassNames:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        violation[{"msg": msg}] {
+          storageClass := input.review.object.spec.storageClassName
+          not contains(input.parameters.storageClassNames, storageClass)
+          msg := sprintf("PersistentVolumeClaim <%v> has invalid storage class: %v, allowed: %v", [input.review.object.metadata.name, storageClass, input.parameters.storageClassNames])
+        }
+
+        contains(list, elem) {
+          list[_] = elem
+        }

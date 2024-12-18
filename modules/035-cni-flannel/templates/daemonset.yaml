@@ -3,7 +3,7 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -59,6 +59,29 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: {{ .Chart.Name }}
+      initContainers:
+      {{- if eq .Values.cniFlannel.internal.podNetworkMode "vxlan" }}
+      - name: handle-vxlan-offload
+        image: {{ include "helm_lib_module_common_image" (list . "vxlanOffloadingFixer") }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        resources:
+          requests:
+          {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+            drop:
+            - ALL
+          privileged: false
+        terminationMessagePolicy: FallbackToLogsOnError
+      {{- end }}
       containers:
       - name: kube-flannel
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
@@ -91,7 +114,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "kube_flannel_resources" . | nindent 12 }}
 {{- end }}
       volumes:

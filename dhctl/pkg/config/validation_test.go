@@ -96,7 +96,7 @@ func TestValidateInitConfiguration(t *testing.T) {
 			config: `
 ---
 ---
-# https://deckhouse.ru/documentation/v1/installing/configuration.html#initconfiguration
+# https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
@@ -200,7 +200,7 @@ func TestValidateClusterConfiguration(t *testing.T) {
 	}{
 		"ok, Static": {
 			config: `
-# https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
+# https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
@@ -215,7 +215,7 @@ clusterDomain: "cluster.local"
 		},
 		"ok, Cloud": {
 			config: `
-# https://deckhouse.ru/documentation/v1/installing/configuration.html#clusterconfiguration
+# https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud

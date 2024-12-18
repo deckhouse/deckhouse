@@ -1,16 +1,25 @@
-{{- $binaries := "/sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so*" }}
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
 shell:
   install:
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+    - mkdir -p /relocate/sbin
     - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
-        ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+        ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
       done
       # broken symlinks are not imported from the artifact
-      touch /iptables-wrapper
+      touch /sbin/iptables-wrapper
+    - |
+      for mode in legacy nft; do
+        for basecmd in iptables ip6tables; do
+          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+          done
+        done
+      done
 ---
 artifact: {{ .ModuleName }}/entrypoint-artifact
 from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
@@ -29,6 +38,9 @@ shell:
 artifact: {{ .ModuleName }}/flanneld-artifact
 from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - mkdir -p /src
     - cd /src
@@ -40,28 +52,28 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/flanneld-artifact
-  add: /src/dist/flanneld
-  to: /opt/bin/flanneld
-  before: setup
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
-  to: /
+  to: /sbin
   includePaths:
-  - lib64/iptables
-  - lib64/libm*
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: setup
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /sbin/iptables-wrapper
+  before: setup
+- artifact: {{ .ModuleName }}/flanneld-artifact
+  add: /src/dist/flanneld
+  to: /opt/bin/flanneld
   before: setup
 - artifact: {{ .ModuleName }}/entrypoint-artifact
   add: /entrypoint
   to: /entrypoint
-  before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /iptables-wrapper
   before: setup
 docker:
   ENTRYPOINT: ["/entrypoint"]

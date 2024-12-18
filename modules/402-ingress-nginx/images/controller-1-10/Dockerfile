@@ -2,7 +2,7 @@ ARG BASE_ALT
 ARG BASE_ALT_DEV
 ARG BASE_ALPINE_DEV
 ARG BASE_GOLANG_22_ALPINE_DEV
-ARG CONTROLLER_BRANCH=controller-v1.10.3
+ARG CONTROLLER_BRANCH=controller-v1.10.4
 
 FROM $BASE_ALT as base-alt
 
@@ -10,19 +10,23 @@ FROM $BASE_ALT as base-alt
 FROM $BASE_ALPINE_DEV as dumb-init-builder
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
-RUN git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git && cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
+RUN apk add --no-cache openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --branch v1.2.5 --depth 1 ${SOURCE_REPO}/yelp/dumb-init.git
+RUN cd dumb-init && cc -std=gnu99 -static -s -Wall -Werror -O3 -o dumb-init dumb-init.c
 
 # Build luarocks assets
 FROM $BASE_ALT_DEV as luarocks-builder
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
-RUN apt-get install -y lua5.1-devel \
-    && git clone --branch 0.5.1 ${SOURCE_REPO}/starwing/lua-protobuf \
-    && cd lua-protobuf/ \
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN apt-get install -y lua5.1-devel
+RUN --mount=type=ssh git clone --branch 0.5.1 ${SOURCE_REPO}/starwing/lua-protobuf
+RUN cd lua-protobuf/ \
     && luarocks-5.1 make rockspecs/lua-protobuf-scm-1.rockspec
-RUN cd / && \
-    git clone --branch 7-3 ${SOURCE_REPO}/luarocks-sorces/lua-iconv \
-    && cd lua-iconv/ \
+RUN --mount=type=ssh cd / && \
+    git clone --branch 7-3 ${SOURCE_REPO}/luarocks-sorces/lua-iconv
+RUN cd lua-iconv/ \
     && luarocks-5.1 install lua-iconv-7-3.src.rock
 
 # Build ingress controller, debug tool and pre-stop hook
@@ -34,6 +38,8 @@ ARG GOPROXY
 ENV SOURCE_REPO=${SOURCE_REPO} \
     GOPROXY=${GOPROXY}
 WORKDIR /src/
+RUN apk add --no-cache openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 COPY patches/lua-info.patch /
 COPY patches/makefile.patch /
 COPY patches/healthcheck.patch /
@@ -41,16 +47,18 @@ COPY patches/metrics-SetSSLExpireTime.patch /
 COPY patches/util.patch /
 COPY patches/fix-cleanup.patch /
 COPY patches/add-http3.patch /
+COPY patches/new-metrics.patch /
 ENV GOARCH=amd64
-RUN git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src && \
-    patch -p1 < /lua-info.patch && \
+RUN --mount=type=ssh git clone --branch $CONTROLLER_BRANCH --depth 1 ${SOURCE_REPO}/kubernetes/ingress-nginx.git /src
+RUN patch -p1 < /lua-info.patch && \
     patch -p1 < /makefile.patch && \
     patch -p1 < /healthcheck.patch && \
     patch -p1 < /metrics-SetSSLExpireTime.patch && \
     patch -p1 < /util.patch && \
     patch -p1 < /fix-cleanup.patch && \
     patch -p1 < /add-http3.patch && \
-    make GO111MODULE=on USE_DOCKER=false build
+    patch -p1 < /new-metrics.patch
+RUN make GO111MODULE=on USE_DOCKER=false build
 
 # Build nginx for ingress controller
 FROM $BASE_ALT_DEV as nginx-builder
@@ -63,7 +71,9 @@ COPY rootfs/etc /etc/
 COPY patches/nginx-build.patch /
 RUN apt-get update && apt-get install -y ninja-build libabseil-cpp-devel build-essential libgrpc-devel  \
     libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
-RUN patch build.sh < nginx-build.patch && /build.sh
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN patch build.sh < nginx-build.patch
+RUN --mount=type=ssh /build.sh
 
 # This intermediary image will be used only to copy all the required files to the chroot
 # Based on tag "controller-v1.10.2":
@@ -181,7 +191,7 @@ COPY --chown=www-data:www-data curl-chroot-wrapper.sh /usr/bin/curl
 COPY --from=dumb-init-builder /dumb-init/dumb-init /usr/bin/dumb-init
 
 RUN  chmod 1777 /tmp \
-  && setcap     cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
+  && setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller \
   && setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \
   && setcap -v cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare \

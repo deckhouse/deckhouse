@@ -18,16 +18,19 @@ import (
 	"context"
 	"fmt"
 
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 )
 
 type KubeProxyChecker struct {
+	input            *session.Input
+	privateKeys      []session.AgentPrivateKey
 	initParams       *client.KubernetesInitParams
 	logCheckResult   bool
 	askPassword      bool
@@ -72,8 +75,22 @@ func (c *KubeProxyChecker) WithExternalIPs(ips map[string]string) *KubeProxyChec
 	return c
 }
 
+func (c *KubeProxyChecker) WithSSHCredentials(input session.Input, privateKeys ...session.AgentPrivateKey) *KubeProxyChecker {
+	c.input = &input
+	c.privateKeys = privateKeys
+	return c
+}
+
 func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
-	sshClient := ssh.NewClientFromFlags()
+	var sshClient *ssh.Client
+
+	if c.input != nil {
+		sshClient = ssh.NewClient(session.NewSession(*c.input), c.privateKeys)
+		// Avoid starting a new ssh agent
+		sshClient.InitializeNewAgent = false
+	} else {
+		sshClient = ssh.NewClientFromFlags()
+	}
 
 	if len(c.nodesExternalIPs) > 0 {
 		ip, ok := c.nodesExternalIPs[nodeName]
@@ -81,7 +98,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 			return false, fmt.Errorf("Not found external ip for node %s", nodeName)
 		}
 
-		sshClient.Settings.SetAvailableHosts([]string{ip})
+		sshClient.Settings.SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
 	}
 
 	var err error
@@ -90,7 +107,7 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 		return false, err
 	}
 
-	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 	err = kubeCl.Init(client.AppKubernetesInitParams())
 	if err != nil {
 		return false, fmt.Errorf("open kubernetes connection: %v", err)
@@ -102,11 +119,11 @@ func (c *KubeProxyChecker) IsReady(nodeName string) (bool, error) {
 		}
 
 		if kubeCl.KubeProxy != nil {
-			kubeCl.KubeProxy.Stop(0)
+			kubeCl.KubeProxy.StopAll()
 		}
 
-		if kubeCl.SSHClient != nil {
-			kubeCl.SSHClient.Stop()
+		if wrapper, ok := kubeCl.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+			wrapper.Client().Stop()
 		}
 	}()
 
@@ -130,7 +147,7 @@ func (c *KubeProxyChecker) Name() string {
 	return "Ssh access and kube-proxy availability"
 }
 
-func (c *KubeProxyChecker) printNs(cm *apiv1.ConfigMap) {
+func (c *KubeProxyChecker) printNs(cm *corev1.ConfigMap) {
 	if !c.logCheckResult {
 		return
 	}

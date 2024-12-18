@@ -15,36 +15,58 @@
 package resources
 
 import (
-	"context"
+	"reflect"
+
 	"github.com/hashicorp/go-multierror"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type Checker interface {
-	IsReady(ctx context.Context) (bool, error)
+	IsReady() (bool, error)
 	Name() string
+	Single() bool
 }
 
-func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources) ([]Checker, error) {
-	if kubeCl == nil {
-		return nil, nil
-	}
-
+func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, metaConfig *config.MetaConfig) ([]Checker, error) {
 	errRes := &multierror.Error{}
 
 	checkers := make([]Checker, 0)
+	singleConstructors := make(map[string]interface{})
 
-	for _, r := range resources {
-		check, err := newResourceIsReadyChecker(kubeCl, r)
+	tryToAppendCheck := func(check Checker, err error) {
 		if err != nil {
 			errRes = multierror.Append(errRes, err)
-			continue
+			return
 		}
 
-		if check != nil {
+		if check == nil || reflect.ValueOf(check).IsNil() {
+			return
+		}
+
+		_, hasSingleCheck := singleConstructors[check.Name()]
+		if !check.Single() || !hasSingleCheck {
 			checkers = append(checkers, check)
+			singleConstructors[check.Name()] = struct{}{}
+		}
+	}
+
+	staticNGSChecker, err := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(kubeCl, metaConfig)
+	tryToAppendCheck(staticNGSChecker, err)
+
+	type constructor func(*client.KubernetesClient, *config.MetaConfig, *template.Resource) (Checker, error)
+
+	constructors := []constructor{
+		tryToGetClusterIsBootstrappedChecker,
+		tryToGetResourceIsReadyChecker,
+	}
+
+	for _, r := range resources {
+		for _, crtor := range constructors {
+			check, err := crtor(kubeCl, metaConfig, r)
+			tryToAppendCheck(check, err)
 		}
 	}
 
@@ -65,11 +87,11 @@ func NewWaiter(checkers []Checker) *Waiter {
 	}
 }
 
-func (w *Waiter) ReadyAll(ctx context.Context) (bool, error) {
+func (w *Waiter) ReadyAll() (bool, error) {
 	checkersToStay := make([]Checker, 0)
 
 	for _, c := range w.checkers {
-		ready, err := c.IsReady(ctx)
+		ready, err := c.IsReady()
 		if err != nil {
 			return false, err
 		}

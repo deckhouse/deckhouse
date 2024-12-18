@@ -879,3 +879,93 @@ var Validation_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "services.proto",
 }
+
+const (
+	Status_GetStatus_FullMethodName = "/dhctl.Status/GetStatus"
+)
+
+// StatusClient is the client API for Status service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type StatusClient interface {
+	GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error)
+}
+
+type statusClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewStatusClient(cc grpc.ClientConnInterface) StatusClient {
+	return &statusClient{cc}
+}
+
+func (c *statusClient) GetStatus(ctx context.Context, in *GetStatusRequest, opts ...grpc.CallOption) (*GetStatusResponse, error) {
+	out := new(GetStatusResponse)
+	err := c.cc.Invoke(ctx, Status_GetStatus_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// StatusServer is the server API for Status service.
+// All implementations must embed UnimplementedStatusServer
+// for forward compatibility
+type StatusServer interface {
+	GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error)
+	mustEmbedUnimplementedStatusServer()
+}
+
+// UnimplementedStatusServer must be embedded to have forward compatible implementations.
+type UnimplementedStatusServer struct {
+}
+
+func (UnimplementedStatusServer) GetStatus(context.Context, *GetStatusRequest) (*GetStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
+}
+func (UnimplementedStatusServer) mustEmbedUnimplementedStatusServer() {}
+
+// UnsafeStatusServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to StatusServer will
+// result in compilation errors.
+type UnsafeStatusServer interface {
+	mustEmbedUnimplementedStatusServer()
+}
+
+func RegisterStatusServer(s grpc.ServiceRegistrar, srv StatusServer) {
+	s.RegisterService(&Status_ServiceDesc, srv)
+}
+
+func _Status_GetStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StatusServer).GetStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Status_GetStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StatusServer).GetStatus(ctx, req.(*GetStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Status_ServiceDesc is the grpc.ServiceDesc for Status service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Status_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "dhctl.Status",
+	HandlerType: (*StatusServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetStatus",
+			Handler:    _Status_GetStatus_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "services.proto",
+}

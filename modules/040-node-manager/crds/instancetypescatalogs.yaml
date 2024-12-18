@@ -1,0 +1,58 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: instancetypescatalogs.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: node-manager
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: instancetypescatalogs
+    singular: instancetypescatalog
+    kind: InstanceTypesCatalog
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema: &schema
+        openAPIV3Schema:
+          type: object
+          description: |
+            Contains information about discovered data from cloud.
+          required:
+            - instanceTypes
+          properties:
+            instanceTypes:
+              description: List of available instance types.
+              type: array
+              items:
+                type: object
+                required: ["cpu", "memory"]
+                properties:
+                  name:
+                    type: string
+                    description: Instance type name.
+                  memory:
+                    anyOf:
+                      - type: integer
+                      - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                    description: The amount of RAM a instance type has.
+                  cpu:
+                    anyOf:
+                      - type: integer
+                      - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                    description: The number of CPUs for the instance type.
+                  rootDisk:
+                    anyOf:
+                      - type: integer
+                      - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                    description: Root disk size.

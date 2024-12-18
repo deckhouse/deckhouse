@@ -106,7 +106,7 @@ dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private
   --config=/config.yml \
   --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
-dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --config=/resources.yml
+dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --config=/resources.yml
 {%- endif %}
 ```
 {% endsnippetcut %}
@@ -117,7 +117,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 {%- else %}
 В параметре `--ssh-user` укажите имя пользователя по умолчанию для выбранного образа виртуальной машины.
 {%- if page.platform_code == "azure" %} В случае c {{ page.platform_name[page.lang] }}, это `azureuser` (для используемого в этом руководстве образа).
-{%- elsif page.platform_code == "gcp" %} В случае c {{ page.platform_name[page.lang] }}, это `user` (для используемого в этом руководстве образа).
+{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %} В случае c {{ page.platform_name[page.lang] }}, это `user` (для используемого в этом руководстве образа).
 {%- else %} Для предложенного в руководстве образа это `ubuntu`.
 {%- endif %}
 {%- endif %}
@@ -129,7 +129,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 > Если установка не может быть продолжена и вам нужно удалить созданные в облаке ресурсы, выполните следующую команду:
 >
 > ```shell
-> dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
+> dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
 > ```
 {%- endofftopic %}
 {%- endif %}
@@ -155,7 +155,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 ```
 ...
 ┌ 🎈 ~ Common: Kubernetes Master Node addresses for SSH
-│ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@1.2.3.4
+│ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% else %}ubuntu{% endif %}@1.2.3.4
 └ 🎈 ~ Common: Kubernetes Master Node addresses for SSH (0.00 seconds)
 ```
 {% endif %}

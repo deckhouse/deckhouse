@@ -1,0 +1,7 @@
+name: log-shipper
+weight: 460
+description: |
+  Collecting logs in the Kubernetes cluster
+
+requirements:
+  bootstrapped: true

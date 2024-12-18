@@ -6,10 +6,6 @@ properties:
     type: object
     default: {}
     properties:
-      defaultStorageClass:
-        type: string
-        x-examples:
-        - test
       storageClasses:
         type: array
         additionalProperties:

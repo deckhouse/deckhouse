@@ -14,14 +14,22 @@ from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
+git:
+  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   beforeInstall:
-    - apk add --no-cache make patch git bash
+  - apk add --no-cache make patch git bash openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - mkdir /src
     - export GOPROXY={{ $.GOPROXY }}
     - git clone --depth 1 --branch v{{ .TF.openstack.version }} {{ $.SOURCE_REPO }}/terraform-provider-openstack/terraform-provider-openstack.git /src
     - cd /src
+    - git apply /patches/*.patch --verbose
     - make fmt
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/terraform-provider-openstack/terraform-provider-openstack/version.ProviderVersion={{ .TF.openstack.version }}"
     - mv /go/bin/terraform-provider-openstack /terraform-provider-openstack

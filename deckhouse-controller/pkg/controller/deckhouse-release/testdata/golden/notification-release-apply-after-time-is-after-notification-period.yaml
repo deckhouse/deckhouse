@@ -29,9 +29,9 @@ spec:
   version: v1.36.0
 status:
   approved: false
-  message: 'Release is postponed until: 12 Nov 22 02:23 MSK'
+  message: Release is postponed by canary process until 11 Nov 22 23:23 UTC
   phase: Pending
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null
 ---
 apiVersion: v1
 kind: Pod
@@ -77,16 +77,3 @@ spec:
         name: deckhouse
         resources: {}
 status: {}
----
-apiVersion: v1
-data:
-  isUpdating: "false"
-  notified: "true"
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-  name: d8-release-data
-  namespace: d8-system
-  resourceVersion: "1"

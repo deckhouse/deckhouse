@@ -4975,7 +4975,9 @@
   ],
   "refresh": "30s",
   "schemaVersion": 38,
-  "tags": [],
+  "tags": [
+    "main"
+  ],
   "templating": {
     "list": [
       {

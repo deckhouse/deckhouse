@@ -24,18 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var (
-	DeckhouseReleaseGVR = schema.GroupVersionResource{
-		Group:    SchemeGroupVersion.Group,
-		Version:  SchemeGroupVersion.Version,
-		Resource: "deckhousereleases",
-	}
-	DeckhouseReleaseGVK = schema.GroupVersionKind{
-		Group:   SchemeGroupVersion.Group,
-		Version: SchemeGroupVersion.Version,
-		Kind:    "DeckhouseRelease",
-	}
-)
+var DeckhouseReleaseGVK = schema.GroupVersionKind{
+	Group:   SchemeGroupVersion.Group,
+	Version: SchemeGroupVersion.Version,
+	Kind:    DeckhouseReleaseKind,
+}
 
 // +genclient
 // +genclient:nonNamespaced
@@ -128,7 +121,7 @@ func (in *DeckhouseRelease) GetManuallyApproved() bool {
 		return true
 	}
 
-	v, ok := in.Annotations["release.deckhouse.io/approved"]
+	v, ok := in.Annotations[DeckhouseReleaseApprovalAnnotation]
 	if ok {
 		return v == "true"
 	}
@@ -143,6 +136,10 @@ func (in *DeckhouseRelease) GetMessage() string {
 func (in *DeckhouseRelease) GetNotificationShift() bool {
 	v, ok := in.Annotations["release.deckhouse.io/notification-time-shift"]
 	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetModuleName() string {
+	return ""
 }
 
 type DeckhouseReleaseSpec struct {

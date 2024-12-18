@@ -2,7 +2,231 @@
 title: "The user-authz module: usage"
 ---
 
+## Example of assigning rights to a cluster administrator
+
+{% alert level="info" %}
+The example uses the [new role-based](./#the-new-role-based-model).
+{% endalert %}
+
+To grant access to a cluster administrator, use the role `d8:manage:all:manager` in `ClusterRoleBinding`.
+
+Example of assigning rights to a cluster administrator (User `joe`):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-admin-joe
+subjects:
+- kind: User
+  name: joe
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:manage:all:manager
+  apiGroup: rbac.authorization.k8s.io
+```
+
+{% offtopic title="The rights that the user will get" %}
+The rights that the user will get will be limited to namespaces starting with `d8-` or `kube-`.
+
+The user will be able to:
+- View, modify, delete, and create Kubernetes resources and DKP modules;
+- Modify module configurations (view, modify, delete, and create `moduleConfig` resources);
+- Execute the following commands on pods and services:
+  - `kubectl attach`
+  - `kubectl exec`
+  - `kubectl port-forward`
+  - `kubectl proxy`
+{% endofftopic %}
+
+## Example of assigning rights to a network administrator
+
+{% alert level="info" %}
+The example uses the [new role-based](./#the-new-role-based-model).
+{% endalert %}
+
+To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:manage:networking:manager` in `ClusterRoleBinding`.
+
+Example of assigning rights to a network administrator (User `joe`):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: network-admin-joe
+subjects:
+- kind: User
+  name: joe
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:manage:networking:manager
+  apiGroup: rbac.authorization.k8s.io
+```
+
+{% offtopic title="The rights that the user will get" %}
+The rights that the user will get will be limited to the following list of DKP module namespaces from the `networking` subsystem (the actual list depends on the list of modules included in the cluster):
+- `d8-cni-cilium`
+- `d8-cni-flannel`
+- `d8-cni-simple-bridge`
+- `d8-ingress-nginx`
+- `d8-istio`
+- `d8-metallb`
+- `d8-network-gateway`
+- `d8-openvpn`
+- `d8-static-routing-manager`
+- `d8-system`
+- `kube-system`
+
+The user will be able to:
+- View, modify, delete, and create *standard* Kubernetes resources in the module namespace from the `networking` subsystem.
+
+  Example of resources that the user will be able to manage (the list is not exhaustive):
+  - `Certificate`
+  - `CertificateRequest`
+  - `ConfigMap`
+  - `ControllerRevision`
+  - `CronJob`
+  - `DaemonSet`
+  - `Deployment`
+  - `Event`
+  - `HorizontalPodAutoscaler`
+  - `Ingress`
+  - `Issuer`
+  - `Job`
+  - `Lease`
+  - `LimitRange`
+  - `NetworkPolicy`
+  - `PersistentVolumeClaim`
+  - `Pod`
+  - `PodDisruptionBudget`
+  - `ReplicaSet`
+  - `ReplicationController`
+  - `ResourceQuota`
+  - `Role`
+  - `RoleBinding`
+  - `Secret`
+  - `Service`
+  - `ServiceAccount`
+  - `StatefulSet`
+  - `VerticalPodAutoscaler`
+  - `VolumeSnapshot`
+
+- View, modify, delete, and create the following resources in the modules namespace from the `networking` subsystem:
+
+  A list of resources that the user will be able to manage:
+  - `EgressGateway`
+  - `EgressGatewayPolicy`
+  - `FlowSchema`
+  - `IngressClass`
+  - `IngressIstioController`
+  - `IngressNginxController`
+  - `IPRuleSet`
+  - `IstioFederation`
+  - `IstioMulticluster`
+  - `RoutingTable`
+
+- Modify the configuration of modules (view, change, delete, and create moduleConfig resources) from the `networking` subsystem.
+
+  List of modules that the user will be able to manage:
+  - `cilium-hubble`
+  - `cni-cilium`
+  - `cni-flannel`
+  - `cni-simple-bridge`
+  - `flow-schema`
+  - `ingress-nginx`
+  - `istio`
+  - `kube-dns`
+  - `kube-proxy`
+  - `metallb`
+  - `network-gateway`
+  - `network-policy-engine`
+  - `node-local-dns`
+  - `openvpn`
+  - `static-routing-manager`
+  
+- Execute the following commands with pods and services in the modules namespace from the `networking` subsystem:
+  - `kubectl attach`
+  - `kubectl exec`
+  - `kubectl port-forward`
+  - `kubectl proxy`
+{% endofftopic %}
+
+## Example of assigning administrative rights to a user within a namespace
+
+{% alert level="info" %}
+The example uses the [new role-based](./#the-new-role-based-model).
+{% endalert %}
+
+To assign rights to a user manage application resources within a namespace, but without the ability to configure DKP modules, use the role `d8:use:role:admin` in `RoleBinding` in the corresponding namespace.
+
+Example of assigning rights to an application developer (User `app-developer`) in namespace `myapp`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: myapp-developer
+  namespace: myapp
+subjects:
+- kind: User
+  name: app-developer
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:use:role:admin
+  apiGroup: rbac.authorization.k8s.io
+```
+
+{% offtopic title="The rights that the user will get" %}
+In the `myapp` namespace, the user will be able to:
+- View, modify, delete, and create Kubernetes resources. For example, the following resources (the list is not exhaustive):
+  - `Certificate`
+  - `CertificateRequest`
+  - `ConfigMap`
+  - `ControllerRevision`
+  - `CronJob`
+  - `DaemonSet`
+  - `Deployment`
+  - `Event`
+  - `HorizontalPodAutoscaler`
+  - `Ingress`
+  - `Issuer`
+  - `Job`
+  - `Lease`
+  - `LimitRange`
+  - `NetworkPolicy`
+  - `PersistentVolumeClaim`
+  - `Pod`
+  - `PodDisruptionBudget`
+  - `ReplicaSet`
+  - `ReplicationController`
+  - `ResourceQuota`
+  - `Role`
+  - `RoleBinding`
+  - `Secret`
+  - `Service`
+  - `ServiceAccount`
+  - `StatefulSet`
+  - `VerticalPodAutoscaler`
+  - `VolumeSnapshot`
+- View, edit, delete, and create the following DKP module resources:
+  - `DexAuthenticator`
+  - `DexClient`
+  - `PodLogginConfig`
+- Execute the following commands for pods and services:
+  - `kubectl attach`
+  - `kubectl exec`
+  - `kubectl port-forward`
+  - `kubectl proxy`
+{% endofftopic %}
+
 ## An example of `ClusterAuthorizationRule`
+
+{% alert level="warning" %}
+The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -36,6 +260,10 @@ spec:
 ```
 
 ## Creating a user
+
+{% alert level="warning" %}
+The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
+{% endalert %}
 
 There are two types of users in Kubernetes:
 
@@ -176,6 +404,10 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
    ```
 
 ### How to create a user using a client certificate
+
+{% alert level="warning" %}
+The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
+{% endalert %}
 
 #### Creating a user
 
@@ -351,7 +583,11 @@ The `allowed: false` message means that the webhook doesn't block access. In cas
 
 ## Customizing rights of high-level roles
 
-If you want to grant more privileges to a specific [high-level role](./#role-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
+{% alert level="warning" %}
+The example uses the [obsolete role-based model](./#the-obsolete-role-based-model).
+{% endalert %}
+
+If you want to grant more privileges to a specific [high-level role](./#the-obsolete-role-based-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
 
 An example:
 

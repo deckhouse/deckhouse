@@ -33,7 +33,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/hashicorp/go-multierror"
-	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,6 +40,7 @@ import (
 
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // TODO (alex123012): Use new methods in transport package for getting bearer token:
@@ -53,9 +53,9 @@ const (
 	caKey      = "ca"
 )
 
-func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag, scheme string, dryRun bool) error {
+func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag, scheme string, dryRun bool, logger *log.Logger) error {
 	ctx := context.Background()
-	logEntry := log.WithField("operator.component", "ChangeRegistry")
+	logEntry := logger.With("operator.component", "ChangeRegistry")
 
 	authConfig := newAuthConfig(username, password)
 
@@ -65,14 +65,14 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 	}
 
 	nameOpts := newNameOptions(scheme)
-	newRepo, err := name.NewRepository(newRegistry, nameOpts...)
+	newRepo, err := name.NewRepository(strings.TrimRight(newRegistry, "/"), nameOpts...)
 	if err != nil {
 		return err
 	}
 
 	caTransport := cr.GetHTTPTransport(caContent)
 
-	if err := checkBearerSupport(ctx, newRepo.Registry, caTransport); err != nil {
+	if err := checkAuthSupport(ctx, newRepo.Registry, caTransport); err != nil {
 		return err
 	}
 
@@ -81,7 +81,7 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
-	logEntry.Println("Retrieving deckhouse deployment...")
+	logEntry.Info("Retrieving deckhouse deployment...")
 	deckhouseDeploy, err := deckhouseDeployment(ctx, kubeCl)
 	if err != nil {
 		return err
@@ -109,26 +109,26 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 	}
 
 	if dryRun {
-		logEntry.Println("Dry-run enabled")
+		logEntry.Info("Dry-run enabled")
 		secretYaml, _ := yaml.Marshal(deckhouseSecret)
 		deploymentYaml, _ := yaml.Marshal(deckhouseDeploy)
-		logEntry.Println("------------------------------")
-		logEntry.Printf("New Secret will be applied:\n%s\n", secretYaml)
-		logEntry.Println("------------------------------")
-		logEntry.Printf("New Deployment will be applied:\n%s\n", deploymentYaml)
+		logEntry.Info("------------------------------")
+		logEntry.Infof("New Secret will be applied:\n%s\n", secretYaml)
+		logEntry.Info("------------------------------")
+		logEntry.Infof("New Deployment will be applied:\n%s\n", deploymentYaml)
 	} else {
-		logEntry.Println("Updating deckhouse image pull secret...")
+		logEntry.Info("Updating deckhouse image pull secret...")
 		if err := updateImagePullSecret(ctx, kubeCl, deckhouseSecret); err != nil {
 			return err
 		}
 
-		logEntry.Println("Updating deckhouse deployment...")
+		logEntry.Info("Updating deckhouse deployment...")
 		if err := updateDeployment(ctx, kubeCl, deckhouseDeploy); err != nil {
 			return err
 		}
 	}
 
-	logEntry.Println("Done")
+	logEntry.Info("Done")
 	return nil
 }
 
@@ -337,7 +337,7 @@ func checkImageExists(imageRef name.Reference, opts []remote.Option) error {
 // checkBearerSupport func checks that registry accepts bearer token authentification.
 // This is modified "ping" func from
 // https://github.com/google/go-containerregistry/blob/v0.5.1/pkg/v1/remote/transport/ping.go
-func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper http.RoundTripper) error {
+func checkAuthSupport(ctx context.Context, reg name.Registry, roundTripper http.RoundTripper) error {
 	client := &http.Client{Transport: roundTripper}
 
 	// This first attempts to use "https" for every request, falling back to http
@@ -356,12 +356,12 @@ func checkBearerSupport(ctx context.Context, reg name.Registry, roundTripper htt
 			continue
 		}
 
-		err = checkResponseForBearerSupport(resp, reg.Name())
+		err = checkResponseForAuthSupport(resp, reg.Name())
 		if err == nil {
 			return nil
 		}
 
-		errs = multierror.Append(errs, fmt.Errorf("check bearer support with %q scheme failed: %w", scheme, err))
+		errs = multierror.Append(errs, fmt.Errorf("check auth support with %q scheme failed: %w", scheme, err))
 	}
 
 	return errs.ErrorOrNil()
@@ -387,31 +387,34 @@ func makeRequestWithScheme(ctx context.Context, client *http.Client, scheme, reg
 	return resp, resp.Body.Close()
 }
 
-func checkResponseForBearerSupport(resp *http.Response, registryHost string) error {
+func checkResponseForAuthSupport(resp *http.Response, registryHost string) error {
 	if resp.StatusCode != http.StatusUnauthorized {
 		return transport.CheckError(resp, http.StatusUnauthorized)
 	}
 
-	if authHeaderWithBearer(resp.Header) {
+	if authHeader(resp.Header) {
 		return nil
 	}
 
-	return fmt.Errorf("can't use bearer token auth with registry %s", registryHost)
+	return fmt.Errorf("can't use bearer or basic auth with registry %s", registryHost)
 }
 
-func authHeaderWithBearer(header http.Header) bool {
-	const (
-		wwwAuthHeader = "WWW-Authenticate"
-		bearer        = "bearer"
-	)
+func authHeader(headers http.Header) bool {
+	authSchemes := []string{"bearer", "basic"}
+	authHeader := headers.Get("WWW-Authenticate")
+	if authHeader == "" {
+		log.Info("Empty WWW-Authenticate header")
+		return false
+	}
 
-	for _, h := range header[http.CanonicalHeaderKey(wwwAuthHeader)] {
-		if strings.HasPrefix(strings.ToLower(h), bearer) {
+	lowerHeader := strings.ToLower(authHeader)
+	for _, scheme := range authSchemes {
+		if strings.HasPrefix(lowerHeader, scheme) {
 			return true
 		}
 	}
-
-	return strings.ToLower(header.Get(wwwAuthHeader)) == bearer
+	log.Infof("WWW-Authenticate header has an incorrect value: %s", authHeader)
+	return false
 }
 
 type dockerCfgAuthEntry struct {

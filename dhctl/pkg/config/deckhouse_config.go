@@ -29,55 +29,6 @@ import (
 )
 
 const (
-	initConfigurationError = `%s fields in InitConfiguration are deprecated.
-Please use ModuleConfig 'deckhouse' section in configuration. Example:
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterConfiguration
-...
-apiVersion: deckhouse.io/v1alpha1
-kind: InitConfiguration
-...
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  settings:
-    %s
-`
-	configOverridesWarn = `
-Config overrides are deprecated. Please use module config:
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterConfiguration
-...
-apiVersion: deckhouse.io/v1alpha1
-kind: InitConfiguration
-...
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: global
-spec:
-  settings:
-    highAvailability: false
-    modules:
-      publicDomainTemplate: '%s.example.com'
-  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: cni-flannel
-spec:
-  enabled: true
----
-...
-`
-
 	DefaultBundle   = "Default"
 	DefaultLogLevel = "Info"
 )
@@ -100,7 +51,6 @@ type DeckhouseInstaller struct {
 	KubeadmBootstrap   bool
 	MasterNodeSelector bool
 
-	ReleaseChannel   string
 	InstallerVersion string
 
 	CommanderMode bool
@@ -109,6 +59,9 @@ type DeckhouseInstaller struct {
 
 func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	registryNameTemplate := "%s%s:%s"
+	if tag, ok := os.LookupEnv("DHCTL_TEST_VERSION_TAG"); ok {
+		return fmt.Sprintf(registryNameTemplate, c.Registry.Address, c.Registry.Path, tag)
+	}
 	tag := c.DevBranch
 	if forceVersionTag {
 		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer()
@@ -150,6 +103,23 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	if metaConfig == nil {
 		return nil, fmt.Errorf("Internal error. Metaconfig is nil")
 	}
+
+	if len(metaConfig.DeckhouseConfig.ConfigOverrides) > 0 {
+		return nil, fmt.Errorf("Support for 'configOverrides' was removed. Please use ModuleConfig's instead.")
+	}
+
+	if metaConfig.DeckhouseConfig.ReleaseChannel != "" {
+		return nil, fmt.Errorf("Support for 'releaseChannel' was removed. Please use 'deckhouse' ModuleConfig's settings instead.")
+	}
+
+	if metaConfig.DeckhouseConfig.Bundle != "" {
+		return nil, fmt.Errorf("Support for 'bundle' in InitConfiguration was removed. Please use 'deckhouse' ModuleConfig's settings instead.")
+	}
+
+	if metaConfig.DeckhouseConfig.LogLevel != "" {
+		return nil, fmt.Errorf("Support for 'logLevel' in InitConfiguration was removed. Please use 'deckhouse' ModuleConfig's settings instead.")
+	}
+
 	clusterConfig, err := metaConfig.ClusterConfigYAML()
 	if err != nil {
 		return nil, fmt.Errorf("Marshal cluster config failed: %v", err)
@@ -168,48 +138,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
 
-	releaseChannel := ""
-
-	// todo after release 1.55 remove it and from openapi schema
-	deprecatedFields := make([]string, 0, 3)
-	deprecatedFieldsExamples := make([]string, 0, 3)
-	if metaConfig.DeckhouseConfig.ReleaseChannel != "" {
-		releaseChannel = metaConfig.DeckhouseConfig.ReleaseChannel
-		deprecatedFields = append(deprecatedFields, "releaseChannel")
-		deprecatedFieldsExamples = append(deprecatedFieldsExamples, "releaseChannel: Stable")
-	}
-
-	if metaConfig.DeckhouseConfig.Bundle != bundle {
-		bundle = metaConfig.DeckhouseConfig.Bundle
-		deprecatedFields = append(deprecatedFields, "bundle")
-		deprecatedFieldsExamples = append(deprecatedFieldsExamples, "bundle: Default")
-	}
-
-	if metaConfig.DeckhouseConfig.LogLevel != logLevel {
-		logLevel = metaConfig.DeckhouseConfig.LogLevel
-		deprecatedFields = append(deprecatedFields, "logLevel")
-		deprecatedFieldsExamples = append(deprecatedFieldsExamples, "logLevel: Info")
-	}
-
-	if len(deprecatedFields) > 0 {
-		log.WarnF(initConfigurationError, strings.Join(deprecatedFields, ","), strings.Join(deprecatedFieldsExamples, "\n    "))
-	}
-
 	schemasStore := NewSchemaStore()
-
-	if len(metaConfig.DeckhouseConfig.ConfigOverrides) > 0 {
-		log.WarnLn(configOverridesWarn)
-		if len(metaConfig.ModuleConfigs) > 0 {
-			return nil, fmt.Errorf("Cannot use ModuleConfig's and configOverrides at the same time. Please use ModuleConfig's")
-		}
-
-		mcs, err := ConvertInitConfigurationToModuleConfigs(metaConfig, schemasStore, bundle, logLevel)
-		if err != nil {
-			return nil, err
-		}
-
-		metaConfig.ModuleConfigs = mcs
-	}
 
 	var deckhouseCm *ModuleConfig
 	// find deckhouse module config for extract release
@@ -231,7 +160,7 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 	}
 
 	if deckhouseCm == nil {
-		deckhouseCm, err = buildModuleConfigWithOverrides(schemasStore, "deckhouse", true, map[string]any{
+		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, map[string]any{
 			"bundle":   bundle,
 			"logLevel": logLevel,
 		})
@@ -239,14 +168,6 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 			return nil, fmt.Errorf("Cannot create ModuleConfig deckhouse: %s", err)
 		}
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, deckhouseCm)
-	} else {
-		releaseChannelRaw, hasReleaseChannelKey := deckhouseCm.Spec.Settings["releaseChannel"]
-		if rc, ok := releaseChannelRaw.(string); hasReleaseChannelKey && ok {
-			// we need set releaseChannel after bootstrapping process done
-			// to prevent update during bootstrap
-			delete(deckhouseCm.Spec.Settings, "releaseChannel")
-			releaseChannel = rc
-		}
 	}
 
 	installConfig := DeckhouseInstaller{
@@ -260,7 +181,6 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		StaticClusterConfig:   staticClusterConfig,
 		ClusterConfig:         clusterConfig,
 		ModuleConfigs:         metaConfig.ModuleConfigs,
-		ReleaseChannel:        releaseChannel,
 		InstallerVersion:      metaConfig.InstallerVersion,
 	}
 

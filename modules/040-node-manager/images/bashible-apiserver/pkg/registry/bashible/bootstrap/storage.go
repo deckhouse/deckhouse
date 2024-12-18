@@ -46,7 +46,7 @@ type Storage struct {
 	bashibleContext template.Context
 }
 
-// Render renders single script content by name
+// Render renders single script content by nodegroup name (single bootstrap script is used for all bundles).
 func (s Storage) Render(ng string) (runtime.Object, error) {
 	data, err := s.getContext(ng)
 	if err != nil {
@@ -69,8 +69,8 @@ func (s Storage) Render(ng string) (runtime.Object, error) {
 	return &obj, nil
 }
 
-func (s Storage) getContext(name string) (map[string]interface{}, error) {
-	contextKey, err := template.GetBashibleContextKey(name)
+func (s Storage) getContext(ng string) (map[string]interface{}, error) {
+	contextKey, err := template.GetBootstrapContextKey(ng)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get context key: %v", err)
 	}

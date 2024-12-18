@@ -1,5 +1,0 @@
-- name: Grafana Agent
-  link: https://github.com/grafana/agent
-  description: Grafana Agent is a telemetry collector for sending metrics, logs, and trace data to the opinionated Grafana observability stack.
-  logo: https://raw.githubusercontent.com/grafana/agent/1c553542ce0e7a57d9fadf0139bdea1042dcdc03/docs/assets/logo_and_name.png
-  licence: Apache License 2.0

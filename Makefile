@@ -47,7 +47,7 @@ endif
 
 # Set testing path for tests-modules
 ifeq ($(FOCUS),)
-	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/...
+	TESTS_PATH = ./modules/... ./global-hooks/... ./ee/modules/... ./ee/fe/modules/... ./ee/be/modules/... ./ee/se/modules/... ./ee/se-plus/modules/...
 else
 	CE_MODULES = $(shell find ./modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(CE_MODULES),)
@@ -68,6 +68,10 @@ else
 	SE_MODULES = $(shell find ./ee/se/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
 	ifneq ($(FE_MODULES),)
 		SE_MODULES_RECURSE = ${SE_MODULES}/...
+	endif
+	SE_PLUS_MODULES = $(shell find ./ee/se-plus/modules -maxdepth 1 -regex ".*[0-9]-${FOCUS}")
+	ifneq ($(FE_MODULES),)
+		SE_PLUS_MODULES_RECURSE = ${SE_PLUS_MODULES}/...
 	endif
 	TESTS_PATH = ${CE_MODULES_RECURSE} ${EE_MODULES_RECURSE} ${FE_MODULES_RECURSE} ${BE_MODULES_RECURSE} ${SE_MODULES_RECURSE}
 endif
@@ -110,6 +114,10 @@ TESTS_TIMEOUT="15m"
 
 deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf bin/gh ## Install dev dependencies.
 
+##@ Security
+bin:
+	mkdir -p bin
+
 ##@ Tests
 
 bin/promtool-${PROMTOOL_VERSION}/promtool:
@@ -130,7 +138,11 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
-.PHONY: tests-modules tests-matrix tests-openapi tests-controller
+.PHONY: bin/yq
+bin/yq: bin ## Install yq deps for update-patchversion script.
+	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
+
+.PHONY: tests-modules tests-matrix tests-openapi tests-controller tests-webhooks
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
@@ -145,10 +157,8 @@ tests-openapi: ## Run tests against modules openapi values schemas.
 tests-controller: ## Run deckhouse-controller unit tests.
 	go test ./deckhouse-controller/... -v
 
-.PHONY: tests-doc-links
-tests-doc-links: ## Build documentation and run checker of html links.
-	bash tools/doc_check_links.sh
-
+tests-webhooks: bin/yq ## Run python webhooks unit tests.
+	./testing/webhooks/run.sh
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
@@ -187,6 +197,9 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 	@docker run --rm -v ${PWD}:/workdir ${MDLINTER_IMAGE} \
 		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md" --fix && (echo 'Fixed successfully.')
 
+lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
+	@werf config render | awk 'NR!=1 {print}' | go run ./tools/lint-src-artifact/lint-src-artifact.go
+
 ##@ Generate
 
 .PHONY: generate render-workflow
@@ -195,10 +208,6 @@ generate: bin/werf ## Run all generate-* jobs in bulk.
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
-
-##@ Security
-bin:
-	mkdir -p bin
 
 bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 	cd tools/regcopy; go build -o bin/regcopy
@@ -226,25 +235,33 @@ cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
 .PHONY: docs
 docs: ## Run containers with the documentation.
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-dev
 docs-dev: ## Run containers with the documentation in the dev mode (allow uncommited files).
+	export WERF_REPO=:local
+	export SECONDARY_REPO=""
+	export DOC_API_URL=dev
+	export DOC_API_KEY=dev
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development
+	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
+	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
 	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
 
+.PHONY: tests-doc-links
+docs-linkscheck: ## Build documentation and run checker of html links.
+	bash tools/doc_check_links.sh
+
 .PHONY: docs-spellcheck
 docs-spellcheck: ## Check the spelling in the documentation.
   ##~ Options: file="path/to/file" (Specify a path to a specific file)
-	cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/spell_check.sh -f $(file)
+	cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" --repo ":local" -- /app/spell_check.sh -f $(file)
 
 lint-doc-spellcheck-pr:
 	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=bash" -- /app/check_diff.sh
@@ -276,9 +293,6 @@ bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion s
 	rm -f bin/jq
 	ln -s jq-$(JQ_VERSION)/jq bin/jq
 
-bin/yq: bin ## Install yq deps for update-patchversion script.
-	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
-
 bin/crane: bin ## Install crane deps for update-patchversion script.
 	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
 
@@ -287,9 +301,13 @@ bin/trdl: bin
 	chmod +x bin/trdl
 
 bin/werf: bin bin/trdl ## Install werf for images-digests generator.
-	trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2 && \
-	trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable
-	ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf
+	@bash -c 'trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2'
+	@if command -v bin/werf >/dev/null 2>&1; then \
+		trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 1.2 stable; \
+	else \
+		trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable; \
+		ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf; \
+	fi
 
 bin/gh: bin ## Install gh cli.
 	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
@@ -345,13 +363,16 @@ set-build-envs:
   ifeq ($(DECKHOUSE_REGISTRY_HOST),)
  		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
   endif
+  ifeq ($(OBSERVABILITY_SOURCE_REPO),)
+  	export OBSERVABILITY_SOURCE_REPO=https://example.com
+  endif
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
 
 build: set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
-	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
+	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --save-build-report=true --build-report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
   ifeq ($(FOCUS),)
     ifneq ($(CI_COMMIT_REF_SLUG),)
 				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches.

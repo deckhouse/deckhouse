@@ -1,0 +1,5 @@
+name: metallb
+weight: 380
+
+requirements:
+  bootstrapped: true

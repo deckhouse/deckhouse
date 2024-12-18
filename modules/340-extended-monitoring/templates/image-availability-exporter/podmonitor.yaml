@@ -1,5 +1,5 @@
 {{- if .Values.extendedMonitoring.imageAvailability.exporterEnabled }}
-  {{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+  {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor

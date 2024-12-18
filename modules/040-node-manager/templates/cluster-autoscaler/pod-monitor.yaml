@@ -1,4 +1,4 @@
-{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
   {{- if include "cluster_autoscaler_enabled" . }}
     {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
 ---

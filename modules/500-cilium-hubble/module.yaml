@@ -1,0 +1,4 @@
+name: cilium-hubble
+weight: 500
+description: |
+    The cilium-hubble module

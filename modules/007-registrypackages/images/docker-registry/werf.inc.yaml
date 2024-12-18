@@ -1,0 +1,48 @@
+{{- $docker_version := "2.8.3" }}
+{{- $docker_auth_version := "1.12.0" }}
+
+{{- $image_version := $docker_version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - registry
+  - auth_server
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    docker: {{ $docker_version }}
+    cesanta_auth: {{ $docker_auth_version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  setup:
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=auto
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone --depth 1 --branch {{ $docker_auth_version }} {{ $.SOURCE_REPO }}/cesanta/docker_auth.git
+  - cd /docker_auth/auth_server
+  - make build
+  - mv ./auth_server /auth_server
+  - mkdir -p /go/src/github.com/docker/distribution
+  - cd /go/src/github.com/docker/distribution
+  - git clone --depth 1 --branch v{{ $docker_version }} {{ $.SOURCE_REPO }}/distribution/distribution.git .
+  - make
+  - cp bin/registry /
+  - chmod +x /auth_server /registry /install /uninstall

@@ -1,0 +1,36 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: operator-trivy
+    rbac.deckhouse.io/aggregate-to-security-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-operator-trivy
+  name: d8:manage:permission:module:operator-trivy:view
+rules:
+- apiGroups:
+  - aquasecurity.github.io
+  resources:
+  - clustercompliancereports
+  - clusterconfigauditreports
+  - clusterinfraassessmentreports
+  - clusterrbacassessmentreports
+  - clustersbomreports
+  - clustervulnerabilityreports
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - operator-trivy
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

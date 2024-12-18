@@ -5,7 +5,7 @@ permalink: en/module-development/example/
 
 {% raw %}
 
-This section provides an example of creating a `hello-world-module` module based on [module template](https://github.com/deckhouse/modules-template/) and an adaptation of the [hello-world](https://github.com/giantswarm/hello-world-app) Helm-chart.
+This section provides an example of creating a `helloworld` module based on [module template](https://github.com/deckhouse/modules-template/) and an adaptation of the [hello-world](https://github.com/giantswarm/hello-world-app) Helm-chart.
 
 ## Preparing module source code and building
 
@@ -17,20 +17,20 @@ This section provides an example of creating a `hello-world-module` module based
 1. Fork the [module template repository](https://github.com/deckhouse/modules-template/) or copy it.
 
    ```shell
-   git clone git@github.com:deckhouse/modules-template.git hello-world-module \
-     && cd hello-world-module
+   git clone git@github.com:deckhouse/modules-template.git helloworld \
+     && cd helloworld
    ```
 
-1. Enter the name of the module in the `Chart.yaml` file.
+1. Enter the name of the module in the `module.yaml` file.
 
-   We will use the `hello-world-module` module name in this example, but you can use any name you like.
+   We will use the `helloworld` module name in this example, but you can use any name you like. For this, replace 'helloworld' in the commands and in your repo's name with the one you prefer.
 
    > Note that the module name may differ depending on the command. In may be written in *kebab-case* as well as *camelCase*. If you use a custom module name, make sure to modify it accordingly.
 
-   Run the following command to add the module name to the `Chart.yaml` file or edit it manually:
+   Run the following command to add the module name to the `module.yaml` file or edit it manually:
 
    ```shell
-   sed -Ei 's/^name:(.*)/name: hello-world-module/g' Chart.yaml
+   sed -i -e 's/^name:.*$/name: helloworld/' module.yaml
    ```
 
 1. Clone the [hello-world](https://github.com/giantswarm/hello-world-app) chart source code into a temporary directory.
@@ -44,14 +44,15 @@ This section provides an example of creating a `hello-world-module` module based
    ```shell
    rm -rf templates/*
    cp -fR .tmp-chart/helm/hello-world/templates/* templates/
+   cp .tmp-chart/helm/hello-world/values.yaml values.yaml
    ```
 
-1. Replace the `.Values` path in the chart templates with `.Values.helloWorld`.
+1. Replace the `.Values` path in the chart templates with `.Values.helloworld`.
 
    > This is due to the architectural feature of [addon-operator](https://github.com/flant/addon-operator). You have to stick to it to be able to access module values.
 
    ```shell
-   sed -i -e 's/.Values/.Values.helloWorldModule/g' $(find templates/ -type f)
+   sed -i -e 's/.Values/.Values.helloworld/g' $(find templates/ -type f)
    ```
 
 1. Add the OpenAPI schema of the module settings.
@@ -59,7 +60,12 @@ This section provides an example of creating a `hello-world-module` module based
    The module parameters are specified in the OpenAPI schema in the [openapi](../structure/#openapi) directory. Execute the following command to convert the JSON schema of the chart parameters to the OpenAPI schema of the module:
 
    ```shell
-   yq -P .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
+   jq 'walk(
+      if type == "object" and .type == "object" and (keys | length) == 1
+      then . + {additionalProperties: true}
+      else .
+      end
+   )' .tmp-chart/helm/hello-world/values.schema.json > openapi/config-values.yaml
    ```
 
 1. Define a rule for building an application container image.
@@ -68,14 +74,14 @@ This section provides an example of creating a `hello-world-module` module based
 
    ```shell
    rm -rf images/*
-   mkdir images/hello-world-module
-   echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/hello-world-module/Dockerfile
+   mkdir images/helloworld
+   echo "FROM quay.io/giantswarm/helloworld:0.2.0" > images/helloworld/Dockerfile
    ```
 
 1. Replace the image in the Deployment manifest with the Deckhouse Kubernetes Platform library helper. This will allow you to use the current content-based image tag.
 
    ```shell
-   sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloWorldModule") }}/g' templates/deployment.yaml
+   sed -Ei 's/image\:(.*)/image: {{ include "helm_lib_module_image" (list . "helloworld") }}/g' templates/deployment.yaml
    ```
 
 1. Delete module hooks, CRDs, and temporary files.
@@ -130,7 +136,7 @@ You can now access your module in a cluster managed by Deckhouse Kubernetes Plat
 
 ## Enabling a module in a cluster
 
-The following is the sequence of steps to enable the `hello-world-module` in a cluster managed by Deckhouse Kubernetes Platform.
+The following is the sequence of steps to enable the `helloworld` in a cluster managed by Deckhouse Kubernetes Platform.
 
 1. Create an access token in the GitHub repository with permissions to handle GitHub Packages.
 1. Generate an authentication string to access the GitHub Packages container registry in [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials) format; insert your GitHub username (or organization) and access token in the angle brackets below:
@@ -172,18 +178,18 @@ The following is the sequence of steps to enable the `hello-world-module` in a c
    kubectl  get ms ghcr -o jsonpath='{.status.modules[*].name}'
    ```
 
-   The list should only contain the `hello-world-module` module.
+   The list should only contain the `helloworld` module.
 
 1. Create a [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) resource that defines the module update policy.
 
-   Run the following command to create an update policy for the `hello-world-module` module with the *Alpha* release channel and *Auto* update mode:
+   Run the following command to create an update policy for the `helloworld-policy` module with the *Alpha* release channel and *Auto* update mode:
 
    ```shell
    kubectl apply -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleUpdatePolicy
    metadata:
-     name: hello-world-module
+     name: helloworld-policy
    spec:
      moduleReleaseSelector:
        labelSelector:
@@ -212,7 +218,7 @@ The following is the sequence of steps to enable the `hello-world-module` in a c
    ```console
    $ kubectl get mr
    NAME                                PHASE        UPDATE POLICY        TRANSITIONTIME   MESSAGE
-   hello-world-module-v0.0.1           Deployed     hello-world-module   22m            
+   helloworld-v0.0.1                   Deployed     helloworld-policy    22m            
    ```
 
 1. If the release has been successfully installed, wait for the Deckhouse Kubernetes Platform pod to restart.
@@ -224,7 +230,7 @@ The following is the sequence of steps to enable the `hello-world-module` in a c
 1. Enable the module by running the following command:
 
    ```shell
-   kubectl -ti -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable hello-world-module
+   kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable helloworld
    ```
 
    After a while, the module objects will be available in the cluster.
@@ -238,7 +244,7 @@ The following is the sequence of steps to enable the `hello-world-module` in a c
   or check the status of the DKP queue:
 
    ```shell
-   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller queue list
+   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
    ```
 
 {% endraw %}

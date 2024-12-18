@@ -28,7 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -48,14 +48,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                "ngs",
 			ApiVersion:          "deckhouse.io/v1",
 			Kind:                "NodeGroup",
-			ExecuteHookOnEvents: pointer.Bool(false),
+			ExecuteHookOnEvents: ptr.To(false),
 			FilterFunc:          bootstrapTokenFilterNodeGroup,
 		},
 		{
 			Name:                "bootstrap_tokens",
 			ApiVersion:          "v1",
 			Kind:                "Secret",
-			ExecuteHookOnEvents: pointer.Bool(false),
+			ExecuteHookOnEvents: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},

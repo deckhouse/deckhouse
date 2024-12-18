@@ -38,26 +38,6 @@ positive:
     - modules:
         https:
           mode: OnlyInURI
-    # various proxy settings
-    - modules:
-        proxy:
-          httpProxy: http://1.2.3.4:80
-    - modules:
-        proxy:
-          httpsProxy: https://1.2.3.4:443
-    - modules:
-        proxy:
-          httpProxy: http://1.2.3.4:80
-          noProxy: ["127.0.0.1", "example.com"]
-    - modules:
-        proxy:
-          httpsProxy: https://1.2.3.4:443
-          noProxy: ["127.0.0.1", "example.com"]
-    - modules:
-        proxy:
-          httpProxy: http://1.2.3.4:80
-          httpsProxy: https://1.2.3.4:443
-          noProxy: ["127.0.0.1", "example.com"]
     # public domain template contain %s in the middle of the domain template
     - modules:
         publicDomainTemplate: "example-%s.com"
@@ -83,7 +63,7 @@ positive:
       clusterIsBootstrapped: true
       deckhouseVersion: dev
       deckhouseEdition: FE
-      enabledModules: [ "cert-manager", "vertical-pod-autoscaler-crd", "prometheus", "priority-class" ]
+      enabledModules: [ "cert-manager", "vertical-pod-autoscaler", "prometheus", "priority-class" ]
       discovery:
         clusterControlPlaneIsHighlyAvailable: true
         clusterMasterCount: 3
@@ -196,11 +176,6 @@ negative:
       resourcesRequests:
         masterNode:
           memory: "1Gigabyte"
-  # only one of httpProxy and httpsProxy is allowed
-  - modules:
-      proxy:
-        httpProxy: 1.2.3.4:80
-        httpsProxy: 1.2.3.4:443
   values:
     # cluster configuration: not support k8s version
     - clusterConfiguration:

@@ -46,13 +46,13 @@
 
               Get `providerClusterConfiguration.withNATInstance`:
               ```
-              kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
+              kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerClusterConfiguration.withNATInstance'
               ```
 
               1. If you specified `withNATInstance.natInstanceInternalAddress` and/or `withNATInstance.internalSubnetID` in providerClusterConfiguration, you need to remove them with the following command:
 
                   ```
-                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+                  kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
                   ```
 
               1. If you specified `withNATInstance.externalSubnetID` and/or `withNATInstance.natInstanceExternalAddress` in providerClusterConfiguration, you need to change these to the appropriate values.
@@ -61,7 +61,7 @@
 
                   Change `withNATInstance.externalSubnetID` and `withNATInstance.natInstanceExternalAddress` with the following command:
                   ```
-                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
+                  kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
                   ```
 
           1. Run the appropriate edition and version of the Deckhouse installer container on the **local** machine (change the container registry address if necessary) and do converge.
@@ -91,13 +91,13 @@
               1. Get route table name
 
                   ```
-                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
+                  kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
                   ```
 
               1. Get NAT Instance name:
 
                   ```
-                  kubectl -n d8-system exec -it deploy/deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
+                  kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName'
                   ```
 
               1. Get NAT Instance internal IP

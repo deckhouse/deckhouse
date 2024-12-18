@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/clusterapi"
 	mcmv1alpha1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
@@ -164,18 +164,22 @@ func instanceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 		return nil, err
 	}
 
-	return &ic, nil
+	return &instance{
+		Name:              ic.Name,
+		DeletionTimestamp: ic.DeletionTimestamp,
+		Status:            ic.Status,
+	}, nil
 }
 
 func instanceController(input *go_hook.HookInput) error {
-	instances := make(map[string]*d8v1alpha1.Instance, len(input.Snapshots["instances"]))
+	instances := make(map[string]*instance, len(input.Snapshots["instances"]))
 	machines := make(map[string]*machineForInstance, len(input.Snapshots["machines"]))
 	clusterAPIMachines := make(map[string]*machineForInstance, len(input.Snapshots["cluster_api_machines"]))
 	nodeGroups := make(map[string]*nodeGroupForInstance, len(input.Snapshots["ngs"]))
 
 	for _, i := range input.Snapshots["instances"] {
-		ins := i.(*d8v1alpha1.Instance)
-		instances[ins.GetName()] = ins
+		ins := i.(*instance)
+		instances[ins.Name] = ins
 	}
 
 	for _, m := range input.Snapshots["machines"] {
@@ -204,7 +208,7 @@ func instanceController(input *go_hook.HookInput) error {
 	for name, machine := range machines {
 		ng, ok := nodeGroups[machine.NodeGroup]
 		if !ok {
-			input.LogEntry.Warningf("NodeGroup %s not found", machine.NodeGroup)
+			input.Logger.Warnf("NodeGroup %s not found", machine.NodeGroup)
 
 			continue
 		}
@@ -233,7 +237,7 @@ func instanceController(input *go_hook.HookInput) error {
 	for name, machine := range clusterAPIMachines {
 		ng, ok := nodeGroups[machine.NodeGroup]
 		if !ok {
-			input.LogEntry.Warningf("NodeGroup %s not found", machine.NodeGroup)
+			input.Logger.Warnf("NodeGroup %s not found", machine.NodeGroup)
 
 			continue
 		}
@@ -266,13 +270,13 @@ func instanceController(input *go_hook.HookInput) error {
 	//  	a. we should delete finalizers only if metadata.deletionTimestamp is non-zero
 	//		b. we should delete finalizers and delete instance if metadata.deletionTimestamp is zero
 	for _, ic := range instances {
-		_, machineExists := machines[ic.GetName()]
-		_, clusterAPIMachineExists := clusterAPIMachines[ic.GetName()]
+		_, machineExists := machines[ic.Name]
+		_, clusterAPIMachineExists := clusterAPIMachines[ic.Name]
 
 		if !machineExists && !clusterAPIMachineExists {
 			input.PatchCollector.MergePatch(deleteFinalizersPatch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name)
 
-			ds := ic.GetDeletionTimestamp()
+			ds := ic.DeletionTimestamp
 			if ds == nil || ds.IsZero() {
 				input.PatchCollector.Delete("deckhouse.io/v1alpha1", "Instance", "", ic.Name)
 			}
@@ -309,8 +313,8 @@ func newInstance(machine *machineForInstance, ng *nodeGroupForInstance) *d8v1alp
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					APIVersion:         "deckhouse.io/v1",
-					BlockOwnerDeletion: pointer.Bool(false),
-					Controller:         pointer.Bool(false),
+					BlockOwnerDeletion: ptr.To(false),
+					Controller:         ptr.To(false),
 					Kind:               "NodeGroup",
 					Name:               ng.Name,
 					UID:                ng.UID,
@@ -352,7 +356,7 @@ func instanceLastOpMap(s map[string]interface{}) map[string]interface{} {
 	return m.(map[string]interface{})
 }
 
-func getInstanceStatusPatch(ic *d8v1alpha1.Instance, machine *machineForInstance, ng *nodeGroupForInstance) map[string]interface{} {
+func getInstanceStatusPatch(ic *instance, machine *machineForInstance, ng *nodeGroupForInstance) map[string]interface{} {
 	status := make(map[string]interface{})
 
 	if ic.Status.NodeRef.Name != machine.NodeName {
@@ -428,4 +432,10 @@ type nodeGroupForInstance struct {
 	Name           string
 	UID            k8stypes.UID
 	ClassReference d8v1.ClassReference
+}
+
+type instance struct {
+	Name              string
+	DeletionTimestamp *metav1.Time
+	Status            d8v1alpha1.InstanceStatus
 }

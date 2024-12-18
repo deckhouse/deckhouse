@@ -27,6 +27,7 @@ import (
 // Client is a client that executes commands on hosts using the OpenSSH client.
 // It spawns tasks and stores their results by providerID.
 type Client struct {
+	checkTaskManager     *taskManager
 	bootstrapTaskManager *taskManager
 	cleanupTaskManager   *taskManager
 	tcpCheckTaskManager  *taskManager
@@ -38,6 +39,7 @@ type Client struct {
 // NewClient creates a new Client.
 func NewClient(recorder *event.Recorder) *Client {
 	return &Client{
+		checkTaskManager:     newTaskManager(),
 		bootstrapTaskManager: newTaskManager(),
 		cleanupTaskManager:   newTaskManager(),
 		tcpCheckTaskManager:  newTaskManager(),

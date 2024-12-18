@@ -5,6 +5,35 @@ $( document ).ready(function() {
             if (e.target.value.length > 0 ) $(".search__results").addClass("active");
             else $(".search__results").removeClass("active");
           });
+          $('a.lang-switcher').each(function() {
+            let pageDomain = window.location.hostname;
+            if (window.location.pathname.startsWith('/ru/')) {
+              $(this).attr('href', window.location.href.replace('/ru/', '/en/'))
+            } else if (window.location.pathname.startsWith('/en/')) {
+              $(this).attr('href', window.location.href.replace('/en/', '/ru/'))
+            } else {
+              switch (pageDomain) {
+                case 'deckhouse.io':
+                  $(this).attr('href', window.location.href.replace('deckhouse.io', 'deckhouse.ru'))
+                  break;
+                case 'deckhouse.ru':
+                  $(this).attr('href', window.location.href.replace('deckhouse.ru', 'deckhouse.io'))
+                  break;
+                case 'ru.localhost':
+                  $(this).attr('href', window.location.href.replace('ru.localhost', 'localhost'))
+                  break;
+                case 'localhost':
+                  $(this).attr('href', window.location.href.replace('localhost', 'ru.localhost'))
+                  break;
+                default:
+                  if (pageDomain.includes('deckhouse.ru.')) {
+                    $(this).attr('href', window.location.href.replace('deckhouse.ru.', 'deckhouse.'))
+                  } else if (pageDomain.includes('deckhouse.')) {
+                    $(this).attr('href', window.location.href.replace('deckhouse.', 'deckhouse.ru.'))
+                  }
+              }
+            }
+          });
 });
 
 document.addEventListener("DOMContentLoaded", function() {
@@ -22,7 +51,6 @@ $( document ).ready(function() {
     //this script says, if the height of the viewport is greater than 800px, then insert affix class, which makes the nav bar float in a fixed
     // position as your scroll. if you have a lot of nav items, this height may not work for you.
     var h = $(window).height();
-    //console.log (h);
     if (h > 800) {
         // $( "#mysidebar" ).attr("class", "nav affix");
         // $( "#mysidebar" ).attr("class", "nav");
@@ -173,6 +201,29 @@ $(document).ready(function(){
   })
 });
 
+$(document).ready(function(){
+  const titles = $('.resources__prop_name');
+  const links = $('.resources__prop_wrap .anchorjs-link');
+
+  links.each((i, link) => {
+    $(link).click((e) => {
+      e.stopPropagation();
+    })
+  })
+
+  titles.each((i, title) => {
+    $(title).click(() => {
+      const firstList = $(title).parent('.resources__prop_wrap').parent('li').parent('ul');
+
+      if (firstList.hasClass('resources')) return;
+
+      const parentElem = $(title).parent('.resources__prop_wrap').parent('li');
+
+      parentElem.toggleClass('closed');
+    })
+  })
+});
+
 const openDiagram = function () {
   const button = $('[data-open-scheme]');
   const wrap = $('.functionality-block__diagram-wrap')
@@ -204,20 +255,22 @@ function changeHandler(e) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  let top;
   let header = document.querySelector('header');
   let lastScrollTop = 0;
   let topOffsetToTransform = 25;
 
-  const headerTransforms = () => {
-    let top = window.scrollY
-
-    changeShadow(top)
-    changeOffset(top)
-
+  const calcScroll = () => {
+    top = window.scrollY
     lastScrollTop = top
   }
 
-  window.onscroll = headerTransforms
+  window.onscroll = calcScroll
+  window.addEventListener('scroll', () => changeOffset(top))
+
+  if (!header.classList.contains('header_float')) {
+    window.addEventListener('scroll', () => changeShadow(top))
+  }
 
   const changeShadow = (top) => {
     if (!header.classList.contains('header_float') && top >=

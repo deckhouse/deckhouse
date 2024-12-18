@@ -1,0 +1,5 @@
+module: priority-class
+namespace: none
+subsystems:
+  - kubernetes
+

@@ -3,7 +3,7 @@ cpu: 20m
 memory: 20Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -79,7 +79,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "agent_resources" . | nindent 12 }}
 {{- end }}
       containers:
@@ -118,7 +118,7 @@ spec:
               fieldRef:
                 fieldPath: spec.nodeName
           - name: UPMETER_SCHEDULER_PROBE_IMAGE
-            value: {{ include "helm_lib_module_common_image" (list . "alpine") }}
+            value: {{ include "helm_lib_module_common_image" (list . "init") }}
           - name: UPMETER_SCHEDULER_PROBE_IMAGE_PULL_SECRETS
             value: "deckhouse-registry"
           - name: UPMETER_TLS
@@ -155,7 +155,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "agent_resources" . | nindent 14 }}
 {{- end }}
       hostNetwork: true

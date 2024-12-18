@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: prometheus
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -16,7 +17,8 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
+      deprecated: true
       schema: &schema
         openAPIV3Schema:
           type: object
@@ -55,6 +57,16 @@ spec:
                 customAuthToken:
                   type: string
                   description: Custom token sent as a value of the X-Auth-Token header.
+                headers:
+                  description: |
+                    HTTP headers to include in the request.
+                  type: object
+                  properties:
+                    X-Scope-OrgID:
+                      description: |
+                        The `X-Scope-OrgID` header specifying the tenant ID.
+                      type: string
+                  required: ["X-Scope-OrgID"]
                 writeRelabelConfigs:
                   description: |
                     The list of remote write relabel configurations.
@@ -120,6 +132,6 @@ spec:
           description: 'Prometheus Remote write URL.'
     - name: v1
       served: true
-      storage: false
+      storage: true
       schema: *schema
       additionalPrinterColumns: *additionalPrinterColumns

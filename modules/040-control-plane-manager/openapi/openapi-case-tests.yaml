@@ -13,3 +13,4 @@ positive:
         - 4.3.2.1
         pkiChecksum: test
         rolloutEpoch: 100500
+        kubeSchedulerExtenders: []

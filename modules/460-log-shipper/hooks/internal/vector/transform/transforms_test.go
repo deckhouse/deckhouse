@@ -24,7 +24,7 @@ import (
 	"github.com/clarketm/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
@@ -177,22 +177,22 @@ func TestTransformSnippet(t *testing.T) {
 		customConfigs := []v1alpha1.MultilineParserCustom{
 			{
 				EndsWhen: &v1alpha1.ParserRegex{
-					NotRegex: pointer.String("^endsWhenRegexEnd"),
+					NotRegex: ptr.To("^endsWhenRegexEnd"),
 				},
 			},
 			{
 				StartsWhen: &v1alpha1.ParserRegex{
-					NotRegex: pointer.String("^startsWhenRegexEnd"),
+					NotRegex: ptr.To("^startsWhenRegexEnd"),
 				},
 			},
 			{
 				EndsWhen: &v1alpha1.ParserRegex{
-					Regex: pointer.String("^endsWhenRegex"),
+					Regex: ptr.To("^endsWhenRegex"),
 				},
 			},
 			{
 				EndsWhen: &v1alpha1.ParserRegex{
-					NotRegex: pointer.String("^startsWhenRegex"),
+					NotRegex: ptr.To("^startsWhenRegex"),
 				},
 			},
 		}

@@ -20,9 +20,9 @@ import (
 	"github.com/cloudflare/cfssl/csr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -32,7 +32,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: generate_ca", func() {
 		`{"cniCilium":{}}`,
 	)
 	const cn = "d8.hubble-ca.cilium.io"
-	ca, _ := certificate.GenerateCA(&logrus.Entry{}, cn,
+	ca, _ := certificate.GenerateCA(log.NewNop(), cn,
 		certificate.WithKeyRequest(&csr.KeyRequest{
 			A: "rsa",
 			S: 2048,

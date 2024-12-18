@@ -58,13 +58,14 @@ type StaticInstanceStatusCurrentStatus struct {
 	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
 
 	// +optional
-	// +kubebuilder:validation:Enum=Pending;Bootstrapping;Running;Cleaning
+	// +kubebuilder:validation:Enum=Error;Pending;Bootstrapping;Running;Cleaning
 	Phase StaticInstanceStatusCurrentStatusPhase `json:"phase"`
 }
 
 type StaticInstanceStatusCurrentStatusPhase string
 
 const (
+	StaticInstanceStatusCurrentStatusPhaseError         StaticInstanceStatusCurrentStatusPhase = "Error"
 	StaticInstanceStatusCurrentStatusPhasePending       StaticInstanceStatusCurrentStatusPhase = "Pending"
 	StaticInstanceStatusCurrentStatusPhaseBootstrapping StaticInstanceStatusCurrentStatusPhase = "Bootstrapping"
 	StaticInstanceStatusCurrentStatusPhaseRunning       StaticInstanceStatusCurrentStatusPhase = "Running"

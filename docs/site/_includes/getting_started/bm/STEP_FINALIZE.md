@@ -32,7 +32,7 @@ sudo /opt/deckhouse/bin/kubectl patch nodegroup master --type json -p '[{"op": "
 {% endsnippetcut %}
   </li>
   <li>
-<p>Configure the StorageClass for the <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
+<p>Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -48,10 +48,11 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-<p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
+<p>Make the created StorageClass as the default one in the cluster:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
+sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
+  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 {% endsnippetcut %}
   </li>
@@ -59,14 +60,14 @@ sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io
 </div>
 
 <div id="block_layout_worker" class="tabs__content_worker">
-<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/documentation/latest/modules/040-node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
+<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/products/kubernetes-platform/documentation/latest/modules/040-node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
 
 <ul>
   <li>
     Start a <strong>new virtual machine</strong> that will become the cluster node.
   </li>
   <li>
-  Configure the StorageClass for the <a href="/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
+  Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/031-local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
 {% snippetcut %}
 ```shell
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -82,15 +83,16 @@ EOF
 {% endsnippetcut %}
   </li>
   <li>
-  <p>Make the created StorageClass as the default one by adding the <code>storageclass.kubernetes.io/is-default-class='true'</code> annotation:</p>
+  <p>Make the created StorageClass as the default one in the cluster:</p>
 {% snippetcut %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl annotate sc localpath storageclass.kubernetes.io/is-default-class='true'
+sudo /opt/deckhouse/bin/kubectl patch mc global --type merge \
+  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Create a <a href="/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:</p>
+    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
 sudo /opt/deckhouse/bin/kubectl create -f - << EOF
@@ -118,7 +120,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Create an <a href="/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
+    <p>Create an <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```bash
 kubectl create -f - <<EOF
@@ -159,7 +161,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 {% endsnippetcut %}
   </li>
   <li>
-    <p>Create a <a href="/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
+    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
 {% snippetcut %}
 ```bash
 # Specify the IP address of the node you want to connect to the cluster.
@@ -291,6 +293,8 @@ upmeter.example.com</code>
 </pre>
         </div>
       </li>
+      <li><strong>Important:</strong> The domain used in the template should not match the domain specified in the clusterDomain parameter and the internal service network zone. For example, if clusterDomain is set to <code>cluster.local</code> (the default value) and the service network zone is <code>ru-central1.internal</code>, then publicDomainTemplate cannot be <code>%s.cluster.local</code> or <code>%s.ru-central1.internal</code>.
+      </li>
     </ul>
   </li>
   <li><p>If you <strong>don't have a DNS server</strong>: on your PC add static entries (specify your public IP address in the <code>PUBLIC_IP</code>variable) that match the names of specific services to the public IP to the <code>/etc/hosts</code> file for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows):</p>
@@ -316,7 +320,6 @@ EOF
 "
 ```
 {% endsnippetcut %}
-</li></ul>
 </li>
 </ul>
 

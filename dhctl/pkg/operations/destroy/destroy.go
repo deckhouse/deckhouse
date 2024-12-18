@@ -30,8 +30,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -42,7 +44,7 @@ type Destroyer interface {
 }
 
 type Params struct {
-	SSHClient              *ssh.Client
+	NodeInterface          node.Interface
 	StateCache             dhctlstate.Cache
 	OnPhaseFunc            phases.DefaultOnPhaseFunc
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
@@ -84,15 +86,20 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		pec = phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc)
 	}
 
-	d8Destroyer := NewDeckhouseDestroyer(params.SSHClient, state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
+	wrapper, ok := params.NodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		return nil, fmt.Errorf("cluster destruction requires usage of ssh node interface")
+	}
+
+	d8Destroyer := NewDeckhouseDestroyer(wrapper.Client(), state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
 
 	var terraStateLoader terraform.StateLoader
 
 	if params.CommanderMode {
 		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
-		//if params.CommanderUUID == uuid.Nil {
+		// if params.CommanderUUID == uuid.Nil {
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
-		//}
+		// }
 
 		metaConfig, err := commander.ParseMetaConfig(state.cache, params.CommanderModeParams)
 		if err != nil {
@@ -105,7 +112,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 
 	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.TerraformContext, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
 
-	staticDestroyer := NewStaticMastersDestroyer(params.SSHClient)
+	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client())
 
 	return &ClusterDestroyer{
 		state:           state,
@@ -229,14 +236,14 @@ func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
 	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
 	for _, host := range mastersHosts {
 		settings := d.SSHClient.Settings.Copy()
-		settings.SetAvailableHosts([]string{host})
+		settings.SetAvailableHosts([]session.Host{host})
 		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).Run(func() error {
-			err := frontend.NewCommand(settings, cmd).
-				Sudo().
-				WithTimeout(5 * time.Minute).
-				WithStdoutHandler(stdOutErrHandler).
-				WithStderrHandler(stdOutErrHandler).
-				Run()
+			cmd := frontend.NewCommand(settings, cmd)
+			cmd.Sudo()
+			cmd.WithTimeout(5 * time.Minute)
+			cmd.WithStdoutHandler(stdOutErrHandler)
+			cmd.WithStderrHandler(stdOutErrHandler)
+			err := cmd.Run()
 
 			if err != nil {
 				var ee *exec.ExitError

@@ -115,13 +115,13 @@ func main() {
 	go func() {
 		log.Infof("Signal received: %v. Exiting.\n", <-signalChan)
 		cancel()
-		log.Infoln("Waiting for stop reconcile loop...")
+		log.Info("Waiting for stop reconcile loop...")
 		<-doneCh
 
 		ctx, cancel := context.WithTimeout(rootCtx, 10*time.Second)
 		defer cancel()
 
-		log.Infoln("Shutdown ...")
+		log.Info("Shutdown ...")
 
 		err := httpServer.Shutdown(ctx)
 		if err != nil {

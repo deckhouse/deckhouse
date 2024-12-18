@@ -29,7 +29,7 @@ type PreflightChecksTestSuite struct {
 }
 
 func (s *PreflightChecksTestSuite) SetupSuite() {
-	s.checker = NewChecker(nil, nil, nil)
+	s.checker = NewChecker(nil, nil, nil, nil)
 }
 
 func (s *PreflightChecksTestSuite) SetupTest() {

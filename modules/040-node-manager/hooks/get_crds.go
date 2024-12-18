@@ -195,7 +195,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	// Kind is changed, so objects in "dynamic-kind" can be ignored. Update kind and stop the hook.
 	if kindInUse != kindFromSecret {
 		if kindFromSecret == "" {
-			input.LogEntry.Infof("InstanceClassKind has changed from '%s' to '': disable binding 'ics'", kindInUse)
+			input.Logger.Infof("InstanceClassKind has changed from '%s' to '': disable binding 'ics'", kindInUse)
 			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 				Name:       "ics",
 				Action:     "Disable",
@@ -203,7 +203,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				ApiVersion: "",
 			})
 		} else {
-			input.LogEntry.Infof("InstanceClassKind has changed from '%s' to '%s': update kind for binding 'ics'", kindInUse, kindFromSecret)
+			input.Logger.Infof("InstanceClassKind has changed from '%s' to '%s': update kind for binding 'ics'", kindInUse, kindFromSecret)
 			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 				Name:   "ics",
 				Action: "UpdateKind",
@@ -333,7 +333,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					}
 				}
 
-				input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+				input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 				continue
 			}
@@ -361,7 +361,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					}
 				}
 
-				input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+				input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 				continue
 			}
@@ -373,7 +373,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
 					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
 					if err != nil {
-						input.LogEntry.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
+						input.Logger.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
 						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
 						continue
 					}
@@ -397,7 +397,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 				if containCount != len(nodeGroup.Spec.CloudInstances.Zones) {
 					errorMsg := fmt.Sprintf("unknown cloudInstances.zones: %v", unknownZones)
-					input.LogEntry.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+					input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
 
 					setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
 					continue

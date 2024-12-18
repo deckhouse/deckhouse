@@ -1,0 +1,7 @@
+module: node-manager
+namespace: d8-cloud-instance-manager
+subsystems:
+  - infrastructure
+crds:
+  - modules/040-node-manager/crds/*.yaml
+  - candi/openapi/node_group.yaml

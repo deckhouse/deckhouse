@@ -1,0 +1,36 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: user-authn
+    rbac.deckhouse.io/aggregate-to-security-as: manager
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-user-authn
+  name: d8:manage:permission:module:user-authn:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexproviders
+  - groups
+  - users
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - user-authn
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

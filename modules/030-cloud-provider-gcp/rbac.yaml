@@ -1,0 +1,3 @@
+module: cloud-provider-gcp
+subsystems:
+  - infrastructure

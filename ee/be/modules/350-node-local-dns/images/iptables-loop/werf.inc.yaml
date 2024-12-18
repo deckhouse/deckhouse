@@ -1,3 +1,6 @@
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
@@ -5,12 +8,12 @@ import:
   add: /relocate
   to: /
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
-  to: /
+  to: /sbin
   includePaths:
-  - lib64/iptables
-  - lib64/libm*
+  - xtables-legacy-multi
+  - xtables-nft-multi
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
@@ -19,7 +22,7 @@ import:
 docker:
   ENTRYPOINT: ["/iptables-loop.sh"]
 ---
-{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/iptables* /sbin/iptables* /sbin/ip6tables* /sbin/xtables* /sbin/arptables* /usr/bin/inotifywait" }}
+{{ $iptablesLoopBinaries := "/bin/rm /bin/mkfifo /bin/mktemp /bin/echo /bin/sleep /bin/bash /sbin/ip /usr/bin/inotifywait" }}
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
@@ -38,4 +41,12 @@ shell:
       for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
         rm -f "/relocate/sbin/${cmd}"
         ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+      done
+    - |
+      for mode in legacy nft; do
+        for basecmd in iptables ip6tables; do
+          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+          done
+        done
       done

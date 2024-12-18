@@ -37,7 +37,7 @@ var _ = Describe("Istio hooks :: external service monitoring ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1)) // group expire
@@ -52,7 +52,7 @@ var _ = Describe("Istio hooks :: external service monitoring ::", func() {
 
 		It("Hook must figure out irrelevant external service with ports and set metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))

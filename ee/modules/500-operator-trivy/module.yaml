@@ -1,0 +1,5 @@
+name: operator-trivy
+weight: 500
+
+requirements:
+  bootstrapped: true

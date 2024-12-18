@@ -1,0 +1,25 @@
+candi:
+  fixes:
+    - summary: Increase number of retries and sleep timeout for bb-package-install in bootstrap phase.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9471
+dhctl:
+  fixes:
+    - summary: >-
+        Fixed checking the length of the list of external IP addresses in the
+        `YandexClusterConfiguration`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9449
+    - summary: Fix static installation consume 100% of CPU.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9359
+docs:
+  fixes:
+    - summary: >-
+        Clarified network security infrastracture requirements in "Network security settings"
+        section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9467
+user-authn:
+  fixes:
+    - summary: Update `client-groups.patch` for Dex.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9465
+    - summary: Show real ip addresses in dex and dex-authenticator logs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9221
+

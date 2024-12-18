@@ -41,6 +41,8 @@ const (
 var (
 	moduleRequirementsRegex = regexp.MustCompile(`^(ee\/)?(be\/|fe\/)?modules\/.+\/requirements\/.+\.go$`)
 	modulesDirs             = []string{"./modules", "./ee"}
+	// these checks are excluded from validation for some reason (the way they are implemented, etc)
+	specificChecks          = []string{"disabledModules"}
 )
 
 type releaseSettings struct {
@@ -153,6 +155,10 @@ func RunReleaseRequirementsValidation(info *DiffInfo) (exitCode int) {
 		fmt.Println("Following checks have been found:", allChecks)
 
 		for _, check := range allChecks {
+			delete(allRequirements, check)
+		}
+
+		for _, check := range specificChecks {
 			delete(allRequirements, check)
 		}
 

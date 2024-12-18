@@ -1,4 +1,4 @@
-{{- if (.Values.global.enabledModules | has "operator-prometheus-crd") }}
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
   {{- if $.Values.istio.internal.applicationNamespacesToMonitor }}
 ---
 apiVersion: monitoring.coreos.com/v1

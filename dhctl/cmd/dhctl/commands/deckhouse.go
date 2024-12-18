@@ -25,7 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -38,7 +38,10 @@ func DefineDeckhouseRemoveDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 		sshClient, err := ssh.NewInitClientFromFlags(true)
 
 		err = log.Process("default", "Remove Deckhouse️", func() error {
-			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+			kubeCl := client.NewKubernetesClient().
+				WithNodeInterface(
+					ssh.NewNodeInterfaceWrapper(sshClient),
+				)
 			// auto init
 			err = kubeCl.Init(client.AppKubernetesInitParams())
 			if err != nil {
@@ -101,7 +104,10 @@ func DefineDeckhouseCreateDeployment(parent *kingpin.CmdClause) *kingpin.CmdClau
 		}
 
 		err = log.Process("bootstrap", "Create Deckhouse Deployment", func() error {
-			kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+			kubeCl := client.NewKubernetesClient().
+				WithNodeInterface(
+					ssh.NewNodeInterfaceWrapper(sshClient),
+				)
 			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}

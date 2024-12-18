@@ -9,7 +9,7 @@ Deckhouse завершил процесс установки кластера. �
 Подключитесь к master-узлу по SSH (IP-адрес master-узла был выведен инсталлятором по завершении установки, но вы также можете найти его используя веб-интерфейс или CLI&#8209;утилиты облачного провайдера):
 {% snippetcut %}
 ```shell
-ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
+ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
 {% endsnippetcut %}
 

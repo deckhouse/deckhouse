@@ -81,10 +81,10 @@ func (p *Proxy) Serve() {
 			repository = registry.DefaultRepository
 		}
 
-		logEntry := fmt.Sprintf("request from %s received: repo = %s, digest = %s", requestIP, repository, digest)
+		logEntry := fmt.Sprintf("Received request with digest %q for repo %s from client %s", digest, repository, requestIP)
 
 		if additionalPath != "" {
-			logEntry = fmt.Sprintf("%s, additional_path = %s", logEntry, additionalPath)
+			logEntry = fmt.Sprintf("%s and additional path = %s", logEntry, additionalPath)
 		}
 
 		p.logger.Infof("%s", logEntry)
@@ -126,6 +126,8 @@ func (p *Proxy) Serve() {
 			p.logger.Errorf("send package: %v", err)
 			return
 		}
+
+		p.logger.Infof("Package for digest %q sent successfully", digest)
 	})
 
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
@@ -147,7 +149,7 @@ func (p *Proxy) Stop() {
 func (p *Proxy) getPackage(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
 	// if cache is nil, return digest directly from registry
 	if p.cache == nil {
-		p.logger.Infof("cache is not set, trying to fetch package from registry")
+		p.logger.Infof("Digest %q not found in local cache, trying to fetch package from registry", digest)
 		return p.getPackageFromRegistry(ctx, digest, repository, path)
 	}
 

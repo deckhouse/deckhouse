@@ -23,7 +23,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/101-cert-manager/hooks/internal"
 )
@@ -59,7 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "ClusterIssuers",
 			ApiVersion:                   "cert-manager.io/v1",
 			Kind:                         "ClusterIssuer",
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{

@@ -1,0 +1,9 @@
+candi:
+  fixes:
+    - summary: Add PVC disks to ignore_changes lifecycle for CloudPermanent nodes at VMware Cloud Director.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9781
+dhctl:
+  fixes:
+    - summary: Fix attempt to change protected objects.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9560
+

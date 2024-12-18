@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
@@ -42,7 +42,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			SSHClient:        sshClient,
+			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.InstallDeckhouse()
@@ -65,7 +65,7 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.C
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			SSHClient:        sshClient,
+			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.ExecuteBashible()
@@ -89,7 +89,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause 
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			SSHClient:        sshClient,
+			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.CreateResources()
@@ -110,7 +110,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		sshClient := ssh.NewClientFromFlags()
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			SSHClient:        sshClient,
+			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.Abort(app.ForceAbortFromCache)
@@ -148,7 +148,7 @@ func DefineExecPostBootstrapScript(parent *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			SSHClient:        sshClient,
+			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
 			TerraformContext: terraform.NewTerraformContext(),
 		})
 		return bootstraper.ExecPostBootstrap()

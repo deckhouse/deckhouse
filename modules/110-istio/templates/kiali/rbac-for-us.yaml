@@ -18,13 +18,6 @@ rules:
   - configmaps
   - endpoints
   - pods/log
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - namespaces
   - pods
   - replicationcontrollers
@@ -139,14 +132,6 @@ rules:
   verbs:
   - create
 - apiGroups:
-  - apps
-  resourceNames:
-  - trickster
-  resources:
-  - deployments/http"
-  verbs:
-  - get
-- apiGroups:
   - monitoring.coreos.com
   resources:
   - prometheuses
@@ -159,6 +144,15 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
+- apiGroups:
+  - apps
+  resourceNames:
+  - trickster
+  resources:
+  - deployments/http
+  verbs:
+  - create
+  - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -173,4 +167,3 @@ subjects:
 - kind: ServiceAccount
   name: kiali
   namespace: d8-{{ $.Chart.Name }}
----

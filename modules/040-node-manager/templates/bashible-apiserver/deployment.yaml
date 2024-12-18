@@ -3,7 +3,7 @@ cpu: 25m
 memory: 150Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -98,7 +98,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "bashible_apiserver_resources" . | nindent 12 }}
 {{- end }}
       volumes:
@@ -150,9 +150,7 @@ spec:
       {{- $.Values.nodeManager.internal.kubernetesCA | nindent 6 }}
     {{- end }}
     allowedBundles:
-      {{- $.Values.nodeManager.allowedBundles | toYaml | nindent 6 }}
-    allowedKubernetesVersions:
-      {{- $.Values.nodeManager.allowedKubernetesVersions | toYaml | nindent 6 }}
+      {{- $.Values.nodeManager.internal.allowedBundles | toYaml | nindent 6 }}
     nodeGroups:
       {{- $.Values.nodeManager.internal.nodeGroups | toYaml | nindent 6 }}
     nodeStatusUpdateFrequency: {{ $.Values.nodeManager.internal.nodeStatusUpdateFrequency | toYaml | default 0 }}

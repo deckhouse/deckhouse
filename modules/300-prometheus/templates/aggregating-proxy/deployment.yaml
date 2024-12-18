@@ -9,7 +9,7 @@ memory: 25Mi
 {{- end }}
 
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -70,8 +70,8 @@ spec:
       serviceAccountName: aggregating-proxy
       initContainers:
         - name: wait-memcached
-          image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
-          command: [ '/bin/sh', '-c', 'while ! nc -w 1 -z memcached:11211; do sleep 1; done' ]
+          image: {{ include "helm_lib_module_common_image" (list . "init") }}
+          command: [ '/bin/sh', '-c', 'while ! nc -w 1 -z memcached 11211; do sleep 1; done' ]
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           resources:
             requests:
@@ -103,7 +103,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "mimir_resources" . | nindent 14 }}
               {{- end }}
         - name: promxy
@@ -131,7 +131,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "promxy_resources" . | nindent 14 }}
               {{- end }}
         - name: kube-rbac-proxy
@@ -193,7 +193,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
               {{- end }}
       volumes:

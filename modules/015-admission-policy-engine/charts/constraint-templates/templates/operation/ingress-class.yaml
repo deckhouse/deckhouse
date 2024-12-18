@@ -1,0 +1,39 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8ingressclass
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Required Ingress Class"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: "Required Ingress Class"
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8IngressClass
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            ingressClassNames:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        violation[{"msg": msg}] {
+          ingressClass := input.review.object.spec.ingressClassName
+          not contains(input.parameters.ingressClassNames, ingressClass)
+          msg := sprintf("Ingress <%v> has invalid ingress class: %v, allowed: %v", [input.review.object.metadata.name, ingressClass, input.parameters.ingressClassNames])
+        }
+
+        contains(list, elem) {
+          list[_] = elem
+        }

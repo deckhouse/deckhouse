@@ -1,5 +1,5 @@
 ---
-title: "How to start module in the DKP claster?"
+title: "How to start module in the DKP cluster?"
 permalink: en/module-development/run/
 ---
 
@@ -96,8 +96,7 @@ module-two-v1.2.0          Superseded   deckhouse       48d
 module-two-v1.2.1          Superseded   deckhouse       48d              
 module-two-v1.2.3          Deployed     deckhouse       48d              
 module-two-v1.2.4          Superseded   deckhouse       44d              
-module-two-v1.2.5          Pending      deckhouse       44d              Waiting for manual approval
-
+module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
 ```
 
 If there is a module release in `Deployed` status, this module can be [enabled](#enabling-the-module) in the cluster. If a module release is in `Superseded` status, it means that the module release is out of date, and there is a newer release to replace it.
@@ -266,12 +265,12 @@ You can enable the module similarly to built-in DKP modules using any of the fol
 - Run the command below (specify the name of the module):
 
   ```shell
-  kubectl -ti -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable <MODULE_NAME>
+  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable <MODULE_NAME>
   ```
 
 - Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..
 
- Below is an example of a [ModuleConfig](../../cr.html#moduleconfig) that enables and configures the `module-1` module in the cluster:
+  Below is an example of a [ModuleConfig](../../cr.html#moduleconfig) that enables and configures the `module-1` module in the cluster:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -298,7 +297,7 @@ If there were errors while enabling a module in the cluster, you can learn about
 
   Here is an example of the error message for `module-1`:
 
-  ```shell
+  ```console
   $ kubectl get moduleconfig module-1
   NAME        ENABLED   VERSION   AGE   MESSAGE
   module-1    true                7s    Ignored: unknown module name
@@ -315,7 +314,7 @@ Output example:
 ```shell
 $ kubectl get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
-module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for manual approval
+module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
 
 The example output above illustrates _ModuleRelease_ message when the update mode ([update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) of the _ModuleUpdatePolicy_ resource is set to `Manual`. In this case, you must manually confirm the installation of the new module version by adding the `modules.deckhouse.io/approved="true"` annotation to the release:

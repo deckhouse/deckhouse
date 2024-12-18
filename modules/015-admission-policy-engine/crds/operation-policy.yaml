@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: admission-policy-engine
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -35,9 +36,9 @@ spec:
                   default: "Deny"
                   description: |
                     The enforcement action to control what to do with the result of the constraint.
-                    - Deny — Deny action.
-                    - Dryrun — No action. It is used when debugging. Information about the event can be viewed in Grafana or in the console via kubectl.
-                    - Warn — Same as `Dryrun`. In addition to the event information, it provides some info on why that constraint would have been denied if you had set `Deny` instead of `Warn`.
+                    - `Deny` — Deny action.
+                    - `Dryrun` — No action. It is used when debugging. Information about the event can be viewed in Grafana in dashboard `Security/Admission policy engine`.
+                    - `Warn` — Same as `Dryrun`. In addition to the event information, it provides some info on why that constraint would have been denied if you had set `Deny` instead of `Warn`.
                   enum:
                     - Warn
                     - Deny
@@ -143,8 +144,10 @@ spec:
                             x-doc-examples: ["apps/Deployment", "/Pod", "networking.k8s.io/Ingress"]
                     requiredProbes:
                       type: array
-                      x-doc-examples: ["livenessProbe", "readinessProbe"]
-                      description: "The list of probes that are required (e.g. `readinessProbe`)"
+                      x-doc-examples: 
+                        - - readinessProbe
+                          - livenessProbe
+                      description: "The list of probes that are required (e.g. `readinessProbe` and `livenessProbe`)"
                       items:
                         type: string
                         enum:
@@ -157,6 +160,16 @@ spec:
                     priorityClassNames:
                       type: array
                       description: "List of allowed priority class names."
+                      items:
+                        type: string
+                    ingressClassNames:
+                      type: array
+                      description: "List of allowed ingress class names."
+                      items:
+                        type: string
+                    storageClassNames:
+                      type: array
+                      description: "List of allowed storage class names."
                       items:
                         type: string
                     imagePullPolicy:

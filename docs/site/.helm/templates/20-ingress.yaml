@@ -20,14 +20,6 @@ metadata:
       proxy_set_header X-Original-URI         $request_uri;
       ssi on;
       ssi_silent_errors on;
-      rewrite ^/source/modules/(.*)$ /modules/$1 redirect;
-      rewrite ^/platform/(.*)$ /documentation/v1/$1 redirect;
-      rewrite ^/documentation/v1/modules/490-virtualization/(examples|configuration|cr|faq).html(.*)$ /modules/virtualization/stable/$1.html$2 permanent;
-      rewrite ^/documentation/v1/modules/490-virtualization/.*$ /modules/virtualization/stable/ permanent;
-      rewrite ^/modules/([^./]+)/?$ /modules/$1/stable/ permanent;
-      rewrite ^/modules/([^./]+)/((?!(alpha|beta|early-access|stable|rock-solid)).+)$ /modules/$1/stable/$2 permanent;
-      rewrite ^(/en|/ru)?/documentation/v1\.3[0-7](\.[0-9]+)?(/.*)$ /documentation/v1.38$3 permanent;
-      rewrite ^(/en|/ru)?(/documentation/v1\.[0-9]+)\.[0-9]+(/.*)$ $2$3 permanent;
       rewrite ^/ru/(.*) https://{{ $hostRu }}/$1 permanent;
       rewrite ^/en/(.*) https://{{ $hostEn }}/$1 permanent;
       {{- include "rewrites" . | nindent 6 }}
@@ -82,7 +74,21 @@ spec:
             name: frontend
             port:
               name: http
+      - path: /products/kubernetes-platform/gs
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
       - path: /presentations
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/presentations
         pathType: Prefix
         backend:
           service:
@@ -96,7 +102,21 @@ spec:
             name: frontend
             port:
               name: http
+      - path: /products/kubernetes-platform/guides
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
       - path: /modules
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/modules
         pathType: Prefix
         backend:
           service:
@@ -110,7 +130,21 @@ spec:
             name: frontend
             port:
               name: http
+      - path: /products/kubernetes-platform/platform
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
       - path: /source
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/source
         pathType: Prefix
         backend:
           service:
@@ -132,6 +166,13 @@ spec:
             port:
               name: http
       - path: /documentation
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/documentation
         pathType: Prefix
         backend:
           service:
@@ -166,6 +207,48 @@ spec:
         backend:
           service:
             name: backend
+            port:
+              name: http
+      - path: /products/kubernetes-platform/documentation/v1
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              name: http
+      - path: /products/virtualization-platform/documentation/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/reference/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/guides/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/gs/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              name: http
+      - path: /products/virtualization-platform/modules/
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
             port:
               name: http
 {{- if ne $.Values.web.env "web-production" }}

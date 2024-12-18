@@ -19,6 +19,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
+type NodeGroupGroupOptions struct {
+	Name            string
+	LayoutStep      string
+	CloudConfig     string
+	DesiredReplicas int
+	State           map[string][]byte
+}
+
 func getReplicasByNodeGroupName(metaConfig *config.MetaConfig, nodeGroupName string) int {
 	replicas := 0
 	if nodeGroupName != MasterNodeGroupName {

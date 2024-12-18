@@ -1,0 +1,4 @@
+module: node-local-dns
+namespace: kube-system
+subsystems:
+  - networking

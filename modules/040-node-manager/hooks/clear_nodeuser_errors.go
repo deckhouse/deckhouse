@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	golibset "github.com/deckhouse/deckhouse/go_lib/set"
 	nodeuserv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -46,9 +46,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         nodeForClearSnapName,
-			WaitForSynchronization:       pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			WaitForSynchronization:       ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(false),
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -63,9 +63,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:                         nodeUserForClearSnapName,
-			WaitForSynchronization:       pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(false),
+			WaitForSynchronization:       ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(false),
 			ApiVersion:                   "deckhouse.io/v1",
 			Kind:                         "NodeUser",
 			FilterFunc:                   applyNodeUsersForClearFilter,
@@ -114,11 +114,11 @@ func discoverNodeUsersForClear(input *go_hook.HookInput) error {
 
 	for _, item := range nodeUserSnap {
 		nuForClear := item.(nodeUsersForClear)
-		input.LogEntry.Debugf("clearErrors--> NodeUsers: %v Nodes: %v", nuForClear, nodes)
+		input.Logger.Debugf("clearErrors--> NodeUsers: %v Nodes: %v", nuForClear, nodes)
 		if incorrectNodes := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); len(
 			incorrectNodes,
 		) > 0 {
-			input.LogEntry.Debugf("clearErrors--> incorrectNodes: %v", incorrectNodes)
+			input.Logger.Debugf("clearErrors--> incorrectNodes: %v", incorrectNodes)
 			err := clearNodeUserIncorrectErrors(nuForClear.Name, incorrectNodes, input)
 			if err != nil {
 				return err
@@ -157,7 +157,7 @@ func clearNodeUserIncorrectErrors(
 		patch["status"]["errors"][node] = nil
 	}
 
-	input.LogEntry.Debugf("clearErrors--> patch: %v", patch)
+	input.Logger.Debugf("clearErrors--> patch: %v", patch)
 	input.PatchCollector.MergePatch(
 		patch,
 		"deckhouse.io/v1",

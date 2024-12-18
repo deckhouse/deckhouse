@@ -1,0 +1,4 @@
+module: secret-copier
+namespace: none
+subsystems:
+  - security

@@ -2,7 +2,7 @@
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
 {{- $crdChecksum := toJson $crd | sha256sum }}
   {{- if eq $crd.spec.inlet "HostWithFailover" }}
-    {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+    {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -181,6 +181,7 @@ spec:
         ports:
         - containerPort: 4208
           name: https-metrics
+          hostPort: 4208
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}

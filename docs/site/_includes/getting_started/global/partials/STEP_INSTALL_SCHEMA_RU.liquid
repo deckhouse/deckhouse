@@ -1,15 +1,21 @@
 {%- include getting_started/global/partials/NOTICES.liquid %}
 
-{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' %}
+{% if page.platform_code == "bm-private" and page.lang == "ru" %}
+{% alert level="info" %}
+В [Deckhouse Академии](https://deckhouse.ru/academy/) доступен для прохождения курс обучения [«Установка Deckhouse Kubernetes Platform в закрытом окружении»](https://education.flant.ru/course/ustanovka-deckhouse-kubernetes-platform-v-zakrytom-okruzhenii/).
+{% endalert %}
+{% endif %}
+
+{%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' or page.platform_code == 'dynamix' %}
 
 Для развертывания будет использован минимальный набор узлов:
-{%- assign preset=site.data.getting_started.data.presets.minimal %}
+{%- assign preset=site.data.getting_started.dkp_data.presets.minimal %}
 <div id="preset_minimal" markdown="1">
 {{ preset.description[page.lang] }}
 </div>
 
 {%- assign layout_platform_code = page.platform_code | regex_replace: "^(openstack)_.+$", "\1" %}
-{%- assign layout = site.data.getting_started.data.installTypes[layout_platform_code].layout %}
+{%- assign layout = site.data.getting_started.dkp_data.installTypes[layout_platform_code].layout %}
 {%- offtopic title="Схема размещения и взаимодействия ресурсов в облаке..." %}
 {%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
 {%- capture layout_doc_path %}../../documentation/v1/modules/030-cloud-provider-{{ layout_platform_code }}/layouts.html{% endcapture %}
@@ -32,7 +38,7 @@
 
 Кластеры Kubernetes, предлагаемые различными облачными провайдерами, имеют свои особенности и различия, так же как и кластеры, развернутые вручную. Правильная стратегия установки Deckhouse в таких кластерах — установить Deckhouse в минимальной конфигурации, после чего включить необходимые модули.
 
-Данное руководство предлагает установку Deckhouse в **минимальной** конфигурации с включенным модулем [внутренней документации](/documentation/v1/modules/810-documentation/) (для примера работы web-приложения) и модулем [cert-manager](/documentation/v1/modules/101-cert-manager/).
+Данное руководство предлагает установку Deckhouse в **минимальной** конфигурации с включенным модулем [внутренней документации](/products/kubernetes-platform/documentation/v1/modules/810-documentation/) (для примера работы web-приложения) и модулем [cert-manager](/products/kubernetes-platform/documentation/v1/modules/101-cert-manager/).
 
 После выполнения всех шагов данного руководства вам нужно будет самостоятельно включить интересующие вас модули. Воспользуйтесь [документацией](/documentation/), чтобы получить об этом необходимую информацию. Также, при возникновении вопросов, вы можете попросить помощи [сообщества](/community/about.html).
 
@@ -59,7 +65,7 @@
    - ОС: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+);
    - установленный docker для запуска инсталлятора Deckhouse (инструкции для [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
 {% if page.platform_code == "bm-private" %}
-   - доступ до проксирующего registry ([читайте подробнее](/documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
+   - доступ до проксирующего registry ([читайте подробнее](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
 {%- else %}
    - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`;
 {%- endif %}
@@ -85,7 +91,7 @@
 <li>
 {% if page.platform_type == "existing" %}
   <p><strong>Существующий кластер Kubernetes.</strong></p>
-  <p>Версии Kubernetes и ОС узлов кластера должны быть <a href="../../documentation/v1/supported_versions.html">в списке поддерживаемых</a>.</p>
+  <p>Версии Kubernetes и ОС узлов кластера должны быть <a href="../../products/kubernetes-platform/documentation/v1/supported_versions.html">в списке поддерживаемых</a>.</p>
   <p>В процессе установки инсталлятор, запущенный на <strong>персональном компьютере</strong> (см. п.1), подключится к кластеру и развернет Deckhouse.</p>
   <p><strong>Обратите внимание</strong>, что установка непосредственно с master-узла не поддерживается.</p>
 {%- elsif page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
@@ -114,7 +120,7 @@
    - не менее 4 ядер CPU;
    - не менее 8 ГБ RAM;
    - не менее 60 ГБ дискового пространства на быстром диске (400+ IOPS);
-   - [поддерживаемая ОС](/documentation/v1/supported_versions.html);
+   - [поддерживаемая ОС](/products/kubernetes-platform/documentation/v1/supported_versions.html);
    - ядро Linux версии `5.7` или новее;
    - **Уникальный hostname** в пределах серверов (виртуальных машин) кластера;
    {% if page.platform_code == "bm-private" %}

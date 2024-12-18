@@ -34,7 +34,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" "EKS" -}!}
 {!{- $criNames := slice "Containerd" -}!}
-{!{- $kubernetesVersions := slice "1.26" "1.27" "1.28" "1.29" "1.30" "Automatic" -}!}
+{!{- $kubernetesVersions := slice "1.26" "1.27" "1.28" "1.29" "1.30" "1.31" "Automatic" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
@@ -73,12 +73,10 @@ on:
       layout:
         description: 'Cloud provider layout which was tested'
         required: true
-      cri:
-        description: 'CRI which was tested'
-        required: true
-      k8s_version:
-        description: 'CRI which was tested'
-        required: true
+      test_config:
+        description: 'JSON string of parameters which was tested'
+        required: false
+        default: '{"cri":"Containerd","ver":"1.29","edition":"FE"}'
       # needs for run correct installer image for abort
       installer_image_path:
         description: 'Installer image without host'
@@ -101,6 +99,8 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
+
+{!{ tmpl.Exec "check_e2e_labels_job" $ctx | strings.Indent 2 }!}
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{/* Note: it is sufficient to have one workflow 'e2e-abort.yaml' with one 'destroy' job and use provider, cri, k8s_version and layout from inputs. Still there are jobs for each CRI and Kubernetes version for similarity with e2e.multi.yaml */}!}

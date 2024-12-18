@@ -39,7 +39,7 @@ kind: DaemonSet
 metadata:
   annotations:
     ingress-nginx-controller.deckhouse.io/checksum: aae2dceef3dfbb345a89425527b723dcd4e516f30d446804e8746bb70d231eeb
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.6"
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
   labels:
     app: controller

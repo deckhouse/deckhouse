@@ -1,0 +1,235 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+{{ if eq .ModuleName "docs" }}
+from: {{ .Images.BASE_NGINX_ALPINE }}
+shell:
+  setup:
+  - |
+      cat <<"EOD" > /etc/nginx/nginx.conf
+      {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
+      EOD
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site
+  to: /app
+  before: setup
+docker:
+  ENTRYPOINT: [ "nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
+{{ else }}
+fromImage: common/nginx-static
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site/documentation
+  to: /app/platform
+  before: setup
+  excludePaths:
+  - '*/gs/'
+  - '*/guides/'
+  - search-index.json
+  - '*/sitemap*.xml'
+  - '*/robots.txt'
+docker:
+  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
+{{ end }}
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}/static
+from: {{ .Images.BASE_JEKYLL }}
+shell:
+  setup:
+  - |
+        echo "Ruby: $(ruby --version)"
+        echo "Gem: $(gem --version)"
+        bundle --version
+
+        echo '[] Creating modules.yml ...'
+        cd /srv/jekyll-data/documentation/
+{{ if ne .ModuleName "docs" }}
+        export MODULES_DIR=/comparison
+{{ end }}
+        ./modules_list.sh 1>_data/modules/internal.yaml
+        # Creating list of ALL the modules...
+        cat _data/modules/internal.yaml |yq eval -j | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
+
+        cat modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
+
+        echo '[] Edition - {{ .Edition }}. Merging modules of different editions...'
+        for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
+
+        echo '[] Preparing modules structure...'
+        export MODULES_SRC_DIR=/src/modules
+        export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
+        export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
+        bash ./modules_prepare.sh
+
+        echo '[] Adding permalinks...'
+        for i in $(find . -regex '.*.md' -print); do
+          if ! grep -q "^---" "$i"; then continue; fi
+          if cat $i | tr -d '\n' | grep -qv "^---.*permalink: .*---"; then
+            # permalink is absent, add permalink
+            PERMALINK="/$(echo $i | sed -E 's#(modules_)(en|ru)/#\2/modules/#' | sed 's#docs/##g'| tr '[:upper:]' '[:lower:]' | sed 's#\.md$#.html#' | sed 's#^\.\/##' | sed 's#readme\.html$##' )"
+            sed -i "1apermalink: $PERMALINK" $i
+          fi
+        done
+
+        echo '[] Generating configuration schemas...'
+        export MODULES_DIR=modules_en
+        bash ./modules_generate_configuration.sh
+        export MODULES_DIR=modules_ru MODULES_LANG=ru
+        bash ./modules_generate_configuration.sh
+
+        echo
+        echo '[] Generating cluster configuration schemas...'
+        export MODULES_DIR=modules_en
+        bash ./generate_cluster_configuration.sh
+        export MODULES_DIR=modules_ru MODULES_LANG=ru
+        bash ./generate_cluster_configuration.sh
+
+        echo
+        echo "[] Generating CR schemas..."
+        export MODULES_DIR=modules_en
+        bash ./modules_generate_cr.sh
+        export MODULES_DIR=modules_ru
+        bash ./modules_generate_cr.sh
+
+        echo
+        echo '[] Preparing OSS license info...'
+        export MODULES_DIR=/src/modules
+        bash ./modules_generate_ossinfo.sh
+
+        echo '[] Extracting the default Kubernetes version...'
+        echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
+
+        echo '[] Filling in the array of supported OS & K8S versions...'
+        cd _data
+        sed '/^bashible:/r version_map_addition.yml' version_map.yml >> supported_versions.yml
+
+        echo '[] Converting editions structure...'
+        yq e -j editions-source.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - editions-addition.json | jq --argfile data modules/be-addition.json '(.[] | select(.name == "BE").excludeModules) += $data.excludeModules' - > editions.json
+        #  yq eval -j | jq  '.editions' | jq --argfile data modules/be-additions.json '(.[] | select(.name == "BE").excludeModules) += $data.excludeModules' -
+
+
+{{ if ne .ModuleName "docs" }}
+        # "Converting public documentation links to internal relative..."
+        grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
+          xargs sed -Ei 's$\]\(https://deckhouse.io/(ru|en)/documentation/v[0-9]+/(modules/|#)$](/\1/\2$'
+
+        cat <<"EOD" > /tmp/_config_additional.yml
+        {{- .Files.Get (printf "%smodules/810-documentation/images/web/_config.yml" .ModulePath) | nindent 8 }}
+        EOD
+        cat <<"EOD" > /srv/jekyll-data/documentation/_data/topnav.yml
+        {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
+        EOD
+        cat <<"EOD" > /srv/jekyll-data/site/_data/topnav.yml
+        {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
+        EOD
+        cat <<"EOD" > /srv/jekyll-data/site/_includes/footer.html
+        {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_includes/footer.html" .ModulePath) | nindent 8 }}
+        EOD
+
+        # Creating additional config...
+        echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
+{{ end }}
+
+        echo '[] Generating static files of the documentation part...'
+        cd ..
+        mkdir -m 777 -p /app/_site/
+{{ if eq .ModuleName "docs" }}
+        {{- if eq .Mode "development" }}
+        JEKYLL_ENV=development jekyll build -d /app/_site/ --profile -t
+        {{- else }}
+        JEKYLL_ENV=production jekyll build -d /app/_site/
+        {{- end }}
+{{ else }}
+        JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml
+
+        echo '[] Generating static files of the main part...'
+        cd /srv/jekyll-data/site/
+        JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml
+
+        cp -Rf /app/_site/site/assets /app/_site/documentation/
+        cp -Rf /app/_site/site/images /app/_site/documentation/
+        cp -Rf /app/_site/site/ru/includes /app/_site/documentation/ru
+        cp -Rf /app/_site/site/en/includes /app/_site/documentation/en
+        cp -Rf /app/_site/site/ru /app/_site/documentation/
+        cp -Rf /app/_site/site/en /app/_site/documentation/
+        rm -rf /app/_site/documentation/compare/
+{{ end }}
+git:
+- add: /{{ .ModulePath }}docs
+  to: /srv/jekyll-data
+  owner: jekyll
+  group: jekyll
+  includePaths:
+{{ if eq .ModuleName "docs" }}
+    - site/_config.yml
+    - site/_includes/head.html
+    - site/Gemfile
+    - site/Gemfile.lock
+{{ else }}
+    - site
+{{ end }}
+    - documentation
+  excludePaths:
+    - '**/werf*.yaml'
+    - '**/docker-compose.yml'
+    - '**/Makefile'
+    - '**/.werf'
+    - '**/.helm'
+    - documentation/pages/internal
+    - documentation/config
+{{ if ne .ModuleName "docs" }}
+    - site/pages/*.html
+    - site/_includes/footer.html
+    - site/_data/topnav.*
+    - site/backends
+    - site/_plugins/gs_generator.rb
+    - site/_plugins/dvp_resource_generator.rb
+    - site/pages/virtualization-platform
+{{ end }}
+  stageDependencies:
+    install: ['site/Gemfile','site/Gemfile.lock']
+    setup: '**/*'
+{{ if ne .ModuleName "docs" }}
+- add: /{{ .ModulePath }}
+  to: /comparison
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+  - ee/modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/fe
+  to: /comparison/fe
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/be
+  to: /comparison/be
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/se
+  to: /comparison/se
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+- add: /{{ .ModulePath }}ee/se-plus
+  to: /comparison/se-plus
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/README.md
+{{ end }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}

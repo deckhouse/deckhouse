@@ -43,7 +43,6 @@ cloudProviderAzure:
     - sc\d+
     - bar
     - managed-standard-large
-    default: other-bar
 `
 		initValuesExcludeAllString = `
 cloudProviderAzure:
@@ -51,6 +50,50 @@ cloudProviderAzure:
   storageClass:
     exclude:
     - ".*"
+`
+
+		initValuesWithDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: default-cluster-sc
+cloudProviderAzure:
+  internal: {}
+  storageClass:
+    provision:
+    - name: managed-ultra-ssd
+      type: UltraSSD_LRS
+      diskIOPSReadWrite: 600
+      diskMBpsReadWrite: 150
+      tags:
+      - key: key1
+        value: value1
+      - key: key2
+        value: value2
+    exclude:
+    - sc\d+
+    - bar
+    - managed-standard-large
+`
+
+		initValuesWithEmptyDefaultClusterStorageClass = `
+global:
+  defaultClusterStorageClass: ""
+cloudProviderAzure:
+  internal: {}
+  storageClass:
+    provision:
+    - name: managed-ultra-ssd
+      type: UltraSSD_LRS
+      diskIOPSReadWrite: 600
+      diskMBpsReadWrite: 150
+      tags:
+      - key: key1
+        value: value1
+      - key: key2
+        value: value2
+    exclude:
+    - sc\d+
+    - bar
+    - managed-standard-large
 `
 	)
 
@@ -62,7 +105,7 @@ cloudProviderAzure:
 			f.RunHook()
 		})
 
-		It("Should discover storageClasses with default set", func() {
+		It("Should discover storageClasses", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cloudProviderAzure.internal.storageClasses").String()).To(MatchJSON(`
 [
@@ -97,9 +140,7 @@ cloudProviderAzure:
   }
 ]
 `))
-			Expect(f.ValuesGet("cloudProviderAzure.internal.defaultStorageClass").String()).To(Equal(`other-bar`))
 		})
-
 	})
 
 	fb := HookExecutionConfigInit(initValuesExcludeAllString, `{}`)
@@ -110,12 +151,9 @@ cloudProviderAzure:
 			fb.RunHook()
 		})
 
-		It("Should discover no storageClasses with no default is set", func() {
+		It("Should discover no storageClasses", func() {
 			Expect(fb).To(ExecuteSuccessfully())
 			Expect(fb.ValuesGet("cloudProviderAzure.internal.storageClasses").String()).To(MatchJSON(`[]`))
-			Expect(fb.ValuesGet("cloudProviderAzure.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
-
 	})
-
 })

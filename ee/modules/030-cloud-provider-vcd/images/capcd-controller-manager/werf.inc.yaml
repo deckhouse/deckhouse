@@ -25,10 +25,11 @@ mount:
     to: /go/pkg
 shell:
   beforeInstall:
-    - apt update && apt install ca-certificates git
+    - apt update && apt install -y ca-certificates git
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth 1 --branch {{ $value.clusterApi.vcd }} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
     - cd /src
     - git apply /patches/*.patch --verbose

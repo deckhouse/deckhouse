@@ -20,7 +20,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -31,7 +31,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: set_instance_class_usage :
 		Name:                "ics",
 		ApiVersion:          "deckhouse.io/v1",
 		Kind:                "OpenStackInstanceClass",
-		ExecuteHookOnEvents: pointer.Bool(false),
+		ExecuteHookOnEvents: ptr.To(false),
 		FilterFunc:          applyUsedInstanceClassFilter,
 	}
 

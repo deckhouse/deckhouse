@@ -7,7 +7,7 @@ kind: MachineDeployment
 metadata:
   namespace: d8-cloud-instance-manager
   name: {{ $ng.name }}
-  {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name "app" "caps-controller")) | nindent 2 }}
 spec:
   clusterName: static
   replicas: {{ $ng.staticInstances.count | default "0" }}

@@ -1,0 +1,10 @@
+module: admission-policy-engine
+subsystems:
+  - security
+allowedResources:
+  - group: templates.gatekeeper.sh
+    resources:
+      - constrainttemplates
+crds:
+  - modules/015-admission-policy-engine/crds/*.yaml
+  - modules/015-admission-policy-engine/crds/native/*.yaml

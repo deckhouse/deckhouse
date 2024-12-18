@@ -464,7 +464,7 @@
         {
           "editorMode": "code",
           "exemplar": true,
-          "expr": "count by (controller_type) (kube_controller_pod)",
+          "expr": "count by (controller_type) (count by (controller_type, controller_name, namespace) (kube_controller_pod))",
           "interval": "",
           "legendFormat": "__auto",
           "range": true,

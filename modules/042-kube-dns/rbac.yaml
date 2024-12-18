@@ -1,0 +1,5 @@
+module: kube-dns
+namespace: kube-system
+subsystems:
+  - kubernetes
+  - networking

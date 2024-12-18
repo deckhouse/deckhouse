@@ -42,7 +42,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd"]
+  enabledModules: ["vertical-pod-autoscaler"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -197,7 +197,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
-			f.ValuesSetFromYaml("cloudProviderAws.internal.defaultStorageClass", `iops-foo`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `iops-foo`)
 			f.HelmRender()
 		})
 
@@ -285,11 +285,11 @@ storageclass.kubernetes.io/is-default-class: "true"
 			assertEnv(f, "AWS_REGION", "myregion")
 		})
 
-		Context("vertical-pod-autoscaler-crd module enabled", func() {
+		Context("vertical-pod-autoscaler module enabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
 				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler-crd"]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
 				f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
 				f.HelmRender()
 			})
@@ -302,7 +302,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			})
 		})
 
-		Context("vertical-pod-autoscaler-crd module disabled", func() {
+		Context("vertical-pod-autoscaler module disabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
 				f.ValuesSet("global.modulesImages", GetModulesImages())

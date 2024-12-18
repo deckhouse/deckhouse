@@ -1,117 +1,222 @@
 ---
-title: "The metallb module: примеры"
+title: "The MetalLB module: примеры"
 ---
 
-Metallb можно использовать в статических кластерах (bare metal), когда нет возможности воспользоваться балансировщиком от облачного провайдера. Metallb может работать в режимах L2 или BGP.
+Metallb можно использовать в статических кластерах (bare metal), когда нет возможности воспользоваться балансировщиком от облачного провайдера. Metallb может работать в режимах L2 LoadBalancer или BGP LoadBalancer.
 
-## Пример использования metallb в L2-режиме
+## Пример использования MetalLB в режиме L2 LoadBalancer
 
 {% raw %}
-Пример включения модуля metallb и публикации отдельно запущенного приложения (веб-сервер Nginx).
 
-1. Задайте группы узлов ([_NodeGroup_](../040-node-manager/cr.html#nodegroup)) для запуска приложений, к которым предоставляется доступ.
+Включите модуль:
 
-   Например, Ingress-контроллеры запускаются на frontend-узлах, а веб-сервер Nginx — на worker-узле. У frontend-узлов есть лейбл `node-role.deckhouse.io/metallb=""`.
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: metallb
+spec:
+  enabled: true
+  version: 2
+```
 
-   ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: NodeGroup
-   metadata:
-     name: frontend
-   spec:
-     disruptions:
-       approvalMode: Manual
-     nodeTemplate:
-       labels:
-         node-role.deckhouse.io/frontend: ""
-         node-role.deckhouse.io/metallb: ""
-       taints:
-       - effect: NoExecute
-         key: dedicated.deckhouse.io
-         value: frontend
-     nodeType: Static
-   ---
-   apiVersion: deckhouse.io/v1
-   kind: NodeGroup
-   metadata:
-     name: worker
-   spec:
-     disruptions:
-       approvalMode: Manual
-     nodeType: Static
-   ```
+Подготовьте приложение, которое хотите опубликовать:
 
-1. Проверьте, что на узлах проставлен корректный лейбл:
+```shell
+kubectl create deploy nginx --image=nginx
+```
 
-   ```bash
-   kubectl get nodes -l node-role.deckhouse.io/metallb
-   ```
+Создайте ресурс _MetalLoadBalancerClass_:
 
-   Пример вывода:
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: MetalLoadBalancerClass
+metadata:
+  name: ingress
+spec:
+  addressPool:
+    - 192.168.2.100-192.168.2.150
+  isDefault: false
+  nodeSelector:
+    node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
+  type: L2
+```
 
-   ```bash
-   $ kubectl get nodes -l node-role.deckhouse.io/metallb
-   NAME              STATUS   ROLES      AGE   VERSION
-   demo-frontend-0   Ready    frontend   61d   v1.21.14
-   demo-frontend-1   Ready    frontend   61d   v1.21.14
-   ```
+Создайте ресурс _Service_ со аннотацией и именем MetalLoadBalancerClass:
 
-1. Включите модуль metallb и задайте параметры `nodeSelector` и `tolerations` для спикеров MetalLB.
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-deployment
+  annotations:
+    network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: ingress # имя MetalLoadBalancerClass
+  ports:
+  - port: 8000
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx
+```
 
-   Пример конфигурации модуля:
-  
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: metallb
-   spec:
-     version: 1
-     enabled: true
-     settings:
-       addressPools:
-       - addresses:
-         - 192.168.199.100-192.168.199.102
-         name: frontend-pool
-         protocol: layer2
-       speaker:
-         nodeSelector:
-           node-role.deckhouse.io/metallb: ""
-         tolerations:
-         - effect: NoExecute
-           key: dedicated.deckhouse.io
-           operator: Equal
-           value: frontend
-   ```
+В результате, созданному сервису с типом `LoadBalancer` будут присвоены адреса в заданном количестве:
 
-1. Проинсталлируем приложение (nginx) и опубликуем на порту `8080`:
+```shell
+$ kubectl get svc
+NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
+nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
+```
 
-   ```shell
-   kubectl create deploy nginx --image=nginx
-   kubectl create svc loadbalancer nginx --tcp=8080:80
-   ```
+Полученные EXTERNAL-IP можно прописывать в качестве A-записей для прикладного домена:
 
-1. Проверьте, что сервис создан:
+```shell
+$ curl -s -o /dev/null -w "%{http_code}" 192.168.2.100:8000
+200
+$ curl -s -o /dev/null -w "%{http_code}" 192.168.2.101:8000
+200
+$ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
+200
+```
 
-   ```shell
-   kubectl get svc nginx
-   ```
+{% endraw %}
 
-   Пример вывода:
+## Пример использования MetalLB в режиме BGP LoadBalancer
 
-   ```shell
-   $ kubectl get svc nginx
-   NAME    TYPE           CLUSTER-IP     EXTERNAL-IP       PORT(S)          AGE
-   nginx   LoadBalancer   10.222.9.190   192.168.199.101   8080:31689/TCP   3m11s
-   ```
+{% raw %}
 
-1. Проверьте доступ к приложению.
+Включите модуль и настройте все необходимые параметры:
 
-   Пример:
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: metallb
+spec:
+  enabled: true
+  settings:
+    addressPools:
+    - addresses:
+      - 192.168.219.100-192.168.219.200
+      name: mypool
+      protocol: bgp
+    bgpPeers:
+    - hold-time: 3s
+      my-asn: 64600
+      peer-address: 172.18.18.10
+      peer-asn: 64601
+    speaker:
+      nodeSelector:
+        node-role.deckhouse.io/metallb: ""
+      tolerations:
+      - effect: NoExecute
+        key: dedicated.deckhouse.io
+        operator: Equal
+  version: 2
+```
 
-   ```console
-   $ curl -s -o /dev/null -w "%{http_code}" 192.168.199.101:8080
-   200
-   ```
+Настройте BGP-пиринг на сетевом оборудовании.
+
+{% endraw %}
+
+## Дополнительные примеры настроек для _Service_
+
+{% raw %}
+
+Для создания _Services_ с общими IP адресами необходимо добавить к ним аннотацию `metallb.universe.tf/allow-shared-ip`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: dns-service-tcp
+  namespace: default
+  annotations:
+    metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 1.2.3.4
+  ports:
+    - name: dnstcp
+      protocol: TCP
+      port: 53
+      targetPort: 53
+  selector:
+    app: dns
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dns-service-udp
+  namespace: default
+  annotations:
+    metallb.universe.tf/allow-shared-ip: "key-to-share-1.2.3.4"
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 1.2.3.4
+  ports:
+    - name: dnsudp
+      protocol: UDP
+      port: 53
+      targetPort: 53
+  selector:
+    app: dns
+```
+
+Для создания _Service_ с принудительно выбранным адресом в режиме L2 LoadBalancer, необходимо добавить аннотацию `network.deckhouse.io/load-balancer-ips`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  annotations:
+    network.deckhouse.io/load-balancer-ips: 192.168.217.217
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: nginx
+  type: LoadBalancer
+```
+
+Для создания _Service_ с принудительно выбранным адресом в режиме BGP LoadBalancer, необходимо добавить аннотацию `metallb.universe.tf/loadBalancerIPs`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: 192.168.1.100
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: nginx
+  type: LoadBalancer
+```
+
+Создание _Service_ и назначение ему _IPAddressPools_ возможно в режиме BGP LoadBalancer через аннотацию `metallb.universe.tf/address-pool`. Для режима L2 LoadBalancer необходимо использовать настройки _MetalLoadBalancerClass_ (см. выше).
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  annotations:
+    metallb.universe.tf/address-pool: production-public-ips
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: nginx
+  type: LoadBalancer
+```
 
 {% endraw %}

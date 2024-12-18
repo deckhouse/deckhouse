@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: cilium-hubble
+    rbac.deckhouse.io/aggregate-to-networking-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-cni-cilium
+  name: d8:manage:permission:module:cilium-hubble:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - cilium-hubble
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

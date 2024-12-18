@@ -65,6 +65,7 @@ message AbortStartOptions {
   int32 log_width = 3;
   google.protobuf.Duration resources_timeout = 4;
   google.protobuf.Duration deckhouse_timeout = 5;
+  OperationOptions common_options = 10;
 }
 
 message AbortResult {

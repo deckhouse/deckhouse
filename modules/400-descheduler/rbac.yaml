@@ -1,0 +1,5 @@
+module: descheduler
+subsystems:
+  - infrastructure
+crds:
+  - modules/400-descheduler/crds/*.yaml

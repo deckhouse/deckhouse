@@ -21,7 +21,7 @@
 {!{ end -}!}
 
 {!{- define "e2e_kubernetes_default_version" -}!}
-1.27
+1.29
 {!{- end -}!}
 
 # job for set e2e requirement status
@@ -114,6 +114,7 @@ run: |
     LAYOUT=${LAYOUT}
     KUBERNETES_VERSION=${KUBERNETES_VERSION}
     TMP_DIR_PATH=${TMP_DIR_PATH}
+    MASTERS_COUNT=${MASTERS_COUNT}
   "
 
   ls -lh $(pwd)/testing
@@ -151,6 +152,7 @@ run: |
   docker run --rm \
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+  -e PREFIX=${PREFIX} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e CRI=${CRI} \
   -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -170,6 +172,7 @@ run: |
   docker run --rm \
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+  -e PREFIX=${PREFIX} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e LAYOUT=${LAYOUT:-not_provided} \
   -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -190,6 +193,7 @@ run: |
   docker run --rm \
   -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
   -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
+  -e PREFIX=${PREFIX} \
   -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
   -e CRI=${CRI} \
   -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -213,6 +217,7 @@ run: |
   docker run --rm \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
     -e PREFIX=${PREFIX} \
+    -e MASTERS_COUNT=${MASTERS_COUNT} \
     -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
     -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
     -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
@@ -285,6 +290,8 @@ check_e2e_labels:
     {!{ printf "run_%s_%s: ${{ steps.check.outputs.run_%s_%s }}" $cri $kubernetesVersionSlug $cri $kubernetesVersionSlug }!}
 {!{- end -}!}
 {!{- end }!}
+    edition: ${{ steps.check.outputs.edition }}
+    multimaster: ${{ steps.check.outputs.multimaster }}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check e2e labels
@@ -339,6 +346,9 @@ check_e2e_labels:
     KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
+{!{- if coll.Has $ctx "manualRun" }!}
+    WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
+{!{- end }!}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
@@ -362,6 +372,7 @@ check_e2e_labels:
         REF_FULL: ${{needs.git_info.outputs.ref_full}}
         INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
         MANUAL_RUN: {!{ coll.Has $ctx "manualRun" | conv.ToString | strings.Quote }!}
+        MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
       run: |
         # Calculate unique prefix for e2e test.
         # GITHUB_RUN_ID is a unique number for each workflow run.
@@ -384,7 +395,7 @@ check_e2e_labels:
         DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
         # Create tmppath for test script.
-        TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+        TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
         if [[ -d "${TMP_DIR_PATH}" ]] ; then
           echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
           ls -la ${TMP_DIR_PATH}
@@ -415,16 +426,21 @@ check_e2e_labels:
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
         fi
 
+        # Add edition name for non-FE tests on branch
+        if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+          IMAGE_EDITION=${WERF_ENV,,}
+        fi
+
         # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
         INITIAL_IMAGE_TAG=
         if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-          INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
         fi
 
         # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
         # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
         # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
         INSTALL_IMAGE_NAME=
 {!{- if eq $provider "eks" }!}
@@ -455,6 +471,13 @@ check_e2e_labels:
         SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
         echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
 
+        if [ "${MULTIMASTER}" == true ] ; then
+          MASTERS_COUNT=3
+        else
+          MASTERS_COUNT=1
+        fi
+        echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
         # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
         echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
         docker pull "${INSTALL_IMAGE_NAME}"
@@ -475,6 +498,7 @@ check_e2e_labels:
         echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
         echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
         echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+        echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
 
@@ -494,6 +518,7 @@ check_e2e_labels:
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+        MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -526,7 +551,7 @@ check_e2e_labels:
 {!{- end }!}
 
     - name: Cleanup bootstrapped cluster
-      if: {!{ coll.Has $ctx "manualRun" | test.Ternary "success()" "always()" }!}
+      if: {!{ coll.Has $ctx "manualRun" | test.Ternary "inputs.autodelete||success()" "always()" }!}
       id: cleanup_cluster
       timeout-minutes: 60
       env:
@@ -542,6 +567,7 @@ check_e2e_labels:
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+        MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
 {!{- if eq $provider "eks" }!}
         TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
@@ -620,7 +646,7 @@ check_e2e_labels:
 # <template: e2e_run_job_template>
 {!{ $ctx.jobID }!}:
   name: "{!{ $ctx.jobName }!}"
-  if: ${{ github.event.inputs.cri == '{!{ $ctx.cri }!}' && github.event.inputs.k8s_version == '{!{ $ctx.kubernetesVersion }!}' && github.event.inputs.layout == '{!{ $ctx.layout }!}' }}
+  if: ${{ fromJson(inputs.test_config).cri == '{!{ $ctx.cri }!}' && fromJson(inputs.test_config).ver == '{!{ $ctx.kubernetesVersion }!}' && github.event.inputs.layout == '{!{ $ctx.layout }!}' }}
   env:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
@@ -650,9 +676,10 @@ check_e2e_labels:
         DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
         INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
+        MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
       run: |
         # Create tmppath for test script.
-        TMP_DIR_PATH="/mnt/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
+        TMP_DIR_PATH="/tmp/cloud-layouts/layouts/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${DHCTL_PREFIX}"
         if [[ -d "${TMP_DIR_PATH}" ]] ; then
           echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
           ls -la ${TMP_DIR_PATH}
@@ -679,6 +706,13 @@ check_e2e_labels:
         TERRAFORM_IMAGE_NAME="${BRANCH_REGISTRY_PATH}/e2e-terraform:${DECKHOUSE_IMAGE_TAG}"
 {!{- end }!}
 
+        if [ "${MULTIMASTER}" == true ] ; then
+          MASTERS_COUNT=3
+        else
+          MASTERS_COUNT=1
+        fi
+        echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
         echo '::echo::on'
         echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
         echo "install-image-full=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
@@ -687,6 +721,7 @@ check_e2e_labels:
         echo "terraform-image-name=${TERRAFORM_IMAGE_NAME}" >> $GITHUB_OUTPUT
 {!{- end }!}
         echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+        echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
 
         echo '::echo::off'
 
@@ -700,7 +735,7 @@ check_e2e_labels:
         path: ${{ steps.setup.outputs.tmp-dir-path}}
 
     - name: Cleanup bootstrapped cluster
-      if: ${{ success() }}
+      if: ${{ success() || cancelled() }}
       id: cleanup_cluster
       env:
         PROVIDER: {!{ $ctx.providerName }!}
@@ -715,6 +750,7 @@ check_e2e_labels:
         LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
         TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
         PREFIX: ${{ github.event.inputs.cluster_prefix }}
+        MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
 {!{- if eq $provider "eks" }!}

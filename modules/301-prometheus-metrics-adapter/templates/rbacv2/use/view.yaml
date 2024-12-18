@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: prometheus-metrics-adapter
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+    rbac.deckhouse.io/kind: use
+  name: d8:use:capability:module:prometheus-metrics-adapter:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - daemonsetmetrics
+  - deploymentmetrics
+  - ingressmetrics
+  - namespacemetrics
+  - podmetrics
+  - servicemetrics
+  - statefulsetmetrics
+  verbs:
+  - get
+  - list
+  - watch

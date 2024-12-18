@@ -1,0 +1,3 @@
+module: operator-prometheus
+subsystems:
+  - observability

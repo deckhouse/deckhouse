@@ -22,12 +22,10 @@ import (
 	"syscall"
 	"time"
 
-	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
-	"github.com/flant/addon-operator/pkg/utils"
+	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/kube-client/client"
-	sh_app "github.com/flant/shell-operator/pkg/app"
-	utils_signal "github.com/flant/shell-operator/pkg/utils/signal"
-	log "github.com/sirupsen/logrus"
+	shapp "github.com/flant/shell-operator/pkg/app"
+	utilsignal "github.com/flant/shell-operator/pkg/utils/signal"
 	"gopkg.in/alecthomas/kingpin.v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,12 +35,10 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addon-operator/kube-config/backend"
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
-	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -53,42 +49,41 @@ const (
 	retryPeriod      = 10
 )
 
-func start(_ *kingpin.ParseContext) error {
-	sh_app.AppStartMessage = version()
+func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
+	return func(_ *kingpin.ParseContext) error {
+		shapp.AppStartMessage = version()
 
-	ctx := context.Background()
+		ctx := context.Background()
 
-	operator := addon_operator.NewAddonOperator(ctx)
+		operator := addonoperator.NewAddonOperator(ctx, addonoperator.WithLogger(logger.Named("addon-operator")))
 
-	operator.StartAPIServer()
+		operator.StartAPIServer()
 
-	if os.Getenv("DECKHOUSE_HA") == "true" {
-		log.Info("Desckhouse is starting in HA mode")
-		runHAMode(ctx, operator)
+		if os.Getenv("DECKHOUSE_HA") == "true" {
+			logger.Info("Desckhouse is starting in HA mode")
+			runHAMode(ctx, operator, logger)
+			return nil
+		}
+
+		if err := run(ctx, operator, logger); err != nil {
+			logger.Error("run", log.Err(err))
+			os.Exit(1)
+		}
+
 		return nil
 	}
-
-	err := run(ctx, operator)
-	if err != nil {
-		log.Error(err)
-		os.Exit(1)
-	}
-
-	return nil
 }
 
-func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
+func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
 	var identity string
 	podName := os.Getenv("DECKHOUSE_POD")
 	if len(podName) == 0 {
-		log.Info("DECKHOUSE_POD env not set or empty")
-		os.Exit(1)
+		log.Fatal("DECKHOUSE_POD env not set or empty")
 	}
 
 	podIP := os.Getenv("ADDON_OPERATOR_LISTEN_ADDRESS")
 	if len(podIP) == 0 {
-		log.Info("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
-		os.Exit(1)
+		log.Fatal("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
 	}
 
 	podNs := os.Getenv("ADDON_OPERATOR_NAMESPACE")
@@ -104,7 +99,7 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
 		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
 	}
 
-	err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
+	if err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
 		// Create a leaderElectionConfig for leader election
 		Lock: &resourcelock.LeaseLock{
 			LeaseMeta: v1.ObjectMeta{
@@ -121,96 +116,64 @@ func runHAMode(ctx context.Context, operator *addon_operator.AddonOperator) {
 		RetryPeriod:   time.Duration(retryPeriod) * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
-				err := run(ctx, operator)
+				err := run(ctx, operator, logger)
 				if err != nil {
-					log.Info(err)
+					operator.Logger.Info("run", log.Err(err))
 					os.Exit(1)
 				}
 			},
 			OnStoppedLeading: func() {
-				log.Info("Restarting because the leadership was handed over")
+				operator.Logger.Info("Restarting because the leadership was handed over")
 				operator.Stop()
-				os.Exit(1)
+				os.Exit(0)
 			},
 		},
 		ReleaseOnCancel: true,
-	})
-	if err != nil {
-		log.Error(err)
+	}); err != nil {
+		operator.Logger.Error("run", log.Err(err))
 	}
 
 	go func() {
 		<-ctx.Done()
 		log.Info("Context canceled received")
-		err := syscall.Kill(1, syscall.SIGUSR2)
-		if err != nil {
-			log.Infof("Couldn't shutdown deckhouse: %s\n", err)
-			os.Exit(1)
+		if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
+			log.Fatalf("Couldn't shutdown deckhouse: %s\n", err)
 		}
 	}()
 
 	operator.LeaderElector.Run(ctx)
 }
 
-func run(ctx context.Context, operator *addon_operator.AddonOperator) error {
-	err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml")
-	if err != nil {
-		return err
+func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
+	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml"); err != nil {
+		return fmt.Errorf("ensure crds: %w", err)
 	}
 
 	// we have to lock the controller run if dhctl lock configmap exists
-	err = lockOnBootstrap(ctx, operator.KubeClient())
-	if err != nil {
-		return err
+	if err := lockOnBootstrap(ctx, operator.KubeClient(), logger); err != nil {
+		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
-	deckhouseConfigC := make(chan utils.Values, 1)
-
-	kubeConfigBackend := backend.New(operator.KubeClient().RestConfig(), deckhouseConfigC, log.StandardLogger().WithField("KubeConfigManagerBackend", "ModuleConfig"))
-	kubeConfigChannel := kubeConfigBackend.GetEventsChannel()
-
-	operator.SetupKubeConfigManager(kubeConfigBackend)
-	validation.RegisterAdmissionHandlers(operator)
-
-	err = operator.Setup()
+	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, operator, logger.Named("deckhouse-controller"))
 	if err != nil {
-		return err
+		return fmt.Errorf("create deckhouse controller: %w", err)
 	}
 
-	dController, err := controller.NewDeckhouseController(ctx, operator.KubeClient().RestConfig(), operator.ModuleManager, operator.MetricStorage)
-	if err != nil {
-		return err
+	// load modules from FS, start controllers and run deckhouse config event loop
+	if err = deckhouseController.Start(ctx); err != nil {
+		return fmt.Errorf("start deckhouse controller: %w", err)
 	}
 
-	operator.ModuleManager.SetModuleEventsChannel(kubeConfigChannel)
-
-	operator.ModuleManager.SetModuleLoader(dController)
-
-	// Init deckhouse-config service with ModuleManager instance.
-	d8config.InitService(operator.ModuleManager)
-
-	// Runs preflight checks first (restore the modules' file system)
-	if os.Getenv("EXTERNAL_MODULES_DIR") != "" {
-		dController.StartPluggableModulesControllers(ctx)
-	}
-
-	// Loads deckhouse modules from the fs and Starts main event lop
-	err = dController.DiscoverDeckhouseModules(ctx, operator.ModuleManager.GetModuleEventsChannel(), deckhouseConfigC)
-	if err != nil {
-		return err
-	}
-
-	err = operator.Start(ctx)
-	if err != nil {
-		return err
+	if err = operator.Start(ctx); err != nil {
+		return fmt.Errorf("start operator: %w", err)
 	}
 
 	debugserver.RegisterRoutes(operator.DebugServer)
 
-	// Block main thread by waiting signals from OS.
-	utils_signal.WaitForProcessInterruption(func() {
+	// block main thread by waiting signals from OS.
+	utilsignal.WaitForProcessInterruption(func() {
 		operator.Stop()
-		os.Exit(1)
+		os.Exit(0)
 	})
 
 	return nil
@@ -221,7 +184,7 @@ const (
 	cmNamespace = "d8-system"
 )
 
-func lockOnBootstrap(ctx context.Context, client *client.Client) error {
+func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Logger) error {
 	bk := wait.Backoff{
 		Duration: 1 * time.Second,
 		Factor:   1.2,
@@ -231,20 +194,18 @@ func lockOnBootstrap(ctx context.Context, client *client.Client) error {
 	}
 
 	return retry.OnError(bk, func(err error) bool {
-		log.Errorf("An error occurred during the bootstrap lock: %s. Retrying", err)
+		logger.Errorf("An error occurred during the bootstrap lock: %s. Retrying", err)
 		// retry on any error
 		return true
 	}, func() error {
-		_, err := client.CoreV1().ConfigMaps(cmNamespace).Get(ctx, cmLockName, v1.GetOptions{})
-		if err != nil {
+		if _, err := client.CoreV1().ConfigMaps(cmNamespace).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
 			}
-
-			return err
+			return fmt.Errorf("get the '%s' configmap: %w", cmLockName, err)
 		}
 
-		log.Info("Bootstrap lock ConfigMap exists. Waiting for bootstrap process to be done")
+		logger.Info("Bootstrap lock ConfigMap exists. Waiting for bootstrap process to be done")
 
 		listOpts := v1.ListOptions{
 			FieldSelector: "metadata.name=" + cmLockName,
@@ -252,7 +213,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client) error {
 		}
 		wch, err := client.CoreV1().ConfigMaps(cmNamespace).Watch(ctx, listOpts)
 		if err != nil {
-			return err
+			return fmt.Errorf("watch configmaps: %w", err)
 		}
 
 		for event := range wch.ResultChan() {
@@ -262,7 +223,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client) error {
 		}
 		wch.Stop()
 
-		log.Info("Bootstrap lock has been released")
+		logger.Info("Bootstrap lock has been released")
 
 		return nil
 	})

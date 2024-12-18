@@ -3,7 +3,7 @@ cpu: 500m
 memory: 1000Mi
 {{- end }}
 
-{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -71,6 +71,7 @@ spec:
         app: deckhouse
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
+        kubectl.kubernetes.io/default-container: deckhouse
     spec:
       affinity:
         nodeAffinity:
@@ -109,12 +110,11 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
 {{- end }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
-{{- if (.Values.global.enabledModules | has "external-module-manager") }}
       initContainers:
-        - name: init-external-modules
-          image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
+        - name: init-downloaded-modules
+          image: {{ include "helm_lib_module_common_image" (list . "init") }}
           imagePullPolicy: Always
-          command: ['sh', '-c', 'mkdir -p /deckhouse/external-modules/modules && chown -hR 64535 /deckhouse/external-modules /deckhouse/external-modules/modules && chmod 0700 /deckhouse/external-modules /deckhouse/external-modules/modules']
+          command: ['sh', '-c', 'if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
@@ -122,9 +122,8 @@ spec:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
           volumeMounts:
-            - mountPath: /deckhouse/external-modules
-              name: external-modules
-{{- end }}
+            - mountPath: /deckhouse/
+              name: deckhouse
       containers:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
@@ -167,6 +166,8 @@ spec:
                   fieldPath: spec.nodeName
             - name: HELM_HOST
               value: "127.0.0.1:44434"
+            - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
+              value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled"
             - name: ADDON_OPERATOR_LISTEN_PORT
               value: "4222"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
@@ -193,26 +194,25 @@ spec:
               value: "true"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_CERTS_DIR
               value: "/certs"
+            - name: ADDON_OPERATOR_CRD_EXTRA_LABELS
+              value: "heritage=deckhouse"
             - name: HELM3LIB
               value: "yes"
             - name: HELM_HISTORY_MAX
               value: "3"
-{{- if (.Values.global.enabledModules | has "external-module-manager") }}
             - name: MODULES_DIR
-              value: "/deckhouse/modules:/deckhouse/external-modules/modules"
+              value: "/deckhouse/modules:/deckhouse/downloaded/modules"
+            - name: DOWNLOADED_MODULES_DIR
+              value: "/deckhouse/downloaded/"
+            # For backward compatibility with current modules' hooks - remove after 1.69
             - name: EXTERNAL_MODULES_DIR
-              value: "/deckhouse/external-modules/"
-{{- else }}
-            - name: MODULES_DIR
-              value: "/deckhouse/modules"
-{{- end }}
+              value: "/deckhouse/downloaded/"
             - name: DEBUG_UNIX_SOCKET
               value: /tmp/shell-operator-debug.socket
             - name: HISTFILE
               value: /tmp/.bash_history
             - name: DEBUG_HTTP_SERVER_ADDR
               value: "127.0.0.1:9652"
-            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
           ports:
             - containerPort: 4222
               name: self
@@ -229,7 +229,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "deckhouse_resources" . | nindent 14 }}
 {{- end }}
           workingDir: /deckhouse
@@ -241,10 +241,8 @@ spec:
           - mountPath: /certs
             name: certs
             readOnly: true
-{{- if (.Values.global.enabledModules | has "external-module-manager") }}
-          - mountPath: /deckhouse/external-modules
-            name: external-modules
-{{- end }}
+          - mountPath: /deckhouse/downloaded
+            name: downloaded
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
@@ -288,7 +286,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
 {{- end }}
       hostNetwork: true
@@ -308,9 +306,11 @@ spec:
       - name: certs
         secret:
           secretName: admission-webhook-certs
-{{- if (.Values.global.enabledModules | has "external-module-manager") }}
-      - name: external-modules
+      - name: deckhouse
         hostPath:
-          path: /var/lib/deckhouse/external-modules
+          path: /var/lib/deckhouse
           type: DirectoryOrCreate
-{{- end}}
+      - name: downloaded
+        hostPath:
+          path: /var/lib/deckhouse/downloaded
+          type: DirectoryOrCreate

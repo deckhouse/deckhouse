@@ -8,7 +8,7 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -65,21 +65,6 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
-  initContainers:
-  - command:
-    - sh
-    - -c
-    - chown -vfR 64535:64535 /prometheus-db/
-    image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
-    imagePullPolicy: IfNotPresent
-    name: fix-permissions
-    securityContext:
-      runAsNonRoot: false
-      runAsUser: 0
-    volumeMounts:
-    - mountPath: /prometheus-db
-      name: prometheus-main-db
-      subPath: prometheus-db
   containers:
   - name: prometheus
     startupProbe:
@@ -117,7 +102,7 @@ spec:
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 8 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
 {{- end }}
     volumeMounts:
@@ -127,7 +112,7 @@ spec:
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 20 | nindent 8 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
         {{- include "config_reloader_resources" . | nindent 8 }}
 {{- end }}
   affinity:
@@ -137,7 +122,7 @@ spec:
         podAffinityTerm:
           labelSelector:
             matchLabels:
-              app: prometheus
+              app.kubernetes.io/name: prometheus
               prometheus: longterm
           topologyKey: kubernetes.io/hostname
 {{- if (include "helm_lib_ha_enabled" .) }}
@@ -150,11 +135,10 @@ spec:
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
-  externalLabels:
-{{- with .Values.prometheus.externalLabels }}
-    {{- . | toYaml | nindent 4 }}
-{{- end }}
-    prometheus: deckhouse
+  # Empty field because when scraping metrics via the Federation API,
+  # labels from externalLabels are being added,
+  # which makes the series in long-term storage and regular Prometheus different
+  externalLabels: {}
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""
   serviceAccountName: prometheus
@@ -200,6 +184,8 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
+{{- $externalLabels := .Values.prometheus.externalLabels }}
+{{- $externalLabels = merge (dict "prometheus" "deckhouse") $externalLabels }}
 {{- if .Values.prometheus.internal.remoteWrite }}
   remoteWrite:
   {{- range .Values.prometheus.internal.remoteWrite }}
@@ -219,9 +205,22 @@ spec:
     headers:
       X-Auth-Token: {{ .spec.customAuthToken }}
     {{- end }}
+    {{- if .spec.headers }}
+      {{- range $key, $value := .spec.headers }}
+      {{ $key }}: {{ $value | quote }}
+      {{- end }}
+    {{- end }}
     {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
-    {{- .spec.writeRelabelConfigs | toYaml | nindent 4 }}
+      {{- .spec.writeRelabelConfigs | toYaml | nindent 6 }}
+      {{- with $externalLabels }}
+      {{- range $key, $value := . }}
+      - sourceLabels: [{{ $key }}]
+        regex: "^$"
+        targetLabel: {{ $key }}
+        replacement: {{ $value | quote }}
+      {{- end }}
+      {{- end }}
     {{- end }}
     {{- if .spec.tlsConfig }}
       {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
@@ -302,7 +301,7 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 6 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
       {{- include "prometheus_resources" . | nindent 6 }}
 {{- end }}
   volumes:

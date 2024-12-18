@@ -1,4 +1,4 @@
-{{/* Important! The iptables binaries from artifact are also used in kube-router image of network-policy-engine module. */}}
+{{/* Important! The iptables binaries from artifact are also used in other modules: kube-proxy, cni-simple-bridge, cni-cilium, cni-flannel, node-local-dns, ingress-nginx, openvpn, network-policy-engine and network-gateway. */}}
 {{- $version := "1.8.9" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
@@ -29,6 +29,9 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   setup:
     - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
     - git clone -b libmnl-1.0.5 --depth 1 {{ $.SOURCE_REPO }}/netfilter/libmnl /src-libmnl

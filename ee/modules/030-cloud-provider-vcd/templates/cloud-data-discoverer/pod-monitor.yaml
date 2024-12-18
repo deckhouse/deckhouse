@@ -1,3 +1,4 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
@@ -35,3 +36,4 @@ spec:
   namespaceSelector:
     matchNames:
       - d8-cloud-provider-vcd
+{{- end }}

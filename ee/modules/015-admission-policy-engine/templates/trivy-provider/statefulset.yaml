@@ -3,10 +3,8 @@ cpu: 100m
 memory: 128Mi
 {{- end }}
 
-{{ $JavaDbRepository := printf "%s/security/trivy-java-db:1" .Values.global.modulesImages.registry.base | quote }}
-
 {{- if include "trivy.provider.enabled" $ }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -45,6 +43,8 @@ spec:
       app.kubernetes.io/part-of: gatekeeper
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/trivy-provider/configmap.yaml") . | sha256sum }}
       labels:
         app: trivy-provider
         app.kubernetes.io/part-of: gatekeeper
@@ -68,7 +68,10 @@ spec:
         - name: TRIVY_REMOTE_URL
           value: "http://trivy-server.d8-operator-trivy:4954"
         - name: TRIVY_JAVA_DB_IMAGE
-          value: {{ $JavaDbRepository }}
+          value: {{ printf "%s/security/trivy-java-db:1" .Values.global.modulesImages.registry.base | quote }}
+        envFrom:
+        - configMapRef:
+            name: trivy-provider
         ports:
         - containerPort: 8443
           protocol: TCP
@@ -88,7 +91,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+          {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
       dnsPolicy: ClusterFirst

@@ -1,0 +1,4 @@
+module: terraform-manager
+namespace: d8-system
+subsystems:
+  - infrastructure

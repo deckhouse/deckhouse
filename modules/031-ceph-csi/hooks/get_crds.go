@@ -143,7 +143,7 @@ func setInternalValues(input *go_hook.HookInput) error {
 				storageClassName := obj.Metadata.Name + "-" + sc.NamePostfix
 				if isStorageClassChanged(input, storageClassName, sc.ReclaimPolicy) {
 					input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClassName)
-					input.LogEntry.Infof("ReclaimPolicy changed. StorageClass %s is Deleted.", storageClassName)
+					input.Logger.Infof("ReclaimPolicy changed. StorageClass %s is Deleted.", storageClassName)
 				}
 			}
 		}
@@ -154,7 +154,7 @@ func setInternalValues(input *go_hook.HookInput) error {
 				storageClassName := obj.Metadata.Name + "-" + sc.NamePostfix
 				if isStorageClassChanged(input, storageClassName, sc.ReclaimPolicy) {
 					input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", storageClassName)
-					input.LogEntry.Infof("ReclaimPolicy changed. StorageClass %s is Deleted.", storageClassName)
+					input.Logger.Infof("ReclaimPolicy changed. StorageClass %s is Deleted.", storageClassName)
 				}
 			}
 		}

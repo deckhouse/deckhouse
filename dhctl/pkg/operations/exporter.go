@@ -28,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -92,7 +92,7 @@ func NewConvergeExporter(address, path string, interval time.Duration) *Converge
 		panic(err)
 	}
 
-	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
+	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 	if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 		panic(err)
 	}

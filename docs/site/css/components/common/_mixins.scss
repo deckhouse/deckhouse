@@ -33,7 +33,7 @@ $ntrl-900: #02003E;
 }
 
 @mixin box-shadow {
-  box-shadow: 0 0 4px rgba(0, 0, 0, .15);
+  box-shadow: 0 4px 9px 0 rgba(34, 42, 94, .11);
 }
 
 @function rem($px) {

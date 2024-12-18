@@ -1,0 +1,3 @@
+module: static-routing-manager
+subsystems:
+  - networking

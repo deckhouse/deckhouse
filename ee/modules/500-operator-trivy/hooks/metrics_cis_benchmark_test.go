@@ -9,7 +9,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -31,7 +31,7 @@ var _ = Describe("Modules :: operator-trivy :: hooks :: metrics for cis benchmar
 		for i, m := range metrics {
 			if m.Name == metricName && m.Labels["id"] == id {
 				assertMetricLabels(m.Labels, expectedLabels)
-				Expect(m.Value).To(Equal(pointer.Float64(value)))
+				Expect(m.Value).To(Equal(ptr.To(value)))
 				metricIndex = i
 				break
 			}

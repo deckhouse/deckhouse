@@ -30,7 +30,7 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 //go:generate go run ./build.go --edition all
@@ -81,6 +81,12 @@ var nothingButGoHooksExcludes = []string{
 var stageDependencies = map[string][]string{
 	"setup": {
 		"**/*.go",
+	},
+}
+
+var stageDependenciesFile = map[string][]string{
+	"setup": {
+		"**/*",
 	},
 }
 
@@ -148,12 +154,23 @@ func writeSections(settings writeSettings) {
 		if settings.SaveTo == modulesWithExcludeFileName && hooksPathRegex.Match([]byte(file)) {
 			return
 		}
-		addEntries = append(addEntries, addEntry{
-			Add:               strings.TrimPrefix(file, workDir),
-			To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
-			ExcludePaths:      settings.ExcludePaths,
-			StageDependencies: settings.StageDependencies,
-		})
+
+		info, err := os.Stat(file)
+		if err == nil && !info.IsDir() {
+			addEntries = append(addEntries, addEntry{
+				Add:               strings.TrimPrefix(file, workDir),
+				To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+				ExcludePaths:      nil,
+				StageDependencies: stageDependenciesFile,
+			})
+		} else {
+			addEntries = append(addEntries, addEntry{
+				Add:               strings.TrimPrefix(file, workDir),
+				To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+				ExcludePaths:      settings.ExcludePaths,
+				StageDependencies: settings.StageDependencies,
+			})
+		}
 	}
 
 	for _, file := range files {
@@ -361,8 +378,8 @@ func (e *executor) executeEdition(editionName string) {
 		bi := ed.BuildIncludes
 		if bi == nil {
 			bi = &buildIncludes{
-				SkipCandi:   pointer.Bool(false),
-				SkipModules: pointer.Bool(false),
+				SkipCandi:   ptr.To(false),
+				SkipModules: ptr.To(false),
 			}
 		}
 

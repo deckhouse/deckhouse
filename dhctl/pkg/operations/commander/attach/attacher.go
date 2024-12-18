@@ -18,22 +18,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"os"
 
 	"github.com/google/uuid"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
@@ -65,9 +65,9 @@ func NewAttacher(params *Params) *Attacher {
 	}
 
 	// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
-	//if params.CommanderUUID == uuid.Nil {
+	// if params.CommanderUUID == uuid.Nil {
 	//	panic("CommanderUUID required for commander/attach operation!")
-	//}
+	// }
 
 	return &Attacher{
 		Params:                 params,
@@ -99,7 +99,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 		return nil, fmt.Errorf("unable to scan cluster: %w", err)
 	}
 
-	if pointer.BoolDeref(i.Params.ScanOnly, true) {
+	if ptr.Deref(i.Params.ScanOnly, true) {
 		if err = i.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache, PhaseData{
 			ScanResult: scanResult,
 		}); err != nil {
@@ -163,7 +163,7 @@ func (i *Attacher) prepare(_ context.Context) (*client.KubernetesClient, *config
 	err := log.Process("attach", "Prepare cluster attach", func() error {
 		var err error
 
-		kubeClient, err = operations.ConnectToKubernetesAPI(i.Params.SSHClient)
+		kubeClient, err = kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(i.Params.SSHClient))
 		if err != nil {
 			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 		}
@@ -294,12 +294,12 @@ func (i *Attacher) capture(
 			return fmt.Errorf("unable to parse resources: %w", err)
 		}
 
-		checkers, err := resources.GetCheckers(kubeClient, attachResources)
+		checkers, err := resources.GetCheckers(kubeClient, attachResources, nil)
 		if err != nil {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(kubeClient, nil, attachResources, checkers)
+		err = resources.CreateResourcesLoop(kubeClient, attachResources, checkers, nil)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}

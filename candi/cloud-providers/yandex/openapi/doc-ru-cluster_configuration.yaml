@@ -4,13 +4,15 @@ apiVersions:
     description: |
       Описывает конфигурацию облачного кластера в Yandex Cloud.
 
-      Используется cloud-провайдером, если control plane кластера размещен в облаке.
+      Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
 
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit provider-cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
     x-doc-search: |
       ProviderClusterConfiguration
     properties:
@@ -31,7 +33,7 @@ apiVersions:
               Список зон, в которых допустимо создавать узлы.
           instanceClass:
             description: |
-              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
+              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
             properties: &instanceClassProperties_ru
               platform:
                 description: |
@@ -60,11 +62,19 @@ apiVersions:
                 description: |
                   Список внешних IP-адресов.
 
-                  При отсутствии опции `externalSubnetID` необходимо использовать или [зарезервированные публичные IP-адреса](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес), или константу `Auto`.
+                  При отсутствии опции `externalSubnetID` необходимо использовать или [зарезервированные публичные IP-адреса](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес), или константу `Auto`.
 
                   При наличии опции `externalSubnetID` необходимо выбрать конкретные свободные IP-адреса из указанной подсети.
 
-                  Количество элементов массива **должно** соответствовать количеству узлов в группе (значение параметра `replicas`). Если используется значение `Auto` (автоматический заказ публичных IP-адресов), количество элементов в массиве `externalIPAddresses` все равно должно соответствовать количеству узлов в группе.
+                  Если количество элементов массива меньше количества узлов в группе (значение параметра `replicas`), то используется значение `Auto` (автоматический заказ публичных IP-адресов).
+
+                  Элементы массива должны быть перечислены согласно порядку зон, в которых будут создаваться узлы. Например:
+
+                  ```yaml
+                  - <RU-CENTRAL1-A-IP-ADDRESS>
+                  - <RU-CENTRAL1-B-IP-ADDRESS>
+                  - <RU-CENTRAL1-D-IP-ADDRESS>
+                  ```
               externalSubnetID:
                 description: |
                   Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
@@ -73,6 +83,14 @@ apiVersions:
                   Подключаемый к узлу дополнительный сетевой интерфейс, в который будет идти маршрут по умолчанию.
 
                   Также будет добавлен маршрут для internal-интерфейса узла на всю подсеть, указанную в `nodeNetworkCIDR`.
+
+                  Элементы массива должны быть перечислены согласно порядку зон, в которых будут создаваться узлы. Например:
+
+                  ```yaml
+                  - <RU-CENTRAL1-A-SUBNET-ID>
+                  - <RU-CENTRAL1-B-SUBNET-ID>
+                  - <RU-CENTRAL1-D-SUBNET-ID>
+                  ```
               additionalLabels:
                 description: |
                   Дополнительные лейблы, которые будут присвоены созданным инстансам.
@@ -114,7 +132,7 @@ apiVersions:
                     > **Внимание!** Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
+                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
                 coreFraction:
@@ -140,7 +158,7 @@ apiVersions:
         description: |
           Список DHCP-опций, которые будут установлены на все подсети.
 
-          [Возможные проблемы](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
+          [Возможные проблемы](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании.
         properties:
           domainName:
             description: |
@@ -152,10 +170,10 @@ apiVersions:
         description: |
           Название схемы размещения.
 
-          [Подробнее](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
+          [Подробнее](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера.
       withNATInstance:
         description: |
-          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance).
+          Настройки для схемы размещения [`WithNATInstance`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/layouts.html#withnatinstance).
         properties:
           exporterAPIKey:
             description: |
@@ -167,7 +185,7 @@ apiVersions:
                 Service account'у, для которого будет создан ключ, необходимо назначить роль `monitoring.viewer`.
           natInstanceExternalAddress:
             description: |
-              Внешний [зарезервированный IP-адрес](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
+              Внешний [зарезервированный IP-адрес](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции.
           natInstanceInternalAddress:
             description: |
               Лучше не использовать эту опцию, а использовать автоматически назначаемые адреса.
@@ -190,7 +208,7 @@ apiVersions:
                   Количество оперативной памяти (в мегабайтах) у создаваемого NAT-инстанса.
       provider:
         description: |
-          [Параметры подключения](https://deckhouse.ru/documentation/v1/modules/030-cloud-provider-yandex/environment.html) к API Yandex Cloud.
+          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/environment.html) к API Yandex Cloud.
         properties:
           cloudID:
             description: |

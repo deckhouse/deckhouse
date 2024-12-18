@@ -1,0 +1,3 @@
+module: chrony
+subsystems:
+  - infrastructure

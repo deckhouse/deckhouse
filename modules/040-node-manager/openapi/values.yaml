@@ -47,6 +47,8 @@ properties:
         type: boolean
       capiControllerManagerEnabled:
         type: boolean
+        x-examples:
+        - true
       capsControllerManagerEnabled:
         type: boolean
       clusterMasterAddresses:
@@ -373,3 +375,12 @@ properties:
             type: array
             items:
               type: string
+      allowedBundles:
+        type: array
+        default:
+          - "ubuntu-lts"
+          - "centos"
+          - "debian"
+          - "opensuse"
+        items:
+          type: string

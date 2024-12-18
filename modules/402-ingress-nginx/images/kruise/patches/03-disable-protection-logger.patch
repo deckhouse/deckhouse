@@ -1,0 +1,16 @@
+diff --git a/main.go b/main.go
+index 56fea93e..a99ba0cb 100644
+--- a/main.go
++++ b/main.go
+@@ -167,11 +167,6 @@ func main() {
+ 		setupLog.Error(err, "unable to init kruise clientset and informer")
+ 		os.Exit(1)
+ 	}
+-	err = util.InitProtectionLogger()
+-	if err != nil {
+-		setupLog.Error(err, "unable to init protection logger")
+-		os.Exit(1)
+-	}
+ 
+ 	var syncPeriod *time.Duration
+ 	if syncPeriodStr != "" {

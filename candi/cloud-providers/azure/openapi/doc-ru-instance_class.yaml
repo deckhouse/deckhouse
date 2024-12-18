@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Параметры группы Azure Instances, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/documentation/v1/modules/040-node-manager/)).
+            Параметры группы Azure Instances, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/)).
 
             На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
           properties:
@@ -44,7 +44,7 @@ spec:
 
                     По умолчанию используется образ из `AzureCloudDiscoveryData` (образ, из которого был создан мастер-узел при развертывании кластера).
 
-                    Список поддерживаемых ОС и их версий можно найти в [документации](https://deckhouse.ru/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                    Список поддерживаемых ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
                 diskSizeGb:
                   description: |
                     Размер root-диска. Значение указывается в `ГиБ`.

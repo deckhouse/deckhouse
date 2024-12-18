@@ -16,7 +16,9 @@ limitations under the License.
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 type OperationPolicy struct {
 	metav1.TypeMeta `json:",inline"`
@@ -90,11 +92,19 @@ type SecurityPolicySpec struct {
 			Type  string `json:"type,omitempty"`
 			User  string `json:"user,omitempty"`
 		} `json:"seLinux,omitempty"`
+		VerifyImageSignatures []ImageReference `json:"verifyImageSignatures,omitempty"`
 	} `json:"policies"`
 	Match struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`
 		LabelSelector     metav1.LabelSelector `json:"labelSelector,omitempty"`
 	} `json:"match"`
+}
+
+type ImageReference struct {
+	PublicKeys []string `json:"publicKeys"`
+	CA         string   `json:"ca,omitempty"`
+	Reference  string   `json:"reference"`
+	DockerCfg  string   `json:"dockerCfg,omitempty"`
 }
 
 type SelectUIDStrategy struct {
@@ -134,6 +144,8 @@ type OperationPolicySpec struct {
 		MaxRevisionHistoryLimit   *int     `json:"maxRevisionHistoryLimit,omitempty"`
 		ImagePullPolicy           string   `json:"imagePullPolicy,omitempty"`
 		PriorityClassNames        []string `json:"priorityClassNames,omitempty"`
+		IngressClassNames         []string `json:"ingressClassNames,omitempty"`
+		StorageClassNames         []string `json:"storageClassNames,omitempty"`
 		CheckHostNetworkDNSPolicy bool     `json:"checkHostNetworkDNSPolicy,omitempty"`
 		CheckContainerDuplicates  bool     `json:"checkContainerDuplicates,omitempty"`
 		ReplicaLimits             struct {

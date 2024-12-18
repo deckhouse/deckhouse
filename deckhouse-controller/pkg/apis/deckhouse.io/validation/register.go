@@ -16,10 +16,39 @@ limitations under the License.
 
 package validation
 
-import addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
+import (
+	"net/http"
 
-// RegisterAdmissionHandlers register validation webhook handlers for admission server built-in in addon-operator
-func RegisterAdmissionHandlers(operator *addon_operator.AddonOperator) {
-	operator.AdmissionServer.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler())
-	operator.AdmissionServer.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/go_lib/configtools"
+)
+
+type registerer interface {
+	RegisterHandler(route string, handler http.Handler)
+}
+
+type moduleStorage interface {
+	GetModuleByName(name string) (*moduletypes.Module, error)
+}
+
+type moduleManager interface {
+	IsModuleEnabled(name string) bool
+}
+
+// RegisterAdmissionHandlers registers validation webhook handlers for admission server built-in in addon-operator
+func RegisterAdmissionHandlers(
+	reg registerer,
+	cli client.Client,
+	mm moduleManager,
+	validator *configtools.Validator,
+	storage moduleStorage,
+	metricStorage *metricstorage.MetricStorage,
+) {
+	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, validator))
+	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
+	reg.RegisterHandler("/validate/v1/configuration-secret", kubernetesVersionHandler(mm))
+	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
 }

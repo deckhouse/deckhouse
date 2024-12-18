@@ -86,6 +86,16 @@ jobs:
       - run: |
           echo Enable ${{ needs.pull_request_info.outputs.edition }}
 
+  enable_se_plus:
+    if: ${{ needs.pull_request_info.outputs.edition == 'SE-plus' }}
+    name: Enable SE-plus
+    needs:
+      - pull_request_info
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo Enable ${{ needs.pull_request_info.outputs.edition }}
+
   go_generate:
     name: Go Generate
     needs:
@@ -136,6 +146,14 @@ jobs:
       - git_info
       - pull_request_info
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "unit") | strings.Indent 4 }!}
+
+  tests_python_webhooks:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Tests python webhooks
+    needs:
+      - git_info
+      - pull_request_info
+{!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
 
   matrix_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}

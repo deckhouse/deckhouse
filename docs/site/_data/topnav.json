@@ -4,104 +4,80 @@
       {
         "items": [
           {
-            "title": "Documentation",
+            "title": "Solutions",
             "url": "",
             "target": "",
+            "rel": "",
             "items": [
               {
-                "title": "Platform",
-                "url": "/documentation/v1/deckhouse-overview.html",
-                "target": ""
+                "title": "Technical Support",
+                "url": "/tech-support/",
+                "target": "",
+                "rel": ""
               },
               {
-                "title": "Modules",
-                "url": "/modules/",
-                "target": ""
-              }
-            ]
-          },
-          {
-            "title": "How to start",
-            "url": "",
-            "target": "",
-            "items": [
-              {
-                "title": "Getting started",
-                "url": "/gs/",
-                "target": ""
+                "title": "Security",
+                "url": "/security/",
+                "target": "",
+                "rel": ""
               },
-              {
-                "title": "Going to Production",
-                "url": "/guides/production.html",
-                "target": ""
-              }
-            ]
-          },
-          {
-            "title": "Products",
-            "url": "",
-            "target": "",
-            "items": [
-              {
-                "title": "Deckhouse Kubernetes Platform EE",
-                "url": "/products/enterprise-edition/",
-                "target": ""
-              },
-              {
-                "title": "Deckhouse Kubernetes Platform CE",
-                "url": "/community/community-edition/",
-                "target": ""
-              },
-              {
-                "title": "Deckhouse Commander",
-                "url": "/products/commander/",
-                "target": ""
-              }
-            ]
-          },
-          {
-            "title": "Serviсes",
-            "url": "",
-            "target": "",
-            "items": [
               {
                 "title": "Training &amp; Consulting",
-                "url": "/services/education/",
-                "target": ""
-              }
-            ]
-          },
-          {
-            "title": "Resources",
-            "url": "",
-            "target": "",
-            "items": [
-              {
-                "title": "Deckhouse Security",
-                "url": "/security/",
-                "target": ""
+                "url": "/services/training-and-consulting/",
+                "target": "",
+                "rel": ""
               },
               {
                 "title": "Deckhouse vs KaaS",
                 "url": "/deckhouse-vs-kaas/",
-                "target": ""
-              },
-              {
-                "title": "Technical support regulations",
-                "url": "/regulations-en/",
-                "target": ""
-              },
-              {
-                "title": "Success stories",
-                "url": "/success-stories/",
-                "target": ""
+                "target": "",
+                "rel": ""
               }
             ]
           },
           {
+            "title": "Documentation",
+            "url": "",
+            "target": "",
+            "rel": "",
+            "items": [
+              {
+                "title": "Getting started",
+                "url": "/gs/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Going to Production",
+                "url": "/guides/production.html",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Platform",
+                "url": "/documentation/v1/deckhouse-overview.html",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Modules",
+                "url": "/modules/",
+                "target": "",
+                "rel": ""
+              }
+            ]
+          },
+          {
+            "title": "Success stories",
+            "url": "/success-stories/",
+            "target": "",
+            "rel": ""
+          },
+          {
             "title": "Community",
             "url": "/community/",
-            "target": ""
+            "target": "",
+            "rel": ""
           }
         ]
       }
@@ -110,134 +86,100 @@
       {
         "items": [
           {
-            "title": "Документация",
+            "title": "Решения",
             "url": "",
             "target": "",
+            "rel": "",
             "items": [
               {
-                "title": "Платформа",
-                "url": "/documentation/v1/deckhouse-overview.html",
-                "target": ""
+                "title": "Техническая поддержка",
+                "url": "/tech-support/",
+                "target": "",
+                "rel": ""
               },
               {
-                "title": "Модули",
-                "url": "/modules/",
-                "target": ""
-              }
-            ]
-          },
-          {
-            "title": "Руководства",
-            "url": "",
-            "target": "",
-            "items": [
-              {
-                "title": "Быстрый старт",
-                "url": "/gs/",
-                "target": ""
-              },
-              {
-                "title": "Подготовка к production",
-                "url": "/guides/production.html",
-                "target": ""
-              }
-            ]
-          },
-          {
-            "title": "Продукты",
-            "url": "",
-            "target": "",
-            "items": [
-              {
-                "title": "Deckhouse Kubernetes Platform EE",
-                "url": "/products/enterprise-edition/",
-                "target": ""
-              },
-              {
-                "title": "Deckhouse Kubernetes Platform CE",
-                "url": "/community/community-edition/",
-                "target": ""
-              },
-              {
-                "title": "Deckhouse Commander",
-                "url": "/products/commander/",
-                "target": ""
-              },
-              {
-                "title": "Как купить",
-                "url": "/how-to-buy/",
-                "target": ""
-              }
-            ]
-          },
-          {
-            "title": "Услуги",
-            "url": "",
-            "target": "",
-            "items": [
-              {
-                "title": "Обучение",
-                "url": "/services/education/",
-                "target": ""
+                "title": "Технологические партнёры",
+                "url": "/partnership-products/",
+                "target": "",
+                "rel": ""
               },
               {
                 "title": "Переезд с OpenShift",
                 "url": "/moving-from-openshift/",
-                "target": ""
+                "target": "",
+                "rel": ""
               },
               {
-                "title": "Техническая поддержка",
-                "url": "/tech-support/",
-                "target": ""
-              }
-            ]
-          },
-          {
-            "title": "Информация",
-            "url": "",
-            "target": "",
-            "items": [
-              {
-                "title": "Партнёры",
-                "url": "/how-to-buy/#partners",
-                "target": ""
-              },
-              {
-                "title": "Партнёрская программа",
-                "url": "/partners-program/",
-                "target": ""
-              },
-              {
-                "title": "Импортозамещение",
-                "url": "/substitution/",
-                "target": ""
-              },
-              {
-                "title": "Безопасность Deckhouse",
+                "title": "Безопасность",
                 "url": "/security/",
-                "target": ""
+                "target": "",
+                "rel": ""
               },
               {
                 "title": "Сравнение с KaaS",
                 "url": "/deckhouse-vs-kaas/",
-                "target": ""
-              },
-              {
-                "title": "Истории успеха",
-                "url": "/success-stories/",
-                "target": ""
-              },
-              {
-                "title": "Вакансии",
-                "url": "https://job.flant.ru/vacancies/deckhouse",
-                "target": ""
+                "target": "",
+                "rel": ""
               }
             ]
           },
           {
-            "title": "Сообщество",
-            "url": "/community/",
-            "target": ""
+            "title": "Как купить",
+            "url": "",
+            "target": "",
+            "rel": "",
+            "items": [
+              {
+                "title": "Контакты",
+                "url": "/how-to-buy/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Стать партнёром",
+                "url": "/how-to-buy/#partners",
+                "target": "",
+                "rel": ""
+              }
+            ]
+          },
+          {
+            "title": "Медиа-центр",
+            "url": "",
+            "target": "",
+            "rel": "",
+            "items": [
+              {
+                "title": "Истории успеха",
+                "url": "/success-stories/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Блог",
+                "url": "https://blog.deckhouse.ru",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Новости",
+                "url": "/news/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "title": "Вебинары",
+                "url": "/webinars/",
+                "target": "",
+                "rel": ""
+              }
+            ]
+          },
+          {
+            "title": "Обучение",
+            "url": "/academy/",
+            "target": "",
+            "rel": ""
           }
         ]
       }

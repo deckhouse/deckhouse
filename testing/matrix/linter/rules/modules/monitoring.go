@@ -36,6 +36,7 @@ func dirExists(moduleName, modulePath string, path ...string) (bool, errors.Lint
 			"MODULE060",
 			moduleLabel(moduleName),
 			path,
+			"%s",
 			err.Error(),
 		)
 	}
@@ -86,6 +87,7 @@ func monitoringModuleRule(moduleName, modulePath, moduleNamespace string) errors
 			"MODULE060",
 			moduleLabel(moduleName),
 			searchingFilePath,
+			"%s",
 			err.Error(),
 		)
 	}

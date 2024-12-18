@@ -317,7 +317,7 @@ spec:
      namespace: d8-service-accounts
    ```
 
-2. Сгенерируйте `kubeconfig` для созданного `ServiceAccount` ([пример генерации kubeconfig для `ServiceAccount`](https://deckhouse.ru/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа)).
+2. Сгенерируйте `kubeconfig` для созданного `ServiceAccount` ([пример генерации kubeconfig для `ServiceAccount`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/140-user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа)).
 
 3. Положите получившийся `kubeconfig` на *удаленный сервер*. В дальнейшем понадобится указать путь к этому `kubeconfig` в настройках `kube-rbac-proxy` (в примере используется путь `${PWD}/.kube/config`).
 

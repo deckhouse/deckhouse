@@ -47,11 +47,12 @@ const helpersPath = "templates"
 
 // Deckhouse edition type
 const (
-	ce edition = "ce" // community edition
-	ee edition = "ee" // enterprise edition
-	be edition = "be" // basic edition
-	se edition = "se" // standard edition
-	fe edition = "fe" // fan edition
+	ce     edition = "ce"      // community edition
+	ee     edition = "ee"      // enterprise edition
+	be     edition = "be"      // basic edition
+	se     edition = "se"      // standard edition
+	sePlus edition = "se-plus" // standard plus edition
+	fe     edition = "fe"      // fan edition
 )
 
 var deckhouseRoot = ""
@@ -87,8 +88,8 @@ func containsString(slice []string, value string) bool {
 }
 
 func stripHTMLTags(input string) string {
-    re := regexp.MustCompile(`<.*?>`)
-    return re.ReplaceAllString(input, "")
+	re := regexp.MustCompile(`<.*?>`)
+	return re.ReplaceAllString(input, "")
 }
 
 func run() error {
@@ -199,8 +200,8 @@ func getAlertsFromTemplate(templateContent []byte, moduleName, moduleUrlName, ed
 					var buf bytes.Buffer
 					if err := goldmark.Convert([]byte(strings.ReplaceAll(summary, "\n", " ")), &buf); err == nil {
 						summary = stripHTMLTags(string(buf.Bytes()))
-						//summary = strings.TrimLeft(summary,"<p>")
-						//summary = strings.TrimRight(summary,"</p>\n")
+						// summary = strings.TrimLeft(summary,"<p>")
+						// summary = strings.TrimRight(summary,"</p>\n")
 					}
 				}
 			}
@@ -208,13 +209,13 @@ func getAlertsFromTemplate(templateContent []byte, moduleName, moduleUrlName, ed
 			alertLabels, ok := alertMap["labels"].(map[string]interface{})
 			severity = "undefined"
 			if ok {
-			    // don't store severity if it is not a number (e.g. it can be a template)
-				if _, err := strconv.Atoi(alertLabels["severity_level"].(string)); err == nil {
-					severity, _ = alertLabels["severity_level"].(string)
+				// don't store severity if it is not a number (e.g. it can be a template)
+				if severityData, severityExists := alertLabels["severity_level"]; severityExists {
+					if _, err := strconv.Atoi(severityData.(string)); err == nil {
+						severity = severityData.(string)
+					}
 				}
 			}
-
-
 
 			alerts = append(alerts, moduleAlert{
 				Name:         alertMap["alert"].(string),
@@ -230,7 +231,7 @@ func getAlertsFromTemplate(templateContent []byte, moduleName, moduleUrlName, ed
 		}
 	}
 
-	//return yaml.Marshal(alerts)
+	// return yaml.Marshal(alerts)
 	return alerts, nil
 }
 
@@ -300,6 +301,18 @@ func modules(deckhouseRoot string) (modules []module) {
 		}
 	}
 
+	files, _ = os.ReadDir(filepath.Join(deckhouseRoot, "ee/se-plus/modules"))
+	for _, file := range files {
+		if file.IsDir() {
+			md := module{
+				Name:    file.Name(),
+				Path:    filepath.Join("ee/se-plus/modules", file.Name()),
+				Edition: sePlus,
+			}
+			modules = append(modules, md)
+		}
+	}
+
 	return modules
 }
 
@@ -307,27 +320,34 @@ func moduleTemplates(module module) (yamlTemplates, tplTemplates map[string][]by
 	yamlTemplates = make(map[string][]byte)
 	tplTemplates = make(map[string][]byte)
 
-	files, err := os.ReadDir(filepath.Join(deckhouseRoot, module.Path, prometheusRules))
+	readDirWithTemplates(filepath.Join(deckhouseRoot, module.Path, prometheusRules), "", yamlTemplates, tplTemplates)
+
+	return
+}
+
+func readDirWithTemplates(pathToDir string, parentFolder string, yamlTemplates map[string][]byte, tplTemplates map[string][]byte) {
+	files, err := os.ReadDir(pathToDir)
 	if err != nil {
 		return
 	}
 
 	for _, file := range files {
 		if !file.IsDir() {
-			content, err := os.ReadFile(filepath.Join(deckhouseRoot, module.Path, prometheusRules, file.Name()))
+			content, err := os.ReadFile(filepath.Join(pathToDir, file.Name()))
 			if err != nil {
 				continue
 			}
 
 			switch filepath.Ext(file.Name()) {
 			case ".yaml":
-				yamlTemplates[file.Name()] = content
+				yamlTemplates[filepath.Join(parentFolder, file.Name())] = content
 			case ".tpl":
-				tplTemplates[file.Name()] = content
+				tplTemplates[filepath.Join(parentFolder, file.Name())] = content
 			}
+		} else {
+			readDirWithTemplates(filepath.Join(pathToDir, file.Name()), file.Name(), yamlTemplates, tplTemplates)
 		}
 	}
-
 	return
 }
 
@@ -345,8 +365,15 @@ func renderHelmTemplate(module module, templateNames []string) (map[string]strin
 	defer renderDir.Remove()
 
 	for _, templateName := range templateNames {
-		if err := renderDir.AddTemplate(templateName, filepath.Join(deckhouseRoot, module.Path, prometheusRules, templateName)); err != nil {
-			return nil, err
+		names := strings.Split(templateName, "/")
+		if len(names) > 0 {
+			if err := renderDir.AddTemplate(names[len(names)-1], filepath.Join(deckhouseRoot, module.Path, prometheusRules, templateName)); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := renderDir.AddTemplate(templateName, filepath.Join(deckhouseRoot, module.Path, prometheusRules, templateName)); err != nil {
+				return nil, err
+			}
 		}
 	}
 

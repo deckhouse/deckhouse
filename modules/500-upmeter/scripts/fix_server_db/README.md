@@ -20,7 +20,7 @@ time="2021-05-20T10:22:50Z" level=fatal msg="cannot start server: database not c
 ### 1. Migrate
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -- /modules/500-upmeter/scripts/fix_server_db/migrate.sh
+kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- /modules/500-upmeter/scripts/fix_server_db/migrate.sh
 ```
 
 ### 2. Optionally observe the state

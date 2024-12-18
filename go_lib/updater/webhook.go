@@ -16,13 +16,17 @@ limitations under the License.
 
 package updater
 
-import "time"
+import (
+	"time"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+)
 
 const (
 	SubjectDeckhouse = "Deckhouse"
 	SubjectModule    = "Module"
 )
 
-type WebhookDataSource[R Release] interface {
+type WebhookDataSource[R v1alpha1.Release] interface {
 	Fill(output *WebhookData, release R, applyTime time.Time)
 }

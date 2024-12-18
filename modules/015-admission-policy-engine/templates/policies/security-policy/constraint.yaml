@@ -51,8 +51,11 @@
   {{- if or (hasKey $cr.spec.policies "allowedUnsafeSysctls") (hasKey $cr.spec.policies "forbiddenSysctls") }}
     {{- include "allowed_sysctls" (list $context $cr) }}
   {{- end }}
-  {{- if or (hasKey $cr.spec.policies "seccompProfiles") }}
+  {{- if hasKey $cr.spec.policies "seccompProfiles" }}
     {{- include "seccomp_profiles" (list $context $cr) }}
+  {{- end }}
+  {{- if and (hasKey $cr.spec.policies "verifyImageSignatures") (regexMatch "^(EE|FE|CSE|SE-plus)$" $context.Values.global.deckhouseEdition) }}
+    {{- include "verify_image_signatures" (list $context $cr) }}
   {{- end }}
 {{- end }}
 
@@ -465,5 +468,29 @@ spec:
     {{- if hasKey $cr.spec.policies.seccompProfiles "allowedLocalhostFiles" }}
     allowedLocalhostFiles:
       {{- $cr.spec.policies.seccompProfiles.allowedLocalhostFiles | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- define "verify_image_signatures" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8VerifyImageSignatures
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    references:
+    {{- range $policy := $cr.spec.policies.verifyImageSignatures }}
+    - {{ printf "^%s$" ($policy.reference | replace "*" ".*") }}
     {{- end }}
 {{- end }}

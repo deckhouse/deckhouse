@@ -31,7 +31,7 @@ import (
 )
 
 // ExecSSHCommand executes a command on the StaticInstance.
-func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer) (err error) {
+func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout io.Writer, stderr io.Writer) error {
 	privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode private ssh key")
@@ -44,16 +44,16 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 		return errors.Wrap(err, "failed to create a temporary file for private ssh key")
 	}
 	defer func() {
-		err = sshKey.Close()
+		err := sshKey.Close()
 		if err != nil {
-			err = errors.Wrapf(err, "failed to close temporary file '%s' with private ssh key", sshKey.Name())
-			return
+			// It is not critical if we can't close the file.
+			instanceScope.Logger.Error(err, fmt.Sprintf("failed to close temporary file '%s' with private ssh key", sshKey.Name()))
 		}
 
 		err = os.Remove(sshKey.Name())
 		if err != nil {
-			err = errors.Wrapf(err, "failed to remove temporary file '%s' with private ssh key", sshKey.Name())
-			return
+			// It is not critical if we can't remove the file.
+			instanceScope.Logger.Error(err, fmt.Sprintf("failed to remove temporary file '%s' with private ssh key", sshKey.Name()))
 		}
 	}()
 
@@ -106,7 +106,10 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 	}
 
 	cmd.Stdout = stdout
-	cmd.Stderr = NewLogger(instanceScope.Logger.WithName("stderr"))
+	cmd.Stderr = stderr
+	if stderr == nil {
+		stderr = NewLogger(instanceScope.Logger.WithName("stderr"))
+	}
 
 	instanceScope.Logger.Info("Exec ssh command", "command", cmd.String())
 
@@ -121,10 +124,16 @@ func ExecSSHCommand(instanceScope *scope.InstanceScope, command string, stdout i
 // ExecSSHCommandToString executes a command on the StaticInstance and returns the output as a string.
 func ExecSSHCommandToString(instanceScope *scope.InstanceScope, command string) (string, error) {
 	stdout := &bytes.Buffer{}
-
-	err := ExecSSHCommand(instanceScope, command, stdout)
+	stderr := &bytes.Buffer{}
+	err := ExecSSHCommand(instanceScope, command, stdout, stderr)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to exec ssh command")
+		stderrBytes, err2 := io.ReadAll(stderr)
+		if err2 != nil {
+			return "", errors.Wrap(err2, "failed to read stderr from ssh command")
+		}
+		str := strings.TrimSpace(string(stderrBytes))
+		instanceScope.Logger.Info(str, "stderr")
+		return str, err
 	}
 
 	stdoutBytes, err := io.ReadAll(stdout)

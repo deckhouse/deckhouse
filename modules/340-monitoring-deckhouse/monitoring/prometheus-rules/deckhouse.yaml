@@ -396,7 +396,7 @@
         This alert is an attempt to detect the correlation between the faulty snapshot invalidation
         and apiserver connection errors, especially for the handle-node-template hook in the node-manager module.
         Check the difference between the snapshot and actual node objects for this hook:
-        `diff -u <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'|sort) <(kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '."040-node-manager/hooks/handle_node_templates.go"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)`
+        `diff -u <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'|sort) <(kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '."040-node-manager/hooks/handle_node_templates.go"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)`
 
       summary: |
         Possible apiserver connection error in the client-go informer, check logs and snapshots.
@@ -415,3 +415,21 @@
       description: |
         The deckhouse configmap is no longer used.
         You need to remove configmap "d8-system/deckhouse" from ArgoCD
+
+  - alert: D8DeckhouseModuleUpdatePolicyNotFound
+    expr: |
+      increase(deckhouse_module_update_policy_not_found[__SCRAPE_INTERVAL_X_2__]) > 0
+    for: 3m
+    labels:
+      tier: cluster
+      d8_module: "{{ $labels.module }}"
+      severity_level: "5"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      summary: Module update policy not found for {{ $labels.module_release }}
+      description: |
+        Module update policy not found for {{ $labels.module_release }}
+
+        You need to remove label from MR: `kubectl label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-`.
+        A new suitable policy will be detected automatically.

@@ -1,5 +1,5 @@
 ---
-title: "Сloud provider — OpenStack: настройки"
+title: "Cloud provider — OpenStack: настройки"
 ---
 
 Модуль автоматически включается для всех облачных кластеров, развернутых в OpenStack.
@@ -28,5 +28,8 @@ title: "Сloud provider — OpenStack: настройки"
 | Load Balancing (Octavia) &#8432; | v2         |
 
 &#8432;  Если нужно заказывать Load Balancer.
+
+В случае использования публичных облаков, адреса и порты API можно узнать в официальной документации сервиса:  
+* [VK Cloud](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints)
 
 {% include module-settings.liquid %}

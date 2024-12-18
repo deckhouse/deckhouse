@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 	"text/template"
 
@@ -185,28 +184,6 @@ func fromJSONArray(str string) []interface{} {
 		a = []interface{}{err.Error()}
 	}
 	return a
-}
-
-func slicesIsEqual(s1orig, s2orig []string) bool {
-	s1 := make([]string, len(s1orig))
-	s2 := make([]string, len(s2orig))
-	copy(s1, s1orig)
-	copy(s2, s2orig)
-
-	if len(s1) != len(s2) {
-		return false
-	}
-
-	sort.Strings(s1)
-	sort.Strings(s2)
-
-	for i := 0; i < len(s2); i++ {
-		if s1[i] != s2[i] {
-			return false
-		}
-	}
-
-	return true
 }
 
 func fromUnstructured(unstructuredObj *unstructured.Unstructured, obj interface{}) error {

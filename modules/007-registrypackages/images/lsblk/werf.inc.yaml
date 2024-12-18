@@ -1,0 +1,43 @@
+{{- $version := "2.40.2" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - lsblk
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    lsblk: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
+git:
+  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+    to: /
+    stageDependencies:
+      setup:
+      - '**/*'
+shell:
+  install:
+    - apk update && apk add --no-cache openssh-client gettext-dev
+  setup:
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+    - git clone -b v{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/util-linux/util-linux.git  /src
+    - cd /src
+    - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s" 
+    - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
+    - ./autogen.sh
+    - ./configure --enable-static --enable-static-programs=lsblk --disable-pylibmount --without-python --disable-liblastlog2
+    - make LDFLAGS="--static" lsblk && strip ./lsblk
+    - ldd ./lsblk || true
+    - mv ./lsblk /lsblk
+    - chmod +x /lsblk /install /uninstall

@@ -169,7 +169,7 @@ spec:
 
 #### Blitz Identity Provider
 
-Note that you must specify a URL to redirect the user after authorization when [registering the application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with the Blitz Identity Provider.  When using `DexProvider`, you must specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster's DNS name template as [defined](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) in the `global` module.
+Note that you must specify a URL to redirect the user after authorization when [registering the application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with the Blitz Identity Provider.  When using `DexProvider`, you must specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster's DNS name template as [defined](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) in the `global` module.
 
 The example below shows the provider settings for integration with Blitz Identity Provider.
 
@@ -322,6 +322,8 @@ echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
 ```
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
+
+Note that in the below example the [`ttl`](cr.html#user-v1-spec-ttl) parameter is set.
 
 {% raw %}
 

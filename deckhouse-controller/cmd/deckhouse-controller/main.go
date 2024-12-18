@@ -22,16 +22,18 @@ import (
 	"runtime"
 
 	ad_app "github.com/flant/addon-operator/pkg/app"
-	"github.com/flant/addon-operator/pkg/utils/stdliblogtologrus"
-	"github.com/flant/kube-client/klogtologrus"
+	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
+	"github.com/flant/kube-client/klogtolog"
 	sh_app "github.com/flant/shell-operator/pkg/app"
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
 	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // Variables with component versions. They set by 'go build' command.
@@ -61,6 +63,9 @@ func main() {
 
 	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
 
+	logger := log.NewLogger(log.Options{})
+	log.SetDefault(logger)
+
 	// override usage template to reveal additional commands with information about start command
 	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(FileName))
 
@@ -71,15 +76,15 @@ func main() {
 	})
 
 	kpApp.Action(func(_ *kingpin.ParseContext) error {
-		klogtologrus.InitAdapter(sh_app.DebugKubernetesAPI)
-		stdliblogtologrus.InitAdapter()
+		klogtolog.InitAdapter(sh_app.DebugKubernetesAPI, logger.Named("klog"))
+		stdliblogtolog.InitAdapter(logger)
 		return nil
 	})
 
 	// start main loop
 	startCmd := kpApp.
 		Command("start", "Start deckhouse.").
-		Action(start)
+		Action(start(logger))
 
 	ad_app.DefineStartCommandFlags(kpApp, startCmd)
 
@@ -88,16 +93,19 @@ func main() {
 	ad_app.DefineDebugCommands(kpApp)
 
 	// Add more commands to the "module" command.
-	debug.DefineModuleConfigDebugCommands(kpApp)
+	debug.DefineModuleConfigDebugCommands(kpApp, logger)
 
 	// deckhouse-controller helper subcommands
-	helpers.DefineHelperCommands(kpApp)
+	helpers.DefineHelperCommands(kpApp, logger)
 
 	// deckhouse-controller collect-debug-info
 	debug.DefineCollectDebugInfoCommand(kpApp)
 
 	// deckhouse-controller requirements
 	debug.DefineRequirementsCommands(kpApp)
+
+	// deckhouse-controller registry
+	registry.DefineRegistryCommand(kpApp, logger)
 
 	// deckhouse-controller edit subcommands
 	editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")

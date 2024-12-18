@@ -16,9 +16,15 @@
 
 package bootstrap
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+import (
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+)
 
 const PostBootstrapResultCacheKey = "post-bootstrap-result"
+const PreflightBootstrapCloudResultCacheKey = "preflight-bootstrap-cloud-result"
+const PreflightBootstrapPostCloudResultCacheKey = "preflight-bootstrap-post-cloud-result"
+const PreflightBootstrapGlobalResultCacheKey = "preflight-bootstrap-global-result"
+const PreflightBootstrapStaticResultCacheKey = "preflight-bootstrap-static-result"
 
 type State struct {
 	cache state.Cache
@@ -36,6 +42,42 @@ func (s *State) SavePostBootstrapScriptResult(result string) error {
 
 func (s *State) PostBootstrapScriptResult() ([]byte, error) {
 	return s.cache.Load(PostBootstrapResultCacheKey)
+}
+
+func (s *State) SetGlobalPreflightchecksWasRan() error {
+	return s.cache.Save(PreflightBootstrapGlobalResultCacheKey, []byte("yes"))
+}
+
+func (s *State) GlobalPreflightchecksWasRan() (bool, error) {
+	preflightcachefile, err := s.cache.InCache(PreflightBootstrapGlobalResultCacheKey)
+	return preflightcachefile, err
+}
+
+func (s *State) SetCloudPreflightchecksWasRan() error {
+	return s.cache.Save(PreflightBootstrapCloudResultCacheKey, []byte("yes"))
+}
+
+func (s *State) SetPostCloudPreflightchecksWasRan() error {
+	return s.cache.Save(PreflightBootstrapPostCloudResultCacheKey, []byte("yes"))
+}
+
+func (s *State) CloudPreflightchecksWasRan() (bool, error) {
+	preflightcachefile, err := s.cache.InCache(PreflightBootstrapCloudResultCacheKey)
+	return preflightcachefile, err
+}
+
+func (s *State) PostCloudPreflightchecksWasRan() (bool, error) {
+	preflightcachefile, err := s.cache.InCache(PreflightBootstrapPostCloudResultCacheKey)
+	return preflightcachefile, err
+}
+
+func (s *State) SetStaticPreflightchecksWasRan() error {
+	return s.cache.Save(PreflightBootstrapStaticResultCacheKey, []byte("yes"))
+}
+
+func (s *State) StaticPreflightchecksWasRan() (bool, error) {
+	preflightcachefile, err := s.cache.InCache(PreflightBootstrapStaticResultCacheKey)
+	return preflightcachefile, err
 }
 
 func (s *State) Clean() {

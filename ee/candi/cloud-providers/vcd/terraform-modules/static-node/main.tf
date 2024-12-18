@@ -75,7 +75,8 @@ resource "vcd_vapp_vm" "node" {
 
   lifecycle {
     ignore_changes = [
-      guest_properties
+      guest_properties,
+      disk
     ]
   }
 

@@ -34,7 +34,7 @@ def find_module_root(path):
     """
     while True:
         # We are in the module root if we found Chart.yaml file.
-        if os.path.exists(os.path.join(path, "Chart.yaml")):
+        if os.path.exists(os.path.join(path, "module.yaml")) or os.path.exists(os.path.join(path, "Chart.yaml")):
             return path
 
         parent, _ = os.path.split(path)

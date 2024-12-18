@@ -1,9 +1,9 @@
+
 ---
 layout: none
 searchable: false
 sitemap_include: false
-permalink: en/sitemap.xml
+permalink: en/gs/sitemap.xml
 lang: en
 ---
-
 {% include sitemap-site.liquid %}

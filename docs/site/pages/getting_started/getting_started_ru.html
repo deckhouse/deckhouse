@@ -23,8 +23,11 @@ toc: false
     <div>
       <h3>Облачная платформа</h3>
       <div class="button-group">
-        {%- for provider in site.data.getting_started.data.installTypes %}
+        {%- for provider in site.data.getting_started.dkp_data.installTypes %}
         {%- if provider[1].type != 'cloud' %}{% continue %}{% endif %}
+        {%- if provider[1].languages %}
+          {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
+        {%- endif %}
         {%- if provider[1].wip == true %}
         <a
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
@@ -46,7 +49,7 @@ toc: false
       <p>
         <small>
           Полный список настроек облачных провайдеров<br>
-          Deckhouse Kubernetes Platform доступен <a href="/documentation/v1/kubernetes.html"
+          Deckhouse Kubernetes Platform доступен <a href="/products/kubernetes-platform/documentation/v1/kubernetes.html"
           title="Поддерживаемые облачные провайдеры и параметры конфигурации облачных провайдеров">в документации</a>.
         </small>
       </p>
@@ -54,14 +57,22 @@ toc: false
     <div>
       <h3>Другие варианты</h3>
       <div class="button-group">
-        {%- for provider in site.data.getting_started.data.installTypes %}
+        {%- for provider in site.data.getting_started.dkp_data.installTypes %}
         {%- if provider[1].type == 'cloud' %}{% continue %}{% endif %}
+        {%- if provider[1].languages %}
+          {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
+        {%- endif %}
         {%- if provider[1].wip == true %}
         <a
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card"
-          href="/gs/{{ provider[0] }}/step2.html">{% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}<span class="name">{{ provider[1].name[page.lang] }}</span></a>
+          href="/gs/{{ provider[0] }}/step2.html">
+          {% if provider[1].iconPath %}
+            <div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>
+          {% endif %}
+          <span class="name">{{ provider[1].name[page.lang] }}</span>
+        </a>
         {%- endif %}
         {% endfor %}
       </div>

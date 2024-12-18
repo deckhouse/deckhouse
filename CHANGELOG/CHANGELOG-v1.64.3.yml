@@ -1,0 +1,58 @@
+candi:
+  fixes:
+    - summary: fix AltLinux 11 bootstrap ( udev error )
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10079
+cloud-provider-yandex:
+  fixes:
+    - summary: Fix table in the documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10101
+cni-cilium:
+  fixes:
+    - summary: Disabling the upload of the service image `base-cilium-dev` to the final container registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9987
+      impact: All cilium-agent pods will be restarted.
+    - summary: Wiping unwanted iptables-legacy rules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9971
+      impact: All cilium-agent pods will be restarted.
+dashboard:
+  features:
+    - summary: >-
+        Add auth.allowedUserGroups option. Now it is possible to authorize user access based on
+        their groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10068
+deckhouse-tools:
+  fixes:
+    - summary: Corrected the link to d8-cli for windowsOS, add a extension of file to link&
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10051
+dhctl:
+  fixes:
+    - summary: Fix panic during creation resources and add timestamps to debug log.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10070
+    - summary: Fix ensure required namespaces.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9714
+docs:
+  fixes:
+    - summary: Add link to description of clusterDomain parameter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10094
+    - summary: Fixed incorrect spelling of the command at ModulePullOverride.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10056
+    - summary: >-
+        Update `staticClusterConfiguration` docs, add Deckhouse Virtualization Platform deployment
+        specifics.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9765
+prometheus:
+  fixes:
+    - summary: Fix Grafana root URL.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10076
+      impact: Grafana will be restarted.
+upmeter:
+  fixes:
+    - summary: Fix `D8UpmeterSmokeMiniMoreThanOnePVxPVC` alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10026
+user-authn:
+  features:
+    - summary: Add claimMappingOverride option for OIDC Dex provider.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9974
+    - summary: dex support Base64 encoded and PEM encoded certs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9894
+

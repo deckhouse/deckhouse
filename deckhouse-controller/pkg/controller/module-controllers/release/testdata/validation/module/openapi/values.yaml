@@ -1,0 +1,30 @@
+type: object
+x-extend:
+  schema: config-values.yaml
+properties:
+  registry:
+    type: object
+    default: {}
+    properties:
+      base:
+        type: string
+        default: dev-registry.deckhouse.io/deckhouse/external-modules
+      dockercfg:
+        type: string
+        default: value
+      scheme:
+        type: string
+        default: HTTPS
+      ca:
+        type: string
+  internal:
+    default: {}
+    properties:
+      pythonVersions:
+        default: []
+        items:
+          type: string
+        type: array
+    type: object
+  someField:
+    type: string

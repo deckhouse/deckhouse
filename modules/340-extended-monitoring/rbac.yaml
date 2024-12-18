@@ -1,0 +1,4 @@
+module: extended-monitoring
+namespace: d8-monitoring
+subsystems:
+  - observability

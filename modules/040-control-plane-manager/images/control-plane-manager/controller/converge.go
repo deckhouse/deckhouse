@@ -42,7 +42,7 @@ func installExtraFiles() error {
 		return err
 	}
 
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
+	if err := os.MkdirAll(dstDir, 0700); err != nil {
 		return err
 	}
 
@@ -59,7 +59,7 @@ func installExtraFiles() error {
 			continue
 		}
 
-		if err := installFileIfChanged(filepath.Join(configPath, entry.Name()), filepath.Join(dstDir, strings.TrimPrefix(entry.Name(), "extra-file-")), 0644); err != nil {
+		if err := installFileIfChanged(filepath.Join(configPath, entry.Name()), filepath.Join(dstDir, strings.TrimPrefix(entry.Name(), "extra-file-")), 0600); err != nil {
 			return err
 		}
 	}
@@ -227,7 +227,7 @@ metadata:
 	log.Infof("write checksum patch for component %s", componentName)
 	patchFile := filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml")
 	content := fmt.Sprintf(patch, componentName, checksum)
-	return os.WriteFile(patchFile, []byte(content), 0644)
+	return os.WriteFile(patchFile, []byte(content), 0600)
 }
 
 func etcdJoinConverge() error {

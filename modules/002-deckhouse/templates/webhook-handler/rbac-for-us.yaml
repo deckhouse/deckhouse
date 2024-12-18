@@ -24,6 +24,12 @@ rules:
 - apiGroups: [""]
   resources: ["secrets","endpoints","configmaps","namespaces"]
   verbs: ["get", "list", "watch"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterroles"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["network.deckhouse.io"]
+  resources: ["*"]
+  verbs: ["get","list","watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

@@ -43,6 +43,7 @@ webhooks:
         operations:
           - CREATE
           - UPDATE
+          - DELETE
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
@@ -55,4 +56,55 @@ webhooks:
         namespace: d8-system
         port: 4223
         path: /validate/v1alpha1/module-configs
+  - name: update-policies.deckhouse-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - "deckhouse.io"
+        apiVersions:
+          - "v1alpha2"
+        resources:
+          - "moduleupdatepolicies"
+        operations:
+          - DELETE
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    failurePolicy: Fail
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.deckhouse.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: deckhouse
+        namespace: d8-system
+        port: 4223
+        path: /validate/v1alpha1/update-policies
+  - name: kubernetes-version.deckhouse-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - "*"
+        resources:
+          - "secrets"
+        scope: "Namespaced"
+        operations:
+          - UPDATE
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: kube-system
+    objectSelector:
+      matchLabels:
+        name: d8-cluster-configuration
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    failurePolicy: Fail
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.deckhouse.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: deckhouse
+        namespace: d8-system
+        port: 4223
+        path: /validate/v1/configuration-secret
 {{- end }}

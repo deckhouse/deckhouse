@@ -34,7 +34,7 @@ var _ = Describe("Istio hooks :: discovery_versions ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
+			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
 			Expect(f.ValuesGet("istio.internal.versionMap").Map()).To(HaveLen(0))
 		})
 	})
@@ -58,7 +58,7 @@ pilotVx11x11x11x11: "old-pilot-img"
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
+			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
 			Expect(f.ValuesGet("istio.internal.versionMap").Map()).To(HaveLen(2))
 			// 1.22
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.22.fullVersion").String()).To(Equal("1.22.3"))

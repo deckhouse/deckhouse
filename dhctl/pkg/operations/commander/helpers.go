@@ -61,7 +61,7 @@ func CheckShouldUpdateCommanderUUID(ctx context.Context, kubeCl *client.Kubernet
 			// if no commander uuid found then should update
 			return true, nil
 		}
-		return false, fmt.Errorf("unable to get cm/%s in ns/%s: %w", manifests.CommanderUUIDCm, manifests.CommanderUUIDCmNamespace)
+		return false, fmt.Errorf("unable to get cm/%s in ns/%s: %w", manifests.CommanderUUIDCm, manifests.CommanderUUIDCmNamespace, err)
 	}
 	return doCheckShouldUpdateCommanderUUID(cm, requiredCommanderUUID)
 }
@@ -79,7 +79,7 @@ func ConstructManagedByCommanderConfigMapTask(commanderUUID uuid.UUID, kubeCl *c
 		UpdateFunc: func(manifest interface{}) error {
 			existingCm, err := kubeCl.CoreV1().ConfigMaps(manifests.CommanderUUIDCmNamespace).Get(context.TODO(), manifests.CommanderUUIDCm, metav1.GetOptions{})
 			if err != nil {
-				return fmt.Errorf("unable to get existing cm %q: %w")
+				return fmt.Errorf("unable to get existing cm: %w", err)
 			}
 
 			shouldUpdate, err := doCheckShouldUpdateCommanderUUID(existingCm, commanderUUID)

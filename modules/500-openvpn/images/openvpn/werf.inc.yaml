@@ -1,77 +1,141 @@
-{{- $binaries := "/usr/sbin/conntrack /sbin/xtables-nft-multi /sbin/ip6tables-nft /sbin/ip6tables-nft-restore /sbin/ip6tables-nft-save /sbin/iptables-nft /sbin/iptables-nft-restore /sbin/iptables-nft-save /sbin/xtables-legacy-multi /sbin/iptables /sbin/iptables-restore /sbin/iptables-save /sbin/iptables-legacy /sbin/iptables-legacy-restore /sbin/iptables-legacy-save /sbin/ip6tables /sbin/ip6tables-restore /sbin/ip6tables-save /sbin/ip6tables-legacy /sbin/ip6tables-legacy-restore /sbin/ip6tables-legacy-save /usr/lib64/libnetfilter_conntrack.so* /bin/mknod" }}
+{{- $openvpnVersion := "2.6.12" }}
+{{- $opensslVersion := "3.3.2" }}
+{{- $libcapNgVersion := "0.8.5" }}
+{{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so* /bin/mknod" }}
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
-shell:
-  install:
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-    - mkdir -m 0755 -p /relocate/lib64/iptables /relocate/run
-    - cp -rp /lib64/iptables /relocate/lib64/
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /sbin/iptables-wrapper
+  before: setup
+- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /sbin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: setup
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/openvpn/src/openvpn/openvpn
+  to: /usr/sbin/openvpn
+  before: setup
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+  add: /src/entrypoint
+  to: /entrypoint
+  before: setup
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: setup
 ---
-artifact: {{ .ModuleName }}/entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}/modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint
-  to: /src
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
+  to: /src/entrypoint
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
 shell:
   install:
-    - cd /src
-    - export GO_VERSION=${GOLANG_VERSION}
-    - export GOPROXY={{ $.GOPROXY }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /entrypoint entrypoint.go
+  - git clone --depth 1 -b openssl-{{ $opensslVersion }} {{ .SOURCE_REPO }}/openssl/openssl.git /src/openssl && cd /src/openssl && rm -rf .git
+  - git clone --depth 1 -b v{{ $libcapNgVersion }} {{ .SOURCE_REPO }}/stevegrubb/libcap-ng.git /src/libcap-ng && cd /src/libcap-ng && rm -rf .git
+  - git clone --depth 1 -b v{{ $openvpnVersion }} {{ .SOURCE_REPO }}/OpenVPN/openvpn.git /src/openvpn && cd /src/openvpn && rm -rf .git
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/entrypoint
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  install:
+  - cd /src
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go mod tidy
+  - go build -ldflags '-s -w' .
+  - chown -R 64535:64535 /src
+  - chmod 0755 /src/entrypoint
 ---
 artifact: {{ .ModuleName }}/openssl-artifact
 from: {{ .Images.BASE_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/openssl
+  to: /src
+  before: install
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache autoconf automake make libtool g++ linux-headers
   install:
-    - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev tree
-    - mkdir -p /src
-    - cd /src
-    - git clone --depth 1 -b openssl-3.1.3 {{ $.SOURCE_REPO }}/openssl/openssl.git
-    - cd openssl
-    - ./Configure gcc -static -no-shared
-    - make -j4
-    - make install_sw DESTDIR=/openssl
+  - cd /src/
+  - ./Configure gcc -static -no-shared
+  - make -j4
+  - make install_sw DESTDIR=/openssl
 ---
-artifact: {{ .ModuleName }}/openvpn-artifact
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_ALPINE }}
 import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 - artifact: {{ .ModuleName }}/openssl-artifact
   add: /openssl
   to: /
   before: install
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache autoconf automake make libtool g++ linux-headers pkgconfig
   install:
-    - apk add --no-cache curl git autoconf automake make libtool g++ linux-headers libnl3-dev libcap-ng-dev lz4-dev linux-pam-dev tree
-    - mkdir -p /src
-    - cd /src
-    - git clone --depth 1 -b lzo-2.10 {{ $.SOURCE_REPO }}/oberhumer/lzo.git
-    - cd lzo
-    - ./configure --enable-static --disable-debug
-    - make -j4
-    - make install
-    - cd /src
-    - git clone --depth 1 -b v2.5.6 {{ $.SOURCE_REPO }}/OpenVPN/openvpn.git
-    - cd openvpn
-    - autoreconf -vi
-    - ./configure --enable-static --disable-shared --disable-debug --disable-unit-tests --disable-lz4 --disable-plugin-auth-pam --disable-plugin-down-root
-    - make LIBS="-all-static"
+  - cd /src/libcap-ng
+  - ./autogen.sh
+  - ./configure --enable-static
+  - make
+  - make install
+  - cd /src/openvpn
+  - autoreconf -vi
+  - ./configure --enable-static --disable-shared --disable-debug --disable-unit-tests --disable-lzo --disable-lz4 --disable-plugin-auth-pam --disable-plugin-down-root --disable-dco
+  - make LIBS="-all-static -lcap-ng"
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
-import:
-- artifact: {{ .ModuleName }}/openvpn-artifact
-  add: /src/openvpn/src/openvpn/openvpn
-  to: /usr/sbin/openvpn
-  before: setup
-- artifact: {{ .ModuleName }}/entrypoint-artifact
-  add: /entrypoint
-  to: /entrypoint
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /relocate
-  to: /
-  before: setup
+artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromArtifact: common/relocate-artifact
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y conntrack-tools coreutils
+  - find /var/lib/apt/lists /var/cache/apt -type f -exec rm -f {} +
+  install:
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+  - mkdir -p /relocate/sbin
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /iptables-wrapper
+  - |
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
+        done
+      done
+    done
+

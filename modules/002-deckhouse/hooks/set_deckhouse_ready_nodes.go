@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/kubectl/pkg/util/podutils"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 const deckhouseReadyLabel = "node.deckhouse.io/deckhouse-ready"
@@ -41,8 +41,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "control-plane-pods",
 			ApiVersion:                   "v1",
 			Kind:                         "Pod",
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(true),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -60,8 +60,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:                         "control-plane-nodes",
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(true),
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"node-role.kubernetes.io/control-plane": "",
@@ -145,7 +145,7 @@ func setDeckhouseReadyNodes(input *go_hook.HookInput) (err error) {
 	}
 
 	for nodeName, nodeStatus := range deckhouseReadyNodes {
-		input.LogEntry.Infof("Labeling %s node with %s=%v label", nodeName, deckhouseReadyLabel, nodeStatus)
+		input.Logger.Infof("Labeling %s node with %s=%v label", nodeName, deckhouseReadyLabel, nodeStatus)
 		metadata := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"labels": map[string]interface{}{

@@ -38,7 +38,7 @@ var _ = Describe("Istio hooks :: discovery_application_namespaces ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
+			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.applicationNamespaces").Array()).To(BeEmpty())
 		})

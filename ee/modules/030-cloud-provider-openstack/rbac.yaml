@@ -1,0 +1,3 @@
+module: cloud-provider-openstack
+subsystems:
+  - infrastructure

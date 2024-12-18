@@ -2,7 +2,231 @@
 title: "Модуль user-authz: примеры конфигурации"
 ---
 
+## Пример назначения прав администратору кластера
+
+{% alert level="info" %}
+Пример использует [новую ролевую модель](./#новая-ролевая-модель).
+{% endalert %}
+
+Для назначения прав администратору кластера используйте роль `d8:manage:all:manager` в `ClusterRoleBinding`.
+
+Пример назначения прав администратору кластера (User `joe`):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-admin-joe
+subjects:
+- kind: User
+  name: joe
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:manage:all:manager
+  apiGroup: rbac.authorization.k8s.io
+```
+
+{% offtopic title="Права, которые получит пользователь" %}
+Права, которые получит пользователь, будут ограничены рамками пространств имён, начинающихся с `d8-` или `kube-`.
+
+Пользователю будут доступны следующие права:
+- Просмотр, изменение, удаление и создание ресурсов Kubernetes и модулей DKP.
+- Изменение конфигурации модулей (просмотр, изменение, удаление и создание ресурсов `moduleConfig`).
+- Выполнение следующих команд к подам и сервисам:
+  - `kubectl attach`;
+  - `kubectl exec`;
+  - `kubectl port-forward`;
+  - `kubectl proxy`.
+{% endofftopic %}
+
+## Пример назначения прав сетевому администратору
+
+{% alert level="info" %}
+Пример использует [новую ролевую модель](./#новая-ролевая-модель).
+{% endalert %}
+
+Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:manage:networking:manager` в `ClusterRoleBinding`.
+
+Пример назначения прав сетевому администратору (User `joe`):
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: network-admin-joe
+subjects:
+- kind: User
+  name: joe
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:manage:networking:manager
+  apiGroup: rbac.authorization.k8s.io
+```
+
+{% offtopic title="Список прав, которые получит пользователь" %}
+Права, которые получит пользователь, будут ограничены следующим списком пространств имён модулей DKP из подсистемы `networking` (фактический список зависит от списка включённых в кластере модулей):
+- `d8-cni-cilium`;
+- `d8-cni-flannel`;
+- `d8-cni-simple-bridge`;
+- `d8-ingress-nginx`;
+- `d8-istio`;
+- `d8-metallb`;
+- `d8-network-gateway`;
+- `d8-openvpn`;
+- `d8-static-routing-manager`;
+- `d8-system`;
+- `kube-system`.
+
+Пользователю будут доступны следующие права:
+- Просмотр, изменение, удаление и создание *стандартных* ресурсов Kubernetes в пространстве имён модулей из подсистемы `networking`.
+
+  Пример ресурсов, которыми сможет управлять пользователь (список не полный):
+  - `Certificate`;
+  - `CertificateRequest`;
+  - `ConfigMap`;
+  - `ControllerRevision`;
+  - `CronJob`;
+  - `DaemonSet`;
+  - `Deployment`;
+  - `Event`;
+  - `HorizontalPodAutoscaler`;
+  - `Ingress`;
+  - `Issuer`;
+  - `Job`;
+  - `Lease`;
+  - `LimitRange`;
+  - `NetworkPolicy`;
+  - `PersistentVolumeClaim`;
+  - `Pod`;
+  - `PodDisruptionBudget`;
+  - `ReplicaSet`;
+  - `ReplicationController`;
+  - `ResourceQuota`;
+  - `Role`;
+  - `RoleBinding`;
+  - `Secret`;
+  - `Service`;
+  - `ServiceAccount`;
+  - `StatefulSet`;
+  - `VerticalPodAutoscaler`;
+  - `VolumeSnapshot`.
+
+- Просмотр, изменение, удаление и создание ресурсов в пространстве имён модулей из подсистемы `networking`.
+
+  Список ресурсов, которыми сможет управлять пользователь:
+  - `EgressGateway`;
+  - `EgressGatewayPolicy`;
+  - `FlowSchema`;
+  - `IngressClass`;
+  - `IngressIstioController`;
+  - `IngressNginxController`;
+  - `IPRuleSet`;
+  - `IstioFederation`;
+  - `IstioMulticluster`;
+  - `RoutingTable`.
+
+- Изменение конфигурации модулей (просмотр, изменение, удаление и создание ресурсов moduleConfig) из подсистемы `networking`.
+
+  Список модулей, которыми сможет управлять пользователь:
+  - `cilium-hubble`;
+  - `cni-cilium`;
+  - `cni-flannel`;
+  - `cni-simple-bridge`;
+  - `flow-schema`;
+  - `ingress-nginx`;
+  - `istio`;
+  - `kube-dns`;
+  - `kube-proxy`;
+  - `metallb`;
+  - `network-gateway`;
+  - `network-policy-engine`;
+  - `node-local-dns`;
+  - `openvpn`;
+  - `static-routing-manager`.
+
+- Выполнение следующих команд к подам и сервисам в пространстве имён модулей из подсистемы `networking`:
+  - `kubectl attach`;
+  - `kubectl exec`;
+  - `kubectl port-forward`;
+  - `kubectl proxy`.
+{% endofftopic %}
+
+## Пример назначения административных прав пользователю в рамках пространства имён
+
+{% alert level="info" %}
+Пример использует [новую ролевую модель](./#новая-ролевая-модель).
+{% endalert %}
+
+Для назначения прав на управление ресурсами приложений в рамках пространства имён, но без возможности настройки модулей DKP, используйте роль `d8:use:role:admin` в `RoleBinding` в соответствующем пространстве имён.
+
+Пример назначения прав разработчику приложений (User `app-developer`) в пространстве имён `myapp`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: myapp-developer
+  namespace: myapp
+subjects:
+- kind: User
+  name: app-developer
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:use:role:admin
+  apiGroup: rbac.authorization.k8s.io
+```
+
+{% offtopic title="Список прав, которые получит пользователь" %}
+В рамках пространства имён `myapp` пользователю будут доступны следующие права:
+- Просмотр, изменение, удаление и создание ресурсов Kubernetes. Например, следующих ресурсов (список не полный):
+  - `Certificate`;
+  - `CertificateRequest`;
+  - `ConfigMap`;
+  - `ControllerRevision`;
+  - `CronJob`;
+  - `DaemonSet`;
+  - `Deployment`;
+  - `Event`;
+  - `HorizontalPodAutoscaler`;
+  - `Ingress`;
+  - `Issuer`;
+  - `Job`;
+  - `Lease`;
+  - `LimitRange`;
+  - `NetworkPolicy`;
+  - `PersistentVolumeClaim`;
+  - `Pod`;
+  - `PodDisruptionBudget`;
+  - `ReplicaSet`;
+  - `ReplicationController`;
+  - `ResourceQuota`;
+  - `Role`;
+  - `RoleBinding`;
+  - `Secret`;
+  - `Service`;
+  - `ServiceAccount`;
+  - `StatefulSet`;
+  - `VerticalPodAutoscaler`;
+  - `VolumeSnapshot`.
+- Просмотр, изменение, удаление и создание следующих ресурсов модулей DKP:
+  - `DexAuthenticator`;
+  - `DexClient`;
+  - `PodLogginConfig`.
+- Выполнение следующих команд к подам и сервисам:
+  - `kubectl attach`;
+  - `kubectl exec`;
+  - `kubectl port-forward`;
+  - `kubectl proxy`.
+{% endofftopic %}
+
 ## Пример `ClusterAuthorizationRule`
+
+{% alert level="warning" %}
+Пример использует [устаревшую ролевую модель](./#устаревшая-ролевая-модель).
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -37,20 +261,24 @@ spec:
 
 ## Создание пользователя
 
+{% alert level="warning" %}
+Это пример для [устаревшей ролевой модели](./#устаревшая-ролевая-модель).
+{% endalert %}
+
 В Kubernetes есть две категории пользователей:
 
-* ServiceAccount'ы, учет которых ведет сам Kubernetes через API.
-* Остальные пользователи, учет которых ведет не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера, — существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются два способа аутентификации:
+* ServiceAccount'ы, учёт которых ведёт сам Kubernetes через API.
+* Остальные пользователи, учёт которых ведёт не сам Kubernetes, а некоторый внешний софт, который настраивает администратор кластера, — существует множество механизмов аутентификации и, соответственно, множество способов заводить пользователей. В настоящий момент поддерживаются два способа аутентификации:
   * через модуль [user-authn](../../modules/150-user-authn/);
   * с помощью сертификатов.
 
-При выпуске сертификата для аутентификации нужно указать в нем имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этим механизмом вы аутентифицируетесь в кластере, когда, например, используете kubectl на bastion-узле.
+При выпуске сертификата для аутентификации нужно указать в нём имя (`CN=<имя>`), необходимое количество групп (`O=<группа>`) и подписать его с помощью корневого CA-кластера. Именно этим механизмом вы аутентифицируетесь в кластере, когда, например, используете kubectl на bastion-узле.
 
 ### Создание ServiceAccount для сервера и предоставление ему доступа
 
-Создание ServiceAccount с доступом к Kubernetes API может потребоваться, например, при настройке развертывания приложений через CI-системы.  
+Создание ServiceAccount с доступом к Kubernetes API может потребоваться, например, при настройке развёртывания приложений через CI-системы.  
 
-1. Создайте ServiceAccount, например в namespace `d8-service-accounts`:
+1. Создайте ServiceAccount, например в пространстве имён `d8-service-accounts`:
 
    ```shell
    kubectl create -f - <<EOF
@@ -71,7 +299,7 @@ spec:
    EOF
    ```
 
-1. Дайте необходимые ServiceAccount права (используя custom resource [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)):
+1. Дайте необходимые ServiceAccount-права (используя custom resource [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)):
 
    ```shell
    kubectl create -f - <<EOF
@@ -90,7 +318,7 @@ spec:
    EOF
    ```
 
-   Если в конфигурации Deckhouse включен режим мультитенантности (параметр [enableMultiTenancy](configuration.html#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имен (параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
+   Если в конфигурации Deckhouse включён режим мультитенантности (параметр [enableMultiTenancy](configuration.html#parameters-enablemultitenancy), доступен только в Enterprise Edition), настройте доступные для ServiceAccount пространства имён (параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 1. Определите значения переменных (они будут использоваться далее), выполнив следующие команды (**подставьте свои значения**):
 
@@ -106,7 +334,7 @@ spec:
    Используйте один из следующих вариантов доступа к API-серверу кластера:
 
    * Если есть прямой доступ до API-сервера:
-     1. Получите сертификат CA кластера Kubernetes:
+     1. Получите сертификат CA-кластера Kubernetes:
 
         ```shell
         kubectl get cm kube-root-ca.crt -o jsonpath='{ .data.ca\.crt }' > /tmp/ca.crt
@@ -121,13 +349,13 @@ spec:
           --kubeconfig=$FILE_NAME
         ```
 
-   * Если прямого доступа до API-сервера нет, то используйте один следующих вариантов:
-      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../150-user-authn/configuration.html#parameters-publishapi)), и укажите адреса с которых будут идти запросы (параметр [whitelistSourceRanges](../150-user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
-      * укажите адреса с которых будут идти запросы в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
+   * Если прямого доступа до API-сервера нет, используйте один следующих вариантов:
+      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../150-user-authn/configuration.html#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../150-user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
+      * укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../402-ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
    * Если используется непубличный CA:
 
-     1. Получите сертификат CA из Secret'а с сертификатом, который используется для домена `api.%s`:
+     1. Получите сертификат CA из секрета с сертификатом, который используется для домена `api.%s`:
 
         ```shell
         kubectl -n d8-user-authn get secrets -o json \
@@ -153,7 +381,7 @@ spec:
        --kubeconfig=$FILE_NAME
      ```
 
-1. Сгенерируйте секцию `user` с токеном из Secret'а ServiceAccount в файле конфигурации kubectl:
+1. Сгенерируйте секцию `user` с токеном из секрета ServiceAccount в файле конфигурации kubectl:
 
    ```shell
    kubectl config set-credentials $USER_NAME \
@@ -176,6 +404,10 @@ spec:
    ```
 
 ### Создание пользователя с помощью клиентского сертификата
+
+{% alert level="warning" %}
+Это пример для [устаревшей ролевой модели](./#устаревшая-ролевая-модель).
+{% endalert %}
 
 #### Создание пользователя
 
@@ -245,13 +477,13 @@ spec:
 
 ## Настройка `kube-apiserver` для работы в режиме multi-tenancy
 
-Режим multi-tenancy, позволяющий ограничивать доступ к namespace, включается параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) модуля.
+Режим multi-tenancy, позволяющий ограничивать доступ к пространству имён, включается параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) модуля.
 
 Работа в режиме multi-tenancy требует включения [плагина авторизации Webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) и выполнения настройки `kube-apiserver`. Все необходимые для работы режима multi-tenancy действия **выполняются автоматически** модулем [control-plane-manager](../../modules/040-control-plane-manager/), никаких ручных действий не требуется.
 
 Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multi-tenancy:
 
-* исправление аргумента `--authorization-mode`. Перед методом RBAC добавится метод Webhook (например — `--authorization-mode=Node,Webhook,RBAC`);
+* исправление аргумента `--authorization-mode`. Перед методом RBAC добавится метод Webhook (например, `--authorization-mode=Node,Webhook,RBAC`);
 * добавление аргумента `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`;
 * добавление `volumeMounts`:
 
@@ -310,7 +542,7 @@ EOF
 }
 ```
 
-Если в кластере включен режим **multi-tenancy**, нужно выполнить еще одну проверку, чтобы убедиться, что у пользователя есть доступ в namespace:
+Если в кластере включён режим **multi-tenancy**, нужно выполнить ещё одну проверку, чтобы убедиться, что у пользователя есть доступ в пространство имён:
 
 ```shell
 cat  <<EOF | 2>&1 kubectl --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
@@ -339,7 +571,7 @@ EOF
 }
 ```
 
-Сообщение `allowed: false` значит, что webhook не блокирует запрос. В случае блокировки запроса webhook'ом вы получите, например, следующее сообщение:
+Сообщение `allowed: false` значит, что вебхук не блокирует запрос. В случае блокировки запроса вебхуком вы получите, например, следующее сообщение:
 
 ```json
 {
@@ -351,7 +583,11 @@ EOF
 
 ## Настройка прав высокоуровневых ролей
 
-Если требуется добавить прав для определенной [высокоуровневой роли](./#ролевая-модель), достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
+{% alert level="warning" %}
+Это пример для [устаревшей ролевой модели](./#устаревшая-ролевая-модель).
+{% endalert %}
+
+Если требуется добавить прав для определённой [высокоуровневой роли](./#устаревшая-ролевая-модель), достаточно создать ClusterRole с аннотацией `user-authz.deckhouse.io/access-level: <AccessLevel>`.
 
 Пример:
 

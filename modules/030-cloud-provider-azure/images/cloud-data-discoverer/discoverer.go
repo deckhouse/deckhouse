@@ -26,7 +26,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 )
@@ -67,7 +67,7 @@ func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType
 	}
 
 	pager := cl.NewListPager(&armcompute.ResourceSKUsClientListOptions{
-		Filter: pointer.String(fmt.Sprintf("location eq '%s'", d.location)),
+		Filter: ptr.To(fmt.Sprintf("location eq '%s'", d.location)),
 	})
 
 	pagerCtx, cancel := context.WithTimeout(ctx, 20*time.Second)

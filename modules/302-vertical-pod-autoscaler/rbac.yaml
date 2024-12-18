@@ -1,0 +1,4 @@
+module: vertical-pod-autoscaler
+namespace: kube-system
+subsystems:
+  - infrastructure

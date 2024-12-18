@@ -24,7 +24,7 @@ import (
 )
 
 const globalValues = `
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus"]
+enabledModules: ["vertical-pod-autoscaler", "prometheus"]
 modules:
   https:
     mode: CustomCertificate

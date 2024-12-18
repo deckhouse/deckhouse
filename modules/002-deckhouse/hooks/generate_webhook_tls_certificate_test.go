@@ -32,9 +32,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -136,9 +136,7 @@ func generateTestCert(expired bool) certificate.Certificate {
 		expire = -1 * time.Minute
 	}
 
-	l := logrus.NewEntry(logrus.New())
-
-	ca, _ := certificate.GenerateCA(l,
+	ca, _ := certificate.GenerateCA(log.NewNop(),
 		"webhook-handler.d8-system.svc",
 		certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
@@ -159,7 +157,7 @@ func generateTestCert(expired bool) certificate.Certificate {
 		"conversion-" + webhookServiceFQDN,
 	}
 
-	cert, _ := certificate.GenerateSelfSignedCert(l,
+	cert, _ := certificate.GenerateSelfSignedCert(log.NewNop(),
 		"webhook-handler.d8-system.svc",
 		ca,
 		certificate.WithSANs(sans...),

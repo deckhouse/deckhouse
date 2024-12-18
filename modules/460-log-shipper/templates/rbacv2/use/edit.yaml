@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: log-shipper
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/kind: use
+  name: d8:use:capability:module:log-shipper:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - podloggingconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection

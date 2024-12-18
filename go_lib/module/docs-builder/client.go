@@ -32,9 +32,9 @@ type Client struct {
 	httpClient d8http.Client
 }
 
-func (c *Client) SendDocumentation(baseAddr string, moduleName, moduleVersion string, docsArchive io.Reader) error {
-	url := fmt.Sprintf("%s/loadDocArchive/%s/%s", baseAddr, moduleName, moduleVersion)
-	response, statusCode, err := c.httpPost(url, docsArchive)
+func (c *Client) SendDocumentation(ctx context.Context, baseAddr string, moduleName, moduleVersion string, docsArchive io.Reader) error {
+	url := fmt.Sprintf("%s/api/v1/doc/%s/%s", baseAddr, moduleName, moduleVersion)
+	response, statusCode, err := c.sendRequest(ctx, http.MethodPost, url, docsArchive)
 	if err != nil {
 		return fmt.Errorf("POST %q: %w", url, err)
 	}
@@ -46,9 +46,23 @@ func (c *Client) SendDocumentation(baseAddr string, moduleName, moduleVersion st
 	return nil
 }
 
-func (c *Client) BuildDocumentation(docsBuilderBasePath string) error {
-	url := fmt.Sprintf("%s/build", docsBuilderBasePath)
-	response, statusCode, err := c.httpPost(url, nil)
+func (c *Client) DeleteDocumentation(ctx context.Context, baseAddr string, moduleName string) error {
+	url := fmt.Sprintf("%s/api/v1/doc/%s", baseAddr, moduleName)
+	response, statusCode, err := c.sendRequest(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return fmt.Errorf("DELETE %q: %w", url, err)
+	}
+
+	if statusCode != http.StatusNoContent {
+		return fmt.Errorf("DELETE %q: [%d] %q", url, statusCode, response)
+	}
+
+	return nil
+}
+
+func (c *Client) BuildDocumentation(ctx context.Context, docsBuilderBasePath string) error {
+	url := fmt.Sprintf("%s/api/v1/build", docsBuilderBasePath)
+	response, statusCode, err := c.sendRequest(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return fmt.Errorf("POST %q: %w", url, err)
 	}
@@ -65,7 +79,7 @@ func (c *Client) CheckBuilderHealth(ctx context.Context, baseAddr string) error 
 	defer cancel()
 
 	url := fmt.Sprintf("%s/healthz", baseAddr)
-	response, statusCode, err := c.httpGet(ctx, url)
+	response, statusCode, err := c.sendRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return fmt.Errorf("GET %q: %w", url, err)
 	}
@@ -77,41 +91,21 @@ func (c *Client) CheckBuilderHealth(ctx context.Context, baseAddr string) error 
 	return nil
 }
 
-func (c *Client) httpPost(url string, body io.Reader) ([]byte, int, error) {
-	req, err := http.NewRequest(http.MethodPost, url, body)
+func (c *Client) sendRequest(ctx context.Context, method string, url string, body io.Reader) ([]byte, int, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("create request: %w", err)
 	}
 
 	res, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("do request: %w", err)
 	}
 	defer res.Body.Close()
 
 	dataBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, res.StatusCode, err
-	}
-
-	return dataBytes, res.StatusCode, nil
-}
-
-func (c *Client) httpGet(ctx context.Context, url string) ([]byte, int, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer res.Body.Close()
-
-	dataBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, res.StatusCode, err
+		return nil, res.StatusCode, fmt.Errorf("read all: %w", err)
 	}
 
 	return dataBytes, res.StatusCode, nil

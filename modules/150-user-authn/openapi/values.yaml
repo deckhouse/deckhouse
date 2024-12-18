@@ -149,6 +149,16 @@ properties:
               type: string
             legacyEncodedID:
               type: string
+            labels:
+              type: object
+              default: {}
+              additionalProperties:
+                type: string
+            annotations:
+              type: object
+              default: {}
+              additionalProperties:
+                type: string
             spec:
               # clients spec is copied from custom resources as is and validated by its spec
               type: object
@@ -250,6 +260,7 @@ properties:
                 email: mail
                 groups: roles
                 preferred_username: name
+              claimMappingOverride: true
           - id: bitbucket
             displayName: bitbucket
             type: BitbucketCloud

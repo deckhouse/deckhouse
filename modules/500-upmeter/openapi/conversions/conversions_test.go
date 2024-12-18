@@ -19,51 +19,75 @@ package conversions
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
+
+type testCase struct {
+	name            string
+	settings        string
+	expected        string
+	currentVersion  int
+	expectedVersion int
+}
+
+func v2testCase() testCase {
+	return testCase{
+		name: "should convert from 1 to 2 version",
+		settings: `
+auth:
+  status:
+    password: password
+    allowedUserGroups:
+      - group
+      - group2
+    whitelistSourceRange:
+      - source1
+  webui:
+    password: password
+    allowedUserGroups:
+      - group
+      - group2
+`,
+		expected: `
+auth:
+  status:
+    allowedUserGroups:
+      - group
+      - group2
+    whitelistSourceRange:
+      - source1
+  webui:
+    allowedUserGroups:
+      - group
+      - group2
+`,
+		currentVersion:  1,
+		expectedVersion: 2,
+	}
+}
+
+func v3testCase() testCase {
+	return testCase{
+		name: "should convert from 2 to 3 version",
+		settings: `
+smokeMini:
+  auth:
+  ingressClass: nginx
+`,
+		expected: `
+smokeMini:
+  auth:
+`,
+		currentVersion:  2,
+		expectedVersion: 3,
+	}
+}
 
 func TestUpmeterConversions(t *testing.T) {
 	conversions := "."
-	cases := []struct {
-		name            string
-		settings        string
-		expected        string
-		currentVersion  int
-		expectedVersion int
-	}{
-		{
-			name: "should convert from 1 to 2 version",
-			settings: `
-auth:
-  status:
-    password: password
-    allowedUserGroups:
-      - group
-      - group2
-    whitelistSourceRange:
-      - source1
-  webui:
-    password: password
-    allowedUserGroups:
-      - group
-      - group2
-`,
-			expected: `
-auth:
-  status:
-    allowedUserGroups:
-      - group
-      - group2
-    whitelistSourceRange:
-      - source1
-  webui:
-    allowedUserGroups:
-      - group
-      - group2
-`,
-			currentVersion:  1,
-			expectedVersion: 2,
-		},
+	cases := []testCase{
+		v2testCase(),
+		v3testCase(),
 	}
 
 	for _, c := range cases {

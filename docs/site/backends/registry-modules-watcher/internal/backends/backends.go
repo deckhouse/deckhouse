@@ -38,6 +38,7 @@ type Version struct {
 	Version         string
 	ReleaseChannels []string
 	TarFile         []byte
+	ToDelete        bool
 }
 
 type backends struct {

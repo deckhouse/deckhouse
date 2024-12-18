@@ -3,7 +3,7 @@ cpu: 50m
 memory: 50Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -66,12 +66,9 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring" "without-storage-problems") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
-      {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
       initContainers:
 {{- $storageClass := .Values.upmeter.internal.effectiveStorageClass }}
-{{- if $storageClass }}
-      {{- include "helm_lib_module_init_container_chown_deckhouse_volume" (tuple . "data") | nindent 6 }}
-{{- end }}
       - name: migrator
         image: {{ include "helm_lib_module_image" (list . "upmeter") }}
         command:
@@ -94,7 +91,7 @@ spec:
 {{- else }}
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 12 }}
 {{- end }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "upmeter_resources" . | nindent 12 }}
 {{- end }}
       containers:
@@ -130,7 +127,6 @@ spec:
             value: "info"
           - name: LOG_TYPE
             value: "json"
-          {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
         volumeMounts:
           - mountPath: /db
             name: data
@@ -163,7 +159,7 @@ spec:
 {{- else }}
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 1024 | nindent 12 }}
 {{- end }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "upmeter_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
@@ -202,7 +198,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
         volumeMounts:

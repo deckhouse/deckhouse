@@ -9,9 +9,6 @@
       h1 {
         text-align: center;
       }
-      .group-header th {
-        font-size: 200%;
-      }
       .sub-header th {
         font-size: 150%;
       }

@@ -16,6 +16,17 @@ spec:
     insecureSkipVerify: true
   staticConfigs:
     - targets: ['kube-state-metrics.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}.:8080']
+  metricRelabelings:
+  - sourceLabels: [__name__]
+    targetLabel: __name__
+    regex: kube_verticalpodautoscaler_labels_info
+    replacement: kube_verticalpodautoscaler_labels
+  - sourceLabels: [__name__]
+    targetLabel: name
+    regex: kube_verticalpodautoscaler_labels
+    replacement: ''
+  - action: labeldrop
+    regex: customresource_version|customresource_kind|customresource_group
   relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop

@@ -46,21 +46,17 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 	}
 
 	var coreCountPropertyPath, ramAmountPropertyPath, rootDiskPropertyPath []string
-	// externalDiskSizeDefault := 0
 	switch configKind {
 	case "AWSClusterConfiguration", "GCPClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
-		// externalDiskSizeDefault = 20
 
 	case "AzureClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGb"}
-		// externalDiskSizeDefault = 50
 
 	case "YandexClusterConfiguration":
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "cores"}
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "diskSizeGB"}
-		// externalDiskSizeDefault = 50
 
 	case "OpenStackClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
@@ -69,17 +65,23 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
-		// externalDiskSizeDefault = 30
 
 	case "VCDClusterConfiguration":
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
-		// externalDiskSizeDefault = 20
 
 	case "ZvirtClusterConfiguration":
 		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
 		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
 		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
 		// externalDiskSizeDefault = 30
+	case "DynamixClusterConfiguration":
+		coreCountPropertyPath = []string{"masterNodeGroup", "instanceClass", "numCPUs"}
+		ramAmountPropertyPath = []string{"masterNodeGroup", "instanceClass", "memory"}
+		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSizeGb"}
+		// externalDiskSizeDefault = 30
+
+	case "HuaweiCloudClusterConfiguration":
+		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
 
 	default:
 		return fmt.Errorf("unknown provider cluster configuration kind: %s", configKind)

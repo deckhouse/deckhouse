@@ -21,13 +21,12 @@ import (
 	"strings"
 	"time"
 
-	addonOpUtils "github.com/flant/addon-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -43,6 +42,7 @@ const (
 	deployServiceHostEnvVarName = "KUBERNETES_SERVICE_HOST"
 	deployServicePortEnvVarName = "KUBERNETES_SERVICE_PORT"
 	deployTimeEnvVarFormat      = time.RFC3339
+	pathSeparator               = ":"
 
 	ConvergeLabel = "dhctl.deckhouse.io/node-for-converge"
 )
@@ -54,15 +54,22 @@ type DeckhouseDeploymentParams struct {
 
 	DeployTime time.Time
 
-	IsSecureRegistry       bool
-	MasterNodeSelector     bool
-	KubeadmBootstrap       bool
-	ExternalModulesEnabled bool // TODO remove this after integrating external-module-manager into deckhouse-controller
+	IsSecureRegistry   bool
+	MasterNodeSelector bool
+	KubeadmBootstrap   bool
 }
 
 type imagesDigests map[string]map[string]interface{}
 
 func loadImagesDigests(filename string) (imagesDigests, error) {
+	if val, ok := os.LookupEnv("DHCTL_TEST"); ok && val == "yes" {
+		return map[string]map[string]interface{}{
+			"common": {
+				"init": "sha256:4c5064aa2864e7650e4f2dd5548a4a6a4aaa065b4f8779f01023f73132cde882",
+			},
+		}, nil
+	}
+
 	var imagesDigestsDict imagesDigests
 
 	imagesDigestsJSONFile, err := os.ReadFile(filename)
@@ -175,7 +182,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		log.ErrorLn(err)
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
-		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["alpine"].(string))
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["init"].(string))
 	}
 
 	deckhouseDeployment := &appsv1.Deployment{
@@ -192,7 +199,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: pointer.Int32(2),
+			RevisionHistoryLimit: ptr.To(int32(2)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "deckhouse",
@@ -209,14 +216,17 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	deckhousePodTemplate := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: deckhouseDeployment.Spec.Selector.MatchLabels,
+			Annotations: map[string]string{
+				"kubectl.kubernetes.io/default-container": "deckhouse",
+			},
 		},
 		Spec: apiv1.PodSpec{
 			HostNetwork:        true,
 			DNSPolicy:          apiv1.DNSDefault,
 			ServiceAccountName: "deckhouse",
 			SecurityContext: &apiv1.PodSecurityContext{
-				RunAsUser:    pointer.Int64(0),
-				RunAsNonRoot: pointer.Bool(false),
+				RunAsUser:    ptr.To(int64(0)),
+				RunAsNonRoot: ptr.To(false),
 			},
 			Tolerations: []apiv1.Toleration{
 				{Operator: apiv1.TolerationOpExists},
@@ -235,10 +245,19 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					},
 				},
 				{
-					Name: "external-modules",
+					Name: "downloaded",
 					VolumeSource: apiv1.VolumeSource{
 						HostPath: &apiv1.HostPathVolumeSource{
-							Path: "/var/lib/deckhouse/external-modules",
+							Path: "/var/lib/deckhouse/downloaded",
+							Type: &hostPathDirectory,
+						},
+					},
+				},
+				{
+					Name: "deckhouse",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/var/lib/deckhouse",
 							Type: &hostPathDirectory,
 						},
 					},
@@ -282,27 +301,32 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				MountPath: "/.kube",
 			},
 			{
-				Name:      "external-modules",
+				Name:      "downloaded",
 				ReadOnly:  false,
-				MountPath: "/deckhouse/external-modules",
+				MountPath: "/deckhouse/downloaded",
 			},
 		},
 	}
 
 	deckhouseInitContainer := apiv1.Container{
-		Name:            "init-external-modules",
+		Name:            "init-downloaded-modules",
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", "mkdir -p /deckhouse/external-modules/modules && chown -hR 64535 /deckhouse/external-modules /deckhouse/external-modules/modules && chmod 0700 /deckhouse/external-modules /deckhouse/external-modules/modules",
+			"sh", "-c", `if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
-				Name:      "external-modules",
+				Name:      "deckhouse",
 				ReadOnly:  false,
-				MountPath: "/deckhouse/external-modules",
+				MountPath: "/deckhouse",
 			},
 		},
+	}
+
+	modulesDirs := []string{
+		"/deckhouse/modules",
+		"/deckhouse/downloaded",
 	}
 
 	deckhouseContainerEnv := []apiv1.EnvVar{
@@ -329,6 +353,10 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		{
 			Name:  "ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT",
 			Value: "4223",
+		},
+		{
+			Name:  "ADDON_OPERATOR_CRD_EXTRA_LABELS",
+			Value: "heritage=deckhouse",
 		},
 		{
 			Name:  "HELM3LIB",
@@ -374,31 +402,29 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Name:  "DEBUG_HTTP_SERVER_ADDR",
 			Value: "127.0.0.1:9652",
 		},
+		{
+			Name:  "ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS",
+			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled",
+		},
+		{
+			Name:  "DOWNLOADED_MODULES_DIR",
+			Value: modulesDirs[1],
+		},
+		{
+			Name:  "EXTERNAL_MODULES_DIR",
+			Value: modulesDirs[1],
+		},
+		{
+			Name:  "MODULES_DIR",
+			Value: strings.Join(modulesDirs, pathSeparator),
+		},
 	}
 
 	// Deployment composition
 	deckhouseContainer.Env = deckhouseContainerEnv
 	deckhousePodTemplate.Spec.Containers = []apiv1.Container{deckhouseContainer}
+	deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
 	deckhouseDeployment.Spec.Template = deckhousePodTemplate
-
-	modulesDirs := []string{
-		"/deckhouse/modules",
-	}
-
-	if params.ExternalModulesEnabled {
-		const externalModulesDir = "/deckhouse/external-modules/modules"
-		modulesDirs = append(modulesDirs, externalModulesDir)
-		deckhousePodTemplate.Spec.InitContainers = []apiv1.Container{deckhouseInitContainer}
-		deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
-			Name:  "EXTERNAL_MODULES_DIR",
-			Value: externalModulesDir,
-		})
-	}
-
-	deckhouseContainerEnv = append(deckhouseContainerEnv, apiv1.EnvVar{
-		Name:  "MODULES_DIR",
-		Value: strings.Join(modulesDirs, addonOpUtils.PathsSeparator),
-	})
 
 	return ParameterizeDeckhouseDeployment(deckhouseDeployment, params)
 }
@@ -516,7 +542,7 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 }
 
 func generateSecret(name, namespace string, data map[string][]byte, labels map[string]string) *apiv1.Secret {
-	preparedLabels := map[string]string{"heritage": "deckhouse"}
+	preparedLabels := make(map[string]string)
 	for key, value := range labels {
 		preparedLabels[key] = value
 	}
@@ -539,7 +565,9 @@ func SecretWithTerraformState(data []byte) *apiv1.Secret {
 		map[string][]byte{
 			"cluster-tf-state.json": data,
 		},
-		nil,
+		map[string]string{
+			"heritage": "deckhouse",
+		},
 	)
 }
 
@@ -556,7 +584,7 @@ func SecretWithClusterConfig(data []byte) *apiv1.Secret {
 		"d8-cluster-configuration",
 		"kube-system",
 		map[string][]byte{"cluster-configuration.yaml": data},
-		nil,
+		map[string]string{"name": "d8-cluster-configuration"},
 	)
 }
 
@@ -570,7 +598,12 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 		data["cloud-provider-discovery-data.json"] = discoveryData
 	}
 
-	return generateSecret("d8-provider-cluster-configuration", "kube-system", data, nil)
+	return generateSecret(
+		"d8-provider-cluster-configuration",
+		"kube-system",
+		data,
+		nil,
+	)
 }
 
 func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
@@ -578,8 +611,12 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 	if configData != nil {
 		data["static-cluster-configuration.yaml"] = configData
 	}
-
-	return generateSecret("d8-static-cluster-configuration", "kube-system", data, nil)
+	return generateSecret(
+		"d8-static-cluster-configuration",
+		"kube-system",
+		data,
+		nil,
+	)
 }
 
 func SecretNameForNodeTerraformState(nodeName string) string {
@@ -599,6 +636,7 @@ func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []b
 			"node.deckhouse.io/node-group":      nodeGroup,
 			"node.deckhouse.io/node-name":       nodeName,
 			"node.deckhouse.io/terraform-state": "",
+			"heritage":                          "deckhouse",
 		},
 	)
 }
@@ -617,6 +655,19 @@ func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 		"d8-system",
 		map[string][]byte{
 			nodeName: devicePath,
+		},
+		map[string]string{
+			"heritage": "deckhouse",
+		},
+	)
+}
+
+func SecretConvergeState(state []byte) *apiv1.Secret {
+	return generateSecret(
+		"d8-dhctl-converge-state",
+		"d8-system",
+		map[string][]byte{
+			"state.json": state,
 		},
 		map[string]string{},
 	)

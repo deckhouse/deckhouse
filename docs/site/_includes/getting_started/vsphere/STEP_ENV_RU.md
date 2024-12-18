@@ -2,6 +2,10 @@
 
 ## Список необходимых ресурсов vSphere
 
+{% alert %}
+Deckhouse использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в `mainNetwork`, вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
+{% endalert %}
+
 * **User** с необходимым [набором прав](#создание-и-назначение-роли).
 * **Network** с DHCP и доступом в интернет.
 * **Datacenter** с соответствующим тегом [`k8s-region`](#создание-тегов-и-категорий-тегов).
@@ -79,7 +83,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
 {% endsnippetcut %}
@@ -90,7 +94,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 Ввиду разнообразия подключаемых к vSphere SSO-провайдеров шаги по созданию пользователя в данной статье не рассматриваются.
 
 Роль, которую предлагается создать далее, включает в себя все возможные права для всех компонентов Deckhouse.
-Для получения детального списка привилегий, обратитесь [к документации](/documentation/v1/modules/030-cloud-provider-vsphere/configuration.html#список-необходимых-привилегий).
+Для получения детального списка привилегий, обратитесь [к документации](/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/configuration.html#список-необходимых-привилегий).
 При необходимости получения более гранулярных прав обратитесь в техподдержку Deckhouse.
 {% endalert %}
 
@@ -126,4 +130,4 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 Если вы планируете использовать дистрибутив отечественной ОС, обратитесь к вендору ОС для получения образа/OVA-файла.
 {% endalert %}
 
-Если вам необходимо использовать собственный образ, обратитесь к [документации](/documentation/v1/modules/030-cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).
+Если вам необходимо использовать собственный образ, обратитесь к [документации](/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).

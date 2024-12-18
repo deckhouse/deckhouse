@@ -65,6 +65,9 @@ common:
   for_example:
     en: for example
     ru: например
+  dev_menu_message:
+    en: "Menu is not generated in dev build mode"
+    ru: "В режиме dev сборки меню не генерируется"
   example:
     en: example
     ru: пример
@@ -77,6 +80,9 @@ common:
   x-kubernetes-int-or-string:
     en: integer or string
     ru: строка или число
+  of_x-kubernetes-int-or-string:
+    en: of integers or strings
+    ru: строк или чисел
   pattern:
     en: pattern
     ru: шаблон
@@ -146,9 +152,12 @@ common:
   or:
     en: or
     ru: или
+  scope:
+    en: Scope
+    ru: Область (scope)
   notice-latest:
-    en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/documentation/v1/">go to the latest stable Deckhouse version</a>.
-    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
+    en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/products/kubernetes-platform/documentation/v1/">go to the latest stable Deckhouse version</a>.
+    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/products/kubernetes-platform/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
   os_supported_phrase:
     en: The following Linux distributions are currently supported for nodes
     ru: В настоящий момент в качестве ОС для узлов поддерживаются следующие дистрибутивы Linux
@@ -158,6 +167,12 @@ common:
   linux_distro:
     en: Linux Distribution
     ru: Дистрибутив Linux
+  redactions:
+    en: Supported in redactions
+    ru: Поддерживается в редакциях
+  notes:
+    en: Notes
+    ru: Примечания
   for_domain_template:
     en: for the domain template
     ru: для шаблона доменов
@@ -179,6 +194,9 @@ common:
   modules:
     en: modules
     ru: модули
+  modules_of_a_scope:
+    en: The modules within the scope
+    ru: Модули, входящие в область
   alert_description_template:
     en: Alert description template
     ru: Шаблон описания алерта
@@ -191,6 +209,9 @@ common:
   alert_edition:
     en: The minimum DKP edition in which the alert is available
     ru: Минимальная редакция DKP, в которой доступен алерт
+  note_ce_notguaranteed:
+    en: Functionality in Community Edition is not guaranteed
+    ru: Работоспособность в Community Edition не гарантируется
   module_has_the_following_alerts:
     en: The following alerts are implemented in the module
     ru: В модуле реализованы следующие алерты
@@ -206,11 +227,41 @@ common:
   module_alerts_title:
     en: Alerts
     ru: Алерты
+  namespaces:
+    en: namespaces
+    ru: пространства имен
+  namespaces_used_by_modules:
+    en: Namespaces in which modules of a scope operate
+    ru: Пространства имен используемых модулями области
+  all_namespaces:
+    en: All namespaces
+    ru: Все пространства имен
+  all_modules:
+    en: All modules
+    ru: Все модули
+  description_cr:
+    ru: Deckhouse Kubernetes Platform, кастомные ресурсы (custom resources) модуля <MODULENAME>.
+    en: Deckhouse Kubernetes Platform — Custom resources of the <MODULENAME> module.
+  description_configuration:
+    ru: Deckhouse Kubernetes Platform, параметры конфигурации модуля <MODULENAME>.
+    en: Deckhouse Kubernetes Platform — configuration parameters of the <MODULENAME> module.
+  description_examples:
+    ru: Deckhouse Kubernetes Platform, примеры конфигурации модуля <MODULENAME>.
+    en: Deckhouse Kubernetes Platform — examples of configuring the <MODULENAME> module.
+  description_usage:
+    ru: Deckhouse Kubernetes Platform, примеры использования модуля <MODULENAME>.
+    en: Deckhouse Kubernetes Platform — examples of using the <MODULENAME> module.
+  description_faq:
+    ru: Deckhouse Kubernetes Platform, частые вопросы по использованию модуля <MODULENAME>.
+    en: Deckhouse Kubernetes Platform — Frequently Asked Questions for the <MODULENAME> module.
 
 comparison:
   except_parameters:
-    en: "Except for the following parameters:<br />"
-    ru: "Кроме следующих параметров:<br />"
+    en: "Except for the following parameters:<br />"
+    ru: "Кроме следующих параметров:<br />"
+  module_has_restions:
+    en: "There are limitations to functionality"
+    ru: "Есть ограничения  функциональности"
 
 features:
   experimental:

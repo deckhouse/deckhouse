@@ -5,32 +5,29 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.25.0
-  resourceVersion: "1000"
+  resourceVersion: "999"
 spec:
   version: v1.25.0
 status:
   approved: false
   message: ""
-  phase: Superseded
-  transitionTime: "2019-10-17T15:33:00Z"
+  phase: Deployed
+  transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
-  annotations:
-    release.deckhouse.io/isUpdating: "true"
-    release.deckhouse.io/notified: "false"
   creationTimestamp: null
   name: v1.25.1
-  resourceVersion: "1002"
+  resourceVersion: "1001"
 spec:
   version: v1.25.1
-status:v1.26.0
+status:
   approved: false
-  message: ""
-  phase: Deployed
-  transitionTime: "2019-10-17T15:33:00Z"
+  message: 'Release is waiting for the ''release.deckhouse.io/approved: "true"'' annotation'
+  phase: Pending
+  transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 approved: false
@@ -38,12 +35,12 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.26.0
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   version: v1.26.0
 status:
   approved: false
-  message: ""
+  message: Awaiting for v1.25.1 release to be deployed
   phase: Pending
   transitionTime: null
 ---
@@ -78,7 +75,7 @@ metadata:
   creationTimestamp: null
   name: deckhouse
   namespace: d8-system
-  resourceVersion: "1000"
+  resourceVersion: "999"
 spec:
   selector: null
   strategy: {}
@@ -87,20 +84,7 @@ spec:
       creationTimestamp: null
     spec:
       containers:
-      - image: my.registry.com/deckhouse:v1.25.1
+      - image: my.registry.com/deckhouse:v1.25.0
         name: deckhouse
         resources: {}
 status: {}
----
-apiVersion: v1
-data:
-  isUpdating: "true"
-  notified: "false"
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  labels:
-    heritage: deckhouse
-  name: d8-release-data
-  namespace: d8-system
-  resourceVersion: "1"

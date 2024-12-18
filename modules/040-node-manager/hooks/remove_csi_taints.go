@@ -22,7 +22,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -32,18 +32,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                   "csinodes",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			ApiVersion:             "storage.k8s.io/v1",
 			Kind:                   "CSINode",
 			FilterFunc:             csiFilterCSINode, //  jqFilter: '{"name": .metadata.name}'
 		},
 		{
 			Name:                         "nodes",
-			WaitForSynchronization:       pointer.Bool(false),
+			WaitForSynchronization:       ptr.To(false),
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   csiFilterNode, // '{"needPatch": ([(.spec.taints // [])[] | select(.key == "node.deckhouse.io/csi-not-bootstrapped")] | length > 0), "name": .metadata.name}',
 		},
 	},

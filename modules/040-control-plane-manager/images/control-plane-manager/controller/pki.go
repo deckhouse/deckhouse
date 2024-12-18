@@ -32,17 +32,11 @@ import (
 
 func installBasePKIfiles() error {
 	log.Info("phase: install base pki files")
-	if err := os.MkdirAll(filepath.Join(kubernetesPkiPath, "etcd"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(kubernetesPkiPath, "etcd"), 0700); err != nil {
 		return err
 	}
 
 	for _, f := range []string{"ca.crt", "front-proxy-ca.crt"} {
-		if err := installFileIfChanged(filepath.Join(pkiPath, f), filepath.Join(kubernetesPkiPath, f), 0644); err != nil {
-			return err
-		}
-	}
-
-	for _, f := range []string{"ca.key", "sa.pub", "sa.key", "front-proxy-ca.key"} {
 		if err := installFileIfChanged(filepath.Join(pkiPath, f), filepath.Join(kubernetesPkiPath, f), 0600); err != nil {
 			return err
 		}
@@ -54,7 +48,13 @@ func installBasePKIfiles() error {
 		}
 	}
 
-	if err := installFileIfChanged(filepath.Join(pkiPath, "etcd-ca.crt"), filepath.Join(kubernetesPkiPath, "etcd", "ca.crt"), 0644); err != nil {
+	for _, f := range []string{"ca.key", "sa.pub", "sa.key", "front-proxy-ca.key"} {
+		if err := installFileIfChanged(filepath.Join(pkiPath, f), filepath.Join(kubernetesPkiPath, f), 0600); err != nil {
+			return err
+		}
+	}
+
+	if err := installFileIfChanged(filepath.Join(pkiPath, "etcd-ca.crt"), filepath.Join(kubernetesPkiPath, "etcd", "ca.crt"), 0600); err != nil {
 		return err
 	}
 
@@ -167,11 +167,11 @@ func fillTmpDirWithPKIData() error {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Join(config.TmpPath, kubernetesPkiPath, "etcd"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(config.TmpPath, kubernetesPkiPath, "etcd"), 0700); err != nil {
 		return err
 	}
 
-	if err := os.MkdirAll(filepath.Join(config.TmpPath, deckhousePath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(config.TmpPath, deckhousePath), 0700); err != nil {
 		return err
 	}
 

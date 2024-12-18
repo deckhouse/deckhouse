@@ -3,6 +3,9 @@
 artifact: {{ .ModuleName }}/build-keepalived
 from: {{ .Images.BASE_ALPINE_DEV }}
 shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
     - mkdir build && cd build
     - git clone -b v2.2.7 --single-branch --depth=1 {{ $.SOURCE_REPO }}/acassen/keepalived.git ./src

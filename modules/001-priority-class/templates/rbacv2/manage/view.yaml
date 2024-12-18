@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: priority-class
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+  name: d8:manage:permission:module:priority-class:view
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - priority-class
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch

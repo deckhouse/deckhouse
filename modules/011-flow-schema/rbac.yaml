@@ -1,0 +1,5 @@
+module: flow-schema
+namespace: none
+subsystems:
+  - kubernetes
+  - networking

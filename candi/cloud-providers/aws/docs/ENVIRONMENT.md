@@ -3,9 +3,13 @@ title: "Cloud provider — AWS: Preparing environment"
 description: "Configuring AWS for Deckhouse cloud provider operation."
 ---
 
+{% include notice_envinronment.liquid %}
+
 To use the `cloud-provider` and `machine-controller-manager` modules, you must access the AWS API as an IAM user with a sufficient set of privileges.
 
-> Make sure that you have access to the desired regions and that you have the necessary quotas.
+{% alert level="warning" %}
+Make sure that you have access to the desired regions and that you have the necessary quotas.
+{% endalert %}
 
 ## JSON Policy
 
@@ -91,6 +95,11 @@ First, prepare a JSON file with the configuration of the necessary privileges:
                 "ec2:CreateVpcPeeringConnection",
                 "ec2:DeleteVpcPeeringConnection",
                 "ec2:AcceptVpcPeeringConnection",
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaceAttribute",
+                "ec2:ModifyNetworkInterfaceAttribute",
+                "ec2:DeleteNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",                
                 "elasticloadbalancing:AddTags",
                 "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
                 "elasticloadbalancing:AttachLoadBalancerToSubnets",

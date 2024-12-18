@@ -6,9 +6,9 @@
 {%- assign page_url_parts = page.url | split: '/' -%}
 {%- assign max_ind = page_url_parts.size | minus: 1 -%}
 {%- assign title_parts = "" | split: "" -%}
-{% assign is_directory = page.url | endswith: "/" %}
+{%- assign is_directory = page.url | endswith: "/" %}
 
-{% if max_ind == 1 and include.mode=='documentation' %}{%- assign max_ind = 2 -%}{% endif %}
+{%- if max_ind == 1 and include.mode=='documentation' %}{%- assign max_ind = 2 -%}{% endif %}
 
 {%- for i in (2..max_ind) %}
 
@@ -19,10 +19,10 @@
 {%- assign breadcrumb = site.data.breadcrumbs[current_breadcrumb_url] %}
 {%- if breadcrumb %}
     {%- if breadcrumb.title[page.lang] %}
-    {%- assign title = breadcrumb.title[page.lang] %}
-    {% else %}
-    {%- assign title = breadcrumb.title %}
-    {% endif -%}
+        {%- assign title = breadcrumb.title[page.lang] %}
+    {%- else %}
+        {%- assign title = breadcrumb.title %}
+    {%- endif -%}
     {%- assign title_parts = title_parts | push: title -%}
 {%- endif -%}
 {%- endfor %}
@@ -35,16 +35,24 @@
 
 {%- assign generated_title = title_parts | reverse | join: " / " %}
 <title>{{ generated_title }} | {{ site.site_title }}</title>
-{% if page.description %}
+{%- if page.description %}
     {%- assign description = page.description | strip_html | strip_newlines | strip | truncate: 200 %}
-{% else %}
-    {%- assign description = site.site_description[page.lang] | strip_html | strip_newlines | strip | truncate: 200 %}
-{% endif %}
+{%- else %}
+    {%- assign pageCommonName = page.name | replace: '_RU.md', '' | replace: '.md', '' | downcase %}
+    {%- if pageCommonName == "configuration" or pageCommonName == "cr" or pageCommonName == "examples" or pageCommonName == "usage" or pageCommonName == "faq"  %}
+        {%- assign i18nKey = 'description_' | append: pageCommonName %}
+        {%- assign description = site.data.i18n.common[i18nKey][page.lang] | replace: '<MODULENAME>', page['module-kebab-name'] %}
+    {%- elsif page.platform_type %}
+        {%- assign description = site.data.i18n.common['gs_description'][page.lang] | replace: '<TITLE>', page.title_main | replace: '<STEP>', page.step_name %}
+    {%- else %}
+        {%- assign description = page.content | markdownify | strip_html | normalizeSearchContent | strip_newlines | strip | truncate: 200 %}
+    {%- endif %}
+{%- endif %}
 
 {%- if include.mode=='documentation' %}
-{%- assign page_meta_url = site.canonical_url_prefix | append: (page_url_without_lang | relative_url) %}
+  {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
 {%- else %}
-{%- assign page_meta_url = page_url_without_lang | relative_url %}
+  {%- assign page_meta_url = page_url_without_lang | relative_url %}
 {% endif %}
 <!-- multilang -->
 {%- if page.multilang %}

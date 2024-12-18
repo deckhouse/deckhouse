@@ -22,20 +22,22 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+    "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"	
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient              *ssh.Client
+	SSHClient  *ssh.Client
+	KubeClient *client.KubernetesClient // optional
+
 	OnPhaseFunc            phases.DefaultOnPhaseFunc
 	AutoDismissDestructive bool
 	AutoApprove            bool
@@ -61,12 +63,12 @@ type Converger struct {
 }
 
 func NewConverger(params *Params) *Converger {
-	//if params.CommanderMode {
+	// if params.CommanderMode {
 	// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
-	//if params.CommanderUUID == uuid.Nil {
+	// if params.CommanderUUID == uuid.Nil {
 	//	panic("CommanderUUID required for bootstrap operation in commander mode!")
-	//}
-	//}
+	// }
+	// }
 
 	return &Converger{
 		Params:                 params,
@@ -102,9 +104,20 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		return nil, err
 	}
 
-	kubeCl, err := operations.ConnectToKubernetesAPI(c.SSHClient)
-	if err != nil {
-		return nil, err
+	var err error
+	var kubeCl *client.KubernetesClient
+
+	if c.KubeClient != nil {
+		kubeCl = c.KubeClient
+	} else {
+                if c.SSHClient == nil {
+                      return nil, fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl converge --help to get available flags.\nSsh host flag is not provided. Need to pass --ssh-host")
+                }
+
+		kubeCl, err = kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
+		if err != nil {
+			return nil, fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
+		}
 	}
 
 	if !c.CommanderMode {
@@ -213,14 +226,22 @@ func (c *Converger) AutoConverge() error {
 		return fmt.Errorf("Need to pass running node name. It is may taints terraform state while converge")
 	}
 
-	sshClient, err := ssh.NewInitClientFromFlags(false)
-	if err != nil {
-		return err
-	}
+	var err error
+	var kubeCl *client.KubernetesClient
 
-	kubeCl := client.NewKubernetesClient().WithSSHClient(sshClient)
-	if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-		return err
+	if c.KubeClient != nil {
+		kubeCl = c.KubeClient
+	} else {
+		var sshClient *ssh.Client
+		sshClient, err = ssh.NewInitClientFromFlags(false)
+		if err != nil {
+			return err
+		}
+
+		kubeCl = client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
+		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+			return err
+		}
 	}
 
 	inLockRunner := converge.NewInLockRunner(kubeCl, converge.AutoConvergerIdentity).

@@ -3,7 +3,7 @@ cpu: 25m
 memory: 25Mi
 {{- end }}
 
-{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
   {{- if (hasKey .Values.prometheus.internal.alertmanagers "internal") }}
     {{- range .Values.prometheus.internal.alertmanagers.internal }}
 ---

@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"io"
 	"os"
 	"sync"
 	"time"
@@ -26,13 +25,12 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
@@ -48,9 +46,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "nodes_for_draining",
-			WaitForSynchronization:       pointer.Bool(true),
-			ExecuteHookOnSynchronization: pointer.Bool(true),
-			ExecuteHookOnEvents:          pointer.Bool(true),
+			WaitForSynchronization:       ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			ExecuteHookOnEvents:          ptr.To(true),
 			ApiVersion:                   "v1",
 			Kind:                         "Node",
 			LabelSelector: &v1.LabelSelector{
@@ -115,15 +113,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		return err
 	}
 
-	errOut := input.LogEntry.WriterLevel(logrus.WarnLevel)
-	defer func(errOut *io.PipeWriter) {
-		err := errOut.Close()
-		if err != nil {
-			input.LogEntry.Warningf("error closing logrus PipeWriter: %s", err)
-		}
-	}(errOut)
-
-	drainHelper := drain.NewDrainer(k8sCli, errOut)
+	drainHelper := drain.NewDrainer(k8sCli)
 	drainHelper.Ctx = context.Background()
 
 	var wg = &sync.WaitGroup{}
@@ -157,7 +147,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 		err := drain.RunCordonOrUncordon(drainHelper, cordonNode, true)
 		if err != nil {
-			input.LogEntry.Errorf("Cordon node '%s' failed: %s", dNode.Name, err)
+			input.Logger.Errorf("Cordon node '%s' failed: %s", dNode.Name, err)
 			continue
 		}
 
@@ -187,7 +177,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire("d8_node_draining")
 	for drainedNode := range drainingNodesC {
 		if drainedNode.Err != nil {
-			input.LogEntry.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
+			input.Logger.Errorf("node %q drain failed: %s", drainedNode.NodeName, drainedNode.Err)
 			event := drainedNode.buildEvent()
 			input.PatchCollector.Create(event, object_patch.UpdateIfExists())
 			input.MetricsCollector.Set("d8_node_draining", 1, map[string]string{"node": drainedNode.NodeName, "message": drainedNode.Err.Error()})

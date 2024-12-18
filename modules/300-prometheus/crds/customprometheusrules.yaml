@@ -6,6 +6,7 @@ metadata:
     heritage: deckhouse
     module: prometheus
     app: prometheus
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: deckhouse.io
   scope: Cluster
@@ -17,12 +18,13 @@ spec:
   versions:
     - name: v1alpha1
       served: true
-      storage: true
+      storage: false
+      deprecated: true
       schema: &schema
         openAPIV3Schema:
           type: object
           description: |
-            Resource to store `PrometheusRule`.  [Details...](https://deckhouse.io/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
+            Resource to store `PrometheusRule`.  [Details...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/300-prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
           required:
             - spec
           properties:
@@ -79,5 +81,5 @@ spec:
                               type: string
     - name: v1
       served: true
-      storage: false
+      storage: true
       schema: *schema

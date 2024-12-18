@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-gcp
+    rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/namespace: d8-cloud-provider-gcp
+  name: d8:manage:permission:module:cloud-provider-gcp:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - cloud-provider-gcp
+  resources:
+  - moduleconfigs
+  verbs:
+  - create
+  - update
+  - patch
+  - delete

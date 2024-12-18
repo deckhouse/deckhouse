@@ -1,4 +1,5 @@
 {{- if or .Values.istio.federation.enabled (and .Values.istio.multicluster.enabled .Values.istio.internal.multiclustersNeedIngressGateway) }}
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -48,4 +49,5 @@ spec:
       - key: app
         operator: In
         values: ["ingressgateway"]
+{{- end }}
 {{- end }}

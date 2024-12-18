@@ -1,3 +1,4 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 {{- if .Values.istio.internal.ingressControllers }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -48,4 +49,5 @@ spec:
       - key: app
         operator: In
         values: ["ingress-gateway-controller"]
+{{- end }}
 {{- end }}

@@ -18,6 +18,7 @@ package template
 
 import (
 	"fmt"
+	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -60,11 +61,11 @@ func (ngc NodeGroupConfigurationSpec) IsEqual(newSpec NodeGroupConfigurationSpec
 		return false
 	}
 
-	if slicesIsEqual(ngc.NodeGroups, newSpec.NodeGroups) {
+	if !slices.Equal(ngc.NodeGroups, newSpec.NodeGroups) {
 		return false
 	}
 
-	if slicesIsEqual(ngc.Bundles, newSpec.Bundles) {
+	if !slices.Equal(ngc.Bundles, newSpec.Bundles) {
 		return false
 	}
 

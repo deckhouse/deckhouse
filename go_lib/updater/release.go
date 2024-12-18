@@ -17,19 +17,22 @@ limitations under the License.
 package updater
 
 import (
+	"context"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-type ByVersion[R Release] []R
+type ByVersion[R v1alpha1.Release] []R
 
 func (a ByVersion[R]) Len() int {
 	return len(a)
 }
+
 func (a ByVersion[R]) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
+
 func (a ByVersion[R]) Less(i, j int) bool {
 	return a[i].GetVersion().LessThan(a[j].GetVersion())
 }
@@ -39,29 +42,11 @@ type DeckhouseReleaseData struct {
 	Notified   bool
 }
 
-type Release interface {
-	GetName() string
-	GetApplyAfter() *time.Time
-	GetVersion() *semver.Version
-	GetRequirements() map[string]string
-	GetChangelogLink() string
-	GetCooldownUntil() *time.Time
-	GetDisruptions() []string
-	GetDisruptionApproved() bool
-	GetPhase() string
-	GetForce() bool
-	GetApplyNow() bool
-	GetApprovedStatus() bool
-	SetApprovedStatus(b bool)
-	GetSuspend() bool
-	GetManuallyApproved() bool
-	GetMessage() string
-}
-
-type KubeAPI[R Release] interface {
-	UpdateReleaseStatus(release R, msg, phase string) error
-	PatchReleaseAnnotations(release R, annotations map[string]interface{}) error
+type KubeAPI[R v1alpha1.Release] interface {
+	UpdateReleaseStatus(ctx context.Context, release R, msg, phase string) error
+	PatchReleaseAnnotations(ctx context.Context, release R, annotations map[string]interface{}) error
 	PatchReleaseApplyAfter(release R, applyTime time.Time) error
-	SaveReleaseData(release R, data DeckhouseReleaseData) error
-	DeployRelease(release R) error
+	SaveReleaseData(ctx context.Context, release R, data DeckhouseReleaseData) error
+	DeployRelease(ctx context.Context, release R) error
+	IsKubernetesVersionAutomatic(ctx context.Context) (bool, error)
 }

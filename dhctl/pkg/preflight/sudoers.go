@@ -21,7 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 func (pc *Checker) CheckSudoIsAllowedForUser() error {
@@ -31,20 +31,20 @@ func (pc *Checker) CheckSudoIsAllowedForUser() error {
 	}
 
 	if app.AskBecomePass {
-		return callSudo(pc.sshClient, app.BecomePass)
+		return callSudo(pc.nodeInterface, app.BecomePass)
 	}
 
-	return callSudo(pc.sshClient, "")
+	return callSudo(pc.nodeInterface, "")
 
 }
 
-func callSudo(sshCl *ssh.Client, password string) error {
+func callSudo(nodeInterface node.Interface, password string) error {
 	args := []string{"-Sv", "<<<", password}
 	if password == "" {
 		args = []string{"-n", "echo", "-n"}
 	}
 
-	err := sshCl.Command("sudo", args...).Run()
+	err := nodeInterface.Command("sudo", args...).Run()
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) && exitErr.ExitCode() != 255 {

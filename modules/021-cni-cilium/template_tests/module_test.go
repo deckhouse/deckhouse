@@ -35,7 +35,7 @@ func Test(t *testing.T) {
 const (
 	globalValues = `
 deckhouseVersion: test
-enabledModules: ["vertical-pod-autoscaler-crd", "prometheus", "operator-prometheus-crd"]
+enabledModules: ["vertical-pod-autoscaler", "prometheus", "operator-prometheus"]
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   kind: ClusterConfiguration
@@ -127,7 +127,7 @@ func getSubdirs(dir string) ([]string, error) {
 }
 
 const (
-	ciliumEETempaltesPath = "/deckhouse/ee/modules/021-cni-cilium/templates/"
+	ciliumEETempaltesPath = "/deckhouse/ee/se-plus/modules/021-cni-cilium/templates/"
 	ciliumCETempaltesPath = "/deckhouse/modules/021-cni-cilium/templates/"
 )
 
@@ -166,7 +166,9 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 			cegp := f.KubernetesGlobalResource("CiliumEgressGatewayPolicy", "d8.myeg")
 			Expect(cegp.Exists()).To(BeTrue())
 
-			Expect(cegp.Field("spec.excludedCIDRs").String()).To(MatchJSON(`["192.168.0.0/16"]`))
+			Expect(cegp.Field("spec.destinationCIDRs").String()).To(MatchJSON(`["192.168.0.0/16"]`))
+
+			Expect(cegp.Field("spec.excludedCIDRs").String()).To(MatchJSON(`["192.168.3.0/24"]`))
 
 			Expect(cegp.Field("spec.selectors").String()).To(MatchJSON(`[{"podSelector": {"matchLabels": {"app": "nginx"}}}]`))
 

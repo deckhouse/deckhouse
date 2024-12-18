@@ -22,6 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 const (
@@ -32,8 +33,14 @@ const (
 var ErrAuthSSHFailed = errors.New("authentication failed")
 
 func (pc *Checker) CheckSSHTunnel() error {
-	if app.PreflightSkipSSHForword {
-		log.InfoLn("SSH forward preflight check was skipped")
+	if app.PreflightSkipSSHForward {
+		log.InfoLn("SSH forward preflight check was skipped (via skip flag)")
+		return nil
+	}
+
+	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		log.InfoLn("SSH forward preflight check was skipped (local run)")
 		return nil
 	}
 
@@ -48,7 +55,7 @@ func (pc *Checker) CheckSSHTunnel() error {
 	builder.WriteString(":localhost:")
 	builder.WriteString(strconv.Itoa(DefaultTunnelRemotePort))
 
-	tun := pc.sshClient.Tunnel("R", builder.String())
+	tun := wrapper.Client().Tunnel("R", builder.String())
 	err := tun.Up()
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
@@ -61,11 +68,17 @@ Please check connectivity to control-plane host and that the sshd config paramet
 
 func (pc *Checker) CheckSSHCredential() error {
 	if app.PreflightSkipSSHCredentialsCheck {
-		log.InfoLn("SSH credentials preflight check was skipped")
+		log.InfoLn("SSH credentials preflight check was skipped (via skip flag)")
 		return nil
 	}
 
-	sshCheck := pc.sshClient.Check()
+	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		log.InfoLn("SSH credentials preflight check was skipped (local run)")
+		return nil
+	}
+
+	sshCheck := wrapper.Client().Check()
 	err := sshCheck.CheckAvailability()
 	if err != nil {
 		return fmt.Errorf(
@@ -78,11 +91,17 @@ func (pc *Checker) CheckSSHCredential() error {
 
 func (pc *Checker) CheckSingleSSHHostForStatic() error {
 	if app.PreflightSkipOneSSHHost {
-		log.InfoLn("Only one --ssh-host parameter used preflight check was skipped")
+		log.InfoLn("Only one --ssh-host parameter used preflight check was skipped (via skip flag)")
 		return nil
 	}
 
-	if len(pc.sshClient.Settings.AvailableHosts()) > 1 {
+	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		log.InfoLn("Only one --ssh-host parameter used preflight check was skipped (local run)")
+		return nil
+	}
+
+	if len(wrapper.Client().Settings.AvailableHosts()) > 1 {
 		return fmt.Errorf(
 			"during the bootstrap of the first static master node, only one --ssh-host parameter is allowed",
 		)

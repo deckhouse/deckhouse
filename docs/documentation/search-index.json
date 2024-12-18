@@ -11,7 +11,7 @@ sitemap_include: false
 {%- for page in searchedpages %}
 {
 "title": "{{ page.title | escape }}",
-"url": "{{ site.urls[page.lang] }}{{ site.canonical_url_prefix }}/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
+"url": "{{ site.urls[page.lang] }}{{ site.canonical_url_prefix_documentation }}/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
 {%- if page['module-kebab-name'] %}
   {%- assign keywords = page['module-kebab-name'] %}
 {%- else %}
@@ -44,7 +44,7 @@ sitemap_include: false
 {%- endif %}
 {
 "title": "{{ page.title | escape }}",
-"url": "{{ site.urls[page.lang] }}{{ site.canonical_url_prefix }}/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
+"url": "{{ site.urls[page.lang] }}{{ site.canonical_url_prefix_documentation }}/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
 "keywords": {{ keywords | jsonify }},
 "content": "{{ page.title | escape }}"
 }

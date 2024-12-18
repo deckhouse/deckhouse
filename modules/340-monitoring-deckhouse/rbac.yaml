@@ -1,0 +1,4 @@
+module: monitoring-deckhouse
+namespace: d8-monitoring
+subsystems:
+  - observability

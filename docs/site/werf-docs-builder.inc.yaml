@@ -1,43 +1,65 @@
 ---
-artifact: docs-builder-artifact
-from: {{ .ctx.Images.BASE_GOLANG_20_ALPINE }}
-ansible:
-  install:
-    - name: Download dependencies
-      shell: |
-        go mod tidy
-      args:
-        executable: /bin/sh
-        chdir: /go/src/app
-  setup:
-    - name: Build docs-builder
-      shell: |
-        go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/
-      args:
-        executable: /bin/sh
-        chdir: /go/src/app
-git:
-  - add: /docs/site/backends/docs-builder
-    to: /go/src/app
-    stageDependencies:
-      install: 'go.mod'
-      setup: '**/*'
----
-image: docs-builder
-from: {{ .ctx.Images.BASE_ALPINE }}
+image: {{ .ModuleName }}/{{ .ImageName }}
+{{ if ne .ModuleName "docs" }}
+fromImage: common/distroless
+{{ else }}
+from: {{ .Images.BASE_SCRATCH }}
+{{ end }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/docs-builder
+  to: /app/server
+  before: setup
 docker:
   WORKDIR: /app
-import:
-  - artifact: docs-builder-artifact
-    add: /go/src/app/server
-    to: /app/server
-    before: setup
+  ENTRYPOINT: [ "/app/server" ]
 git:
-  - add: /docs/site/backends/docs-builder-template
+  - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
     to: /app/hugo
-{{ if eq .mode "module" }}
+{{ if ne .ModuleName "docs" }}
     excludePaths:
     - config/production/
-  - add: /{{ .ctx.ModulePath }}modules/810-documentation/images/web/modules-docs/hugo.yaml
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
     to: /app/hugo/config/production/hugo.yaml
 {{ end }}
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+{{ if ne .ModuleName "docs" }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+{{ end }}
+shell:
+  install:
+  - cd /src
+  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go mod tidy
+  - go build -ldflags '-s -w' .
+  - chown -R 64535:64535 /src
+  - chmod 0700 /src/docs-builder
+{{ if ne .ModuleName "docs" }}
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+shell:
+  install:
+  - cd /src
+{{ end }}
+git:
+- add: /{{ .ModulePath }}docs/site/backends/docs-builder
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'

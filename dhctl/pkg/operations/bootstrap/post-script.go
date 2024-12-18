@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/ssh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -72,11 +72,11 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 	}
 
 	createOUtFileCmd := fmt.Sprintf("touch %s && chmod 644 %s", outputFile, outputFile)
-	err := frontend.NewCommand(e.sshClient.Settings, createOUtFileCmd).
-		Sudo().
-		WithStderrHandler(nil).
-		WithStdoutHandler(nil).
-		Run()
+	cmd := frontend.NewCommand(e.sshClient.Settings, createOUtFileCmd)
+	cmd.Sudo()
+	cmd.WithStderrHandler(nil)
+	cmd.WithStdoutHandler(nil)
+	err := cmd.Run()
 
 	if err != nil {
 		return "", fmt.Errorf("Cannot create output file for script: %v", err)
@@ -84,22 +84,22 @@ func (e *PostBootstrapScriptExecutor) run() (string, error) {
 
 	defer func() {
 		// remove out file on server because it can contain non-safe information
-		err = frontend.NewCommand(e.sshClient.Settings, fmt.Sprintf("rm %s", outputFile)).
-			Sudo().
-			WithStderrHandler(nil).
-			WithStdoutHandler(nil).
-			Run()
+		cmd = frontend.NewCommand(e.sshClient.Settings, fmt.Sprintf("rm %s", outputFile))
+		cmd.Sudo()
+		cmd.WithStderrHandler(nil)
+		cmd.WithStdoutHandler(nil)
+		err = cmd.Run()
 	}()
 
-	cmd := e.sshClient.UploadScript(e.path).
-		WithTimeout(e.timeout).
-		WithStdoutHandler(func(s string) {
-			log.InfoLn(s)
-		}).
-		WithEnvs(envs).
-		Sudo()
+	script := e.sshClient.UploadScript(e.path)
+	script.WithTimeout(e.timeout)
+	script.WithStdoutHandler(func(s string) {
+		log.InfoLn(s)
+	})
+	script.WithEnvs(envs)
+	script.Sudo()
 
-	_, err = cmd.Execute()
+	_, err = script.Execute()
 
 	if err != nil {
 		return "", fmt.Errorf("Running %s done with error: %w", e.path, err)

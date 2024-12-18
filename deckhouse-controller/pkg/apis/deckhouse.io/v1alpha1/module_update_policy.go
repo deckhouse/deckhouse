@@ -17,27 +17,45 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"sync"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+)
+
+const (
+	ModuleUpdatePolicyResource = "moduleupdatepolicies"
+	ModuleUpdatePolicyKind     = "ModuleUpdatePolicy"
+
+	ModuleUpdatePolicyModeIgnore = "Ignore"
 )
 
 var (
 	ModuleUpdatePolicyGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
-		Resource: "moduleupdatepolicies",
+		Resource: ModuleUpdatePolicyResource,
 	}
 	ModuleUpdatePolicyGVK = schema.GroupVersionKind{
 		Group:   SchemeGroupVersion.Group,
 		Version: SchemeGroupVersion.Version,
-		Kind:    "ModuleUpdatePolicy",
+		Kind:    ModuleUpdatePolicyKind,
 	}
 )
+
+var _ runtime.Object = (*ModuleUpdatePolicy)(nil)
+
+// +k8s:deepcopy-gen=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ModuleUpdatePolicyList is a list of ModuleUpdatePolicy resources
+type ModuleUpdatePolicyList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleUpdatePolicy `json:"items"`
+}
 
 // +genclient
 // +genclient:nonNamespaced
@@ -55,6 +73,8 @@ type ModuleUpdatePolicy struct {
 	Spec ModuleUpdatePolicySpec `json:"spec"`
 }
 
+// +k8s:deepcopy-gen=true
+
 type ModuleUpdatePolicySpec struct {
 	Update                ModuleUpdatePolicySpecUpdate          `json:"update"`
 	ReleaseChannel        string                                `json:"releaseChannel"`
@@ -68,40 +88,4 @@ type ModuleUpdatePolicySpecUpdate struct {
 
 type ModuleUpdatePolicySpecReleaseSelector struct {
 	LabelSelector *metav1.LabelSelector `json:"labelSelector"`
-}
-
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleUpdatePolicyList is a list of ModuleUpdatePolicy resources
-type ModuleUpdatePolicyList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleUpdatePolicy `json:"items"`
-}
-
-func NewModuleUpdatePolicySpecContainer(spec *ModuleUpdatePolicySpec) *ModuleUpdatePolicySpecContainer {
-	return &ModuleUpdatePolicySpecContainer{spec: spec}
-}
-
-type ModuleUpdatePolicySpecContainer struct {
-	spec *ModuleUpdatePolicySpec
-	lock sync.Mutex
-}
-
-func (c *ModuleUpdatePolicySpecContainer) Set(settings *helpers.DeckhouseSettings) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	c.spec.ReleaseChannel = settings.ReleaseChannel
-	c.spec.Update.Mode = settings.Update.Mode
-	c.spec.Update.Windows = settings.Update.Windows
-}
-
-func (c *ModuleUpdatePolicySpecContainer) Get() *ModuleUpdatePolicySpec {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	return c.spec
 }

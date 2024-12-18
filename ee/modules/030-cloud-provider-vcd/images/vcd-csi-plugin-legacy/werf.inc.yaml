@@ -1,8 +1,10 @@
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /src/bin/cloud-director-named-disk-csi-driver
   to: /cloud-director-named-disk-csi-driver
   before: setup
@@ -25,7 +27,7 @@ import:
 docker:
   ENTRYPOINT: ["/cloud-director-named-disk-csi-driver"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
 from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
 git:
 - add: /{{ $.ModulePath }}/modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -47,11 +49,13 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - export VERSION="1.4.1"
   - mkdir -p /src
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/vmware/cloud-director-named-disk-csi-driver.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - go mod vendor
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X github.com/vmware/cloud-director-named-disk-csi-driver/version.Version=${VERSION}" -o bin/cloud-director-named-disk-csi-driver cmd/csi/main.go
+{{- end }}
 ---
 {{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/btrfs* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fsfreeze /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /sbin/xfs_repair /usr/sbin/nvme /usr/sbin/parted /usr/sbin/xfs*" }}
 ---

@@ -20,7 +20,7 @@ kubectl -n d8-system get deploy/deckhouse -o wide
 echo "Pod/deckhouse-*"
 kubectl -n d8-system get po -o wide | grep ^deckhouse
 echo "Enabled modules:"
-kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module list -o yaml | grep -v enabledModules: | sort
+kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module list -o yaml | grep -v enabledModules: | sort
 echo "ConfigMap/generated"
 kubectl -n d8-system get configmap/deckhouse-generated-config-do-not-edit -o yaml
 echo "ModuleConfigs"

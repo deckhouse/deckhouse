@@ -35,7 +35,7 @@ var _ = Describe("Module :: log-shipper :: helm template :: log-shipper ", func(
 
 	BeforeEach(func() {
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.27.0")
-		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd"})
+		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler"})
 	})
 	Context("With Static mode set", func() {
 		BeforeEach(func() {
@@ -121,10 +121,10 @@ memory: 64Mi
 - containerName: vector-reloader
   maxAllowed:
     cpu: 20m
-    memory: 25Mi
+    memory: 15Mi
   minAllowed:
     cpu: 10m
-    memory: 25Mi
+    memory: 15Mi
 - containerName: kube-rbac-proxy
   maxAllowed:
     cpu: 20m

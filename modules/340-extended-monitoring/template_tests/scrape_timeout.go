@@ -31,7 +31,7 @@ var _ = Describe("Module :: extendedMonitoring :: helm template :: scrape timeou
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
 		hec.ValuesSet("global.modulesImages.registry.base", "registry.example.com")
-		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler-crd", "operator-prometheus-crd"})
+		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler", "operator-prometheus"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 		hec.ValuesSet("extendedMonitoring.events.exporterEnabled", true)
 		hec.ValuesSet("extendedMonitoring.events.severityLevel", "OnlyWarnings")

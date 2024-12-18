@@ -24,14 +24,16 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 var kindToVersion = map[string]string{
-	"vcdinstanceclass":   "deckhouse.io/v1",
-	"zvirtinstanceclass": "deckhouse.io/v1",
+	"vcdinstanceclass":         "deckhouse.io/v1",
+	"zvirtinstanceclass":       "deckhouse.io/v1",
+	"dynamixinstanceclass":     "deckhouse.io/v1alpha1",
+	"huaweicloudinstanceclass": "deckhouse.io/v1",
 }
 
 var setInstanceClassNGUsageConfig = &go_hook.HookConfig{
@@ -42,22 +44,22 @@ var setInstanceClassNGUsageConfig = &go_hook.HookConfig{
 			Name:                "ics",
 			ApiVersion:          "",
 			Kind:                "",
-			ExecuteHookOnEvents: pointer.Bool(false),
+			ExecuteHookOnEvents: ptr.To(false),
 			FilterFunc:          applyUsedInstanceClassFilter,
 		},
 		{
 			Name:                   "ngs",
 			Kind:                   "NodeGroup",
 			ApiVersion:             "deckhouse.io/v1",
-			WaitForSynchronization: pointer.Bool(false),
+			WaitForSynchronization: ptr.To(false),
 			FilterFunc:             filterCloudEphemeralNG,
 		},
 		{
 			Name:                         "cloud_provider_secret",
 			ApiVersion:                   "v1",
 			Kind:                         "Secret",
-			ExecuteHookOnEvents:          pointer.Bool(false),
-			ExecuteHookOnSynchronization: pointer.Bool(false),
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"kube-system"},
@@ -86,7 +88,7 @@ func filterCloudEphemeralNG(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}
 
 	return ngUsedInstanceClass{
-		usedInstanceClass: usedInstanceClass{
+		UsedInstanceClass: usedInstanceClass{
 			Kind: ng.Spec.CloudInstances.ClassReference.Kind,
 			Name: ng.Spec.CloudInstances.ClassReference.Name,
 		},
@@ -102,7 +104,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 		// Kind is changed, so objects in "dynamic-kind" can be ignored. Update kind and stop the hook.
 		if kindInUse != kindFromSecret {
 			if kindFromSecret == "" {
-				input.LogEntry.Infof("InstanceClassKind has changed from '%s' to '': disable binding 'ics'", kindInUse)
+				input.Logger.Infof("InstanceClassKind has changed from '%s' to '': disable binding 'ics'", kindInUse)
 				*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 					Name:       "ics",
 					Action:     "Disable",
@@ -110,7 +112,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 					ApiVersion: "",
 				})
 			} else {
-				input.LogEntry.Infof("InstanceClassKind has changed from '%s' to '%s': update kind for binding 'ics'", kindInUse, kindFromSecret)
+				input.Logger.Infof("InstanceClassKind has changed from '%s' to '%s': update kind for binding 'ics'", kindInUse, kindFromSecret)
 				*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 					Name:       "ics",
 					Action:     "UpdateKind",
@@ -136,7 +138,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 
 		usedIC := sn.(ngUsedInstanceClass)
 
-		icNodeConsumers[usedIC.usedInstanceClass] = append(icNodeConsumers[usedIC.usedInstanceClass], usedIC.NodeGroupName)
+		icNodeConsumers[usedIC.UsedInstanceClass] = append(icNodeConsumers[usedIC.UsedInstanceClass], usedIC.NodeGroupName)
 	}
 
 	// find instanceClasses which were unbound from NG (or ng deleted)
@@ -145,8 +147,8 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 		icm := sn.(usedInstanceClassWithConsumers)
 
 		// if not found in NGs - remove consumers
-		if _, ok := icNodeConsumers[icm.usedInstanceClass]; !ok {
-			icNodeConsumers[icm.usedInstanceClass] = []string{}
+		if _, ok := icNodeConsumers[icm.UsedInstanceClass]; !ok {
+			icNodeConsumers[icm.UsedInstanceClass] = []string{}
 		}
 	}
 
@@ -175,13 +177,13 @@ type usedInstanceClass struct {
 }
 
 type usedInstanceClassWithConsumers struct {
-	usedInstanceClass
+	UsedInstanceClass  usedInstanceClass
 	NodeGroupConsumers []string
 }
 
 type ngUsedInstanceClass struct {
-	usedInstanceClass
-	NodeGroupName string
+	UsedInstanceClass usedInstanceClass
+	NodeGroupName     string
 }
 
 func applyUsedInstanceClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -195,7 +197,7 @@ func applyUsedInstanceClassFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	return usedInstanceClassWithConsumers{
-		usedInstanceClass: usedInstanceClass{
+		UsedInstanceClass: usedInstanceClass{
 			Kind: obj.GetKind(),
 			Name: obj.GetName(),
 		},

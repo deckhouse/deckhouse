@@ -92,12 +92,13 @@ bin/protoc:
 protoc:
 	bin/protoc -I pkg/server/api/dhctl --go_out=pkg/server --go-grpc_out=pkg/server \
 	pkg/server/api/dhctl/common.proto \
+	pkg/server/api/dhctl/status.proto \
 	pkg/server/api/dhctl/check.proto \
 	pkg/server/api/dhctl/bootstrap.proto \
 	pkg/server/api/dhctl/destroy.proto \
 	pkg/server/api/dhctl/abort.proto \
 	pkg/server/api/dhctl/converge.proto \
-  pkg/server/api/dhctl/commander_attach.proto \
+	pkg/server/api/dhctl/commander_attach.proto \
 	pkg/server/api/dhctl/commander_detach.proto \
 	pkg/server/api/dhctl/validation.proto \
 	pkg/server/api/dhctl/services.proto
@@ -112,7 +113,7 @@ build-test:
 	CGO_ENABLED=0 GOOS="linux" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl
 
 test:
-	go test ./...
+	go test -p 1 ./...
 
 deps: bin/golangci-lint bin/gofumpt bin/protoc
 	go mod tidy

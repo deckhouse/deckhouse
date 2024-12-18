@@ -19,6 +19,7 @@ package helpers
 import (
 	"sync"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
@@ -35,27 +36,80 @@ type DeckhouseSettings struct {
 	ReleaseChannel string `json:"releaseChannel"`
 }
 
+func DefaultDeckhouseSettings() *DeckhouseSettings {
+	settings := &DeckhouseSettings{
+		ReleaseChannel: "",
+	}
+	settings.Update.Mode = "Auto"
+	settings.Update.DisruptionApprovalMode = "Auto"
+
+	return settings
+}
+
 func NewDeckhouseSettingsContainer(spec *DeckhouseSettings) *DeckhouseSettingsContainer {
-	return &DeckhouseSettingsContainer{spec: spec}
+	return &DeckhouseSettingsContainer{settings: spec, inited: make(chan struct{})}
 }
 
 type DeckhouseSettingsContainer struct {
-	spec *DeckhouseSettings
+	settings *DeckhouseSettings
+	lock     sync.Mutex
+	inited   chan struct{}
+}
+
+// Set update settings in container
+// TODO: notify controllers and requeue all releases
+func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
+	if settings == nil {
+		panic("argument should be defined")
+	}
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.settings == nil {
+		c.settings = DefaultDeckhouseSettings()
+		close(c.inited)
+	}
+
+	c.settings.ReleaseChannel = settings.ReleaseChannel
+	c.settings.Update.Mode = settings.Update.Mode
+	c.settings.Update.Windows = settings.Update.Windows
+	c.settings.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
+	c.settings.Update.NotificationConfig = settings.Update.NotificationConfig
+}
+
+func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.settings == nil {
+		c.lock.Unlock()
+		<-c.inited
+		c.lock.Lock()
+	}
+
+	return c.settings
+}
+
+func NewModuleUpdatePolicySpecContainer(spec *v1alpha2.ModuleUpdatePolicySpec) *ModuleUpdatePolicySpecContainer {
+	return &ModuleUpdatePolicySpecContainer{spec: spec}
+}
+
+type ModuleUpdatePolicySpecContainer struct {
+	spec *v1alpha2.ModuleUpdatePolicySpec
 	lock sync.Mutex
 }
 
-func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
+func (c *ModuleUpdatePolicySpecContainer) Set(settings *DeckhouseSettings) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	c.spec.ReleaseChannel = settings.ReleaseChannel
 	c.spec.Update.Mode = settings.Update.Mode
 	c.spec.Update.Windows = settings.Update.Windows
-	c.spec.Update.DisruptionApprovalMode = settings.Update.DisruptionApprovalMode
-	c.spec.Update.NotificationConfig = settings.Update.NotificationConfig
 }
 
-func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {
+func (c *ModuleUpdatePolicySpecContainer) Get() *v1alpha2.ModuleUpdatePolicySpec {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

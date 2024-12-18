@@ -15,7 +15,6 @@
 package preflight
 
 import (
-	"bytes"
 	_ "embed"
 	"testing"
 
@@ -31,26 +30,26 @@ var cpuinfo1core4sockets []byte
 func TestCPUCoresCountDetection(t *testing.T) {
 	tests := []struct {
 		name    string
-		cpuinfo *bytes.Buffer
+		cpuinfo []byte
 		want    int
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
-			name:    "1 socket, 6 cores",
-			cpuinfo: bytes.NewBuffer(cpuinfo6cores1socket),
-			want:    6,
+			name:    "1 socket, 6 cores, 2 threads each",
+			cpuinfo: cpuinfo6cores1socket,
+			want:    12,
 			wantErr: assert.NoError,
 		},
 		{
-			name:    "4 sockets, 1 core",
-			cpuinfo: bytes.NewBuffer(cpuinfo1core4sockets),
+			name:    "4 sockets, 1 core, 1 thread each",
+			cpuinfo: cpuinfo1core4sockets,
 			want:    4,
 			wantErr: assert.NoError,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := physicalCoresCountFromCPUInfo(tt.cpuinfo)
+			got, err := logicalCoresCountFromCPUInfo(tt.cpuinfo)
 			if !tt.wantErr(t, err) {
 				return
 			}

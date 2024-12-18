@@ -6,38 +6,41 @@ docker:
 import:
   - artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /extended-monitoring-exporter
-    to: /extended-monitoring-exporter
     after: setup
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
 git:
-  - add: /{{ .ModulePath }}modules/340-{{ .ModuleName }}/images/{{ .ImageName }}/src
-    to: /src
-    excludePaths:
-      - "**/*.md"
-      - "**/*.yaml"
-      - hack
-    stageDependencies:
-      install:
-        - go.mod
-        - go.sum
-      setup:
-        - go.mod
-        - go.sum
-        - "**/*.go"
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
+shell:
+  install:
+  - cd /src
+---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
   install:
     - cd /src
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - go mod download
-  setup:
-    - cd /src
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - CGO_ENABLED=0 GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64
     - go build -ldflags="-s -w" -o /extended-monitoring-exporter main.go
     - chown 64535:64535 /extended-monitoring-exporter
     - chmod 0700 /extended-monitoring-exporter

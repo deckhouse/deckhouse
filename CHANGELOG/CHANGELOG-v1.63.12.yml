@@ -1,0 +1,5 @@
+deckhouse-controller:
+  fixes:
+    - summary: Fixed a bug related to the fact that the state of the release object was not updated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10410
+

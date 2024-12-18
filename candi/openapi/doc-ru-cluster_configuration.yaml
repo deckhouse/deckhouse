@@ -10,7 +10,7 @@ apiVersions:
       Чтобы изменить содержимое ресурса `ClusterConfiguration` в работающем кластере, выполните следующую команду:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit cluster-configuration
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
       ```
     properties:
       apiVersion:
@@ -50,7 +50,9 @@ apiVersions:
         description: |
           Домен кластера (используется для маршрутизации внутри кластера).
 
-          **Обратите внимание:** домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate). Например, нельзя одновременно устанавливать `clusterDomain: cluster.local` и `publicDomainTemplate: %s.cluster.local`.
+          **Обратите внимание:** домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate). Например, нельзя одновременно устанавливать `clusterDomain: cluster.local` и `publicDomainTemplate: %s.cluster.local`.  
+          
+          > При необходимости смены параметра в уже развернутом кластере рекомендуется воспользоваться [инструкцией](../modules/042-kube-dns/faq.html#как-поменять-домен-кластера-с-минимальным-простоем)
       defaultCRI:
         description: |
           Тип container runtime, используемый на узлах кластера (в NodeGroup'ах) по умолчанию.
@@ -61,7 +63,7 @@ apiVersions:
         description: |
           Версия control plane кластера Kubernetes.
 
-          Изменение параметра в работающем кластере приведет к [автоматическому обновлению](https://deckhouse.ru/documentation/v1/modules/040-control-plane-manager/#управление-версиями) версии control plane кластера.
+          Изменение параметра в работающем кластере приведет к [автоматическому обновлению](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-control-plane-manager/#управление-версиями) версии control plane кластера.
 
           Если указано `Automatic`, то используется версия control plane, которая считается стабильной на данный момент. Если стабильная версия control plane меньше максимальной, которая когда либо была установлена в кластере, больше чем на 1 минорную версию - тогда версия кластера не изменится.
           Изменение этой версии может произойти при смене минорной версии релиза Deckhouse (см. список изменений к релизу).

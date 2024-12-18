@@ -22,16 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func generateMetaConfigForDeckhouseConfigTest(t *testing.T, data map[string]interface{}) *MetaConfig {
-	return generateMetaConfig(t, configOverridesTemplate, data, false)
-}
-
-func generateMetaConfigForDeckhouseConfigTestWithErr(t *testing.T, data map[string]interface{}) *MetaConfig {
-	return generateMetaConfig(t, configOverridesTemplate, data, true)
-}
-
-func TestDeckhouseReleaseChannelDeprecated(t *testing.T) {
-	metaConfig := generateMetaConfig(t, `
+const configOverridesTemplate = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
@@ -44,7 +35,21 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   devBranch: aaaa
-  releaseChannel: Beta
+{{- if .bundle }}
+  bundle: {{ .bundle }}
+{{- end }}
+
+{{- if .releaseChannel }}
+  releaseChannel: {{ .releaseChannel }}
+{{- end }}
+
+{{- if .logLevel }}
+  logLevel: {{ .logLevel }}
+{{- end }}
+
+{{- if .configOverrides}}
+{{- .configOverrides | nindent 2 }}
+{{- end }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 # type of the configuration section
@@ -52,46 +57,28 @@ kind: StaticClusterConfiguration
 # address space for the cluster's internal network
 internalNetworkCIDRs:
 - 192.168.199.0/24
+---
+{{- if .moduleConfigs}}
+{{- .moduleConfigs }}
+{{- end }}
+`
 
-`, map[string]interface{}{}, false)
-	iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
-	require.NoError(t, err)
-	require.Equal(t, iCfg.ReleaseChannel, "Beta")
+func assertModuleConfig(t *testing.T, mc *ModuleConfig, enabled bool, version int, setting map[string]interface{}) {
+	require.NotNil(t, mc.Spec.Enabled)
+	require.Equal(t, *mc.Spec.Enabled, enabled)
+	require.Equal(t, mc.Spec.Version, version)
+	require.Equal(t, mc.Spec.Settings, SettingsValues(setting))
+}
+
+func generateMetaConfigForDeckhouseConfigTest(t *testing.T, data map[string]interface{}) *MetaConfig {
+	return generateMetaConfig(t, configOverridesTemplate, data, false)
+}
+
+func generateMetaConfigForDeckhouseConfigTestWithErr(t *testing.T, data map[string]interface{}) *MetaConfig {
+	return generateMetaConfig(t, configOverridesTemplate, data, true)
 }
 
 func TestModuleDeckhouseConfigOverridesAndMc(t *testing.T) {
-	t.Run("Fail whe module config and config overrides", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
-			"configOverrides": `
-configOverrides:
-  istioEnabled: false
-  global:
-    modules:
-      publicDomainTemplate: "%s.example.com"
-  cniCiliumEnabled: true
-  cniCilium:
-    tunnelMode: VXLAN
-  common:
-    testString: aaaaa
-`,
-			"moduleConfigs": `
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  creationTimestamp: "2022-11-22T09:12:26Z"
-  generation: 1
-  name: common
-  resourceVersion: "826312837"
-  uid: b275a253-dcb5-4321-b0ef-8881fdc8a2a8
-spec:
-  enabled: false
-`,
-		})
-
-		_, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.Error(t, err)
-	})
-
 	t.Run("Use default bundle and logLevel", func(t *testing.T) {
 		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
 			"moduleConfigs": `
@@ -145,47 +132,7 @@ spec:
 		require.Len(t, iCfg.ModuleConfigs, 1)
 	})
 
-	t.Run("Remove releaseChannel from module config and set to installer cfg for adding after bootstrap", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
-			"moduleConfigs": `
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  enabled: true
-  settings:
-    releaseChannel: RockSolid
-  version: 1
-`,
-		})
-
-		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.NoError(t, err)
-
-		require.Equal(t, iCfg.LogLevel, "Info")
-		require.Equal(t, iCfg.Bundle, "Default")
-
-		require.Len(t, iCfg.ModuleConfigs, 1)
-
-		require.NotContains(t, iCfg.ModuleConfigs[0].Spec.Settings, "releaseChannel")
-		require.Equal(t, iCfg.ReleaseChannel, "RockSolid")
-	})
-
-	t.Run("Use bundle and logLevel from module config", func(t *testing.T) {
-		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
-			"logLevel": "Debug",
-			"bundle":   "Minimal",
-		})
-
-		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.NoError(t, err)
-
-		require.Equal(t, iCfg.LogLevel, "Debug")
-		require.Equal(t, iCfg.Bundle, "Minimal")
-	})
-
-	t.Run("Convert config overrides to module config", func(t *testing.T) {
+	t.Run("Forbid to use configOverrides", func(t *testing.T) {
 		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
 			"configOverrides": `
 configOverrides:
@@ -201,10 +148,35 @@ configOverrides:
 `,
 		})
 
-		iCfg, err := PrepareDeckhouseInstallConfig(metaConfig)
-		require.NoError(t, err)
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
+	})
 
-		require.Len(t, iCfg.ModuleConfigs, 5)
+	t.Run("Forbid to use releaseChannel", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"releaseChannel": "Beta",
+		})
+
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
+	})
+
+	t.Run("Forbid to use bundle", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"bundle": "Default",
+		})
+
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
+	})
+
+	t.Run("Forbid to use logLevel", func(t *testing.T) {
+		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]interface{}{
+			"logLevel": "Info",
+		})
+
+		_, err := PrepareDeckhouseInstallConfig(metaConfig)
+		require.Error(t, err)
 	})
 
 	t.Run("Correct parse module configs", func(t *testing.T) {
@@ -290,7 +262,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: operator-prometheus-crd
+  name: registrypackages
 spec:
   enabled: true
 `,
@@ -310,7 +282,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: operator-prometheus-crd
+  name: registrypackages
 spec:
   enabled: true
   version: 1

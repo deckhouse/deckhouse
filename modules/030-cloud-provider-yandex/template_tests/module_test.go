@@ -39,8 +39,10 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
+// fake *-crd modules are required for backward compatibility with lib_helm library
+// TODO: remove fake crd modules
 const globalValues = `
-  enabledModules: ["vertical-pod-autoscaler-crd", "cloud-provider-yandex", "operator-prometheus-crd"]
+  enabledModules: ["vertical-pod-autoscaler", "cloud-provider-yandex", "operator-prometheus", "operator-prometheus-crd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -341,12 +343,12 @@ storageclass.kubernetes.io/is-default-class: "true"
 		})
 	})
 
-	Context("Yabdex with default StorageClass specified", func() {
+	Context("Yandex with discovered default StorageClass (without `global.defaultClusterStorageClass`)", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
-			f.ValuesSetFromYaml("cloudProviderYandex.internal.defaultStorageClass", `network-ssd`)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `network-ssd`)
 			f.HelmRender()
 		})
 
@@ -366,6 +368,63 @@ storageclass.kubernetes.io/is-default-class: "true"
 storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
 `))
+		})
+	})
+
+	Context("Yandex with discovered default StorageClass AND `global.defaultClusterStorageClass` specified", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
+			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `network-ssd`)
+			f.ValuesSetFromYaml("global.defaultClusterStorageClass", `network-ssd`)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper default StorageClass", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			csiHDDSC := f.KubernetesGlobalResource("StorageClass", "network-hdd")
+			csiSSDSC := f.KubernetesGlobalResource("StorageClass", "network-ssd")
+			csiSSDSCNonReplicated := f.KubernetesGlobalResource("StorageClass", "network-ssd-nonreplicated")
+
+			Expect(csiHDDSC.Exists()).To(BeTrue())
+			Expect(csiSSDSC.Exists()).To(BeTrue())
+			Expect(csiSSDSCNonReplicated.Exists()).To(BeTrue())
+
+			Expect(csiHDDSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+			Expect(csiSSDSC.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.deckhouse.io/volume-expansion-mode: offline
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+		})
+	})
+
+	Context("Yandex bootstraped cluster (no default StorageClass yet)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly with proper (first in list) default StorageClass", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			csiHDDSC := f.KubernetesGlobalResource("StorageClass", "network-hdd")
+			csiSSDSC := f.KubernetesGlobalResource("StorageClass", "network-ssd")
+			csiSSDSCNonReplicated := f.KubernetesGlobalResource("StorageClass", "network-ssd-nonreplicated")
+
+			Expect(csiHDDSC.Exists()).To(BeTrue())
+			Expect(csiSSDSC.Exists()).To(BeTrue())
+			Expect(csiSSDSCNonReplicated.Exists()).To(BeTrue())
+
+			Expect(csiHDDSC.Field("metadata.annotations").String()).To(MatchYAML(`
+storageclass.deckhouse.io/volume-expansion-mode: offline
+storageclass.kubernetes.io/is-default-class: "true"
+`))
+			Expect(csiSSDSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+			Expect(csiSSDSCNonReplicated.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 		})
 	})
 

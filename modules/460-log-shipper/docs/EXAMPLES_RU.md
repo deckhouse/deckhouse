@@ -326,6 +326,41 @@ spec:
     syslog.message_id: "{{ request_id }}"
 ```
 
+## Логи в CEF формате
+
+Существует способ формировать логи в формате CEF, используя `codec: CEF`, с переопределением `cef.name` и `cef.severity` по значениям из поля `message` (лога приложения) в формате JSON.
+
+В примере ниже `app` и `log_level` это ключи содержащие значения для переопределения:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: siem-kafka
+spec:
+  extraLabels:
+    cef.name: '{{ app }}'
+    cef.severity: '{{ log_level }}'
+  type: Kafka
+  kafka:
+    bootstrapServers:
+      - my-cluster-kafka-brokers.kafka:9092
+    encoding:
+      codec: CEF
+    tls:
+      verifyCertificate: false
+      verifyHostname: true
+    topic: logs
+```
+
+Так же можно вручную задать свои значения:
+
+```yaml
+extraLabels:
+  cef.name: 'TestName'
+  cef.severity: '1'
+```
+
 ## Сбор событий Kubernetes
 
 События Kubernetes могут быть собраны log-shipper'ом, если `events-exporter` включен в настройках модуля [extended-monitoring](../340-extended-monitoring/).
@@ -367,6 +402,7 @@ spec:
 ## Фильтрация логов
 
 Пользователи могут фильтровать логи, используя следующие фильтры:
+
 * `labelFilter` — применяется к метаданным, например имени контейнера (`container`), пространству имен (`namespace`) или имени пода (`pod_name`);
 * `logFilter` — применяется к полям самого сообщения, если оно в JSON-формате.
 
@@ -467,16 +503,16 @@ spec:
   kubernetesPods:
     namespaceSelector:
       labelSelector:
-        matchNames:
+        matchLabels:
           environment: production
   destinationRefs:
   - loki-storage
 ```
 
-## Исключить поды и namespace'ы, используя label
+## Исключение подов и пространств имён, используя label
 
-Существует преднастроенный label для исключения определенных подов и namespace'ов: `log-shipper.deckhouse.io/exclude=true`.
-Он помогает остановить сбор логов с подов и namespace'ов без изменения глобальной конфигурации.
+Существует преднастроенный label для исключения определенных подов и пространств имён: `log-shipper.deckhouse.io/exclude=true`.
+Он помогает остановить сбор логов с подов и пространств имён без изменения глобальной конфигурации.
 
 ```yaml
 ---
@@ -498,5 +534,69 @@ spec:
       labels:
         log-shipper.deckhouse.io/exclude: "true"
 ```
+
+## Включение буферизации
+
+Настройка буферизации логов необходима для улучшения надежности и производительности системы сбора логов. Буферизация может быть полезна в следующих случаях:
+
+1. Временные перебои с подключением. Если есть временные перебои или нестабильность соединения с системой хранения логов (например, с Elasticsearch), буфер позволяет временно сохранять логи и отправить их, когда соединение восстановится.
+
+1. Сглаживание пиков нагрузки. При внезапных всплесках объема логов буфер позволяет сгладить пиковую нагрузку на систему хранения логов, предотвращая её перегрузку и потенциальную потерю данных.
+
+1. Оптимизация производительности. Буферизация помогает оптимизировать производительность системы сбора логов за счёт накопления логов и отправки их группами, что снижает количество сетевых запросов и улучшает общую пропускную способность.
+
+### Пример включения буферизации в оперативной памяти
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  buffer:
+    memory:
+      maxEvents: 4096
+    type: Memory
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+### Пример включения буферизации на диске
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+### Пример определения поведения при переполнении буфера
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  buffer:
+    disk:
+      maxSize: 1Gi
+    type: Disk
+    whenFull: DropNewest
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+Более подробное описание параметров доступно [в ресурсе ClusterLogDestination](cr.html#clusterlogdestination).
 
 {% endraw %}

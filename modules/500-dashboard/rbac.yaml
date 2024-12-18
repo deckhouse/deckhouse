@@ -1,0 +1,3 @@
+module: dashboard
+subsystems:
+  - observability

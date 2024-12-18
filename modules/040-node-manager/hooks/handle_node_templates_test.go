@@ -20,7 +20,7 @@ import (
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -899,7 +899,7 @@ spec:
 
 		It("Metric 'd8_nodegroup_taint_missing' should appear", func() {
 			// collected metrics should have 'd8_nodegroup_taint_missing' metric
-			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_taint_missing", pointer.Float64(1))).To(BeTrue())
+			Expect(metricEqual(f.MetricsCollector.CollectedMetrics(), "d8_nodegroup_taint_missing", ptr.To(1.0))).To(BeTrue())
 		})
 	})
 

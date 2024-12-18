@@ -27,6 +27,7 @@ spec:
       containers:
       - name: web
         image: {{ include "helm_lib_module_image" (list $ "web") }}
+        {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 8 }}
         ports:
           - containerPort: 8080
             name: http
@@ -38,28 +39,26 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "web_resources" . | nindent 12 }}
   {{- end }}
-        securityContext:
-          allowPrivilegeEscalation: false
         volumeMounts:
           - name: config
             mountPath: /app/config
           - name: nginx-config
             mountPath: /opt/nginx-static/conf/nginx.conf
             subPath: nginx.conf
-          - name: tmp
-            mountPath: /tmp
+          - mountPath: /tmp
+            name: tmp
           - mountPath: /app/modules/en
             name: modules-docs-en
+            readOnly: true
           - mountPath: /app/modules/ru
             name: modules-docs-ru
+            readOnly: true
       - name: builder
-        image: {{ include "helm_lib_module_image" (list $ "docsBuilder" "docs-builder") }}
+        image: {{ include "helm_lib_module_image" (list $ "docsBuilder") }}
         {{ include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 8 }}
-        command:
-          - "/app/server"
         env:
           - name: HUGO_ENVIRONMENT
             value: production
@@ -89,17 +88,17 @@ spec:
             port: 8081
         readinessProbe:
           httpGet:
-            path: /healthz
+            path: /readyz
             port: 8081
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "builder_resources" . | nindent 12 }}
   {{- end }}
         volumeMounts:
-          - name: tmp
-            mountPath: /tmp
+          - mountPath: /tmp
+            name: tmp
           - mountPath: "/mount/public/en/modules"
             name: modules-docs-en
           - mountPath: "/mount/public/ru/modules"

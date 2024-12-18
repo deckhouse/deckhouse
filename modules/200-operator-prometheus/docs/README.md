@@ -122,7 +122,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 * Prometheus Operator defines four custom resources using the CRD (Custom Resource Definitions) mechanism:
   * [prometheus](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheus) — defines the Prometheus installation (cluster);
   * [servicemonitor](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitor) — defines the method for monitoring (collecting metrics) a set of services;
-  * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanager) — defines the Alertmanager cluster (it isn't used since metrics are sent directly to [madison](https://madison.flant.com/));
+  * [alertmanager](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#alertmanager) — defines the Alertmanager cluster;
   * [prometheusrule](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusrule) — defines a list of Prometheus rules;
 * Monitors `prometheus` resources and generates for each resource:
   * StatefulSet (with Prometheus);

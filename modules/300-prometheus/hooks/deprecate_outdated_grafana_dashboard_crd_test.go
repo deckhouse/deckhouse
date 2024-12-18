@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -512,51 +513,64 @@ spec:
 			It("Should start exposing metrics about deprecation", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				m := f.MetricsCollector.CollectedMetrics()
-				Expect(m).To(HaveLen(8))
-				Expect(m[0].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
-				Expect(m[0].Labels).To(Equal(map[string]string{
+				Expect(m).To(HaveLen(9))
+				Expect(m[0].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+				Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+					Group:  outdatedGrafanaDashboardsDeprecationMetricGroup,
+					Action: "expire",
+				}))
+				Expect(m[1].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
+				Expect(m[1].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+				Expect(m[1].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "single_panel",
 					"interval":  "interval_rv",
 				}))
-				Expect(m[1].Name).To(Equal("d8_grafana_dashboards_deprecated_alert_rule"))
-				Expect(m[1].Labels).To(Equal(map[string]string{
+				Expect(m[2].Name).To(Equal("d8_grafana_dashboards_deprecated_alert_rule"))
+				Expect(m[2].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+				Expect(m[2].Labels).To(Equal(map[string]string{
 					"dashboard":  "test",
 					"panel":      "single_panel",
 					"alert_rule": "alert_rule_inside_single_panel",
 				}))
-				Expect(m[2].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
-				Expect(m[2].Labels).To(Equal(map[string]string{
+				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
+				Expect(m[3].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+				Expect(m[3].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_single_panel",
 					"interval":  "interval_rv",
 				}))
-				Expect(m[3].Name).To(Equal("d8_grafana_dashboards_deprecated_plugin"))
-				Expect(m[3].Labels).To(Equal(map[string]string{
+				Expect(m[4].Name).To(Equal("d8_grafana_dashboards_deprecated_plugin"))
+				Expect(m[4].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+				Expect(m[4].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_single_panel",
 					"plugin":    "flant-statusmap-panel",
 				}))
-				Expect(m[4].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
-				Expect(m[4].Labels).To(Equal(map[string]string{
+				Expect(m[5].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
+				Expect(m[5].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+				Expect(m[5].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "panel_inside_row",
 					"interval":  "interval_sx3",
 				}))
-				Expect(m[5].Name).To(Equal("d8_grafana_dashboards_deprecated_alert_rule"))
-				Expect(m[5].Labels).To(Equal(map[string]string{
+				Expect(m[6].Name).To(Equal("d8_grafana_dashboards_deprecated_alert_rule"))
+				Expect(m[6].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+				Expect(m[6].Labels).To(Equal(map[string]string{
 					"dashboard":  "test",
 					"panel":      "panel_inside_row",
 					"alert_rule": "panel_inside_row_alert_rule",
 				}))
-				Expect(m[6].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
-				Expect(m[6].Labels).To(Equal(map[string]string{
+				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
+				Expect(m[7].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+				Expect(m[7].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_panel_inside_row",
 					"interval":  "interval_sx4",
 				}))
-				Expect(m[7].Name).To(Equal("d8_grafana_dashboards_deprecated_plugin"))
-				Expect(m[7].Labels).To(Equal(map[string]string{
+				Expect(m[8].Name).To(Equal("d8_grafana_dashboards_deprecated_plugin"))
+				Expect(m[8].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+				Expect(m[8].Labels).To(Equal(map[string]string{
 					"dashboard": "test",
 					"panel":     "plugin_panel_inside_row",
 					"plugin":    "flant-statusmap-panel",
@@ -569,10 +583,15 @@ spec:
 					f.RunHook()
 				})
 
-				It("Should stop exposing deprecation metrics", func() {
+				It("Should expire deprecation metrics", func() {
 					Expect(f).To(ExecuteSuccessfully())
 					m := f.MetricsCollector.CollectedMetrics()
-					Expect(m).To(HaveLen(0))
+					Expect(m).To(HaveLen(1))
+					Expect(m[0].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+					Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+						Group:  outdatedGrafanaDashboardsDeprecationMetricGroup,
+						Action: "expire",
+					}))
 				})
 			})
 
@@ -951,10 +970,15 @@ spec:
 					f.RunHook()
 				})
 
-				It("Should stop exposing deprecation metrics", func() {
+				It("Should expire deprecation metrics", func() {
 					Expect(f).To(ExecuteSuccessfully())
 					m := f.MetricsCollector.CollectedMetrics()
-					Expect(m).To(HaveLen(0))
+					Expect(m).To(HaveLen(1))
+					Expect(m[0].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
+					Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+						Group:  outdatedGrafanaDashboardsDeprecationMetricGroup,
+						Action: "expire",
+					}))
 				})
 			})
 		})

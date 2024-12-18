@@ -1,0 +1,5 @@
+module: keepalived
+subsystems:
+  - infrastructure
+crds:
+  - ee/modules/450-keepalived/crds/*.yaml

@@ -54,12 +54,13 @@ type Container interface {
 }
 
 var (
-	defaultDC Container
-	TestDC    *mockedDependencyContainer
+	defaultDC    Container
+	TestDC       *MockedContainer
+	TestTimeZone = time.UTC
 )
 
 func init() {
-	TestDC = newMockedContainer()
+	TestDC = NewMockedContainer()
 	defaultDC = NewDependencyContainer()
 }
 
@@ -131,16 +132,6 @@ func (dc *dependencyContainer) GetHTTPClient(options ...http.Option) http.Client
 		return TestDC.GetHTTPClient(options...)
 	}
 
-	dc.m.RLock()
-	if dc.httpClient != nil {
-		defer dc.m.RUnlock()
-		return dc.httpClient
-	}
-	dc.m.RUnlock()
-
-	dc.m.Lock()
-	defer dc.m.Unlock()
-
 	var opts []http.Option
 	opts = append(opts, options...)
 
@@ -149,9 +140,9 @@ func (dc *dependencyContainer) GetHTTPClient(options ...http.Option) http.Client
 		opts = append(opts, http.WithAdditionalCACerts([][]byte{contentCA}))
 	}
 
-	dc.httpClient = http.NewClient(opts...)
+	httpClient := http.NewClient(opts...)
 
-	return dc.httpClient
+	return httpClient
 }
 
 func (dc *dependencyContainer) GetEtcdClient(endpoints []string, options ...etcd.Option) (etcd.Client, error) {
@@ -185,6 +176,7 @@ func (dc *dependencyContainer) GetK8sClient(options ...k8s.Option) (k8s.Client, 
 		if err != nil {
 			return nil, err
 		}
+
 		dc.k8sClient = kc
 	}
 
@@ -267,7 +259,7 @@ func WithExternalDependencies(f func(input *go_hook.HookInput, dc Container) err
 }
 
 // Mocks
-type mockedDependencyContainer struct {
+type MockedContainer struct {
 	ctrl *minimock.Controller // maybe we need it somewhere in tests
 
 	HelmClient    *helm.ClientMock
@@ -279,49 +271,49 @@ type mockedDependencyContainer struct {
 	clock         clockwork.FakeClock
 }
 
-func (mdc *mockedDependencyContainer) GetHelmClient(_ string, _ ...helm.Option) (helm.Client, error) {
-	return mdc.HelmClient, nil
+func (c *MockedContainer) GetHelmClient(_ string, _ ...helm.Option) (helm.Client, error) {
+	return c.HelmClient, nil
 }
 
-func (mdc *mockedDependencyContainer) GetHTTPClient(_ ...http.Option) http.Client {
-	return mdc.HTTPClient
+func (c *MockedContainer) GetHTTPClient(_ ...http.Option) http.Client {
+	return c.HTTPClient
 }
 
-func (mdc *mockedDependencyContainer) GetEtcdClient(_ []string, _ ...etcd.Option) (etcd.Client, error) {
-	return mdc.EtcdClient, nil
+func (c *MockedContainer) GetEtcdClient(_ []string, _ ...etcd.Option) (etcd.Client, error) {
+	return c.EtcdClient, nil
 }
 
-func (mdc *mockedDependencyContainer) MustGetEtcdClient(_ []string, _ ...etcd.Option) etcd.Client {
-	return mdc.EtcdClient
+func (c *MockedContainer) MustGetEtcdClient(_ []string, _ ...etcd.Option) etcd.Client {
+	return c.EtcdClient
 }
 
-func (mdc *mockedDependencyContainer) GetK8sClient(_ ...k8s.Option) (k8s.Client, error) {
-	if mdc.K8sClient != nil {
-		return mdc.K8sClient, nil
+func (c *MockedContainer) GetK8sClient(_ ...k8s.Option) (k8s.Client, error) {
+	if c.K8sClient != nil {
+		return c.K8sClient, nil
 	}
 	return fake.NewFakeCluster(k8s.DefaultFakeClusterVersion).Client, nil
 }
 
-func (mdc *mockedDependencyContainer) MustGetK8sClient(options ...k8s.Option) k8s.Client {
-	k, _ := mdc.GetK8sClient(options...)
+func (c *MockedContainer) MustGetK8sClient(options ...k8s.Option) k8s.Client {
+	k, _ := c.GetK8sClient(options...)
 	return k
 }
 
-func (mdc *mockedDependencyContainer) GetRegistryClient(_ string, _ ...cr.Option) (cr.Client, error) {
-	if mdc.CRClient != nil {
-		return mdc.CRClient, nil
+func (c *MockedContainer) GetRegistryClient(_ string, _ ...cr.Option) (cr.Client, error) {
+	if c.CRClient != nil {
+		return c.CRClient, nil
 	}
 	return nil, fmt.Errorf("no CR client")
 }
 
-func (mdc *mockedDependencyContainer) GetVsphereClient(_ *vsphere.ProviderClusterConfiguration) (vsphere.Client, error) {
-	if mdc.VsphereClient != nil {
-		return mdc.VsphereClient, nil
+func (c *MockedContainer) GetVsphereClient(_ *vsphere.ProviderClusterConfiguration) (vsphere.Client, error) {
+	if c.VsphereClient != nil {
+		return c.VsphereClient, nil
 	}
 	return nil, fmt.Errorf("no Vsphere client")
 }
 
-func (mdc *mockedDependencyContainer) GetClientConfig() (*rest.Config, error) {
+func (c *MockedContainer) GetClientConfig() (*rest.Config, error) {
 	return &rest.Config{
 		Host: "https://127.0.0.1:6443",
 		TLSClientConfig: rest.TLSClientConfig{
@@ -336,26 +328,28 @@ hvcNAQEBBQADggEPADCC
 }
 
 // SetK8sVersion change FakeCluster versions. KubeClient returns with resources of specified version
-func (mdc *mockedDependencyContainer) SetK8sVersion(ver k8s.FakeClusterVersion) {
+func (c *MockedContainer) SetK8sVersion(ver k8s.FakeClusterVersion) {
 	cli := fake.NewFakeCluster(ver).Client
-	mdc.K8sClient = cli
+	c.K8sClient = cli
 }
 
-func (mdc *mockedDependencyContainer) GetClock() clockwork.Clock {
-	if mdc.clock != nil {
-		return mdc.clock
+func (c *MockedContainer) GetClock() clockwork.Clock { return c.GetFakeClock() }
+
+func (c *MockedContainer) GetFakeClock() clockwork.FakeClock {
+	if c.clock != nil {
+		return c.clock
 	}
 
-	t := time.Date(2019, time.October, 17, 15, 33, 0, 0, time.UTC)
+	t := time.Date(2019, time.October, 17, 15, 33, 0, 0, TestTimeZone)
 	cc := clockwork.NewFakeClockAt(t)
-	mdc.clock = cc
+	c.clock = cc
 	return cc
 }
 
-func newMockedContainer() *mockedDependencyContainer {
+func NewMockedContainer() *MockedContainer {
 	ctrl := minimock.NewController(&testing.T{})
 
-	return &mockedDependencyContainer{
+	return &MockedContainer{
 		ctrl: ctrl,
 
 		HelmClient:    helm.NewClientMock(ctrl),

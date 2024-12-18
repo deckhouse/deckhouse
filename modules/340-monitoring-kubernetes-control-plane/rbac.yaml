@@ -1,0 +1,4 @@
+module: monitoring-kubernetes-control-plane
+namespace: d8-monitoring
+subsystems:
+  - observability

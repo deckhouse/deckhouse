@@ -1,8 +1,8 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_21_ALPINE
+ARG BASE_GOLANG_22_ALPINE
 
 # Based on https://github.com/deckhouse/k8s-image-availability-exporter/blob/master/Dockerfile
-FROM $BASE_GOLANG_21_ALPINE as artifact
+FROM $BASE_GOLANG_22_ALPINE as artifact
 
 ARG SOURCE_REPO
 ENV SOURCE_REPO=${SOURCE_REPO}
@@ -12,8 +12,9 @@ ENV GOPROXY=${GOPROXY}
 
 WORKDIR /src
 ENV GOARCH=amd64
-RUN apk add patch git
-RUN git clone --depth 1 --branch v0.8.0 ${SOURCE_REPO}/deckhouse/k8s-image-availability-exporter.git .
+RUN apk add --no-cache patch git openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --depth 1 --branch v0.9.0 ${SOURCE_REPO}/deckhouse/k8s-image-availability-exporter.git .
 COPY patches/001-support-legacy-annotation.patch /src/
 RUN patch -p1 < 001-support-legacy-annotation.patch
 RUN CGO_ENABLED=0 go build -a -ldflags '-s -w -extldflags "-static"' -o /k8s-image-availability-exporter main.go && \

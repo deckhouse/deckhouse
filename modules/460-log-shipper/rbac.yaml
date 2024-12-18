@@ -1,0 +1,5 @@
+module: log-shipper
+subsystems:
+  - observability
+crds:
+  - modules/460-log-shipper/crds/*.yaml
