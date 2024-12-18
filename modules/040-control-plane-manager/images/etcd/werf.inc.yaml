@@ -15,6 +15,7 @@ import:
     before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/etcd"]
+  USER: 0
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}

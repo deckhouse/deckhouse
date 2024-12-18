@@ -16,4 +16,5 @@ import:
   before: setup
 docker:
   ENTRYPOINT: ["/usr/bin/kube-scheduler"]
+  USER: 0
 {{- end }}
