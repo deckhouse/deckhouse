@@ -12,4 +12,4 @@ import:
 docker:
   ENTRYPOINT: ["/snapshot-validation-webhook"]
   {{- end }}
-  {{- end }}
+{{- end }}

@@ -147,7 +147,7 @@ image: relocate-artifact
 fromImage: alt-p11-artifact
 final: false
 git:
-  - add: /tools/binary_replace/binary_replace.sh
+  - add: /tools/dev_images/additional_tools/alt/binary_replace.sh
     to: /binary_replace.sh
     stageDependencies:
       install:
