@@ -9,7 +9,7 @@ import:
   add: /tmp/istio/out/operator
   to: /usr/local/bin/
   after: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- artifact: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
   add: /var/lib/istio/manifests/
   to: /var/lib/istio/manifests/
   after: setup
@@ -17,7 +17,8 @@ docker:
   USER: "1337:1337"
   ENTRYPOINT: ["/usr/local/bin/operator"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
@@ -35,10 +36,11 @@ shell:
   - git clone --depth 1 --branch {{ $istioOperatorVersion }} https://github.com/istio/istio.git /tmp/istio/
   - cd /tmp/istio/
   - find /patches -name '*.patch' | xargs git apply --verbose
-  - echo 1.21.6 > version
+  - echo {{ $istioOperatorVersion }} > version
   - export GOPROXY={{ $.GOPROXY }}
   - GOOS=linux GOARCH=amd64 LDFLAGS='-extldflags -static -s -w' common/scripts/gobuild.sh /tmp/istio/out/ -tags=agent,disable_pgv /tmp/istio/operator/cmd/operator/
   - chown 0700 /tmp/istio/out/operator
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+final: false
 from: istio/operator:1.21.6@sha256:436ac8dd5913cb82bdad5f3975a853fa76e73d0cd92d05f6f7fd78c0a32f1332
