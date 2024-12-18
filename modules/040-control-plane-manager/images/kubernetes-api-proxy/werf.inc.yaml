@@ -8,7 +8,6 @@ import:
   before: install
 docker:
   ENTRYPOINT: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
-  USER: 0
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_22_ALPINE }}

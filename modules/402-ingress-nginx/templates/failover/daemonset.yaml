@@ -123,13 +123,8 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             memory: 20Mi
             cpu: 10m
-        securityContext:
-          # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
-          runAsNonRoot: false
-          capabilities:
-            add:
-            - NET_RAW
-            - NET_ADMIN
+        # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
+        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
         volumeMounts:
           - mountPath: /run/xtables.lock
             name: xtables-lock
