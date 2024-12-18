@@ -21,7 +21,7 @@ git:
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v2.9.11 {{ .SOURCE_REPO }}/grafana/loki/ .
+  - git clone --depth 1 --branch v2.9.10 {{ .SOURCE_REPO }}/grafana/loki.git . && rm -rf /src/.git
   - git apply /patches/*.patch --verbose
   - rm -rf tools/lambda-promtail operator
 ---
