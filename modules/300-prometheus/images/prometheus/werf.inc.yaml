@@ -122,7 +122,7 @@ shell:
   - chmod 0700 /src/prometheus /src/promtool
 ---
 artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromArtifact: relocate-artifact
+fromImage: common/relocate-artifact
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}

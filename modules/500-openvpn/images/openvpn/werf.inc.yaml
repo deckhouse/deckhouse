@@ -119,7 +119,7 @@ shell:
   - make LIBS="-all-static -lcap-ng"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: relocate-artifact
+fromImage: common/relocate-artifact
 final: false
 shell:
   beforeInstall:

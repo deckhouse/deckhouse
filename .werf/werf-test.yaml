@@ -46,7 +46,7 @@ import:
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   after: setup
-- artifact: jq
+- image: common/jq-artifact
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup

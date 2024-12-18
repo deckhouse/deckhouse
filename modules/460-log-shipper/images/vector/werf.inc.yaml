@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: alt-p11-artifact
+fromImage: common/alt-p11-artifact
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
     add: /reloader
@@ -32,7 +32,7 @@ shell:
   - rm -rf /src/vector/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

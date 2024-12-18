@@ -9,7 +9,7 @@ import:
   before: setup
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: relocate-artifact
+fromImage: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
