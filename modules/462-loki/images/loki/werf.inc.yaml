@@ -2,15 +2,16 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/loki
   to: /usr/bin/loki
   before: setup
 docker:
   ENTRYPOINT: [ "/usr/bin/loki" ]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
 - add: /{{ .ModulePath }}modules/462-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
@@ -24,10 +25,11 @@ shell:
   - git apply /patches/*.patch --verbose
   - rm -rf tools/lambda-promtail operator
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
