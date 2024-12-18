@@ -1,7 +1,7 @@
 {{- if . }}
       <table>
       {{- range . }}
-        <tr class="group-header"><th colspan="6">Source type: {{ escapeXML .Type }}<br>Source: {{ escapeXML .Target }}</br></th></tr>
+        <tr class="group-header"><th colspan="6">Source type: {{ .Type | toString | escapeXML }}<br>Source: {{ escapeXML .Target }}</br></th></tr>
         {{- if (eq (len .Vulnerabilities) 0) }}
         <tr><th colspan="6">No Vulnerabilities found</th></tr>
         {{- else }}
