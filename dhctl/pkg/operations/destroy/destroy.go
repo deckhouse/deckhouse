@@ -166,44 +166,9 @@ func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
 	case config.CloudClusterType:
 		infraDestroyer = d.cloudClusterInfra
 	case config.StaticClusterType:
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		kubeCl, err := d.d8Destroyer.GetKubeClient()
+		nodeIPs, err := d.GetMasterNodesIPs()
 		if err != nil {
-			log.DebugF("Cannot get kubernetes client. Got error: %v", err)
 			return err
-		}
-
-		var nodes *v1.NodeList
-		err = retry.NewLoop("Get control plane nodes from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
-			nodes, err = kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
-			if err != nil {
-				log.DebugF("Cannot get nodes. Got error: %v", err)
-				return err
-			}
-			return nil
-		})
-
-		if err != nil {
-			log.DebugF("Cannot get nodes after 5 attemts")
-			return err
-		}
-
-		var nodeIPs []NodeIP
-		for _, node := range nodes.Items {
-			var ip NodeIP
-
-			for _, addr := range node.Status.Addresses {
-				if addr.Type == "InternalIP" {
-					ip.internalIP = addr.Address
-				}
-				if addr.Type == "ExternalIP" {
-					ip.externalIP = addr.Address
-				}
-			}
-
-			nodeIPs = append(nodeIPs, ip)
 		}
 
 		d.staticDestroyer.IPs = nodeIPs
@@ -368,4 +333,49 @@ func processStaticHosts(hosts []session.Host, s *session.Session, stdOutErrHandl
 	}
 
 	return nil
+}
+
+func (d *ClusterDestroyer) GetMasterNodesIPs() ([]NodeIP, error) {
+	var nodeIPs []NodeIP
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	kubeCl, err := d.d8Destroyer.GetKubeClient()
+	if err != nil {
+		log.DebugF("Cannot get kubernetes client. Got error: %v", err)
+		return []NodeIP{}, err
+	}
+
+	var nodes *v1.NodeList
+	err = retry.NewLoop("Get control plane nodes from Kubernetes cluster", 5, 5*time.Second).Run(func() error {
+		nodes, err = kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
+		if err != nil {
+			log.DebugF("Cannot get nodes. Got error: %v", err)
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.DebugF("Cannot get nodes after 5 attemts")
+		return []NodeIP{}, err
+	}
+
+	for _, node := range nodes.Items {
+		var ip NodeIP
+
+		for _, addr := range node.Status.Addresses {
+			if addr.Type == "InternalIP" {
+				ip.internalIP = addr.Address
+			}
+			if addr.Type == "ExternalIP" {
+				ip.externalIP = addr.Address
+			}
+		}
+
+		nodeIPs = append(nodeIPs, ip)
+	}
+
+	return nodeIPs, nil
 }
