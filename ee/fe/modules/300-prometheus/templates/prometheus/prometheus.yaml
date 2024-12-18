@@ -93,9 +93,9 @@ spec:
     - "--working-dir=/prometheus"
     - "--verbose"
     {{- if (.Values.global.enabledModules | has "prompp") }}
-    - "walpp"
-    {{- else }}
     - "walvanilla"
+    {{- else }}
+    - "walpp"
     {{- end }}
     volumeMounts:
     - name: prometheus-main-db
