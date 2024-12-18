@@ -1,5 +1,5 @@
 ---
-title: Общие настройки
+title: KUMA
 permalink: en/security/kuma.html
 lang: en
 ---

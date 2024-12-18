@@ -1,5 +1,5 @@
 ---
-title: Общие настройки
+title: KESL
 permalink: ru/security/kesl.html
 lang: ru
 ---
