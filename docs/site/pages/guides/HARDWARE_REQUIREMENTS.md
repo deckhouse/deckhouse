@@ -38,7 +38,7 @@ In general, your cluster might include the following node types:
 
 See [Configuration Features](https://deckhouse.io/products/kubernetes-platform/guides/production.html#things-to-consider-when-configuring) of the "Going to Production" section for details on these node types.
 
-### Minimum Сluster Сonfiguration
+### Minimum Cluster Configuration
 
 Minimum cluster configuration is suitable for small projects with low load and low reliability requirements. Such a cluster includes:
 
@@ -53,7 +53,7 @@ It is up to you to define the characteristics of the worker node based on the ex
 Such a cluster configuration is risky because if a single master node fails, the entire cluster will be affected.
 {% endalert %}
 
-### Typical Сluster Сonfiguration
+### Typical Cluster Configuration
 
 This is the recommended configuration that can tolerate the failure of two master nodes. It greatly improves service availability.
 A typical cluster includes:
@@ -101,12 +101,12 @@ Each cluster node must comply with the following requirements:
 
 Regardless of the way the cluster will be operated and the workloads expected to be run in it, the following **minimum resources** are recommended for infrastructure nodes depending on their role in the cluster:
 
-* **Master node** — 4 CPUs, 8GB of RAM, 60GB of disk space on performant disk (400+ IOPS)
+* **Master node** — 4 CPUs, 8GB of RAM, 60GB of disk space on a performant disk (400+ IOPS)
 * **Frontend node** — 2 CPUs, 4GB of RAM, 50GB of disk space
-* **Monitoring node** (for high-load clusters) — 4 CPUs, 8GB of RAM, 50GB of disk space on performant disk (400+ IOPS)
+* **Monitoring node** (for high-load clusters) — 4 CPUs, 8GB of RAM, 50GB of disk space on a performant disk (400+ IOPS)
 * **System node**:
   * 2 CPUs, 4GB of RAM, 50GB of disk space — if there are dedicated monitoring nodes in the cluster
-  * 4 CPUs, 8GB of RAM, 60GB of disk space on performant disk (400+ IOPS) — if no dedicated monitoring nodes are running in the cluster
+  * 4 CPUs, 8GB of RAM, 60GB of disk space on a performant disk (400+ IOPS) — if no dedicated monitoring nodes are running in the cluster
 * **Worker node** — the requirements are similar to those for the master node, but largely depend on the nature of the workload running on the node(s).
 
 {% alert level="warning" %}
@@ -117,65 +117,65 @@ We recommend to increase the node resources if the number of enabled modules is 
 
 ### Resource Requirements for Nodes Running Production Workloads
 
-Для того чтобы в production-среде кластер не столкнулся с нехваткой ресурсов на узлах, а все модули в любых конфигурациях могли нормально работать, рекомендуются следующие системные требования для узлов:
+We recommend the following resourses for nodes to ensure that the cluster running production workloads won't run out of resources, and that all modules in any configuration will run smoothly:
 
-* **Мастер-узел** — 8 CPU, 16 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS);
-* **Frontend-узел** — 2 CPU, 4 ГБ RAM, 50 ГБ дискового пространства.
-* **Узел мониторинга** (для нагруженных кластеров) — 4 CPU, 8 ГБ RAM; 50 ГБ дискового пространства на быстром диске (400+ IOPS).
-* **Системный узел**:
-  * 6 CPU, 12 ГБ RAM, 50 ГБ дискового пространства — если в кластере есть выделенные узлы мониторинга;
-  * 8 CPU, 16 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS) — если в кластере нет выделенных узлов мониторинга.
-* **Worker-узел** — 4 CPU, 12 ГБ RAM, 60 ГБ дискового пространства на быстром диске (400+ IOPS).
+* **Master node** — 8 CPUs, 16GB of RAM, 60GB of disk space on a performant disk (400+ IOPS)
+* **Frontend node** — 2 CPUs, 4GB of RAM, 50GB of disk space
+* **Monitoring node** (for high-load clusters) — 4 CPUs, 8GB of RAM, 50GB of disk space on a performant disk (400+ IOPS)
+* **System node**:
+  * 6 CPUs, 12GB of RAM, 50GB of disk space — if there are dedicated monitoring nodes in the cluster
+  * 8 CPUs, 16GB of RAM, 60GB of disk space on a performant disk (400+ IOPS) — if no dedicated monitoring nodes are running in the cluster
+* **Worker node** — 4 CPUs, 12GB of RAM, 60GB of disk space on a performant disk (400+ IOPS)
 
-### Cluster With a Single Master Node
+### Clusters With a Single Master Node
 
 {% alert level="warning" %}
-Such a cluster lacks fault tolerance. We highly advise you against using this kind of clusters in production environments.
+These clusters lack fault tolerance. We highly advise you against using this kind of clusters in production environments.
 {% endalert %}
 
-В некоторых случаях может быть достаточно всего одного единственного узла, который будет выполнять все описанные выше роли узлов в одиночку. Например, это может быть полезно в ознакомительных целях или для каких-то совсем простых задач, не требовательных к ресурсам.
+In some cases, a single-node cluster is enough. In this case, the node will take care of all the node roles described above. For example, this may be useful if you just want to familiarize yourself with the technology or run some fairly lightweight tasks.
 
-В [быстром старте](../gs/bm/step5.html) есть инструкции по развертыванию кластера на единственном master-узле. После снятия taint с узла на нем будут запущены все компоненты кластера, входящие в выбранный bundle модулей (по умолчанию [bundle: Default](../documentation/v1/modules/002-deckhouse/configuration.html#parameters-bundle)). Для успешной работы кластера в таком режиме потребуются 6 CPU, 12 ГБ RAM и 60 ГБ дискового пространства на быстром диске (400+ IOPS). Эта конфигурация позволит запускать некоторую полезную нагрузку, при этом Deckhouse будет занимать примерно ~25% CPU, ~9 ГБ RAM, ~20 ГБ дискового пространства.
+The [Quick Start Guide](../gs/bm/step5.html) contains instructions for deploying the cluster on a single master node. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](../documentation/v1/modules/002-deckhouse/configuration.html#parameters-bundle) by default). To successfully run the cluster in this mode, you will need at least 6 CPUs, 12GB of RAM, and 60GB of disk space on a performant disk (400+ IOPS). This configuration will allow some workloads to be run, with Deckhouse consuming roughly ~25% of CPUs, ~9GB of RAM, and ~20GB of disk space.
 
-В такой конфигурации при нагрузке в 2500 RPS на условное веб-приложение (статическая страница Nginx) из 30 подов и входящем трафике в 24 Мбит/с:
+With this configuration, under a load of 2500 RPS per generic web application (e. g., a static Nginx page) consisting of 30 pods and incoming traffic of 24 Mbps, you can expect the following resource consumption figures:
 
-- Нагрузка на CPU суммарно будет повышаться до ~60%.
-- Значения RAM и диска не возрастают, но в реальности будут зависеть от кол-ва метрик, собираемых с приложений, и характера обработки полезной нагрузки.
+- CPU load will increase up to ~60% in total
+- The RAM and disk numbers mostly stay the same. In the end, however, it all comes down to the amount of metrics collected and the nature of the workload being run
 
 {% alert level="info" %}
-Рекомендуется провести нагрузочное тестирование вашего приложения, и с учетом этого скорректировать мощности сервера.
+We recommend load testing your application and adjusting the server capacity accordingly.
 {% endalert %}
 
-## Требования к аппаратным характеристикам узлов
+## Node Hardware Requirements
 
-Машины, предназначенные стать узлами будущего кластера, должны соответствовать следующим требованиям:
+The machines that you intend to turn into nodes of your future cluster must meet the following requirements:
 
-* **Архитектура ЦП** — на всех узлах должна использоваться архитектура ЦП `x86_64`.
-* **Однотипные узлы** — все узлы должны иметь одинаковую конфигурацию для каждого типа узлов. Узлы должны быть одной марки и модели с одинаковой конфигурацией ЦП, памяти и хранилища.
-* **Сетевые интерфейсы** — каждый узел должен иметь по крайней мере один сетевой интерфейс для маршрутизируемой сети.
+* **CPU architecture** — all nodes must be of the `x86_64` CPU architecture
+* **Identical nodes** — all nodes of the same type must have the same hardware configuration. Nodes must be of the same make and model with the same CPU, memory, and storage
+* **Network interfaces** — each node must have at least one network interface for the routed network
 
-## Требования к сети между узлами
+## Network Requirements
 
-Узлы должны иметь сетевой доступ друг к другу. Между узлами должны соблюдаться [сетевые политики](../documentation/v1/network_security_setup.html).
+Nodes must be able to access each other over the network. The [network policies](../documentation/v1/network_security_setup.html)  must be met.
 
-### Требования к MTU внутри сети
+### Network MTU Requirements
 
-Требований к MTU нет.
+There are no MTU requirements.
 
-### Требования к IP-адресам узлов
+### Node IP Address Requirements
 
-У каждого узла должен быть постоянный IP-адрес.
+Each node must have a permanent IP address.
 
 {% alert level="warning" %}
-В случае использования DHCP-сервера для распределения IP-адресов по узлам необходимо настроить в нём чёткое соответствие выдаваемых адресов каждому узлу. Смена IP-адреса узлов нежелательна.
+If you use a DHCP server to assign IP addresses to nodes, you must configure the DHCP server to explicitly assign addresses to each node. Changing the IP addresses of the nodes is undesirable.
 {% endalert %}
 
-## Сообщество
+## Community
 
 {% alert %}
-Следите за новостями проекта в [Telegram](https://t.me/deckhouse_ru).
+Join the project's [Telegram channel](https://t.me/deckhouse) to stay up to date.
 {% endalert %}
 
-Вступите в [сообщество](https://deckhouse.ru/community/about.html), чтобы быть в курсе важных изменений и новостей. Вы сможете общаться с людьми, занятыми общим делом. Это позволит избежать многих типичных проблем.
+Join the [Deckhouse community](https://deckhouse.io/community/about.html) for updates on important developments and news. There, you will be able to chat with others and learn from their experiences. This will help you avoid many of the typical problems.
 
-Команда Deckhouse знает, каких усилий требует организация работы production-кластера в Kubernetes. Мы будем рады, если Deckhouse позволит вам реализовать задуманное. Поделитесь своим опытом и вдохновите других на переход в Kubernetes.
+The Deckhouse team is well aware of the effort required to set up a production cluster in Kubernetes. We would be glad if Deckhouse enables you to fulfill your goals and dreams. Share your experiences and inspire others to migrate to Kubernetes.
