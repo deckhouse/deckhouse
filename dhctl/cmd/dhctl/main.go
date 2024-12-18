@@ -42,51 +42,53 @@ import (
 )
 
 var (
-	allowedCommands []string
+	allowedCommands                         []string
+	bootstrapCommand                        = Command{Name: "bootstrap", Help: "Bootstrap cluster."}
+	bootstrapPhaseCommand                   = Command{Name: "bootstrap-phase", Help: "Commands to run a single phase of the bootstrap process."}
+	executeBashibleSubcommand               = Command{Name: "execute-bashible-bundle", Help: "Prepare Master node and install Kubernetes."}
+	createResourcesSubcommand               = Command{Name: "create-resources", Help: "Create resources in Kubernetes cluster."}
+	installDeckhouseSubcommand              = Command{Name: "install-deckhouse", Help: "Install deckhouse and wait for its readiness."}
+	abortSubcommand                         = Command{Name: "abort", Help: "Delete every node, which was created during bootstrap process."}
+	baseInfrastructureSubcommand            = Command{Name: "base-infra", Help: "Create base infrastructure for Cloud Kubernetes cluster."}
+	execPostBootstarpSubcommand             = Command{Name: "exec-post-bootstrap", Help: "Test scp upload and ssh run uploaded script."}
+	serverCommand                           = Command{Name: "server", Help: "Start dhctl as GRPC server."}
+	singleThreadedServerCommand             = Command{Name: "_server", Help: "Start dhctl as GRPC server. Single threaded version."}
+	convergeCommand                         = Command{Name: "converge", Help: "Converge kubernetes cluster."}
+	autoConvergeCommand                     = Command{Name: "converge-periodical", Help: "Start service for periodical run converge."}
+	lockCommand                             = Command{Name: "lock", Help: "Converge cluster lock"}
+	lockReleaseSubcommand                   = Command{Name: "release", Help: "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful"}
+	destroyCommand                          = Command{Name: "destroy", Help: "Destroy Kubernetes cluster."}
+	terraformCommand                        = Command{Name: "terraform", Help: "Terraform commands."}
+	convergeExporterSubcommand              = Command{Name: "converge-exporter", Help: "Run terraform converge exporter."}
+	terraformCheckSubcommand                = Command{Name: "check", Help: "Check differences between state of Kubernetes cluster and Terraform state."}
+	configCommand                           = Command{Name: "comfig", Help: "Load, edit and save various dhctl configurations."}
+	parseSubcommand                         = Command{Name: "parse", Help: "Parse, validate and output configurations."}
+	renderSubcommand                        = Command{Name: "render", Help: "Render transitional configurations."}
+	editSubcommand                          = Command{Name: "edit", Help: "Change configuration files in Kubernetes cluster conveniently and safely."}
+	parseClusterConfigurationSubcommand     = Command{Name: "cluster-configuration", Help: "Parse configuration and print it."}
+	parseCloudDiscoveryDataSubcommand       = Command{Name: "cloud-discovery-data", Help: "Parse cloud discovery data and print it."}
+	renderBashibleBundleSubcommand          = Command{Name: "bashible-bundle", Help: "Render bashible bundle."}
+	renderKubeadmConfigSubcommand           = Command{Name: "kubeadm-config", Help: "Render kubeadm config."}
+	renderMasterBootstrapSubcommand         = Command{Name: "master-bootstrap-scripts", Help: "Render master bootstrap scripts."}
+	testCommand                             = Command{Name: "test", Help: "Commands to test the parts of bootstrap and converge process."}
+	testSSHConnectionSubcommand             = Command{Name: "ssh-connection", Help: "Test connection via ssh."}
+	testKubernetesAPIConnectionSubcommand   = Command{Name: "kubernetes-api-connection", Help: "Test connection to kubernetes api via ssh or directly."}
+	testSCPSubcommand                       = Command{Name: "scp", Help: "Test scp file operations."}
+	testUploadExecSubcommand                = Command{Name: "upload-exec", Help: "Test scp upload and ssh run uploaded script."}
+	testBundleSubcommand                    = Command{Name: "bashible-bundle", Help: "Test upload and execute a bundle."}
+	testControlPlaneSubcommand              = Command{Name: "control-plane", Help: "Commands to test control plane nodes."}
+	testControlPlaneManagerSubcommand       = Command{Name: "manager", Help: "Test control plane manager is ready."}
+	testControlPlaneNodeSubcommand          = Command{Name: "node", Help: "Test control plane node is ready."}
+	testDeckhouseSubcommand                 = Command{Name: "deckhouse", Help: "Install and uninstall deckhouse."}
+	testDeckhouseCreateDeploymentSubcommand = Command{Name: "create-deployment", Help: "Install deckhouse after terraform is applied successful."}
+	testDeckhouseRemoveDeploymentSubcommand = Command{Name: "remove-deployment", Help: "Delete deckhouse deployment."}
+	testWaitDeploymentReadySubcommand       = Command{Name: "deployment-ready", Help: "Wait while deployment is ready."}
 )
 
-const (
-	serverCommand                           = "server"
-	singleThreadedServerCommand             = "_server"
-	bootstrapCommand                        = "bootstrap"
-	bootstrapPhaseCommand                   = "bootstrap-phase"
-	executeBashibleSubcommand               = "execute-bashible-bundle"
-	installDeckhouseSubcommand              = "install-deckhouse"
-	createResourcesSubcommand               = "create-resources"
-	abortSubcommand                         = "abort"
-	baseInfrastructureSubcommand            = "base-infra"
-	execPostBootstarpSubcommand             = "exec-post-bootstrap"
-	convergeCommand                         = "converge"
-	autoConvergeCommand                     = "converge-periodical"
-	lockCommand                             = "lock"
-	lockReleaseSubcommand                   = "release"
-	destroyCommand                          = "destroy"
-	terraformCommand                        = "terraform"
-	convergeExporterSubcommand              = "converge-exporter"
-	terraformCheckSubcommand                = "check"
-	configCommand                           = "comfig"
-	parseSubcommand                         = "parse"
-	renderSubcommand                        = "render"
-	editSubcommand                          = "edit"
-	parseClusterConfigurationSubcommand     = "cluster-configuration"
-	parseCloudDiscoveryDataSubcommand       = "cloud-discovery-data"
-	renderBashibleBundleSubcommand          = "bashible-bundle"
-	renderKubeadmConfigSubcommand           = "kubeadm-config"
-	renderMasterBootstrapSubcommand         = "master-bootstrap-scripts"
-	testCommand                             = "test"
-	testSSHConnectionSubcommand             = "ssh-connection"
-	testKubernetesAPIConnectionSubcommand   = "kubernetes-api-connection"
-	testSCPSubcommand                       = "scp"
-	testUploadExecSubcommand                = "upload-exec"
-	testBundleSubcommand                    = "bashible-bundle"
-	testControlPlaneSubcommand              = "control-plane"
-	testControlPlaneManagerSubcommand       = "manager"
-	testControlPlaneNodeSubcommand          = "node"
-	testDeckhouseSubcommand                 = "deckhouse"
-	testDeckhouseCreateDeploymentSubcommand = "create-deployment"
-	testDeckhouseRemoveDeploymentSubcommand = "remove-deployment"
-	testWaitDeploymentReadySubcommand       = "deployment-ready"
-)
+type Command struct {
+	Name string
+	Help string
+}
 
 func main() {
 	_ = os.Mkdir(app.TmpDirName, 0o755)
@@ -110,111 +112,111 @@ func main() {
 		return nil
 	})
 
-	allowed, _ := checkCommand(serverCommand, allowedCommands)
+	allowed, _ := checkCommand(serverCommand.Name, allowedCommands)
 	if allowed {
-		commands.DefineServerCommand(kpApp, serverCommand)
+		commands.DefineServerCommand(kpApp, kingpin.Command(serverCommand.Name, serverCommand.Help))
 	}
 
-	allowed, _ = checkCommand(singleThreadedServerCommand, allowedCommands)
+	allowed, _ = checkCommand(singleThreadedServerCommand.Name, allowedCommands)
 	if allowed {
-		commands.DefineSingleThreadedServerCommand(kpApp, singleThreadedServerCommand)
+		commands.DefineSingleThreadedServerCommand(kpApp, kingpin.Command(singleThreadedServerCommand.Name, singleThreadedServerCommand.Help))
 	}
 
-	allowed, _ = checkCommand(bootstrapCommand, allowedCommands)
+	allowed, _ = checkCommand(bootstrapCommand.Name, allowedCommands)
 	if allowed {
-		bootstrap.DefineBootstrapCommand(kpApp, bootstrapCommand)
+		bootstrap.DefineBootstrapCommand(kpApp, kingpin.Command(bootstrapCommand.Name, bootstrapCommand.Help))
 	}
 
-	allowed, subcommands := checkCommand(bootstrapPhaseCommand, allowedCommands)
+	allowed, subcommands := checkCommand(bootstrapPhaseCommand.Name, allowedCommands)
 	if allowed {
-		bootstrapPhaseCmd := kpApp.Command(bootstrapPhaseCommand, "Commands to run a single phase of the bootstrap process.")
+		bootstrapPhaseCmd := kpApp.Command(bootstrapPhaseCommand.Name, bootstrapPhaseCommand.Help)
 		{
-			if checkSubcommand(executeBashibleSubcommand, subcommands) {
-				bootstrap.DefineBootstrapExecuteBashibleCommand(bootstrapPhaseCmd, executeBashibleSubcommand)
+			if checkSubcommand(executeBashibleSubcommand.Name, subcommands) {
+				bootstrap.DefineBootstrapExecuteBashibleCommand(bootstrapPhaseCmd, kingpin.Command(executeBashibleSubcommand.Name, executeBashibleSubcommand.Help))
 			}
 
-			if checkSubcommand(installDeckhouseSubcommand, subcommands) {
-				bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd, installDeckhouseSubcommand)
+			if checkSubcommand(installDeckhouseSubcommand.Name, subcommands) {
+				bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd, kingpin.Command(installDeckhouseSubcommand.Name, installDeckhouseSubcommand.Help))
 			}
 
-			if checkSubcommand(createResourcesSubcommand, subcommands) {
-				bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd, createResourcesSubcommand)
+			if checkSubcommand(createResourcesSubcommand.Name, subcommands) {
+				bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd, kingpin.Command(createResourcesSubcommand.Name, createResourcesSubcommand.Help))
 			}
 
-			if checkSubcommand(abortSubcommand, subcommands) {
-				bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd, abortSubcommand)
+			if checkSubcommand(abortSubcommand.Name, subcommands) {
+				bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd, kingpin.Command(abortSubcommand.Name, abortSubcommand.Help))
 			}
 
-			if checkSubcommand(baseInfrastructureSubcommand, subcommands) {
-				bootstrap.DefineBaseInfrastructureCommand(bootstrapPhaseCmd, baseInfrastructureSubcommand)
+			if checkSubcommand(baseInfrastructureSubcommand.Name, subcommands) {
+				bootstrap.DefineBaseInfrastructureCommand(bootstrapPhaseCmd, kingpin.Command(baseInfrastructureSubcommand.Name, baseInfrastructureSubcommand.Help))
 			}
 
-			if checkSubcommand(execPostBootstarpSubcommand, subcommands) {
-				bootstrap.DefineExecPostBootstrapScript(bootstrapPhaseCmd, execPostBootstarpSubcommand)
+			if checkSubcommand(execPostBootstarpSubcommand.Name, subcommands) {
+				bootstrap.DefineExecPostBootstrapScript(bootstrapPhaseCmd, kingpin.Command(execPostBootstarpSubcommand.Name, execPostBootstarpSubcommand.Help))
 			}
 		}
 	}
 
-	allowed, _ = checkCommand(convergeCommand, allowedCommands)
+	allowed, _ = checkCommand(convergeCommand.Name, allowedCommands)
 	if allowed {
-		commands.DefineConvergeCommand(kpApp, convergeCommand)
+		commands.DefineConvergeCommand(kpApp, kingpin.Command(convergeCommand.Name, convergeCommand.Help))
 	}
 
-	allowed, _ = checkCommand(autoConvergeCommand, allowedCommands)
+	allowed, _ = checkCommand(autoConvergeCommand.Name, allowedCommands)
 	if allowed {
-		commands.DefineAutoConvergeCommand(kpApp, autoConvergeCommand)
+		commands.DefineAutoConvergeCommand(kpApp, kingpin.Command(autoConvergeCommand.Name, autoConvergeCommand.Help))
 	}
 
-	allowed, _ = checkCommand(lockCommand, allowedCommands)
+	allowed, _ = checkCommand(lockCommand.Name, allowedCommands)
 	if allowed {
-		lockCmd := kpApp.Command(lockCommand, "Converge cluster lock")
+		lockCmd := kpApp.Command(lockCommand.Name, lockCommand.Help)
 		{
-			commands.DefineReleaseConvergeLockCommand(lockCmd, lockReleaseSubcommand)
+			commands.DefineReleaseConvergeLockCommand(lockCmd, kingpin.Command(lockReleaseSubcommand.Name, lockReleaseSubcommand.Help))
 		}
 	}
 
-	allowed, _ = checkCommand(destroyCommand, allowedCommands)
+	allowed, _ = checkCommand(destroyCommand.Name, allowedCommands)
 	if allowed {
-		commands.DefineDestroyCommand(kpApp, destroyCommand)
+		commands.DefineDestroyCommand(kpApp, kingpin.Command(destroyCommand.Name, destroyCommand.Help))
 	}
 
-	allowed, subcommands = checkCommand(terraformCommand, allowedCommands)
+	allowed, subcommands = checkCommand(terraformCommand.Name, allowedCommands)
 	if allowed {
-		terraformCmd := kpApp.Command(terraformCommand, "Terraform commands.")
+		terraformCmd := kpApp.Command(terraformCommand.Name, terraformCommand.Help)
 		{
-			if checkSubcommand(convergeExporterSubcommand, subcommands) {
-				commands.DefineTerraformConvergeExporterCommand(terraformCmd, convergeExporterSubcommand)
+			if checkSubcommand(convergeExporterSubcommand.Name, subcommands) {
+				commands.DefineTerraformConvergeExporterCommand(terraformCmd, kingpin.Command(convergeExporterSubcommand.Name, convergeExporterSubcommand.Help))
 			}
 
-			if checkSubcommand(terraformCheckSubcommand, subcommands) {
-				commands.DefineTerraformCheckCommand(terraformCmd, terraformCheckSubcommand)
+			if checkSubcommand(terraformCheckSubcommand.Name, subcommands) {
+				commands.DefineTerraformCheckCommand(terraformCmd, kingpin.Command(terraformCheckSubcommand.Name, terraformCheckSubcommand.Help))
 			}
 		}
 	}
 
-	allowed, subcommands = checkCommand(configCommand, allowedCommands)
+	allowed, subcommands = checkCommand(configCommand.Name, allowedCommands)
 	if allowed {
-		configCmd := kpApp.Command(configCommand, "Load, edit and save various dhctl configurations.")
+		configCmd := kpApp.Command(configCommand.Name, configCommand.Help)
 		{
-			if checkSubcommand(parseSubcommand, subcommands) {
-				parseCmd := configCmd.Command(parseSubcommand, "Parse, validate and output configurations.")
+			if checkSubcommand(parseSubcommand.Name, subcommands) {
+				parseCmd := configCmd.Command(parseSubcommand.Name, parseSubcommand.Help)
 				{
-					commands.DefineCommandParseClusterConfiguration(kpApp, parseCmd, parseClusterConfigurationSubcommand)
-					commands.DefineCommandParseCloudDiscoveryData(kpApp, parseCmd, parseCloudDiscoveryDataSubcommand)
+					commands.DefineCommandParseClusterConfiguration(kpApp, parseCmd, kingpin.Command(parseClusterConfigurationSubcommand.Name, parseClusterConfigurationSubcommand.Help))
+					commands.DefineCommandParseCloudDiscoveryData(kpApp, parseCmd, kingpin.Command(parseCloudDiscoveryDataSubcommand.Name, parseCloudDiscoveryDataSubcommand.Help))
 				}
 			}
 
-			if checkSubcommand(renderSubcommand, subcommands) {
-				renderCmd := configCmd.Command(renderSubcommand, "Render transitional configurations.")
+			if checkSubcommand(renderSubcommand.Name, subcommands) {
+				renderCmd := configCmd.Command(renderSubcommand.Name, renderSubcommand.Help)
 				{
-					commands.DefineRenderBashibleBundle(renderCmd, renderBashibleBundleSubcommand)
-					commands.DefineRenderKubeadmConfig(renderCmd, renderKubeadmConfigSubcommand)
-					commands.DefineRenderMasterBootstrap(renderCmd, renderMasterBootstrapSubcommand)
+					commands.DefineRenderBashibleBundle(renderCmd, kingpin.Command(renderBashibleBundleSubcommand.Name, renderBashibleBundleSubcommand.Help))
+					commands.DefineRenderKubeadmConfig(renderCmd, kingpin.Command(renderKubeadmConfigSubcommand.Name, renderKubeadmConfigSubcommand.Help))
+					commands.DefineRenderMasterBootstrap(renderCmd, kingpin.Command(renderMasterBootstrapSubcommand.Name, renderMasterBootstrapSubcommand.Help))
 				}
 			}
 
-			if checkSubcommand(editSubcommand, subcommands) {
-				editCmd := configCmd.Command(editSubcommand, "Change configuration files in Kubernetes cluster conveniently and safely.")
+			if checkSubcommand(editSubcommand.Name, subcommands) {
+				editCmd := configCmd.Command(editSubcommand.Name, editSubcommand.Help)
 				{
 					commands.DefineEditCommands(editCmd /* wConnFlags */, true)
 				}
@@ -222,45 +224,45 @@ func main() {
 		}
 	}
 
-	allowed, subcommands = checkCommand(testCommand, allowedCommands)
+	allowed, subcommands = checkCommand(testCommand.Name, allowedCommands)
 	if allowed {
-		testCmd := kpApp.Command(testCommand, "Commands to test the parts of bootstrap and converge process.")
+		testCmd := kpApp.Command(testCommand.Help, testCommand.Help)
 		{
-			if checkSubcommand(testSSHConnectionSubcommand, subcommands) {
-				commands.DefineTestSSHConnectionCommand(testCmd, testSSHConnectionSubcommand)
+			if checkSubcommand(testSSHConnectionSubcommand.Name, subcommands) {
+				commands.DefineTestSSHConnectionCommand(testCmd, kingpin.Command(testSSHConnectionSubcommand.Name, testSSHConnectionSubcommand.Help))
 			}
 
-			if checkSubcommand(testKubernetesAPIConnectionSubcommand, subcommands) {
-				commands.DefineTestKubernetesAPIConnectionCommand(testCmd, testKubernetesAPIConnectionSubcommand)
+			if checkSubcommand(testKubernetesAPIConnectionSubcommand.Name, subcommands) {
+				commands.DefineTestKubernetesAPIConnectionCommand(testCmd, kingpin.Command(testKubernetesAPIConnectionSubcommand.Name, testKubernetesAPIConnectionSubcommand.Help))
 			}
 
-			if checkSubcommand(testSCPSubcommand, subcommands) {
-				commands.DefineTestSCPCommand(testCmd, testSCPSubcommand)
+			if checkSubcommand(testSCPSubcommand.Name, subcommands) {
+				commands.DefineTestSCPCommand(testCmd, kingpin.Command(testSCPSubcommand.Name, testSCPSubcommand.Help))
 			}
 
-			if checkSubcommand(testUploadExecSubcommand, subcommands) {
-				commands.DefineTestUploadExecCommand(testCmd, testUploadExecSubcommand)
+			if checkSubcommand(testUploadExecSubcommand.Name, subcommands) {
+				commands.DefineTestUploadExecCommand(testCmd, kingpin.Command(testUploadExecSubcommand.Name, testUploadExecSubcommand.Help))
 			}
 
-			if checkSubcommand(testBundleSubcommand, subcommands) {
-				commands.DefineTestBundle(testCmd, testBundleSubcommand)
+			if checkSubcommand(testBundleSubcommand.Name, subcommands) {
+				commands.DefineTestBundle(testCmd, kingpin.Command(testBundleSubcommand.Name, testBundleSubcommand.Help))
 			}
 
-			if checkSubcommand(testControlPlaneSubcommand, subcommands) {
-				controlPlaneCmd := testCmd.Command(testControlPlaneSubcommand, "Commands to test control plane nodes.")
+			if checkSubcommand(testControlPlaneSubcommand.Name, subcommands) {
+				controlPlaneCmd := testCmd.Command(testControlPlaneSubcommand.Name, testControlPlaneSubcommand.Help)
 				{
-					commands.DefineTestControlPlaneManagerReadyCommand(controlPlaneCmd, testControlPlaneManagerSubcommand)
-					commands.DefineTestControlPlaneNodeReadyCommand(controlPlaneCmd, testControlPlaneNodeSubcommand)
+					commands.DefineTestControlPlaneManagerReadyCommand(controlPlaneCmd, kingpin.Command(testControlPlaneManagerSubcommand.Name, testControlPlaneManagerSubcommand.Help))
+					commands.DefineTestControlPlaneNodeReadyCommand(controlPlaneCmd, kingpin.Command(testControlPlaneNodeSubcommand.Name, testControlPlaneNodeSubcommand.Help))
 				}
 			}
 		}
 
-		if checkSubcommand(testDeckhouseSubcommand, subcommands) {
-			deckhouseCmd := testCmd.Command(testDeckhouseSubcommand, "Install and uninstall deckhouse.")
+		if checkSubcommand(testDeckhouseSubcommand.Name, subcommands) {
+			deckhouseCmd := testCmd.Command(testDeckhouseSubcommand.Name, testDeckhouseSubcommand.Help)
 			{
-				commands.DefineDeckhouseCreateDeployment(deckhouseCmd, testDeckhouseCreateDeploymentSubcommand)
-				commands.DefineDeckhouseRemoveDeployment(deckhouseCmd, testDeckhouseRemoveDeploymentSubcommand)
-				commands.DefineWaitDeploymentReadyCommand(deckhouseCmd, testWaitDeploymentReadySubcommand)
+				commands.DefineDeckhouseCreateDeployment(deckhouseCmd, kingpin.Command(testDeckhouseCreateDeploymentSubcommand.Name, testDeckhouseCreateDeploymentSubcommand.Help))
+				commands.DefineDeckhouseRemoveDeployment(deckhouseCmd, kingpin.Command(testDeckhouseRemoveDeploymentSubcommand.Name, testDeckhouseRemoveDeploymentSubcommand.Help))
+				commands.DefineWaitDeploymentReadyCommand(deckhouseCmd, kingpin.Command(testWaitDeploymentReadySubcommand.Name, testWaitDeploymentReadySubcommand.Help))
 			}
 		}
 	}

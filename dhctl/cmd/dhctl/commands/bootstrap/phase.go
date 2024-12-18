@@ -26,8 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
-func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Install deckhouse and wait for its readiness.")
+func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
@@ -52,8 +51,7 @@ func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause, command s
 	return cmd
 }
 
-func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Prepare Master node and install Kubernetes.")
+func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
@@ -75,8 +73,7 @@ func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause, command st
 	return cmd
 }
 
-func DefineCreateResourcesCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Create resources in Kubernetes cluster.")
+func DefineCreateResourcesCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigsForResourcesPhaseFlags(cmd)
@@ -99,8 +96,7 @@ func DefineCreateResourcesCommand(parent *kingpin.CmdClause, command string) *ki
 	return cmd
 }
 
-func DefineBootstrapAbortCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Delete every node, which was created during bootstrap process.")
+func DefineBootstrapAbortCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
@@ -120,8 +116,7 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause, command string) *kin
 	return cmd
 }
 
-func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Create base infrastructure for Cloud Kubernetes cluster.")
+func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineCacheFlags(cmd)
 	app.DefineDropCacheFlags(cmd)
@@ -136,8 +131,7 @@ func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause, command string) 
 	return cmd
 }
 
-func DefineExecPostBootstrapScript(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Test scp upload and ssh run uploaded script.")
+func DefineExecPostBootstrapScript(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
 	app.DefineBecomeFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)

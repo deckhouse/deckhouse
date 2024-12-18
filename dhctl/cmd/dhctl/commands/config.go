@@ -33,8 +33,7 @@ var (
 	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
 )
 
-func DefineRenderBashibleBundle(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Render bashible bundle.")
+func DefineRenderBashibleBundle(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 	app.DefineRenderBundleFlags(cmd)
@@ -69,8 +68,7 @@ func DefineRenderBashibleBundle(parent *kingpin.CmdClause, command string) *king
 	return cmd
 }
 
-func DefineRenderMasterBootstrap(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Render master bootstrap scripts.")
+func DefineRenderMasterBootstrap(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 	app.DefineRenderBundleFlags(cmd)
@@ -94,8 +92,7 @@ func DefineRenderMasterBootstrap(parent *kingpin.CmdClause, command string) *kin
 	return cmd
 }
 
-func DefineRenderKubeadmConfig(parent *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	cmd := parent.Command(command, "Render kubeadm config.")
+func DefineRenderKubeadmConfig(parent *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 
@@ -118,16 +115,10 @@ func DefineRenderKubeadmConfig(parent *kingpin.CmdClause, command string) *kingp
 	return cmd
 }
 
-func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCmd *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	var parseCmd *kingpin.CmdClause
-	if parentCmd == nil {
-		parseCmd = kpApp.Command("parse-"+command, "Parse configuration and print it.")
-	} else {
-		parseCmd = parentCmd.Command(command, "Parse configuration and print it.")
-	}
-	app.DefineInputOutputRenderFlags(parseCmd)
+func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCmd *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineInputOutputRenderFlags(cmd)
 
-	parseCmd.Action(func(c *kingpin.ParseContext) error {
+	cmd.Action(func(c *kingpin.ParseContext) error {
 		var err error
 		var metaConfig *config.MetaConfig
 
@@ -163,19 +154,13 @@ func DefineCommandParseClusterConfiguration(kpApp *kingpin.Application, parentCm
 		return nil
 	})
 
-	return parseCmd
+	return cmd
 }
 
-func DefineCommandParseCloudDiscoveryData(kpApp *kingpin.Application, parentCmd *kingpin.CmdClause, command string) *kingpin.CmdClause {
-	var parseCmd *kingpin.CmdClause
-	if parentCmd == nil {
-		parseCmd = kpApp.Command("parse-"+command, "Parse cloud discovery data and print it.")
-	} else {
-		parseCmd = parentCmd.Command(command, "Parse cloud discovery data and print it.")
-	}
-	app.DefineInputOutputRenderFlags(parseCmd)
+func DefineCommandParseCloudDiscoveryData(kpApp *kingpin.Application, parentCmd *kingpin.CmdClause, cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineInputOutputRenderFlags(cmd)
 
-	parseCmd.Action(func(c *kingpin.ParseContext) error {
+	cmd.Action(func(c *kingpin.ParseContext) error {
 		var err error
 		var data []byte
 
@@ -211,7 +196,7 @@ func DefineCommandParseCloudDiscoveryData(kpApp *kingpin.Application, parentCmd 
 		return nil
 	})
 
-	return parseCmd
+	return cmd
 }
 
 func InitGlobalVars(pwd string) {
