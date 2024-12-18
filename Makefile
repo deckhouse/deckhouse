@@ -215,7 +215,7 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p trivy-${TRIVY_VERSION}
 	# curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
-	curl --header "PRIVATE-TOKEN: ${TRIVY_TOKEN}" https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o ./bin/trivy-${TRIVY_VERSION}/trivy
+	curl --header "PRIVATE-TOKEN: ${TRIVY_TOKEN}" https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
