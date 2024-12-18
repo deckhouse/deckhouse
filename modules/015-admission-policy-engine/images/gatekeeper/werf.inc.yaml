@@ -10,7 +10,7 @@ docker:
   ENTRYPOINT: [ "/bin/gatekeeper" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: src-artifact
+fromImage: common/src-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
