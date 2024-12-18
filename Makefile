@@ -117,7 +117,6 @@ deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promto
 ##@ Security
 bin:
 	mkdir -p bin
-	ls -ld bin
 
 ##@ Tests
 
@@ -213,16 +212,17 @@ render-workflow: ## Generate CI workflow instructions.
 bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 	cd tools/regcopy; go build -o bin/regcopy
 
-bin/trivy-${TRIVY_VERSION}/trivy:
-    ls -ld bin
-	mkdir -p trivy-${TRIVY_VERSION}
+bin/trivy-test/trivy:
+	mkdir -p bin/trivy-${TRIVY_VERSION}
 	# curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
-	curl --header "PRIVATE-TOKEN: ${TRIVY_TOKEN}" https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o trivy-${TRIVY_VERSION}/trivy
+	curl --header "PRIVATE-TOKEN: ${TRIVY_TOKEN}" https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
-bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
-	rm -f trivy
-	ln -s trivy-${TRIVY_VERSION}/trivy trivy
+bin/trivy: bin bin/trivy-test/trivy
+	rm -rf bin/trivy
+	ln -s bin/trivy-${TRIVY_VERSION}/trivy bin/trivy
+	ls  -l bin/trivy-${TRIVY_VERSION}/trivy
+	cat bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: cve-report cve-base-images
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
