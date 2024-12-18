@@ -19,21 +19,22 @@ import:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/openvpn/src/openvpn/openvpn
   to: /usr/sbin/openvpn
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
   add: /src/entrypoint
   to: /entrypoint
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: src-artifact
+final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
   to: /src/entrypoint
@@ -52,10 +53,11 @@ shell:
   - git clone --depth 1 -b v{{ $libcapNgVersion }} {{ .SOURCE_REPO }}/stevegrubb/libcap-ng.git /src/libcap-ng && cd /src/libcap-ng && rm -rf .git
   - git clone --depth 1 -b v{{ $openvpnVersion }} {{ .SOURCE_REPO }}/OpenVPN/openvpn.git /src/openvpn && cd /src/openvpn && rm -rf .git
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/entrypoint
   to: /src
   before: install
@@ -71,10 +73,11 @@ shell:
   - chown -R 64535:64535 /src
   - chmod 0755 /src/entrypoint
 ---
-artifact: {{ .ModuleName }}/openssl-artifact
+image: {{ .ModuleName }}/openssl-artifact
 from: {{ .Images.BASE_ALPINE }}
+final: false
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/openssl
   to: /src
   before: install
@@ -88,14 +91,15 @@ shell:
   - make -j4
   - make install_sw DESTDIR=/openssl
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_ALPINE }}
+final: false
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
-- artifact: {{ .ModuleName }}/openssl-artifact
+- image: {{ .ModuleName }}/openssl-artifact
   add: /openssl
   to: /
   before: install
@@ -114,8 +118,9 @@ shell:
   - ./configure --enable-static --disable-shared --disable-debug --disable-unit-tests --disable-lzo --disable-lz4 --disable-plugin-auth-pam --disable-plugin-down-root --disable-dco
   - make LIBS="-all-static -lcap-ng"
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromArtifact: common/relocate-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
+fromImage: relocate-artifact
+final: false
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}

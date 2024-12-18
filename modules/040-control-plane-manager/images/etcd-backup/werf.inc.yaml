@@ -13,15 +13,16 @@ import:
   add: /etcdctl
   to: /bin/etcdctl
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /relocate
   to: /
   before: setup
 docker:
   ENTRYPOINT: ["/entrypoint.sh"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromArtifact: common/relocate-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: relocate-artifact
+final: false
 shell:
   beforeInstall:
   - apt-get update

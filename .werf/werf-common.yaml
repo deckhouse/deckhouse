@@ -1,5 +1,6 @@
-artifact: jq-src-artifact
-fromArtifact: src-artifact
+image: jq-src-artifact
+fromImage: src-artifact
+final: false
 shell:
   install:
     - cd /src
@@ -8,10 +9,11 @@ shell:
     - mkdir -p docs/content/manual
     - touch docs/content/manual/manual.yml
 ---
-artifact: jq
+image: jq
 from: {{ $.Images.BASE_ALPINE }}
+final: false
 import:
-  - artifact: jq-src-artifact
+  - image: jq-src-artifact
     add: /src
     to: /src
     before: install
@@ -32,19 +34,21 @@ shell:
     - make LDFLAGS=-all-static
     - make prefix=/usr install
 ---
-artifact: yq4-src-artifact
-fromArtifact: src-artifact
+image: yq4-src-artifact
+fromImage: src-artifact
+final: false
 shell:
   install:
     - git clone --depth 1 {{ .SOURCE_REPO }}/mikefarah/yq --branch "v4.44.3" /src
 ---
-artifact: yq4-artifact
+image: yq4-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 import:
-  - artifact: yq4-src-artifact
+  - image: yq4-src-artifact
     add: /src
     to: /src
     before: install
@@ -54,16 +58,18 @@ shell:
     - cd /src
     - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /usr/local/bin/yq
 ---
-artifact: semver-src-artifact
-fromArtifact: src-artifact
+image: semver-src-artifact
+fromImage: src-artifact
+final: false
 shell:
   install:
     - git clone --depth 1 {{ .SOURCE_REPO }}/fsaintjacques/semver-tool --branch 2.1.0 /src
 ---
-artifact: semver-artifact
+image: semver-artifact
 from: {{ $.Images.BASE_ALPINE }}
+final: false
 import:
-  - artifact: semver-src-artifact
+  - image: semver-src-artifact
     add: /src
     to: /src
     before: install
@@ -75,8 +81,9 @@ shell:
     - cd /src
     - make install
 ---
-artifact: tini-src-artifact
-fromArtifact: src-artifact
+image: tini-src-artifact
+fromImage: src-artifact
+final: false
 git:
   - add: /patches/tini
     to: /patches
@@ -89,8 +96,9 @@ shell:
     - cd /src
     - git apply /patches/*.patch --verbose
 ---
-artifact: tini-artifact
+image: tini-artifact
 from: {{ $.Images.BASE_ALPINE }}
+final: false
 import:
   - artifact: tini-src-artifact
     add: /src
@@ -133,3 +141,17 @@ shell:
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 docker:
   USER: 64535
+---
+# base artifact to do relocate
+image: relocate-artifact
+fromImage: alt-p11-artifact
+final: false
+git:
+  - add: /tools/binary_replace/binary_replace.sh
+    to: /binary_replace.sh
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+  - apt-get install -y glibc-utils
