@@ -268,7 +268,7 @@ kubectl apply -f - <<EOF
 kubectl edit moduleupdatepolicies.v1alpha1.deckhouse.io название_политики
 ```
 
-Заменить старый селектор в политики обновления на пустой, чтобы селектор не мог найти модули:
+Заменить старый селектор в ModuleUpdatePolicy на пустой, чтобы селектор не мог найти модули:
 
 ```yaml
  moduleReleaseSelector:
