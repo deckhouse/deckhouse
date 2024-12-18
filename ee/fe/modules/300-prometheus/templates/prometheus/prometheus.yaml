@@ -91,6 +91,7 @@ spec:
     command:
     - /bin/prompptool
     - "--working-dir=/prometheus"
+    - "--verbose"
     {{- if (.Values.global.enabledModules | has "prompp") }}
     - "walpp"
     {{- else }}
