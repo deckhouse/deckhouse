@@ -465,6 +465,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	"systemRegistry": map[string]interface{}{
 		"dockerAuth":            "imageHash-systemRegistry-dockerAuth",
 		"dockerDistribution":    "imageHash-systemRegistry-dockerDistribution",
+		"mirrorer":              "imageHash-systemRegistry-mirrorer",
 		"seaweedfs":             "imageHash-systemRegistry-seaweedfs",
 		"systemRegistryManager": "imageHash-systemRegistry-systemRegistryManager",
 	},
