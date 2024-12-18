@@ -1,5 +1,9 @@
 ## Patches
 
+### go mod
+
+Update go mod for fix vuln's
+
 ### Client allowed groups
 
 With this patch, Dex can authorize requests for specific `OAuth2Client`s based on user's groups.
