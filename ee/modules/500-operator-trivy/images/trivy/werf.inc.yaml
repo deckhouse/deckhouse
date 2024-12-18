@@ -13,8 +13,8 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ .ModulePath }}modules/462-{{ .ModuleName }}/images/{{ .ImageName }}/patches/trivy
-  to: /patches/trivy
+- add: /{{ .ModulePath }}modules/{{.ModulePriority}}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
   stageDependencies:
     install:
     - '**/*'
