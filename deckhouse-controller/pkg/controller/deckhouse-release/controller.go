@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	aoapp "github.com/flant/addon-operator/pkg/app"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
@@ -49,7 +50,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	aoapp "github.com/flant/addon-operator/pkg/app"
 )
 
 const (
@@ -282,7 +282,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	if registrySecret != nil {
 		if registrySecret.ClusterIsBootstrapped != "" {
-			clusterBootstrapping = string(registrySecret.ClusterIsBootstrapped) != `"true"`
+			clusterBootstrapping = registrySecret.ClusterIsBootstrapped != "true"
 		}
 
 		imagesRegistry = registrySecret.ImageRegistry
