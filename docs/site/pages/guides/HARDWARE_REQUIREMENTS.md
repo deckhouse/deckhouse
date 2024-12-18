@@ -95,7 +95,7 @@ Each cluster node must comply with the following requirements:
 * access to the default package repositories for the operating system in use
 * no container runtime packages (e.g., containerd or Docker) must be present on the node
 * the `cloud-utils` and `cloud-init` packages must be installed on the node **and their corresponding services must be running**
-* all nodes must have access to time servers (NTP) so that the [Chrony](../documentation/v1/modules/chrony/) module can synchronize time
+* all nodes must have access to time servers (NTP) so that the [chrony](../documentation/v1/modules/chrony/) module can synchronize time
 
 ### Minimum Node Resource Requirements
 
