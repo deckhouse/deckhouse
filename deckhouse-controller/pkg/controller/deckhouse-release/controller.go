@@ -281,12 +281,11 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	if registrySecret != nil {
-		clusterBootstrapped, ok := registrySecret.Data["clusterIsBootstrapped"]
-		if ok {
-			clusterBootstrapping = string(clusterBootstrapped) != `"true"`
+		if registrySecret.ClusterIsBootstrapped != "" {
+			clusterBootstrapping = string(registrySecret.ClusterIsBootstrapped) != `"true"`
 		}
 
-		imagesRegistry = string(registrySecret.Data["imagesRegistry"])
+		imagesRegistry = registrySecret.ImageRegistry
 	}
 
 	// TODO: ready check service?
@@ -495,11 +494,10 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 
 	var opts []cr.Option
 	if registrySecret != nil {
-		drs, _ := utils.ParseDeckhouseRegistrySecret(registrySecret.Data)
 		rconf := &utils.RegistryConfig{
-			DockerConfig: drs.DockerConfig,
-			Scheme:       drs.Scheme,
-			CA:           drs.CA,
+			DockerConfig: registrySecret.DockerConfig,
+			Scheme:       registrySecret.Scheme,
+			CA:           registrySecret.CA,
 			UserAgent:    r.clusterUUID,
 		}
 		opts = utils.GenerateRegistryOptions(rconf, r.logger)
@@ -558,7 +556,7 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 	return nil
 }
 
-func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*corev1.Secret, error) {
+func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*utils.DeckhouseRegistrySecret, error) {
 	var secret corev1.Secret
 	key := types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-registry"}
 	err := r.client.Get(ctx, key, &secret)
@@ -566,7 +564,9 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*co
 		return nil, fmt.Errorf("get secret %s: %w", key, err)
 	}
 
-	return &secret, nil
+	regSecret, _ := utils.ParseDeckhouseRegistrySecret(secret.Data)
+
+	return regSecret, nil
 }
 
 func (r *deckhouseReleaseReconciler) isDeckhousePodReady() bool {
