@@ -4,7 +4,7 @@ fromImage: common/src-artifact
 final: false
 shell:
   install:
-  - git clone --depth 1 {{ .SOURCE_REPO }}/fsaintjacques/semver-tool --branch 2.1.0 /src
+  - git clone --depth 1 {{ .SOURCE_REPO }}/fsaintjacques/semver-tool --branch 2.1.0 /src && rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ $.Images.BASE_ALPINE }}

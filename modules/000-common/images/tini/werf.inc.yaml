@@ -10,7 +10,7 @@ git:
       - '**/*'
 shell:
   install:
-    - git clone --depth 1 {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0 /src
+    - git clone --depth 1 {{ .SOURCE_REPO }}/krallin/tini --branch v0.19.0 /src && rm -rf /src/.git
     - cd /src
     - git apply /patches/*.patch --verbose
 ---
