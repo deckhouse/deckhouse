@@ -92,7 +92,27 @@ entries:
         - title:
             en: Security software settings
             ru: Настройка ПО безопасности
-          url: /security_software_setup.html
+          folders:
+            - title:
+                en: SIEM
+                ru: SIEM
+              folders:
+                - title:
+                    en: KUMA
+                    ru: KUMA
+                  url: /security/kuma.html
+            - title:
+                en: Security scanners
+                ru: Сканеры безопасности
+              folders:
+                - title:
+                    en: Common settings
+                    ru: Общие настройки
+                  url: /security_software_setup.html
+                - title:
+                    en: KESL
+                    ru: KESL
+                  url: /security/kesl.html
         - title:
             en: Alerts
             ru: Алерты
