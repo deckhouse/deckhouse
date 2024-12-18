@@ -282,7 +282,8 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	if registrySecret != nil {
 		if registrySecret.ClusterIsBootstrapped != "" {
-			clusterBootstrapping = registrySecret.ClusterIsBootstrapped != "true"
+			// is it working???
+			clusterBootstrapping = registrySecret.ClusterIsBootstrapped != `"true"`
 		}
 
 		imagesRegistry = registrySecret.ImageRegistry
