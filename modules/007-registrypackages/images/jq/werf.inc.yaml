@@ -31,7 +31,7 @@ git:
     setup:
     - '**/*'
 import:
-- artifact: jq
+- image: common/jq-artifact
   add: /usr/bin/jq
   to: /jq
   before: setup

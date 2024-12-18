@@ -89,7 +89,7 @@ shell:
   - npm run build
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: relocate-artifact
+fromImage: common/relocate-artifact
 final: false
 import:
 - artifact: {{ .ModuleName }}/openssl-artifact
