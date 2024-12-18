@@ -6,7 +6,7 @@ mount:
   to: /go/pkg
 import:
 - image: prometheus/prometheus-promu-artifact
-  add: /promu/promu
+  add: /src/promu
   to: /bin/promu
   before: install
 shell:
