@@ -100,6 +100,7 @@ spec:
     volumeMounts:
     - name: prometheus-main-db
       mountPath: /prometheus
+      subPath: prometheus-db
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
