@@ -1,0 +1,20 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: observability
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+    rbac.deckhouse.io/kind: use
+  name: d8:use:capability:module:observability:view
+rules:
+- apiGroups:
+  - observability.deckhouse.io
+  resources:
+  - metrics
+  - observabilitydashboards
+  verbs:
+  - get
+  - list
+  - watch

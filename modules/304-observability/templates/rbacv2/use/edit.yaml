@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: observability
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/kind: use
+  name: d8:use:capability:module:observability:edit
+rules:
+- apiGroups:
+  - observability.deckhouse.io
+  resources:
+  - observabilitydashboards
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
