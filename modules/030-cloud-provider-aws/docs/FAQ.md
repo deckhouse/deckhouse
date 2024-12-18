@@ -131,4 +131,4 @@ The progress of the process can be observed in events using the command `kubectl
 
    Apply this policy in `Amazon ECR` > `Private registry` > `Repositories` > `{{ name }}` > `Permissions`.
 
-2. Add to [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies) `ecr:GetAuthorizationToken`.
+2. Add `ecr:GetAuthorizationToken` to [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies).
