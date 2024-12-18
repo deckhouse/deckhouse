@@ -3,7 +3,7 @@
 ---
 # Based on https://github.com/istio/istio/blob/1.19.7/operator/docker/Dockerfile.operator
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ $.Images.BASE_ALT }}
+from: {{ $.Images.BASE_DISTROLESS }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /tmp/istio/out/operator
