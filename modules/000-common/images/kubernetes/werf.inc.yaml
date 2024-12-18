@@ -46,5 +46,6 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version
+  - go mod vendor
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
 {{- end }}
