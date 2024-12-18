@@ -11,13 +11,13 @@ Kaspersky Unified Monitoring and Analysis Platform (KUMA) объединяет �
 #### Описание настроек
 
 {% alert level="warning" %}
-Для работы с KUMA должен быть **обязательно включён** модуль [log-shipper](modules/log-shipper/).
+Для работы с KUMA должен быть **обязательно включён** модуль [log-shipper](../modules/log-shipper/).
 {% endalert %}
 
 Для отправки данных [в KUMA](https://go.kaspersky.com/ru-kuma) необходимо настроить на стороне DKP следующие ресурсы:
 
-- [`ClusterLogDestination`](modules/log-shipper/cr.html#clusterlogdestination);
-- [`ClusterLoggingConfig`](modules/log-shipper/cr.html#clusterloggingconfig).
+- [`ClusterLogDestination`](../modules/log-shipper/cr.html#clusterlogdestination);
+- [`ClusterLoggingConfig`](../modules/log-shipper/cr.html#clusterloggingconfig).
 
 {% alert level="info" %}
 На стороне KUMA должны быть настроены необходимые ресурсы для приёма событий.

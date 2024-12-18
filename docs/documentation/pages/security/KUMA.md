@@ -15,13 +15,13 @@ which is the most common target for attackers, against modern cyber threats.
 #### Configuration details
 
 {% alert level="warning" %}
-To work with KUMA, you **must enable** the [log-shipper](modules/log-shipper/) module.
+To work with KUMA, you **must enable** the [log-shipper](../modules/log-shipper/) module.
 {% endalert %}
 
 To send data to [KUMA](https://support.kaspersky.com/help/kuma/1.5/en-US/217694.htm), configure the following resources in DKP:
 
-- [`ClusterLogDestination`](modules/log-shipper/cr.html#clusterlogdestination)
-- [`ClusterLoggingConfig`](modules/log-shipper/cr.html#clusterloggingconfig)
+- [`ClusterLogDestination`](../modules/log-shipper/cr.html#clusterlogdestination)
+- [`ClusterLoggingConfig`](../modules/log-shipper/cr.html#clusterloggingconfig)
 
 {% alert level="info" %}
 Make sure to configure the necessary resources in KUMA to enable event collection.
