@@ -1,6 +1,6 @@
 module mirrorer
 
-go 1.23.4
+go 1.23
 
 require github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241217181326-61486be4aa10
 
