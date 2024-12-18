@@ -88,6 +88,7 @@ spec:
   initContainers:
   - name: prompptool
     image: {{ include "helm_lib_module_image" (list (include "prompp-context" . | fromYaml) "prompptool") }}
+    workingDir: /prometheus
     command:
     - /bin/prompptool
     - "--working-dir=/prometheus"
@@ -101,11 +102,12 @@ spec:
     - name: prometheus-main-db
       mountPath: /prometheus
       subPath: prometheus-db
-    securityContext:
-      fsGroup: 64535
-      runAsGroup: 64535
-      runAsNonRoot: true
-      runAsUser: 64535
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
