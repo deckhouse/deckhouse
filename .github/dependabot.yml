@@ -106,6 +106,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/038-system-registry/images/mirrorer/app"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/038-system-registry/images/system-registry-manager/app"
   labels:
   - "type/dependencies"
