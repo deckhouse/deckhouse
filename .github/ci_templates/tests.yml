@@ -14,7 +14,7 @@ docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xter
 
 {!{ define "dmtlint_run_args" }!}
 # <template: dmt_lint_run_args>
-args: 'dmt lint -l INFO /modules'
+args: 'make dmt-lint'
 docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg'
 # </template: dmt_lint_run_args>
 {!{- end -}!}

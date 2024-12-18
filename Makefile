@@ -21,26 +21,31 @@ ifeq ($(OS_NAME), Linux)
 	JQ_PLATFORM = linux64
 	YQ_PLATFORM = linux
 	TRDL_PLATFORM = linux
+	DMT_PLATFORM = linux
 	GH_PLATFORM = linux
 else ifeq ($(OS_NAME), Darwin)
 	JQ_PLATFORM = osx-amd64
 	YQ_PLATFORM = darwin
 	TRDL_PLATFORM = darwin
+	DMT_PLATFORM = darwin
 	GH_PLATFORM = macOS
 endif
 JQ_VERSION = 1.6
+DMT_VERSION = 0.0.21
 
 # Set arch for deps
 ifeq ($(PLATFORM_NAME), x86_64)
 	YQ_ARCH = amd64
 	CRANE_ARCH = x86_64
 	TRDL_ARCH = amd64
+	DMT_ARCH = amd64
 	CRANE_ARCH = x86_64
 	GH_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
 	YQ_ARCH = arm64
 	CRANE_ARCH = arm64
 	TRDL_ARCH = arm64
+	DMT_ARCH = arm64
 	CRANE_ARCH = arm64
 	GH_ARCH = arm64
 endif
@@ -112,7 +117,7 @@ TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf bin/gh ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf bin/gh bin/dmt ## Install dev dependencies.
 
 ##@ Security
 bin:
@@ -150,6 +155,18 @@ tests-modules: ## Run unit tests for modules hooks and templates.
 tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered with different input values generated from values examples.
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} ./testing/matrix/ -v
+
+dmt-lint: bin/dmt
+	mkdir -p bin/dmt-$(DMT_VERSION)/run
+	cp -R modules/* bin/dmt-$(DMT_VERSION)/run
+	cp -R ee/modules/* bin/dmt-$(DMT_VERSION)/run
+	cp -R ee/be/modules/* bin/dmt-$(DMT_VERSION)/run
+	cp -R ee/fe/modules/* bin/dmt-$(DMT_VERSION)/run
+	cp -R ee/se/modules/* bin/dmt-$(DMT_VERSION)/run
+	cp -R ee/se-plus/modules/* bin/dmt-$(DMT_VERSION)/run
+	bin/dmt lint -l INFO bin/dmt-$(DMT_VERSION)/run
+	rm -rf bin/dmt-$(DMT_VERSION)/run/*
+
 
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
@@ -292,6 +309,13 @@ bin/jq-$(JQ_VERSION)/jq:
 bin/jq: bin bin/jq-$(JQ_VERSION)/jq ## Install jq deps for update-patchversion script.
 	rm -f bin/jq
 	ln -s jq-$(JQ_VERSION)/jq bin/jq
+
+.PHONY: bin/dmt
+bin/dmt: bin
+	mkdir -p bin/dmt-$(DMT_VERSION)
+	rm -f bin/dmt
+	curl -sSfL https://github.com/deckhouse/dmt/releases/download/v$(DMT_VERSION)/dmt-$(DMT_VERSION)-$(DMT_PLATFORM)-$(DMT_ARCH).tar.gz | tar -zx --strip-components 1 -C bin/dmt-$(DMT_VERSION)
+	ln -s dmt-$(DMT_VERSION)/dmt bin/dmt
 
 bin/crane: bin ## Install crane deps for update-patchversion script.
 	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane

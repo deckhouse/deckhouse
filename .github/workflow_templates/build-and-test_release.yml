@@ -248,8 +248,7 @@ jobs:
     name: DMT Lint
     needs:
     - git_info
-    - build_fe
-{!{ tmpl.Exec "tests_template" (slice $ctx "dmtlint" "build_deckhouse") | strings.Indent 4 }!}
+{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "dmtlint") | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.matrix_tests) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "dhctl_tests" "Dhctl Tests") }!}
