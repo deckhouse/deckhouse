@@ -1,14 +1,9 @@
-{{- $_ := set . "Env" (.Env | default "EE") }}
+{{ $_ := set . "Env" (.Env | default "FE") }}
 
-{{- $_ := set . "Mode" "production" }}
-{{- $_ := set . "Edition" "EE" }}
-{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") -}}
-  {{- $_ := set . "Edition" $.Env }}
-{{- else if eq $.Env "FE"  }}
-  {{- $_ := set . "Edition" "EE" }}
-{{- else }}
-  {{- $_ := set . "Mode" $.Env }}
-{{- end }}
-
-{{- $context := . }}
-{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-web.inc.yaml" .ModulePath)) $context }}
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/nginx-static
+docker:
+  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/content
+  to: /app
