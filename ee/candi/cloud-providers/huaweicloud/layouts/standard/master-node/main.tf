@@ -2,15 +2,16 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 locals {
-  security_group_names = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
-  volume_type_map      = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
-  actual_zones         = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.huaweicloud_availability_zones.zones.names, var.providerClusterConfiguration.zones)) : data.huaweicloud_availability_zones.zones.names
-  zone                 = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
-  volume_type          = local.volume_type_map[local.zone]
-  flavor_name          = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
-  root_disk_size       = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", 10) # Huaweicloud can have disks predefined within vm flavours, so we do not set any defaults here
-  etcd_volume_size     = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
-  additional_tags      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
+  security_group_names        = local.network_security ? concat([local.prefix], lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])) : []
+  volume_type_map             = var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap
+  actual_zones                = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.huaweicloud_availability_zones.zones.names, var.providerClusterConfiguration.zones)) : data.huaweicloud_availability_zones.zones.names
+  zone                        = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
+  volume_type                 = local.volume_type_map[local.zone]
+  flavor_name                 = var.providerClusterConfiguration.masterNodeGroup.instanceClass.flavorName
+  root_disk_size              = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSize", 10) # Huaweicloud can have disks predefined within vm flavours, so we do not set any defaults here
+  etcd_volume_size            = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDiskSizeGb
+  system_registry_volume_size = var.providerClusterConfiguration.masterNodeGroup.instanceClass.systemRegistryDiskSizeGb
+  additional_tags             = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalTags", {})
 }
 
 module "network_security_info" {
@@ -54,6 +55,19 @@ module "kubernetes_data" {
   volume_type = local.volume_type
   volume_zone = module.volume_zone.zone
   tags        = local.tags
+}
+
+module "system_registry_data" {
+  source      = "../../../terraform-modules/system-registry-data"
+  prefix      = local.prefix
+  node_index  = var.nodeIndex
+  master_id   = module.master.id
+  volume_size = local.system_registry_volume_size
+  volume_type = local.volume_type
+  volume_zone = module.volume_zone.zone
+  tags        = local.tags
+
+  depends_on = [module.kubernetes_data] # For sequential attachment
 }
 
 module "security_groups" {

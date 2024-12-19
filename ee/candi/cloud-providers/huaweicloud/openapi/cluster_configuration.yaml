@@ -121,6 +121,12 @@ apiVersions:
                 example: 10
                 default: 10
                 type: integer
+              systemRegistryDiskSizeGb:
+                description: |
+                  System registry disk size in gigabytes.
+                example: 100
+                default: 100
+                type: integer
           volumeTypeMap:
             description: |
               A dictionary of disk types for storing etcd data and Kubernetes configuration files.

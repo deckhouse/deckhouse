@@ -51,6 +51,9 @@ apiVersions:
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd. Значение указывается в гигабайтах.
+              systemRegistryDiskSizeGb:
+                description: |
+                  Размер диска system registry. Значение указывается в гигабайтах.
           volumeTypeMap:
             description: |
               Словарь типов дисков для хранения данных etcd и конфигурационных файлов Kubernetes.
