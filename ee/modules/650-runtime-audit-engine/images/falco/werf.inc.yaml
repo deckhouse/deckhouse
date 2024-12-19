@@ -3,7 +3,7 @@
 {{- $pluginsVersion := "plugins/k8smeta/v0.2.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ $.Images.BASE_ALT_P11 }}
+from: common/alt-p11
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /falco-package
