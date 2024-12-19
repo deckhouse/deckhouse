@@ -4,6 +4,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
+fromCacheVersion: 19122024
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /ovirt-csi-driver
