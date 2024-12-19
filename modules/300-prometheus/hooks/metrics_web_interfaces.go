@@ -150,7 +150,7 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 func domainMetricHandler(input *go_hook.HookInput) error {
 	snap := input.Snapshots["ingresses"]
 	input.MetricsCollector.Expire("deckhouse_exported_domains")
-	globalHTTPSMode := input.ConfigValues.Get("global.https.mode").String()
+	globalHTTPSMode := input.ConfigValues.Get("global.modules.https.mode").String()
 
 	for _, sn := range snap {
 		if sn == nil {
