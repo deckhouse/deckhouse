@@ -194,9 +194,8 @@ func useBinding(relatedWith, namespace string) string {
 			Name:      fmt.Sprintf("d8:binding:%s", relatedWith),
 			Namespace: namespace,
 			Labels: map[string]string{
-				"heritage":                       "deckhouse",
-				"rbac.deckhouse.io/automated":    "true",
-				"rbac.deckhouse.io/related-with": relatedWith,
+				"heritage":                    "deckhouse",
+				"rbac.deckhouse.io/automated": "true",
 			},
 		},
 		Subjects: []rbacv1.Subject{
