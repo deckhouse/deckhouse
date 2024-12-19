@@ -75,49 +75,34 @@ func deleteConfigFiles(configsDir string, cni string) {
 }
 
 func execIptables(args ...string) (string, error) {
+	args = append(args, "--wait")
 	cmd := exec.Command("/sbin/iptables", args...)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
-}
-
-func chainExists(table, chain string) bool {
-	_, err := execIptables("-t", table, "-L", chain)
-	return err == nil
 }
 
 func clearIptables(chainPrefixes []string) {
 	tables := []string{"filter", "nat", "mangle", "raw"}
 	standardChains := []string{"PREROUTING", "POSTROUTING", "INPUT", "FORWARD", "OUTPUT"}
 
-	// First delete rules from standard chains
-	for _, table := range tables {
-		for _, chain := range standardChains {
-			if !chainExists(table, chain) {
-				continue
-			}
+	log.Printf("clear CNI prefixes: %s", strings.Join(chainPrefixes, ", "))
 
-			output, err := execIptables("-t", table, "-S", chain)
+	for _, table := range tables {
+		for _, standardChain := range standardChains {
+			output, err := execIptables("-t", table, "-L", standardChain, "--line-numbers")
 			if err != nil {
 				continue
 			}
-
-			rules := strings.Split(strings.TrimSpace(output), "\n")
-			for _, rule := range rules {
-				if rule == "" || strings.HasPrefix(rule, "-P") {
-					continue
-				}
-
-				for _, prefix := range chainPrefixes {
-					if strings.Contains(rule, prefix) {
-						parts := strings.Fields(rule)
-						if len(parts) < 2 {
-							continue
-						}
-
-						ruleNum := "1"
-						_, err := execIptables("-t", table, "-D", chain, ruleNum)
+			log.Printf("table %s: clear rules in chain %s", table, standardChain)
+			lines := strings.Split(strings.TrimSpace(output), "\n")
+			for i := len(lines) - 1; i >= 0; i-- {
+				for _, chain := range chainPrefixes {
+					if strings.Contains(lines[i], chain) {
+						lineSlice := strings.Fields(lines[i])
+						number := lineSlice[0]
+						out, err := execIptables("-t", table, "-D", standardChain, number)
 						if err != nil {
-							log.Printf("failed to delete rule number %s in chain %s in table %s: %v", ruleNum, chain, table, err)
+							log.Printf("table %s: %s", table, out)
 						}
 					}
 				}
@@ -125,59 +110,39 @@ func clearIptables(chainPrefixes []string) {
 		}
 	}
 
-	// Then process CNI-defined chains
 	for _, table := range tables {
 		output, err := execIptables("-t", table, "-S")
 		if err != nil {
-			log.Printf("failed to list chains in table %s: %v", table, err)
 			continue
 		}
 
-		var chains []string
-		for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
-			if line == "" || strings.HasPrefix(line, "-P") {
-				continue
-			}
-			parts := strings.Fields(line)
-			if len(parts) > 1 {
-				chain := parts[1]
-				if !contains(chains, chain) {
-					chains = append(chains, chain)
+		log.Printf("table %s: clear CNI chains", table)
+		lines := strings.Split(strings.TrimSpace(output), "\n")
+		for _, rule := range lines {
+			for _, chain := range chainPrefixes {
+				if strings.HasPrefix(rule, "-N") && strings.Contains(rule, chain) {
+					commandTail := strings.TrimPrefix(rule, "-N ")
+					out, err := execIptables("-t", table, "-F", commandTail)
+					if err != nil {
+						log.Printf("table %s: %s", table, out)
+					}
 				}
 			}
 		}
-
-		for _, chain := range chains {
-			for _, prefix := range chainPrefixes {
-				if strings.HasPrefix(chain, prefix) {
-					_, err := execIptables("-t", table, "-F", chain)
+		log.Printf("table %s: delete CNI chains", table)
+		lines = strings.Split(strings.TrimSpace(output), "\n")
+		for _, rule := range lines {
+			for _, chain := range chainPrefixes {
+				if strings.HasPrefix(rule, "-N") && strings.Contains(rule, chain) {
+					commandTail := strings.TrimPrefix(rule, "-N ")
+					out, err := execIptables("-t", table, "-X", commandTail)
 					if err != nil {
-						log.Printf("failed to clear chain %s in table %s: %v", chain, table, err)
-						continue
+						log.Printf("table %s: %s", table, out)
 					}
-					log.Printf("cleared rules in chain %s table %s", chain, table)
-
-					_, err = execIptables("-t", table, "-X", chain)
-					if err != nil {
-						log.Printf("could not delete chain %s in table %s: %v", chain, table, err)
-					} else {
-						log.Printf("chain %s in table %s deleted successfully", chain, table)
-					}
-					break
 				}
 			}
 		}
 	}
-}
-
-// contains checks if a string is present in a slice
-func contains(slice []string, str string) bool {
-	for _, v := range slice {
-		if v == str {
-			return true
-		}
-	}
-	return false
 }
 
 func main() {
@@ -222,8 +187,10 @@ func main() {
 	}
 
 	log.Println("start system cleaning")
+
 	deleteConfigFiles("/etc/cni/net.d/", "flannel")
 	deleteInterfaces([]string{"cni0"})
+
 	clearIptables([]string{
 		"FLANNEL-",
 		"CNI-",
@@ -237,8 +204,9 @@ func main() {
 		"KUBE-PROXY-FIREWALL",
 		"KUBE-SERVICES",
 		"KUBE-PROXY-CANARY",
-		"KUBE-SEP-",
 		"KUBE-SVC-",
+		"KUBE-SEP-",
 	})
+
 	log.Println("finished system cleaning")
 }

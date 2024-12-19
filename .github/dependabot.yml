@@ -340,7 +340,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/035-cni-flannel/images/flanneld/entrypoint"
+  directory: "/modules/035-cni-flannel/images/flanneld/cni-wrapper"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -349,7 +349,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/035-cni-flannel/images/flanneld/wrapper"
+  directory: "/modules/035-cni-flannel/images/flanneld/entrypoint"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
