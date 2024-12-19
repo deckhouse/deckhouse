@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: common/alt-p11
+fromImage: common/alt-p11
 import:
 - image: common/shell-operator-artifact
   add: /shell-operator/shell-operator
@@ -69,7 +69,7 @@ docker:
   CMD: ["start"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binary-artifact
-from: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/650-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt

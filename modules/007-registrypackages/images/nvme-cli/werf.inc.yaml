@@ -35,7 +35,7 @@ shell:
   - rm -rf /src/nvme-cli/.git /src/nvme-cli/subprojects/libnvme/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
-from: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}

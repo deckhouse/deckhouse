@@ -31,7 +31,7 @@ shell:
   - rm ./Lib/ensurepip/_bundled/setuptools-65.5.0-py3-none-any.whl
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-whl
-from: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 shell:
   beforeInstall:

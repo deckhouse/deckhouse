@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/src-artifact
-from: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 shell:
   beforeInstall:
