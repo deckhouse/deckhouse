@@ -18,6 +18,7 @@ package requirements
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -25,8 +26,9 @@ import (
 )
 
 const (
-	minVersionValuesKey     = "ingressNginx:minimalControllerVersion"
-	incompatibleVersionsKey = "ingressNginx:hasIncompatibleIngressClass"
+	minVersionValuesKey         = "ingressNginx:minimalControllerVersion"
+	incompatibleVersionsKey     = "ingressNginx:hasIncompatibleIngressClass"
+	configuredDefaultVersionKey = "ingressNginx:configuredDefaultVersion"
 )
 
 func init() {
@@ -43,6 +45,14 @@ func init() {
 		if err != nil {
 			return false, err
 		}
+
+		configuredDefaultVersionStr, exists := getter.Get(configuredDefaultVersionKey)
+		if exists {
+			if configuredDefaultVersion, err := semver.NewVersion(configuredDefaultVersionStr.(string)); err == nil && configuredDefaultVersion.LessThan(desiredVersion) {
+				return false, fmt.Errorf("ModuleConfig defaultControllerVersion %s is lower then required %s", configuredDefaultVersion.String(), desiredVersion.String())
+			}
+		}
+
 		currentVersionRaw, exists := getter.Get(minVersionValuesKey)
 		if !exists {
 			// no IngressNginxController CRs exist
