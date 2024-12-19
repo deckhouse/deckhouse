@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: common/alt-p11
+fromImage: common/alt-p11
 import:
 - image: common/shell-operator-artifact
   add: /shell-operator/shell-operator
