@@ -19,8 +19,8 @@ package modules
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"log"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -247,6 +247,7 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 			log.Printf("WARNING!!! SKIP DISTROLESS CHECK!!!\nmodule = %s, image = %s\nvalue - %s\n\n", name, relativeFilePath, fromInstruction)
 			continue
 		}
+
 		result, message := isDockerfileInstructionUnacceptable(fromInstruction, lastInstruction)
 		if result {
 			return errors.NewLintRuleError(
