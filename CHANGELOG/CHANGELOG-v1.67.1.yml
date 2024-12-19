@@ -1,0 +1,13 @@
+dhctl:
+  fixes:
+    - summary: Resource readiness fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11018
+istio:
+  fixes:
+    - summary: Fixes for Federation/Multicluster metadata-exporter and for istio-operator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11150
+user-authn:
+  fixes:
+    - summary: add profile scope to oidc auth requests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11083
+

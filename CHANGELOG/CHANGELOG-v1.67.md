@@ -1,5 +1,11 @@
 # Changelog v1.67
 
+## [MALFORMED]
+
+
+ - #9930 unknown section "isio"
+ - #11096 unknown section "multinenancy-manager"
+
 ## Know before update
 
 
@@ -59,20 +65,22 @@
  - **[deckhouse-controller]** Rollout restart for Deckhouse workloads (heritage=deckhouse) is forbidden. [#10844](https://github.com/deckhouse/deckhouse/pull/10844)
  - **[descheduler]** Fix and update descheduler. [#10361](https://github.com/deckhouse/deckhouse/pull/10361)
     descheduler pod will be restarted.
+ - **[dhctl]** Resource readiness fix [#11018](https://github.com/deckhouse/deckhouse/pull/11018)
  - **[dhctl]** Fix the `master_ip_address_for_ssh` terraform output variable handling in converge. [#11039](https://github.com/deckhouse/deckhouse/pull/11039)
  - **[dhctl]** Fixed bootstrap on systems with umask `027`. [#10967](https://github.com/deckhouse/deckhouse/pull/10967)
  - **[dhctl]** Add tasks for moduleconfigs routines for post bootstrap and creating with resources phases. [#10688](https://github.com/deckhouse/deckhouse/pull/10688)
  - **[dhctl]** Fixed work with drain for nodes with kruise.io DaemonSet. [#10578](https://github.com/deckhouse/deckhouse/pull/10578)
- - **[dhctl]** Fix converge through bastion. [#10278](https://github.com/deckhouse/deckhouse/pull/10278)
  - **[dhctl]** Delete docker CRI type support. [#10114](https://github.com/deckhouse/deckhouse/pull/10114)
  - **[docs]** Added information about preflight skips flags. [#10916](https://github.com/deckhouse/deckhouse/pull/10916)
  - **[docs]** Fix priority-class module documentation. [#10897](https://github.com/deckhouse/deckhouse/pull/10897)
  - **[docs]** Add required NetworkInterface AWS policies. [#10842](https://github.com/deckhouse/deckhouse/pull/10842)
  - **[helm_lib]** Updated helm_lib to 1.37.1, which should fix issue [#10950](https://github.com/deckhouse/deckhouse/pull/10950)
+ - **[istio]** Fixes for Federation/Multicluster metadata-exporter and for istio-operator [#11150](https://github.com/deckhouse/deckhouse/pull/11150)
  - **[istio]** Fixed `IngressIstioController` CRD docs rendering. [#10581](https://github.com/deckhouse/deckhouse/pull/10581)
  - **[node-manager]** Fix the key usage with cert-authority. [#10718](https://github.com/deckhouse/deckhouse/pull/10718)
  - **[node-manager]** no_proxy/http_proxy tuning, `bb-set-proxy/bb-unset-proxy` functions. [#10676](https://github.com/deckhouse/deckhouse/pull/10676)
  - **[runtime-audit-engine]** Fix k8s labels collection from containers in syscall event source. [#10639](https://github.com/deckhouse/deckhouse/pull/10639)
+ - **[user-authn]** add profile scope to oidc auth requests [#11083](https://github.com/deckhouse/deckhouse/pull/11083)
  - **[user-authn]** Extend list annotations helm.sh/ to delete from secret. [#10918](https://github.com/deckhouse/deckhouse/pull/10918)
 
 ## Chore
@@ -87,6 +95,12 @@
  - **[cloud-provider-dynamix]** Adopt cloudProviderDynamix to new default StorageClass logic. [#10736](https://github.com/deckhouse/deckhouse/pull/10736)
  - **[cloud-provider-gcp]** Removed legacy "098_remove_cbr0.sh.tpl" step. [#10888](https://github.com/deckhouse/deckhouse/pull/10888)
  - **[cloud-provider-yandex]** Removed legacy "098_remove_cbr0.sh.tpl" step. [#10888](https://github.com/deckhouse/deckhouse/pull/10888)
+ - **[cni-cilium]** Adding pre-migration compatibility checks for CNI configurations. [#10640](https://github.com/deckhouse/deckhouse/pull/10640)
+    You will now receive alerts if not all parameters are clearly specified in the CNI `moduleConfigs`.
+ - **[cni-flannel]** Adding pre-migration compatibility checks for CNI configurations. [#10640](https://github.com/deckhouse/deckhouse/pull/10640)
+    You will now receive alerts if not all parameters are clearly specified in the CNI `moduleConfigs`.
+ - **[cni-simple-bridge]** Adding pre-migration compatibility checks for CNI configurations. [#10640](https://github.com/deckhouse/deckhouse/pull/10640)
+    You will now receive alerts if not all parameters are clearly specified in the CNI `moduleConfigs`.
  - **[dashboard]** Updated to 7.10.0 [#10301](https://github.com/deckhouse/deckhouse/pull/10301)
     Dashboard module works only via HTTPS and no longer supports the "Basic" HTTP authentication scheme.
  - **[deckhouse-controller]** Update the drain mechanism in the copied code. [#10578](https://github.com/deckhouse/deckhouse/pull/10578)
