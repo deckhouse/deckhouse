@@ -175,8 +175,12 @@ func getPossiblePathToModules() []string {
 	return modulesDir
 }
 
-func GetDeckhouseModulesWithValuesMatrixTests(focusNames set.Set) (modules []utils.Module, err error) {
-	var possibleModulesPaths []string
+func GetDeckhouseModulesWithValuesMatrixTests(focusNames set.Set) ([]utils.Module, error) {
+	var (
+		possibleModulesPaths []string
+		modulesPaths         []string
+	)
+
 	modulesDir, ok := os.LookupEnv("MODULES_DIR")
 	if !ok {
 		possibleModulesPaths = getPossiblePathToModules()
@@ -184,18 +188,22 @@ func GetDeckhouseModulesWithValuesMatrixTests(focusNames set.Set) (modules []uti
 		possibleModulesPaths = strings.Split(modulesDir, ":")
 	}
 
-	var modulesPaths []string
 	for _, possibleModuleDir := range possibleModulesPaths {
 		result, err := getModulePaths(possibleModuleDir)
 		if err != nil {
-			return modules, fmt.Errorf("search modules with %q: %v", ChartConfigFilename, err)
+			return nil, fmt.Errorf("search modules with %q: %w", ChartConfigFilename, err)
 		}
 
 		modulesPaths = append(modulesPaths, result...)
 	}
 
-	var lintRuleErrorsList errors.LintRuleErrorsList
+	var (
+		lintRuleErrorsList errors.LintRuleErrorsList
+		modules            = make([]utils.Module, 0, len(modulesPaths))
+	)
+
 	for _, modulePath := range modulesPaths {
+		var err error
 		if focusNames.Size() > 0 {
 			moduleName := filepath.Base(modulePath)
 			moduleName = strings.TrimLeft(moduleName, "1234567890-")
@@ -212,7 +220,7 @@ func GetDeckhouseModulesWithValuesMatrixTests(focusNames set.Set) (modules []uti
 
 		module.Chart, err = loader.Load(modulePath)
 		if err != nil {
-			return modules, fmt.Errorf("chart load %q: %v", ChartConfigFilename, err)
+			return modules, fmt.Errorf("chart load %q: %w", ChartConfigFilename, err)
 		}
 
 		modules = append(modules, module)

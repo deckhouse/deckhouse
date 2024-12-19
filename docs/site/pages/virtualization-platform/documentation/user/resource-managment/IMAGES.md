@@ -1,6 +1,6 @@
 ---
 title: "Images"
-permalink: en/virtualization-platform/documentation/user/resource-managment/images.html
+permalink: en/virtualization-platform/documentation/user/resource-management/images.html
 ---
 
 The [VirtualImage](../../../reference/cr/virtualimage.html) resource is designed for uploading virtual machine images and subsequently using them to create virtual machine disks. This resource is only accessible within the namespace or project where it was created.
@@ -58,7 +58,8 @@ Verifying the creation of [VirtualImage](../../../reference/cr/virtualimage.html
 
 ```bash
 d8 k get virtualimage ubuntu-22.04
-# or use the shorter form
+
+# A shorter version of the command
 d8 k get vi ubuntu-22.04
 ```
 

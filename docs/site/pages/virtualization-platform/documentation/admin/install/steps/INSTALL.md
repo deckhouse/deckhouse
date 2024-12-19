@@ -11,7 +11,9 @@ To install the platform, you need to prepare a YAML configuration file for insta
 
 The YAML installation configuration file includes parameters for several resources (manifests):
 
-- [InitConfiguration](/products/virtualization-platform/reference/cr/initconfiguration.html) — initial parameters for the platform configuration. The platform will launch after installation with this configuration. This resource specifies parameters necessary for the platform to function or operate correctly, such as [module placement parameters](/products/virtualization-platform/reference/mc.html#global-parameters-modules-placement-customtolerationkeys), the used [storageClass](../deckhouse-configure-global.html#global-parameters-storageclass), access settings for [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg), the [template for DNS names](../deckhouse-configure-global.html#global-parameters-modules-publicdomaintemplate), and others.
+- [InitConfiguration](/products/virtualization-platform/reference/cr/initconfiguration.html) — initial parameters for the platform configuration. The platform will launch after installation with this configuration.
+
+  This resource specifies parameters necessary for the platform to function or operate correctly, such as [module placement parameters](/products/virtualization-platform/reference/mc.html#global-parameters-modules-placement-customtolerationkeys), the used [storageClass](../../../../reference/mc.html#global-parameters-modules-storageclass), access settings for [container registry](../../../../reference/cr/initconfiguration.html#initconfiguration-deckhouse-registrydockercfg), the [template for DNS names](../../../../reference/mc.html#global-parameters-modules-publicdomaintemplate), and others.
 
 - [ClusterConfiguration](/products/virtualization-platform/reference/cr/clusterconfiguration.html) — general parameters of the cluster, such as control plane version, network parameters, CRI settings, etc.
 
@@ -20,7 +22,8 @@ The YAML installation configuration file includes parameters for several resourc
 - [StaticClusterConfiguration](/products/virtualization-platform/reference/cr/staticclusterconfiguration.html) — parameters for a Kubernetes cluster deployed on bare metal servers or virtual machines in unsupported clouds.
   > Similar to `ClusterConfiguration`, `StaticClusterConfiguration` is not needed if the platform is installed in an existing Kubernetes cluster.
 
-- ModuleConfig — a set of resources containing configuration parameters for [built-in platform modules](../).
+- [ModuleConfig](/products/virtualization-platform/reference/cr/moduleconfig.html) — a set of resources containing configuration parameters for built-in platform modules.
+  
   If the cluster is initially created with nodes designated for specific types of workloads (system nodes, monitoring nodes, etc.), it is recommended to explicitly specify the corresponding nodeSelector in the module configuration for modules using persistent storage volumes (e.g., for the `prometheus` module, this would be the [nodeSelector](/products/virtualization-platform/reference/mc.html#prometheus-parameters-nodeselector) parameter).
 
 <!-- TODO: поправить манифесты -->
@@ -117,7 +120,7 @@ spec:
 
 An optional YAML file of installation resources contains Kubernetes resource manifests that the installer will apply after the successful installation of the platform. This file can be useful for additional configuration of the cluster post-installation: deploying an Ingress controller, creating additional node groups, configuring resources, setting permissions, users, etc.
 
-**Attention!** You cannot use [ModuleConfig](../) for **built-in** modules in the installation resources file. Use the [configuration file](#файл-конфигурации-установки) for configuring built-in modules.
+**Attention!** You cannot use [ModuleConfig](/products/virtualization-platform/reference/cr/moduleconfig.html) for **built-in** modules in the installation resources file. Use the [configuration file](#installation-configuration-file) for configuring built-in modules.
 
 {% offtopic title="Example Installation Resources File..." %}
 
@@ -252,7 +255,7 @@ where:
   - SSH access keys;
   - configuration file;
   - resources file, etc.
-- `<RELEASE_CHANNEL>` — [update channel](../update_channels.html) of the platform in kebab-case. It should match the one set in `config.yaml`:
+- `<RELEASE_CHANNEL>` — [update channel](../../update-channels.html) of the platform in kebab-case. It should match the one set in `config.yaml`:
   - `alpha` — for the *Alpha* update channel;
   - `beta` — for the *Beta* update channel;
   - `early-access` — for the *Early Access* update channel;
@@ -344,7 +347,8 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 ## Storage Systems Installation
 
 To ensure the proper functioning of the platform, one or more storage systems need to be installed for:
+
 - The permanent storage of platform system data (metrics, logs, images)
 - The storage of virtual machine disks
 
-The list of supported storage systems is described in the ["Storage Configuration"](../platform-management/storage/) section.
+The list of supported storage systems is described in the [Storage Configuration](../../platform-management/storage/supported-storage.html) section.

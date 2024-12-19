@@ -323,7 +323,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 	return nil
 }
 
-func getMachinesToDelete(machines []*Machine) (machinesToDelete []string) {
+func getMachinesToDelete(machines []*Machine) []string {
 	sort.Slice(machines, func(i, j int) bool {
 		return machines[i].nodeCreationTimestamp.Before(&machines[j].nodeCreationTimestamp)
 	})
@@ -334,11 +334,14 @@ func getMachinesToDelete(machines []*Machine) (machinesToDelete []string) {
 		batch = 1
 	}
 
+	machinesToDelete := make([]string, 0, batch)
 	for _, currentMachine := range machines {
 		if len(machinesToDelete) < batch {
 			machinesToDelete = append(machinesToDelete, currentMachine.Name)
+		} else {
+			break
 		}
 	}
 
-	return
+	return machinesToDelete
 }

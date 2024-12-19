@@ -303,7 +303,8 @@ func handleEffectiveK8sVersion(input *go_hook.HookInput, dc dependency.Container
 }
 
 // process control plane pods snapshot with annotation, gettings minimum and maximum from control-plane-pods
-func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (minControlPlaneVersion, maxControlPlaneVersion *semver.Version, err error) {
+// returns minControlPlaneVersion, maxControlPlaneVersion and error
+func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (*semver.Version, *semver.Version, error) {
 	snap := input.Snapshots["control_plane_versions"]
 
 	var controlPlaneVersions []controlPlanePod
@@ -346,14 +347,11 @@ func ekvProcessPodsSnapshot(input *go_hook.HookInput, dc dependency.Container) (
 	}
 	sort.Sort(semver.Collection(controlPlaneVs))
 
-	minControlPlaneVersion = controlPlaneVs[0]
-	maxControlPlaneVersion = controlPlaneVs[len(controlPlaneVs)-1]
-
-	return
+	return controlPlaneVs[0], controlPlaneVs[len(controlPlaneVs)-1], nil
 }
 
 // determine minimum and maximum node versions
-func ekvProcessNodeSnapshot(input *go_hook.HookInput) (minNodeVersion, maxNodeVersion *semver.Version, err error) {
+func ekvProcessNodeSnapshot(input *go_hook.HookInput) (*semver.Version /*minNodeVersion*/, *semver.Version /*maxNodeVersion*/, error) {
 	snap := input.Snapshots["node_versions"]
 
 	var nodeVersions []*semver.Version
@@ -366,14 +364,11 @@ func ekvProcessNodeSnapshot(input *go_hook.HookInput) (minNodeVersion, maxNodeVe
 	}
 	sort.Sort(semver.Collection(nodeVersions))
 
-	minNodeVersion = nodeVersions[0]
-	maxNodeVersion = nodeVersions[len(nodeVersions)-1]
-
-	return
+	return nodeVersions[0], nodeVersions[len(nodeVersions)-1], nil
 }
 
 // get semver from secret
-func ekvProcessSecretSnapshot(input *go_hook.HookInput) (maxUsedControlPlaneVersion kubernetesVersionsInSecret) {
+func ekvProcessSecretSnapshot(input *go_hook.HookInput) kubernetesVersionsInSecret {
 	snap := input.Snapshots["max_used_control_plane_version"]
 
 	if len(snap) > 0 && snap[0] != nil {

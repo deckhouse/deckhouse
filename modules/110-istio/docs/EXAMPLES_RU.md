@@ -643,23 +643,23 @@ annotations:
 
 * Deckhouse позволяет инсталлировать несколько версий control plane одновременно:
   * Одна глобальная, обслуживает namespace'ы или поды без явного указания версии (label у namespace `istio-injection: enabled`). Настраивается параметром [globalVersion](configuration.html#parameters-globalversion).
-  * Остальные — дополнительные, обслуживают namespace'ы или поды с явным указанием версии (label у namespace или пода `istio.io/rev: v1x19`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
+  * Остальные — дополнительные, обслуживают namespace'ы или поды с явным указанием версии (label у namespace или пода `istio.io/rev: v1x21`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
-* Алгоритм обновления (для примера, на версию `1.19`):
-  * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.19"]`).
-  * Дождаться появления соответствующего пода `istiod-v1x19-xxx-yyy` в namespace `d8-istio`.
+* Алгоритм обновления (для примера, на версию `1.21`):
+  * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.21"]`).
+  * Дождаться появления соответствующего пода `istiod-v1x21-xxx-yyy` в namespace `d8-istio`.
   * Для каждого прикладного namespace, где включен istio:
-    * поменять label `istio-injection: enabled` на `istio.io/rev: v1x19`;
+    * поменять label `istio-injection: enabled` на `istio.io/rev: v1x21`;
     * по очереди пересоздать поды в namespace, параллельно контролируя работоспособность приложения.
-  * Поменять настройку `globalVersion` на `1.19` и удалить `additionalVersions`.
+  * Поменять настройку `globalVersion` на `1.21` и удалить `additionalVersions`.
   * Убедиться, что старый под `istiod` удалился.
   * Поменять лейблы прикладных namespace на `istio-injection: enabled`.
 
 Чтобы найти все поды под управлением старой ревизии Istio, выполните:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x16" \
+kubectl get pods -A -o json | jq --arg revision "v1x21" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
