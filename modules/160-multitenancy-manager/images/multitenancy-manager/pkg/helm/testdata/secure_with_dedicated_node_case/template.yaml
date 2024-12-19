@@ -208,9 +208,9 @@ spec:
     metadata:
       name: {{ .projectName }}
       labels:
-        {{- with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
-        {{- if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
-        {{- if .parameters.securityScanningEnabled }}security-scanning.deckhouse.io/enabled: ""{{ end }}
+        {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
+        {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
+        {{ if .parameters.securityScanningEnabled }}security-scanning.deckhouse.io/enabled: ""{{ end }}
       {{- with .parameters.dedicatedNodes }}
       annotations:
         {{- with .defaultTolerations }}
