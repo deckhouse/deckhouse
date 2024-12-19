@@ -217,13 +217,13 @@ func getDrainTimeout(input *go_hook.HookInput, client k8s.Client, ngName string)
 			return defaultDrainTimeout
 		}
 
-		timeout, found, err := unstructured.NestedFloat64(spec, "nodeDrainTimeoutSec")
+		timeout, found, err := unstructured.NestedFloat64(spec, "nodeDrainTimeout")
 		if err != nil {
-			input.Logger.Error("Error extracting 'nodeDrainTimeoutSec' from 'spec', use defaultDrainTimeout", "ngName", groupName)
+			input.Logger.Error("Error extracting 'nodeDrainTimeout' from 'spec', use defaultDrainTimeout", "ngName", groupName)
 			return defaultDrainTimeout
 		}
 		if !found {
-			input.Logger.Info("'nodeDrainTimeoutSec' not set in 'spec', use defaultDrainTimeout, ", "ngName", groupName)
+			input.Logger.Info("'nodeDrainTimeout' not set in 'spec', use defaultDrainTimeout, ", "ngName", groupName)
 			return defaultDrainTimeout
 		}
 
