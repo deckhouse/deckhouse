@@ -285,10 +285,6 @@ properties:
               type: [integer, string]
               x-examples:
                 - "1624550403"
-            nodeDrainTimeout:
-              type: [integer]
-              x-examples:
-                - "900"
             nodeType:
               # See NodeGroup in candi/openapi/node_group.yaml
               type: string
@@ -345,6 +341,10 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
+            nodeDrainTimeout:
+              type: [integer]
+              x-examples:
+                - "900"
             fencing:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
