@@ -17,6 +17,7 @@ limitations under the License.
 package kubernetesversion
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -63,15 +64,16 @@ func (w *versionWatcher) watch(path string) error {
 func (w *versionWatcher) handler(path string) error {
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("read the '%s' file: %w", path, err)
 	}
+
 	if len(content) == 0 {
 		return nil
 	}
+
 	parsed, err := semver.NewVersion(strings.TrimSpace(string(content)))
 	if err != nil {
-		w.logger.Error("failed to parse version", "path", path, "content", string(content), log.Err(err))
-		return err
+		return fmt.Errorf("parse the '%s' version: %w", path, err)
 	}
 	if w.lastVersion == nil || !w.lastVersion.Equal(parsed) {
 		w.lastVersion = parsed

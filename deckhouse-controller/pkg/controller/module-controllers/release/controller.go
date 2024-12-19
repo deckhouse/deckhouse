@@ -80,7 +80,7 @@ func RegisterController(
 	r := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
-		log:                  logger,
+		log:                  logger.Named("module-release-controller"),
 		moduleManager:        mm,
 		metricStorage:        ms,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),

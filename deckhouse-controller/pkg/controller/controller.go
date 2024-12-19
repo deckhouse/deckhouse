@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -44,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	moduleconfig "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/config"
@@ -60,13 +60,14 @@ import (
 )
 
 const (
-	docsLeaseLabel = "deckhouse.io/documentation-builder-sync"
-
-	deckhouseNamespace  = "d8-system"
-	kubernetesNamespace = "kube-system"
+	labelDocsLease = "deckhouse.io/documentation-builder-sync"
+	labelApp       = "app"
+	labelName      = "name"
+	labelHeritage  = "heritage"
+	labelModule    = "module"
 )
 
-type DeckhouseController struct {
+type controller struct {
 	runtimeManager     manager.Manager
 	preflightCountDown *sync.WaitGroup
 
@@ -76,10 +77,12 @@ type DeckhouseController struct {
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 	settings       *helpers.DeckhouseSettingsContainer
-	log            *log.Logger
+	logger         *log.Logger
 }
 
-func NewDeckhouseController(ctx context.Context, version string, operator *addonoperator.AddonOperator, logger *log.Logger) (*DeckhouseController, error) {
+func Start(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
+	logger = logger.Named("deckhouse-controller")
+
 	addToScheme := []func(s *runtime.Scheme) error{
 		corev1.AddToScheme,
 		coordv1.AddToScheme,
@@ -91,7 +94,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	scheme := runtime.NewScheme()
 	for _, add := range addToScheme {
 		if err := add(scheme); err != nil {
-			return nil, fmt.Errorf("add to scheme: %w", err)
+			return fmt.Errorf("add to scheme: %w", err)
 		}
 	}
 
@@ -116,35 +119,35 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				// for ModuleDocumentation controller
 				&coordv1.Lease{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{docsLeaseLabel: ""}),
+						app.NamespaceDeckhouse: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{labelDocsLease: ""}),
 						},
 					},
 				},
 				// for ModuleRelease controller and DeckhouseRelease controller
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse", "module": "deckhouse"}),
+						app.NamespaceDeckhouse: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{labelHeritage: app.ModuleDeckhouse, labelModule: app.ModuleDeckhouse}),
 						},
-						kubernetesNamespace: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"name": "d8-cluster-configuration"}),
+						app.NamespaceKubernetes: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{labelName: app.ClusterConfigurationSecret}),
 						},
 					},
 				},
 				// for DeckhouseRelease controller
 				&corev1.Pod{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"app": "deckhouse"}),
+						app.NamespaceDeckhouse: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{labelApp: app.ModuleDeckhouse}),
 						},
 					},
 				},
 				// for DeckhouseRelease controller
 				&corev1.ConfigMap{}: {
 					Namespaces: map[string]cache.Config{
-						deckhouseNamespace: {
-							LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
+						app.NamespaceDeckhouse: {
+							LabelSelector: labels.SelectorFromSet(map[string]string{labelHeritage: app.ModuleDeckhouse}),
 						},
 					},
 				},
@@ -154,26 +157,24 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				&v1alpha1.ModuleDocumentation{}: {},
 				&v1alpha1.ModuleRelease{}:       {},
 				&v1alpha1.ModuleSource{}:        {},
-				&v1alpha1.ModuleUpdatePolicy{}:  {},
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
-				&v1alpha1.ModulePullOverride{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},
 				&v1alpha1.DeckhouseRelease{}:    {},
 			},
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create controller runtime manager: %w", err)
+		return fmt.Errorf("create controller runtime manager: %w", err)
 	}
 
 	deckhouseConfigCh := make(chan utils.Values, 1)
 
-	configHandler := confighandler.New(runtimeManager.GetClient(), deckhouseConfigCh, logger.Named("config-handler"))
+	configHandler := confighandler.New(runtimeManager.GetClient(), deckhouseConfigCh)
 	operator.SetupKubeConfigManager(configHandler)
 
 	// init module manager
 	if err = operator.Setup(); err != nil {
-		return nil, fmt.Errorf("setup operator: %w", err)
+		return fmt.Errorf("setup operator: %w", err)
 	}
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
@@ -182,7 +183,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	// register extenders
 	for _, extender := range extenders.Extenders() {
 		if err = operator.ModuleManager.AddExtender(extender); err != nil {
-			return nil, fmt.Errorf("add extender: %w", err)
+			return fmt.Errorf("add extender: %w", err)
 		}
 	}
 
@@ -200,39 +201,37 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
 
-	bundle := os.Getenv("DECKHOUSE_BUNDLE")
-
-	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, embeddedPolicy, logger.Named("module-loader"))
+	loader := moduleloader.New(runtimeManager.GetClient(), dc, embeddedPolicy, logger)
 	operator.ModuleManager.SetModuleLoader(loader)
 
-	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger.Named("deckhouse-release-controller"))
+	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger)
 	if err != nil {
-		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
+		return fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, loader, bundle, logger.Named("module-config-controller"))
+	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, loader, logger)
 	if err != nil {
-		return nil, fmt.Errorf("register module config controller: %w", err)
+		return fmt.Errorf("register module config controller: %w", err)
 	}
 
-	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, logger.Named("module-source-controller"))
+	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, logger)
 	if err != nil {
-		return nil, fmt.Errorf("register module source controller: %w", err)
+		return fmt.Errorf("register module source controller: %w", err)
 	}
 
-	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
+	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, operator.MetricStorage, logger)
 	if err != nil {
-		return nil, fmt.Errorf("register module release controller: %w", err)
+		return fmt.Errorf("register module release controller: %w", err)
 	}
 
-	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, dc, logger.Named("module-pull-override-controller"))
+	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, dc, logger)
 	if err != nil {
-		return nil, fmt.Errorf("register module pull override controller: %w", err)
+		return fmt.Errorf("register module pull override controller: %w", err)
 	}
 
-	err = docbuilder.NewModuleDocumentationController(runtimeManager, dc, logger.Named("module-documentation-controller"))
+	err = docbuilder.NewModuleDocumentationController(runtimeManager, dc, logger)
 	if err != nil {
-		return nil, fmt.Errorf("create module documentation controller: %w", err)
+		return fmt.Errorf("create module documentation controller: %w", err)
 	}
 
 	validation.RegisterAdmissionHandlers(
@@ -243,7 +242,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		loader,
 		operator.MetricStorage)
 
-	return &DeckhouseController{
+	deckhouseController := &controller{
 		runtimeManager:     runtimeManager,
 		moduleLoader:       loader,
 		preflightCountDown: preflightCountDown,
@@ -252,12 +251,14 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 		embeddedPolicy: embeddedPolicy,
 		settings:       settingsContainer,
-		log:            logger,
-	}, nil
+		logger:         logger,
+	}
+
+	return deckhouseController.start(ctx)
 }
 
-// Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
-func (c *DeckhouseController) Start(ctx context.Context) error {
+// start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
+func (c *controller) start(ctx context.Context) error {
 	// run preflight check
 	c.startModulesControllers(ctx)
 
@@ -283,21 +284,21 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 }
 
 // startModulesControllers starts all child controllers
-func (c *DeckhouseController) startModulesControllers(ctx context.Context) {
+func (c *controller) startModulesControllers(ctx context.Context) {
 	// syncs the fs with the cluster state, starts the manager and various controllers
 	go func() {
 		if err := c.runtimeManager.Start(ctx); err != nil {
-			c.log.Fatalf("start controller manager failed: %s", err)
+			c.logger.Fatalf("failed to start controller manager: %v", err)
 		}
 	}()
 
-	c.log.Info("waiting for the preflight checks to run")
+	c.logger.Info("wait for the preflight checks to run")
 	c.preflightCountDown.Wait()
-	c.log.Info("the preflight checks are done")
+	c.logger.Info("the preflight checks are done")
 }
 
 // syncDeckhouseSettings updates embeddedPolicy and deckhouse settings by the deckhouse moduleConfig
-func (c *DeckhouseController) syncDeckhouseSettings() {
+func (c *controller) syncDeckhouseSettings() {
 	for {
 		deckhouseConfig := <-c.deckhouseConfigCh
 
@@ -309,17 +310,17 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		settings.Update.DisruptionApprovalMode = "Auto"
 
 		if err := yaml.Unmarshal(configBytes, settings); err != nil {
-			c.log.Errorf("failed to unmarshal the deckhouse setting: %s", err)
+			c.logger.Errorf("failed to unmarshal the deckhouse setting: %s", err)
 			continue
 		}
 
-		c.log.Debugf("update deckhouse settings")
+		c.logger.Debugf("update deckhouse settings")
 		c.settings.Set(settings)
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
 			settings.ReleaseChannel = "Stable"
-			c.log.Debugf("the embedded deckhouse policy release channel set to %q", settings.ReleaseChannel)
+			c.logger.Debugf("the embedded deckhouse policy release channel set to %q", settings.ReleaseChannel)
 		}
 
 		c.embeddedPolicy.Set(settings)

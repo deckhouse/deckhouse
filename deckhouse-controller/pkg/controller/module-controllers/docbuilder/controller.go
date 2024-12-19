@@ -70,7 +70,7 @@ func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Contain
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
 		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
-		logger:               logger,
+		logger:               logger.Named("module-documentation-controller"),
 	}
 
 	ctr, err := controller.New("module-documentation", mgr, controller.Options{
