@@ -26,7 +26,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/coreos/go-iptables/iptables"
 	"github.com/vishvananda/netlink"
 )
 
@@ -75,31 +74,90 @@ func deleteConfigFiles(configsDir string, cni string) {
 	}
 }
 
+func execIptables(args ...string) (string, error) {
+	cmd := exec.Command("iptables", args...)
+	output, err := cmd.CombinedOutput()
+	return string(output), err
+}
+
+func chainExists(table, chain string) bool {
+	_, err := execIptables("-t", table, "-L", chain)
+	return err == nil
+}
+
 func clearIptables(chainPrefixes []string) {
 	tables := []string{"filter", "nat", "mangle", "raw"}
 	standardChains := []string{"PREROUTING", "POSTROUTING", "INPUT", "FORWARD", "OUTPUT"}
 
-	ipt, err := iptables.New()
-	if err != nil {
-		log.Printf("failed to initialize iptables: %v", err)
-		return
+	// First delete rules from standard chains
+	for _, table := range tables {
+		for _, chain := range standardChains {
+			if !chainExists(table, chain) {
+				continue
+			}
+
+			output, err := execIptables("-t", table, "-S", chain)
+			if err != nil {
+				continue
+			}
+
+			rules := strings.Split(strings.TrimSpace(output), "\n")
+			for _, rule := range rules {
+				if rule == "" || strings.HasPrefix(rule, "-P") {
+					continue
+				}
+
+				for _, prefix := range chainPrefixes {
+					if strings.Contains(rule, prefix) {
+						parts := strings.Fields(rule)
+						if len(parts) < 2 {
+							continue
+						}
+
+						ruleNum := "1"
+						_, err := execIptables("-t", table, "-D", chain, ruleNum)
+						if err != nil {
+							log.Printf("failed to delete rule number %s in chain %s in table %s: %v", ruleNum, chain, table, err)
+						}
+					}
+				}
+			}
+		}
 	}
 
+	// Then process CNI-defined chains
 	for _, table := range tables {
-		chains, err := ipt.ListChains(table)
+		output, err := execIptables("-t", table, "-S")
 		if err != nil {
 			log.Printf("failed to list chains in table %s: %v", table, err)
 			continue
 		}
 
+		var chains []string
+		for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+			if line == "" || strings.HasPrefix(line, "-P") {
+				continue
+			}
+			parts := strings.Fields(line)
+			if len(parts) > 1 {
+				chain := parts[1]
+				if !contains(chains, chain) {
+					chains = append(chains, chain)
+				}
+			}
+		}
+
 		for _, chain := range chains {
 			for _, prefix := range chainPrefixes {
 				if strings.HasPrefix(chain, prefix) {
-					err = ipt.ClearChain(table, chain)
+					_, err := execIptables("-t", table, "-F", chain)
 					if err != nil {
-						log.Printf("could not clear chain %s in table %s: %v", chain, table, err)
+						log.Printf("failed to clear chain %s in table %s: %v", chain, table, err)
+						continue
 					}
-					err = ipt.DeleteChain(table, chain)
+					log.Printf("cleared rules in chain %s table %s", chain, table)
+
+					_, err = execIptables("-t", table, "-X", chain)
 					if err != nil {
 						log.Printf("could not delete chain %s in table %s: %v", chain, table, err)
 					} else {
@@ -110,26 +168,16 @@ func clearIptables(chainPrefixes []string) {
 			}
 		}
 	}
+}
 
-	for _, table := range tables {
-		for _, chain := range standardChains {
-			rules, err := ipt.List(table, chain)
-			if err != nil {
-				log.Printf("failed to list rules in chain %s in table %s: %v", chain, table, err)
-				continue
-			}
-			for _, rule := range rules {
-				for _, prefix := range chainPrefixes {
-					if strings.Contains(rule, prefix) {
-						err = ipt.Delete(table, chain, rule)
-						if err != nil {
-							log.Printf("failed to delete rule %s in chain %s in table %s: %v", rule, chain, table, err)
-						}
-					}
-				}
-			}
+// contains checks if a string is present in a slice
+func contains(slice []string, str string) bool {
+	for _, v := range slice {
+		if v == str {
+			return true
 		}
 	}
+	return false
 }
 
 func main() {
