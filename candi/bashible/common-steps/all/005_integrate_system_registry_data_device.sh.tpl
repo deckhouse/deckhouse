@@ -40,7 +40,7 @@ function setup_registry_data_device() {
     if ! file -s "$data_device" | grep -q ext4; then
         mkfs.ext4 -F -L "$label" "$data_device"
     else
-      # TODO: create label
+      : # TODO: create label
     fi
 
     # Add an entry to /etc/fstab if it does not already exist
