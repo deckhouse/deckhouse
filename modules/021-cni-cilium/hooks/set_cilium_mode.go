@@ -94,28 +94,35 @@ func setCiliumMode(input *go_hook.HookInput) error {
 		}
 	}
 
-	if input.ConfigValues.Exists("cniCilium.tunnelMode") {
-		if input.ConfigValues.Get("cniCilium.tunnelMode").String() == "VXLAN" {
+	value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
+	if ok {
+		switch value.String() {
+		case "VXLAN":
 			input.Values.Set("cniCilium.internal.mode", "VXLAN")
-			return nil
-		} else if input.ConfigValues.Get("cniCilium.tunnelMode").String() == "Disabled" {
+		case "Disabled":
 			// to recover default value if it was discovered before
 			input.Values.Set("cniCilium.internal.mode", "Direct")
 		}
 	}
 
-	value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
+	value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 	if ok && value.Bool() {
 		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
-		return nil
+	}
+
+	value, ok = input.ConfigValues.GetOk("cniCilium.masqueradeMode")
+	if ok {
+		input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
 	}
 
 	// for static clusters we should use DirectWithNodeRoutes mode
 	value, ok = input.Values.GetOk("global.clusterConfiguration.clusterType")
 	if ok && value.String() == "Static" {
 		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
-		return nil
 	}
-	// default = Direct
+
+	// default
+	// mode = Direct
+	// masqueradeMode = BPF
 	return nil
 }
