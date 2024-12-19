@@ -621,8 +621,6 @@ spec:
                     * `LoadBalancerWithProxyProtocol` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. Ingress controller uses proxy-protocol to get a real IP of the client.
                     * `LoadBalancerWithSSLPasstrough` — Ingress controller is deployed and the service of `LoadBalancer` type is provisioned. It enables SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly, without terminating it at the Ingress controller.
 
-                      Settings are required in [spec.HostPortWithSSLPassthrough](#ingressnginxcontroller-v1-spec-hostportwithsslpassthrough).
-
                       > **Caution!** SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: 443) and handing it over to a local TCP proxy. This bypasses NGINX completely and introduces a non-negligible performance penalty.
 
                       SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
@@ -637,8 +635,6 @@ spec:
 
                       > **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
                     * `HostPortWithSSLPassthrough` - Ingress controller is deployed and available through nodes' ports via `hostPort.  It enables SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly, without terminating it at the Ingress controller.
-
-                      Settings are required in [spec.HostPortWithSSLPassthrough](#ingressnginxcontroller-v1-spec-hostportwithsslpassthrough).
 
                       SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
 
