@@ -1,5 +1,5 @@
 ---
-artifact: {{ $.ModuleName }}/build-promu-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
@@ -13,13 +13,13 @@ shell:
   - cd /promu
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
-artifact: {{ $.ModuleName }}/build-chrony-exporter-static-artifact
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 import:
-- artifact: {{ $.ModuleName }}/build-promu-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /promu/promu
   to: /bin/promu
   before: install
@@ -35,7 +35,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/build-chrony-exporter-static-artifact
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/chrony_exporter
   to: /usr/bin/chrony_exporter
   before: install
