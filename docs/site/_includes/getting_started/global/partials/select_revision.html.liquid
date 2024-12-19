@@ -29,8 +29,8 @@
 {%- endunless %}
 
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
-{%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
-{%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
+{%- if page.ee_only == true and revision == 'ce' and revision == 'be' and revision == 'se' %}{% continue %}{% endif %}
+{%- if page.ce_only == true and revision == 'ee' and revision == 'be' and revision == 'se' %}{% continue %}{% endif %}
 {% assign layoutCode = '' | append: layout.code %}
 <div id='block_layout_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
     {% if page.lang == 'ru' %}
@@ -73,7 +73,7 @@ Create the `resources.yml` file.
 </div>
 
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
-{%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
+{%- if revision =='ce' and revision == 'be' and revision == 'se' and page.ee_only == true %}{% continue %}{% endif %}
 
 {% if revision == 'ee' %}
 <div class="dimmer-block-content">
