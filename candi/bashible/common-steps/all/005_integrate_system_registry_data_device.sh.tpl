@@ -51,10 +51,18 @@ function setup_registry_data_device() {
         mount -L "$label"
     fi
 
-    # Create a symlink if the target directory is empty
-    if [[ "$(find "$symlink_target" -type f 2>/dev/null | wc -l)" == "0" ]]; then
-        rm -rf "$symlink_target"
-        ln -s "$mount_point" "$symlink_target"
+    # Check if symlink_target exists
+    if [[ -e "$symlink_target" ]]
+    then
+      # Check if symlink_target is a symlink and points to mount_point
+      if [[ -L "$symlink_target" && $(readlink "$symlink_target") == "$mount_point" ]]; then
+          echo "symlink is correct, nothing to do"
+      else
+          rm -rf "$symlink_target"
+          ln -s "$mount_point" "$symlink_target"
+      fi
+    else
+      ln -s "$mount_point" "$symlink_target"
     fi
 }
 
@@ -64,8 +72,8 @@ function teardown_registry_data_device() {
     local link_target="/opt/deckhouse/system-registry"
     local label="registry-data"
   
-    # Remove the symbolic link if it exists and points to the correct location
-    if [[ -L "$link_target" && "$(readlink "$link_target")" == "$mount_point" ]]; then
+    # Remove the symbolic link if it exists
+    if [[ -L "$link_target" ]]; then
         rm -f "$link_target"
     fi
     
@@ -73,10 +81,10 @@ function teardown_registry_data_device() {
     if grep -q "$label" "$fstab_file"; then
         sed -i "/^LABEL=${label}.*/d" "$fstab_file"
     fi
-    
-    # Unmount the device
-    if mount | grep -q "$mount_point"; then
-        umount "$mount_point"
+
+    # Remove the mount point directory if it exists
+    if [[ -d "$mount_point" ]]; then
+        rm -rf "$mount_point"
     fi
 }
 
