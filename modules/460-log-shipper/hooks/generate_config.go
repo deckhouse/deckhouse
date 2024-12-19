@@ -274,7 +274,7 @@ func applyTLSConfig(dest *v1alpha1.ClusterLogDestination, tlsConfig *tlsConfigFr
 
 	getTLSSpec := accessors[dest.Spec.Type]
 	if getTLSSpec == nil {
-		return nil
+		return errors.Errorf("no tls spec accessor for destination type %s", dest.Spec.Type)
 	}
 
 	tls := getTLSSpec()
