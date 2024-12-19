@@ -1,6 +1,6 @@
-# Based on https://github.com/istio/istio/blob/1.16.2/cni/deployments/kubernetes/Dockerfile.install-cni
+# Based on https://github.com/istio/istio/blob/1.21.6/cni/deployments/kubernetes/Dockerfile.install-cni
 ARG BASE_DISTROLESS
-FROM docker.io/istio/install-cni:1.16.2@sha256:14255494cf4c78740913c702aa0768fad4b433e82d10cdfc264ef5f30cf041ec as artifact
+FROM docker.io/istio/install-cni:1.21.6@sha256:6c85a016e612d7a095ed32546dbe7f973672b31cc1930c26a747232d38ff372a as artifact
 
 FROM $BASE_DISTROLESS
 
