@@ -18,8 +18,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -96,13 +94,30 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 
 	nodePredicate := predicate.Funcs{
 		CreateFunc: func(e event.TypedCreateEvent[client.Object]) bool {
-			return nodeObjectIsMaster(e.Object)
+			node := e.Object.(*corev1.Node)
+			return hasMasterLabel(node)
 		},
 		DeleteFunc: func(e event.TypedDeleteEvent[client.Object]) bool {
-			return nodeObjectIsMaster(e.Object)
+			node := e.Object.(*corev1.Node)
+			return hasMasterLabel(node)
 		},
 		UpdateFunc: func(e event.TypedUpdateEvent[client.Object]) bool {
-			return nodeObjectIsMaster(e.ObjectOld) != nodeObjectIsMaster(e.ObjectNew)
+			oldNode := e.ObjectNew.(*corev1.Node)
+			newNode := e.ObjectNew.(*corev1.Node)
+
+			if hasMasterLabel(oldNode) != hasMasterLabel(newNode) {
+				return true
+			}
+
+			if len(oldNode.Status.Addresses) != len(newNode.Status.Addresses) {
+				return true
+			}
+
+			if getNodeInternalIP(oldNode) != getNodeInternalIP(newNode) {
+				return true
+			}
+
+			return false
 		},
 	}
 
@@ -330,15 +345,16 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
-	if len(node.Status.Addresses) == 0 {
-		err = fmt.Errorf("node does not have address")
+	nodeInternalIP := getNodeInternalIP(node)
+	if nodeInternalIP == "" {
+		err = fmt.Errorf("node does not have internal IP")
 		return
 	}
 
 	nodePKI, err := nc.ensureNodePKI(
 		ctx,
 		node.Name,
-		node.Status.Addresses[0].Address,
+		nodeInternalIP,
 		globalPKI,
 	)
 	if err != nil {
@@ -757,13 +773,8 @@ func (nc *nodeController) isFirstMasterNode(ctx context.Context, node *corev1.No
 	return true, nil
 }
 
-func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *metav1.PartialObjectMetadataList, err error) {
-	nodes = &metav1.PartialObjectMetadataList{}
-	nodes.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "",
-		Version: "v1",
-		Kind:    "Node",
-	})
+func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *corev1.NodeList, err error) {
+	nodes = &corev1.NodeList{}
 
 	if err = nc.Client.List(ctx, nodes, &masterNodesMatchingLabels); err != nil {
 		err = fmt.Errorf("cannot list nodes: %w", err)
@@ -846,22 +857,16 @@ func (nc *nodeController) logModuleWarning(log *logr.Logger, reason, message str
 	}
 }
 
-func nodeObjectIsMaster(obj client.Object) bool {
-	if obj == nil {
-		return false
-	}
-
-	labels := obj.GetLabels()
-	if labels == nil {
-		return false
-	}
-
-	_, hasMasterLabel := labels["node-role.kubernetes.io/master"]
-
-	return hasMasterLabel
-}
-
 func hasMasterLabel(node *corev1.Node) bool {
 	_, isMaster := node.Labels["node-role.kubernetes.io/master"]
 	return isMaster
+}
+
+func getNodeInternalIP(node *corev1.Node) string {
+	for _, addr := range node.Status.Addresses {
+		if addr.Type == corev1.NodeInternalIP {
+			return addr.Address
+		}
+	}
+	return ""
 }
