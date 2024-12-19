@@ -27,8 +27,7 @@ import (
 )
 
 const (
-	Name              extenders.ExtenderName = "Bootstrapped"
-	RequirementsField string                 = "bootstrapped"
+	Name extenders.ExtenderName = "Bootstrapped"
 )
 
 var (
@@ -60,8 +59,10 @@ func (e *Extender) AddConstraint(name string, value string) error {
 		e.logger.Debugf("adding installed constraint for the '%s' module failed", name)
 		return err
 	}
+
 	e.modules[name] = parsed
 	e.logger.Debugf("installed constraint for the '%s' module is added", name)
+
 	return nil
 }
 
