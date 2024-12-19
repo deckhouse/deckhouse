@@ -222,7 +222,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 	}
 
 	// remove the source from available sources in deleted modules
@@ -322,6 +322,18 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			availableModule.PullError = err.Error()
 			availableModules = append(availableModules, availableModule)
 			pullErrorsExist = true
+			// set the downloading error phase for the module
+			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
+					module.Status.Phase = v1alpha1.ModulePhaseDownloadingError
+					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloadingError, err.Error())
+					return true
+				}
+				return false
+			})
+			if err != nil {
+				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
+			}
 			continue
 		}
 
