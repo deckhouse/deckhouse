@@ -12,3 +12,7 @@ output "node_internal_ip_address" {
 output "kubernetes_data_device_path" {
   value = module.kubernetes_data.device_path
 }
+
+output "system_registry_data_device_path" {
+  value = var.systemRegistryEnable ? module.system_registry_data[0].device_path : ""
+}
