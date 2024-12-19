@@ -122,33 +122,36 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		Complete(ctr)
 }
 
-func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	var res ctrl.Result
+
 	r.logger.Debugf("%s release processing started", req.Name)
-	defer func() { r.logger.Debugf("%s release processing complete: %+v", req.Name, result) }()
+	defer func() { r.logger.Debugf("%s release processing complete: %+v", req.Name, res) }()
 
 	if r.updateSettings.Get().ReleaseChannel == "" {
 		r.logger.Debug("release channel not set")
-		return result, nil
+		return res, nil
 	}
 
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricReleasesGroup)
 
 	release := new(v1alpha1.DeckhouseRelease)
-	err = r.client.Get(ctx, req.NamespacedName, release)
+	err := r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
-		r.logger.Debugf("get release: %s", err.Error())
 		// The DeckhouseRelease resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
-			return result, nil
+			return res, nil
 		}
 
-		return result, err
+		r.logger.Debugf("get release: %s", err.Error())
+
+		return res, err
 	}
 
 	if !release.DeletionTimestamp.IsZero() {
 		r.logger.Debugf("release deletion timestamp: %s", release.DeletionTimestamp.String())
-		return result, nil
+		return res, nil
 	}
 
 	return r.createOrUpdateReconcile(ctx, release)
@@ -317,18 +320,21 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		clusterBootstrapping, imagesRegistry, r.moduleManager.GetEnabledModuleNames(),
 	)
 
+	if releaseData.IsUpdating && !podReady {
+		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
+	}
+
 	if podReady {
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
 
 		if releaseData.IsUpdating {
 			// note: if pod is ready and release is updating - patch annotations if changed
 			// here we patch updating annotation
+			// but we have no patch here, because we have no predicted release and just change update settings (what???)
 			_ = deckhouseUpdater.ChangeUpdatingFlag(false)
+
+			// releaseData.IsUpdating = false
 		}
-		// note: too complex logic
-		// TODO: remove else and check it before pod ready
-	} else if releaseData.IsUpdating {
-		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, "d8_is_updating", 1, map[string]string{"releaseChannel": r.updateSettings.Get().ReleaseChannel})
 	}
 
 	{
@@ -338,6 +344,11 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 			return res, fmt.Errorf("get deckhouse releases: %w", err)
 		}
 
+		if len(releases.Items) == 0 {
+			r.logger.Debug("releases count is zero")
+			return res, nil
+		}
+
 		// note: slice pointer? purpose? only because of use generics???
 		pointerReleases := make([]*v1alpha1.DeckhouseRelease, 0, len(releases.Items))
 		for _, rl := range releases.Items {
@@ -345,13 +356,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 		// sort by version and save it to updater
 		deckhouseUpdater.SetReleases(pointerReleases)
-	}
-
-	// note: checking releases after set releases
-	// why not check it when list?
-	if deckhouseUpdater.ReleasesCount() == 0 {
-		r.logger.Debug("releases count is zero")
-		return res, nil
 	}
 
 	// predict next patch for Deploy

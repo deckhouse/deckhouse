@@ -76,7 +76,8 @@ type Updater[R v1alpha1.Release] struct {
 
 	deckhousePodIsReady      bool
 	deckhouseIsBootstrapping bool
-	releaseData              DeckhouseReleaseData
+
+	releaseData DeckhouseReleaseData
 }
 
 func NewUpdater[R v1alpha1.Release](
