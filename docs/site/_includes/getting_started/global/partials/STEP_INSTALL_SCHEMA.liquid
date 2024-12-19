@@ -83,7 +83,7 @@ Scheme of Deckhouse installation in a private environment:<br />
 <li>
 {% if page.platform_type == "existing" %}
   <p><strong>The existing Kubernetes cluster.</strong></p>
-  <p>The Kubernetes versions and OS of cluster nodes should be on <a href="../../products/kubernetes-platform/documentation/v1/supported_versions.html">the list of supported</a>.</p>
+  <p>The Kubernetes versions and OS of cluster nodes should be on <a href="https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html">the list of supported</a>.</p>
   <p>During the installation, the Deckhouse installer running on the <strong>personal computer</strong> (see step 1) will connect to the cluster and deploy Deckhouse.</p>
   <p><strong>Note</strong> that master node-based installation is not currently supported.</p>
 {%- elsif page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
@@ -112,7 +112,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - at least 4 CPU cores
    - at least 8 GB of RAM
    - at least 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
-   - [supported OS](/products/kubernetes-platform/documentation/v1/supported_versions.html)
+   - [supported OS](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html)
    - Linux kernel version >= `5.7`
    - **Unique hostname** within servers (virtual machines) of the cluster
    {% if page.platform_code == "bm-private" %}

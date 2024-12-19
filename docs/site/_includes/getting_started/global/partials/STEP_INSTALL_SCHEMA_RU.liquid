@@ -91,7 +91,7 @@
 <li>
 {% if page.platform_type == "existing" %}
   <p><strong>Существующий кластер Kubernetes.</strong></p>
-  <p>Версии Kubernetes и ОС узлов кластера должны быть <a href="../../products/kubernetes-platform/documentation/v1/supported_versions.html">в списке поддерживаемых</a>.</p>
+  <p>Версии Kubernetes и ОС узлов кластера должны быть <a href="https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html">в списке поддерживаемых</a>.</p>
   <p>В процессе установки инсталлятор, запущенный на <strong>персональном компьютере</strong> (см. п.1), подключится к кластеру и развернет Deckhouse.</p>
   <p><strong>Обратите внимание</strong>, что установка непосредственно с master-узла не поддерживается.</p>
 {%- elsif page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
@@ -120,7 +120,7 @@
    - не менее 4 ядер CPU;
    - не менее 8 ГБ RAM;
    - не менее 60 ГБ дискового пространства на быстром диске (400+ IOPS);
-   - [поддерживаемая ОС](/products/kubernetes-platform/documentation/v1/supported_versions.html);
+   - [поддерживаемая ОС](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html);
    - ядро Linux версии `5.7` или новее;
    - **Уникальный hostname** в пределах серверов (виртуальных машин) кластера;
    {% if page.platform_code == "bm-private" %}
