@@ -36,9 +36,15 @@ const (
 )
 
 type RegistryConfig struct {
-	Mode     RegistryMode    `json:"mode"` // enum: Direct, Proxy, Detached
-	Proxy    *ProxyConfig    `json:"proxy,omitempty"`
-	Detached *DetachedConfig `json:"detached,omitempty"`
+	Mode           RegistryMode    `json:"mode"` // enum: Direct, Proxy, Detached
+	Proxy          *ProxyConfig    `json:"proxy,omitempty"`
+	Detached       *DetachedConfig `json:"detached,omitempty"`
+	ImagesOverride ImagesOverride  `json:"imagesOverride,omitempty"`
+}
+
+type ImagesOverride struct {
+	RegistryManager string `json:"registryManager,omitempty"`
+	Mirrorer        string `json:"mirrorer,omitempty"`
 }
 
 type StorageMode string // enum: S3, Fs

@@ -79,7 +79,6 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, httpClient *htt
 	imageAuth := os.Getenv("IMAGE_DOCKER_AUTH")
 	imageDistribution := os.Getenv("IMAGE_DOCKER_DISTRIBUTION")
 	imageMirrorer := os.Getenv("IMAGE_MIRRORER")
-	imageMirrorerOverride := os.Getenv("IMAGE_MIRRORER_OVERRIDE")
 
 	if registryAddress == "" {
 		return fmt.Errorf("REGISTRY_ADDRESS enviroment variable is not set")
@@ -131,12 +130,11 @@ func setupAndStartManager(ctx context.Context, cfg *rest.Config, httpClient *htt
 		HttpClient: httpClient,
 
 		Settings: registry_controller.NodeControllerSettings{
-			RegistryAddress:       registryAddress,
-			RegistryPath:          registryPath,
-			ImageAuth:             imageAuth,
-			ImageDistribution:     imageDistribution,
-			ImageMirrorer:         imageMirrorer,
-			ImageMirrorerOverride: imageMirrorerOverride,
+			RegistryAddress:   registryAddress,
+			RegistryPath:      registryPath,
+			ImageAuth:         imageAuth,
+			ImageDistribution: imageDistribution,
+			ImageMirrorer:     imageMirrorer,
 		},
 	}
 

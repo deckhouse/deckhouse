@@ -104,10 +104,6 @@ spec:
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.seaweedfs }}"
         - name: IMAGE_MIRRORER
           value: "{{ $.Values.global.modulesImages.digests.systemRegistry.mirrorer }}"
-        {{- if and (hasKey $.Values.systemRegistry "imagesOverride") (hasKey $.Values.systemRegistry.imagesOverride "mirrorer") (ne $.Values.systemRegistry.imagesOverride.mirrorer "") }}
-        - name: IMAGE_MIRRORER_OVERRIDE
-          value: "{{ $.Values.systemRegistry.imagesOverride.mirrorer }}"
-        {{- end }}
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: http-healthz
