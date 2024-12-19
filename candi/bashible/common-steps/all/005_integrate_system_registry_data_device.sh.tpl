@@ -39,6 +39,8 @@ function setup_registry_data_device() {
     # Format the data device if it is not already ext4
     if ! file -s "$data_device" | grep -q ext4; then
         mkfs.ext4 -F -L "$label" "$data_device"
+    else
+      # TODO: create label
     fi
 
     # Add an entry to /etc/fstab if it does not already exist
@@ -82,8 +84,8 @@ function teardown_registry_data_device() {
         sed -i "/^LABEL=${label}.*/d" "$fstab_file"
     fi
 
-    # Remove the mount point directory if it exists
-    if [[ -d "$mount_point" ]]; then
+    # Remove the mount point if it exists
+    if [[ -e "$mount_point" ]]; then
         rm -rf "$mount_point"
     fi
 }
