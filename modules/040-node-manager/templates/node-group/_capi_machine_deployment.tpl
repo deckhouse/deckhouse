@@ -40,11 +40,11 @@ spec:
         apiVersion: {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion | quote }}
         kind:  {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateKind | quote }}
         name: {{ $template_name }}
-  {{- if $ng.nodeDrainTimeout }}
-      drainTimeout: {{$ng.nodeDrainTimeout}}s
-      nodeDrainTimeout: {{$ng.nodeDrainTimeout}}s
-      nodeDeletionTimeout: {{$ng.nodeDrainTimeout}}s
-      nodeVolumeDetachTimeout: {{$ng.nodeDrainTimeout}}s
+  {{- if $ng.nodeDrainTimeoutSec }}
+      drainTimeout: {{$ng.nodeDrainTimeoutSec}}s
+      nodeDrainTimeout: {{$ng.nodeDrainTimeoutSec}}s
+      nodeDeletionTimeout: {{$ng.nodeDrainTimeoutSec}}s
+      nodeVolumeDetachTimeout: {{$ng.nodeDrainTimeoutSec}}s
   {{- else }}
       nodeDrainTimeout: 5m
       nodeDeletionTimeout: 5m
