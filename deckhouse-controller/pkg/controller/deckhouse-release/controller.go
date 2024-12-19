@@ -21,11 +21,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/updater"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	aoapp "github.com/flant/addon-operator/pkg/app"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
@@ -36,20 +45,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -333,6 +334,69 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 	}
 
+	oCalc := d8updater.NewOrderCalculator(r.client, r.logger)
+	order, err := oCalc.CalculatePendingReleaseOrder(ctx, dr)
+	if err != nil {
+		return res, err
+	}
+
+	switch order.Order {
+	case d8updater.Skip:
+		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhaseSkipped,
+			Message: order.Message,
+		})
+		if err != nil {
+			r.logger.Warn("skip order status update ", slog.String("name", dr.GetName()), log.Err(err))
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+
+		return res, nil
+	case d8updater.Await:
+		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhasePending,
+			Message: order.Message,
+		})
+		if err != nil {
+			r.logger.Warn("await order status update ", slog.String("name", dr.GetName()), log.Err(err))
+			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+		}
+
+		return res, nil
+	}
+
+	// add to reconciler???
+	checker, err := d8updater.NewDeckhouseReleaseChecker(r.client, r.moduleManager.GetEnabledModuleNames(), r.logger)
+	if err != nil {
+		updateErr := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhasePending,
+			Message: err.Error(),
+		})
+		if updateErr != nil {
+			r.logger.Warn("create release checker status update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
+	reasons := checker.MetRequirements(dr)
+	if len(reasons) > 0 {
+		msgs := make([]string, 0, len(reasons))
+		for _, reason := range reasons {
+			msgs = append(msgs, fmt.Sprintf("reason: %s, requirement: %s", reason.Reason, reason.Message))
+		}
+
+		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
+			Phase:   v1alpha1.DeckhouseReleasePhasePending,
+			Message: strings.Join(msgs, ";"),
+		})
+		if err != nil {
+			r.logger.Warn("met requirements status update ", slog.String("name", dr.GetName()), log.Err(err))
+		}
+
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
+	}
+
 	{
 		var releases v1alpha1.DeckhouseReleaseList
 		err = r.client.List(ctx, &releases)
@@ -350,6 +414,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		for _, rl := range releases.Items {
 			pointerReleases = append(pointerReleases, &rl)
 		}
+
 		// sort by version and save it to updater
 		deckhouseUpdater.SetReleases(pointerReleases)
 	}
@@ -630,6 +695,38 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 func (r *deckhouseReleaseReconciler) newUpdaterKubeAPI() *d8updater.KubeAPI {
 	return d8updater.NewKubeAPI(r.client, r.dc, "")
+}
+
+func (r *deckhouseReleaseReconciler) updateReleaseStatus(ctx context.Context, dr *v1alpha1.DeckhouseRelease, status *v1alpha1.DeckhouseReleaseStatus) error {
+	r.logger.Debugf("refresh the %q release status", dr.GetName())
+
+	// events happen quite often, so conflicts happen often, default backoff not suitable
+	backoff := wait.Backoff{
+		Steps: 6,
+		// magic number
+		Duration: 20 * time.Millisecond,
+		Factor:   1.0,
+		Jitter:   0.1,
+	}
+
+	release := new(v1alpha1.DeckhouseRelease)
+
+	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		return retry.RetryOnConflict(backoff, func() error {
+			if err := r.client.Get(ctx, client.ObjectKey{Name: dr.GetName()}, release); err != nil {
+				return err
+			}
+
+			if release.Status.Phase != status.Phase {
+				release.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
+			}
+
+			release.Status.Phase = status.Phase
+			release.Status.Message = status.Message
+
+			return r.client.Status().Update(ctx, release)
+		})
+	})
 }
 
 func getDeckhouseContainerIndex(containers []corev1.Container) int {

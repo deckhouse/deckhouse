@@ -58,7 +58,7 @@ type CalculatingResult struct {
 
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 
-func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, release *v1alpha1.DeckhouseRelease) (*CalculatingResult, error) {
+func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (*CalculatingResult, error) {
 	releases, err := p.listReleases(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list releases: %w", err)
@@ -74,18 +74,18 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, rele
 
 	currentDeployedReleaseVersion := releases[deployedIdx].GetVersion()
 
-	relIdx, _ := slices.BinarySearchFunc(releases, release.GetVersion(), func(a v1alpha1.DeckhouseRelease, b *semver.Version) int {
+	relIdx, _ := slices.BinarySearchFunc(releases, dr.GetVersion(), func(a v1alpha1.DeckhouseRelease, b *semver.Version) int {
 		return a.GetVersion().Compare(b)
 	})
 
-	if release.GetPhase() != v1alpha1.DeckhouseReleasePhasePending {
+	if dr.GetPhase() != v1alpha1.DeckhouseReleasePhasePending {
 		return nil, ErrReleasePhaseIsNotPending
 	}
 
 	// if we have a deployed a release
 	if currentDeployedReleaseVersion != nil {
 		// if deployed version is greater than the pending one, this pending release should be superseded
-		if currentDeployedReleaseVersion.GreaterThan(release.GetVersion()) {
+		if currentDeployedReleaseVersion.GreaterThan(dr.GetVersion()) {
 			return &CalculatingResult{
 				Order: Skip,
 			}, nil
@@ -98,8 +98,8 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, rele
 
 		// if release version is greater in major or minor version than previous release
 		// it must await for release Deployed state
-		if (release.GetVersion().Major() > prevRelease.GetVersion().Major() ||
-			release.GetVersion().Minor() > prevRelease.GetVersion().Minor()) &&
+		if (dr.GetVersion().Major() > prevRelease.GetVersion().Major() ||
+			dr.GetVersion().Minor() > prevRelease.GetVersion().Minor()) &&
 			prevRelease.GetPhase() != v1alpha1.DeckhouseReleasePhaseDeployed {
 			msg := prevRelease.Status.Message
 			if !strings.Contains(msg, "Awaiting") {
@@ -119,8 +119,8 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, rele
 
 		// if nextRelease version is not greater in major or minor version than current release
 		// it's definitely greater at patch version
-		if release.GetVersion().Major() < nextRelease.GetVersion().Major() ||
-			release.GetVersion().Minor() < nextRelease.GetVersion().Minor() {
+		if dr.GetVersion().Major() < nextRelease.GetVersion().Major() ||
+			dr.GetVersion().Minor() < nextRelease.GetVersion().Minor() {
 			return &CalculatingResult{
 				Order: Process,
 			}, nil
