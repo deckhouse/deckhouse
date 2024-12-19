@@ -75,7 +75,7 @@ Create the `resources.yml` file.
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
 {%- if revision =='ce' or revision == 'be' or revision == 'se' and page.ee_only == true %}{% continue %}{% endif %}
 
-{% if revision == 'ee' %}
+{% if revision == 'ee' or revision == 'be' or revision == 'se' %}
 <div class="dimmer-block-content">
 {% endif %}
 
@@ -86,7 +86,7 @@ Create the `resources.yml` file.
 {% include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
 {% endif %}
 </div>
-{% if revision == 'ee' %}
+{% if revision == 'ee' or revision == 'be' or revision == 'se' %}
 </div>
 {% endif %}
 
