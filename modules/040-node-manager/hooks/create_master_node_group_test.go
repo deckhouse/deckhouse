@@ -70,6 +70,11 @@ spec:
     labels:
       node.deckhouse.io/group: worker-big
   nodeType: CloudEphemeral
+  kubelet:
+    containerLogMaxFiles: 4
+    containerLogMaxSize: 50Mi
+    resourceReservation:
+      mode: Auto
 `
 		masterNgNoneDefault = `
 apiVersion: deckhouse.io/v1
@@ -87,6 +92,11 @@ spec:
       node-role.kubernetes.io/master: ""
       node-role.kubernetes.io/control-plane: ""
   nodeType: CloudStatic
+  kubelet:
+    containerLogMaxFiles: 4
+    containerLogMaxSize: 50Mi
+    resourceReservation:
+      mode: Auto
 `
 	)
 
@@ -98,7 +108,7 @@ spec:
 
 	for _, clType := range []string{"Cloud", "Static"} {
 		clusterType := clType
-		Context(fmt.Sprintf("%s cluster", clType), func() {
+		Context(fmt.Sprintf("%s cluster", clusterType), func() {
 			masterNgUnstructured, err := getDefaultMasterNg(clusterType)
 			if err != nil {
 				panic(err)
@@ -109,8 +119,8 @@ spec:
 				panic(err)
 			}
 
-			var masterNgDefaultYAML = string(masterNgDefaultYAMLBBytes)
-
+			// TODO(miklezzzz): fix master ng template
+			var masterNgDefaultYAML = f.ApplyCRDefaults(string(masterNgDefaultYAMLBBytes))
 			assertDefaultMasterNodeGroupOnlyPresent := func(f *HookExecutionConfig) {
 				masterNg := f.KubernetesResource("NodeGroup", "", "master")
 				Expect(masterNg.ToYaml()).To(MatchYAML(masterNgDefaultYAML))

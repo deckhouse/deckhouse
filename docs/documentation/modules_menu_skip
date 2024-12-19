@@ -1,5 +1,5 @@
-000-common
-010-cloud-data-crd
-340-monitoring-applications
-340-prometheus-madison-integration
-500-basic-auth
+common
+cloud-data-crd
+monitoring-applications
+prometheus-madison-integration
+basic-auth

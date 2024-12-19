@@ -135,7 +135,7 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 				Access:           access,
 				Timeout:          5 * time.Second,
 				Namespace:        "d8-dashboard",
-				LabelSelector:    "app=dashboard",
+				LabelSelector:    "app=api",
 				PreflightChecker: controlPlanePinger,
 			},
 		}, {

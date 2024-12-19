@@ -17,19 +17,15 @@ package apis
 import (
 	"context"
 
-	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-var (
-	deprecatedCRDs = []string{
-		"externalmodulesources.deckhouse.io",
-		"externalmodulereleases.deckhouse.io",
-	}
-)
+// list of CRDs to delete, like "externalmodulesources.deckhouse.io"
+var deprecatedCRDs = []string{}
 
 type kubeClient interface {
 	kubernetes.Interface

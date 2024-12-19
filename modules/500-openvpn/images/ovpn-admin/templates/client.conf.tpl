@@ -6,7 +6,6 @@ verb 4
 client
 nobind
 dev tun
-cipher AES-128-CBC
 key-direction 1
 #redirect-gateway def1
 tls-client

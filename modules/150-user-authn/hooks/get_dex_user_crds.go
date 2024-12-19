@@ -178,7 +178,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 			}
 		}
 
-		input.LogEntry.Infof("Update groups in user status %s. Groups: %v", dexUser.Name, patch["status"].(expirePatch).Groups)
+		input.Logger.Infof("Update groups in user status %s. Groups: %v", dexUser.Name, patch["status"].(expirePatch).Groups)
 		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
 	}
 

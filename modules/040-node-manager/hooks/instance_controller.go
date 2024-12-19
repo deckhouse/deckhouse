@@ -208,7 +208,7 @@ func instanceController(input *go_hook.HookInput) error {
 	for name, machine := range machines {
 		ng, ok := nodeGroups[machine.NodeGroup]
 		if !ok {
-			input.LogEntry.Warningf("NodeGroup %s not found", machine.NodeGroup)
+			input.Logger.Warnf("NodeGroup %s not found", machine.NodeGroup)
 
 			continue
 		}
@@ -237,7 +237,7 @@ func instanceController(input *go_hook.HookInput) error {
 	for name, machine := range clusterAPIMachines {
 		ng, ok := nodeGroups[machine.NodeGroup]
 		if !ok {
-			input.LogEntry.Warningf("NodeGroup %s not found", machine.NodeGroup)
+			input.Logger.Warnf("NodeGroup %s not found", machine.NodeGroup)
 
 			continue
 		}

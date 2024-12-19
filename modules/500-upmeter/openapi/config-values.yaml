@@ -9,16 +9,18 @@ properties:
       - type: boolean
         enum: [false]
     x-examples: [false, "default"]
-    description: |
-      The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, either the global [StorageClass](../../deckhouse-configure-global.html#parameters-storageclass) or `global.discovery.defaultStorageClass` is used, and if those are undefined, the emptyDir volume is used to store the data.
+    description: |-
+      The name of StorageClass that will be used in the cluster by default.
 
-      `global.discovery.defaultStorageClass` is applied during module activation, changing default StorageClass in cluster won't result in disk re-provisioning.
+      The name of the StorageClass to use. If omitted, the StorageClass of the existing PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
 
-      **Caution.** Setting this value to one that differs from the current one (in the existing PVC) will result in disk re-provisioning and data loss.
+      The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
 
-      **Caution.** When migrating Upmeter with local storage to other nodes, the pod will hang in the Pending state. In this case, it will be necessary to save the Upmeter database, delete the old PVC and restart the pod manually.  Local storage refers to a StorageClass that is associated not with network storage, but with a local volume on a node (for example, StorageClass created by the local-path-provider module).
+       If `false` is specified, `emptyDir` will be forced to be used.
 
-      Setting it to `false` forces the use of an emptyDir volume.
+      **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+
+      **Warning.** When migrating Upmeter with local storage to other nodes, the pods will enter a Pending state. In this situation, it will be necessary to back up the Upmeter database, delete the old PVCs, and manually restart the pod. Here, local storage refers to a StorageClass associated not with network storage but with a local volume on a node (for example, a StorageClass created by the local-path-provisioner module).
   auth:
     type: object
     default: {}

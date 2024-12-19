@@ -91,6 +91,7 @@ func commonTestGoForHooks(name, path string) errors.LintRuleError {
 			"MODULE001",
 			moduleLabel(name),
 			nil,
+			"%s",
 			errstr,
 		)
 	}

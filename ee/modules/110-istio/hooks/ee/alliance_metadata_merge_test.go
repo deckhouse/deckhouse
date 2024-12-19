@@ -44,7 +44,7 @@ var _ = Describe("Istio hooks :: alliance_metadata_merge ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`[]`))
 			Expect(f.ValuesGet("istio.internal.multiclusters").String()).To(MatchJSON(`[]`))
@@ -305,6 +305,8 @@ status:
               }
             ],
             "name": "federation-only-full-0",
+            "ca": "",
+            "insecureSkipVerify": false,
             "publicServices": [
               {
                 "hostname": "bbb",
@@ -322,6 +324,8 @@ status:
               }
             ],
             "name": "federation-only-full-1",
+            "ca": "",
+            "insecureSkipVerify": false,
             "publicServices": [
               {
                 "hostname": "ccc",
@@ -404,19 +408,19 @@ status:
 		  "aaa-bbb-m6": {"clusterUUID": "aaa-bbb-m6", "rootCA": "abc-m6", "authnKeyPub": "xyz-m6"}
 		}
 `))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-empty wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-full-empty-ig-0 wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-only-ingress wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-only-services wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-empty-ig weren't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-apiHost wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-no-ig weren't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-networkname wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("public metadata for IstioMulticluster multicluster-no-public wasn't fetched yet"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-only-public wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-empty wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-full-empty-ig-0 wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-only-ingress wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-only-services wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-empty-ig weren't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-apiHost wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-no-ig weren't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-networkname wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("public metadata for IstioMulticluster multicluster-no-public wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-only-public wasn't fetched yet"))
 
 			// there should be 10 log messages
-			Expect(strings.Split(strings.Trim(string(f.LogrusOutput.Contents()), "\n"), "\n")).To(HaveLen(10))
+			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(10))
 		})
 	})
 })

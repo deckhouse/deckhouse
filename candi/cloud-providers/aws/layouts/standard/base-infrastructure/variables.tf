@@ -40,4 +40,6 @@ locals {
   existing_vpc_id          = lookup(var.providerClusterConfiguration, "existingVPCID", "")
   tags                     = lookup(var.providerClusterConfiguration, "tags", {})
   ssh_allow_list           = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
+  additional_role_policies = lookup(var.providerClusterConfiguration, "additionalRolePolicies", [])
+
 }

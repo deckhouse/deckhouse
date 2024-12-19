@@ -20,8 +20,6 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/mitchellh/hashstructure/v2"
-
 	"github.com/vishvananda/netlink"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -266,12 +264,7 @@ func (ire *IPRuleEntry) String() string {
 }
 
 func (ire *IPRuleEntry) getHash() string {
-	hash, err := hashstructure.Hash(*ire, hashstructure.FormatV2, nil)
-	if err != nil {
-		return ire.String()
-	}
-
-	return fmt.Sprintf("%v", hash)
+	return ire.String()
 }
 
 func (ire *IPRuleEntry) getNetlinkRule() (*netlink.Rule, error) {
@@ -378,59 +371,59 @@ func (ire *IPRuleEntry) getNetlinkRule() (*netlink.Rule, error) {
 	return PreparedIPRule, nil
 }
 
-func getIPRuleEntryFromNetlinkRule(nlRule netlink.Rule) IPRuleEntry {
+func getIPRuleEntryFromNetlinkRule(netlinkRule netlink.Rule) IPRuleEntry {
 	PreparedIPRule := IPRuleEntry{}
 
-	if nlRule.Priority > 0 {
-		PreparedIPRule.Priority = nlRule.Priority
+	if netlinkRule.Priority > 0 {
+		PreparedIPRule.Priority = netlinkRule.Priority
 	}
-	if nlRule.Table > 0 {
-		PreparedIPRule.Table = nlRule.Table
+	if netlinkRule.Table > 0 {
+		PreparedIPRule.Table = netlinkRule.Table
 	}
-	if nlRule.Mark != -1 {
-		FWMark := fmt.Sprintf("0x%x", nlRule.Mark)
-		if nlRule.Mask != -1 {
-			FWMark = fmt.Sprintf("%s/0x%x", FWMark, nlRule.Mask)
+	if netlinkRule.Mark != -1 {
+		FWMark := fmt.Sprintf("0x%x", netlinkRule.Mark)
+		if netlinkRule.Mask != -1 {
+			FWMark = fmt.Sprintf("%s/0x%x", FWMark, netlinkRule.Mask)
 		}
 		PreparedIPRule.FWMark = FWMark
 	}
-	if nlRule.Tos > 0 {
-		PreparedIPRule.Tos = fmt.Sprintf("0x%x", nlRule.Tos)
+	if netlinkRule.Tos > 0 {
+		PreparedIPRule.Tos = fmt.Sprintf("0x%x", netlinkRule.Tos)
 	}
-	if nlRule.Src != nil {
-		PreparedIPRule.Src = nlRule.Src.String()
+	if netlinkRule.Src != nil {
+		PreparedIPRule.Src = netlinkRule.Src.String()
 	}
-	if nlRule.Dst != nil {
-		PreparedIPRule.Dst = nlRule.Dst.String()
+	if netlinkRule.Dst != nil {
+		PreparedIPRule.Dst = netlinkRule.Dst.String()
 	}
-	if nlRule.IifName != "" {
-		PreparedIPRule.IifName = nlRule.IifName
+	if netlinkRule.IifName != "" {
+		PreparedIPRule.IifName = netlinkRule.IifName
 	}
-	if nlRule.OifName != "" {
-		PreparedIPRule.OifName = nlRule.OifName
+	if netlinkRule.OifName != "" {
+		PreparedIPRule.OifName = netlinkRule.OifName
 	}
-	if nlRule.Invert == true {
-		PreparedIPRule.Invert = nlRule.Invert
+	if netlinkRule.Invert == true {
+		PreparedIPRule.Invert = netlinkRule.Invert
 	}
-	if nlRule.IPProto > 0 {
-		PreparedIPRule.IPProto = nlRule.IPProto
+	if netlinkRule.IPProto > 0 {
+		PreparedIPRule.IPProto = netlinkRule.IPProto
 	}
-	if nlRule.Dport != nil {
+	if netlinkRule.Dport != nil {
 		PreparedIPRule.DPortRange = &v1alpha1.PortRange{
-			Start: nlRule.Dport.Start,
-			End:   nlRule.Dport.End,
+			Start: netlinkRule.Dport.Start,
+			End:   netlinkRule.Dport.End,
 		}
 	}
-	if nlRule.Sport != nil {
+	if netlinkRule.Sport != nil {
 		PreparedIPRule.SPortRange = &v1alpha1.PortRange{
-			Start: nlRule.Sport.Start,
-			End:   nlRule.Sport.End,
+			Start: netlinkRule.Sport.Start,
+			End:   netlinkRule.Sport.End,
 		}
 	}
-	if nlRule.UIDRange != nil {
+	if netlinkRule.UIDRange != nil {
 		PreparedIPRule.UIDRange = &v1alpha1.UIDRange{
-			Start: nlRule.UIDRange.Start,
-			End:   nlRule.UIDRange.End,
+			Start: netlinkRule.UIDRange.Start,
+			End:   netlinkRule.UIDRange.End,
 		}
 	}
 
@@ -442,9 +435,6 @@ func getIPRuleEntryFromNetlinkRule(nlRule netlink.Rule) IPRuleEntry {
 type IPRuleEntryMap map[string]IPRuleEntry
 
 func (irem *IPRuleEntryMap) AppendIRE(ire IPRuleEntry) {
-	if len(*irem) == 0 {
-		*irem = make(map[string]IPRuleEntry)
-	}
 	(*irem)[ire.getHash()] = ire
 }
 
@@ -524,10 +514,10 @@ func nirsSummaryInit() *nirsSummary {
 	return &nirsSummary{
 		k8sResources:              new(v1alpha1.SDNInternalNodeIPRuleSet),
 		newReconciliationStatus:   utils.ReconciliationStatus{},
-		desiredIPRulesByNIRS:      IPRuleEntryMap{},
-		lastAppliedIPRulesByNIRS:  IPRuleEntryMap{},
+		desiredIPRulesByNIRS:      make(IPRuleEntryMap),
+		lastAppliedIPRulesByNIRS:  make(IPRuleEntryMap),
 		desiredIPRulesToAddByNIRS: make([]IPRuleEntry, 0),
-		desiredIPRulesToDelByNIRS: IPRuleEntryMap{},
+		desiredIPRulesToDelByNIRS: make(IPRuleEntryMap),
 		nirsWasDeleted:            false,
 		needToWipeFinalizer:       false,
 	}
@@ -765,17 +755,17 @@ func delIPRuleFromNode(ipRule IPRuleEntry) error {
 }
 
 func getActualIPRuleEntryMapFromNode() (IPRuleEntryMap, error) {
-	nlRules, err := netlink.RuleListFiltered(netlink.FAMILY_V4, nil, 0)
+	netlinkRules, err := netlink.RuleListFiltered(netlink.FAMILY_V4, nil, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed get IPRule from node, err: %w", err)
 	}
 	airem := make(IPRuleEntryMap)
 
-	for _, nlRule := range nlRules {
-		if nlRule.Flow != v1alpha1.D8Realm {
+	for _, netlinkRule := range netlinkRules {
+		if netlinkRule.Flow != v1alpha1.D8Realm {
 			continue
 		}
-		ire := getIPRuleEntryFromNetlinkRule(nlRule)
+		ire := getIPRuleEntryFromNetlinkRule(netlinkRule)
 		airem.AppendIRE(ire)
 	}
 	return airem, nil

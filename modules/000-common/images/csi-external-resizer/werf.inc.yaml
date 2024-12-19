@@ -6,34 +6,37 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /csi-resizer
-    to: /csi-resizer
-    before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+  add: /csi-resizer
+  to: /csi-resizer
+  before: setup
 docker:
   ENTRYPOINT: ["/csi-resizer"]
 ---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+fromArtifact: common/src-artifact
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $value.csi.resizer }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-resizer.git /src
+  - rm -r /src/.git
+---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    {{- if semverCompare ">=1.30" $version }}
-from: {{ $.Images.BASE_GOLANG_22_ALPINE_DEV }}
-    {{- else }}
-from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
-    {{- end }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-    - git clone --depth 1 --branch {{ $value.csi.resizer }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-resizer.git /src
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache make bash
   install:
-    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - cd /src
-    {{- if semverCompare "<1.29" $version }}
-    - go get golang.org/x/net@v0.17.0
-    - go get google.golang.org/grpc@v1.56.3
-    - go mod tidy
-    - go mod vendor
-    {{- end }}
-    - make build
-    - cp bin/csi-resizer /csi-resizer
-    - chown 64535:64535 /csi-resizer
-    - chmod 0755 /csi-resizer
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  - make build
+  - cp bin/csi-resizer /csi-resizer
+  - chown 64535:64535 /csi-resizer
+  - chmod 0755 /csi-resizer
   {{- end }}
 {{- end }}

@@ -28,6 +28,10 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+  - apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   setup:
     - apt-get update
     - apt-get install libinih-dev libblkid-dev gettext liburcu-dev libtool -y

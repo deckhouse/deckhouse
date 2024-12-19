@@ -72,7 +72,7 @@ func handleRecicleMastersNode(input *go_hook.HookInput) error {
 	snap := input.Snapshots["master_nodes"]
 
 	if len(snap) == 0 {
-		input.LogEntry.Debug("No master Nodes found in snapshot, skipping iteration")
+		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")
 		return nil
 	}
 

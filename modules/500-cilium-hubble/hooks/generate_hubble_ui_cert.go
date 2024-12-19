@@ -67,7 +67,7 @@ func generateHubbleUICert(input *go_hook.HookInput) error {
 	ca := genCAAuthority(input)
 
 	const cn = "*.hubble-ui.cilium.io"
-	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+	tls, err := certificate.GenerateSelfSignedCert(input.Logger,
 		cn,
 		ca,
 		certificate.WithKeyRequest(&csr.KeyRequest{

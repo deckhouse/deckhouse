@@ -134,11 +134,11 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 	for _, iopRaw := range input.Snapshots["istio_operators"] {
 		iop := iopRaw.(IstioOperatorCrdSnapshot)
 		if iop.NeedPunch {
-			input.LogEntry.Infof("iop with rev %s needs to punch.", iop.Revision)
+			input.Logger.Infof("iop with rev %s needs to punch.", iop.Revision)
 			if podName, ok := operatorPodMap[iop.Revision]; ok {
-				input.LogEntry.Infof("Pod %s is allowed to punch.", podName)
+				input.Logger.Infof("Pod %s is allowed to punch.", podName)
 				input.PatchCollector.Delete("v1", "Pod", "d8-istio", podName, object_patch.InBackground())
-				input.LogEntry.Infof("Pod %s deleted.", podName)
+				input.Logger.Infof("Pod %s deleted.", podName)
 			}
 		}
 	}

@@ -16,6 +16,7 @@ package bootstrap
 
 import (
 	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -68,5 +69,6 @@ func (b *ClusterBootstrapper) InstallDeckhouse() error {
 		return err
 	}
 
-	return InstallDeckhouse(kubeCl, installConfig)
+	_, err = InstallDeckhouse(kubeCl, installConfig)
+	return err
 }

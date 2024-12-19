@@ -145,10 +145,8 @@ Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parame
 <td>
 <ul style="columns: 3">
 {%- for moduleName in site.data.bundles.bundleModules[bundle] %}
-{%- assign isExcluded = site.data.exclude.module_names | where: "name", moduleName %}
-{%- if isExcluded.size > 0 %}{% continue %}{% endif %}
-<li>
-{{ moduleName }}</li>
+{%- if site.data.excludedModules contains moduleName %}{% continue %}{% endif %}
+<li>{{ moduleName }}</li>
 {%- endfor %}
 </ul>
 </td>
@@ -157,7 +155,7 @@ Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parame
 </tbody>
 </table>
 
-### Things to keep in mind when working with the Minimal module set on bare metal
+### Things to keep in mind when working with the Minimal module set
 
 {% alert level="warning" %}
 **Note** that several basic modules are not included in the `Minimal` set of modules (for example, the CNI module).
@@ -165,14 +163,16 @@ Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parame
 Deckhouse with the `Minimal` module set and no basic modules included will only be able to operate in an already deployed cluster.
 {% endalert %}
 
-To install Deckhouse with the `Minimal` module set on bare metal, you must be sure to enable the following modules by specifying them in the installer configuration file:
+To install Deckhouse with the `Minimal` module set, enable at least the following modules by specifying them in the installer configuration file:
 
-* registry-packages-proxy;
+* cloud provider module (for example, `cloud-provider-aws` for AWS), in a case of deploying a cloud cluster;
 * cloud-data-crd;
-* node-manager;
-* cni-cilium (or another CNI control module if necessary);
+* cni-cilium or another CNI control module (if necessary);
+* control-plane-manager;
 * kube-dns;
-* control-plane-manager.
+* node-manager;
+* registry-packages-proxy;
+* terraform-manager, in a case of deploying a cloud cluster.
 
 ## Managing placement of Deckhouse components
 

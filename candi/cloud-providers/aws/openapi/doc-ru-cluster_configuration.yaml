@@ -4,13 +4,15 @@ apiVersions:
     description: |
       Описывает конфигурацию облачного кластера в AWS.
 
-      Используется cloud-провайдером, если control plane кластера размещен в облаке.
+      Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.
 
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
       kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
       ```
+
+      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
     x-doc-search: |
       ProviderClusterConfiguration
     properties:
@@ -248,10 +250,3 @@ apiVersions:
           По умолчанию IAM-роли содержат следующие policy actions:
           - `ec2:DescribeTags`
           - `ec2:DescribeInstances`
-      iamNodeRole:
-        description: |
-          Имя IAM-роли, которая будет привязана ко всем AWS-инстансам узлов кластера.
-
-          DKP всегда создает и привязывает к каждому AWS-инстансу узла кластера специальную IAM-роль с именем `<PREFIX>-node`, где `<PREFIX>` — значение параметра [cloud.prefix](../../installing/configuration.html#clusterconfiguration-cloud-prefix) общих параметров кластера. Вы можете указать в параметре `iamNodeRole` свою IAM-роль с бОльшими правами, но, важно чтобы она включала в себя политики IAM-роли, создаваемой DKP (роль `<PREFIX>-node`).
-
-          Подробнее о IAM-ролях для AWS EC2 можно прочитать в [документации AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).

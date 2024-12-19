@@ -162,7 +162,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 
 		node, ok := nodeMap[pod.NodeName]
 		if !ok {
-			input.LogEntry.Warnf("Node %s not found", pod.NodeName)
+			input.Logger.Warnf("Node %s not found", pod.NodeName)
 			continue
 		}
 		if node.IsApproved {

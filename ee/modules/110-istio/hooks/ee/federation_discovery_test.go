@@ -48,7 +48,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
@@ -65,7 +65,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
@@ -198,7 +198,7 @@ status:
 				},
 			}
 			dependency.TestDC.HTTPClient.DoMock.
-				Set(func(req *http.Request) (rp1 *http.Response, err error) {
+				Set(func(req *http.Request) (*http.Response, error) {
 					host := strings.Split(req.Host, ":")[0]
 					uri := req.URL.Path
 					mockResponse := respMap[host][uri]
@@ -217,7 +217,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LogrusOutput.Contents())).To(HaveLen(0))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			tPub0, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioFederation", "proper-federation-0").Field("status.metadataCache.publicLastFetchTimestamp").String())
 			Expect(err).ShouldNot(HaveOccurred())
@@ -563,7 +563,7 @@ status: {}
 				},
 			}
 			dependency.TestDC.HTTPClient.DoMock.
-				Set(func(req *http.Request) (rp1 *http.Response, err error) {
+				Set(func(req *http.Request) (*http.Response, error) {
 					host := strings.Split(req.Host, ":")[0]
 					uri := req.URL.Path
 					mockResponse := respMap[host][uri]
@@ -580,14 +580,14 @@ status: {}
 		It("Hook must execute successfully with proper warnings", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(string(f.LogrusOutput.Contents())).To(Not(ContainSubstring("local-federation")))
+			Expect(string(f.LoggerOutput.Contents())).To(Not(ContainSubstring("local-federation")))
 
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot fetch public metadata endpoint https://public-internal-error/metadata/public/public.json for IstioFederation public-internal-error (HTTP Code 500)"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot unmarshal public metadata endpoint https://public-bad-json/metadata/public/public.json for IstioFederation public-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("bad public metadata format in endpoint https://public-wrong-format/metadata/public/public.json for IstioFederation public-wrong-format"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot fetch private metadata endpoint https://private-internal-error/metadata/private/federation.json for IstioFederation private-internal-error (HTTP Code 500)"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("cannot unmarshal private metadata endpoint https://private-bad-json/metadata/private/federation.json for IstioFederation private-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LogrusOutput.Contents())).To(ContainSubstring("bad private metadata format in endpoint https://private-wrong-format/metadata/private/federation.json for IstioFederation private-wrong-format"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch public metadata endpoint https://public-internal-error/metadata/public/public.json for IstioFederation public-internal-error (HTTP Code 500)"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal public metadata endpoint https://public-bad-json/metadata/public/public.json for IstioFederation public-bad-json, error: unexpected end of JSON input"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("bad public metadata format in endpoint https://public-wrong-format/metadata/public/public.json for IstioFederation public-wrong-format"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch private metadata endpoint https://private-internal-error/metadata/private/federation.json for IstioFederation private-internal-error (HTTP Code 500)"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal private metadata endpoint https://private-bad-json/metadata/private/federation.json for IstioFederation private-bad-json, error: unexpected end of JSON input"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("bad private metadata format in endpoint https://private-wrong-format/metadata/private/federation.json for IstioFederation private-wrong-format"))
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "local-federation").Field("status").String()).To(MatchJSON("{}"))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "public-internal-error").Field("status").String()).To(MatchJSON("{}"))

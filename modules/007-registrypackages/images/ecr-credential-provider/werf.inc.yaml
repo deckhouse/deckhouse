@@ -43,6 +43,7 @@ shell:
     - export GOARCH=amd64
     - mkdir -p /src
     - cd /src
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone --depth=1 --branch {{ $value.ccm.aws }} {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-aws.git
     - cd cloud-provider-aws
     - export VERSION={{ $value.ccm.aws }}

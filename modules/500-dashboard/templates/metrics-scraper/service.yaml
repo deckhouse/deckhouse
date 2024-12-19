@@ -1,0 +1,13 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: metrics-scraper
+  namespace: d8-{{.Chart.Name}}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "metrics-scraper")) | nindent 2 }}
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: metrics-scraper

@@ -22,18 +22,19 @@ kind: ModuleConfig
 metadata:
   name: global
 spec:
-  version: 1
+  version: 2
   settings: # <-- Module parameters from the "Parameters" section below.
+    defaultClusterStorageClass: 'default-fast'
     modules:
       publicDomainTemplate: '%s.kube.company.my'
       resourcesRequests:
         controlPlane:
           cpu: 1000m
-          memory: 500M      
+          memory: 500M
       placement:
         customTolerationKeys:
         - dedicated.example.com
-    storageClass: sc-fast
+      storageClass: 'default-fast'
 ```
 
 ## Parameters

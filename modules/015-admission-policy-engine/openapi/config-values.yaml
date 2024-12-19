@@ -63,10 +63,16 @@ properties:
       storageClass:
         type: string
         x-examples: ["ceph-ssd", "false"]
-        description: |
+        description: |-
           The name of the StorageClass to use for `trivy-provider`.
 
-          `false` — forces the `emptyDir` usage. Manually delete the old PVC and restart Pod, after setting the parameter.
+          If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
+            
+          The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
+          
+          **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+
+          If `false` is specified, `emptyDir` will be forced to be used.
       enabled:
         type: boolean
         default: false

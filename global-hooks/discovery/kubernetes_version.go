@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -250,7 +251,7 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 	} else if c := len(serverCPLabeledSnap); c > 0 {
 		podsCnt = c
 	} else {
-		input.LogEntry.Infoln("k8s version. Pods snapshots is empty")
+		input.Logger.Info("k8s version. Pods snapshots is empty")
 	}
 
 	var endpoints []string
@@ -258,12 +259,12 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 		endpointsRaw := endpointsSnap[0]
 		endpoints = endpointsRaw.([]string)
 	} else {
-		input.LogEntry.Infoln("k8s version. Endpoints snapshots is empty")
+		input.Logger.Info("k8s version. Endpoints snapshots is empty")
 	}
 	endpointsCnt := len(endpoints)
 
 	if endpointsCnt == 0 && podsCnt == 0 {
-		input.LogEntry.Infoln("k8s version. Endpoints and pods not found. Skip")
+		input.Logger.Info("k8s version. Endpoints and pods not found. Skip")
 		return nil, nil
 	}
 
@@ -280,10 +281,10 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 		// in bash hook we don't subscribe for deleting pods
 		// it is emulating this behaviour
 		if !versions.Exists() || !minVer.Exists() {
-			return nil, fmt.Errorf(msg)
+			return nil, errors.New(msg)
 		}
 
-		input.LogEntry.Warnln(msg)
+		input.Logger.Warn(msg)
 
 		return nil, nil
 	}
@@ -292,7 +293,7 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 }
 
 func k8sVersions(input *go_hook.HookInput) error {
-	input.LogEntry.Infoln("k8s version. Start discovery")
+	input.Logger.Info("k8s version. Start discovery")
 	endpoints, err := apiServerEndpoints(input)
 	if err != nil {
 		return err
@@ -337,7 +338,7 @@ func k8sVersions(input *go_hook.HookInput) error {
 	}
 
 	if len(versions) == 0 {
-		input.LogEntry.Infoln("k8s version. Versions is empty. Skip")
+		input.Logger.Info("k8s version. Versions is empty. Skip")
 		return nil
 	}
 
@@ -351,7 +352,7 @@ func k8sVersions(input *go_hook.HookInput) error {
 	input.Values.Set("global.discovery.kubernetesVersion", minVerStr)
 
 	requirements.SaveValue("global.discovery.kubernetesVersion", minVerStr)
-	input.LogEntry.Infof("k8s version was discovered: %s, all %v", minVerStr, versions)
+	input.Logger.Infof("k8s version was discovered: %s, all %v", minVerStr, versions)
 
 	input.MetricsCollector.Set("deckhouse_kubernetes_version", 1, map[string]string{
 		"version": minVerStr,

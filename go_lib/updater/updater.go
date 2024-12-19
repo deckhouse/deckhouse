@@ -23,14 +23,16 @@ import (
 	"sort"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -54,11 +56,12 @@ const (
 )
 
 type Updater[R v1alpha1.Release] struct {
+	ctx            context.Context
 	now            time.Time
 	settings       *Settings
 	enabledModules set.Set
 
-	logger            logger.Logger
+	logger            *log.Logger
 	kubeAPI           KubeAPI[R]
 	metricsUpdater    MetricsUpdater[R]
 	webhookDataSource WebhookDataSource[R]
@@ -76,11 +79,20 @@ type Updater[R v1alpha1.Release] struct {
 	releaseData              DeckhouseReleaseData
 }
 
-func NewUpdater[R v1alpha1.Release](dc dependency.Container, logger logger.Logger, settings *Settings,
-	data DeckhouseReleaseData, podIsReady, isBootstrapping bool, kubeAPI KubeAPI[R], metricsUpdater MetricsUpdater[R],
-	webhookDataSource WebhookDataSource[R], enabledModules []string,
+func NewUpdater[R v1alpha1.Release](
+	ctx context.Context,
+	dc dependency.Container,
+	logger *log.Logger,
+	settings *Settings,
+	data DeckhouseReleaseData,
+	podIsReady, isBootstrapping bool,
+	kubeAPI KubeAPI[R],
+	metricsUpdater MetricsUpdater[R],
+	webhookDataSource WebhookDataSource[R],
+	enabledModules []string,
 ) *Updater[R] {
 	return &Updater[R]{
+		ctx:            ctx,
 		now:            dc.GetClock().Now().UTC(),
 		settings:       settings,
 		enabledModules: set.New(enabledModules...),
@@ -102,16 +114,21 @@ func NewUpdater[R v1alpha1.Release](dc dependency.Container, logger logger.Logge
 
 // for patch, we check fewer conditions, then for minor release
 // - Canary settings
-func (u *Updater[R]) checkPatchReleaseConditions(release R) error {
-	applyTime, reason, err := u.calculatePatchResultDeployTime(release)
+func (u *Updater[R]) checkPatchReleaseConditions(release R, metricLabels MetricLabels) error {
+	applyTime, reason, err := u.calculatePatchResultDeployTime(release, metricLabels)
 	if err != nil {
 		return fmt.Errorf("calculate patch result deploy time: %w", err)
 	}
 
 	// check: Notification
 	if u.settings.NotificationConfig != (NotificationConfig{}) && u.settings.NotificationConfig.ReleaseType == ReleaseTypeAll {
+		metricLabels[NotificationNotSent] = "false"
 		err = u.sendReleaseNotification(release, applyTime)
 		if err != nil {
+			metricLabels[NotificationNotSent] = "true"
+			if err := u.updateStatus(release, "Release blocked: failed to send release notification", PhasePending); err != nil {
+				return fmt.Errorf("update status: %w", err)
+			}
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
@@ -161,30 +178,28 @@ func (u *Updater[R]) sendReleaseNotification(release R, releaseApplyTime time.Ti
 // - Canary settings
 // - Update windows or manual approval
 // - Deckhouse pod is ready
-func (u *Updater[R]) checkMinorReleaseConditions(release R) error {
-	// check: release requirements (hard lock)
-	passed := u.checkReleaseRequirements(release)
-	if !passed {
-		u.metricsUpdater.ReleaseBlocked(release.GetName(), "requirement")
-		return fmt.Errorf("release %s requirements are not met: %w", release.GetName(), ErrDeployConditionsNotMet)
-	}
-
+func (u *Updater[R]) checkMinorReleaseConditions(release R, metricLabels MetricLabels) error {
 	// check: release disruptions (hard lock)
-	passed = u.checkReleaseDisruptions(release)
+	passed := u.checkReleaseDisruptions(release)
 	if !passed {
-		u.metricsUpdater.ReleaseBlocked(release.GetName(), "disruption")
+		metricLabels[DisruptionApprovalRequired] = "true"
 		return fmt.Errorf("release %s disruption approval required: %w", release.GetName(), ErrDeployConditionsNotMet)
 	}
 
-	resultDeployTime, delayReason, err := u.calculateMinorResultDeployTime(release)
+	resultDeployTime, delayReason, err := u.calculateMinorResultDeployTime(release, metricLabels)
 	if err != nil {
 		return fmt.Errorf("calculate minor result deploy time: %w", err)
 	}
 
 	// check: Notification
 	if u.settings.NotificationConfig != (NotificationConfig{}) {
+		metricLabels[NotificationNotSent] = "false"
 		err = u.sendReleaseNotification(release, resultDeployTime)
 		if err != nil {
+			metricLabels[NotificationNotSent] = "true"
+			if err := u.updateStatus(release, "Release blocked: failed to send release notification", PhasePending); err != nil {
+				return fmt.Errorf("update status: %w", err)
+			}
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
@@ -192,8 +207,7 @@ func (u *Updater[R]) checkMinorReleaseConditions(release R) error {
 	// check: Deckhouse pod is ready
 	if !u.deckhousePodIsReady {
 		u.logger.Info("Deckhouse is not ready. Skipping upgrade")
-		err := u.updateStatus(release, "Waiting for Deckhouse pod to be ready", PhasePending)
-		if err != nil {
+		if err := u.updateStatus(release, "Awaiting for Deckhouse pod to be ready", PhasePending); err != nil {
 			return fmt.Errorf("update status: %w", err)
 		}
 		return ErrDeployConditionsNotMet
@@ -206,7 +220,7 @@ func (u *Updater[R]) checkMinorReleaseConditions(release R) error {
 	return u.postponeDeploy(release, delayReason, resultDeployTime)
 }
 
-func (u *Updater[R]) calculateMinorResultDeployTime(release R) (time.Time, deployDelayReason, error) {
+func (u *Updater[R]) calculateMinorResultDeployTime(release R, metricLabels MetricLabels) (time.Time, deployDelayReason, error) {
 	var (
 		newApplyAfter    time.Time
 		releaseApplyTime = u.now
@@ -252,10 +266,8 @@ func (u *Updater[R]) calculateMinorResultDeployTime(release R) (time.Time, deplo
 	// check: release is approved in Manual mode
 	if u.settings.Mode != ModeAuto && !release.GetManuallyApproved() {
 		u.logger.Infof("Release %s is waiting for manual approval ", release.GetName())
-		u.metricsUpdater.WaitingManual(release, 1)
+		metricLabels[ManualApprovalRequired] = "true"
 		releaseApplyTime, reason = u.now, manualApprovalRequiredReason
-	} else {
-		u.metricsUpdater.WaitingManual(release, 0)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -270,7 +282,7 @@ func (u *Updater[R]) calculateMinorResultDeployTime(release R) (time.Time, deplo
 	return releaseApplyTime, reason, nil
 }
 
-func (u *Updater[R]) calculatePatchResultDeployTime(release R) (time.Time, deployDelayReason, error) {
+func (u *Updater[R]) calculatePatchResultDeployTime(release R, metricLabels MetricLabels) (time.Time, deployDelayReason, error) {
 	var (
 		newApplyAfter    time.Time
 		releaseApplyTime = u.now
@@ -306,10 +318,8 @@ func (u *Updater[R]) calculatePatchResultDeployTime(release R) (time.Time, deplo
 
 	if u.settings.Mode == ModeManual && !release.GetManuallyApproved() {
 		u.logger.Infof("Release %s is waiting for manual approval", release.GetName())
-		u.metricsUpdater.WaitingManual(release, 1)
+		metricLabels[ManualApprovalRequired] = "true"
 		releaseApplyTime, reason = u.now, manualApprovalRequiredReason
-	} else {
-		u.metricsUpdater.WaitingManual(release, 0)
 	}
 
 	if !newApplyAfter.IsZero() {
@@ -324,6 +334,20 @@ func (u *Updater[R]) calculatePatchResultDeployTime(release R) (time.Time, deplo
 	return releaseApplyTime, reason, nil
 }
 
+func (u *Updater[R]) setReleaseQueueDepthLabel(metricLabels map[string]string) {
+	if metricLabels[ManualApprovalRequired] == "true" {
+		diff := len(u.releases) - 1 - u.predictedReleaseIndex
+		switch {
+		case diff == 1:
+			metricLabels[ReleaseQueueDepth] = "one"
+		case diff == 2:
+			metricLabels[ReleaseQueueDepth] = "two"
+		case diff > 2:
+			metricLabels[ReleaseQueueDepth] = "three"
+		}
+	}
+}
+
 // ApplyPredictedRelease applies predicted release, checks everything:
 //   - Deckhouse is ready (except patch)
 //   - Canary settings
@@ -331,7 +355,8 @@ func (u *Updater[R]) calculatePatchResultDeployTime(release R) (time.Time, deplo
 //   - Release requirements
 //
 // In addition to the regular error, ErrDeployConditionsNotMet or NotReadyForDeployError is returned as appropriate.
-func (u *Updater[R]) ApplyPredictedRelease() (err error) {
+func (u *Updater[R]) ApplyPredictedRelease() error {
+	var err error
 	if u.predictedReleaseIndex == -1 {
 		return ErrDeployConditionsNotMet // has no predicted release
 	}
@@ -351,11 +376,18 @@ func (u *Updater[R]) ApplyPredictedRelease() (err error) {
 		return u.runReleaseDeploy(predictedRelease, currentRelease)
 	}
 
+	metricLabels := NewReleaseMetricLabels(predictedRelease)
+
 	if u.PredictedReleaseIsPatch() {
-		err = u.checkPatchReleaseConditions(predictedRelease)
+		err = u.checkPatchReleaseConditions(predictedRelease, metricLabels)
 	} else {
-		err = u.checkMinorReleaseConditions(predictedRelease)
+		err = u.checkMinorReleaseConditions(predictedRelease, metricLabels)
 	}
+	u.setReleaseQueueDepthLabel(metricLabels)
+
+	// if the predicted release has an index less than the number of awaiting releases
+	// calculate and set releaseDepthQueue label
+	u.metricsUpdater.UpdateReleaseMetric(predictedRelease.GetName(), metricLabels)
 	if err != nil {
 		return fmt.Errorf("check release %s conditions: %w", predictedRelease.GetName(), err)
 	}
@@ -399,7 +431,7 @@ func (u *Updater[R]) checkReleaseDisruptions(rl R) bool {
 				msg := fmt.Sprintf("Release requires disruption approval (`kubectl annotate DeckhouseRelease %s release.deckhouse.io/disruption-approved=true`): %s", rl.GetName(), reason)
 				err := u.updateStatus(rl, msg, PhasePending)
 				if err != nil {
-					u.logger.Error(err)
+					u.logger.Error("update status", log.Err(err))
 				}
 				return false
 			}
@@ -472,23 +504,13 @@ func (u *Updater[R]) runReleaseDeploy(predictedRelease R, currentRelease *R) err
 		}
 	}
 
-	if len(u.skippedPatchesIndexes) > 0 {
-		for _, index := range u.skippedPatchesIndexes {
-			release := u.releases[index]
-			// skip not-deployed patches
-			err = u.updateStatus(release, "", PhaseSkipped)
-			if err != nil {
-				return fmt.Errorf("update status to skipped: %w", err)
-			}
-		}
-	}
-
-	return nil
+	return u.CommitSkippedReleases()
 }
 
 // PredictNextRelease runs prediction of the next release to deploy.
-// it skips patch releases and save only the latest one
-func (u *Updater[R]) PredictNextRelease() {
+// It skips patch releases and saves only the latest one.
+// Also, the metrics of the referenced release are updated.
+func (u *Updater[R]) PredictNextRelease(release R) {
 	for index, rl := range u.releases {
 		if rl.GetPhase() == PhaseDeployed {
 			u.currentDeployedReleaseIndex = index
@@ -496,16 +518,25 @@ func (u *Updater[R]) PredictNextRelease() {
 		}
 	}
 
-	for i, release := range u.releases {
-		switch release.GetPhase() {
+	for i, rl := range u.releases {
+		switch rl.GetPhase() {
 		case PhaseSuperseded, PhaseSuspended, PhaseSkipped:
 			// pass
 
 		case PhasePending:
-			u.processPendingRelease(i, release)
+			releaseRequirementsMet := u.checkReleaseRequirements(rl)
+			u.processPendingRelease(i, rl, releaseRequirementsMet)
+			// update metric only for the release that initiated prediction so as not to provoke metrics churn on every prediction
+			if rl.GetName() == release.GetName() {
+				metricLabels := NewReleaseMetricLabels(rl)
+				if !releaseRequirementsMet {
+					metricLabels[RequirementsNotMet] = "true"
+				}
+				u.metricsUpdater.UpdateReleaseMetric(rl.GetName(), metricLabels)
+			}
 		}
 
-		if release.GetForce() {
+		if rl.GetForce() {
 			u.forcedReleaseIndex = i
 		}
 	}
@@ -554,7 +585,7 @@ func (u *Updater[R]) ApplyForcedRelease(ctx context.Context) error {
 		if i < u.forcedReleaseIndex {
 			err := u.updateStatus(release, "", PhaseSuperseded)
 			if err != nil {
-				u.logger.Error(err)
+				u.logger.Error("update status", log.Err(err))
 			}
 		}
 	}
@@ -595,24 +626,7 @@ func (u *Updater[R]) PredictedReleaseIsPatch() bool {
 	return true
 }
 
-func (u *Updater[R]) processPendingRelease(index int, release R) {
-	releaseRequirementsMet := u.checkReleaseRequirements(release)
-	// check: already has predicted release and current is a patch
-	if u.predictedReleaseIndex >= 0 {
-		previousPredictedRelease := u.releases[u.predictedReleaseIndex]
-		if previousPredictedRelease.GetVersion().Major() != release.GetVersion().Major() {
-			return
-		}
-
-		if previousPredictedRelease.GetVersion().Minor() != release.GetVersion().Minor() {
-			return
-		}
-		// it's a patch for predicted release, continue
-		if releaseRequirementsMet {
-			u.skippedPatchesIndexes = append(u.skippedPatchesIndexes, u.predictedReleaseIndex)
-		}
-	}
-
+func (u *Updater[R]) processPendingRelease(index int, release R, releaseRequirementsMet bool) {
 	// if we have a deployed a release
 	if u.currentDeployedReleaseIndex >= 0 {
 		// if deployed version is greater than the pending one, this pending release should be superseded
@@ -622,8 +636,19 @@ func (u *Updater[R]) processPendingRelease(index int, release R) {
 		}
 	}
 
-	// release is predicted to be Deployed
 	if releaseRequirementsMet {
+		// check: already has predicted release and current is a patch
+		if u.predictedReleaseIndex >= 0 {
+			previousPredictedRelease := u.releases[u.predictedReleaseIndex]
+			if previousPredictedRelease.GetVersion().Major() < release.GetVersion().Major() || previousPredictedRelease.GetVersion().Minor() < release.GetVersion().Minor() {
+				if err := u.updateStatus(release, fmt.Sprintf("Awaiting for %s release to be deployed", previousPredictedRelease.GetName()), PhasePending); err != nil {
+					u.logger.Error("update status", log.Err(err))
+				}
+				return
+			}
+			// it's a patch for predicted release, continue
+			u.skippedPatchesIndexes = append(u.skippedPatchesIndexes, u.predictedReleaseIndex)
+		}
 		u.predictedReleaseIndex = index
 	}
 }
@@ -635,12 +660,40 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 		if err := extenders.CheckModuleReleaseRequirements(rl.GetName(), rl.GetRequirements()); err != nil {
 			err = u.updateStatus(rl, err.Error(), PhasePending)
 			if err != nil {
-				u.logger.Error(err)
+				u.logger.Error("update status", log.Err(err))
 			}
 			return false
 		}
 
 	case *v1alpha1.DeckhouseRelease:
+		if moduleName, err := deckhouseversion.Instance().ValidateBaseVersion(rl.GetVersion().String()); err != nil {
+			// invalid deckhouse version in deckhouse release or an enabled module has requirements that prevent deckhouse release from becoming predicted
+			if moduleName == "" || u.enabledModules.Has(moduleName) {
+				if err = u.updateStatus(rl, err.Error(), PhasePending); err != nil {
+					u.logger.Error("update status", log.Err(err))
+				}
+				return false
+			}
+		}
+
+		k8sVersionAutomatic, err := u.kubeAPI.IsKubernetesVersionAutomatic(u.ctx)
+		// if discovery failed, we musn't suspend the release
+		if err != nil {
+			u.logger.Error("check k8s automatic version", log.Err(err))
+			return false
+		}
+		if k8sVersionAutomatic && len(rl.GetRequirements()["autoK8sVersion"]) > 0 {
+			if moduleName, err := kubernetesversion.Instance().ValidateBaseVersion(rl.GetRequirements()["autoK8sVersion"]); err != nil {
+				// invalid auto kubernetes version in deckhouse release or an enabled module has requirements that prevent deckhouse release from becoming predicted
+				if moduleName == "" || u.enabledModules.Has(moduleName) {
+					if err = u.updateStatus(rl, err.Error(), PhasePending); err != nil {
+						u.logger.Error("update status", log.Err(err))
+					}
+					return false
+				}
+			}
+		}
+
 		for key, value := range rl.GetRequirements() {
 			// these fields are checked by extenders in module release controller
 			if extenders.IsExtendersField(key) {
@@ -650,12 +703,11 @@ func (u *Updater[R]) checkReleaseRequirements(rl R) bool {
 			if !passed {
 				msg := fmt.Sprintf("%q requirement for DeckhouseRelease %q not met: %s", key, rl.GetVersion(), err)
 				if errors.Is(err, requirements.ErrNotRegistered) {
-					u.logger.Error(err)
+					u.logger.Error("check requirements", log.Err(err))
 					msg = fmt.Sprintf("%q requirement is not registered", key)
 				}
-				err := u.updateStatus(rl, msg, PhasePending)
-				if err != nil {
-					u.logger.Error(err)
+				if err := u.updateStatus(rl, msg, PhasePending); err != nil {
+					u.logger.Error("update status", log.Err(err))
 				}
 				return false
 			}
@@ -673,7 +725,12 @@ func (u *Updater[R]) updateStatus(release R, msg, phase string) error {
 		return nil
 	}
 
-	return u.kubeAPI.UpdateReleaseStatus(release, msg, phase)
+	switch phase {
+	case PhaseSuperseded, PhaseSuspended, PhaseSkipped, PhaseDeployed:
+		u.metricsUpdater.PurgeReleaseMetric(release.GetName())
+	}
+
+	return u.kubeAPI.UpdateReleaseStatus(u.ctx, release, msg, phase)
 }
 
 func (u *Updater[R]) ChangeUpdatingFlag(fl bool) error {
@@ -715,6 +772,20 @@ func (u *Updater[R]) GetPredictedRelease() R {
 		return release
 	}
 	return u.releases[u.predictedReleaseIndex]
+}
+
+func (u *Updater[R]) CommitSkippedReleases() error {
+	if len(u.skippedPatchesIndexes) > 0 {
+		for _, index := range u.skippedPatchesIndexes {
+			release := u.releases[index]
+			// skip not-deployed patches
+			if err := u.updateStatus(release, "", PhaseSkipped); err != nil {
+				return fmt.Errorf("update status to skipped: %w", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (u *Updater[R]) GetSkippedPatchesIndexes() []int {

@@ -1,6 +1,6 @@
 .github/                        @name212
-002-deckhouse/                  @yalosev @miklezzzz
-005-external-module-manager/    @yalosev @miklezzzz
+002-deckhouse/                  @yalosev @miklezzzz @ldmonster
+005-external-module-manager/    @yalosev @miklezzzz @ldmonster
 007-registrypackages/           @RomanenkoDenys @name212 @sprait
 010-cloud-data-crd/             @nabokihms
 011-flow-schema/                @name212 @sprait
@@ -41,9 +41,9 @@
 350-node-local-dns/             @name212 @sprait
 380-metallb/                    @apolovov
 400-descheduler/                @RomanenkoDenys @name212 @sprait
-402-ingress-nginx/              @miklezzzz @yalosev
-450-keepalived/                @apolovov
-450-network-gateway/           @apolovov
+402-ingress-nginx/              @apolovov
+450-keepalived/                 @apolovov
+450-network-gateway/            @apolovov
 460-log-shipper/                @nabokihms @vladimirGuryanov @lazovskiy
 462-loki/                       @nabokihms @vladimirGuryanov @lazovskiy
 465-pod-reloader/               @name212 @sprait
@@ -64,9 +64,10 @@ bashible-apiserver/             @name212 @sprait
 candi/                          @name212 @sprait
 cloud-controller-manager/       @aleksey-su
 csi/                            @AleksZimin
-deckhouse-controller/           @yalosev @miklezzzz
+deckhouse-controller/           @yalosev @miklezzzz @ldmonster
 dhctl/                          @name212 @sprait
 docs/                           @z9r5 @nabokihms
 helm_lib/                       @name212 @sprait
 crds/                           @nabokihms @konstantin-axenov @z9r5
 openapi/                        @nabokihms @konstantin-axenov @z9r5
+/pkg/                           @yalosev @ldmonster

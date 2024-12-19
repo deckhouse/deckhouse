@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -143,12 +144,16 @@ func prometheusDiskMetrics(input *go_hook.HookInput, dc dependency.Container) er
 	return nil
 }
 
-func getFsInfo(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (fsSizeBytes, fsUsedBytes, fsUsedPercent float64) {
-	containerName := "prometheus"
-	command := "df -PB1 /prometheus/"
+func getFsInfo(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (float64, float64, float64) {
+	var (
+		command                                 = "df -PB1 /prometheus/"
+		containerName                           = "prometheus"
+		fsSizeBytes, fsUsedBytes, fsUsedPercent float64
+	)
+
 	output, _, err := execToPodThroughAPI(kubeClient, command, containerName, pod.Name, pod.Namespace)
 	if err != nil {
-		input.LogEntry.Warnf("%s: %s", pod.Name, err.Error())
+		input.Logger.Warnf("%s: %s", pod.Name, err.Error())
 	} else {
 		for _, s := range strings.Split(output, "\n") {
 			if strings.Contains(s, "prometheus") {
@@ -159,11 +164,13 @@ func getFsInfo(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (
 			}
 		}
 	}
-	return
+
+	return fsSizeBytes, fsUsedBytes, fsUsedPercent
 }
 
 func execToPodThroughAPI(kubeClient k8s.Client, command, containerName, podName, namespace string) (string, string, error) {
 	req := kubeClient.CoreV1().RESTClient().Post().
+		Timeout(time.Duration(10) * time.Second).
 		Resource("pods").
 		Name(podName).
 		Namespace(namespace).

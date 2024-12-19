@@ -155,14 +155,14 @@ func handleNodes(input *go_hook.HookInput) error {
 					"affected_module": modulesListInUse,
 					"constraint":      constrant.KernelVersionConstraint,
 				}, metrics.WithGroup(nodeKernelCheckMetricsGroup))
-				input.LogEntry.Debugf("kernel %s on node %s does not satisfy kernel constraint %s for modules [%s]", node.KernelVersion, node.Name, constrant.KernelVersionConstraint, modulesListInUse)
+				input.Logger.Debugf("kernel %s on node %s does not satisfy kernel constraint %s for modules [%s]", node.KernelVersion, node.Name, constrant.KernelVersionConstraint, modulesListInUse)
 				hasAffectedNodes = true
 			}
 		}
 	}
 
 	if hasAffectedNodes {
-		input.LogEntry.Error("some nodes have unmet kernel constraints. To observe affected nodes use the expr `d8_node_kernel_does_not_satisfy_requirements == 1` in Prometheus")
+		input.Logger.Error("some nodes have unmet kernel constraints. To observe affected nodes use the expr `d8_node_kernel_does_not_satisfy_requirements == 1` in Prometheus")
 	}
 
 	return nil

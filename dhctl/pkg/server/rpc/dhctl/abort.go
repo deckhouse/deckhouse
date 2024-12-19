@@ -91,7 +91,7 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abort(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.abortSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
 					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
 				}()
 
@@ -120,6 +120,21 @@ connectionProcessor:
 			}
 		}
 	}
+}
+
+func (s *Service) abortSafe(
+	ctx context.Context,
+	request *pb.AbortStart,
+	switchPhase phases.DefaultOnPhaseFunc,
+	logWriter io.Writer,
+) (result *pb.AbortResult) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = &pb.AbortResult{Err: panicMessage(ctx, r)}
+		}
+	}()
+
+	return s.abort(ctx, request, switchPhase, logWriter)
 }
 
 func (s *Service) abort(

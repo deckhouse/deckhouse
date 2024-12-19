@@ -2,4 +2,4 @@
   link: https://github.com/cilium/cilium
   description: Cilium is open source software for providing and transparently securing network connectivity and loadbalancing between application workloads such as application containers or processes.
   logo: /images/logos/cilium.png
-  licence: Apache License 2.0
+  license: Apache License 2.0

@@ -65,12 +65,12 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.32.0
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   version: v1.32.0
 status:
   approved: false
-  message: ""
+  message: Awaiting for v1.31.3 release to be deployed
   phase: Pending
   transitionTime: null
 ---

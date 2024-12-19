@@ -5,7 +5,7 @@ lang: ru
 toc: false
 ---
 
-Deckhouse Kubernetes Platform поставляется в редакциях _Community Edition (CE)_, _Basic Edition (BE)_, _Standard Edition (SE)_, _Enterprise Edition (EE)_ и _Certified Security Edition (CSE)_. Они отличаются набором функциональных возможностей и уровнем доступной поддержки. Краткое сравнение с перечислением ключевых возможностей и особенностей можно найти на [этой странице]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/).
+Deckhouse Kubernetes Platform поставляется в нескольких редакциях. Они отличаются набором возможностей и уровнем доступной поддержки. Краткое сравнение ключевых возможностей и особенностей можно найти на [сайте Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/pricing/#revisions).
 
 В таблице ниже перечислены модули Deckhouse Kubernetes Platform, доступные для использования в разных редакциях платформы:
 

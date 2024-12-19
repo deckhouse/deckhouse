@@ -76,7 +76,7 @@ func TestNewRegistryClientConfigGetter(t *testing.T) {
 }
 
 func TestBootstrapGetNodesFromCache(t *testing.T) {
-	log.InitLogger("simple")
+	log.InitLogger("json")
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-bootstrap-*")
 	defer os.RemoveAll(dir)
 
@@ -114,6 +114,21 @@ func TestBootstrapGetNodesFromCache(t *testing.T) {
 }
 
 func TestInstallDeckhouse(t *testing.T) {
+	err := os.Setenv("DHCTL_TEST", "yes")
+	require.NoError(t, err)
+	defer func() {
+		os.Unsetenv("DHCTL_TEST")
+	}()
+
+	err = os.WriteFile("/deckhouse/version", []byte("dev"), 0o666)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		os.Remove("/deckhouse/version")
+	}()
+
 	createReadyDeckhousePod := func(fakeClient *client.KubernetesClient) {
 		pod := &v1.Pod{
 			TypeMeta: metav1.TypeMeta{
@@ -195,7 +210,7 @@ func TestInstallDeckhouse(t *testing.T) {
 			fakeClient := client.NewFakeKubernetesClient()
 			createReadyDeckhousePod(fakeClient)
 
-			err := InstallDeckhouse(fakeClient, conf)
+			_, err := InstallDeckhouse(fakeClient, conf)
 
 			require.NoError(t, err, "Should install Deckhouse")
 
@@ -212,7 +227,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, curUUID)
 
-				err := InstallDeckhouse(fakeClient, conf)
+				_, err := InstallDeckhouse(fakeClient, conf)
 
 				require.Error(t, err, "Should not install Deckhouse")
 
@@ -229,7 +244,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, curUUID)
 
-				err := InstallDeckhouse(fakeClient, conf)
+				_, err := InstallDeckhouse(fakeClient, conf)
 
 				require.Error(t, err, "Should not install Deckhouse")
 
@@ -243,7 +258,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, clusterUUID)
 
-				err := InstallDeckhouse(fakeClient, conf)
+				_, err := InstallDeckhouse(fakeClient, conf)
 
 				require.NoError(t, err, "Should install Deckhouse")
 

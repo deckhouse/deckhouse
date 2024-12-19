@@ -30,7 +30,10 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client
   setup:
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b {{ $version }} --depth 1 {{ $.SOURCE_REPO }}/flant/go-ec2-describe-tags.git src
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}

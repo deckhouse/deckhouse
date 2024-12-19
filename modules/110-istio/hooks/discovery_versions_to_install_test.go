@@ -62,7 +62,7 @@ globalVersion: "1.2" # default version "from openapi/values.yaml"
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.LogrusOutput.Contents()).To(HaveLen(0))
+			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
 
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").String()).To(MatchJSON(`["1.2"]`))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.2"))

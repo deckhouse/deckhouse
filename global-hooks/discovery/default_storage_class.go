@@ -75,7 +75,7 @@ func discoveryDefaultStorageClass(input *go_hook.HookInput) error {
 	const valuePath = "global.discovery.defaultStorageClass"
 
 	if defaultStorageClass == "" {
-		input.LogEntry.Warnln("Default storage class not found. Cleaning current value.")
+		input.Logger.Warn("Default storage class not found. Cleaning current value.")
 		input.Values.Remove(valuePath)
 		return nil
 	}

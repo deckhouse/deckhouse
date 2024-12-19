@@ -95,26 +95,26 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 			values, ok := existingTemplates[name]
 			if !ok {
 				// required template isn't found in the cluster
-				input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: missing %s ConstraintTemplate", name)
+				input.Logger.Warnf("admission-policy-engine isn't bootstrapped yet: missing %s ConstraintTemplate", name)
 				bootstrapped = false
 				break
 			}
 
 			if !values.Processed {
 				// status.created field of a constraint template isn't found - highly likely the constraint template wasn't processed for some reasons
-				input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: ConstraintTemplate %s not processed", name)
+				input.Logger.Warnf("admission-policy-engine isn't bootstrapped yet: ConstraintTemplate %s not processed", name)
 				bootstrapped = false
 				break
 			}
 			if !values.Created {
 				// status.created field equals false, there might be some errors in processing there
-				input.LogEntry.Warnf("admission-policy-engine isn't bootstrapped yet: CRD for ConstraintTemplate %s not created", name)
+				input.Logger.Warnf("admission-policy-engine isn't bootstrapped yet: CRD for ConstraintTemplate %s not created", name)
 				bootstrapped = false
 				break
 			}
 		}
 	} else {
-		input.LogEntry.Warn("admission-policy-engine isn't bootstrapped yet: no required constraint templates found")
+		input.Logger.Warn("admission-policy-engine isn't bootstrapped yet: no required constraint templates found")
 	}
 
 	input.Values.Set("admissionPolicyEngine.internal.bootstrapped", bootstrapped)

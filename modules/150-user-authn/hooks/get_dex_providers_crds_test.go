@@ -88,17 +88,18 @@ spec:
 
 				Expect(f.ValuesGet("userAuthn.internal.providers").String()).To(MatchJSON(`
 [{
-  "type": "BitbucketCloud",
-  "displayName": "bitbucket",
   "bitbucketCloud": {
     "clientID": "plainstring",
     "clientSecret": "plainstring",
+    "includeTeamGroups": false,
     "teams": [
       "only",
       "team"
     ]
   },
-  "id": "bitbucket"
+  "displayName": "bitbucket",
+  "id": "bitbucket",
+  "type": "BitbucketCloud"
 }]`))
 			})
 
@@ -124,34 +125,42 @@ spec:
 					Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
 					Expect(f.ValuesGet("userAuthn.internal.providers").String()).To(MatchUnorderedJSON(`
-[{
-  "type": "OIDC",
-  "displayName": "google",
-  "oidc": {
-    "basicAuthUnsupported": true,
-    "clientID": "plainstring",
-    "clientSecret": "plainstring",
-    "getUserInfo": true,
-    "insecureSkipEmailVerified": true,
-    "issuer": "https://issue.example.com",
-    "scopes": [
-      "profile",
-      "email"
-    ]
-  },
-  "id": "oidc-notslu-gif-ed"
-}, {
-  "type": "BitbucketCloud",
-  "displayName": "bitbucket",
+[
+{
   "bitbucketCloud": {
     "clientID": "plainstring",
     "clientSecret": "plainstring",
+    "includeTeamGroups": false,
     "teams": [
       "only",
       "team"
     ]
   },
-  "id": "bitbucket"
+  "displayName": "bitbucket",
+  "id": "bitbucket",
+  "type": "BitbucketCloud"
+},
+{
+  "displayName": "google",
+  "id": "oidc-notslu-gif-ed",
+  "oidc": {
+    "basicAuthUnsupported": true,
+    "claimMappingOverride": false,
+    "clientID": "plainstring",
+    "clientSecret": "plainstring",
+    "getUserInfo": true,
+    "insecureSkipEmailVerified": true,
+    "insecureSkipVerify": false,
+    "issuer": "https://issue.example.com",
+    "promptType": "consent",
+    "scopes": [
+      "profile",
+      "email"
+    ],
+    "userIDKey": "sub",
+    "userNameKey": "name"
+  },
+  "type": "OIDC"
 }]`))
 				})
 			})
@@ -169,17 +178,18 @@ spec:
 
 			Expect(f.ValuesGet("userAuthn.internal.providers").String()).To(MatchJSON(`
 [{
-  "type": "BitbucketCloud",
-  "displayName": "bitbucket",
-  "bitbucketCloud": {
-    "clientID": "plainstring",
-    "clientSecret": "plainstring",
-    "teams": [
-      "only",
-      "team"
-    ]
-  },
-  "id": "bitbucket"
+"bitbucketCloud": {
+  "clientID": "plainstring",
+  "clientSecret": "plainstring",
+  "includeTeamGroups": false,
+  "teams": [
+    "only",
+    "team"
+  ]
+},
+"displayName": "bitbucket",
+"id": "bitbucket",
+"type": "BitbucketCloud"
 }]`))
 		})
 	})

@@ -38,12 +38,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Container) (bool, error) {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
-		input.LogEntry.Errorf("%v", err)
+		input.Logger.Errorf("%v", err)
 		return false, err
 	}
 	masterNodes, err := kubeClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/control-plane="})
 	if err != nil {
-		input.LogEntry.Errorf("%v", err)
+		input.Logger.Errorf("%v", err)
 		return false, err
 	}
 
@@ -58,8 +58,8 @@ func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Contain
 }
 
 func waitForAllMasterNodesToBecomeInitialized(input *go_hook.HookInput, dc dependency.Container) error {
-	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 120*time.Second, false, func(_ context.Context) (done bool, err error) {
-		input.LogEntry.Infof("waiting for master nodes to become initialized by cloud provider")
+	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 120*time.Second, false, func(_ context.Context) (bool, error) {
+		input.Logger.Infof("waiting for master nodes to become initialized by cloud provider")
 		ok, err := isAllMasterNodesInitialized(input, dc)
 		if ok {
 			return true, nil

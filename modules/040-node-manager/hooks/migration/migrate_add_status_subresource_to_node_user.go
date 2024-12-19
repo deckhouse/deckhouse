@@ -64,11 +64,11 @@ func addStatusSubresourceForNodeUser(input *go_hook.HookInput) error {
 	for _, item := range nodeUserSnap {
 		nu := item.(existingStatus)
 		if nu.StatusExists {
-			input.LogEntry.Debugf("Status already exists for node user %s", nu.UserName)
+			input.Logger.Debugf("Status already exists for node user %s", nu.UserName)
 			continue
 		}
 
-		input.LogEntry.Infof("Add status for node user %s", nu.UserName)
+		input.Logger.Infof("Add status for node user %s", nu.UserName)
 
 		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			objCopy := u.DeepCopy()

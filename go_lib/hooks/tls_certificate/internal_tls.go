@@ -218,12 +218,12 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 			// and we don't need to create Crontab schedule
 			caOutdated, err := isOutdatedCA(cert.CA)
 			if err != nil {
-				input.LogEntry.Errorf(err.Error())
+				input.Logger.Errorf(err.Error())
 			}
 
 			certOutdated, err := isIrrelevantCert(cert.Cert, sans)
 			if err != nil {
-				input.LogEntry.Errorf(err.Error())
+				input.Logger.Errorf(err.Error())
 			}
 
 			// In case of errors, both these flags are false to avoid regeneration loop for the
@@ -297,7 +297,7 @@ func isOutdatedCA(ca string) (bool, error) {
 }
 
 func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages []string) (certificate.Certificate, error) {
-	ca, err := certificate.GenerateCA(input.LogEntry,
+	ca, err := certificate.GenerateCA(input.Logger,
 		cn,
 		certificate.WithKeyAlgo(keyAlgorithm),
 		certificate.WithKeySize(keySize),
@@ -306,7 +306,7 @@ func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages 
 		return certificate.Certificate{}, err
 	}
 
-	return certificate.GenerateSelfSignedCert(input.LogEntry,
+	return certificate.GenerateSelfSignedCert(input.Logger,
 		cn,
 		ca,
 		certificate.WithSANs(sans...),

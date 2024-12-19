@@ -44,4 +44,4 @@ apiVersions:
         minItems: 1
         items:
           type: string
-          pattern: '^[a-z]+-[a-z]+-[0-9]+[a-z]+$'
+          pattern: '^[a-z]+-[a-z]+-[0-9]+(?:[a-z]|-[a-z]+-[0-9]+[a-z])$'

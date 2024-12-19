@@ -100,7 +100,7 @@ func (p *Proxy) Serve() {
 			defer packageReader.Close()
 		}
 		if err != nil {
-			p.logger.Error(err)
+			p.logger.Error(err.Error())
 			if errors.Is(err, registry.ErrPackageNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
@@ -133,7 +133,7 @@ func (p *Proxy) Serve() {
 	p.logger.Debugf("Starting packages proxy listener: %s", p.listener.Addr())
 
 	if err := p.server.Serve(p.listener); err != nil && err != http.ErrServerClosed {
-		p.logger.Error(err)
+		p.logger.Error(err.Error())
 	}
 }
 
@@ -141,7 +141,7 @@ func (p *Proxy) Stop() {
 	p.logger.Infof("graceful shutdown listener: %s", p.listener.Addr())
 	err := p.server.Shutdown(context.Background())
 	if err != nil && err != http.ErrServerClosed {
-		p.logger.Error(err)
+		p.logger.Error(err.Error())
 		os.Exit(1)
 	}
 }
@@ -188,11 +188,11 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 			return
 		}
 		// if cache set returns error, log it and directly copy content from registryReader to pipeWriter
-		p.logger.Error(err)
+		p.logger.Error(err.Error())
 		// Copy remaining data to pipe
 		_, err = io.Copy(pipeWriter, registryReader)
 		if err != nil {
-			p.logger.Error(err)
+			p.logger.Error(err.Error())
 		}
 	}()
 

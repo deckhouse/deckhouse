@@ -1,0 +1,116 @@
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-promu-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - git clone --depth 1 --branch v0.14.0 {{ $.SOURCE_REPO }}/prometheus/promu.git /promu
+  - cd /promu
+  - go build -ldflags="-s -w" -o promu ./main.go
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-promu-artifact
+  add: /promu/promu
+  to: /bin/promu
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /patches
+shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  install:
+  - apk update && apk add --no-cache gcc g++ nodejs npm
+  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=1 GOOS=linux GOARCH=amd64 PROMETHEUS_DEPS_VERSION=v2.53.2 PROMETHEUS_VERSION=v2.53.2-0.0.2
+  - git clone -b "${PROMETHEUS_DEPS_VERSION}" --single-branch {{ $.SOURCE_REPO }}/prometheus/prometheus-deps
+  - mkdir /prometheus && cd /prometheus
+  - git clone -b "${PROMETHEUS_VERSION}" --single-branch {{ $.OBSERVABILITY_SOURCE_REPO }}/prometheus-plus-plus prometheus
+  - cd /prometheus/prometheus/web/ui
+  - rm -rf ./* && mv /prometheus-deps/web/ui/* .
+  - npm run build
+  - cd /prometheus/prometheus
+  - scripts/compress_assets.sh
+  - go mod tidy
+  - go generate -tags plugins ./plugins
+  - /bin/promu build --prefix /prometheus/prometheus
+  - mkdir -p /consoles
+  - cp /prometheus/prometheus/consoles/* /consoles
+  - cp /prometheus/prometheus/console_libraries/* /consoles
+  - mkdir -p /etc
+  - cp /prometheus/prometheus/documentation/examples/prometheus.yml /etc
+  - cp /prometheus/prometheus/console_libraries/* /etc
+  - mkdir /empty
+  - chown -R 64535:64535 /empty
+  - chown -R 64535:64535 /prometheus/
+  - chown -R 64535:64535 /etc/
+  - chown -R 64535:64535 /consoles/
+  - chmod 0700 /prometheus/prometheus/prometheus
+  - chmod 0700 /prometheus/prometheus/promtool
+---
+{{ $binariesList := "/usr/bin/curl /bin/sh /bin/df" }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ $.Images.BASE_ALT_DEV }}
+shell:
+  install:
+    - /binary_replace.sh -i "{{ $binariesList }}" -o /relocate
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+fromCacheVersion: 2024022701
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /prometheus/prometheus/prometheus
+  to: /bin/prometheus
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /prometheus/prometheus/promtool
+  to: /bin/promtool
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /prometheus/prometheus/console_libraries/
+  to: /usr/share/prometheus/console_libraries
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /consoles/
+  to: /usr/share/prometheus/consoles
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /etc/
+  to: /etc/prometheus
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /empty/
+  to: /prometheus
+  before: setup
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /relocate
+  to: /
+  before: install
+  includePaths:
+  - '**/*'
+docker:
+  EXPOSE:
+  - "9090"
+  VOLUME:
+  - "/prometheus"
+  WORKDIR: "/prometheus"
+  ENTRYPOINT:
+  - "/bin/prometheus"
+  CMD:
+  - "--config.file=/etc/prometheus/prometheus.yml"
+  - "--storage.tsdb.path=/prometheus"
+  - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+  - "--web.console.templates=/usr/share/prometheus/consoles"

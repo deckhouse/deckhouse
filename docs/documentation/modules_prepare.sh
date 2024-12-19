@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# Copyright 2024 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Checks if a file has a frontmatter section.
 page::has_frontmatter() {
     if [[ -f $1 ]]
     then
@@ -11,10 +26,6 @@ page::has_frontmatter() {
     fi
     return 1
 }
-
-if [ -f modules_menu_skip ]; then
-  modules_skip_list=$(cat modules_menu_skip)
-fi
 
 pages=$(
 for i in $(find ${MODULES_SRC_DIR} -regex '.*.md' -print | sort); do
@@ -28,13 +39,15 @@ done | sed "s|^${MODULES_SRC_DIR}/||" |  sed 's/_RU\.md/\.md/' | sed 's/\.md$//'
 
 for page in ${pages}; do
     absolute_path="${MODULES_SRC_DIR}/${page}"
-    module_name=$(echo $page | cut -d\/ -f1)
-    skip=false
-    for el in $modules_skip_list ; do
-      if [[ $el == $module_name ]] ; then skip=true; break; fi
-    done
-    if [[ "$skip" == 'true' ]]; then continue; fi
-    page_dst=$page
+    module_original_name=$(echo $page | cut -d\/ -f1)
+    module_name=$(echo $module_original_name | sed -E 's#^[0-9]+-##')
+
+    # Skip modules, which are listed in modules_menu_skip file
+    if grep -Fxq "$module_name" modules_menu_skip; then
+        continue
+    fi
+
+    page_dst=$(echo $page | sed -E 's#^[0-9]+-##')
     mkdir -p $(echo "${MODULES_DST_EN}/${page_dst}" | sed -E 's|^(.+)/[^\/]+$|\1|') $(echo "${MODULES_DST_RU}/${page_dst}" | sed -E 's|^(.+)/[^\/]+$|\1|')
     if [[ -f "${absolute_path}.md" ]] && page::has_frontmatter "${absolute_path}.md"; then
         cp -f "${absolute_path}.md" "${MODULES_DST_EN}/${page_dst}.md"
@@ -54,7 +67,7 @@ for page in ${pages}; do
         sed -i "1alang: ru" "${MODULES_DST_RU}/${page_dst}.md"
         echo "INFO: ${absolute_path}_RU.md is absent and has been replaced by the doc from the other lang."
     fi
-done
 
-rsync -a --exclude='*.md' --exclude-from=modules_menu_skip ${MODULES_SRC_DIR}/ ${MODULES_DST_EN}/
-rsync -a --exclude='*.md' --exclude-from=modules_menu_skip ${MODULES_SRC_DIR}/ ${MODULES_DST_RU}/
+    rsync -a --exclude='*.md' ${MODULES_SRC_DIR}/${module_original_name}/ ${MODULES_DST_EN}/${module_name}/
+    rsync -a --exclude='*.md' ${MODULES_SRC_DIR}/${module_original_name}/ ${MODULES_DST_RU}/${module_name}/
+done

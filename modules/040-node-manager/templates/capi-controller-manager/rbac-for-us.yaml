@@ -108,6 +108,12 @@ rules:
       - zvirtclusters
       - zvirtmachines
       - zvirtmachinetemplates
+      - dynamixclusters
+      - dynamixmachines
+      - dynamixmachinetemplates
+      - huaweicloudclusters
+      - huaweicloudmachines
+      - huaweicloudmachinetemplates
     verbs:
       - create
       - delete

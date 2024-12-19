@@ -15,9 +15,11 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
@@ -28,11 +30,13 @@ var (
 )
 
 type IstioFederationDiscoveryCrdInfo struct {
-	Name                    string
-	ClusterUUID             string
-	TrustDomain             string
-	PublicMetadataEndpoint  string
-	PrivateMetadataEndpoint string
+	Name                     string
+	ClusterUUID              string
+	TrustDomain              string
+	ClusterCA                string
+	EnableInsecureConnection bool
+	PublicMetadataEndpoint   string
+	PrivateMetadataEndpoint  string
 }
 
 func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_hook.MetricsCollector, endpoint string, isError float64) {
@@ -44,7 +48,7 @@ func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_h
 	mc.Set(federationMetricName, isError, labels, metrics.WithGroup(federationMetricsGroup))
 }
 
-func (i *IstioFederationDiscoveryCrdInfo) PatchMetadataCache(pc *object_patch.PatchCollector, scope string, meta interface{}) error {
+func (i *IstioFederationDiscoveryCrdInfo) PatchMetadataCache(pc go_hook.PatchCollector, scope string, meta interface{}) error {
 	patch := map[string]interface{}{
 		"status": map[string]interface{}{
 			"metadataCache": map[string]interface{}{
@@ -75,11 +79,13 @@ func applyFederationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	me = strings.TrimSuffix(me, "/")
 
 	return IstioFederationDiscoveryCrdInfo{
-		Name:                    federation.GetName(),
-		TrustDomain:             federation.Spec.TrustDomain,
-		ClusterUUID:             clusterUUID,
-		PublicMetadataEndpoint:  me + "/public/public.json",
-		PrivateMetadataEndpoint: me + "/private/federation.json",
+		Name:                     federation.GetName(),
+		TrustDomain:              federation.Spec.TrustDomain,
+		ClusterCA:                federation.Spec.Metadata.ClusterCA,
+		EnableInsecureConnection: federation.Spec.Metadata.EnableInsecureConnection,
+		ClusterUUID:              clusterUUID,
+		PublicMetadataEndpoint:   me + "/public/public.json",
+		PrivateMetadataEndpoint:  me + "/private/federation.json",
 	}, nil
 }
 
@@ -87,10 +93,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("federation"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "federations",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "IstioFederation",
-			FilterFunc: applyFederationFilter,
+			Name:                         "federations",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "IstioFederation",
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			FilterFunc:                   applyFederationFilter,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -105,7 +113,7 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		return nil
 	}
 	if !input.Values.Get("istio.internal.remoteAuthnKeypair.priv").Exists() {
-		input.LogEntry.Warnf("authn keypair for signing requests to remote metadata endpoints isn't generated yet, retry in 1min")
+		input.Logger.Warnf("authn keypair for signing requests to remote metadata endpoints isn't generated yet, retry in 1min")
 		return nil
 	}
 
@@ -126,26 +134,34 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.FederationPrivateMetadata
+		var httpOption []http.Option
 
-		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(), federationInfo.PublicMetadataEndpoint, "")
+		if federationInfo.ClusterCA != "" {
+			caCerts := [][]byte{[]byte(federationInfo.ClusterCA)}
+			httpOption = append(httpOption, http.WithAdditionalCACerts(caCerts))
+		} else if federationInfo.EnableInsecureConnection {
+			httpOption = append(httpOption, http.WithInsecureSkipVerify())
+		}
+
+		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(httpOption...), federationInfo.PublicMetadataEndpoint, "")
 		if err != nil {
-			input.LogEntry.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
 		if statusCode != 200 {
-			input.LogEntry.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s (HTTP Code %d)", federationInfo.PublicMetadataEndpoint, federationInfo.Name, statusCode)
+			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s (HTTP Code %d)", federationInfo.PublicMetadataEndpoint, federationInfo.Name, statusCode)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
 		err = json.Unmarshal(bodyBytes, &publicMetadata)
 		if err != nil {
-			input.LogEntry.Warnf("cannot unmarshal public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warnf("cannot unmarshal public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
 		if publicMetadata.ClusterUUID == "" || publicMetadata.AuthnKeyPub == "" || publicMetadata.RootCA == "" {
-			input.LogEntry.Warnf("bad public metadata format in endpoint %s for IstioFederation %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name)
+			input.Logger.Warnf("bad public metadata format in endpoint %s for IstioFederation %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
@@ -165,29 +181,29 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		}
 		bearerToken, err := jwt.GenerateJWT(privKey, claims, time.Minute)
 		if err != nil {
-			input.LogEntry.Warnf("can't generate auth token for endpoint %s of IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warnf("can't generate auth token for endpoint %s of IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
-		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(), federationInfo.PrivateMetadataEndpoint, bearerToken)
+		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), federationInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
-			input.LogEntry.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		if statusCode != 200 {
-			input.LogEntry.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s (HTTP Code %d)", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, statusCode)
+			input.Logger.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s (HTTP Code %d)", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, statusCode)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		err = json.Unmarshal(bodyBytes, &privateMetadata)
 		if err != nil {
-			input.LogEntry.Warnf("cannot unmarshal private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warnf("cannot unmarshal private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		if privateMetadata.IngressGateways == nil || privateMetadata.PublicServices == nil {
-			input.LogEntry.Warnf("bad private metadata format in endpoint %s for IstioFederation %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name)
+			input.Logger.Warnf("bad private metadata format in endpoint %s for IstioFederation %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name)
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}

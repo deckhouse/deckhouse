@@ -9,8 +9,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/api/v1alpha1"
@@ -18,8 +20,6 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/025-static-routing-manager/images/agent/pkg/utils"
 
 	"github.com/go-logr/logr"
-
-	"github.com/mitchellh/hashstructure/v2"
 
 	"github.com/vishvananda/netlink"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -222,44 +222,168 @@ func periodicalRunEventReconcile(
 // RouteEntry: type, service functions and methods
 
 type RouteEntry struct {
+	table       int
 	destination string
 	gateway     string
-	table       int
+	dev         string
+	devId       int
 }
 
 func (re *RouteEntry) String() string {
-	return fmt.Sprintf("%d#%s#%s", re.table, re.destination, re.gateway)
+	hashRaw := make([]string, 0, 5)
+	hashRaw = append(hashRaw, strconv.Itoa(re.table))
+	hashRaw = append(hashRaw, re.destination)
+	hashRaw = append(hashRaw, re.gateway)
+	hashRaw = append(hashRaw, re.dev)
+	hashRaw = append(hashRaw, strconv.Itoa(re.devId))
+	return strings.Join(hashRaw, "#")
 }
 
 func (re *RouteEntry) getHash() string {
-	hash, err := hashstructure.Hash(*re, hashstructure.FormatV2, nil)
-	if err != nil {
-		return re.String()
+	return re.String()
+}
+
+func (re *RouteEntry) getRoute() v1alpha1.Route {
+	preparedRoute := v1alpha1.Route{}
+	if re.destination != "" {
+		preparedRoute.Destination = re.destination
+	}
+	if re.gateway != "" {
+		preparedRoute.Gateway = re.gateway
+	}
+	if re.dev != "" {
+		preparedRoute.Dev = re.dev
+	}
+	return preparedRoute
+}
+
+func (re *RouteEntry) getNetlinkRoute() (*netlink.Route, error) {
+	// Prepare route for netlink
+	preparedNetlinkRoute := new(netlink.Route)
+
+	if re.table > 0 {
+		preparedNetlinkRoute.Table = re.table
+	}
+	if re.destination != "" {
+		ip, dstnetIPNet, err := net.ParseCIDR(re.destination)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse destination in route %v, err: %w",
+				*re,
+				err,
+			)
+		}
+		if !ip.Equal(dstnetIPNet.IP) {
+			return nil, fmt.Errorf("route %v is incorrect, destination is not a valid network address. Perhaps %v was meant",
+				*re,
+				dstnetIPNet.String(),
+			)
+		}
+		preparedNetlinkRoute.Dst = dstnetIPNet
+	}
+	if re.gateway != "" {
+		preparedNetlinkRoute.Gw = net.ParseIP(re.gateway)
+	}
+	if re.dev != "" && re.devId != 0 {
+		preparedNetlinkRoute.LinkIndex = re.devId
 	}
 
-	return fmt.Sprintf("%v", hash)
+	return preparedNetlinkRoute, nil
+}
+
+func getRouteEntryFromNetlinkRoute(netlinkRoute netlink.Route) (RouteEntry, error) {
+	preparedRE := RouteEntry{}
+
+	if netlinkRoute.Dst != nil {
+		preparedRE.destination = netlinkRoute.Dst.String()
+	}
+	if netlinkRoute.Gw != nil {
+		preparedRE.gateway = netlinkRoute.Gw.String()
+	}
+	if netlinkRoute.LinkIndex > 0 {
+		preparedRE.devId = netlinkRoute.LinkIndex
+		link, err := netlink.LinkByIndex(netlinkRoute.LinkIndex)
+		if err != nil {
+			return RouteEntry{}, fmt.Errorf("can not find Link by Index %v, err: %w",
+				netlinkRoute.LinkIndex,
+				err,
+			)
+		}
+		preparedRE.dev = link.Attrs().Name
+	}
+	if netlinkRoute.Table > 0 {
+		preparedRE.table = netlinkRoute.Table
+	}
+
+	return preparedRE, nil
+}
+
+func getRouteEntryFromRouteAndTable(route v1alpha1.Route, tbl int) (RouteEntry, error) {
+	preparedRE := RouteEntry{
+		destination: route.Destination,
+		table:       tbl,
+	}
+
+	if route.Gateway != "" {
+		preparedRE.gateway = route.Gateway
+	}
+	if route.Dev != "" {
+		link, err := netlink.LinkByName(route.Dev)
+		if err != nil {
+			return RouteEntry{}, fmt.Errorf("can not find Link by Name %v, err: %w",
+				route.Dev,
+				err,
+			)
+		}
+		preparedRE.dev = route.Dev
+		preparedRE.devId = link.Attrs().Index
+	}
+	if route.Gateway != "" && route.Dev == "" {
+		// gwrt, err := netlink.RouteGetWithOptions(net.ParseIP(re.gateway), nil)
+		gwRts, err := netlink.RouteGet(net.ParseIP(preparedRE.gateway))
+		if err != nil || len(gwRts) == 0 {
+			return RouteEntry{}, fmt.Errorf("can not find egress Link by route to Gateway %v, err: %w",
+				route.Gateway,
+				err,
+			)
+		}
+		if len(gwRts) > 1 {
+			fmt.Errorf("more then one egress Link found for Gateway %v. Used only first: %v",
+				route.Gateway,
+				gwRts[0].String(),
+			)
+		}
+		preparedRE.devId = gwRts[0].LinkIndex
+
+		link, err := netlink.LinkByIndex(gwRts[0].LinkIndex)
+		if err == nil {
+			preparedRE.dev = link.Attrs().Name
+		} else {
+			return RouteEntry{}, fmt.Errorf("can not find Link by Index %v (for Gateway %v), err: %w",
+				gwRts[0].LinkIndex,
+				route.Gateway,
+				err,
+			)
+		}
+	}
+	return preparedRE, nil
 }
 
 // RouteEntryMap: type, service functions and methods
 
 type RouteEntryMap map[string]RouteEntry
 
-func (rem *RouteEntryMap) AppendRE(re RouteEntry) {
-	if len(*rem) == 0 {
-		*rem = make(map[string]RouteEntry)
+func (rem *RouteEntryMap) getRoutes() v1alpha1.Routes {
+	preparedRoutes := make([]v1alpha1.Route, 0)
+	for _, re := range *rem {
+		re.getRoute()
+		preparedRoutes = append(preparedRoutes, re.getRoute())
 	}
-	(*rem)[re.getHash()] = re
+	return v1alpha1.Routes{
+		Routes: preparedRoutes,
+	}
 }
 
-func (rem *RouteEntryMap) AppendR(route v1alpha1.Route, tbl int) {
-	if len(*rem) == 0 {
-		*rem = make(map[string]RouteEntry)
-	}
-	re := RouteEntry{
-		destination: route.Destination,
-		gateway:     route.Gateway,
-		table:       tbl,
-	}
+func (rem *RouteEntryMap) AppendRE(re RouteEntry) {
 	(*rem)[re.getHash()] = re
 }
 
@@ -280,10 +404,10 @@ func nrtSummaryInit() *nrtSummary {
 	return &nrtSummary{
 		k8sResources:            new(v1alpha1.SDNInternalNodeRoutingTable),
 		newReconciliationStatus: utils.ReconciliationStatus{},
-		desiredRoutesByNRT:      RouteEntryMap{},
-		lastAppliedRoutesByNRT:  RouteEntryMap{},
+		desiredRoutesByNRT:      make(RouteEntryMap),
+		lastAppliedRoutesByNRT:  make(RouteEntryMap),
 		desiredRoutesToAddByNRT: make([]RouteEntry, 0),
-		desiredRoutesToDelByNRT: RouteEntryMap{},
+		desiredRoutesToDelByNRT: make(RouteEntryMap),
 		nrtWasDeleted:           false,
 		needToWipeFinalizer:     false,
 	}
@@ -297,37 +421,61 @@ func (ns *nrtSummary) discoverFacts(nrt v1alpha1.SDNInternalNodeRoutingTable, gl
 	ns.newReconciliationStatus = utils.ReconciliationStatus{IsSuccess: true}
 	ns.needToWipeFinalizer = false
 
+	// Generate REM from CR's routes and table
+	remFromNRTSpecRoutes := make(RouteEntryMap)
+	for _, route := range nrt.Spec.Routes {
+		re, err := getRouteEntryFromRouteAndTable(route, nrt.Spec.IPRoutingTableID)
+		if err == nil {
+			remFromNRTSpecRoutes.AppendRE(re)
+		} else {
+			ns.newReconciliationStatus.AppendError(
+				fmt.Errorf("the route (%v, tbl %v) could not be processed, err: %w", route, nrt.Spec.IPRoutingTableID, err),
+			)
+		}
+	}
+	if !ns.newReconciliationStatus.IsSuccess {
+		return true
+	}
+
 	// If NRT was deleted filling map desiredRoutesToDelByNRT and set flag nrtWasDeleted
 	if nrt.DeletionTimestamp != nil {
 		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] NRT %v is marked for deletion", nrt.Name))
 		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starting filling map routesToDel, and set flag nrtWasDeleted "))
-		tmpREM := make(RouteEntryMap)
-		for _, route := range nrt.Spec.Routes {
-			tmpREM.AppendR(route, nrt.Spec.IPRoutingTableID)
-		}
-		ns.desiredRoutesToDelByNRT = tmpREM
+		ns.desiredRoutesToDelByNRT = remFromNRTSpecRoutes
 		ns.nrtWasDeleted = true
 		return true
 	}
 
 	// Filling desiredRoutesByNRT and globalDesiredRoutesForNode
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starting filling maps: desiredRoutes and globalDesiredRoutes"))
-	for _, route := range nrt.Spec.Routes {
-		ns.desiredRoutesByNRT.AppendR(route, nrt.Spec.IPRoutingTableID)
-		globalDesiredRoutesForNode.AppendR(route, nrt.Spec.IPRoutingTableID)
-	}
+	ns.desiredRoutesByNRT = remFromNRTSpecRoutes
+	maps.Copy(*globalDesiredRoutesForNode, remFromNRTSpecRoutes)
 
 	// Filling lastAppliedRoutesByNRT
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starting filling map lastAppliedRoutes"))
+	tmpREM := make(RouteEntryMap)
 	if nrt.Status.AppliedRoutes != nil {
 		for _, route := range nrt.Status.AppliedRoutes {
-			ns.lastAppliedRoutesByNRT.AppendR(route, nrt.Spec.IPRoutingTableID)
+			re, err := getRouteEntryFromRouteAndTable(route, nrt.Spec.IPRoutingTableID)
+			if err != nil {
+				log.V(config.DebugLvl).Info(fmt.Sprintf(
+					"[NRTReconciler] Something went wrong while processing lastApplied route (%v, tbl %v), err: %v",
+					route,
+					nrt.Spec.IPRoutingTableID,
+					err,
+				))
+				tmpREM = RouteEntryMap{}
+				break
+			}
+			tmpREM.AppendRE(re)
 		}
 	}
+	ns.lastAppliedRoutesByNRT = tmpREM
 
 	// Filling desiredRoutesToAddByNRT
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starting filling map routesToAdd"))
 	for hash, desiredRoute := range ns.desiredRoutesByNRT {
+
 		if _, ok := (*actualRoutesOnNode)[hash]; !ok {
 			ns.desiredRoutesToAddByNRT = append(ns.desiredRoutesToAddByNRT, desiredRoute)
 		}
@@ -335,10 +483,10 @@ func (ns *nrtSummary) discoverFacts(nrt v1alpha1.SDNInternalNodeRoutingTable, gl
 
 	// Filling desiredRoutesToDelByNRT
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starting filling map routesToDel"))
-	tmpREM := make(RouteEntryMap)
-	for hash, route := range ns.lastAppliedRoutesByNRT {
+	tmpREM = RouteEntryMap{}
+	for hash, re := range ns.lastAppliedRoutesByNRT {
 		if _, ok := ns.desiredRoutesByNRT[hash]; !ok {
-			tmpREM.AppendRE(route)
+			tmpREM.AppendRE(re)
 		}
 	}
 	ns.desiredRoutesToDelByNRT = tmpREM
@@ -348,17 +496,17 @@ func (ns *nrtSummary) discoverFacts(nrt v1alpha1.SDNInternalNodeRoutingTable, gl
 
 func (ns *nrtSummary) addRoutes(actualRoutesOnNode *RouteEntryMap, log logr.Logger) {
 	status := ns.newReconciliationStatus
-	for _, route := range ns.desiredRoutesToAddByNRT {
-		log.V(config.DebugLvl).Info(fmt.Sprintf("Route %v should be added", route))
-		if _, ok := (*actualRoutesOnNode)[route.getHash()]; ok {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("but it is already present on Node"))
+	for _, re := range ns.desiredRoutesToAddByNRT {
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Route %v should be added", re))
+		if _, ok := (*actualRoutesOnNode)[re.getHash()]; ok {
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] but it is already present on Node"))
 			continue
 		}
-		err := addRouteToNode(route)
+		err := addRouteToNode(re)
 		if err == nil {
-			actualRoutesOnNode.AppendRE(route)
+			actualRoutesOnNode.AppendRE(re)
 		} else {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("err: %v", err))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] err: %v", err))
 			status.AppendError(err)
 		}
 	}
@@ -433,7 +581,7 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 	for nrtName, ns := range *nm {
 		// Wipe the finalizer if necessary
 		if ns.needToWipeFinalizer && ns.k8sResources.DeletionTimestamp != nil {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("Wipe finalizer on NRT: %v", nrtName))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] wipe finalizer on NRT: %v", nrtName))
 
 			tmpNRTFinalizers := make([]string, 0)
 			for _, fnlzr := range ns.k8sResources.Finalizers {
@@ -450,17 +598,17 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 				},
 			)
 			if err != nil {
-				log.Error(err, fmt.Sprintf("unable to marshal patch for finalizers %v, err: %v", tmpNRTFinalizers, err))
+				log.Error(err, fmt.Sprintf("[NRTReconciler] unable to marshal patch for finalizers %v, err: %v", tmpNRTFinalizers, err))
 			}
 
 			err = cl.Patch(ctx, ns.k8sResources, client.RawPatch(types.MergePatchType, patch))
 			if err != nil {
-				log.Error(err, fmt.Sprintf("unable to patch CR SDNInternalNodeRoutingTable %v, err: %v", nrtName, err))
+				log.Error(err, fmt.Sprintf("[NRTReconciler] unable to patch CR SDNInternalNodeRoutingTable %v, err: %v", nrtName, err))
 			}
 		}
 
 		// Update(patch) status every time
-		log.V(config.DebugLvl).Info(fmt.Sprintf("Update status of NRT: %v", nrtName))
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] update status of NRT: %v", nrtName))
 
 		patch, err := json.Marshal(
 			map[string]interface{}{
@@ -468,12 +616,12 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 			},
 		)
 		if err != nil {
-			log.Error(err, fmt.Sprintf("unable to marshal patch for status %v, err: %v", ns.k8sResources.Status, err))
+			log.Error(err, fmt.Sprintf("[NRTReconciler] unable to marshal patch for status %v, err: %v", ns.k8sResources.Status, err))
 		}
 
 		err = cl.Status().Patch(ctx, ns.k8sResources, client.RawPatch(types.MergePatchType, patch))
 		if err != nil {
-			log.Error(err, fmt.Sprintf("unable to patch status for CR SDNInternalNodeIPRuleSet %v, err: %v", nrtName, err))
+			log.Error(err, fmt.Sprintf("[NRTReconciler] unable to patch status for CR SDNInternalNodeIPRuleSet %v, err: %v", nrtName, err))
 		}
 	}
 }
@@ -481,92 +629,56 @@ func (nm *nrtMap) updateStateInK8S(ctx context.Context, cl client.Client, log lo
 // netlink service functions
 
 func getActualRouteEntryMapFromNode() (RouteEntryMap, error) {
-	routes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: v1alpha1.D8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
+	netlinkRoutes, err := netlink.RouteListFiltered(netlink.FAMILY_V4, &netlink.Route{Realm: v1alpha1.D8Realm}, netlink.RT_FILTER_REALM|netlink.RT_FILTER_TABLE)
 	if err != nil {
 		return nil, fmt.Errorf("failed get routes from node, err: %w", err)
 	}
 	ar := make(RouteEntryMap)
 
-	for _, route := range routes {
-		re := RouteEntry{
-			destination: route.Dst.String(),
-			gateway:     route.Gw.String(),
-			table:       route.Table,
+	for _, route := range netlinkRoutes {
+		re, err := getRouteEntryFromNetlinkRoute(route)
+		if err != nil {
+			return nil, fmt.Errorf("the route (%v) could not be processed, err: %w", route.String(), err)
 		}
 		ar.AppendRE(re)
 	}
-
 	return ar, nil
 }
 
-func addRouteToNode(route RouteEntry) error {
-	ip, dstnetIPNet, err := net.ParseCIDR(route.destination)
+func addRouteToNode(re RouteEntry) error {
+	preparedRoute, err := re.getNetlinkRoute()
 	if err != nil {
-		return fmt.Errorf("unable to parse destination in route %v gw %v tbl %v, err: %w",
-			route.destination,
-			route.gateway,
-			route.table,
+		return fmt.Errorf("unable to parse Route %v, err: %w",
+			re,
 			err,
 		)
 	}
-	if !ip.Equal(dstnetIPNet.IP) {
-		return fmt.Errorf("route %v gw %v tbl %v is incorrect, destination is not a valid network address. perhaps %v was meant",
-			route.destination,
-			route.gateway,
-			route.table,
-			dstnetIPNet.String(),
-		)
-	}
-	gwNetIP := net.ParseIP(route.gateway)
+	preparedRoute.Realm = v1alpha1.D8Realm
 
-	err = netlink.RouteAdd(&netlink.Route{
-		Realm: v1alpha1.D8Realm,
-		Table: route.table,
-		Dst:   dstnetIPNet,
-		Gw:    gwNetIP,
-	})
+	err = netlink.RouteAdd(preparedRoute)
 	if err != nil {
-		return fmt.Errorf("unable to add route %v gw %v tbl %v, err: %w",
-			route.destination,
-			route.gateway,
-			route.table,
+		return fmt.Errorf("unable to add route %v, err: %w",
+			re,
 			err,
 		)
 	}
 	return nil
 }
 
-func delRouteFromNode(route RouteEntry) error {
-	ip, dstnetIPNet, err := net.ParseCIDR(route.destination)
+func delRouteFromNode(re RouteEntry) error {
+	preparedRoute, err := re.getNetlinkRoute()
 	if err != nil {
-		return fmt.Errorf("unable to parse destination in route %v gw %v tbl %v, err: %w",
-			route.destination,
-			route.gateway,
-			route.table,
+		return fmt.Errorf("unable to parse Route %v, err: %w",
+			re,
 			err,
 		)
 	}
-	if !ip.Equal(dstnetIPNet.IP) {
-		return fmt.Errorf("route %v gw %v tbl %v is incorrect, destination is not a valid network address. perhaps %v was meant",
-			route.destination,
-			route.gateway,
-			route.table,
-			dstnetIPNet.String(),
-		)
-	}
-	gwNetIP := net.ParseIP(route.gateway)
+	preparedRoute.Realm = v1alpha1.D8Realm
 
-	err = netlink.RouteDel(&netlink.Route{
-		Realm: v1alpha1.D8Realm,
-		Table: route.table,
-		Dst:   dstnetIPNet,
-		Gw:    gwNetIP,
-	})
+	err = netlink.RouteDel(preparedRoute)
 	if err != nil {
-		return fmt.Errorf("unable to del route %v gw %v tbl %v, err: %w",
-			route.destination,
-			route.gateway,
-			route.table,
+		return fmt.Errorf("unable to del route %v, err: %w",
+			re,
 			err,
 		)
 	}
@@ -576,21 +688,21 @@ func delRouteFromNode(route RouteEntry) error {
 // other service functions
 
 func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryMap, status utils.ReconciliationStatus, log logr.Logger) utils.ReconciliationStatus {
-	for hash, route := range delREM {
-		log.V(config.DebugLvl).Info(fmt.Sprintf("Route %v should be deleted", route))
+	for hash, re := range delREM {
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] route %v should be deleted", re))
 		if _, ok := (gdREM)[hash]; ok {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("but it is present in other NRT"))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] but it is present in other NRT"))
 			continue
 		}
 		if _, ok := (*actREM)[hash]; !ok {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("but it is not present on Node"))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] but it is not present on Node"))
 			continue
 		}
-		err := delRouteFromNode(route)
+		err := delRouteFromNode(re)
 		if err == nil {
 			delete(*actREM, hash)
 		} else {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("err: %v", err))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] err: %v", err))
 			status.AppendError(err)
 		}
 	}
@@ -599,14 +711,14 @@ func deleteRouteEntriesFromNode(delREM, gdREM RouteEntryMap, actREM *RouteEntryM
 
 func deleteOrphanRoutes(gdREM, actREM RouteEntryMap, log logr.Logger) {
 	log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] Starting to find and delete orphan routes (with realm %v) from node.", v1alpha1.D8Realm))
-	for hash, route := range actREM {
+	for hash, re := range actREM {
 		if _, ok := (gdREM)[hash]; ok {
 			continue
 		}
-		log.V(config.DebugLvl).Info(fmt.Sprintf("Route %v should be deleted.", route))
-		err := delRouteFromNode(route)
+		log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] route %v should be deleted.", re))
+		err := delRouteFromNode(re)
 		if err != nil {
-			log.V(config.DebugLvl).Info(fmt.Sprintf("Unable to delete route %v,err: %v", route, err))
+			log.V(config.DebugLvl).Info(fmt.Sprintf("[NRTReconciler] unable to delete route %v,err: %v", re, err))
 		}
 	}
 }

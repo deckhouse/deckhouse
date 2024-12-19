@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	v1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -69,6 +70,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleSources().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("moduleupdatepolicies"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleUpdatePolicies().Informer()}, nil
+
+		// Group=deckhouse.io, Version=v1alpha2
+	case v1alpha2.SchemeGroupVersion.WithResource("modulepulloverrides"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha2().ModulePullOverrides().Informer()}, nil
+	case v1alpha2.SchemeGroupVersion.WithResource("moduleupdatepolicies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha2().ModuleUpdatePolicies().Informer()}, nil
 
 	}
 

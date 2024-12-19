@@ -19,11 +19,11 @@ package deckhouse_release
 import (
 	"runtime/debug"
 
-	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func newEventFilter() predicate.Predicate {
@@ -34,68 +34,68 @@ func newEventFilter() predicate.Predicate {
 }
 
 type logWrapper struct {
-	l *logrus.Entry
+	l *log.Logger
 	p predicate.Predicate
 }
 
 func (w logWrapper) Create(createEvent event.CreateEvent) bool {
-	logEntry := w.l.WithField("event", createEvent)
-	defer w.recover(logEntry)
+	logger := w.l.With("event", createEvent)
+	defer w.recover(logger)
 
 	result := w.p.Create(createEvent)
-	logEntry.
-		WithField("result", result).
-		Debugln("processed create event")
+	logger.
+		With("result", result).
+		Debug("processed create event")
 
 	return result
 }
 
 func (w logWrapper) Delete(deleteEvent event.DeleteEvent) bool {
-	logEntry := w.l.WithField("event", deleteEvent)
-	defer w.recover(logEntry)
+	logger := w.l.With("event", deleteEvent)
+	defer w.recover(logger)
 
 	result := w.p.Delete(deleteEvent)
-	logEntry.
-		WithField("result", result).
-		Debugln("processed delete event")
+	logger.
+		With("result", result).
+		Debug("processed delete event")
 
 	return result
 }
 
 func (w logWrapper) Update(updateEvent event.UpdateEvent) bool {
-	logEntry := w.l.WithField("event", updateEvent)
-	defer w.recover(logEntry)
+	logger := w.l.With("event", updateEvent)
+	defer w.recover(logger)
 
 	result := w.p.Update(updateEvent)
-	logEntry.
-		WithField("result", result).
-		Debugln("processed update event")
+	logger.
+		With("result", result).
+		Debug("processed update event")
 
 	return result
 }
 
 func (w logWrapper) Generic(genericEvent event.GenericEvent) bool {
-	logEntry := w.l.WithField("event", genericEvent)
-	defer w.recover(logEntry)
+	logger := w.l.With("event", genericEvent)
+	defer w.recover(logger)
 
 	result := w.p.Generic(genericEvent)
-	logEntry.
-		WithField("result", result).
-		Debugln("processed generic event")
+	logger.
+		With("result", result).
+		Debug("processed generic event")
 
 	return result
 }
 
-func (w logWrapper) recover(logEntry *logrus.Entry) {
+func (w logWrapper) recover(logger *log.Logger) {
 	r := recover()
 	if r == nil {
 		return
 	}
 
-	logEntry.
-		WithField("panic", r).
-		WithField("stack", debug.Stack()).
-		Errorln("recovered from panic")
+	logger.
+		With("panic", r).
+		With("stack", debug.Stack()).
+		Error("recovered from panic")
 }
 
 type releasePhasePredicate struct{}
@@ -106,7 +106,7 @@ func (rp releasePhasePredicate) Create(ev event.CreateEvent) bool {
 	}
 
 	switch ev.Object.(*v1alpha1.DeckhouseRelease).Status.Phase {
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
+	case v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseDeployed:
 		return false
 	}
 	return true
@@ -124,7 +124,7 @@ func (rp releasePhasePredicate) Update(ev event.UpdateEvent) bool {
 	}
 
 	switch ev.ObjectNew.(*v1alpha1.DeckhouseRelease).Status.Phase {
-	case v1alpha1.PhaseSkipped, v1alpha1.PhaseSuperseded, v1alpha1.PhaseSuspended, v1alpha1.PhaseDeployed:
+	case v1alpha1.ModuleReleasePhaseSkipped, v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseDeployed:
 		return false
 	}
 	return true

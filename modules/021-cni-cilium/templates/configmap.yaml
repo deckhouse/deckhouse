@@ -53,6 +53,9 @@ data:
   # Use stable MAC addresses for pods
   endpoint-interface-host-mac: "f6:e1:74:94:b8:1b"
   endpoint-interface-mac: "f6:e1:74:94:b8:1a"
+  dhcpd-enabled: "true"
+  dhcpd-cluster-dns: {{ .Values.global.discovery.clusterDNSAddress | quote }}
+  dhcpd-cluster-domain: {{ .Values.global.discovery.clusterDomain | quote }}
   {{- end }}
 
   {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}

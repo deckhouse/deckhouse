@@ -9,7 +9,7 @@ spec:
   auditAnnotations:
     - key: source-user
       valueExpression: '''User: '' + string(request.userInfo.username) + '' tries to
-      create secret with `secret-copier.deckhouse.io/enabled` label outside of `default` namespace'''
+      create or update secret with `secret-copier.deckhouse.io/enabled` label outside of `default` namespace'''
   failurePolicy: Fail
   matchConstraints:
     matchPolicy: Equivalent
@@ -23,7 +23,6 @@ spec:
         operations:
           - CREATE
           - UPDATE
-          - DELETE
         resources:
           - 'secrets'
         scope: 'Namespaced'
@@ -31,7 +30,7 @@ spec:
   - expression: request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
     reason: Forbidden
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
-    messageExpression: '''Creating secrets with `secret-copier.deckhouse.io/enabled` label outside of `default` namespace is forbidden'''
+    messageExpression: '''Creating or updating secrets with `secret-copier.deckhouse.io/enabled` label outside of `default` namespace is forbidden'''
 {{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}

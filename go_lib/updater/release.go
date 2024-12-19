@@ -43,9 +43,10 @@ type DeckhouseReleaseData struct {
 }
 
 type KubeAPI[R v1alpha1.Release] interface {
-	UpdateReleaseStatus(release R, msg, phase string) error
+	UpdateReleaseStatus(ctx context.Context, release R, msg, phase string) error
 	PatchReleaseAnnotations(ctx context.Context, release R, annotations map[string]interface{}) error
 	PatchReleaseApplyAfter(release R, applyTime time.Time) error
 	SaveReleaseData(ctx context.Context, release R, data DeckhouseReleaseData) error
 	DeployRelease(ctx context.Context, release R) error
+	IsKubernetesVersionAutomatic(ctx context.Context) (bool, error)
 }

@@ -21,9 +21,10 @@ import (
 	changeregistry "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/change_registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/jwt"
 	dhctlapp "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func DefineHelperCommands(kpApp *kingpin.Application) {
+func DefineHelperCommands(kpApp *kingpin.Application, logger *log.Logger) {
 	helpersCommand := sh_app.CommandWithDefaultUsageTemplate(kpApp, "helper", "Deckhouse helpers.")
 
 	{
@@ -49,7 +50,7 @@ func DefineHelperCommands(kpApp *kingpin.Application) {
 
 		newImageTag := changeRegistryCommand.Flag("new-deckhouse-tag", "New tag that will be used for deckhouse deployment image (by default current tag from deckhouse deployment will be used).").String()
 		changeRegistryCommand.Action(func(_ *kingpin.ParseContext) error {
-			return changeregistry.ChangeRegistry(*newRegistry, *user, *password, *caFile, *newImageTag, *scheme, *dryRun)
+			return changeregistry.ChangeRegistry(*newRegistry, *user, *password, *caFile, *newImageTag, *scheme, *dryRun, logger)
 		})
 	}
 

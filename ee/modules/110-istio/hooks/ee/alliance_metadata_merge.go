@@ -19,18 +19,22 @@ import (
 )
 
 type IstioFederationMergeCrdInfo struct {
-	Name            string                             `json:"name"`
-	TrustDomain     string                             `json:"trustDomain"`
-	SpiffeEndpoint  string                             `json:"spiffeEndpoint"`
-	IngressGateways *[]eeCrd.FederationIngressGateways `json:"ingressGateways"`
-	PublicServices  *[]eeCrd.FederationPublicServices  `json:"publicServices"`
-	Public          *eeCrd.AlliancePublicMetadata      `json:"public,omitempty"`
+	Name             string                             `json:"name"`
+	TrustDomain      string                             `json:"trustDomain"`
+	SpiffeEndpoint   string                             `json:"spiffeEndpoint"`
+	IngressGateways  *[]eeCrd.FederationIngressGateways `json:"ingressGateways"`
+	MetadataCA       string                             `json:"ca"`
+	MetadataInsecure bool                               `json:"insecureSkipVerify"`
+	PublicServices   *[]eeCrd.FederationPublicServices  `json:"publicServices"`
+	Public           *eeCrd.AlliancePublicMetadata      `json:"public,omitempty"`
 }
 
 type IstioMulticlusterMergeCrdInfo struct {
 	Name                 string                               `json:"name"`
 	SpiffeEndpoint       string                               `json:"spiffeEndpoint"`
 	EnableIngressGateway bool                                 `json:"enableIngressGateway"`
+	MetadataCA           string                               `json:"ca"`
+	MetadataInsecure     bool                                 `json:"insecureSkipVerify"`
 	APIHost              string                               `json:"apiHost"`
 	NetworkName          string                               `json:"networkName"`
 	APIJWT               string                               `json:"apiJWT"`
@@ -65,12 +69,14 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	}
 
 	return IstioFederationMergeCrdInfo{
-		Name:            federation.GetName(),
-		TrustDomain:     federation.Spec.TrustDomain,
-		SpiffeEndpoint:  me + "/public/spiffe-bundle-endpoint",
-		IngressGateways: igs,
-		PublicServices:  pss,
-		Public:          p,
+		Name:             federation.GetName(),
+		TrustDomain:      federation.Spec.TrustDomain,
+		SpiffeEndpoint:   me + "/public/spiffe-bundle-endpoint",
+		IngressGateways:  igs,
+		MetadataCA:       federation.Spec.Metadata.ClusterCA,
+		MetadataInsecure: federation.Spec.Metadata.EnableInsecureConnection,
+		PublicServices:   pss,
+		Public:           p,
 	}, nil
 }
 
@@ -104,6 +110,8 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	return IstioMulticlusterMergeCrdInfo{
 		Name:                 multicluster.GetName(),
 		SpiffeEndpoint:       me + "/public/spiffe-bundle-endpoint",
+		MetadataCA:           multicluster.Spec.Metadata.ClusterCA,
+		MetadataInsecure:     multicluster.Spec.Metadata.EnableInsecureConnection,
 		EnableIngressGateway: multicluster.Spec.EnableIngressGateway,
 		APIHost:              apiHost,
 		NetworkName:          networkName,
@@ -150,23 +158,23 @@ federationsLoop:
 	for _, federation := range input.Snapshots["federations"] {
 		federationInfo := federation.(IstioFederationMergeCrdInfo)
 		if federationInfo.TrustDomain == myTrustDomain {
-			input.LogEntry.Warnf("skipping IstioFederation %s with trustDomain equals to ours: %s", federationInfo.Name, federationInfo.TrustDomain)
+			input.Logger.Warnf("skipping IstioFederation %s with trustDomain equals to ours: %s", federationInfo.Name, federationInfo.TrustDomain)
 			continue federationsLoop
 		}
 		if federationInfo.Public == nil {
-			input.LogEntry.Warnf("public metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
+			input.Logger.Warnf("public metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
 			continue federationsLoop
 		}
 
 		remotePublicMetadata[federationInfo.Public.ClusterUUID] = *federationInfo.Public
 
 		if federationInfo.PublicServices == nil {
-			input.LogEntry.Warnf("private metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
+			input.Logger.Warnf("private metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
 			continue
 		}
 
 		if federationInfo.IngressGateways == nil || len(*federationInfo.IngressGateways) == 0 {
-			input.LogEntry.Warnf("private metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
+			input.Logger.Warnf("private metadata for IstioFederation %s wasn't fetched yet", federationInfo.Name)
 			continue federationsLoop
 		}
 
@@ -183,19 +191,19 @@ multiclustersLoop:
 		}
 
 		if multiclusterInfo.Public == nil {
-			input.LogEntry.Warnf("public metadata for IstioMulticluster %s wasn't fetched yet", multiclusterInfo.Name)
+			input.Logger.Warnf("public metadata for IstioMulticluster %s wasn't fetched yet", multiclusterInfo.Name)
 			continue multiclustersLoop
 		}
 
 		remotePublicMetadata[multiclusterInfo.Public.ClusterUUID] = *multiclusterInfo.Public
 
 		if multiclusterInfo.APIHost == "" || multiclusterInfo.NetworkName == "" {
-			input.LogEntry.Warnf("private metadata for IstioMulticluster %s wasn't fetched yet", multiclusterInfo.Name)
+			input.Logger.Warnf("private metadata for IstioMulticluster %s wasn't fetched yet", multiclusterInfo.Name)
 			continue multiclustersLoop
 		}
 		if multiclusterInfo.EnableIngressGateway &&
 			(multiclusterInfo.IngressGateways == nil || len(*multiclusterInfo.IngressGateways) == 0) {
-			input.LogEntry.Warnf("ingressGateways for IstioMulticluster %s weren't fetched yet", multiclusterInfo.Name)
+			input.Logger.Warnf("ingressGateways for IstioMulticluster %s weren't fetched yet", multiclusterInfo.Name)
 			continue multiclustersLoop
 		}
 
@@ -210,7 +218,7 @@ multiclustersLoop:
 		// multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*25)
 		multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*24*366)
 		if err != nil {
-			input.LogEntry.Warnf("can't generate auth token for remote api of IstioMulticluster %s, error: %s", multiclusterInfo.Name, err.Error())
+			input.Logger.Warnf("can't generate auth token for remote api of IstioMulticluster %s, error: %s", multiclusterInfo.Name, err.Error())
 			continue multiclustersLoop
 		}
 

@@ -32,7 +32,7 @@ const (
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
 	BeforeHookCheck: func(input *go_hook.HookInput) bool {
 		if len(input.Values.Get("kubeDns.clusterDomainAliases").Array()) == 0 {
-			input.LogEntry.Debugln("No Domain aliases provided. Interrupting hook execution.")
+			input.Logger.Debug("No Domain aliases provided. Interrupting hook execution.")
 			return false
 		}
 

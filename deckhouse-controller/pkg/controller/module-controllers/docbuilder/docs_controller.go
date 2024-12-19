@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/addon-operator/pkg/utils/logger"
-	log "github.com/sirupsen/logrus"
 	coordv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,10 +45,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	d8env "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/env"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 	docs_builder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const defaultDocumentationCheckInterval = 10 * time.Second
@@ -62,18 +61,16 @@ type moduleDocumentationReconciler struct {
 	dc          dependency.Container
 	docsBuilder *docs_builder.Client
 
-	logger logger.Logger
+	logger *log.Logger
 }
 
-func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Container) error {
-	lg := log.WithField("component", "ModuleDocumentation")
-
+func NewModuleDocumentationController(mgr manager.Manager, dc dependency.Container, logger *log.Logger) error {
 	c := &moduleDocumentationReconciler{
-		mgr.GetClient(),
-		d8env.GetDownloadedModulesDir(),
-		dependency.NewDependencyContainer(),
-		docs_builder.NewClient(dc.GetHTTPClient()),
-		lg,
+		client:               mgr.GetClient(),
+		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		dc:                   dependency.NewDependencyContainer(),
+		docsBuilder:          docs_builder.NewClient(dc.GetHTTPClient()),
+		logger:               logger,
 	}
 
 	ctr, err := controller.New("module-documentation", mgr, controller.Options{
@@ -308,13 +305,13 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	return result, nil
 }
 
-func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Context) (addresses []string, err error) {
+func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Context) ([]string, error) {
 	var leasesList coordv1.LeaseList
-	err = mdr.client.List(ctx, &leasesList, client.InNamespace("d8-system"), client.HasLabels{"deckhouse.io/documentation-builder-sync"})
-	if err != nil {
+	if err := mdr.client.List(ctx, &leasesList, client.InNamespace("d8-system"), client.HasLabels{"deckhouse.io/documentation-builder-sync"}); err != nil {
 		return nil, fmt.Errorf("list leases: %w", err)
 	}
 
+	addresses := make([]string, 0, len(leasesList.Items))
 	for _, lease := range leasesList.Items {
 		if lease.Spec.HolderIdentity == nil {
 			continue
@@ -328,7 +325,7 @@ func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Co
 		addresses = append(addresses, "http://"+*lease.Spec.HolderIdentity)
 	}
 
-	return
+	return addresses, nil
 }
 
 func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes.Buffer) error {

@@ -23,6 +23,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -34,6 +35,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	oci_tools "github.com/sylabs/oci-tools/pkg/mutate"
 	"github.com/tidwall/gjson"
 )
 
@@ -215,7 +217,7 @@ func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 	return authn.AuthConfig{}, fmt.Errorf("%q credentials not found in the dockerCfg", repo)
 }
 
-func GetHTTPTransport(ca string) (transport http.RoundTripper) {
+func GetHTTPTransport(ca string) http.RoundTripper {
 	if ca == "" {
 		return http.DefaultTransport
 	}
@@ -299,4 +301,27 @@ func parse(rawURL string) (*url.URL, error) {
 		return url.ParseRequestURI(rawURL)
 	}
 	return url.Parse("//" + rawURL)
+}
+
+// Extract flattens the image to a single layer and returns ReadCloser for fetching the content
+func Extract(image v1.Image) (io.ReadCloser, error) {
+	flattenedImage, err := oci_tools.Squash(image)
+	if err != nil {
+		return nil, fmt.Errorf("flattening image to a single layer: %w", err)
+	}
+
+	imageLayers, err := flattenedImage.Layers()
+	if err != nil {
+		return nil, fmt.Errorf("getting the image's layers: %w", err)
+	}
+	if len(imageLayers) != 1 {
+		return nil, fmt.Errorf("unexpected number of layers: %w", err)
+	}
+
+	rc, err := imageLayers[0].Uncompressed()
+	if err != nil {
+		return nil, fmt.Errorf("uncompress the layer: %w", err)
+	}
+
+	return rc, nil
 }

@@ -84,6 +84,12 @@ var stageDependencies = map[string][]string{
 	},
 }
 
+var stageDependenciesFile = map[string][]string{
+	"setup": {
+		"**/*",
+	},
+}
+
 type writeSettings struct {
 	Edition           string
 	Prefix            string
@@ -148,12 +154,23 @@ func writeSections(settings writeSettings) {
 		if settings.SaveTo == modulesWithExcludeFileName && hooksPathRegex.Match([]byte(file)) {
 			return
 		}
-		addEntries = append(addEntries, addEntry{
-			Add:               strings.TrimPrefix(file, workDir),
-			To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
-			ExcludePaths:      settings.ExcludePaths,
-			StageDependencies: settings.StageDependencies,
-		})
+
+		info, err := os.Stat(file)
+		if err == nil && !info.IsDir() {
+			addEntries = append(addEntries, addEntry{
+				Add:               strings.TrimPrefix(file, workDir),
+				To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+				ExcludePaths:      nil,
+				StageDependencies: stageDependenciesFile,
+			})
+		} else {
+			addEntries = append(addEntries, addEntry{
+				Add:               strings.TrimPrefix(file, workDir),
+				To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+				ExcludePaths:      settings.ExcludePaths,
+				StageDependencies: settings.StageDependencies,
+			})
+		}
 	}
 
 	for _, file := range files {

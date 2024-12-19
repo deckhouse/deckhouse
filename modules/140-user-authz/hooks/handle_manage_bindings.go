@@ -18,8 +18,6 @@ package hooks
 
 import (
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -27,11 +25,13 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/ptr"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
-	Queue:       "/modules/user-authz/handle-scope-bindings",
+	Queue:       "/modules/user-authz/handle-manage-bindings",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "manageBindings",
@@ -45,7 +45,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "ClusterRole",
 			LabelSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"heritage":               "deckhouse",
 					"rbac.deckhouse.io/kind": "manage",
 				},
 			},
@@ -61,10 +60,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"rbac.deckhouse.io/automated": "true",
 				},
 			},
-			FilterFunc: filterUseBinding,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterUseBinding,
 		},
 	},
-}, syncRoles)
+}, syncBindings)
 
 type filteredUseBinding struct {
 	Name        string           `json:"name"`
@@ -79,17 +80,10 @@ func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	if err := sdk.FromUnstructured(obj, &binding); err != nil {
 		return nil, err
 	}
-	if binding.Labels == nil || len(binding.Labels) == 0 {
-		return nil, nil
-	}
-	relatedWith, ok := binding.Labels["rbac.deckhouse.io/related-with"]
-	if !ok {
-		return nil, nil
-	}
 	return &filteredUseBinding{
 		Name:        binding.Name,
 		Namespace:   binding.Namespace,
-		RelatedWith: relatedWith,
+		RelatedWith: binding.Labels["rbac.deckhouse.io/related-with"],
 		RoleName:    binding.RoleRef.Name,
 		Subjects:    binding.Subjects,
 	}, nil
@@ -114,14 +108,9 @@ func filterManageBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 type filteredManageRole struct {
-	Name  string `json:"name"`
-	Level string `json:"level"`
-	// manage fields
-	Scope     string `json:"scope"`
-	Namespace string `json:"namespace"`
-	// module cap fields
-	Namespaces []string `json:"namespaces"`
-	Scopes     []string `json:"scopes"`
+	Name   string                  `json:"name"`
+	Labels map[string]string       `json:"aggregationLabels"`
+	Rule   *rbacv1.AggregationRule `json:"selectors"`
 }
 
 func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -129,120 +118,110 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	if err := sdk.FromUnstructured(obj, &role); err != nil {
 		return nil, err
 	}
-	filtered := &filteredManageRole{
-		Name: role.Name,
-	}
-	for key, val := range role.Labels {
-		switch key {
-		case "rbac.deckhouse.io/namespace":
-			filtered.Namespace = val
-		case "rbac.deckhouse.io/scope":
-			filtered.Scope = val
-		case "rbac.deckhouse.io/level":
-			filtered.Level = val
-		}
-		if involved, ok := strings.CutPrefix(key, "rbac.deckhouse.io/aggregate-to-"); ok {
-			involved, _ = strings.CutSuffix(involved, "-as")
-			filtered.Scopes = append(filtered.Scopes, involved)
-		}
-	}
-	if filtered.Level == "all" {
-		filtered.Scope = "all"
-	}
-	return filtered, nil
+	return &filteredManageRole{
+		Name:   role.Name,
+		Labels: role.Labels,
+		Rule:   role.AggregationRule,
+	}, nil
 }
 
-func syncRoles(input *go_hook.HookInput) error {
-	roles := parseRoles(input.Snapshots["manageRoles"])
-	expected := make(map[string]*filteredUseBinding)
-	for _, snapBinding := range input.Snapshots["manageBindings"] {
-		binding := snapBinding.(*filteredManageBinding)
-		namespaces, ok := roles[binding.RoleName]
-		if !ok {
-			continue
-		}
-		splits := strings.Split(binding.RoleName, ":")
-		for _, namespace := range namespaces {
-			expectedBinding := &filteredUseBinding{
-				Name:        fmt.Sprintf("d8:use:binding:%s", binding.Name),
-				Namespace:   namespace,
-				RelatedWith: binding.Name,
-				RoleName:    fmt.Sprintf("d8:use:role:%s", splits[len(splits)-1]),
-				Subjects:    binding.Subjects,
-			}
-			input.PatchCollector.Create(createBinding(expectedBinding), object_patch.UpdateIfExists())
-			expected[expectedBinding.Name] = expectedBinding
+func syncBindings(input *go_hook.HookInput) error {
+	expected := make(map[string]bool)
+	for _, snap := range input.Snapshots["manageBindings"] {
+		binding := snap.(*filteredManageBinding)
+		role, namespaces := roleAndNamespacesByBinding(input.Snapshots["manageRoles"], binding.RoleName)
+		useBindingName := fmt.Sprintf("d8:use:%s:binding:%s", role, binding.Name)
+		for namespace := range namespaces {
+			input.PatchCollector.Create(createBinding(binding, role, namespace), object_patch.UpdateIfExists())
+			expected[useBindingName] = true
 		}
 	}
 
-	// delete excess
-	for _, existingSnap := range input.Snapshots["useBindings"] {
-		if existingSnap != nil {
-			continue
-		}
-		existing := existingSnap.(*filteredUseBinding)
-		if _, ok := expected[existing.RoleName]; !ok {
+	// delete excess use bindings
+	for _, snap := range input.Snapshots["useBindings"] {
+		existing := snap.(*filteredUseBinding)
+		if _, ok := expected[existing.Name]; !ok {
 			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", existing.Namespace, existing.Name)
 		}
 	}
+
 	return nil
 }
 
-func parseRoles(manageRoles []go_hook.FilterResult) map[string][]string {
-	var scopes = make(map[string][]string)
-	for _, snapRole := range manageRoles {
-		if snapRole != nil {
-			role := snapRole.(*filteredManageRole)
-			if role.Level != "module" || role.Namespace == "" {
+func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName string) (string, map[string]bool) {
+	var useRole string
+	var found *filteredManageRole
+	for _, snap := range manageRoles {
+		if role := snap.(*filteredManageRole); role.Name == roleName {
+			found = role
+			var ok bool
+			if useRole, ok = found.Labels["rbac.deckhouse.io/use-role"]; !ok {
+				return "", nil
+			}
+			break
+		}
+	}
+	if found == nil {
+		return "", nil
+	}
+
+	var namespaces = make(map[string]bool)
+	for _, snap := range manageRoles {
+		role := snap.(*filteredManageRole)
+		if matchAggregationRule(found.Rule, role.Labels) {
+			if role.Rule == nil {
+				if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
+					namespaces[namespace] = true
+				}
 				continue
 			}
-			for _, scope := range role.Scopes {
-				if !slices.Contains(scopes[scope], role.Namespace) {
-					scopes[scope] = append(scopes[scope], role.Namespace)
+			for _, nestedSnap := range manageRoles {
+				nested := nestedSnap.(*filteredManageRole)
+				if matchAggregationRule(role.Rule, nested.Labels) {
+					if namespace, ok := nested.Labels["rbac.deckhouse.io/namespace"]; ok {
+						namespaces[namespace] = true
+					}
 				}
 			}
-			if !slices.Contains(scopes["all"], role.Namespace) {
-				scopes["all"] = append(scopes["all"], role.Namespace)
-			}
 		}
 	}
 
-	var roles = make(map[string][]string)
-	for _, snapRole := range manageRoles {
-		if snapRole != nil {
-			role := snapRole.(*filteredManageRole)
-			if role.Level == "module" || role.Scope == "" {
-				continue
-			}
-			namespaces, ok := scopes[role.Scope]
-			if !ok {
-				continue
-			}
-			roles[role.Name] = namespaces
-		}
-	}
-	return roles
+	return useRole, namespaces
 }
 
-func createBinding(binding *filteredUseBinding) *rbacv1.RoleBinding {
+func matchAggregationRule(rule *rbacv1.AggregationRule, roleLabels map[string]string) bool {
+	if rule == nil {
+		return false
+	}
+	for _, selector := range rule.ClusterRoleSelectors {
+		if selector.MatchLabels != nil {
+			if labels.SelectorFromSet(selector.MatchLabels).Matches(labels.Set(roleLabels)) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func createBinding(binding *filteredManageBinding, useRoleName string, namespace string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RoleBinding",
 			APIVersion: "rbac.authorization.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      binding.Name,
-			Namespace: binding.Namespace,
+			Name:      fmt.Sprintf("d8:use:%s:binding:%s", useRoleName, binding.Name),
+			Namespace: namespace,
 			Labels: map[string]string{
 				"heritage":                       "deckhouse",
 				"rbac.deckhouse.io/automated":    "true",
-				"rbac.deckhouse.io/related-with": binding.RelatedWith,
+				"rbac.deckhouse.io/related-with": binding.Name,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     binding.RoleName,
+			Name:     fmt.Sprintf("d8:use:role:%s", useRoleName),
 		},
 		Subjects: binding.Subjects,
 	}

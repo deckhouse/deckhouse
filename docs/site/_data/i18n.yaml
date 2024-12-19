@@ -74,9 +74,15 @@ common:
   deprecated_parameter:
     en: Deprecated
     ru: Параметр устарел
+  deprecated_resource:
+    en: Deprecated resource. Support for the resource might be removed in a later release.
+    ru: Устаревший ресурс. Поддержка ресурса может быть исключена в следующих версиях.
   deprecated_parameter_hint:
     en: Support for the parameter might be removed in a later release.
     ru: Поддержка параметра может быть исключена в следующих версиях.
+  coming_soon:
+    en: "coming soon..."
+    ru: "скоро..."
   for_example:
     en: for example
     ru: например
@@ -92,6 +98,9 @@ common:
   x-kubernetes-int-or-string:
     en: integer or string
     ru: строка или число
+  of_x-kubernetes-int-or-string:
+    en: of integers or strings
+    ru: строк или чисел
   pattern:
     en: pattern
     ru: шаблон
@@ -113,6 +122,9 @@ common:
   documents_found:
     en: Documents found
     ru: Найдено документов
+  parameters:
+    en: Parameters
+    ru: Параметры
   parameters_found:
     en: Parameters found
     ru: Найдено параметров
@@ -137,6 +149,18 @@ common:
   version:
     en: version
     ru: версия
+  modules_of_a_scope:
+    en: The modules within the scope
+    ru: Модули, входящие в область
+  namespaces_used_by_modules:
+    en: Namespaces in which modules of a scope operate
+    ru: Пространства имен используемых модулями области
+  all_modules:
+    en: All modules
+    ru: Все модули
+  all_namespaces:
+    en: All namespaces
+    ru: Все пространства имен
   versions:
     en: versions
     ru: версии
@@ -155,6 +179,9 @@ common:
   or:
     en: or
     ru: или
+  scope:
+    en: Scope
+    ru: Область (scope)
   notice-latest:
     en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/products/kubernetes-platform/documentation/v1/">go to the latest stable Deckhouse version</a>.
     ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/products/kubernetes-platform/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
@@ -179,6 +206,12 @@ common:
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
+  gs_description:
+    en: Getting Started. <TITLE>. <STEP>
+    ru: Быстрый старт. <TITLE>. <STEP>
+  documentation_develop:
+    en: The documentation is under development and may contain incomplete information.
+    ru: Документация находится в разработке, может содержать неполную информацию.
 
 comparison:
   except_parameters:

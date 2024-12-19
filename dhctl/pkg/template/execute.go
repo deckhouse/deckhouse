@@ -138,8 +138,8 @@ func (t *Controller) RenderAndSaveTemplates(fromDir, toDir string, data map[stri
 	return nil
 }
 
-func (t *Controller) RenderBashBooster(fromDir, toDir string) error {
-	bashBooster, err := RenderBashBooster(fromDir)
+func (t *Controller) RenderBashBooster(fromDir, toDir string, data map[string]interface{}) error {
+	bashBooster, err := RenderBashBooster(fromDir, data)
 	if err != nil {
 		return fmt.Errorf("render bashboster: %v", err)
 	}

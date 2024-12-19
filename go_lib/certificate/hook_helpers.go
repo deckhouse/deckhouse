@@ -50,7 +50,7 @@ func GetOrCreateCa(input *go_hook.HookInput, snapshot, cn string) (*Authority, e
 		}
 	} else {
 		var err error
-		selfSignedCA, err = GenerateCA(input.LogEntry, cn)
+		selfSignedCA, err = GenerateCA(input.Logger, cn)
 		if err != nil {
 			return nil, fmt.Errorf("cannot generate selfsigned ca: %v", err)
 		}

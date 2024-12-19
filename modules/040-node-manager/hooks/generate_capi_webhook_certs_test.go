@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -27,9 +26,9 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -65,7 +64,7 @@ var _ = Describe("Node Manager hooks :: generate_webhook_certs ::", func() {
 	})
 	Context("With secrets", func() {
 		caAuthority, _ := genWebhookCa(nil)
-		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{LogEntry: logrus.New().WithContext(context.Background())}, caAuthority, "capi-manager-webhook", "capi-webhook-service")
+		tlsAuthority, _ := genWebhookTLS(&go_hook.HookInput{Logger: log.NewNop()}, caAuthority, "capi-manager-webhook", "capi-webhook-service")
 
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(fmt.Sprintf(`
@@ -97,7 +96,7 @@ data:
 	})
 })
 
-func genWebhookCa(logEntry *logrus.Entry) (*certificate.Authority, error) {
+func genWebhookCa(logEntry *log.Logger) (*certificate.Authority, error) {
 	ca, err := certificate.GenerateCA(logEntry, cn, certificate.WithKeyAlgo("ecdsa"),
 		certificate.WithKeySize(256),
 		certificate.WithCAExpiry("87600h"))
@@ -109,7 +108,7 @@ func genWebhookCa(logEntry *logrus.Entry) (*certificate.Authority, error) {
 }
 
 func genWebhookTLS(input *go_hook.HookInput, ca *certificate.Authority, cn string, sanPrefix string) (*certificate.Certificate, error) {
-	tls, err := certificate.GenerateSelfSignedCert(input.LogEntry,
+	tls, err := certificate.GenerateSelfSignedCert(input.Logger,
 		cn,
 		*ca,
 		certificate.WithKeyAlgo("ecdsa"),

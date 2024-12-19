@@ -67,6 +67,7 @@
  - **[deckhouse]** Use tmpfs for hooks execution dir. [#9646](https://github.com/deckhouse/deckhouse/pull/9646)
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9398](https://github.com/deckhouse/deckhouse/pull/9398)
  - **[deckhouse]** Allow admins to change objects with `kind=StorageClass`. [#9362](https://github.com/deckhouse/deckhouse/pull/9362)
+ - **[deckhouse-controller]** Fixed a bug related to the fact that the state of the release object was not updated. [#10410](https://github.com/deckhouse/deckhouse/pull/10410)
  - **[deckhouse-controller]** Fixed panic when processing terminating deckhouse pod. [#9621](https://github.com/deckhouse/deckhouse/pull/9621)
  - **[deckhouse-controller]** Fix panic on invalid module image [#9231](https://github.com/deckhouse/deckhouse/pull/9231)
  - **[deckhouse-controller]** Deckhouse update metrics restored. [#9147](https://github.com/deckhouse/deckhouse/pull/9147)

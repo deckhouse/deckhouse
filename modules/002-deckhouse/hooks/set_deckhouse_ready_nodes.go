@@ -120,7 +120,7 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func setDeckhouseReadyNodes(input *go_hook.HookInput) (err error) {
+func setDeckhouseReadyNodes(input *go_hook.HookInput) error {
 	pods := input.Snapshots["control-plane-pods"]
 	nodes := input.Snapshots["control-plane-nodes"]
 	if len(nodes) == 0 {
@@ -145,7 +145,7 @@ func setDeckhouseReadyNodes(input *go_hook.HookInput) (err error) {
 	}
 
 	for nodeName, nodeStatus := range deckhouseReadyNodes {
-		input.LogEntry.Infof("Labeling %s node with %s=%v label", nodeName, deckhouseReadyLabel, nodeStatus)
+		input.Logger.Infof("Labeling %s node with %s=%v label", nodeName, deckhouseReadyLabel, nodeStatus)
 		metadata := map[string]interface{}{
 			"metadata": map[string]interface{}{
 				"labels": map[string]interface{}{
