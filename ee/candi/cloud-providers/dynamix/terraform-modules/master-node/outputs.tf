@@ -20,3 +20,7 @@ output "node_internal_ip_address" {
 output "kubernetes_data_device_path" {
   value = "/dev/vdb"
 }
+
+output "system_registry_data_device_path" {
+  value = var.systemRegistryEnable ? "/dev/vdc" : ""
+}

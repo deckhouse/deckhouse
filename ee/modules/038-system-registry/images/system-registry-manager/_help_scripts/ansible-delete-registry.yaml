@@ -1,0 +1,25 @@
+---
+- name: Delete specific files and directories on remote servers
+  hosts: masters
+  become: yes
+  tasks:
+    - name: Remove /etc/kubernetes/manifests/system-registry.yaml file
+      file:
+        path: /etc/kubernetes/manifests/system-registry.yaml
+        state: absent
+      tags:
+        - static-pods
+
+    - name: Remove /etc/kubernetes/system-registry directory
+      file:
+        path: /etc/kubernetes/system-registry
+        state: absent
+      tags:
+        - data
+
+    - name: Remove /opt/deckhouse/system-registry/seaweedfs_data directory
+      file:
+        path: /opt/deckhouse/system-registry/seaweedfs_data
+        state: absent
+      tags:
+        - data
