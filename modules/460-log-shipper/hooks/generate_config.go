@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net"
 	"net/url"
@@ -86,6 +87,15 @@ func filterLogShipperTokenSecret(obj *unstructured.Unstructured) (go_hook.Filter
 	}
 
 	return string(secret.Data["token"]), nil
+}
+
+func filterLogShipperTLSSecrets(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := new(corev1.Secret)
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
 }
 
 func filterLokiEndpoints(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -165,6 +175,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterLogShipperTokenSecret,
 		},
 		{
+			Name:       "tls-secrets",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{MatchNames: []string{
+					"d8-log-shipper",
+				}},
+			},
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"log-shipper.deckhouse.io/watch-secret": "true"},
+			},
+			FilterFunc: filterLogShipperTLSSecrets,
+		},
+		{
 			Name:       "loki_endpoint",
 			ApiVersion: "v1",
 			Kind:       "Endpoints",
@@ -181,6 +205,99 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateConfig)
 
+type tlsConfigFromSecret struct {
+	CACert     []byte
+	ClientCert []byte
+	ClientKey  []byte
+	KeyPass    []byte
+}
+
+func getTLSConfigFromSecretSnapshot(name string, snapshot []go_hook.FilterResult) (*tlsConfigFromSecret, error) {
+	for _, secret := range snapshot {
+		if secret.(*corev1.Secret).Name == name {
+			s := secret.(*corev1.Secret)
+			return &tlsConfigFromSecret{
+				CACert:     s.Data["ca.pem"],
+				ClientCert: s.Data["crt.pem"],
+				ClientKey:  s.Data["key.pem"],
+				KeyPass:    s.Data["keyPass"],
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("secret %s not found", name)
+}
+
+func getTLSSecretRef(dest v1alpha1.ClusterLogDestination) string {
+	switch dest.Spec.Type {
+	case "Elasticsearch":
+		if dest.Spec.Elasticsearch.TLS.SecretRef != nil {
+			return dest.Spec.Elasticsearch.TLS.SecretRef.Name
+		}
+	case "Vector":
+		if dest.Spec.Vector.TLS.SecretRef != nil {
+			return dest.Spec.Vector.TLS.SecretRef.Name
+		}
+	case "Loki":
+		if dest.Spec.Loki.TLS.SecretRef != nil {
+			return dest.Spec.Loki.TLS.SecretRef.Name
+		}
+	case "Splunk":
+		if dest.Spec.Splunk.TLS.SecretRef != nil {
+			return dest.Spec.Splunk.TLS.SecretRef.Name
+		}
+	case "Logstash":
+		if dest.Spec.Logstash.TLS.SecretRef != nil {
+			return dest.Spec.Logstash.TLS.SecretRef.Name
+		}
+	case "Socket":
+		if dest.Spec.Socket.TCP.TLS.SecretRef != nil {
+			return dest.Spec.Socket.TCP.TLS.SecretRef.Name
+		}
+	case "Kafka":
+		if dest.Spec.Kafka.TLS.SecretRef != nil {
+			return dest.Spec.Kafka.TLS.SecretRef.Name
+		}
+	}
+	return ""
+}
+
+func applyTLSConfig(dest *v1alpha1.ClusterLogDestination, tlsConfig *tlsConfigFromSecret) error {
+	accessors := map[string]func() *v1alpha1.CommonTLSSpec{
+		"Elasticsearch": func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Elasticsearch.TLS },
+		"Vector":        func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Vector.TLS },
+		"Loki":          func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Loki.TLS },
+		"Splunk":        func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Splunk.TLS },
+		"Logstash":      func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Logstash.TLS },
+		"Socket":        func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Socket.TCP.TLS },
+		"Kafka":         func() *v1alpha1.CommonTLSSpec { return &dest.Spec.Kafka.TLS },
+	}
+
+	getTLSSpec := accessors[dest.Spec.Type]
+	if getTLSSpec == nil {
+		return errors.Errorf("no tls spec accessor for destination type %s", dest.Spec.Type)
+	}
+
+	tls := getTLSSpec()
+	if tls.SecretRef == nil {
+		return nil
+	}
+
+	if len(tlsConfig.CACert) > 0 {
+		tls.CAFile = base64.RawStdEncoding.EncodeToString(tlsConfig.CACert)
+	}
+	if len(tlsConfig.ClientCert) > 0 {
+		tls.CommonTLSClientCert.CertFile = base64.StdEncoding.EncodeToString(tlsConfig.ClientCert)
+	}
+	if len(tlsConfig.ClientKey) > 0 {
+		tls.CommonTLSClientCert.KeyFile = base64.StdEncoding.EncodeToString(tlsConfig.ClientKey)
+	}
+	if len(tlsConfig.KeyPass) > 0 {
+		tls.CommonTLSClientCert.KeyPass = base64.StdEncoding.EncodeToString(tlsConfig.KeyPass)
+	}
+
+	return nil
+}
+
 func generateConfig(input *go_hook.HookInput) error {
 	if len(input.Snapshots["namespace"]) < 1 {
 		// there is no namespace to manipulate the config map, the hook will create it later on afterHelm
@@ -190,6 +307,7 @@ func generateConfig(input *go_hook.HookInput) error {
 
 	destSnap := input.Snapshots["cluster_log_destination"]
 	tokenSnap := input.Snapshots["token"]
+	tlsSecretsSnap := input.Snapshots["tls-secrets"]
 
 	var token string
 
@@ -211,6 +329,17 @@ func generateConfig(input *go_hook.HookInput) error {
 
 	for _, destination := range destSnap {
 		dest := destination.(v1alpha1.ClusterLogDestination)
+
+		// Override TLS config if secretRef is provided
+		if secretName := getTLSSecretRef(dest); secretName != "" {
+			tlsConfig, err := getTLSConfigFromSecretSnapshot(secretName, tlsSecretsSnap)
+			if err != nil {
+				return errors.Wrap(err, "failed to get TLS config from secret snapshot")
+			}
+			if err := applyTLSConfig(&dest, tlsConfig); err != nil {
+				return errors.Wrap(err, "failed to apply TLS config")
+			}
+		}
 
 		if dest.Spec.Type != "Loki" || token == "" {
 			destinations = append(destinations, dest)
