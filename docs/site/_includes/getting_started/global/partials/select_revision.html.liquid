@@ -73,13 +73,13 @@ Create the `resources.yml` file.
 </div>
 
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
-{%- if revision =='ce' and page.ee_only == true or revision == 'be' or revision == 'se' %}{% continue %}{% endif %}
+{%- if revision =='ce' or revision == 'be' or revision == 'se' and page.ee_only == true %}{% continue %}{% endif %}
 
 {% if revision == 'ee' %}
 <div class="dimmer-block-content">
 {% endif %}
 
-<div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
+<div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or revision == 'be' or revision == 'se' or page.ee_only == true %} active{% endif %}" markdown="1">
 {% if page.lang == 'ru' %}
 {% include getting_started/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
 {% else %}
