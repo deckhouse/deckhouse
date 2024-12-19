@@ -139,13 +139,13 @@ func (c *InteractionsCounter) Zero() bool {
 type OpenAPIValuesGenerator struct {
 	rootSchema *spec.Schema
 
-	schemaQueue *deque.Deque
-	resultQueue *deque.Deque
+	schemaQueue *deque.Deque[any]
+	resultQueue *deque.Deque[any]
 }
 
 func NewOpenAPIValuesGenerator(schema *spec.Schema) *OpenAPIValuesGenerator {
-	s := deque.Deque{}
-	r := deque.Deque{}
+	s := deque.Deque[any]{}
+	r := deque.Deque[any]{}
 
 	return &OpenAPIValuesGenerator{
 		rootSchema:  schema,
