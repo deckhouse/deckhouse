@@ -12,27 +12,35 @@
 # and https://packages.altlinux.org/ru/p10/srpms/iptables/specfiles/2623143627906179825
 # #####################################################################
 ---
+artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromArtifact: common/src-artifact
+shell:
+  install:
+  - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src/iptables
+---
 artifact: {{ $.ModuleName }}/iptables-artifact
 fromImage: {{ $.ModuleName }}/base-cilium-dev
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-    - apt-get remove --purge -y iptables iptables-ipv6 iptables-nft
-    - apt-get install -y libpcap-devel
-    - apt-get autoclean && apt-get clean
-  install:
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone -b v{{ $version }} --depth 1  {{ $.SOURCE_REPO }}/netfilter/iptables /src
+  - apt-get remove --purge -y iptables iptables-ipv6 iptables-nft
+  - apt-get install -y libpcap-devel
+  - apt-get autoclean && apt-get clean
   setup:
-    - cd /src
-    - ./autogen.sh
-    - |
-      ./configure \
-      --prefix=/usr \
-      --disable-static \
-      --enable-nftables \
-      --enable-bpf-compiler \
-      --disable-libipq \
-      --sbindir=/sbin \
-      --with-xtlibdir=/lib64/iptables
-    - make
-    - make install DESTDIR=/iptables
+  - cd /src/iptables
+  - ./autogen.sh
+  - |
+    ./configure \
+    --prefix=/usr \
+    --disable-static \
+    --enable-nftables \
+    --enable-bpf-compiler \
+    --disable-libipq \
+    --sbindir=/sbin \
+    --with-xtlibdir=/lib64/iptables
+  - make
+  - make install DESTDIR=/iptables
