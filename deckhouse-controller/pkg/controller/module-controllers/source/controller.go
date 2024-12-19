@@ -62,7 +62,7 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 	r := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
-		log:                  logger,
+		log:                  logger.Named("module-source-controller"),
 		moduleManager:        mm,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,

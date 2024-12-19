@@ -80,7 +80,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	r := &deckhouseReleaseReconciler{
 		client:             mgr.GetClient(),
 		dc:                 dc,
-		logger:             logger,
+		logger:             logger.Named("deckhouse-release-controller"),
 		moduleManager:      moduleManager,
 		updateSettings:     updateSettings,
 		metricStorage:      metricStorage,

@@ -18,15 +18,13 @@ package deckhouseversion
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
-	scherror "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/error"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/versionmatcher"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -46,7 +44,6 @@ var _ extenders.Extender = &Extender{}
 type Extender struct {
 	logger         *log.Logger
 	versionMatcher *versionmatcher.Matcher
-	err            error
 }
 
 // TODO: refactor
@@ -56,46 +53,39 @@ func Instance() *Extender {
 			logger:         log.Default().With("extender", Name),
 			versionMatcher: versionmatcher.New(false),
 		}
-		if val := os.Getenv("TEST_EXTENDER_DECKHOUSE_VERSION"); val != "" {
-			parsed, err := semver.NewVersion(val)
-			if err == nil {
-				instance.logger.Debugf("setting deckhouse version to %s from env", parsed.String())
+
+		// try to set deckhouse version from env
+		if val := app.TestVarExtenderDeckhouseVersion; val != "" {
+			if parsed, err := semver.NewVersion(val); err == nil {
+				instance.logger.Debugf("set deckhouse version to the '%s' from env", parsed.String())
 				instance.versionMatcher.ChangeBaseVersion(parsed)
 				return
 			}
-			instance.logger.Warnf("cannot parse TEST_DECKHOUSE_VERSION env variable value %q: %v", val, err)
+			instance.logger.Debug("failed to parse deckhouse version from env")
 		}
-		if raw, err := os.ReadFile("/deckhouse/version"); err == nil {
-			if strings.TrimSpace(string(raw)) == "dev" {
-				instance.logger.Warn("this is dev cluster, v2.0.0 will be used")
+
+		if val := app.VersionDeckhouse; val != "" {
+			if parsed, err := semver.NewVersion(app.VersionDeckhouse); err == nil {
+				instance.logger.Debugf("set deckhouse version to '%s'", parsed.String())
+				instance.versionMatcher.ChangeBaseVersion(parsed)
 				return
 			}
-			if parsed, err := semver.NewVersion(strings.TrimSpace(string(raw))); err == nil {
-				instance.logger.Debugf("setting deckhouse version to %s from file", parsed.String())
-				instance.versionMatcher.ChangeBaseVersion(parsed)
-			} else {
-				instance.logger.Warn("failed to parse deckhouse version")
-				instance.err = err
-			}
-		} else {
-			instance.logger.Warn("failed to read deckhouse version from /deckhouse/version")
-			instance.err = err
 		}
+
+		instance.logger.Warn("failed to parse deckhouse version, the 'v2.0.0' version will be used")
 	})
+
 	return instance
 }
 
 func (e *Extender) AddConstraint(name, rawConstraint string) error {
 	if err := e.versionMatcher.AddConstraint(name, rawConstraint); err != nil {
-		e.logger.Debugf("adding installed constraint for the '%s' module failed", name)
-		return err
+		return fmt.Errorf("add constraint for '%s' module: %w", name, err)
 	}
-	e.logger.Debugf("installed constraint for the '%s' module is added", name)
 	return nil
 }
 
 func (e *Extender) DeleteConstraint(name string) {
-	e.logger.Debugf("deleting installed constraint for the '%s' module", name)
 	e.versionMatcher.DeleteConstraint(name)
 }
 
@@ -114,38 +104,32 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 	if !e.versionMatcher.Has(name) {
 		return nil, nil
 	}
-	if e.err != nil {
-		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse deckhouse version failed: %s", e.err)}
-	}
+
 	if err := e.versionMatcher.Validate(name); err != nil {
-		e.logger.Debugf("requirements of the '%s' module are not satisfied: current deckhouse version is not suitable: %s", name, err.Error())
-		return ptr.To(false), fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
+		return ptr.To(false), fmt.Errorf("the '%s' module`s requirements not met: the current deckhouse version is not suitable: %v", name, err)
 	}
-	e.logger.Debugf("requirements of the '%s' module are satisfied", name)
+
+	e.logger.Debugf("the '%s' module`s requirements met", name)
 	return ptr.To(true), nil
 }
 
 func (e *Extender) ValidateBaseVersion(baseVersion string) (string, error) {
 	if name, err := e.versionMatcher.ValidateBaseVersion(baseVersion); err != nil {
 		if name != "" {
-			e.logger.Debugf("requirements of the '%s' module are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
-			return name, fmt.Errorf("requirements of the '%s' module are not satisfied: %s deckhouse version is not suitable: %s", name, baseVersion, err.Error())
+			return name, fmt.Errorf("requirements of the '%s' module not met: the '%s' deckhouse version is not suitable: %v", name, baseVersion, err)
 		}
-		e.logger.Debugf("modules requirements cannot be checked: deckhouse version is invalid: %s", err.Error())
-		return "", fmt.Errorf("modules requirements cannot be checked: deckhouse version is invalid: %s", err.Error())
+		return "", fmt.Errorf("check modules requirements: the '%s' deckhouse version is invalid: %v", baseVersion, err)
 	}
-	e.logger.Debugf("modules requirements for '%s' deckhouse version are satisfied", baseVersion)
+
+	e.logger.Debugf("modules requirements for '%s' deckhouse version met", baseVersion)
 	return "", nil
 }
 
-func (e *Extender) ValidateRelease(releaseName, rawConstraint string) error {
-	if e.err != nil {
-		return fmt.Errorf("parse deckhouse version failed: %s", e.err)
+func (e *Extender) ValidateRelease(release, constraint string) error {
+	if err := e.versionMatcher.ValidateConstraint(constraint); err != nil {
+		return fmt.Errorf("the '%s' module release`s requirements not met: the current deckhouse version is not suitable: %v", release, err)
 	}
-	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
-		e.logger.Debugf("requirements of the '%s' module release are not satisfied: current deckhouse version is not suitable: %s", releaseName, err.Error())
-		return fmt.Errorf("requirements are not satisfied: current deckhouse version is not suitable: %s", err.Error())
-	}
-	e.logger.Debugf("requirements of the '%s' module release are satisfied", releaseName)
+
+	e.logger.Debugf("the '%s' module release`s requirements met", release)
 	return nil
 }

@@ -19,64 +19,47 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
-	"runtime"
 
-	ad_app "github.com/flant/addon-operator/pkg/app"
+	addonapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
 	"github.com/flant/kube-client/klogtolog"
-	sh_app "github.com/flant/shell-operator/pkg/app"
-	sh_debug "github.com/flant/shell-operator/pkg/debug"
+	shellapp "github.com/flant/shell-operator/pkg/app"
+	shelldebug "github.com/flant/shell-operator/pkg/debug"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
-	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
-	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	dhctlcommands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
+	dhctlapp "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// Variables with component versions. They set by 'go build' command.
-var (
-	DeckhouseVersion     = "dev"
-	AddonOperatorVersion = "dev"
-	ShellOperatorVersion = "dev"
-)
-
-func version() string {
-	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s, Golang %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion, runtime.Version())
-}
-
 // main is almost a copy from addon-operator. We compile addon-operator to inline
 // Go hooks and set some defaults. Also, helper commands are defined for Shell hooks.
-
-const (
-	AppName        = "deckhouse"
-	AppDescription = "controller for Kubernetes platform from Flant"
-)
-
 func main() {
-	sh_app.Version = ShellOperatorVersion
-	ad_app.Version = AddonOperatorVersion
+	shellapp.Version = app.VersionShellOperator
+	addonapp.Version = app.VersionAddonOperator
 
 	FileName := filepath.Base(os.Args[0])
 
-	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
+	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", app.Name, app.VersionDeckhouse, app.Description))
 
 	logger := log.NewLogger(log.Options{})
 	log.SetDefault(logger)
 
 	// override usage template to reveal additional commands with information about start command
-	kpApp.UsageTemplate(sh_app.OperatorUsageTemplate(FileName))
+	kpApp.UsageTemplate(shellapp.OperatorUsageTemplate(FileName))
 
 	// print version
 	kpApp.Command("version", "Show version.").Action(func(_ *kingpin.ParseContext) error {
-		fmt.Println(version())
+		fmt.Println(app.Version())
 		return nil
 	})
 
 	kpApp.Action(func(_ *kingpin.ParseContext) error {
-		klogtolog.InitAdapter(sh_app.DebugKubernetesAPI, logger.Named("klog"))
+		klogtolog.InitAdapter(shellapp.DebugKubernetesAPI, logger.Named("klog"))
 		stdliblogtolog.InitAdapter(logger)
 		return nil
 	})
@@ -86,11 +69,11 @@ func main() {
 		Command("start", "Start deckhouse.").
 		Action(start(logger))
 
-	ad_app.DefineStartCommandFlags(kpApp, startCmd)
+	addonapp.DefineStartCommandFlags(kpApp, startCmd)
 
 	// Add debug commands from shell-operator and addon-operator
-	sh_debug.DefineDebugCommands(kpApp)
-	ad_app.DefineDebugCommands(kpApp)
+	shelldebug.DefineDebugCommands(kpApp)
+	addonapp.DefineDebugCommands(kpApp)
 
 	// Add more commands to the "module" command.
 	debug.DefineModuleConfigDebugCommands(kpApp, logger)
@@ -110,12 +93,12 @@ func main() {
 	// deckhouse-controller edit subcommands
 	editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
 	{
-		dhctl_app.LoggerType = "json"
-		dhctl_app.Editor = "vim"
-		dhctl_app.KubeConfigInCluster = true
-		dhctl_app.TmpDirName = os.TempDir()
+		dhctlapp.LoggerType = "json"
+		dhctlapp.Editor = "vim"
+		dhctlapp.KubeConfigInCluster = true
+		dhctlapp.TmpDirName = os.TempDir()
 
-		dhctl_commands.DefineEditCommands(editCmd /* wConnFlags */, false)
+		dhctlcommands.DefineEditCommands(editCmd /* wConnFlags */, false)
 	}
 
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))

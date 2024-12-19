@@ -113,11 +113,9 @@ func (suite *ModuleLoaderTestSuite) setupModuleLoader(raw string) {
 		WithStatusSubresource(&v1alpha1.ModuleSource{}, &v1alpha2.ModulePullOverride{}).Build()
 
 	suite.loader = &Loader{
-		client:               suite.client,
-		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
-		dependencyContainer:  dependency.NewDependencyContainer(),
-		log:                  log.NewNop(),
-		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
+		client:              suite.client,
+		dependencyContainer: dependency.NewDependencyContainer(),
+		log:                 log.NewNop(),
 	}
 }
 

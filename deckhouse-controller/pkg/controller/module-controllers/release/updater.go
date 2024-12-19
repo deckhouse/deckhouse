@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"os"
 	"path"
 	"strconv"
@@ -234,9 +235,8 @@ func (k *kubeAPI) updateModuleReleaseDownloadStatistic(ctx context.Context, rele
 }
 
 func (k *kubeAPI) IsKubernetesVersionAutomatic(ctx context.Context) (bool, error) {
-	key := client.ObjectKey{Namespace: "kube-system", Name: "d8-cluster-configuration"}
 	secret := new(corev1.Secret)
-	if err := k.client.Get(ctx, key, secret); err != nil {
+	if err := k.client.Get(ctx, client.ObjectKey{Namespace: app.NamespaceKubernetes, Name: app.ClusterConfigurationSecret}, secret); err != nil {
 		return false, fmt.Errorf("check kubernetes version: failed to get secret: %w", err)
 	}
 

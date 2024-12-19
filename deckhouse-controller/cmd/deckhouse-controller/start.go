@@ -35,7 +35,8 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/util/retry"
 
-	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -47,11 +48,15 @@ const (
 	leaseDuration    = 35
 	renewalDeadline  = 30
 	retryPeriod      = 10
+
+	crdsGlob = "/deckhouse/deckhouse-controller/crds/*.yaml"
+
+	configMapLock = "deckhouse-bootstrap-lock"
 )
 
 func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 	return func(_ *kingpin.ParseContext) error {
-		shapp.AppStartMessage = version()
+		shapp.AppStartMessage = app.Version()
 
 		ctx := context.Background()
 
@@ -59,8 +64,8 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 
 		operator.StartAPIServer()
 
-		if os.Getenv("DECKHOUSE_HA") == "true" {
-			logger.Info("Desckhouse is starting in HA mode")
+		if app.VarModeHA == "true" {
+			logger.Info("deckhouse is starting in HA mode")
 			runHAMode(ctx, operator, logger)
 			return nil
 		}
@@ -145,7 +150,7 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 }
 
 func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
-	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), "/deckhouse/deckhouse-controller/crds/*.yaml"); err != nil {
+	if err := apis.EnsureCRDs(ctx, operator.KubeClient(), crdsGlob); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 
@@ -154,17 +159,12 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
-	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, operator, logger.Named("deckhouse-controller"))
-	if err != nil {
+	// initialize and start controllers, load modules from FS, and run deckhouse config event loop
+	if err := controller.Start(ctx, operator, logger); err != nil {
 		return fmt.Errorf("create deckhouse controller: %w", err)
 	}
 
-	// load modules from FS, start controllers and run deckhouse config event loop
-	if err = deckhouseController.Start(ctx); err != nil {
-		return fmt.Errorf("start deckhouse controller: %w", err)
-	}
-
-	if err = operator.Start(ctx); err != nil {
+	if err := operator.Start(ctx); err != nil {
 		return fmt.Errorf("start operator: %w", err)
 	}
 
@@ -179,13 +179,8 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	return nil
 }
 
-const (
-	cmLockName  = "deckhouse-bootstrap-lock"
-	cmNamespace = "d8-system"
-)
-
 func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Logger) error {
-	bk := wait.Backoff{
+	backoff := wait.Backoff{
 		Duration: 1 * time.Second,
 		Factor:   1.2,
 		Jitter:   1,
@@ -193,25 +188,25 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 		Cap:      5 * time.Minute,
 	}
 
-	return retry.OnError(bk, func(err error) bool {
-		logger.Errorf("An error occurred during the bootstrap lock: %s. Retrying", err)
+	return retry.OnError(backoff, func(err error) bool {
+		logger.Errorf("failed to look bootstrap: %v, retry it", err)
 		// retry on any error
 		return true
 	}, func() error {
-		if _, err := client.CoreV1().ConfigMaps(cmNamespace).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
+		if _, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Get(ctx, configMapLock, v1.GetOptions{}); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil
 			}
-			return fmt.Errorf("get the '%s' configmap: %w", cmLockName, err)
+			return fmt.Errorf("get the '%s' configmap: %w", configMapLock, err)
 		}
 
-		logger.Info("Bootstrap lock ConfigMap exists. Waiting for bootstrap process to be done")
+		logger.Info("the bootstrap lock config map exists, wait for bootstrap process to be done")
 
 		listOpts := v1.ListOptions{
-			FieldSelector: "metadata.name=" + cmLockName,
+			FieldSelector: "metadata.name=" + configMapLock,
 			Watch:         true,
 		}
-		wch, err := client.CoreV1().ConfigMaps(cmNamespace).Watch(ctx, listOpts)
+		wch, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Watch(ctx, listOpts)
 		if err != nil {
 			return fmt.Errorf("watch configmaps: %w", err)
 		}
@@ -223,7 +218,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 		}
 		wch.Stop()
 
-		logger.Info("Bootstrap lock has been released")
+		logger.Info("bootstrap lock has been released")
 
 		return nil
 	})
