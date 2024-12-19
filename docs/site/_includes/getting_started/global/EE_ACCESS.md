@@ -12,10 +12,10 @@
       License key
     </label>
     <input id="license-token-input" class="textfield"
-      type="text" license-token name="license-token"
+      type="text" license-token-{{ revision }} name="license-token-{{ revision }}"
       autocomplete="off" />
   </div>
-  <a href="#" id="enter-license-key" class="button button_alt">Enter</a>
+  <a href="#" id="enter-license-key-{{ revision }}" class="button button_alt">Enter</a>
   <span></span>
 </div>
 </div>
