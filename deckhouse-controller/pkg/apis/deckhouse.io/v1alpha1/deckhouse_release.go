@@ -24,6 +24,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	DeckhouseReleasePhasePending    = "Pending"
+	DeckhouseReleasePhaseDeployed   = "Deployed"
+	DeckhouseReleasePhaseSuperseded = "Superseded"
+	DeckhouseReleasePhaseSuspended  = "Suspended"
+	DeckhouseReleasePhaseSkipped    = "Skipped"
+)
+
 var DeckhouseReleaseGVK = schema.GroupVersionKind{
 	Group:   SchemeGroupVersion.Group,
 	Version: SchemeGroupVersion.Version,
