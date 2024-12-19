@@ -68,7 +68,7 @@ type NodeGroupSpec struct {
 	NodeType NodeType `json:"nodeType,omitempty"`
 
 	// Maximum drain time of CloudEphemeral machines in seconds
-	DrainTimeout *int32 `json:"nodeDrainTimeoutSec,omitempty"`
+	NodeDrainTimeout *float64 `json:"nodeDrainTimeoutSec,omitempty"`
 
 	// CRI parameters. Optional.
 	CRI CRI `json:"cri,omitempty"`
