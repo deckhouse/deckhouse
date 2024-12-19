@@ -40,6 +40,9 @@ shell:
   - git clone --branch v{{ $falcoctlVersion }} --depth 1 {{ .SOURCE_REPO }}/falcosecurity/falcoctl.git /src/falcoctl
   - cd /src/plugins
   - rm -rf shared plugins/cloudtrail plugins/dummy* plugins/gcpaudit plugins/github plugins/k8saudit-* plugins/kafka plugins/okta build docs
+  - rm -rf /src/falco/.git
+  - rm -rf /src/plugins/.git
+  - rm -rf /src/falcoctl/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-falcoctl-artifact
 from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
