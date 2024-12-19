@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,13 +20,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flant/constraint_exporter/pkg/gatekeeper"
-	"github.com/flant/constraint_exporter/pkg/kinds"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/flant/constraint_exporter/pkg/gatekeeper"
+	"github.com/flant/constraint_exporter/pkg/kinds"
 )
 
 type Exporter struct {
