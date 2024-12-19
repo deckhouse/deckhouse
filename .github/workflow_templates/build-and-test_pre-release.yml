@@ -85,9 +85,9 @@ jobs:
       - git_info
 {!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
 
-  tests_python_webhooks:
+  tests_dmt_lint:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
-    name: Tests python webhooks
+    name: Tests DMT lint
     needs:
     - git_info
 {!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
