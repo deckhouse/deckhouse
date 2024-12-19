@@ -88,6 +88,16 @@ function teardown_registry_data_device() {
     fi
 }
 
+function check_if_symlink_and_return_target() {
+    local input_data="$1"
+    
+    if [[ -L "$input_data" ]]; then
+        echo "$(readlink "$input_data")"
+    else 
+        echo "$input_data"
+    fi
+}
+
 function find_all_unmounted_data_devices() {
   lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '
     [
@@ -261,6 +271,7 @@ else
       */}}
       dataDevice=$(find_first_unmounted_data_device)
     fi
+    dataDevice=$(check_if_symlink_and_return_target "$dataDevice")
     # Set up the registry data device
     setup_registry_data_device "$dataDevice"
     # Create the installed file marker after setup
