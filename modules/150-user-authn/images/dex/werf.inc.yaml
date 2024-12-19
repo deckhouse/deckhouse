@@ -18,7 +18,7 @@ shell:
     - git clone --branch v2.41.1 --depth 1 {{ .SOURCE_REPO }}/dexidp/dex.git /src/dex
     - cd /src/dex
     - git apply /patches/*.patch --verbose
-
+    - rm -rf /src/dex/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_GOLANG_23_ALPINE }}
