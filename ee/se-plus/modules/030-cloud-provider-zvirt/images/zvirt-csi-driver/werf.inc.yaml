@@ -4,6 +4,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
+fromCacheVersion: 19122024
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
   add: /ovirt-csi-driver
@@ -30,7 +31,7 @@ docker:
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
     {{- if semverCompare ">=1.27" $version }}
-from: {{ $.Images.BASE_GOLANG_19_BULLSEYE_DEV }}
+from: {{ $.Images.BASE_GOLANG_20_BULLSEYE_DEV }} # https://github.com/golang/go/commit/00401835c1d5122a84f0500e48655cd787402f3f
     {{- end }}
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -52,7 +53,7 @@ shell:
   - git clone --depth 1 --branch {{ $value.csi.zvirt }} {{ $.SOURCE_REPO }}/openshift/ovirt-csi-driver.git /src
   - cd /src
   - rm -rf vendor
-  - git apply /patches/*.patch --verbose
+  - find /patches -name '*.patch' | xargs git apply --verbose
   - go mod tidy
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X version.Version={{ $value.csi.zvirt }}" -o /ovirt-csi-driver ./cmd/ovirt-csi-driver/ovirt-csi-driver.go
  {{- end }}

@@ -67,6 +67,8 @@ resource "ovirt_disk_attachment" "master-kubernetes-data-attachment" {
   vm_id          = ovirt_vm.master_vm.id
   bootable       = false
   active         = true
+
+  depends_on        = [ ovirt_disk_resize.master_boot_disk_resize ]
 }
 
 resource "ovirt_vm_start" "master_vm" {
@@ -76,4 +78,3 @@ resource "ovirt_vm_start" "master_vm" {
 
   depends_on = [ovirt_nic.master_vm_nic, ovirt_disk.master-kubernetes-data, ovirt_disk_attachment.master-kubernetes-data-attachment, ovirt_disk_resize.master_boot_disk_resize]
 }
-
