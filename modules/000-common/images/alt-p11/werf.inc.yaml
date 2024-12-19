@@ -11,5 +11,9 @@ shell:
   {{- include "alt packages proxy" . | nindent 2 }}
   # ssh auth to 3p repos
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ .Images.BASE_ALT_P11 }}
+final: false
 docker:
   USER: 64535
