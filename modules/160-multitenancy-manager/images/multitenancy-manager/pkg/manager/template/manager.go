@@ -22,20 +22,18 @@ import (
 	"sync"
 	"time"
 
-	"controller/pkg/consts"
-
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/validate"
-
 	"github.com/go-logr/logr"
 
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/validate"
 )
 
 type Manager struct {
@@ -60,13 +58,13 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 		return true, nil
 	}
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, check); err != nil {
-		return fmt.Errorf("webhook server failed to start: %w", err)
+		return fmt.Errorf("start webhook server: %w", err)
 	}
 	m.log.Info("webhook server started")
 
 	m.log.Info("ensuring default project templates")
 	if err := m.ensureDefaultProjectTemplates(ctx, defaultPath); err != nil {
-		return fmt.Errorf("failed to ensure default project templates: %w", err)
+		return fmt.Errorf("ensure default project templates: %w", err)
 	}
 
 	m.log.Info("ensured default project templates")
@@ -80,7 +78,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 	if err := validate.ProjectTemplate(template); err != nil {
 		if statusError := m.setTemplateStatus(ctx, template, err.Error(), false); statusError != nil {
 			m.log.Error(statusError, "failed to update the template status")
-			return ctrl.Result{Requeue: true}, statusError
+			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, nil
 	}
@@ -95,14 +93,14 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha1.ProjectTemplate
 		m.log.Info("processing projects for the template", "template", template.Name, "projectsNum", len(projects))
 		for _, project := range projects {
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				if err = m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
-					return fmt.Errorf("failed to get the '%s' project: %w", project.Name, err)
+				if err = m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
+					return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 				}
 				m.log.Info("trigger the project to update", "template", template.Name, "project", project.Name)
 				if project.Annotations == nil {
 					project.Annotations = map[string]string{}
 				}
-				project.Annotations[consts.ProjectRequireSyncAnnotation] = "true"
+				project.Annotations[v1alpha2.ProjectAnnotationRequireSync] = "true"
 				return m.client.Update(ctx, project)
 			})
 			if err != nil {

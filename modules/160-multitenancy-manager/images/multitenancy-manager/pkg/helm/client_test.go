@@ -21,30 +21,28 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/validate"
-
 	"github.com/stretchr/testify/assert"
 
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
 	"helm.sh/helm/v3/pkg/releaseutil"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/validate"
 )
 
 func Test(t *testing.T) {
 	templates, err := parseHelmTemplates("../../templates")
 	assert.Nil(t, err)
-	for _, c := range []string{"empty_case", "secure_case", "secure_with_dedicated_node_case", "default_case", "without_ns_case"} {
+	for _, c := range []string{"default_case", "secure_case", "secure_with_dedicated_node_case", "empty_case", "without_ns_case"} {
 		t.Run(c, func(t *testing.T) {
 			basePath := filepath.Join("./testdata", c)
 			assert.Nil(t, test(templates, basePath))

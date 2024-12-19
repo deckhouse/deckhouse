@@ -22,22 +22,20 @@ import (
 	"net/http"
 	"strings"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/consts"
-	"controller/pkg/helm"
-	"controller/pkg/validate"
-
 	admissionv1 "k8s.io/api/admission/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/helm"
+	projectmanager "controller/pkg/manager/project"
+	"controller/pkg/validate"
 )
 
 func Register(runtimeManager manager.Manager, helmClient *helm.Client) {
@@ -58,7 +56,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 	if req.Operation == admissionv1.Create {
 		// pass virtual projects
-		if project.Name == consts.DefaultProjectName || project.Name == consts.DeckhouseProjectName {
+		if project.Name == projectmanager.DefaultProjectName || project.Name == projectmanager.DeckhouseProjectName {
 			return admission.Allowed("")
 		}
 
@@ -81,7 +79,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 	if req.Operation == admissionv1.Update {
 		// pass triggered projects
 		if annotations := project.Annotations; annotations != nil {
-			require, ok := annotations[consts.ProjectRequireSyncAnnotation]
+			require, ok := annotations[v1alpha2.ProjectAnnotationRequireSync]
 			if ok && require == "true" {
 				return admission.Allowed("")
 			}
@@ -103,12 +101,12 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 	// validate the project against the template
 	if err = validate.Project(project, template); err != nil {
-		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %s", project.Name, err.Error()))
+		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
 	}
 
 	// validate helm render
 	if err = v.helmClient.ValidateRender(project, template); err != nil {
-		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %s", project.Name, err.Error()))
+		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
 	}
 
 	return admission.Allowed("")
@@ -116,11 +114,11 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 func (v *validator) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
 	template := new(v1alpha1.ProjectTemplate)
-	if err := v.client.Get(ctx, types.NamespacedName{Name: name}, template); err != nil {
+	if err := v.client.Get(ctx, client.ObjectKey{Name: name}, template); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("get the '%s' project template: %w", name, err)
 	}
 	return template, nil
 }
