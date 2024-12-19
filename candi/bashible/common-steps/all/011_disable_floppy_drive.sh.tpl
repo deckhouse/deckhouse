@@ -20,6 +20,15 @@ fi
 
 echo "blacklist floppy" > /etc/modprobe.d/blacklist-floppy.conf
 if lsmod | grep floppy -q ; then
+
+  if command -v update-initramfs >/dev/null 2>&1; then
     update-initramfs -u
-    bb-flag-set reboot
+  elif command -v make-initrd >/dev/null 2>&1; then
+    make-initrd
+  else
+    bb-log-error "update-initramfs or make-initrd not found!"
+    exit 1
+  fi
+
+  bb-flag-set reboot
 fi

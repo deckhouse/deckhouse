@@ -505,6 +505,57 @@ alerts:
         Cluster-autoscaler issues too many errors.
       severity: "8"
       markupFormat: markdown
+    - name: D8CNIEnabledMoreThanOne
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Several CNIs are enabled in the cluster:
+        For the cluster to work correctly, only one CNI must be enabled.
+      summary: |
+        More than one CNI is enabled in the cluster.
+      severity: "2"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
+        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+      summary: |
+        The settings from the secret d8-cni-configuratuin and the moduleConfig contradict each other.
+      severity: "3"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
+        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+      summary: |
+        The settings from the secret d8-cni-configuratuin and the moduleConfig contradict each other.
+      severity: "3"
+      markupFormat: markdown
+    - name: D8CNIMisconfigured
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/cni-checks.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        It is necessary to correct the settings in the CNI {{ $labels.cni }} moduleConfig.
+        You can find the desired settings in the `d8-system/desired-cni-moduleconfig` configmap.
+        To do this, please run the following command: `kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml`.
+      summary: |
+        The settings from the secret d8-cni-configuratuin and the moduleConfig contradict each other.
+      severity: "3"
+      markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -1435,10 +1486,10 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8MetalLBBGPSessionDown
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has BGP session {{ $labels.peer }} down.
         Details are in logs:
@@ -1449,22 +1500,11 @@ alerts:
         MetalLB BGP session down.
       severity: "4"
       markupFormat: markdown
-    - name: D8MetallbBothBGPAndL2PoolsConfigured
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
-      moduleUrl: 380-metallb
-      module: metallb
-      edition: se
-      description: |
-        There must not be `Layer2` and `BGP` IP pools configured at the same time in ModuleConfig version 1.
-      summary: |
-        MetaLB module misconfiguration.
-      severity: "4"
-      markupFormat: markdown
     - name: D8MetalLBConfigNotLoaded
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has not loaded.
         To figure out the problem, check controller logs:
@@ -1476,10 +1516,10 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8MetalLBConfigStale
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+      sourceFile: ee/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
       moduleUrl: 380-metallb
       module: metallb
-      edition: se
+      edition: ee
       description: |
         {{ $labels.job }} — MetalLB {{ $labels.container }} on {{ $labels.pod}} has run on a stale configuration, because the latest config failed to load.
         To figure out the problem, check controller logs:
@@ -1490,52 +1530,33 @@ alerts:
         MetalLB running on a stale configuration, because the latest config failed to load.
       severity: "4"
       markupFormat: markdown
-    - name: D8MetallbIpAddressPoolNSMismatch
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+    - name: D8MetallbNotSupportedServiceAnnotationsDetected
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
       moduleUrl: 380-metallb
       module: metallb
       edition: se
       description: |
-        IpAddressPool `{{$labels.name}}` is located in namespace `{{$labels.namespace}}`, but must be located in namespace `d8-metallb`.
+        Annotation '{{$labels.annotation}}' is deprecated for Service '{{$labels.name}}' located in namespace '{{$labels.namespace}}'
+        Service annotations below don't take effect now:
+          `metallb.universe.tf/ip-allocated-from-pool` — just wipe it out.
+          `metallb.universe.tf/address-pool` — use `.spec.loadBalancerClass` parameter or `network.deckhouse.io/metal-load-balancer-class` annotation with corresponding MetalLoadBalancerClass reference.
+          `metallb.universe.tf/loadBalancerIPs` — use `network.deckhouse.io/load-balancer-ips: <ip>` instead.
+
+          Important! Existing LoadBalancer Services of the Deckhouse were migrated automatically, but the new ones won't.
       summary: |
-        MetaLB module misconfiguration.
+        D8 MetalLB settings is outdated
       severity: "4"
       markupFormat: markdown
-    - name: D8MetallbL2AdvertisementNodeSelectorsMismatch
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
+    - name: D8MetallbUpdateMCVersionRequired
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
       moduleUrl: 380-metallb
       module: metallb
       edition: se
       description: |
-        L2Advertisement `{{$labels.name}}`: there must only be one matchLabels (not matchExpressions) in the nodeSelectors.
+        ModuleConfig version for MetaLB needs to be increased
       summary: |
-        MetaLB module misconfiguration.
-      severity: "4"
-      markupFormat: markdown
-    - name: D8MetallbL2AdvertisementNSMismatch
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
-      moduleUrl: 380-metallb
-      module: metallb
-      edition: se
-      description: |
-        L2Advertisement `{{$labels.name}}` is located in namespace `{{$labels.namespace}}`, but must be located in namespace `d8-metallb`.
-      summary: |
-        MetaLB module misconfiguration.
-      severity: "4"
-      markupFormat: markdown
-    - name: D8MetallbOrphanedLoadBalancerDetected
-      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/metallb.yaml
-      moduleUrl: 380-metallb
-      module: metallb
-      edition: se
-      description: |
-        The Service `{{$labels.name}}` in `{{$labels.namespace}}` namespace is orphaned. A Service must have any of the following properties:
-        - have the loadBalancerClass,
-        - have the `metallb.universe.tf/address-pool` annotation,
-        - have the `metallb.universe.tf/ip-allocated-from-pool` annotation.
-      summary: |
-        MetaLB module misconfiguration.
-      severity: "4"
+        D8 MetalLB settings is outdated
+      severity: "5"
       markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
@@ -2628,6 +2649,19 @@ alerts:
         Deckhouse release is waiting for manual approval.
       severity: "9"
       markupFormat: markdown
+    - name: DeckhouseReleaseNotificationNotSent
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Failed to send the Deckhouse release notification webhook.
+
+        Check the notification webhook address by running `kubectl get mc deckhouse -o yaml`.
+      summary: |
+        Deckhouse release notification webhook not sent.
+      severity: "4"
+      markupFormat: markdown
     - name: DeckhouseUpdating
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -3594,22 +3628,11 @@ alerts:
         Kube-state-metrics is not working in the cluster.
       severity: "3"
       markupFormat: markdown
-    - name: L2LoadBalancerModuleDeprecated
-      sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
-      moduleUrl: 381-l2-load-balancer
-      module: l2-load-balancer
-      edition: ee
-      description: |
-        The L2LoadBalancer module is deprecated and will be removed in a future release. Disable the module and use MetalLB module in L2 mode.
-      summary: |
-        L2LoadBalancer module is deprecated
-      severity: "3"
-      markupFormat: markdown
     - name: L2LoadBalancerOrphanServiceFound
-      sourceFile: ee/modules/381-l2-load-balancer/monitoring/prometheus-rules/services.yaml
-      moduleUrl: 381-l2-load-balancer
-      module: l2-load-balancer
-      edition: ee
+      sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
+      moduleUrl: 380-metallb
+      module: metallb
+      edition: se
       description: |
         There is orphan service in the namespace: `{{$labels.namespace}}` with the name: `{{$labels.name}}` which has irrelevant L2LoadBalancer name.
 
@@ -3666,6 +3689,17 @@ alerts:
         Storage class {{ $labels.storageclass }} uses the deprecated rbd provisioner. It is necessary to migrate the volumes to the Ceph CSI driver.
       severity: "9"
       markupFormat: markdown
+    - name: ModuleAtConflict
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Conflicting sources for the {{ $labels.moduleName }} module. Please specify the proper source in the module configuration.
+      summary: |
+        Conflict detected for module {{ $labels.moduleName }}.
+      severity: "4"
+      markupFormat: markdown
     - name: ModuleConfigDeprecated
       sourceFile: modules/810-documentation/monitoring/prometheus-rules/deprecated-mc.yaml
       moduleUrl: 810-documentation
@@ -3678,6 +3712,27 @@ alerts:
       summary: |
         Deprecated ModuleConfig was found.
       severity: "9"
+      markupFormat: markdown
+    - name: ModuleConfigObsoleteVersion
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        ModuleConfig {{ $labels.name }} is outdated. Update ModuleConfig {{ $labels.name }} to the latest version.
+      summary: |
+        ModuleConfig {{ $labels.name }} is outdated.
+      severity: "4"
+      markupFormat: markdown
+    - name: ModuleHasDeprecatedUpdatePolicy
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: "The '{{ $labels.moduleName }}' module has a deprecated module update policy, the policy selector does not work, and the module will use deckhouse update policy. \n\nPlease specify the proper update policy in the module configuration to continue get updates.\n"
+      summary: |
+        The '{{ $labels.moduleName }}' module has a deprecated module update policy.
+      severity: "4"
       markupFormat: markdown
     - name: ModuleReleaseIsBlockedByRequirements
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
@@ -4713,6 +4768,8 @@ modules-having-alerts:
     - chrony
     - cloud-provider-yandex
     - cni-cilium
+    - cni-flannel
+    - cni-simple-bridge
     - control-plane-manager
     - documentation
     - extended-monitoring
@@ -4720,7 +4777,6 @@ modules-having-alerts:
     - ingress-nginx
     - istio
     - kube-dns
-    - l2-load-balancer
     - log-shipper
     - metallb
     - monitoring-applications

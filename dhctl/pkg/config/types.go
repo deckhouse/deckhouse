@@ -78,24 +78,23 @@ type TerraNodeGroupSpec struct {
 }
 
 type DeckhouseClusterConfigOld struct {
-	ReleaseChannel    string                 `json:"releaseChannel,omitempty"`
+	ReleaseChannel    string                 `json:"releaseChannel,omitempty"` // Deprecated
 	DevBranch         string                 `json:"devBranch,omitempty"`
-	Bundle            string                 `json:"bundle,omitempty"`
-	LogLevel          string                 `json:"logLevel,omitempty"`
+	Bundle            string                 `json:"bundle,omitempty"`   // Deprecated
+	LogLevel          string                 `json:"logLevel,omitempty"` // Deprecated
 	ImagesRepo        string                 `json:"imagesRepo"`
 	RegistryDockerCfg string                 `json:"registryDockerCfg,omitempty"`
 	RegistryCA        string                 `json:"registryCA,omitempty"`
 	RegistryScheme    string                 `json:"registryScheme,omitempty"`
-	ImagesBundlePath  string                 `json:"imagesBundlePath,omitempty"`
 	ConfigOverrides   map[string]interface{} `json:"configOverrides"` // Deprecated
 }
 
 type DeckhouseClusterConfig struct {
-	ReleaseChannel  string                 `json:"releaseChannel,omitempty"`
+	ReleaseChannel  string                 `json:"releaseChannel,omitempty"` // Deprecated
 	DevBranch       string                 `json:"devBranch,omitempty"`
-	Bundle          string                 `json:"bundle,omitempty"`
-	LogLevel        string                 `json:"logLevel,omitempty"`
-	ConfigOverrides map[string]interface{} `json:"configOverrides"` // Deprecated
+	Bundle          string                 `json:"bundle,omitempty"`   // Deprecated
+	LogLevel        string                 `json:"logLevel,omitempty"` // Deprecated
+	ConfigOverrides map[string]interface{} `json:"configOverrides"`    // Deprecated
 }
 
 type RegistryClusterConfig struct {
@@ -114,7 +113,7 @@ type RegistryDirectModeProperties struct {
 
 type RegistryProxyModeProperties struct {
 	RegistryDirectModeProperties
-	StorageMode string        `json:"storageMode,omitempty"`
+	StorageMode string             `json:"storageMode,omitempty"`
 	TTL         util_time.Duration `json:"ttl,omitempty"`
 }
 

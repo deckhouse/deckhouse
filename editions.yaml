@@ -63,6 +63,7 @@ editions:
     - openstack
     - vcd
     - decort
+    - huaweicloud
 
 - name: FE
   modulesDir: "ee/fe/modules"

@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -27,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/ptr"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -60,7 +60,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					"rbac.deckhouse.io/automated": "true",
 				},
 			},
-			FilterFunc: filterUseBinding,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterUseBinding,
 		},
 	},
 }, syncBindings)
@@ -124,19 +126,11 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 func syncBindings(input *go_hook.HookInput) error {
-	// TODO: removed deleted roles, can be removed after 1.67
-	for _, roleSnap := range input.Snapshots["manageRoles"] {
-		role := roleSnap.(*filteredManageRole)
-		if deletedRole(role) {
-			input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRole", "", role.Name)
-		}
-	}
-
 	expected := make(map[string]bool)
 	for _, snap := range input.Snapshots["manageBindings"] {
 		binding := snap.(*filteredManageBinding)
 		role, namespaces := roleAndNamespacesByBinding(input.Snapshots["manageRoles"], binding.RoleName)
-		useBindingName := fmt.Sprintf("d8:use:binding:%s", binding.Name)
+		useBindingName := fmt.Sprintf("d8:use:%s:binding:%s", role, binding.Name)
 		for namespace := range namespaces {
 			input.PatchCollector.Create(createBinding(binding, role, namespace), object_patch.UpdateIfExists())
 			expected[useBindingName] = true
@@ -159,10 +153,6 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 	var found *filteredManageRole
 	for _, snap := range manageRoles {
 		if role := snap.(*filteredManageRole); role.Name == roleName {
-			// TODO: skip deleted roles, can be removed after 1.67
-			if deletedRole(role) {
-				continue
-			}
 			found = role
 			var ok bool
 			if useRole, ok = found.Labels["rbac.deckhouse.io/use-role"]; !ok {
@@ -178,10 +168,6 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 	var namespaces = make(map[string]bool)
 	for _, snap := range manageRoles {
 		role := snap.(*filteredManageRole)
-		// TODO: skip deleted roles, can be removed after 1.67
-		if deletedRole(role) {
-			continue
-		}
 		if matchAggregationRule(found.Rule, role.Labels) {
 			if role.Rule == nil {
 				if namespace, ok := role.Labels["rbac.deckhouse.io/namespace"]; ok {
@@ -190,10 +176,6 @@ func roleAndNamespacesByBinding(manageRoles []go_hook.FilterResult, roleName str
 				continue
 			}
 			for _, nestedSnap := range manageRoles {
-				// TODO: skip deleted roles, can be removed after 1.67
-				if deletedRole(role) {
-					continue
-				}
 				nested := nestedSnap.(*filteredManageRole)
 				if matchAggregationRule(role.Rule, nested.Labels) {
 					if namespace, ok := nested.Labels["rbac.deckhouse.io/namespace"]; ok {
@@ -228,7 +210,7 @@ func createBinding(binding *filteredManageBinding, useRoleName string, namespace
 			APIVersion: "rbac.authorization.k8s.io/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("d8:use:binding:%s", binding.Name),
+			Name:      fmt.Sprintf("d8:use:%s:binding:%s", useRoleName, binding.Name),
 			Namespace: namespace,
 			Labels: map[string]string{
 				"heritage":                       "deckhouse",
@@ -243,13 +225,4 @@ func createBinding(binding *filteredManageBinding, useRoleName string, namespace
 		},
 		Subjects: binding.Subjects,
 	}
-}
-
-func deletedRole(role *filteredManageRole) bool {
-	if strings.HasPrefix(role.Name, "d8:manage") {
-		if strings.HasSuffix(role.Name, ":admin") || strings.HasSuffix(role.Name, ":user") {
-			return true
-		}
-	}
-	return false
 }

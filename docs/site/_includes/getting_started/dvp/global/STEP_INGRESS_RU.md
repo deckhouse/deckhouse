@@ -1,6 +1,6 @@
 <script type="text/javascript" src='{{ assets["getting-started.js"].digest_path }}'></script>
 <script type="text/javascript" src='{{ assets["getting-started-access.js"].digest_path }}'></script>
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](https://TODO) запустился и находится в статусе `Ready`.
+Убедитесь, что под Kruise controller manager запустился и находится в статусе `Ready`.
   Выполните на **master-узле** следующую команду:
 
 {% snippetcut %}
@@ -17,7 +17,7 @@ sudo d8 k -n d8-ingress-nginx get po -l app=kruise
 {% snippetcut %}
 ```shell
 sudo d8 k apply -f - <<EOF
-# Секция, описывающая параметры NGINX Ingress controller.
+# Параметры контроллера NGINX Ingress .
 # https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -53,14 +53,14 @@ sudo d8 k -n d8-ingress-nginx get po -l app=controller
 <p>Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.</p>
 
 {% offtopic title="Пример вывода..." %}
-```
+```console
 $ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
 {% endofftopic %}
 </li>
-<li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера
+<li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера:
   <ul>
   <li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер.</li>
   <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:

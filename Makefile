@@ -261,7 +261,7 @@ docs-linkscheck: ## Build documentation and run checker of html links.
 .PHONY: docs-spellcheck
 docs-spellcheck: ## Check the spelling in the documentation.
   ##~ Options: file="path/to/file" (Specify a path to a specific file)
-	cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/spell_check.sh -f $(file)
+	cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" --repo ":local" -- /app/spell_check.sh -f $(file)
 
 lint-doc-spellcheck-pr:
 	@cd tools/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=bash" -- /app/check_diff.sh
@@ -301,9 +301,13 @@ bin/trdl: bin
 	chmod +x bin/trdl
 
 bin/werf: bin bin/trdl ## Install werf for images-digests generator.
-	trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2 && \
-	trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable
-	ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf
+	@bash -c 'trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2'
+	@if command -v bin/werf >/dev/null 2>&1; then \
+		trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 1.2 stable; \
+	else \
+		trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable; \
+		ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf; \
+	fi
 
 bin/gh: bin ## Install gh cli.
 	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip

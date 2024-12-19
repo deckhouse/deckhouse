@@ -45,10 +45,15 @@ on:
       test_config:
         description: 'JSON string of parameters of current test'
         required: false
-        default: '{"cri":"Containerd","ver":"1.27","edition":"FE"}'
+        default: '{"cri":"Containerd","ver":"1.29","edition":"FE"}'
       initial_ref_slug:
         description: 'An image tag to install first and then switch to workflow context ref'
         required: false
+      autodelete:
+        description: 'Should the cluster be deleted regardless of the test result'
+        required: true
+        default: false
+        type: boolean
 env:
 
   # <template: werf_envs>
@@ -190,7 +195,7 @@ jobs:
         with:
           script: |
             const provider = 'eks';
-            const kubernetesDefaultVersion = '1.27';
+            const kubernetesDefaultVersion = '1.29';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
@@ -588,7 +593,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1125,7 +1130,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1662,7 +1667,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -2199,7 +2204,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -2736,7 +2741,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -3273,7 +3278,7 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -3440,7 +3445,7 @@ jobs:
       PROVIDER: EKS
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.27"
+      KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
     runs-on: [self-hosted, e2e-common]
@@ -3667,7 +3672,7 @@ jobs:
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
@@ -3810,14 +3815,14 @@ jobs:
           labels: "e2e/cluster/failed"
 
       - name: Cleanup bootstrapped cluster
-        if: success()
+        if: inputs.autodelete||success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.27"
+          KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}

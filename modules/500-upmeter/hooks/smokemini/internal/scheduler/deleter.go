@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 )
 
 const (
@@ -31,7 +30,7 @@ type Deleter interface {
 	Delete(string)
 }
 
-func newPersistentVolumeClaimDeleter(patcher *object_patch.PatchCollector, logger go_hook.ILogger) Deleter {
+func newPersistentVolumeClaimDeleter(patcher go_hook.PatchCollector, logger go_hook.Logger) Deleter {
 	deleter := &objDeleter{
 		patcher:    patcher,
 		apiVersion: "v1",
@@ -45,7 +44,7 @@ func newPersistentVolumeClaimDeleter(patcher *object_patch.PatchCollector, logge
 	return newLoggingDeleter(deleter, logger, message)
 }
 
-func newStatefulSetDeleter(patcher *object_patch.PatchCollector, logger go_hook.ILogger) Deleter {
+func newStatefulSetDeleter(patcher go_hook.PatchCollector, logger go_hook.Logger) Deleter {
 	deleter := &objDeleter{
 		patcher:    patcher,
 		apiVersion: "apps/v1",
@@ -59,7 +58,7 @@ func newStatefulSetDeleter(patcher *object_patch.PatchCollector, logger go_hook.
 	return newLoggingDeleter(deleter, logger, message)
 }
 
-func newLoggingDeleter(delegate Deleter, logger go_hook.ILogger, message func(string) string) Deleter {
+func newLoggingDeleter(delegate Deleter, logger go_hook.Logger, message func(string) string) Deleter {
 	return &loggingDeleter{
 		delegate: delegate,
 		logger:   logger,
@@ -70,7 +69,7 @@ func newLoggingDeleter(delegate Deleter, logger go_hook.ILogger, message func(st
 // loggingDeleter wraps a Deleter and logs about the deletion
 type loggingDeleter struct {
 	delegate Deleter
-	logger   go_hook.ILogger
+	logger   go_hook.Logger
 	message  func(string) string
 }
 
@@ -81,7 +80,7 @@ func (d *loggingDeleter) Delete(name string) {
 
 // objDeleter is the generic implementation of a Deleter interface
 type objDeleter struct {
-	patcher    *object_patch.PatchCollector
+	patcher    go_hook.PatchCollector
 	apiVersion string
 	kind       string
 	namespace  string

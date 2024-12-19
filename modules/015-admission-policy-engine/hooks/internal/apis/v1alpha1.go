@@ -102,8 +102,9 @@ type SecurityPolicySpec struct {
 
 type ImageReference struct {
 	PublicKeys []string `json:"publicKeys"`
+	CA         string   `json:"ca,omitempty"`
 	Reference  string   `json:"reference"`
-	DockerCfg  string   `json:"dockerCfg"`
+	DockerCfg  string   `json:"dockerCfg,omitempty"`
 }
 
 type SelectUIDStrategy struct {

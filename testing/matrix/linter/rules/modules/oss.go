@@ -165,6 +165,7 @@ var skipOssChecks = map[string]struct{}{
 	"030-cloud-provider-vcd":                  {},
 	"030-cloud-provider-yandex":               {},
 	"030-cloud-provider-zvirt":                {},
+	"030-cloud-provider-huaweicloud":          {},
 	"035-cni-simple-bridge":                   {},
 	"140-user-authz":                          {},
 	"160-multitenancy-manager":                {},
@@ -181,6 +182,7 @@ var skipOssChecks = map[string]struct{}{
 	"500-okmeter":                             {},
 	"500-upmeter":                             {},
 	"600-secret-copier":                       {},
+	"610-service-with-healthchecks":           {},
 	"800-deckhouse-tools":                     {},
 	"810-documentation":                       {},
 }

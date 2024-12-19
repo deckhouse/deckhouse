@@ -8,17 +8,25 @@ lang: ru
 
 Для управления входящим и исходящим трафиком виртуальных машин на уровне 3 или 4 модели OSI используются стандартные сетевые политики Kubernetes. Более подробно об этом можно прочитать в официальной документации [Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/).  
 
-Есть два основных типа управления трафиком, входящий и исходящий соответственно:
-- `ingress`;
-- `egress`.
+Есть два основных типа управления трафиком, входящий и исходящий:
+
+- Ingress – входящий трафик;
+- Egress – исходящий трафик.
 
 Для управления внутрикластерным трафиком рекомендуется использовать `podSelector` и `namespaceSelector`, а для сетевого взаимодействия за пределами кластера – `ipBlock`.
 Правила сетевых политик применяются одновременно, по принципу их складывания, для всех виртуальных машин, которые соответствуют указанным меткам.
 
-Дальнейшие примеры будут показаны на примере проекта `test-project` с двумя виртуальными машинами в пространстве имён `test-project`. По умолчанию входящий и исходящий трафик не ограничены.
+Дальнейшие примеры будут показаны на примере проекта `test-project` с двумя виртуальными машинами в пространстве имён `test-project`.
 
-```bash
-$ d8 k get vm -n test-project
+По умолчанию входящий и исходящий трафик не ограничены:
+
+```shell
+d8 k get vm -n test-project
+```
+
+Пример вывода:
+
+```console
 NAME   PHASE     NODE           IPADDRESS     AGE
 vm-a   Running   virtlab-2      10.66.20.70   5m
 vm-b   Running   virtlab-1      10.66.20.71   5m
@@ -26,8 +34,13 @@ vm-b   Running   virtlab-1      10.66.20.71   5m
 
 Виртуальные машины имеют соответствующие им метки.
 
-```bash
-$ d8 k get vm -n test-project -o yaml | less
+```shell
+d8 k get vm -n test-project -o yaml | less
+```
+
+Пример вывода:
+
+```yaml
 - apiVersion: virtualization.deckhouse.io/v1alpha2
   kind: VirtualMachine
   metadata:
@@ -62,9 +75,9 @@ spec:
     - Ingress
 ```
 
-Policy type `Ingress` означает, что будут применены правила для входящего трафика. Так как никаких `Ingress`-правил в спецификации не указано, то будет ограничен весь входящий трафик.
+Тип политики (policy type) Ingress означает, что будут применены правила для входящего трафика. Так как никаких Ingress правил в спецификации не указано, то будет ограничен весь входящий трафик.
 
-По такому же принципу можно ограничить и исходящий трафик, добавив `Egress` в блок `spec.policyTypes`.
+По такому же принципу можно ограничить и исходящий трафик, добавив Egress в блок `spec.policyTypes`.
 
 ```yaml
 policyTypes:
@@ -95,7 +108,7 @@ spec:
     - Ingress
 ```
 
-С помощью `spec.podSelector` для всех виртуальных машин с меткой `vm: a` применяется сетевая политика с типом `Ingress`. В спецификации `spec.ingress` указано правило, которое разрешает входящий трафик `from` из виртуальных машин с меткой `vm: b`.
+С помощью `spec.podSelector` для всех виртуальных машин с меткой `vm: a` применяется сетевая политика с типом Ingress. В спецификации `spec.ingress` указано правило, которое разрешает входящий трафик `from` из виртуальных машин с меткой `vm: b`.
 
 ## Разрешение исходящего трафика виртуальной машины за пределы кластера
 
@@ -122,7 +135,7 @@ spec:
     - Egress
 ```
 
-Policy type `Egress` указывает на то, что будут применены правила исходящего трафика в спецификации `spec.egress`. Также указаны протокол `TCP` и порт `53`, на который разрешён трафик.
+Тип политики (policy type) указывает на то, что будут применены правила исходящего трафика в спецификации `spec.egress`. Также указаны протокол `TCP` и порт `53`, на который разрешён трафик.
 
 Порты могут быть указаны в виде диапазона с помощью дополнительного поля `endPort` в блоке `ports`.
 
@@ -160,7 +173,7 @@ spec:
 
 С полным описанием спецификации сетевых политик можно ознакомиться в документации:
 
-- [https://kubernetes.io/docs/concepts/services-networking/network-policies](https://kubernetes.io/docs/concepts/services-networking/network-policies),
-- [https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicy-v1-networking-k8s-io](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicy-v1-networking-k8s-io),
+- [https://kubernetes.io/docs/concepts/services-networking/network-policies](https://kubernetes.io/docs/concepts/services-networking/network-policies).
+- [https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicy-v1-networking-k8s-io](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.31/#networkpolicy-v1-networking-k8s-io).
   
-  где 1.31 - это версия Kubernetes релиза. При необходимости укажите поддерживаемую в вашем кластере версию.
+  где `1.31` — версия Kubernetes релиза. При необходимости укажите поддерживаемую в вашем кластере версию.

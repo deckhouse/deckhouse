@@ -93,6 +93,9 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements() error {
 		registryDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "systemRegistryDiskSizeGb"}
 		// externalDiskSizeDefault = 30
 
+	case "HuaweiCloudClusterConfiguration":
+		rootDiskPropertyPath = []string{"masterNodeGroup", "instanceClass", "rootDiskSize"}
+
 	default:
 		return fmt.Errorf("unknown provider cluster configuration kind: %s", configKind)
 	}

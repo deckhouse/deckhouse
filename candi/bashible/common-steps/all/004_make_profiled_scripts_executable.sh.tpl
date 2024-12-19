@@ -13,6 +13,6 @@
 # limitations under the License.
 
 # On AltLinux, scripts under /etc/profile.d should be executable.
-if $(bb-is-bundle) == 'altlinux'; then
+if [[ $(bb-is-bundle) == "altlinux" ]]; then
   chmod +x /etc/profile.d/*.sh
 fi

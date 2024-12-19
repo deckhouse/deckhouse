@@ -4,11 +4,11 @@ permalink: ru/virtualization-platform/documentation/user/resource-management/ima
 lang: ru
 ---
 
-Ресурс [`VirtualImage`](../../../reference/cr/virtualimage.html) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин. Этот ресурс доступен только в пространстве имен или проекте, в котором он был создан.
+Ресурс [VirtualImage](../../../reference/cr/virtualimage.html) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин. Этот ресурс доступен только в пространстве имен или проекте, в котором он был создан.
 
 Процесс создания образа включает следующие шаги:
 
-1. Пользователь создаёт ресурс [`VirtualImage`](../../../reference/cr/virtualimage.html).
+1. Пользователь создаёт ресурс [VirtualImage](../../../reference/cr/virtualimage.html).
 1. После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
 1. После завершения загрузки ресурс становится доступным для создания дисков.
 
@@ -31,8 +31,8 @@ lang: ru
 
 Для проектных образов поддерживается два варианта хранения:
 
-- `ContainerRegistry` - тип по умолчанию, при котором образ хранится в `DVCR`.
-- `PersistentVolumeClaim` - тип, при котором в качестве хранилища для образа используется `PVC`. Этот вариант предпочтителен, если используется хранилище с поддержкой быстрого клонирования `PVC`. В этом случае диски из образов будут создаваться быстрее.
+- `ContainerRegistry` — тип по умолчанию, при котором образ хранится в `DVCR`.
+- `PersistentVolumeClaim` — тип, при котором в качестве хранилища для образа используется `PVC`. Этот вариант предпочтителен, если используется хранилище с поддержкой быстрого клонирования `PVC`. В этом случае диски из образов будут создаваться быстрее.
 
 ### Создание образа с HTTP-сервера
 
@@ -59,21 +59,26 @@ EOF
 
 ```bash
 d8 k get virtualimage ubuntu-22.04
-# или более короткий вариант
-d8 k get vi ubuntu-22.04
 
-# NAME           PHASE   CDROM   PROGRESS   AGE
-# ubuntu-22.04   Ready   false   100%       23h
+# Укороченный вариант команды
+d8 k get vi ubuntu-22.04
+```
+
+Пример вывода:
+
+```console
+NAME           PHASE   CDROM   PROGRESS   AGE
+ubuntu-22.04   Ready   false   100%       23h
 ```
 
 После создания ресурс [VirtualImage](../../../reference/cr/virtualimage.html) может находиться в следующих состояниях:
 
-- `Pending` - ожидание готовности всех зависимых ресурсов, требующихся для создания образа.
-- `WaitForUserUpload` - ожидание загрузки образа пользователем (состояние присутствует только для `type=Upload`).
-- `Provisioning` - идет процесс создания образа.
-- `Ready` - образ создан и готов для использования.
-- `Failed` - произошла ошибка в процессе создания образа.
-- `Terminating` - идет процесс удаления образа; процесс может «зависнуть» в этом состоянии, если образ еще подключен к виртуальной машине.
+- `Pending` — ожидание готовности всех зависимых ресурсов, требующихся для создания образа.
+- `WaitForUserUpload` — ожидание загрузки образа пользователем (состояние присутствует только для `type=Upload`).
+- `Provisioning` — идет процесс создания образа.
+- `Ready` — образ создан и готов для использования.
+- `Failed` — произошла ошибка в процессе создания образа.
+- `Terminating` — идет процесс удаления образа; процесс может «зависнуть» в этом состоянии, если образ еще подключен к виртуальной машине.
 
 До тех пор, пока образ не перешёл в фазу `Ready`, содержимое всего блока `.spec` допускается изменять. При изменении процесс создания диска запустится заново. После перехода в фазу `Ready` содержимое блока `.spec` менять нельзя!
 
@@ -81,15 +86,19 @@ d8 k get vi ubuntu-22.04
 
 ```bash
 d8 k get vi ubuntu-22.04 -w
+```
 
-# NAME           PHASE          CDROM   PROGRESS   AGE
-# ubuntu-22.04   Provisioning   false              4s
-# ubuntu-22.04   Provisioning   false   0.0%       4s
-# ubuntu-22.04   Provisioning   false   28.2%      6s
-# ubuntu-22.04   Provisioning   false   66.5%      8s
-# ubuntu-22.04   Provisioning   false   100.0%     10s
-# ubuntu-22.04   Provisioning   false   100.0%     16s
-# ubuntu-22.04   Ready          false   100%       18s
+Пример вывода:
+
+```console
+NAME           PHASE          CDROM   PROGRESS   AGE
+ubuntu-22.04   Provisioning   false              4s
+ubuntu-22.04   Provisioning   false   0.0%       4s
+ubuntu-22.04   Provisioning   false   28.2%      6s
+ubuntu-22.04   Provisioning   false   66.5%      8s
+ubuntu-22.04   Provisioning   false   100.0%     10s
+ubuntu-22.04   Provisioning   false   100.0%     16s
+ubuntu-22.04   Ready          false   100%       18s
 ```
 
 В описании ресурса [VirtualImage](../../../reference/cr/virtualimage.html) можно получить дополнительную информацию о скачанном образе:
@@ -121,14 +130,18 @@ EOF
 
 ```bash
 d8 k get vi ubuntu-22.04-pvc
-
-# NAME              PHASE   CDROM   PROGRESS   AGE
-# ubuntu-22.04-pvc  Ready   false   100%       23h
 ```
 
-### Создание образа из Container Registry
+Пример вывода:
 
-Образ, хранящийся в `Container Registry`, имеет определенный формат. Рассмотрим на примере:
+```console
+NAME              PHASE   CDROM   PROGRESS   AGE
+ubuntu-22.04-pvc  Ready   false   100%       23h
+```
+
+### Создание образа из container registry
+
+Образ, хранящийся в container registry, имеет определенный формат. Рассмотрим на примере:
 
 Для начала загрузите образ локально:
 
@@ -136,14 +149,14 @@ d8 k get vi ubuntu-22.04-pvc
 curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
 ```
 
-Затем создайте `Dockerfile` со следующим содержимым:
+Затем создайте Dockerfile со следующим содержимым:
 
 ```Dockerfile
 FROM scratch
 COPY ubuntu2204.img /disk/ubuntu2204.img
 ```
 
-Далее нужно собрать образ и загрузить его в `Container registry`. В качестве `Container registry` в примере ниже использован docker.io. Для выполнения вам необходимо иметь учетную запись сервиса и настроенное окружение.
+Далее нужно собрать образ и загрузить его в container registry. В качестве container registry в примере ниже использован docker.io. Для выполнения вам необходимо иметь учетную запись сервиса и настроенное окружение.
 
 ```bash
 docker build -t docker.io/<username>/ubuntu2204:latest
@@ -151,7 +164,7 @@ docker build -t docker.io/<username>/ubuntu2204:latest
 
 где `username` — имя пользователя, указанное при регистрации в docker.io.
 
-Загрузите созданный образ в `Container registry`:
+Загрузите созданный образ в container registry:
 
 ```bash
 docker push docker.io/<username>/ubuntu2204:latest
@@ -222,8 +235,13 @@ curl https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm 
 
 ```bash
 d8 k get vi some-image
-# NAME         PHASE   CDROM   PROGRESS   AGE
-# some-image   Ready   false   100%       1m
+```
+
+Пример вывода:
+
+```console
+NAME         PHASE   CDROM   PROGRESS   AGE
+some-image   Ready   false   100%       1m
 ```
 
 ### Создание образа из диска

@@ -58,37 +58,11 @@ apiVersions:
             description: Registry access scheme (HTTP or HTTPS).
             enum: [HTTP, HTTPS]
             default: HTTPS
-          releaseChannel:
-            type: string
-            deprecated: true
-            description: |
-              Instead of this parameter, use the [releaseChannel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter of the ModuleConfig 'deckhouse'.
-
-              The release channel to use in the cluster.
-            enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
           devBranch:
             type: string
             deprecated: true
             description: |
               The parameter is used for development needs. Will be replaced with the CLI-tools.
-          bundle:
-            type: string
-            deprecated: true
-            description: |
-              Instead of this parameter, use the [bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) parameter of the ModuleConfig 'deckhouse'.
-
-              The Deckhouse bundle to use in the cluster.
-            enum: [Minimal, Managed, Default]
-            default: Default
-          logLevel:
-            type: string
-            deprecated: true
-            description: |
-              Instead of this parameter, use the [logLevel](../modules/002-deckhouse/configuration.html#parameters-loglevel) parameter of the ModuleConfig 'deckhouse'.
-
-              Deckhouse logging Level.
-            enum: [Debug, Info, Error]
-            default: Info
 
 - apiVersion: deckhouse.io/v2alpha1
   openAPISpec:
@@ -249,34 +223,8 @@ apiVersions:
         type: object
         description: Initial parameters required to install Deckhouse.
         properties:
-          releaseChannel:
-            type: string
-            deprecated: true
-            description: |
-              Instead of this parameter, use the [releaseChannel](../modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter of the ModuleConfig 'deckhouse'.
-
-              The release channel to use in the cluster.
-            enum: [Alpha, Beta, EarlyAccess, Stable, RockSolid]
           devBranch:
             type: string
             deprecated: true
             description: |
               The parameter is used for development needs. Will be replaced with the CLI-tools.
-          bundle:
-            type: string
-            deprecated: true
-            description: |
-              Instead of this parameter, use the [bundle](../modules/002-deckhouse/configuration.html#parameters-bundle) parameter of the ModuleConfig 'deckhouse'.
-
-              The Deckhouse bundle to use in the cluster.
-            enum: [Minimal, Managed, Default]
-            default: Default
-          logLevel:
-            type: string
-            deprecated: true
-            description: |
-              Instead of this parameter, use the [logLevel](../modules/002-deckhouse/configuration.html#parameters-loglevel) parameter of the ModuleConfig 'deckhouse'.
-
-              Deckhouse logging Level.
-            enum: [Debug, Info, Error]
-            default: Info

@@ -34,6 +34,7 @@ const (
 	ModuleConditionEnabledByModuleConfig  = "EnabledByModuleConfig"
 	ModuleConditionEnabledByModuleManager = "EnabledByModuleManager"
 	ModuleConditionIsReady                = "IsReady"
+	ModuleConditionIsOverridden           = "IsOverridden"
 
 	ModulePhaseAvailable     = "Available"
 	ModulePhaseDownloading   = "Downloading"
@@ -55,7 +56,6 @@ const (
 	ModuleReasonClusterBootstrappedExtender = "ClusterBootstrappedExtender"
 	ModuleReasonNotInstalled                = "NotInstalled"
 	ModuleReasonDisabled                    = "Disabled"
-	ModuleReasonInit                        = "Init"
 	ModuleReasonConflict                    = "Conflict"
 	ModuleReasonDownloading                 = "Downloading"
 	ModuleReasonHookError                   = "HookError"
@@ -75,13 +75,12 @@ const (
 	ModuleMessageClusterBootstrappedExtender = "turned off because the cluster not bootstrapped yet"
 	ModuleMessageNotInstalled                = "not installed"
 	ModuleMessageDisabled                    = "disabled"
-	ModuleMessageInit                        = "init"
 	ModuleMessageConflict                    = "several available sources"
 	ModuleMessageDownloading                 = "downloading"
 	ModuleMessageReconciling                 = "reconciling"
 	ModuleMessageInstalling                  = "installing"
 	ModuleMessageWaitSyncTasks               = "run sync tasks"
-	ModuleMessageOnStartupHook               = "completed OnStartup hooks"
+	ModuleMessageOnStartupHook               = "onStartup hooks done"
 	ModuleMessageHooksDisabled               = "hooks disabled"
 )
 

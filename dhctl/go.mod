@@ -13,7 +13,8 @@ require (
 	github.com/deckhouse/deckhouse-cli v0.7.0
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
-	github.com/flant/addon-operator v1.5.2
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241106140903-258b93b3334e
+	github.com/deckhouse/module-sdk v0.1.0
 	github.com/flant/kube-client v1.2.2
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-openapi/spec v0.21.0
@@ -32,7 +33,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/client_model v0.6.1
-	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	github.com/werf/logboek v0.6.1
 	golang.org/x/crypto v0.28.0
@@ -68,17 +68,12 @@ require (
 	github.com/containerd/stargz-snapshotter/estargz v0.15.1 // indirect
 	github.com/creack/pty v1.1.21 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241106140903-258b93b3334e // indirect
 	github.com/docker/cli v27.3.1+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.2 // indirect
-	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/evanphx/json-patch v5.8.0+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
-	github.com/flant/libjq-go v1.6.3-0.20201126171326-c46a40ff22ee // indirect
-	github.com/flant/shell-operator v1.5.1 // indirect
-	github.com/go-chi/chi/v5 v5.1.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/analysis v0.23.0 // indirect
@@ -88,8 +83,7 @@ require (
 	github.com/go-openapi/loads v0.22.0 // indirect
 	github.com/go-openapi/runtime v0.28.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
-	github.com/gofrs/uuid/v5 v5.3.0 // indirect
-	github.com/gojuno/minimock/v3 v3.4.1 // indirect
+	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/certificate-transparency-go v1.1.8 // indirect
@@ -107,7 +101,6 @@ require (
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -123,7 +116,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
-	github.com/onsi/ginkgo/v2 v2.20.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
@@ -135,12 +127,10 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/samber/lo v1.47.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/tidwall/gjson v1.17.0 // indirect
-	github.com/tidwall/match v1.1.1 // indirect
-	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/vbatts/tar-split v0.11.5 // indirect
 	github.com/weppos/publicsuffix-go v0.30.3-0.20240411085455-21202160c2ed // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
@@ -159,7 +149,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect
 	gopkg.in/evanphx/json-patch.v5 v5.8.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/robfig/cron.v2 v2.0.0-20150107220207-be2e0b0deed5 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
 	k8s.io/cli-runtime v0.29.10 // indirect
 	k8s.io/component-base v0.29.10 // indirect

@@ -74,6 +74,8 @@ metadata:
     kubectl.kubernetes.io/last-applied-configuration: should-be-removed
     meta.helm.sh/release-name: opendistro
     meta.helm.sh/release-namespace: test
+    helm.sh/chart: my-chart-1.2.3
+    helm.sh/hook: pre-install,pre-upgrade
     ci.werf.io/commit: 90we4affe93154c1200cd3db0f5ee3085c31def6
     ci.werf.io/tag: v1
     gitlab.ci.werf.io/job-url: https://gitlab.example.com/job-url
@@ -240,6 +242,8 @@ metadata:
     kubectl.kubernetes.io/last-applied-configuration: should-be-removed
     meta.helm.sh/release-name: opendistro
     meta.helm.sh/release-namespace: test
+    helm.sh/chart: my-chart-1.2.3
+    helm.sh/hook: pre-install,pre-upgrade
     ci.werf.io/commit: 90we4affe93154c1200cd3db0f5ee3085c31def6
     ci.werf.io/tag: v1
     gitlab.ci.werf.io/job-url: https://gitlab.example.com/job-url

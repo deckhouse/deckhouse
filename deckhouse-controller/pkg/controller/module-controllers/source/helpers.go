@@ -34,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
 )
 
 func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, moduleName string) error {
@@ -115,7 +116,7 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 				if ref.UID == source.UID && ref.Name == source.Name && ref.Kind == v1alpha1.ModuleSourceGVK.Kind {
 					// update the values.yaml file in downloaded-modules/<module_name>/v<module_version/openapi path
 					modulePath := filepath.Join(r.downloadedModulesDir, release.Spec.ModuleName, fmt.Sprintf("v%s", release.Spec.Version))
-					if err = downloader.InjectRegistryToModuleValues(modulePath, source); err != nil {
+					if err = reginjector.InjectRegistryToModuleValues(modulePath, source); err != nil {
 						return fmt.Errorf("update the '%s' module release registry settings: %w", release.Name, err)
 					}
 
@@ -151,7 +152,7 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 		return false, nil
 	}
 
-	r.log.Debugf("the module release with '%s' checksum exist for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
+	r.log.Debugf("the module release with '%s' checksum exists for the '%s' module of the '%s' source", checksum, moduleName, sourceName)
 	return true, nil
 }
 

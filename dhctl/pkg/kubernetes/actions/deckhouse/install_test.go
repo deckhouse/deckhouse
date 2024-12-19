@@ -41,7 +41,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		os.Unsetenv("DHCTL_TEST_VERSION_TAG")
 	}()
 
-	log.InitLogger("simple")
+	log.InitLogger("json")
 	fakeClient := client.NewFakeKubernetesClient()
 
 	tests := []struct {
