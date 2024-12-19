@@ -67,7 +67,7 @@ shell:
   - chmod 0755 falcoctl
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-plugins-artifact
-from: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -106,7 +106,7 @@ shell:
   - cp /src/plugins/json/libjson.so /src/plugins/k8saudit/libk8saudit.so /src/plugins/k8smeta/libk8smeta.so /plugins
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
