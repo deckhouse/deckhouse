@@ -24,14 +24,9 @@ import (
 	"sync"
 	"time"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/consts"
-	"controller/pkg/helm"
-	projectmanager "controller/pkg/manager/project"
-
 	"github.com/go-logr/logr"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -45,6 +40,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/helm"
+	projectmanager "controller/pkg/manager/project"
 )
 
 const controllerName = "d8-project-controller"
@@ -77,12 +76,12 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 			},
 		)
 	})); err != nil {
-		return fmt.Errorf("failed to init project manager: %w", err)
+		return fmt.Errorf("init project manager: %w", err)
 	}
 
 	projectController, err := controller.New(controllerName, runtimeManager, controller.Options{Reconciler: r})
 	if err != nil {
-		return fmt.Errorf("failed to create project controller: %w", err)
+		return fmt.Errorf("create project controller: %w", err)
 	}
 
 	r.log.Info("initializing project controller")
@@ -92,19 +91,19 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, log logr.
 			predicate.AnnotationChangedPredicate{},
 			predicate.GenerationChangedPredicate{},
 			customPredicate[client.Object]{log: log})).
-		Watches(&v1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
-			if labels := object.GetLabels(); labels != nil {
-				if _, ok := labels[consts.ProjectTemplateLabel]; ok {
-					return nil
-				}
+		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
+			if _, ok := object.GetLabels()[v1alpha2.ResourceLabelTemplate]; ok {
+				return nil
 			}
-			if strings.HasPrefix(object.GetName(), consts.KubernetesNamespacePrefix) || strings.HasPrefix(object.GetName(), consts.DeckhouseNamespacePrefix) {
-				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: consts.DeckhouseProjectName}}}
+			if strings.HasPrefix(object.GetName(), projectmanager.KubernetesNamespacePrefix) || strings.HasPrefix(object.GetName(), projectmanager.DeckhouseNamespacePrefix) {
+				return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: projectmanager.DeckhouseProjectName}}}
 			}
-			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: consts.DefaultProjectName}}}
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: projectmanager.DefaultProjectName}}}
 		})).
 		Complete(projectController)
 }
+
+var _ reconcile.Reconciler = &reconciler{}
 
 type reconciler struct {
 	init           *sync.WaitGroup
@@ -118,18 +117,18 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	r.init.Wait()
 
 	r.log.Info("reconciling the project", "project", req.Name)
-	project := &v1alpha2.Project{}
+	project := new(v1alpha2.Project)
 	if err := r.client.Get(ctx, req.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.log.Info("the project not found", "project", req.Name)
 			return reconcile.Result{}, nil
 		}
-		r.log.Error(err, "error getting the project", "project", req.Name)
-		return reconcile.Result{}, nil
+		r.log.Error(err, "failed to get the project", "project", req.Name)
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	// handle virtual projects
-	if project.Spec.ProjectTemplateName == consts.VirtualTemplate {
+	if project.Spec.ProjectTemplateName == projectmanager.VirtualTemplate {
 		r.log.Info("reconcile the virtual project", "project", req.Name)
 		return r.projectManager.HandleVirtual(ctx, project)
 	}
@@ -152,19 +151,17 @@ type customPredicate[T metav1.Object] struct {
 
 func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	if isNil(e.ObjectOld) {
-		p.log.Error(nil, "Update event has no old object to update", "event", e)
+		p.log.Error(nil, "update event has no old object to update", "event", e)
 		return false
 	}
 	if isNil(e.ObjectNew) {
-		p.log.Error(nil, "Update event has no new object for update", "event", e)
+		p.log.Error(nil, "update event has no new object for update", "event", e)
 		return false
 	}
 
 	// skip projects that do not require sync
-	if annotations := e.ObjectNew.GetAnnotations(); annotations != nil {
-		if val, ok := annotations[consts.ProjectRequireSyncAnnotation]; ok && val == "true" {
-			return true
-		}
+	if val, ok := e.ObjectNew.GetAnnotations()[v1alpha2.ProjectAnnotationRequireSync]; ok && val == "true" {
+		return true
 	}
 
 	return e.ObjectNew.GetGeneration() != e.ObjectOld.GetGeneration()

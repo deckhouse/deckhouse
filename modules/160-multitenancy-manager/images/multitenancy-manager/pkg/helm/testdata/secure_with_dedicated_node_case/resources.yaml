@@ -1,17 +1,5 @@
 
 ---
-apiVersion: v1
-kind: Namespace
-metadata:
-  annotations:
-    scheduler.alpha.kubernetes.io/node-selector: node-role/gpu-shared=
-  labels:
-    heritage: multitenancy-manager
-    projects.deckhouse.io/project: test
-    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
-  name: test
-
----
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
@@ -170,3 +158,16 @@ spec:
       - max: 100
         min: 10
       rule: MustRunAs
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations: null
+  labels:
+    extended-monitoring.deckhouse.io/enabled: ""
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: test
+    projects.deckhouse.io/project-template: secure-with-dedicated-nodes
+    security.deckhouse.io/pod-policy: baseline
+  name: test

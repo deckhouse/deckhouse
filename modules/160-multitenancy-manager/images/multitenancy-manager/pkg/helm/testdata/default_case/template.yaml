@@ -132,6 +132,7 @@ spec:
       labels:
         {{ with .parameters.podSecurityProfile }}security.deckhouse.io/pod-policy: "{{ lower . }}"{{ end }}
         {{ if .parameters.extendedMonitoringEnabled }}extended-monitoring.deckhouse.io/enabled: ""{{ end }}
+
     {{- range $administrator := .parameters.administrators }}
     ---
     apiVersion: deckhouse.io/v1alpha1
@@ -141,9 +142,10 @@ spec:
     spec:
       accessLevel: Admin
       subjects:
-      - kind: {{ $administrator.subject }}
-        name: {{ $administrator.name }}
+        - kind: {{ $administrator.subject }}
+          name: {{ $administrator.name }}
     {{- end }}
+
     ---
     # Max requests and limits for resource and storage consumption for all pods in a namespace.
     # Refer to https://kubernetes.io/docs/concepts/policy/resource-quotas/
@@ -164,6 +166,7 @@ spec:
             {{ with .memory }}limits.memory: {{ . }}{{ end }}
           {{ end }}
         {{ end }}
+
     {{- if eq .parameters.networkPolicy "Isolated" }}
     ---
     # Deny all network traffic by default except namespaced traffic and dns.
@@ -199,20 +202,21 @@ spec:
                 matchLabels:
                   app: controller
       egress:
-        # Traffic within the project is allowed.
         - to:
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: "{{ .projectName }}"
+          # Traffic within the project is allowed.
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: "{{ .projectName }}"
         # Allow DNS traffic (both kube-dns and nodelocaldns).
         - to:
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: kube-system
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: kube-system
           ports:
             - protocol: UDP
               port: 53
     {{- end }}
+
     {{- with .parameters.clusterLogDestinationName }}
     ---
     # Refer to https://deckhouse.io/documentation/v1/modules/460-log-shipper/
@@ -224,6 +228,7 @@ spec:
       clusterDestinationRefs:
         - {{ . }}
     {{- end }}
+
     ---
     # Referer to https://deckhouse.io/documentation/v1/modules/015-admission-policy-engine/
     apiVersion: deckhouse.io/v1alpha1
