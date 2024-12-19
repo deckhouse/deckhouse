@@ -37,7 +37,7 @@ docker:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_ALPINE_DEV }}
+from: {{ $.Images.BASE_ALPINE }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -46,6 +46,7 @@ import:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make gettext-dev autoconf automake libtool flex bison clang binutils g++ linux-headers
   setup:
     - cd /src/e2fsprogs
     - CFLAGS='-static' LDFLAGS="-static" ./configure
