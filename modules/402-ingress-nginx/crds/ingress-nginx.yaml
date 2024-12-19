@@ -636,6 +636,8 @@ spec:
                       > **Caution!** Make sure that requests to the Ingress are sent from trusted sources when using this inlet. The `acceptRequestsFrom` parameter can help you with defining trusted sources.
                     * `HostPortWithSSLPassthrough` - Ingress controller is deployed and available through nodes' ports via `hostPort.  It enables SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly, without terminating it at the Ingress controller.
 
+                      Settings are required in [spec.HostPortWithSSLPassthrough](#ingressnginxcontroller-v1-spec-hostportwithsslpassthrough).
+
                       SSL Passthrough leverages SNI and reads the virtual domain from the TLS negotiation, which requires compatible clients. After a connection has been accepted by the TLS listener, it is handled by the controller itself and piped back and forth between the backend and the client.
 
                       If there is no hostname matching the requested host name, the request is handed over to NGINX on the configured passthrough proxy port (default: 442),
