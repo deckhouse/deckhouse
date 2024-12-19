@@ -3,6 +3,8 @@ title: "Requirements"
 permalink: en/virtualization-platform/documentation/admin/install/requirements.html
 ---
 
+TODO sync with REQUIREMENTS_RU.md
+
 ## Preparing the infrastructure
 
 - Minimum requirements: 4 CPUs, 8GB RAM, 60GB disk space on fast disk (400+ IOPS)

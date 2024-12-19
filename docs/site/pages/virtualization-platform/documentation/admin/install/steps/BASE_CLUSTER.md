@@ -1,7 +1,9 @@
 ---
-title: "Platform installation"
+title: "Base platform installation"
 permalink: en/virtualization-platform/documentation/admin/install/steps/install.html
 ---
+
+TODO Sync with BASE_CLUSTER_RU
 
 ## Configuration Preparation
 

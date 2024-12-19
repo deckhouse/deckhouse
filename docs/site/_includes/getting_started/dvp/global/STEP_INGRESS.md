@@ -54,7 +54,7 @@ sudo d8 k -n d8-ingress-nginx get po -l app=controller
 
 {% offtopic title="Example of the output..." %}
 ```console
-$ sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get po -l app=controller
+$ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
