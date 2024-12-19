@@ -75,7 +75,7 @@ func deleteConfigFiles(configsDir string, cni string) {
 }
 
 func execIptables(args ...string) (string, error) {
-	cmd := exec.Command("iptables", args...)
+	cmd := exec.Command("/sbin/iptables-wrapper", args...)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
@@ -240,4 +240,5 @@ func main() {
 		"KUBE-SEP-",
 		"KUBE-SVC-",
 	})
+	log.Println("finished system cleaning")
 }
