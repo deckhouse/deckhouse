@@ -39,6 +39,8 @@ shell:
   install:
   - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
   - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc /src/runc
+  - rm -rf /src/containerd/.git
+  - rm -rf /src/runc/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
