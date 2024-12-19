@@ -170,3 +170,6 @@ replace github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy => ../go_l
 replace github.com/deckhouse/deckhouse/pkg/log => ../pkg/log
 
 replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ../go_lib/dependency/k8s/drain
+
+// From https://github.com/deckhouse/deckhouse-cli/blob/v0.7.0/go.mod#L582
+replace github.com/deislabs/oras => github.com/werf/3p-oras v0.9.1-0.20240115121544-03962ecbd40a // upstream not maintained
