@@ -1,7 +1,8 @@
 {{- $PythonVersion := "v3.11.10" }}
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/Setup.local
   to: /Setup.local
@@ -16,7 +17,7 @@ git:
     install:
     - '**/*.patch'
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-whl
+- image: {{ .ModuleName }}/{{ .ImageName }}-whl
   add: /src
   to: /src/Lib/ensurepip/_bundled
   before: setup
@@ -29,8 +30,9 @@ shell:
   - mv /Setup.local Modules/Setup.local
   - rm ./Lib/ensurepip/_bundled/setuptools-65.5.0-py3-none-any.whl
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-whl
-from: {{ .Images.BASE_ALT_P11 }}
+image: {{ .ModuleName }}/{{ .ImageName }}-whl
+from: common/alt-p11-artifact
+final: false
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -40,10 +42,11 @@ shell:
   - mkdir -p /src
   - pip download setuptools==75.1.0 -d /src
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ .Images.BASE_UBUNTU }}
+final: false
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -63,7 +66,7 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /opt/python-static
   to: /opt/python-static
   before: setup

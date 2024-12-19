@@ -5,7 +5,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -26,31 +26,45 @@ docker:
     containerd: {{ $containerd_version }}
     runc: {{ $runc_version }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_22_BULLSEYE_DEV }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /
+  to: /src/scripts
   stageDependencies:
     install:
       - '**/*'
+shell:
+  install:
+  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
+  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc /src/runc
+  - rm -rf /src/containerd/.git
+  - rm -rf /src/runc/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get update && apt-get install libseccomp-dev -y
   install:
   - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - cd /src
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git
-  - cd containerd
+  - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
   - make STATIC=1 all
   - mv bin/* /
-  - cd /src
-  - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc
-  - cd runc
+  - cd /src/runc
   - git config --global user.email "builder@deckhouse.io"
   - make static
   - mv runc /runc
+  - mv /src/scripts/* /

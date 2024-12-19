@@ -132,11 +132,11 @@ cleanup:
 {{ end }}
 ---
 {{- define "base components imports" }}
-- artifact: tini-artifact
+- image: common/tini-artifact
   add: /tini/tini-static
   to: /usr/bin/tini
   before: setup
-- artifact: semver-artifact
+- image: common/semver-artifact
   add: /usr/local/bin/semver
   to: /usr/local/bin/semver
   before: setup
@@ -434,7 +434,7 @@ dependencies:
   - type: ImageDigest
     targetEnv: deckhouseImageDigest
 import:
-- artifact: yq4-artifact
+- image: common/yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
@@ -471,7 +471,7 @@ import:
 artifact: version-map-artifact
 from: {{ .Images.BASE_ALPINE }}
 import:
-- artifact: yq4-artifact
+- image: common/yq4-artifact
   add: /usr/local/bin/yq
   to: /usr/local/bin/yq
   before: install
