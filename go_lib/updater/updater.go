@@ -76,7 +76,8 @@ type Updater[R v1alpha1.Release] struct {
 
 	deckhousePodIsReady      bool
 	deckhouseIsBootstrapping bool
-	releaseData              DeckhouseReleaseData
+
+	releaseData DeckhouseReleaseData
 }
 
 func NewUpdater[R v1alpha1.Release](
@@ -518,13 +519,17 @@ func (u *Updater[R]) PredictNextRelease(release R) {
 		}
 	}
 
+	// TODO: remove double loop???
 	for i, rl := range u.releases {
 		switch rl.GetPhase() {
 		case PhaseSuperseded, PhaseSuspended, PhaseSkipped:
 			// pass
 
 		case PhasePending:
+			// TODO: get check result and update release within
 			releaseRequirementsMet := u.checkReleaseRequirements(rl)
+
+			// note: here's we have assignment of predicted release
 			u.processPendingRelease(i, rl, releaseRequirementsMet)
 			// update metric only for the release that initiated prediction so as not to provoke metrics churn on every prediction
 			if rl.GetName() == release.GetName() {

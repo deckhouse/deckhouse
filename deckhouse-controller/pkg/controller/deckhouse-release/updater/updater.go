@@ -38,6 +38,7 @@ import (
 )
 
 const (
+	// TODO: make constants in v1alpha1
 	IsUpdatingAnnotation = "release.deckhouse.io/isUpdating"
 	NotifiedAnnotation   = "release.deckhouse.io/notified"
 
@@ -67,6 +68,8 @@ func NewDeckhouseUpdater(
 		releaseData,
 		podIsReady,
 		clusterBootstrapping,
+		// whats purpose of image registry here?
+		// maybe we want to get it when create instance?
 		NewKubeAPI(client, dc, imagesRegistry),
 		newMetricsUpdater(metricStorage),
 		newWebhookDataSource(logger),
@@ -96,6 +99,7 @@ func NewKubeAPI(client client.Client, dc dependency.Container, imagesRegistry st
 	return &KubeAPI{client: client, dc: dc, imagesRegistry: imagesRegistry}
 }
 
+// kubernetes service?
 type KubeAPI struct {
 	client         client.Client
 	dc             dependency.Container
