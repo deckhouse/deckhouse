@@ -106,7 +106,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 				},
 			}
 			dependency.TestDC.HTTPClient.DoMock.
-				Set(func(req *http.Request) (rp1 *http.Response, err error) {
+				Set(func(req *http.Request) (*http.Response, error) {
 					host := strings.Split(req.Host, ":")[0]
 					uri := req.URL.Path
 					mockResponse := respMap[host][uri]

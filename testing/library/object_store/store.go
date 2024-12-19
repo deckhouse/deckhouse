@@ -84,10 +84,10 @@ func (store ObjectStore) DeleteObject(index MetaIndex) {
 	delete(store, normalizeMetaIndex(index))
 }
 
-func (store ObjectStore) RetrieveObjectByMetaIndex(index MetaIndex) (object KubeObject, exists bool) {
-	object, exists = store[index]
+func (store ObjectStore) RetrieveObjectByMetaIndex(index MetaIndex) (KubeObject, bool) {
+	object, exists := store[index]
 
-	return
+	return object, exists
 }
 
 func (store ObjectStore) KubernetesGlobalResource(kind, name string) KubeObject {
