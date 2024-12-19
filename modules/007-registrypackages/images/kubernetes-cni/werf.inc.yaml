@@ -2,10 +2,35 @@
 {{- $flannel_version := "1.1.2" }}
 {{- $image_version := $cni_version | replace "." "-" }}
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $cni_version }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git /src/plugins
+  - cd /src/plugins
+  - git apply /patches/plugins/*.patch --verbose
+  - rm -rf .git
+  - git clone --depth 1 --branch v{{ $flannel_version }} {{ $.SOURCE_REPO }}/flannel-io/cni-plugin.git /src/cni-plugin
+  - cd /src/cni-plugin
+  - git apply /patches/cni-plugins/*.patch --verbose
+  - rm -rf .git
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -37,27 +62,27 @@ docker:
     version: all
     kubernetes-cni: {{ $cni_version }}
     flannel: {{ $flannel_version }}
+  USER: 64535
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
-git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /
-  stageDependencies:
-    setup:
-    - '**/*'
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
 shell:
   beforeInstall:
-    - apk add --no-cache openssh-client
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
   setup:
     - export GOPROXY={{ $.GOPROXY }}
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone --depth 1 --branch v{{ $cni_version }} {{ $.SOURCE_REPO }}/containernetworking/plugins.git
-    - cd /plugins
+    - cd /src/plugins
+    - go mod vendor
     - CGO_ENABLED=0 ./build_linux.sh -ldflags '-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cni_version }}'
     - cp -f bin/* /
-    - cd /
-    - git clone --depth 1 --branch v{{ $flannel_version }} {{ $.SOURCE_REPO }}/flannel-io/cni-plugin.git
-    - cd /cni-plugin
+    - cd /src/cni-plugin
     - make build_linux
-    - cp -f  /go/src/github.com/flannel-io/cni-plugin/dist/flannel-amd64 /flannel
+    - mv /src/scripts/* /
+    - cp -f /go/src/github.com/flannel-io/cni-plugin/dist/flannel-amd64 /flannel
