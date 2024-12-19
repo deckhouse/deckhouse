@@ -103,7 +103,7 @@ shell:
     - chmod 755 /label-converter
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/requirements.txt

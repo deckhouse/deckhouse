@@ -29,7 +29,7 @@ git:
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt

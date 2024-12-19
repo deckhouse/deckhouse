@@ -25,7 +25,7 @@
 # #####################################################################
 ---
 image: {{ $.ModuleName }}/base-cilium-dev
-from: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
