@@ -26,6 +26,7 @@ const (
 	authConfigPath         = "/etc/kubernetes/system-registry/auth_config/config.yaml"
 	distributionConfigPath = "/etc/kubernetes/system-registry/distribution_config/config.yaml"
 	pkiConfigDirectoryPath = "/etc/kubernetes/system-registry/pki"
+	mirrorerConfigPath     = "/etc/kubernetes/system-registry/mirrorer/config.yaml"
 
 	registryStaticPodConfigPath = "/etc/kubernetes/manifests/system-registry.yaml"
 )
@@ -153,6 +154,15 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if resp.Mirrorer, err = model.processTemplate(
+		mirrorerConfigTemplateName,
+		mirrorerConfigPath,
+		&model.Hashes.MirrorerTemplate,
+	); err != nil {
+		sendInternalError("Error processing Mirrorer template", err)
+		return
+	}
+
 	if resp.Pod, err = model.processTemplate(
 		registryStaticPodTemplateName,
 		registryStaticPodConfigPath,
@@ -211,6 +221,12 @@ func (s *apiServer) handleStaticPodDelete(w http.ResponseWriter, r *http.Request
 	// Delete the distribution config file
 	if resp.Distribution, err = deleteFile(distributionConfigPath); err != nil {
 		sendInternalError("Error deleting Distribution config file", err)
+		return
+	}
+
+	// Delete the mirrorer config file
+	if resp.Mirrorer, err = deleteFile(mirrorerConfigPath); err != nil {
+		sendInternalError("Error deleting Mirrorer config file", err)
 		return
 	}
 

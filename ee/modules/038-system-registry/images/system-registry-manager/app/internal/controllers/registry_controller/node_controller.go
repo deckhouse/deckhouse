@@ -290,7 +290,7 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 func (nc *nodeController) checkNodesAddressesChanged(ctx context.Context) error {
-	ips, err := nc.getAllMasterNodesIPs(ctx)
+	ips, err := nc.getAllMasterNodesInternalIPs(ctx)
 	if err != nil {
 		return fmt.Errorf("cannot get master nodes internal IPs: %w", err)
 	}
@@ -413,6 +413,19 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
+	masterNodesIPs, err := nc.getAllMasterNodesInternalIPs(ctx)
+	if err != nil {
+		err = fmt.Errorf("cannot get master nodes IPs: %w", err)
+		return
+	}
+
+	var mirrorerUpstreams []string
+	for _, ip := range masterNodesIPs {
+		if ip != nodeInternalIP {
+			mirrorerUpstreams = append(mirrorerUpstreams, ip)
+		}
+	}
+
 	staticPodConfig, err := nc.contructStaticPodConfig(
 		moduleConfig,
 		userRO,
@@ -422,6 +435,7 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		globalPKI,
 		globalSecrets,
 		nodePKI,
+		mirrorerUpstreams,
 	)
 
 	if err != nil {
@@ -475,6 +489,7 @@ func (nc *nodeController) contructStaticPodConfig(
 	globalPKI state.GlobalPKI,
 	globalSecrets state.GlobalSecrets,
 	nodePKI state.NodePKI,
+	mirrorerUpstreams []string,
 ) (config staticpod.Config, err error) {
 	tokenKey, err := pki.EncodePrivateKey(globalPKI.Token.Key)
 	if err != nil {
@@ -507,10 +522,12 @@ func (nc *nodeController) contructStaticPodConfig(
 			HttpSecret: globalSecrets.HttpSecret,
 			UserRO: staticpod.User{
 				Name:         userRO.UserName,
+				Password:     userRO.Password,
 				PasswordHash: userRO.HashedPassword,
 			},
 			UserRW: staticpod.User{
 				Name:         userRW.UserName,
+				Password:     userRW.Password,
 				PasswordHash: userRW.HashedPassword,
 			},
 		},
@@ -522,6 +539,19 @@ func (nc *nodeController) contructStaticPodConfig(
 			AuthKey:          string(authKey),
 			DistributionCert: string(pki.EncodeCertificate(nodePKI.Distribution.Cert)),
 			DistributionKey:  string(distributionKey),
+		},
+		Mirrorer: staticpod.Mirrorer{
+			UserPuller: staticpod.User{
+				Name:         userMirrorPuller.UserName,
+				Password:     userMirrorPuller.Password,
+				PasswordHash: userMirrorPuller.HashedPassword,
+			},
+			UserPusher: staticpod.User{
+				Name:         userMirrorPusher.UserName,
+				Password:     userMirrorPusher.Password,
+				PasswordHash: userMirrorPusher.HashedPassword,
+			},
+			Upstreams: mirrorerUpstreams,
 		},
 	}
 
@@ -832,7 +862,7 @@ func (nc *nodeController) isFirstMasterNode(ctx context.Context, node *corev1.No
 	return true, nil
 }
 
-func (nc *nodeController) getAllMasterNodesIPs(ctx context.Context) (ips []string, err error) {
+func (nc *nodeController) getAllMasterNodesInternalIPs(ctx context.Context) (ips []string, err error) {
 	nodes, err := nc.getAllMasterNodes(ctx)
 	if err != nil {
 		return

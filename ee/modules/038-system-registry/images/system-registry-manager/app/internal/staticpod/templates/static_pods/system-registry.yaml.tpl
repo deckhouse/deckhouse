@@ -11,6 +11,7 @@ metadata:
   annotations:
     authConfigHash: {{ quote .Hashes.AuthTemplate }}
     distributionConfigHash: {{ quote .Hashes.DistributionTemplate }}
+    mirrorerConfigHash: {{ quote .Hashes.MirrorerTemplate }}
     caCertHash: {{ quote .Hashes.CACert }}
     authCertHash: {{ quote .Hashes.AuthCert }}
     authKeyHash: {{ quote .Hashes.AuthKey }}
@@ -78,6 +79,8 @@ spec:
     volumeMounts:
       - mountPath: /config
         name: mirrorer-config-volume
+      - mountPath: /system_registry_pki
+        name: system-registry-pki-volume
   priorityClassName: system-node-critical
   volumes:
   # PKI volumes

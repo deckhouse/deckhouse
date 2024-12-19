@@ -26,6 +26,7 @@ type Config struct {
 	Images   Images         `json:"images,omitempty"`
 	PKI      PKIModel       `json:"pki,omitempty"`
 	Proxy    *Proxy         `json:"proxy,omitempty"`
+	Mirrorer Mirrorer       `json:"mirrorer,omitempty"`
 }
 
 func (config *Config) Validate() error {
@@ -34,6 +35,7 @@ func (config *Config) Validate() error {
 		validation.Field(&config.Images, validation.Required),
 		validation.Field(&config.PKI, validation.Required),
 		validation.Field(&config.Proxy),
+		validation.Field(&config.Mirrorer, validation.Required),
 	)
 }
 
@@ -75,6 +77,7 @@ type ConfigHashes struct {
 	TokenKey             string
 	DistributionCert     string
 	DistributionKey      string
+	MirrorerTemplate     string
 }
 
 type RegistryMode string
@@ -99,8 +102,8 @@ func (rd RegistryConfig) Validate() error {
 
 	fields = append(fields, validation.Field(&rd.Mode, validation.Required))
 	fields = append(fields, validation.Field(&rd.HttpSecret, validation.Required))
-	fields = append(fields, validation.Field(&rd.UserRO))
-	fields = append(fields, validation.Field(&rd.UserRW))
+	fields = append(fields, validation.Field(&rd.UserRO, validation.Required))
+	fields = append(fields, validation.Field(&rd.UserRW, validation.Required))
 
 	if rd.Mode == RegistryModeProxy {
 		fields = append(fields, validation.Field(&rd.Upstream))
@@ -112,12 +115,14 @@ func (rd RegistryConfig) Validate() error {
 // User represents a user with a name and a password hash
 type User struct {
 	Name         string `json:"name"`
+	Password     string `json:"password"`
 	PasswordHash string `json:"passwordHash"`
 }
 
 func (u User) Validate() error {
 	return validation.ValidateStruct(&u,
 		validation.Field(&u.Name, validation.Required),
+		validation.Field(&u.Password, validation.Required),
 		validation.Field(&u.PasswordHash, validation.Required),
 	)
 }
@@ -168,6 +173,19 @@ func (p Proxy) Validate() error {
 		validation.Field(&p.Http, validation.Required),
 		validation.Field(&p.Https, validation.Required),
 		validation.Field(&p.NoProxy, validation.Required),
+	)
+}
+
+type Mirrorer struct {
+	UserPuller User     `json:"userPuller,omitempty"`
+	UserPusher User     `json:"userPusher,omitempty"`
+	Upstreams  []string `json:"upstreams,omitempty"`
+}
+
+func (m Mirrorer) Validate() error {
+	return validation.ValidateStruct(&m,
+		validation.Field(&m.UserPuller, validation.Required),
+		validation.Field(&m.UserPusher, validation.Required),
 	)
 }
 

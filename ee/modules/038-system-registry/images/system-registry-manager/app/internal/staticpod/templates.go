@@ -22,6 +22,7 @@ const (
 	authConfigTemplateName         templateName = "templates/auth/config.yaml.tpl"
 	distributionConfigTemplateName templateName = "templates/distribution/config.yaml.tpl"
 	registryStaticPodTemplateName  templateName = "templates/static_pods/system-registry.yaml.tpl"
+	mirrorerConfigTemplateName     templateName = "templates/mirrorer/config.yaml.tpl"
 )
 
 // RenderTemplate renders the provided template content with the given data

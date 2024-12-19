@@ -41,6 +41,7 @@ func Test_TemplatesRenders(t *testing.T) {
 		"auth config":         authConfigTemplateName,
 		"distribution config": distributionConfigTemplateName,
 		"registry static pod": registryStaticPodTemplateName,
+		"mirrorer config":     mirrorerConfigTemplateName,
 	}
 
 	modes := []RegistryMode{
@@ -71,4 +72,39 @@ func Test_TemplatesRenders(t *testing.T) {
 			t.Logf("- %v: { path: %v, size: %v }", k, tpl, size)
 		}
 	}
+}
+
+func Test_MirrorerConfig(t *testing.T) {
+	var model templateModel
+	model.Registry.Mode = RegistryModeDetached
+	model.Address = "127.0.0.1"
+	model.Mirrorer = Mirrorer{
+		UserPuller: User{
+			Name:         "puller",
+			Password:     "puller password",
+			PasswordHash: "AS:DLASDLAJSDASD",
+		},
+		UserPusher: User{
+			Name:         "pusher",
+			Password:     "pusher password",
+			PasswordHash: "AS:DLASDLAJSDASD",
+		},
+		Upstreams: []string{
+			"one",
+			"two",
+			"three",
+		},
+	}
+
+	buf, err := renderTemplate(mirrorerConfigTemplateName, &model)
+	if err != nil {
+		t.Errorf("Cannot load template: %v", err)
+	}
+
+	size := len(buf)
+	if size == 0 {
+		t.Error("Template content is empty!")
+	}
+
+	t.Logf("Result:\n%s", buf)
 }
