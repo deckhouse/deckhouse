@@ -285,6 +285,10 @@ properties:
               type: [integer, string]
               x-examples:
                 - "1624550403"
+            nodeDrainTimeout:
+              type: [integer]
+              x-examples:
+                - "900"
             nodeType:
               # See NodeGroup in candi/openapi/node_group.yaml
               type: string
