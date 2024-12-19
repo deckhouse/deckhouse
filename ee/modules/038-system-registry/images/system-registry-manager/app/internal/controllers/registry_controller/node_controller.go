@@ -9,6 +9,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
+	"sync"
 
 	"embeded-registry-manager/internal/state"
 	"embeded-registry-manager/internal/staticpod"
@@ -63,11 +65,14 @@ type nodeController struct {
 	HttpClient *httpclient.Client
 	Settings   NodeControllerSettings
 
+	masterNodeAddrs   []string
+	masterNodeAddrsMu sync.Mutex
+
 	eventRecorder record.EventRecorder
 	reprocessCh   chan event.TypedGenericEvent[reconcile.Request]
 }
 
-var nodeReprocessAllRequest = reconcile.Request{
+var reprocessAllNodesRequest = reconcile.Request{
 	NamespacedName: types.NamespacedName{
 		Namespace: "--reprocess-all-nodes--",
 		Name:      "--reprocess-all-nodes--",
@@ -195,7 +200,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 	})
 
 	reprocessAllHandler := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
-		return []reconcile.Request{nodeReprocessAllRequest}
+		return []reconcile.Request{reprocessAllNodesRequest}
 	})
 
 	err = ctrl.NewControllerManagedBy(mgr).
@@ -238,7 +243,7 @@ func (nc *nodeController) SetupWithManager(ctx context.Context, mgr ctrl.Manager
 }
 
 func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	if req == nodeReprocessAllRequest {
+	if req == reprocessAllNodesRequest {
 		return nc.handleReprocessAll(ctx)
 	}
 
@@ -246,9 +251,14 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		req.Namespace = ""
 	}
 
+	err := nc.checkNodesAddressesChanged(ctx)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("cannot check nodes addresses change: %w", err)
+	}
+
 	node := &corev1.Node{}
 
-	err := nc.Client.Get(ctx, req.NamespacedName, node)
+	err = nc.Client.Get(ctx, req.NamespacedName, node)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nc.handleNodeDelete(ctx, req.Name)
@@ -279,6 +289,37 @@ func (nc *nodeController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 }
 
+func (nc *nodeController) checkNodesAddressesChanged(ctx context.Context) error {
+	ips, err := nc.getAllMasterNodesIPs(ctx)
+	if err != nil {
+		return fmt.Errorf("cannot get master nodes internal IPs: %w", err)
+	}
+
+	nc.masterNodeAddrsMu.Lock()
+	defer nc.masterNodeAddrsMu.Unlock()
+
+	if len(ips) != len(nc.masterNodeAddrs) {
+		nc.masterNodeAddrs = ips
+		if err = nc.triggerReconcile(ctx, reprocessAllNodesRequest); err != nil {
+			return fmt.Errorf("cannot trigger reprocess all nodes: %w", err)
+		}
+		return nil
+	}
+
+	// Addresses already sorted in getAllMasterNodesIPs
+	for i := range ips {
+		if ips[i] != nc.masterNodeAddrs[i] {
+			nc.masterNodeAddrs = ips
+			if err = nc.triggerReconcile(ctx, reprocessAllNodesRequest); err != nil {
+				return fmt.Errorf("cannot trigger reprocess all nodes: %w", err)
+			}
+			return nil
+		}
+	}
+
+	return nil
+}
+
 func (nc *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
@@ -295,8 +336,7 @@ func (nc *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, 
 		req.Name = node.Name
 		req.Namespace = node.Namespace
 
-		if err := nc.triggerReconcileForNode(ctx, req); err != nil {
-			// It currently only when ctx done
+		if err := nc.triggerReconcile(ctx, req); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -304,7 +344,7 @@ func (nc *nodeController) handleReprocessAll(ctx context.Context) (ctrl.Result, 
 	return ctrl.Result{}, nil
 }
 
-func (nc *nodeController) triggerReconcileForNode(ctx context.Context, req reconcile.Request) error {
+func (nc *nodeController) triggerReconcile(ctx context.Context, req reconcile.Request) error {
 	evt := event.TypedGenericEvent[reconcile.Request]{Object: req}
 
 	select {
@@ -770,6 +810,22 @@ func (nc *nodeController) isFirstMasterNode(ctx context.Context, node *corev1.No
 	}
 
 	return true, nil
+}
+
+func (nc *nodeController) getAllMasterNodesIPs(ctx context.Context) (ips []string, err error) {
+	nodes, err := nc.getAllMasterNodes(ctx)
+	if err != nil {
+		return
+	}
+
+	for _, node := range nodes.Items {
+		if ip := getNodeInternalIP(&node); ip != "" {
+			ips = append(ips, ip)
+		}
+	}
+
+	sort.Strings(ips)
+	return
 }
 
 func (nc *nodeController) getAllMasterNodes(ctx context.Context) (nodes *corev1.NodeList, err error) {
