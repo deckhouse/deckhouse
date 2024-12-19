@@ -1,0 +1,34 @@
+candi:
+  features:
+    - summary: >-
+        Added a way to control node labels from files, stored in local directory and it
+        subdirectories.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10905
+ci:
+  fixes:
+    - summary: Fixed 'trdl' startup in older versions of 'make'.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11097
+docs:
+  fixes:
+    - summary: The command on the fifth step page has been fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11156
+    - summary: Added information about SIEM.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11064
+extended-monitoring:
+  features:
+    - summary: Added IAM authentication support for ECR in image-availability-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10893
+log-shipper:
+  features:
+    - summary: >-
+        Add keepDeletedFilesOpenedFor option. Now it is possible to configure how long Vector keeps
+        deleted file in case of unavailability of a log storage (when Vector cannot send logs to a
+        storage and the internal buffer is already filled). Before the change, Vector used to hold
+        log files opened indefinitely, which can cause a node outage by flooding the disk space. The
+        option makes this behaviour configurable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10641
+prometheus:
+  fixes:
+    - summary: Fix links to modules documentation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10748
+
