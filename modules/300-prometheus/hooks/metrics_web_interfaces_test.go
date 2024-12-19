@@ -171,7 +171,7 @@ spec:
 	Context("Cluster containing some services and global module https.mode:OnlyInURI", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(ingressMetrics))
-			f.ConfigValuesSet("global.https.mode", "OnlyInURI")
+			f.ConfigValuesSet("global.modules.https.mode", "OnlyInURI")
 			f.RunHook()
 
 		})
