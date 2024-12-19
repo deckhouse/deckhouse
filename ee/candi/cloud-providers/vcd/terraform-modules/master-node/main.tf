@@ -18,7 +18,6 @@ data "vcd_catalog" "catalog" {
 }
 
 data "vcd_catalog_vapp_template" "template" {
-  org        = local.org
   catalog_id = data.vcd_catalog.catalog.id
   name       = local.template
 }
