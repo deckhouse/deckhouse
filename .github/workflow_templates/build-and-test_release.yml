@@ -235,10 +235,10 @@ jobs:
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests_python_webhooks) | strings.Indent 6 }!}
 
 {!{ $jobNames = coll.Merge $jobNames (dict "tests_dmt_lint" "DMT lint") }!}
-tests_dmt_lint:
-  name: {!{ $jobNames.tests_dmt_lint }!}
-  needs:
-  - git_info
+  tests_dmt_lint:
+    name: {!{ $jobNames.tests_dmt_lint }!}
+    needs:
+    - git_info
 {!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,one-line" $jobNames.tests_dmt_lint) | strings.Indent 6 }!}
 

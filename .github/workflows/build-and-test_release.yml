@@ -2989,10 +2989,10 @@ jobs:
       # </template: update_comment_on_finish>
 
 
-tests_dmt_lint:
-  name: DMT lint
-  needs:
-  - git_info
+  tests_dmt_lint:
+    name: DMT lint
+    needs:
+    - git_info
 
     # <template: tests_dmt_lint>
     runs-on: [self-hosted, regular]
