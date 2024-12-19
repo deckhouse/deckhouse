@@ -343,6 +343,7 @@ properties:
               additionalProperties: true
             nodeDrainTimeout:
               type: [integer]
+              additionalProperties: true
               x-examples:
                 - "900"
             fencing:
