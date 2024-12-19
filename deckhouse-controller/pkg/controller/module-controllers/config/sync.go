@@ -50,7 +50,7 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 			// delete module releases of a stale module
 			r.log.Infof("the %q module disabled too long, delete module releases", module.Name)
 			moduleReleases := new(v1alpha1.ModuleReleaseList)
-			if err := r.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
+			if err := r.client.List(ctx, moduleReleases, &client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: module.Name}); err != nil {
 				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
 			}
 			for _, release := range moduleReleases.Items {
@@ -78,7 +78,7 @@ func (r *reconciler) syncModules(ctx context.Context) error {
 				return true
 			})
 			if err != nil {
-				return fmt.Errorf("set the Available module phase for the '%s' module: %w", module.Name, err)
+				return fmt.Errorf("set the 'Available' phase for the '%s' module: %w", module.Name, err)
 			}
 		}
 	}

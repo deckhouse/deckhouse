@@ -148,6 +148,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
+		r.log.Errorf("failed to refresh the module config: %v", err)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -345,28 +346,40 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		return ctrl.Result{}, nil
 	}
 
-	enabled := module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig)
+	moduleReleases := new(v1alpha1.ModuleReleaseList)
+	if err := r.client.List(ctx, moduleReleases, &client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: module.Name}); err != nil {
+		r.log.Errorf("failed to list the module releases for the '%s' module: %v", module.Name, err)
+		return ctrl.Result{Requeue: true}, nil
+	}
 
-	// disable module
-	if enabled {
-		err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			return true
-		})
-		if err != nil {
-			r.log.Errorf("failed to disable the '%s' module: %v", module.Name, err)
+	for _, release := range moduleReleases.Items {
+		if err := r.client.Delete(ctx, &release); err != nil {
+			r.log.Errorf("failed to delete the '%s' module release for the '%s' module: %v", release.Name, module.Name, err)
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
 
+	// clear module
 	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		module.Properties.UpdatePolicy = ""
-		module.Properties.Source = ""
+		availableSources := module.Properties.AvailableSources
+		module.Properties = v1alpha1.ModuleProperties{
+			AvailableSources: availableSources,
+		}
 		return true
 	})
 	if err != nil {
-		r.log.Errorf("failed to update the '%s' module: %v", module.Name, err)
+		r.log.Errorf("failed to clear the '%s' module: %v", module.Name, err)
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// set available
+	err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		module.Status.Phase = v1alpha1.ModulePhaseAvailable
+		module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		return true
+	})
+	if err != nil {
+		r.log.Errorf("failed to set the 'Available' phase for the '%s' module: %v", module.Name, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
