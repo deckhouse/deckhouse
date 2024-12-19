@@ -19,7 +19,9 @@
         "node_labels": "node_labels"
       },
       "glob_minimum_cooldown_ms": 1000,
-      "use_apiserver_cache": true
+      "use_apiserver_cache": true,
+      "rotate_wait_secs": 5400,
+      "delay_deletion_ms": 5400000
     },
     "cluster_logging_config/test-source:tests-whistlers": {
       "type": "kubernetes_logs",
@@ -40,7 +42,9 @@
         "node_labels": "node_labels"
       },
       "glob_minimum_cooldown_ms": 1000,
-      "use_apiserver_cache": true
+      "use_apiserver_cache": true,
+      "rotate_wait_secs": 5400,
+      "delay_deletion_ms": 5400000
     }
   },
   "transforms": {
