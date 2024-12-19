@@ -80,6 +80,8 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 	configuredDefaultVersion := input.Values.Get("ingressNginx.defaultControllerVersion").String()
 	if configuredDefaultVersion != "" {
 		requirements.SaveValue(configuredDefaultVersionKey, configuredDefaultVersion)
+	} else {
+		requirements.RemoveValue(configuredDefaultVersionKey)
 	}
 
 	for _, s := range snap {
