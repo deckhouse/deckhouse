@@ -35,7 +35,7 @@ docker:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromArtifact: common/alt-p11-artifact
+fromImage: common/alt-p11-artifact
 import:
 - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
