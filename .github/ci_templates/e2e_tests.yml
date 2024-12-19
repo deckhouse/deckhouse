@@ -98,6 +98,9 @@
   REPOSITORY: ${{ github.repository }}
   DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
   GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+{!{- if eq $script_arg "run-test" }!}
+  CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
+{!{- end }!}
 run: |
 {!{- if eq $provider "eks" }!}
   echo "Execute '{!{ $script_eks }!} {!{ $script_arg }!}' via 'docker run', using environment:
@@ -115,6 +118,9 @@ run: |
     KUBERNETES_VERSION=${KUBERNETES_VERSION}
     TMP_DIR_PATH=${TMP_DIR_PATH}
     MASTERS_COUNT=${MASTERS_COUNT}
+{!{- if eq $script_arg "run-test" }!}
+    CIS_ENABLED=${CIS_ENABLED}
+{!{- end }!}
   "
 
   ls -lh $(pwd)/testing
@@ -204,6 +210,7 @@ run: |
   -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
   -e CRI=${CRI} \
   -e USER_RUNNER_ID=${user_runner_id} \
+  -e CIS_ENABLED=${CIS_ENABLED} \
   -v $(pwd)/testing:/deckhouse/testing \
   -v $(pwd)/release.yaml:/deckhouse/release.yaml \
   -v ${TMP_DIR_PATH}:/tmp \
@@ -257,6 +264,9 @@ run: |
     -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
 {!{- end }!}
     -e USER_RUNNER_ID=${user_runner_id} \
+{!{- if eq $script_arg "run-test" }!}
+    -e CIS_ENABLED=${CIS_ENABLED} \
+{!{- end }!}
     -v $(pwd)/testing:/deckhouse/testing \
     -v $(pwd)/release.yaml:/deckhouse/release.yaml \
     -v ${TMP_DIR_PATH}:/tmp \
@@ -292,6 +302,7 @@ check_e2e_labels:
 {!{- end }!}
     edition: ${{ steps.check.outputs.edition }}
     multimaster: ${{ steps.check.outputs.multimaster }}
+    cis: ${{ steps.check.outputs.cis }}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check e2e labels
