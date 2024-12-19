@@ -27,6 +27,20 @@ function find_all_unmounted_data_devices() {
     ] | sort'
 }
 
+function find_path_by_data_device_label() {
+  local device_label="$1"
+  
+  local device_path=$(lsblk -o path,type,mountpoint,fstype,label --tree --json | jq -r "
+    [
+      .blockdevices[] 
+      | select(.label == \"$device_label\")  # Match the specific device label
+    ] | first | .path
+  ")
+  if [[ "$device_path" != "null" ]]; then
+    echo "$device_path"
+  fi
+}
+
 function find_first_unmounted_data_device() {
   local all_unmounted_data_devices="$(find_all_unmounted_data_devices)"
   echo "$all_unmounted_data_devices" | jq '. | first'
@@ -97,6 +111,12 @@ if [ -z "$DATA_DEVICE" ]; then
   exit 1
 fi
 
+# For converge
+DATA_DEVICE_BY_LABEL=$(find_path_by_data_device_label "kubernetes-data")
+if [ -n "$DATA_DEVICE_BY_LABEL" ]; then
+  DATA_DEVICE="$DATA_DEVICE_BY_LABEL"
+fi
+
 if ! [ -b "$DATA_DEVICE" ]; then
   >&2 echo "Failed to find $DATA_DEVICE disk. Trying to detect the correct one..."
 
@@ -108,10 +128,8 @@ if ! [ -b "$DATA_DEVICE" ]; then
     # Additionally, we define the array of disks in Terraform when creating the instance machine.
   */}}
 
-  # Wait all disks
+  # Wait all disks and then get first unmounted data device
   check_expected_disk_count
-
-  # Get first unmounted data device
   DATA_DEVICE=$(find_first_unmounted_data_device)
   if ! [ -b "$DATA_DEVICE" ]; then
     >&2 echo "Failed to find a valid disk by lsblk."

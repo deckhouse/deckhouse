@@ -38,19 +38,20 @@ function setup_registry_data_device() {
 
     # Format the data device if it is not already ext4
     if ! file -s "$data_device" | grep -q ext4; then
-        mkfs.ext4 -F -L "$label" "$data_device"
+      mkfs.ext4 -F -L "$label" "$data_device"
     else
-      : # TODO: create label
+      # else add the label
+      /opt/deckhouse/bin/tune2fs -L "$label" "$data_device"
     fi
 
     # Add an entry to /etc/fstab if it does not already exist
     if ! grep -q "$label" "$fstab_file"; then
-        echo "LABEL=$label $mount_point ext4 defaults,discard,x-systemd.automount 0 0" >> "$fstab_file"
+      echo "LABEL=$label $mount_point ext4 defaults,discard,x-systemd.automount 0 0" >> "$fstab_file"
     fi
 
     # Mount the device if it is not already mounted
     if ! mount | grep -q "$mount_point"; then
-        mount -L "$label"
+      mount -L "$label"
     fi
 
     # Check if symlink_target exists
@@ -58,10 +59,10 @@ function setup_registry_data_device() {
     then
       # Check if symlink_target is a symlink and points to mount_point
       if [[ -L "$symlink_target" && $(readlink "$symlink_target") == "$mount_point" ]]; then
-          echo "symlink is correct, nothing to do"
+        echo "symlink is correct, nothing to do"
       else
-          rm -rf "$symlink_target"
-          ln -s "$mount_point" "$symlink_target"
+        rm -rf "$symlink_target"
+        ln -s "$mount_point" "$symlink_target"
       fi
     else
       ln -s "$mount_point" "$symlink_target"
@@ -111,13 +112,14 @@ function find_all_unmounted_data_devices() {
     ] | sort'
 }
 
-function find_mounted_registry_data_device() {
-  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '
+function find_path_by_data_device_mountpoint() {
+  local data_device_mountpoint="$1"
+  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r "
     [
       .blockdevices[] 
-      | select(.mountpoint == "/mnt/system-registry-data")  # Find devices mounted at /mnt/system-registry-data
+      | select(.mountpoint == \"$data_device_mountpoint\")  # Match the specific device mountpoint
       | .path
-    ] | first'
+    ] | first"
 }
 
 function find_mountpoint_by_data_device() {
@@ -128,6 +130,20 @@ function find_mountpoint_by_data_device() {
       | select(.path == \"$data_device\")  # Match the specific device path
       | .mountpoint
     ] | first"
+}
+
+function find_path_by_data_device_label() {
+  local device_label="$1"
+  
+  local device_path=$(lsblk -o path,type,mountpoint,fstype,label --tree --json | jq -r "
+    [
+      .blockdevices[] 
+      | select(.label == \"$device_label\")  # Match the specific device label
+    ] | first | .path
+  ")
+  if [[ "$device_path" != "null" ]]; then
+    echo "$device_path"
+  fi
 }
 
 function find_first_unmounted_data_device() {
@@ -176,19 +192,10 @@ function is_data_device_mounted() {
   fi
 }
 
-function is_unmounted_data_device_exists() {
-  local data_device
-  data_device=$(find_first_unmounted_data_device)
-  if [ "$data_device" != "null" ] && [ -n "$data_device" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
 function is_registry_data_device_mounted() {
+  local registry_data_device_mountpoint="/mnt/system-registry-data"
   local data_device
-  data_device=$(find_mounted_registry_data_device)
+  data_device=$(find_path_by_data_device_mountpoint "$registry_data_device_mountpoint")
   if [ "$data_device" != "null" ] && [ -n "$data_device" ]; then
     return 0
   else
@@ -259,6 +266,13 @@ else
   
   # If dataDevice is non-empty
   if [ -n "$dataDevice" ]; then
+
+    # for converge
+    dataDeviceByLabel=$(find_path_by_data_device_label "registry-data")
+    if [ -n "$dataDeviceByLabel" ]; then
+      dataDevice="$dataDeviceByLabel"
+    fi
+
     # Check if the data device actually exists as a block device
     if ! [ -b "$dataDevice" ]; then
       # If it doesn't exist, log an error and attempt to detect the correct device
