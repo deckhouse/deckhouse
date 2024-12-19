@@ -19,5 +19,4 @@ cp -f mke2fs /opt/deckhouse/bin
 ln -sf /opt/deckhouse/bin/mke2fs /opt/deckhouse/bin/mkfs.ext4
 ln -sf /opt/deckhouse/bin/mke2fs /opt/deckhouse/bin/mkfs.ext3
 cp -f fsck /opt/deckhouse/bin
-cp -f blkid /opt/deckhouse/bin
 cp -f tune2fs /opt/deckhouse/bin
