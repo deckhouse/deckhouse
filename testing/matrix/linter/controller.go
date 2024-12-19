@@ -132,7 +132,7 @@ func (c *ModuleController) Run() error {
 	}
 }
 
-func (c *ModuleController) RunRender(values chartutil.Values, objectStore *storage.UnstructuredObjectStore) (lintError error) {
+func (c *ModuleController) RunRender(values chartutil.Values, objectStore *storage.UnstructuredObjectStore) error {
 	var renderer helm.Renderer
 	renderer.Name = c.Module.Name
 	renderer.Namespace = c.Module.Namespace
@@ -140,18 +140,16 @@ func (c *ModuleController) RunRender(values chartutil.Values, objectStore *stora
 
 	files, err := renderer.RenderChartFromRawValues(c.Module.Chart, values)
 	if err != nil {
-		lintError = fmt.Errorf("helm chart render: %v", err)
-		return
+		return fmt.Errorf("helm chart render: %w", err)
 	}
 
 	hash, err := hashstructure.Hash(files, hashstructure.FormatV2, nil)
 	if err != nil {
-		lintError = fmt.Errorf("helm chart render: %v", err)
-		return
+		return fmt.Errorf("helm chart render: %w", err)
 	}
 
 	if _, ok := renderedTemplatesHash.Load(hash); ok {
-		return // the same files were already checked
+		return nil // the same files were already checked
 	}
 
 	defer renderedTemplatesHash.Store(hash, struct{}{})
@@ -177,11 +175,12 @@ func (c *ModuleController) RunRender(values chartutil.Values, objectStore *stora
 
 			err = objectStore.Put(path, node, docBytes)
 			if err != nil {
-				return fmt.Errorf("helm chart object already exists: %v", err)
+				return fmt.Errorf("helm chart object already exists: %w", err)
 			}
 		}
 	}
-	return
+
+	return nil
 }
 
 func lint(c *ModuleController, task *Task) error {
@@ -251,8 +250,8 @@ const (
 `
 )
 
-func SplitAt(substring string) func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+func SplitAt(substring string) func(data []byte, atEOF bool) (int /*advance*/, []byte /*token*/, error) {
+	return func(data []byte, atEOF bool) (int, []byte, error) {
 		// Return nothing if at end of file and no data passed
 		if atEOF && len(data) == 0 {
 			return 0, nil, nil
@@ -268,6 +267,6 @@ func SplitAt(substring string) func(data []byte, atEOF bool) (advance int, token
 			return len(data), data, nil
 		}
 
-		return
+		return 0, nil, nil
 	}
 }

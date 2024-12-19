@@ -1,8 +1,6 @@
 module controller
 
-go 1.22.0
-
-toolchain go1.22.4
+go 1.23.1
 
 require (
 	github.com/fatih/structs v1.1.0

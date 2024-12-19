@@ -5,6 +5,8 @@ metadata:
 spec:
   description: This is an example from the Deckhouse documentation.
   parameters:
+    securityScanningEnabled: false
+    extendedMonitoringEnabled: true
     administrators:
       - name: user@gmail.com
         subject: User

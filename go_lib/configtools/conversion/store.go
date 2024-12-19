@@ -37,14 +37,21 @@ func Store() *ConversionsStore {
 	return instance
 }
 
-func (s *ConversionsStore) Add(module, pathToConversions string) (err error) {
+func (s *ConversionsStore) Add(module, pathToConversions string) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	if s.converters == nil {
 		s.converters = make(map[string]*Converter)
 	}
-	s.converters[module], err = newConverter(pathToConversions)
-	return err
+
+	newConverter, err := newConverter(pathToConversions)
+	if err != nil {
+		return err
+	}
+
+	s.converters[module] = newConverter
+
+	return nil
 }
 
 func (s *ConversionsStore) Get(module string) *Converter {

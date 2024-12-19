@@ -37,7 +37,7 @@ type Renderer struct {
 	LintMode  bool
 }
 
-func (r Renderer) RenderChartFromDir(dir string, values string) (files map[string]string, err error) {
+func (r Renderer) RenderChartFromDir(dir string, values string) (map[string]string, error) {
 	c, err := loader.Load(dir)
 	if err != nil {
 		panic(fmt.Errorf("chart load from '%s': %v", dir, err))
@@ -45,10 +45,10 @@ func (r Renderer) RenderChartFromDir(dir string, values string) (files map[strin
 	return r.RenderChart(c, values)
 }
 
-func (r Renderer) RenderChart(c *chart.Chart, values string) (files map[string]string, err error) {
+func (r Renderer) RenderChart(c *chart.Chart, values string) (map[string]string, error) {
 	vals, err := chartutil.ReadValues([]byte(values))
 	if err != nil {
-		return nil, fmt.Errorf("helm chart read raw values: %v", err)
+		return nil, fmt.Errorf("helm chart read raw values: %w", err)
 	}
 
 	releaseName := "release"
@@ -81,20 +81,20 @@ func (r Renderer) RenderChart(c *chart.Chart, values string) (files map[string]s
 
 	valuesToRender, err := chartutil.ToRenderValues(c, vals, releaseOptions, nil)
 	if err != nil {
-		return nil, fmt.Errorf("helm chart prepare render values: %v", err)
+		return nil, fmt.Errorf("helm chart prepare render values: %w", err)
 	}
 
 	return r.RenderChartFromRawValues(c, valuesToRender)
 }
 
-func (r Renderer) RenderChartFromRawValues(c *chart.Chart, values chartutil.Values) (files map[string]string, err error) {
+func (r Renderer) RenderChartFromRawValues(c *chart.Chart, values chartutil.Values) (map[string]string, error) {
 	// render chart with prepared values
 	var e engine.Engine
 	e.LintMode = r.LintMode
 
 	out, err := e.Render(c, values)
 	if err != nil {
-		return nil, fmt.Errorf("helm chart render: %v", err)
+		return nil, fmt.Errorf("helm chart render: %w", err)
 	}
 
 	return out, nil

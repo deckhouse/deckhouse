@@ -26,8 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )

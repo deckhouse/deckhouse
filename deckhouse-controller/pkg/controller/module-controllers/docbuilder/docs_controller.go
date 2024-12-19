@@ -305,13 +305,13 @@ func (mdr *moduleDocumentationReconciler) createOrUpdateReconcile(ctx context.Co
 	return result, nil
 }
 
-func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Context) (addresses []string, err error) {
+func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Context) ([]string, error) {
 	var leasesList coordv1.LeaseList
-	err = mdr.client.List(ctx, &leasesList, client.InNamespace("d8-system"), client.HasLabels{"deckhouse.io/documentation-builder-sync"})
-	if err != nil {
+	if err := mdr.client.List(ctx, &leasesList, client.InNamespace("d8-system"), client.HasLabels{"deckhouse.io/documentation-builder-sync"}); err != nil {
 		return nil, fmt.Errorf("list leases: %w", err)
 	}
 
+	addresses := make([]string, 0, len(leasesList.Items))
 	for _, lease := range leasesList.Items {
 		if lease.Spec.HolderIdentity == nil {
 			continue
@@ -325,7 +325,7 @@ func (mdr *moduleDocumentationReconciler) getDocsBuilderAddresses(ctx context.Co
 		addresses = append(addresses, "http://"+*lease.Spec.HolderIdentity)
 	}
 
-	return
+	return addresses, nil
 }
 
 func (mdr *moduleDocumentationReconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes.Buffer) error {

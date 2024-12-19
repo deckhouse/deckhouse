@@ -9,7 +9,6 @@ require (
 	github.com/clarketm/json v1.15.7
 	github.com/cloudflare/cfssl v1.5.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0 // use non-existent version for replace
 	github.com/fatih/color v1.13.0
 	github.com/flant/kube-client v1.2.2
 	github.com/flant/shell-operator v1.5.3-0.20241209162655-7e40c61f7666
@@ -113,6 +112,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7 // indirect
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20241219045931-ca7514dfb873 // indirect
 	github.com/deckhouse/module-sdk v0.1.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v27.1.1+incompatible // indirect

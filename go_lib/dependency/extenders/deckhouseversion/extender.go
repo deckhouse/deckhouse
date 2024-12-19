@@ -70,7 +70,7 @@ func Instance() *Extender {
 				instance.logger.Warn("this is dev cluster, v2.0.0 will be used")
 				return
 			}
-			if parsed, err := semver.NewVersion(string(raw)); err == nil {
+			if parsed, err := semver.NewVersion(strings.TrimSpace(string(raw))); err == nil {
 				instance.logger.Debugf("setting deckhouse version to %s from file", parsed.String())
 				instance.versionMatcher.ChangeBaseVersion(parsed)
 			} else {

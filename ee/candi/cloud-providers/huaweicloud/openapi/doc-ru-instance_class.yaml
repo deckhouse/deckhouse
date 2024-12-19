@@ -6,9 +6,9 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Параметры группы Huaweicloud servers, которые будет использовать `CAPI` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/)).
+            Параметры группы Huawei Cloud servers, которые будет использовать `CAPI` (модуль [node-manager](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/040-node-manager/)).
 
-            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+            На этот ресурс ссылается ресурс CloudInstanceClass модуля `node-manager`.
           properties:
             spec:
               properties:
@@ -16,35 +16,43 @@ spec:
                   description: |
                     Тип заказываемых виртуальных машин.
 
-                    Получить список всех доступных flavor'ов можно с помощью команды: `openstack flavor list`.
+                    Получить список всех доступных типов машин можно с помощью команды `huaweicloud flavor list`.
 
-                    Для всех не master-узлов желательно использовать flavor'ы с локальным диском. Если в облаке поддерживаются локальные диски, они обычно быстрее и дешевле. Недостатком использования таких flavor'ов является невозможность миграции узлов между гипервизорами.
+                    Для узлов всех видов, кроме master-узлов, желательно использовать тип виртуальных машин с локальным диском. Если в облаке поддерживаются локальные диски, они обычно быстрее и дешевле. Недостатком такого типа виртуальных машин является невозможность миграции узлов между гипервизорами.
+
+                    Пример команды создания типа виртуальной машины: `huaweicloud flavor create c4m8d50 --ram 8192 --disk 50 --vcpus 4`.
                 imageName:
                   description: |
                     Имя образа виртуальной машины, который будет использоваться для инстанса.
 
-                    Получить список всех доступных образов можно с помощью команды: `openstack image list`.
+                    Получить список всех доступных образов можно с помощью команды `huaweicloud image list`.
 
-                    Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                    Список поддерживаемых Deckhouse ОС и их версий можно найти на странице [Поддерживаемые версии Kubernetes и ОС](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+
+                    **По умолчанию** используется значение `HuaweiCloudCloudDiscoveryData` или `instances.imageName`.
                 rootDiskSize:
                   description: |
                     Размер root-диска. Значение указывается в гигабайтах.
 
-                    Параметр также влияет на тип диска. [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-openstack/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен)
+                    Параметр также влияет на тип диска. Особенности применения параметра описаны в разделе [Как использовать rootDiskSize и когда он предпочтителен](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен).
                 rootDiskType:
                   description: |
-                    Тип root-диска. Значение указывается в гигабайтах.
+                    Тип root-диска.
 
                     Параметр используется для указания типа тома, который будет использоваться для корневого диска.
+
+                    **По умолчанию** используется значение `HuaweiCloudCloudDiscoveryData`.
                 subnets:
                   description: |
                     Пути к сетям, к которым будут подключаться вторичные сетевые карты VirtualMachines.
+
+                    **По умолчанию** используется значение `HuaweiCloudCloudDiscoveryData`.
                 securityGroups:
                   description: |
-                    Группы безопасности, которые будут применяться к сетевым портам ВМ в дополнение к группам безопасности, установленным в конфигурации облачного провайдера.
+                    Группы безопасности, которые будут применяться к сетевым портам виртуальных машин в дополнение к группам безопасности, установленным в конфигурации облачного провайдера.
 
-                    Они позволяют устанавливать правила брандмауэра для предоставленных экземпляров..
+                    Данные группы безопасности позволяют устанавливать правила брандмауэра для предоставленных инстансов.
 
                     Группа `SecurityGroups` может не поддерживаться поставщиком облачных услуг.
                 serverGroupID:
-                  description: Группа серверов, в которую следует назначить машину
+                  description: Группа серверов, в которую следует назначить машину.

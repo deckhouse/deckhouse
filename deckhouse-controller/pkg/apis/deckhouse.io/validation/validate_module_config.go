@@ -50,7 +50,7 @@ const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhous
 
 // moduleConfigValidationHandler validations for ModuleConfig creation
 func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorage, metricStorage *metricstorage.MetricStorage, configValidator *configtools.Validator) http.Handler {
-	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (result *kwhvalidating.ValidatorResult, err error) {
+	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		var (
 			cfg = new(v1alpha1.ModuleConfig)
 			ok  bool
@@ -107,7 +107,7 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 			oldModuleMeta := new(AnnotationsOnly)
 
 			buf := bytes.NewBuffer(review.OldObjectRaw)
-			if err = json.NewDecoder(buf).Decode(oldModuleMeta); err != nil {
+			if err := json.NewDecoder(buf).Decode(oldModuleMeta); err != nil {
 				return nil, fmt.Errorf("can not parse old module config: %w", err)
 			}
 
@@ -148,7 +148,7 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 		// skip checking source for the global module
 		if cfg.Name != "global" {
 			module := new(v1alpha1.Module)
-			if err = cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
+			if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
 				if apierrors.IsNotFound(err) {
 					return allowResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
 				}
@@ -163,7 +163,7 @@ func moduleConfigValidationHandler(cli client.Client, moduleStorage moduleStorag
 		// empty policy means module uses deckhouse embedded policy
 		if cfg.Spec.UpdatePolicy != "" {
 			tmp := new(v1alpha1.ModuleUpdatePolicy)
-			if err = cli.Get(ctx, client.ObjectKey{Name: cfg.Spec.UpdatePolicy}, tmp); err != nil {
+			if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Spec.UpdatePolicy}, tmp); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return nil, fmt.Errorf("get the '%s' module policy: %w", cfg.Spec.UpdatePolicy, err)
 				}

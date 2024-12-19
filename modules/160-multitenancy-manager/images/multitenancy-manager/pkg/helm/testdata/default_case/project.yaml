@@ -6,6 +6,8 @@ spec:
   description: This is an example from the Deckhouse documentation.
   projectTemplateName: default
   parameters:
+    extendedMonitoringEnabled: true
+    podSecurityProfile: Baseline
     resourceQuota:
       requests:
         cpu: 1

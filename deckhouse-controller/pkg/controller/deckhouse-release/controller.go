@@ -157,14 +157,10 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return r.createOrUpdateReconcile(ctx, release)
 }
 
-func (r *deckhouseReleaseReconciler) PreflightCheck(ctx context.Context) (err error) {
-	defer func() {
-		if err == nil {
-			r.preflightCountDown.Done()
-		}
-	}()
-
+func (r *deckhouseReleaseReconciler) PreflightCheck(ctx context.Context) error {
 	r.clusterUUID = r.getClusterUUID(ctx)
+	r.preflightCountDown.Done()
+
 	return nil
 }
 

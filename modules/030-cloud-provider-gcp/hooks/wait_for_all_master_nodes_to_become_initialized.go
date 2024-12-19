@@ -58,7 +58,7 @@ func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Contain
 }
 
 func waitForAllMasterNodesToBecomeInitialized(input *go_hook.HookInput, dc dependency.Container) error {
-	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 120*time.Second, false, func(_ context.Context) (done bool, err error) {
+	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 120*time.Second, false, func(_ context.Context) (bool, error) {
 		input.Logger.Infof("waiting for master nodes to become initialized by cloud provider")
 		ok, err := isAllMasterNodesInitialized(input, dc)
 		if ok {

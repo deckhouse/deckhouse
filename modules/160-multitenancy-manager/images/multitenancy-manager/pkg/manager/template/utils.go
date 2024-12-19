@@ -26,43 +26,47 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/util/retry"
+
 	"controller/pkg/apis/deckhouse.io/v1alpha1"
 	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/consts"
 	"controller/pkg/validate"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 )
 
 func (m *Manager) ensureDefaultProjectTemplates(ctx context.Context, templatesPath string) error {
 	dir, err := os.ReadDir(templatesPath)
 	if err != nil {
-		return fmt.Errorf("unable to read the '%s' directory: %w", templatesPath, err)
+		return fmt.Errorf("read the '%s' directory: %w", templatesPath, err)
 	}
+
 	for _, file := range dir {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".yaml") {
 			m.log.Info("skipping file as it's not a YAML file", "file", file.Name())
 			continue
 		}
+
 		m.log.Info("reading file with project template", "file", file.Name())
 		projectTemplateBytes, err := os.ReadFile(filepath.Join(templatesPath, file.Name()))
 		if err != nil {
-			return fmt.Errorf("failed to read the '%s' project template file: %w", file.Name(), err)
+			return fmt.Errorf("read the '%s' project template file: %w", file.Name(), err)
 		}
+
 		projectTemplate := new(v1alpha1.ProjectTemplate)
 		if err = yaml.Unmarshal(projectTemplateBytes, projectTemplate); err != nil {
-			return fmt.Errorf("failed to unmarshal the '%s' project template file: %w", file.Name(), err)
+			return fmt.Errorf("unmarshal the '%s' project template file: %w", file.Name(), err)
 		}
+
 		m.log.Info("validating project template", "file", file.Name())
 		if err = validate.ProjectTemplate(projectTemplate); err != nil {
 			return fmt.Errorf("'%s' invalid project template file: %w", file.Name(), err)
 		}
+
 		if err = m.ensureProjectTemplate(ctx, projectTemplate); err != nil {
-			return err
+			return fmt.Errorf("ensure '%s' project template: %w", file.Name(), err)
 		}
 	}
+
 	return nil
 }
 
@@ -72,8 +76,8 @@ func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1
 		if apierrors.IsAlreadyExists(err) {
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				existingProjectTemplate := new(v1alpha1.ProjectTemplate)
-				if err = m.client.Get(ctx, types.NamespacedName{Name: projectTemplate.Name}, existingProjectTemplate); err != nil {
-					return fmt.Errorf("failed to fetch the '%s' project template: %w", projectTemplate.Name, err)
+				if err = m.client.Get(ctx, client.ObjectKey{Name: projectTemplate.Name}, existingProjectTemplate); err != nil {
+					return fmt.Errorf("get the '%s' project template: %w", projectTemplate.Name, err)
 				}
 
 				existingProjectTemplate.Spec = projectTemplate.Spec
@@ -84,20 +88,21 @@ func (m *Manager) ensureProjectTemplate(ctx context.Context, projectTemplate *v1
 				return m.client.Update(ctx, existingProjectTemplate)
 			})
 			if err != nil {
-				return fmt.Errorf("failed to update the '%s' project template: %w", projectTemplate.Name, err)
+				return fmt.Errorf("update the '%s' project template: %w", projectTemplate.Name, err)
 			}
 		} else {
-			return fmt.Errorf("failed to create the '%s' project template: %w", projectTemplate.Name, err)
+			return fmt.Errorf("create the '%s' project template: %w", projectTemplate.Name, err)
 		}
 	}
+
 	m.log.Info("successfully ensured project template", "projectTemplate", projectTemplate.Name)
 	return nil
 }
 
 func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha1.ProjectTemplate, message string, ready bool) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := m.client.Get(ctx, types.NamespacedName{Name: template.Name}, template); err != nil {
-			return err
+		if err := m.client.Get(ctx, client.ObjectKey{Name: template.Name}, template); err != nil {
+			return fmt.Errorf("get the '%s' project template: %w", template.Name, err)
 		}
 		template.Status.Message = message
 		template.Status.Ready = ready
@@ -107,8 +112,8 @@ func (m *Manager) setTemplateStatus(ctx context.Context, template *v1alpha1.Proj
 
 func (m *Manager) projectsByTemplate(ctx context.Context, template *v1alpha1.ProjectTemplate) ([]*v1alpha2.Project, error) {
 	projects := new(v1alpha2.ProjectList)
-	if err := m.client.List(ctx, projects, client.MatchingLabels{consts.ProjectTemplateLabel: template.Name}); err != nil {
-		return nil, err
+	if err := m.client.List(ctx, projects, client.MatchingLabels{v1alpha2.ResourceLabelTemplate: template.Name}); err != nil {
+		return nil, fmt.Errorf("list projects by template: %w", err)
 	}
 	if len(projects.Items) == 0 {
 		return nil, nil

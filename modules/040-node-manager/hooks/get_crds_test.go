@@ -327,7 +327,7 @@ metadata:
 	// Set Kind for "ics" binding.
 	getCRDsHookConfig.Kubernetes[0].Kind = "D8TestInstanceClass"
 	getCRDsHookConfig.Kubernetes[0].ApiVersion = "deckhouse.io/v1alpha1"
-	detectInstanceClassKind = func(_ *go_hook.HookInput, _ *go_hook.HookConfig) (inUse string, fromSecret string) {
+	detectInstanceClassKind = func(_ *go_hook.HookInput, _ *go_hook.HookConfig) (string, string) {
 		return "D8TestInstanceClass", "D8TestInstanceClass"
 	}
 

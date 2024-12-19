@@ -43,7 +43,7 @@ func testHelperSetETCDMembers(members []*etcdserverpb.Member) {
 		a := *member
 		mems[i] = &a
 	}
-	dependency.TestDC.EtcdClient.MemberListMock.Set(func(_ context.Context) (mp1 *clientv3.MemberListResponse, err error) {
+	dependency.TestDC.EtcdClient.MemberListMock.Set(func(_ context.Context) (*clientv3.MemberListResponse, error) {
 		return &clientv3.MemberListResponse{
 			Members: mems,
 		}, nil
@@ -51,7 +51,7 @@ func testHelperSetETCDMembers(members []*etcdserverpb.Member) {
 }
 
 func testHelperRegisterEtcdMemberUpdate() {
-	dependency.TestDC.EtcdClient.MemberUpdateMock.Set(func(ctx context.Context, id uint64, peers []string) (mp1 *clientv3.MemberUpdateResponse, err error) {
+	dependency.TestDC.EtcdClient.MemberUpdateMock.Set(func(ctx context.Context, id uint64, peers []string) (*clientv3.MemberUpdateResponse, error) {
 		resp, _ := dependency.TestDC.EtcdClient.MemberList(ctx)
 		members := resp.Members
 		for i, member := range members {
@@ -67,7 +67,7 @@ func testHelperRegisterEtcdMemberUpdate() {
 		return nil, nil
 	})
 
-	dependency.TestDC.EtcdClient.MemberRemoveMock.Set(func(ctx context.Context, id uint64) (mp1 *clientv3.MemberRemoveResponse, err error) {
+	dependency.TestDC.EtcdClient.MemberRemoveMock.Set(func(ctx context.Context, id uint64) (*clientv3.MemberRemoveResponse, error) {
 		resp, _ := dependency.TestDC.EtcdClient.MemberList(ctx)
 		members := resp.Members
 		var index int

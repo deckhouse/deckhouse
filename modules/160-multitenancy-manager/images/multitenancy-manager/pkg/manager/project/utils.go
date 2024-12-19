@@ -21,22 +21,20 @@ import (
 	"fmt"
 	"slices"
 
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/consts"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
-
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
 )
 
 func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha2.Project, namespaces []string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
-			return err
+		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
+			return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 		}
 		project.Status.Conditions = nil
 		project.Status.Namespaces = namespaces
@@ -54,37 +52,40 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 			Kind:       v1alpha2.ProjectKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: consts.DeckhouseProjectName,
+			Name: DeckhouseProjectName,
 			Labels: map[string]string{
-				consts.HeritageLabel:       consts.DeckhouseHeritage,
-				consts.ProjectVirtualLabel: "true",
+				v1alpha2.ResourceLabelHeritage:      v1alpha2.ResourceHeritageDeckhouse,
+				v1alpha2.ProjectLabelVirtualProject: "true",
 			},
 		},
 		Spec: v1alpha2.ProjectSpec{
-			ProjectTemplateName: consts.VirtualTemplate,
+			ProjectTemplateName: VirtualTemplate,
 			Description:         "This is a virtual project",
 		},
 	}
+
 	if err := m.ensureProject(ctx, deckhouseProject); err != nil {
 		return err
 	}
+
 	defaultProject := &v1alpha2.Project{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha2.SchemeGroupVersion.String(),
 			Kind:       v1alpha2.ProjectKind,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: consts.DefaultProjectName,
+			Name: DefaultProjectName,
 			Labels: map[string]string{
-				consts.HeritageLabel:       consts.DeckhouseHeritage,
-				consts.ProjectVirtualLabel: "true",
+				v1alpha2.ResourceLabelHeritage:      v1alpha2.ResourceHeritageDeckhouse,
+				v1alpha2.ProjectLabelVirtualProject: "true",
 			},
 		},
 		Spec: v1alpha2.ProjectSpec{
-			ProjectTemplateName: consts.VirtualTemplate,
+			ProjectTemplateName: VirtualTemplate,
 			Description:         "This is a virtual project",
 		},
 	}
+
 	return m.ensureProject(ctx, defaultProject)
 }
 
@@ -95,8 +96,8 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) 
 			m.log.Info("the project already exists, try to update it")
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				existingProject := new(v1alpha2.Project)
-				if err = m.client.Get(ctx, types.NamespacedName{Name: project.Name}, existingProject); err != nil {
-					return fmt.Errorf("failed to fetch the project: %w", err)
+				if err = m.client.Get(ctx, client.ObjectKey{Name: project.Name}, existingProject); err != nil {
+					return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 				}
 
 				existingProject.Spec = project.Spec
@@ -106,31 +107,32 @@ func (m *Manager) ensureProject(ctx context.Context, project *v1alpha2.Project) 
 				return m.client.Update(ctx, existingProject)
 			})
 			if err != nil {
-				return fmt.Errorf("failed to update the project: %w", err)
+				return fmt.Errorf("update the '%s' project: %w", project.Name, err)
 			}
 		} else {
-			return fmt.Errorf("failed to create the '%s' project: %w", project.Name, err)
+			return fmt.Errorf("create the '%s' project: %w", project.Name, err)
 		}
 	}
+
 	m.log.Info("successfully ensured the project", "project", project.Name)
 	return nil
 }
 
 func (m *Manager) projectTemplateByName(ctx context.Context, name string) (*v1alpha1.ProjectTemplate, error) {
 	template := new(v1alpha1.ProjectTemplate)
-	if err := m.client.Get(ctx, types.NamespacedName{Name: name}, template); err != nil {
+	if err := m.client.Get(ctx, client.ObjectKey{Name: name}, template); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("get the '%s' project template: %w", name, err)
 	}
 	return template, nil
 }
 
 func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Project, state string, templateGeneration int64, condition *v1alpha2.Condition) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
-			return err
+		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
+			return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 		}
 
 		if project.Status.State != state && state != "" {
@@ -167,41 +169,37 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha2.Pro
 
 func (m *Manager) removeFinalizer(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
-			return err
+		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
+			return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 		}
-		if !controllerutil.ContainsFinalizer(project, consts.ProjectFinalizer) {
+		if !controllerutil.ContainsFinalizer(project, v1alpha2.ProjectFinalizer) {
 			return nil
 		}
-		controllerutil.RemoveFinalizer(project, consts.ProjectFinalizer)
+		controllerutil.RemoveFinalizer(project, v1alpha2.ProjectFinalizer)
 		return m.client.Update(ctx, project)
 	})
 }
 
+// prepareProject sets template label, finalizer and deletes sync require annotation
 func (m *Manager) prepareProject(ctx context.Context, project *v1alpha2.Project) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err := m.client.Get(ctx, types.NamespacedName{Name: project.Name}, project); err != nil {
-			return err
+		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
+			return fmt.Errorf("get the '%s' project: %w", project.Name, err)
 		}
+
 		if len(project.Labels) == 0 {
 			project.Labels = make(map[string]string, 1)
 		}
-		project.Labels[consts.ProjectTemplateLabel] = project.Spec.ProjectTemplateName
+		project.Labels[v1alpha2.ResourceLabelTemplate] = project.Spec.ProjectTemplateName
+
 		if project.Annotations != nil {
-			delete(project.Annotations, consts.ProjectRequireSyncAnnotation)
+			delete(project.Annotations, v1alpha2.ProjectAnnotationRequireSync)
 		}
-		if !controllerutil.ContainsFinalizer(project, consts.ProjectFinalizer) {
-			controllerutil.AddFinalizer(project, consts.ProjectFinalizer)
+
+		if !controllerutil.ContainsFinalizer(project, v1alpha2.ProjectFinalizer) {
+			controllerutil.AddFinalizer(project, v1alpha2.ProjectFinalizer)
 		}
+
 		return m.client.Update(ctx, project)
 	})
-}
-
-func (m *Manager) makeCondition(condType, condStatus, condMessage string) *v1alpha2.Condition {
-	return &v1alpha2.Condition{
-		Type:               condType,
-		Status:             condStatus,
-		Message:            condMessage,
-		LastTransitionTime: metav1.Now(),
-	}
 }

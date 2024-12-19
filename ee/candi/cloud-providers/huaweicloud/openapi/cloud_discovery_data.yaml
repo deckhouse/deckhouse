@@ -27,7 +27,7 @@ apiVersions:
       volumeTypes:
         type: array
         description: |
-          List of volumes types in the cloud.
+          A list of volume types in the cloud.
         items:
           type: object
           required: [name]
@@ -35,11 +35,11 @@ apiVersions:
             id:
               type: string
               description: |
-                The ID of the volume type.
+                The volume type ID.
             name:
               type: string
               description: |
-                The name of the volume type.
+                The volume type name.
             isPublic:
               type: boolean
               description: |

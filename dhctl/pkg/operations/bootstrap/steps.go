@@ -353,8 +353,8 @@ func (r registryPackagesProxyLogger) Debugf(format string, args ...interface{}) 
 	log.DebugF(format+"\n", args...)
 }
 
-func (r registryPackagesProxyLogger) Error(args ...interface{}) {
-	log.ErrorLn(args...)
+func (r registryPackagesProxyLogger) Error(msg string, args ...interface{}) {
+	log.ErrorLn(msg, args)
 }
 
 func generateTLSCertificate(clusterDomain string) (*tls.Certificate, error) {

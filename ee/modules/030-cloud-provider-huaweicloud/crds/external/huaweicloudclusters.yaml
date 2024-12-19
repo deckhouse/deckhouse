@@ -22,7 +22,7 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: HuaweiCloudCluster is the Schema for the huaweicloudclusters
+          description: HuaweiCloudCluster is the schema for the huaweicloudclusters.
             API
           properties:
             apiVersion:
@@ -43,7 +43,7 @@ spec:
             metadata:
               type: object
             spec:
-              description: HuaweiCloudClusterSpec defines the desired state of HuaweiCloudCluster
+              description: HuaweiCloudClusterSpec defines the desired state of HuaweiCloudCluster.
               properties:
                 controlPlaneEndpoint:
                   description: APIEndpoint represents a reachable Kubernetes API endpoint.

@@ -1,4 +1,4 @@
-2162
+2166
 1GB
 2GB
 5XX
@@ -303,6 +303,7 @@ JWT
 K8s
 KESL
 KLLRCODA
+KUMA
 KaaS
 Kaspersky
 Keepalived
@@ -972,8 +973,10 @@ kubelets
 kubernetes
 kubernetesPods
 kubernetesVersion
+kuma
 labelSelector
 labelsRegex
+lang
 ldap
 letsencrypt
 libc
@@ -1097,6 +1100,7 @@ parametersSchema
 passphrase
 passwordHash
 pathPrefix
+permalink
 php
 plaintext
 playbook

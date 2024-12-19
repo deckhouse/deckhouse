@@ -219,15 +219,17 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	return result.Bytes()
 }
 
-func splitManifests(doc []byte) (result []string) {
+func splitManifests(doc []byte) []string {
 	splits := manifestsDelimiter.Split(string(doc), -1)
 
+	result := make([]string, 0, len(splits))
 	for i := range splits {
 		if splits[i] != "" {
 			result = append(result, splits[i])
 		}
 	}
-	return
+
+	return result
 }
 
 func (suite *ControllerTestSuite) TestCreateReconcile() {
@@ -257,7 +259,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("source with module with pull error", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "errormodule"}, nil)
-		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (i1 v1.Image, err error) {
+		dependency.TestDC.CRClient.ImageMock.Set(func(tag string) (v1.Image, error) {
 			if tag == "alpha" {
 				return nil, errors.New("GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]")
 			}

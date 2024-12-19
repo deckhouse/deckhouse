@@ -144,23 +144,24 @@ type jsonPatchOp struct {
 
 // applyJSPatch applies the patch. Input and output objects must both have
 // the external version, since that is what the patch must have been constructed against.
-func (p *jsonPatcher) applyJSPatch(versionedJS []byte) (patchedJS []byte, strictErrors []error, retErr error) {
+func (p *jsonPatcher) applyJSPatch(versionedJS []byte) ([]byte, []error, error) {
 	switch p.patchType {
 	case types.JSONPatchType:
-
 		var v []jsonPatchOp
-		var err error
-		if strictErrors, err = kjson.UnmarshalStrict(p.patch, &v); err != nil {
+		strictErrors, err := kjson.UnmarshalStrict(p.patch, &v)
+		if err != nil {
 			return nil, nil, fmt.Errorf("error decoding patch: %w", err)
 		}
+
 		for i, e := range strictErrors {
-			strictErrors[i] = fmt.Errorf("json patch %v", e)
+			strictErrors[i] = fmt.Errorf("json patch %w", e)
 		}
 
 		patchObj, err := jsonpatch.DecodePatch(p.patch)
 		if err != nil {
 			return nil, nil, err
 		}
+
 		if len(patchObj) > maxJSONPatchOperations {
 			return nil, nil, fmt.Errorf(
 				"the allowed maximum operations in a JSON patch is %d, got %d",
@@ -175,17 +176,16 @@ func (p *jsonPatcher) applyJSPatch(versionedJS []byte) (patchedJS []byte, strict
 		return patchedJS, strictErrors, nil
 	case types.MergePatchType:
 		v := map[string]interface{}{}
-		var err error
-		strictErrors, err = kjson.UnmarshalStrict(p.patch, &v)
+		strictErrors, err := kjson.UnmarshalStrict(p.patch, &v)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error decoding patch: %v", err)
+			return nil, nil, fmt.Errorf("error decoding patch: %w", err)
 		}
 
-		patchedJS, retErr = jsonpatch.MergePatch(versionedJS, p.patch)
-		if errors.Is(retErr, jsonpatch.ErrBadJSONPatch) {
-			return nil, nil, retErr
+		patchedJS, err := jsonpatch.MergePatch(versionedJS, p.patch)
+		if errors.Is(err, jsonpatch.ErrBadJSONPatch) {
+			return nil, nil, err
 		}
-		return patchedJS, strictErrors, retErr
+		return patchedJS, strictErrors, err
 	default:
 		// only here as a safety net - go-restful filters content-type
 		return nil, nil, fmt.Errorf("unknown Content-Type header for patch: %v", p.patchType)

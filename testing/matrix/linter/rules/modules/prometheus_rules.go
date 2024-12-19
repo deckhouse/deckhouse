@@ -73,7 +73,7 @@ func marshalChartYaml(object storage.StoreObject) ([]byte, error) {
 	return marshal, nil
 }
 
-func writeTempRuleFileFromObject(m utils.Module, marshalledYaml []byte) (path string, err error) {
+func writeTempRuleFileFromObject(m utils.Module, marshalledYaml []byte) (string, error) {
 	renderedFile, err := os.CreateTemp("", m.Name+".*.yml")
 	if err != nil {
 		return "", err

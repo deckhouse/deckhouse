@@ -56,9 +56,9 @@ type GrafanaAlertsChannelsConfig struct {
 	Notifiers []*GrafanaAlertsChannel `json:"notifiers"`
 }
 
-func getChannelSettings(notifyChannel *v1alpha1.GrafanaAlertsChannel) (settings map[string]interface{}, secureSettings map[string]interface{}) {
-	settings = make(map[string]interface{})
-	secureSettings = make(map[string]interface{})
+func getChannelSettings(notifyChannel *v1alpha1.GrafanaAlertsChannel) (map[string]interface{}, map[string]interface{}) {
+	settings := make(map[string]interface{})
+	secureSettings := make(map[string]interface{})
 
 	if notifyChannel.Spec.Type == "PrometheusAlertManager" {
 		alertManager := notifyChannel.Spec.AlertManager

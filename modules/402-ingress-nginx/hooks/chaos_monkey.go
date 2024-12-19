@@ -98,7 +98,7 @@ func applyIngressDaemonSetFilter(obj *unstructured.Unstructured) (go_hook.Filter
 
 	err := sdk.FromUnstructured(obj, d)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+		return nil, fmt.Errorf("cannot convert kubernetes object: %w", err)
 	}
 
 	return ingressDaemonSetFilterResult{
@@ -109,7 +109,7 @@ func applyIngressDaemonSetFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) (err error) {
+func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) error {
 	controllers := input.Snapshots["controllers"]
 	daemonsets := input.Snapshots["daemonsets"]
 
@@ -136,9 +136,7 @@ func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) (err error) 
 			continue
 		}
 
-		podList, err := kubeClient.CoreV1().
-			Pods(internal.Namespace).
-			List(context.TODO(), metav1.ListOptions{LabelSelector: labels.FormatLabels(res.LabelSelector)})
+		podList, err := kubeClient.CoreV1().Pods(internal.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labels.FormatLabels(res.LabelSelector)})
 		if err != nil {
 			return err
 		}
@@ -155,9 +153,7 @@ func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) (err error) 
 			}
 		}
 
-		err = kubeClient.CoreV1().
-			Pods(internal.Namespace).
-			EvictV1(context.TODO(), &policyv1.Eviction{ObjectMeta: metav1.ObjectMeta{Name: oldestPod.Name}})
+		err = kubeClient.CoreV1().Pods(internal.Namespace).EvictV1(context.TODO(), &policyv1.Eviction{ObjectMeta: metav1.ObjectMeta{Name: oldestPod.Name}})
 		if err != nil {
 			input.Logger.Infof("can't evict ingress controller pod %q: %v", oldestPod.Name, err)
 		}

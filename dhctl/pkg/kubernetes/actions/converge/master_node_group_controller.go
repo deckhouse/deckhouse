@@ -428,7 +428,7 @@ func (c *MasterNodeGroupController) deleteNodes(nodesToDeleteInfo []nodeToDelete
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", MasterNodeGroupName, c.desiredReplicas)
 	return log.Process("converge", title, func() error {
 		return c.deleteRedundantNodes(c.state.Settings, nodesToDeleteInfo, func(nodeName string) terraform.InfraActionHook {
-			return controlplane.NewHookForDestroyPipeline(c.client, nodeName)
+			return controlplane.NewHookForDestroyPipeline(c.client, nodeName, c.commanderMode)
 		})
 	})
 }

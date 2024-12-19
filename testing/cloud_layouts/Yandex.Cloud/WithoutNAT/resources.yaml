@@ -35,7 +35,7 @@ kind: YandexInstanceClass
 metadata:
   name: system
 spec:
-  cores: 2
+  cores: 4
   diskSizeGB: 30
   diskType: network-ssd
   memory: 8192
