@@ -143,15 +143,14 @@ apiVersions:
               externalIPAddresses: &instanceClassExternalIPAddresses
                 type: array
                 description: |
-                  A list of external addresses.
+                  A list of external IP addresses, listed in the order of the zones where nodes will be created.
 
-                  If the `externalSubnetIDs` parameter is not set, you have to use either [reserved public IP addresses](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) or the `Auto` constant.
+                  The following values can be specified in the list:
+                  - IP address from an additional external network for the corresponding zone (parameter `externalSubnetIDs`);
+                  - [reserved public IP address](faq.html#how-to-reserve-a-public-ip-address), if the list of additional external networks is not defined (parameter `externalSubnetIDs`);
+                  - `Auto`, to order a public IP address in the corresponding zone.
 
-                  If the `externalSubnetIDs` parameter is set, you must select specific unallocated IP addresses from the specified subnets.
-
-                  If the number of array elements is less than the number of nodes in the group (the value of the `replicas` parameter), the value `Auto` (automatic public IP address reservation) is used.
-
-                  The array elements must be listed in the same order as the zones in which the nodes will be created. For example:
+                  Note that the array elements must be listed in the same order as the zones in which the nodes will be created. For example:
 
                   ```yaml
                   - <RU-CENTRAL1-A-IP-ADDRESS>
@@ -169,11 +168,13 @@ apiVersions:
               externalSubnetIDs: &instanceClassExternalSubnetIDs
                 type: array
                 description: |
-                  If specified, an additional network interface will be added to the node (the latter will use it as a default route).
+                  List of additional external networks connected to the nodes.
 
-                  Also, a route for the node's internal interface will be added (it will cover the entire `nodeNetworkCIDR` subnet).
+                  The node interface that is in the list will be assigned as the default gateway.
 
-                  The array elements must be listed in the same order as the zones in which the nodes will be created. For example:
+                  Also, a route for the node's internal network interface will be added for the entire subnet specified in [nodeNetworkCIDR](#yandexclusterconfiguration-nodenetworkcidr).
+
+                  The array elements **must** be listed in the same order as the zones in which the nodes will be created. For example:
 
                   ```yaml
                   - <RU-CENTRAL1-A-SUBNET-ID>
