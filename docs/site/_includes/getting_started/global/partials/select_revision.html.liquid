@@ -32,6 +32,7 @@
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
 {%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
 {% assign layoutCode = '' | append: layout.code %}
+  {{ revision }}
 <div id='block_layout_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
     {% if page.lang == 'ru' %}
     {% include getting_started/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
