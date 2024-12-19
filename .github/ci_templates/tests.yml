@@ -12,13 +12,6 @@ docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xter
 # </template: matrix_run_args>
 {!{- end -}!}
 
-{!{ define "dmtlint_run_args" }!}
-# <template: dmt_lint_run_args>
-args: 'make dmt-lint'
-docker_options: '-w /deckhouse -v ${{github.workspace}}:/deckhouse -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg --user $(id -u):$(id -g)'
-# </template: dmt_lint_run_args>
-{!{- end -}!}
-
 {!{ define "dhctl_run_args" }!}
 # <template: dhctl_run_args>
 args: 'make ci'
@@ -120,4 +113,17 @@ steps:
     run: |
       make tests-webhooks
 # </template: tests_webhooks_template>
+{!{- end -}!}
+
+{!{ define "tests_dmt_lint" }!}
+# <template: tests_dmt_lint>
+{!{- $ctx       := index . 0 }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+  - name: DMT lint
+    run: |
+      make dmt-lint
+# </template: tests_dmt_lint>
 {!{- end -}!}

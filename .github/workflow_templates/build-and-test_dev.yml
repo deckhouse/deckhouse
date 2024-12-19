@@ -155,6 +155,14 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
 
+  tests_python_webhooks:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Tests python webhooks
+    needs:
+    - git_info
+    - pull_request_info
+{!{ tmpl.Exec "tests_dmt_lint" (slice $ctx) | strings.Indent 4 }!}
+
   matrix_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Matrix tests
@@ -162,14 +170,6 @@ jobs:
       - git_info
       - pull_request_info
 {!{ tmpl.Exec "tests_before_build_template" (slice $ctx "matrix") | strings.Indent 4 }!}
-
-  dmt_lint:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
-    name: DMT Lint
-    needs:
-    - git_info
-    - pull_request_info
-{!{ tmpl.Exec "tests_before_build_template" (slice $ctx "dmtlint") | strings.Indent 4 }!}
 
   dhctl_tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
