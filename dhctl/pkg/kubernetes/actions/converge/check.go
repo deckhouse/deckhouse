@@ -441,7 +441,7 @@ func sortNodesByIndex(nodesState map[string][]byte) ([]string, error) {
 func getStatusForMissedNode(kubeCl *client.KubernetesClient, nodeName, nodeGroupName string, allErrs **multierror.Error) NodeCheckResult {
 	status := AbsentStatus
 
-	exists, err := IsNodeExistsInCluster(kubeCl, nodeName)
+	exists, err := IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
 	if err != nil {
 		*allErrs = multierror.Append(*allErrs, err)
 		status = ErrorStatus

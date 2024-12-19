@@ -20,7 +20,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func StartFileWatcher(path string, fsEventHanlder func(event fsnotify.Event), done chan struct{}) (watcher *fsnotify.Watcher, err error) {
+func StartFileWatcher(path string, fsEventHanlder func(event fsnotify.Event), done chan struct{}, logger log.Logger) (watcher *fsnotify.Watcher, err error) {
 	watcher, err = fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func StartFileWatcher(path string, fsEventHanlder func(event fsnotify.Event), do
 		return nil, err
 	}
 
-	log.InfoF("Start watcher for file %s\n", path)
+	logger.LogInfoF("Start watcher for file %s\n", path)
 
 	go func() {
 		defer close(done)
@@ -49,7 +49,7 @@ func StartFileWatcher(path string, fsEventHanlder func(event fsnotify.Event), do
 					// r.stateWatcher.Close() was called
 					return
 				}
-				log.WarnF("fs watcher: %v\n", err.Error())
+				logger.LogWarnF("fs watcher: %v\n", err.Error())
 			}
 		}
 	}()
