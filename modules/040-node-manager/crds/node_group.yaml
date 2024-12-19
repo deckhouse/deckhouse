@@ -1495,6 +1495,11 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
+                nodeDrainTimeout:
+                  type: integer
+                  description: |
+                    Maximum drain time of Node
+                    This parameter specifies the maximum time the controller will attempt to migrate pods to a new node during a machine rollout. If this time expires, the machine will be forcibly deleted.
                 cri:
                   type: object
                   description: |
@@ -1644,8 +1649,10 @@ spec:
                     - maxPerZone
                   properties:
                     quickShutdown:
-                      description: Lowers CloudEphemeral machine drain timeout to 5 minutes.
                       type: boolean
+                      deprecated: true
+                      description: |
+                        Lowers CloudEphemeral machine drain timeout to 5 minutes.
                     zones:
                       description: |
                         List of availability zones to create instances in.
