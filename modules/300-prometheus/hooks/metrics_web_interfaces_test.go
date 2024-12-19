@@ -92,24 +92,11 @@ spec:
     - test4-example.com
     secretName: test
 `
-		globalConfig = `
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: global
-spec:
-  version: 2
-  settings:
-    https:
-       mode: OnlyInURI
-`
 	)
 	f := HookExecutionConfigInit(
 		`{"prometheus":{"internal":{}},"global":{"enabledModules":[]}}`,
 		`{}`,
 	)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -183,8 +170,10 @@ spec:
 
 	Context("Cluster containing some services and global module https.mode:OnlyInURI", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(ingressMetrics + globalConfig))
+			f.BindingContexts.Set(f.KubeStateSet(ingressMetrics))
+			f.ConfigValuesSet("global.https.mode", "OnlyInURI")
 			f.RunHook()
+
 		})
 
 		It("Hook must not fail, should get metric", func() {
