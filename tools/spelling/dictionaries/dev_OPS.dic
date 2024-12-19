@@ -189,6 +189,8 @@ DoesNotExist
 Dryrun
 EBS
 ECMP
+ECR
+EdgeRouter
 EE
 EKS
 EL7
