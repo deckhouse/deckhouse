@@ -35,8 +35,11 @@ type stateController struct {
 
 	eventRecorder record.EventRecorder
 
-	userRO    *state.User
-	userRW    *state.User
+	userRO           *state.User
+	userRW           *state.User
+	userMirrorPuller *state.User
+	userMirrorPusher *state.User
+
 	globalPKI *state.GlobalPKI
 
 	stateOK bool
@@ -146,6 +149,24 @@ func (sc *stateController) Reconcile(ctx context.Context, req ctrl.Request) (res
 		&sc.userRW,
 	); err != nil {
 		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserRWSecretName, err)
+		return
+	}
+
+	if err = sc.ensureUserSecret(
+		ctx,
+		state.UserMirrorPullerName,
+		&sc.userMirrorPuller,
+	); err != nil {
+		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserMirrorPullerName, err)
+		return
+	}
+
+	if err = sc.ensureUserSecret(
+		ctx,
+		state.UserMirrorPusherName,
+		&sc.userMirrorPusher,
+	); err != nil {
+		err = fmt.Errorf("cannot ensure secret %v for user: %w", state.UserMirrorPusherName, err)
 		return
 	}
 

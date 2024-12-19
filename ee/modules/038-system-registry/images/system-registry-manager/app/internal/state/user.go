@@ -19,6 +19,9 @@ const (
 	UserROSecretName = "registry-user-ro"
 	UserRWSecretName = "registry-user-rw"
 
+	UserMirrorPullerName = "registry-user-mirror-puller"
+	UserMirrorPusherName = "registry-user-mirror-pusher"
+
 	userSecretType      = "system-registry/user"
 	userSecretTypeLabel = "system-registry-user"
 )

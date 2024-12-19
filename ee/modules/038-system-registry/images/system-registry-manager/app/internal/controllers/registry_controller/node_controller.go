@@ -372,6 +372,18 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		return
 	}
 
+	userMirrorPuller, err := nc.loadUserSecret(ctx, state.UserMirrorPullerName)
+	if err != nil {
+		err = fmt.Errorf("cannot load mirror puller user: %w", err)
+		return
+	}
+
+	userMirrorPusher, err := nc.loadUserSecret(ctx, state.UserMirrorPusherName)
+	if err != nil {
+		err = fmt.Errorf("cannot load mirror pusher user: %w", err)
+		return
+	}
+
 	globalSecrets, err := nc.loadGlobalSecrets(ctx)
 	if err != nil {
 		err = fmt.Errorf("cannot load global secrets: %w", err)
@@ -405,6 +417,8 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 		moduleConfig,
 		userRO,
 		userRW,
+		userMirrorPuller,
+		userMirrorPusher,
 		globalPKI,
 		globalSecrets,
 		nodePKI,
@@ -455,7 +469,13 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 	return
 }
 
-func (nc *nodeController) contructStaticPodConfig(moduleConfig state.ModuleConfig, userRO, userRW state.User, globalPKI state.GlobalPKI, globalSecrets state.GlobalSecrets, nodePKI state.NodePKI) (config staticpod.Config, err error) {
+func (nc *nodeController) contructStaticPodConfig(
+	moduleConfig state.ModuleConfig,
+	userRO, userRW, userMirrorPuller, userMirrorPusher state.User,
+	globalPKI state.GlobalPKI,
+	globalSecrets state.GlobalSecrets,
+	nodePKI state.NodePKI,
+) (config staticpod.Config, err error) {
 	tokenKey, err := pki.EncodePrivateKey(globalPKI.Token.Key)
 	if err != nil {
 		err = fmt.Errorf("cannot encode Token key: %w", err)
