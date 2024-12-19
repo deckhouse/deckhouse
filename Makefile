@@ -151,6 +151,10 @@ tests-matrix: bin/promtool bin/gator ## Test how helm templates are rendered wit
   ##~ Options: FOCUS=module-name
 	go test -timeout=${TESTS_TIMEOUT} ./testing/matrix/ -v
 
+dmt-lint:
+	docker run --rm -v ${PWD}:/deckhouse-src --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
+
+
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -vet=off ./testing/openapi_cases/
 

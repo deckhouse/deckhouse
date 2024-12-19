@@ -114,3 +114,16 @@ steps:
       make tests-webhooks
 # </template: tests_webhooks_template>
 {!{- end -}!}
+
+{!{ define "tests_dmt_lint" }!}
+# <template: tests_dmt_lint>
+{!{- $ctx       := index . 0 }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+  - name: DMT lint
+    run: |
+      make dmt-lint
+# </template: tests_dmt_lint>
+{!{- end -}!}
