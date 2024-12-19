@@ -18,11 +18,9 @@ package template
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
-
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	templatemanager "controller/pkg/manager/template"
 
 	"github.com/go-logr/logr"
 
@@ -36,6 +34,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	templatemanager "controller/pkg/manager/template"
 )
 
 const controllerName = "d8-template-controller"
@@ -52,8 +53,7 @@ func Register(runtimeManager manager.Manager, defaultPath string, log logr.Logge
 
 	templateController, err := controller.New(controllerName, runtimeManager, controller.Options{Reconciler: r})
 	if err != nil {
-		log.Error(err, "failed to create template controller")
-		return err
+		return fmt.Errorf("create template controller: %w", err)
 	}
 
 	// init template manager
@@ -74,8 +74,7 @@ func Register(runtimeManager manager.Manager, defaultPath string, log logr.Logge
 			},
 		)
 	})); err != nil {
-		r.log.Error(err, "failed to init template manager")
-		return err
+		return fmt.Errorf("init project manager: %w", err)
 	}
 
 	r.log.Info("initializing template controller")
@@ -101,14 +100,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	r.init.Wait()
 
 	r.log.Info("reconciling the template", "template", req.Name)
-	template := &v1alpha1.ProjectTemplate{}
+	template := new(v1alpha1.ProjectTemplate)
 	if err := r.client.Get(ctx, req.NamespacedName, template); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.log.Info("the template not found", "template", req.Name)
 			return reconcile.Result{}, nil
 		}
-		r.log.Error(err, "error getting the template", "template", req.Name)
-		return reconcile.Result{}, nil
+		r.log.Error(err, "failed to get the template", "template", req.Name)
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	// handle the project template deletion

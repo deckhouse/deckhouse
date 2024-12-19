@@ -18,13 +18,8 @@ package template
 
 import (
 	"context"
-	"controller/pkg/validate"
 	"fmt"
 	"net/http"
-
-	"controller/pkg/apis/deckhouse.io/v1alpha1"
-	"controller/pkg/apis/deckhouse.io/v1alpha2"
-	"controller/pkg/consts"
 
 	admissionv1 "k8s.io/api/admission/v1"
 
@@ -33,6 +28,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
+
+	"controller/pkg/apis/deckhouse.io/v1alpha1"
+	"controller/pkg/apis/deckhouse.io/v1alpha2"
+	"controller/pkg/validate"
 )
 
 func Register(runtimeManager manager.Manager, serviceAccount string) {
@@ -64,7 +63,7 @@ func (v *validator) Handle(_ context.Context, req admission.Request) admission.R
 
 		// cannot delete template if it is used
 		projects := new(v1alpha2.ProjectList)
-		if err := v.client.List(context.Background(), projects, client.MatchingLabels{consts.ProjectTemplateLabel: template.Name}); err != nil {
+		if err := v.client.List(context.Background(), projects, client.MatchingLabels{v1alpha2.ResourceLabelTemplate: template.Name}); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if len(projects.Items) > 0 {
