@@ -2,7 +2,8 @@
 {{- $image_version := $containerd_version | replace "." "-" }}
 {{- $runc_version := "1.2.2" }}
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+final: false
 fromArtifact: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -20,7 +21,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: {{ $.Images.BASE_SCRATCH }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -40,11 +41,13 @@ docker:
     version: all
     containerd: {{ $containerd_version }}
     runc: {{ $runc_version }}
+  USER: 64535
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
 from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
