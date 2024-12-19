@@ -73,14 +73,12 @@ func (suite *ReleaseTestSuite) SetupSubTest() {
 	require.NoError(suite.T(), err)
 }
 
-func (suite *ReleaseTestSuite) TestCheckRelease() {
-	check := func(name string, actual, target string, fail bool) {
+func (suite *ReleaseTestSuite) TestGetLastVersion() {
+	check := func(name string, _, target string, fail bool) {
 		suite.Run(name, func() {
-			actual, _ := semver.NewVersion(actual)
 			target, _ := semver.NewVersion(target)
-			v, err := suite.rc.nextVersion(
+			v, err := suite.rc.getLastVersion(
 				context.Background(),
-				actual,
 				target,
 			)
 			require.NoError(suite.T(), err)
