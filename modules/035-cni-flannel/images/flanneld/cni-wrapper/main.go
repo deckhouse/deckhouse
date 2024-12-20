@@ -180,14 +180,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to get ModuleConfig %s: %v", moduleConfigName, err)
 	}
-	moduleStatus, found, err := unstructured.NestedString(moduleConfig.Object, "spec", "enabled")
+	moduleStatus, found, err := unstructured.NestedBool(moduleConfig.Object, "spec", "enabled")
 	if err != nil {
 		log.Fatalf("Failed to get moduleStatus from ModuleConfig: %v", err)
 	}
 	if !found {
 		log.Fatalf("moduleStatus not found in ModuleConfig")
 	}
-	log.Printf("ModuleStatus: %s", moduleStatus)
+	log.Printf("ModuleStatus: %t", moduleStatus)
 
 	// Handle CNI process
 	sigCh := make(chan os.Signal, 1)
