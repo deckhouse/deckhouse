@@ -39,6 +39,11 @@ shell:
   install:
   - git clone --depth=1 --branch v{{ $containerd_version }} {{ $.SOURCE_REPO }}/containerd/containerd.git /src/containerd
   - git clone --depth=1 --branch v{{ $runc_version }} {{ $.SOURCE_REPO }}/opencontainers/runc /src/runc
+  - cd /src/containerd
+  - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
+  - git rev-parse HEAD > REVISION
+  - cd /src/runc
+  - git describe --dirty --long --always > COMMIT
   - rm -rf /src/containerd/.git
   - rm -rf /src/runc/.git
 ---
@@ -61,10 +66,10 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
-  - make STATIC=1 all
+  - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" all
   - mv bin/* /
   - cd /src/runc
   - git config --global user.email "builder@deckhouse.io"
-  - make static
+  - make COMMIT="$(cat COMMIT)" static
   - mv runc /runc
   - mv /src/scripts/* /
