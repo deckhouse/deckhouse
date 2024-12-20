@@ -43,6 +43,7 @@ shell:
   beforeInstall:
   - apk add --no-cache openssh-client
   install:
+  - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone -b v{{ $version }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/cloudflare/cfssl.git src && cd ./src
