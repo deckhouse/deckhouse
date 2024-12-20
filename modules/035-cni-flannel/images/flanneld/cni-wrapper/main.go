@@ -154,6 +154,41 @@ func clearIptables(chainPrefixes []string) {
 }
 
 func main() {
+	moduleConfigName := "cni-flannel"
+
+	nodeName, err := os.Hostname()
+	if err != nil {
+		log.Fatal(err) // FIXME: ???
+	}
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		log.Fatalf("failed to get in-cluster config: %v", err)
+	}
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		log.Fatalf("Failed to create dynamic client: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+
+	moduleConfigGVR := schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "moduleconfigs",
+	}
+	moduleConfig, err := dynamicClient.Resource(moduleConfigGVR).Get(ctx, moduleConfigName, metav1.GetOptions{})
+	if err != nil {
+		log.Fatalf("failed to get ModuleConfig %s: %v", moduleConfigName, err)
+	}
+	moduleStatus, found, err := unstructured.NestedString(moduleConfig.Object, "spec", "enabled")
+	if err != nil {
+		log.Fatalf("Failed to get moduleStatus from ModuleConfig: %v", err)
+	}
+	if !found {
+		log.Fatalf("moduleStatus not found in ModuleConfig")
+	}
+	log.Printf("ModuleStatus: %s", moduleStatus)
+
 	// Handle CNI process
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -180,7 +215,7 @@ func main() {
 			} else {
 				log.Println("CNI exited gracefully")
 			}
-		case <-time.After(10 * time.Second):
+		case <-time.After(2 * time.Second):
 			log.Println("timeout waiting for CNI to exit, killing it")
 			if err := p.Kill(); err != nil {
 				log.Printf("error killing CNI: %v", err)
@@ -196,40 +231,40 @@ func main() {
 	}
 
 	// Get CNI ModuleConfig
-	moduleConfigName := "cni-flannel"
+	// moduleConfigName := "cni-flannel"
 
-	nodeName, err := os.Hostname()
-	if err != nil {
-		log.Fatal(err) // FIXME: ???
-	}
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		log.Fatalf("failed to get in-cluster config: %v", err)
-	}
-	dynamicClient, err := dynamic.NewForConfig(config)
-	if err != nil {
-		log.Fatalf("Failed to create dynamic client: %v", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
+	// nodeName, err := os.Hostname()
+	// if err != nil {
+	// 	log.Fatal(err) // FIXME: ???
+	// }
+	// config, err := rest.InClusterConfig()
+	// if err != nil {
+	// 	log.Fatalf("failed to get in-cluster config: %v", err)
+	// }
+	// dynamicClient, err := dynamic.NewForConfig(config)
+	// if err != nil {
+	// 	log.Fatalf("Failed to create dynamic client: %v", err)
+	// }
+	// ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	// defer cancel()
 
-	moduleConfigGVR := schema.GroupVersionResource{
-		Group:    "deckhouse.io",
-		Version:  "v1alpha1",
-		Resource: "moduleconfigs",
-	}
-	moduleConfig, err := dynamicClient.Resource(moduleConfigGVR).Get(ctx, moduleConfigName, metav1.GetOptions{})
-	if err != nil {
-		log.Fatalf("failed to get ModuleConfig %s: %v", moduleConfigName, err)
-	}
-	moduleStatus, found, err := unstructured.NestedString(moduleConfig.Object, "spec", "enabled")
-	if err != nil {
-		log.Fatalf("Failed to get moduleStatus from ModuleConfig: %v", err)
-	}
-	if !found {
-		log.Fatalf("moduleStatus not found in ModuleConfig")
-	}
-	log.Printf("ModuleStatus: %s", moduleStatus)
+	// moduleConfigGVR := schema.GroupVersionResource{
+	// 	Group:    "deckhouse.io",
+	// 	Version:  "v1alpha1",
+	// 	Resource: "moduleconfigs",
+	// }
+	// moduleConfig, err := dynamicClient.Resource(moduleConfigGVR).Get(ctx, moduleConfigName, metav1.GetOptions{})
+	// if err != nil {
+	// 	log.Fatalf("failed to get ModuleConfig %s: %v", moduleConfigName, err)
+	// }
+	// moduleStatus, found, err := unstructured.NestedString(moduleConfig.Object, "spec", "enabled")
+	// if err != nil {
+	// 	log.Fatalf("Failed to get moduleStatus from ModuleConfig: %v", err)
+	// }
+	// if !found {
+	// 	log.Fatalf("moduleStatus not found in ModuleConfig")
+	// }
+	// log.Printf("ModuleStatus: %s", moduleStatus)
 
 	// Get pods within podCIDR
 	clientset, err := kubernetes.NewForConfig(config)
