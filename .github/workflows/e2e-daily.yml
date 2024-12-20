@@ -375,7 +375,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -388,7 +387,6 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -415,7 +413,6 @@ jobs:
             -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
             -e LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -847,7 +844,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script_eks.sh run-test' via 'docker run', using environment:
             TERRAFORM_IMAGE_NAME=${TERRAFORM_IMAGE_NAME}
@@ -861,7 +857,6 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -926,7 +921,6 @@ jobs:
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e CIS_ENABLED=${CIS_ENABLED} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -1352,7 +1346,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1365,7 +1358,6 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -1394,7 +1386,6 @@ jobs:
             -e LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided} \
             -e LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1822,7 +1813,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1835,7 +1825,6 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -1861,7 +1850,6 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2285,7 +2273,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2298,7 +2285,6 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -2326,7 +2312,6 @@ jobs:
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
             -e LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2752,7 +2737,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2765,7 +2749,6 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -2791,7 +2774,6 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3214,7 +3196,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3227,7 +3208,6 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -3254,7 +3234,6 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3682,7 +3661,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3695,7 +3673,6 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -3725,7 +3702,6 @@ jobs:
             -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
             -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -4155,7 +4131,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -4168,7 +4143,6 @@ jobs:
             KUBERNETES_VERSION=${KUBERNETES_VERSION}
             TMP_DIR_PATH=${TMP_DIR_PATH}
             MASTERS_COUNT=${MASTERS_COUNT}
-            CIS_ENABLED=${CIS_ENABLED}
           "
 
           ls -lh $(pwd)/testing
@@ -4194,7 +4168,6 @@ jobs:
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
