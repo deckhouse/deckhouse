@@ -69,7 +69,6 @@ spec:
                         Enabling this option may affect the resource consumption of the Vector and also flood a disk with deleted logs. Use it with caution.
 
                         The format is a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
-                      default: 1h30m
                       format: duration
                       pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
                     namespaceSelector:
