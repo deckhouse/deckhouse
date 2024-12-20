@@ -36,8 +36,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_ebpf_exporter_malfunctioning: "EbpfExporterKernelNotSupportedGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_ebpf_exporter_malfunctioning: "EbpfExporterKernelNotSupportedGroup,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_ebpf_exporter_malfunctioning: "EbpfExporterKernelNotSupportedGroup,tier=cluster, node={{ $labels.node }},prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_ebpf_exporter_malfunctioning: "EbpfExporterKernelNotSupportedGroup,tier=cluster, node={{ $labels.node }},prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "job"
       summary: >
         The BTF module required for ebpf_exporter is missing in the kernel.
