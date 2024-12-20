@@ -80,7 +80,6 @@ function __main__() {
     echo "----------------------------------------------"
     echo "👾 Image: $image"
     echo ""
-
     trivyGetCVEListForImage -r "$REGISTRY" -i "$image" > "$WORKDIR/$(echo "$image" | tr "/" "_").cve"
     trivyGetHTMLReportPartForImage -r "$REGISTRY" -i "$image" -l "$(echo "$image" | cut -d@ -f1)" >> out/base-images.html
   done
