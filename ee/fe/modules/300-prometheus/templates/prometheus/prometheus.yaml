@@ -88,7 +88,6 @@ spec:
   initContainers:
   - name: prompptool
     image: {{ include "helm_lib_module_image" (list (include "prompp-context" . | fromYaml) "prompptool") }}
-    workingDir: /prometheus
     command:
     - /bin/prompptool
     - "--working-dir=/prometheus"
