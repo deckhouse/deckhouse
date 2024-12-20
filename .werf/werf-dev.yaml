@@ -82,6 +82,12 @@ shell:
     # Create symlink to vim-console
     ln -fs /usr/bin/vim-console /usr/bin/vim
     ln -fs /usr/bin/vim-console /usr/bin/vi
+    # Create chroot dir
+    mkdir -p /chroot/tmp/addon-operator
+    cp -r /usr/bin /chroot/
+    cp -r /usr/lib /chroot/
+    cp -r /usr/lib64 /chroot/
+    chown deckhouse:deckhouse -R /chroot
 docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
