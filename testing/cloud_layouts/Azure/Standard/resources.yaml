@@ -17,7 +17,7 @@ spec:
       name: worker
     maxPerZone: 1
     minPerZone: 1
-    zones: ["1"]
+    zones: 3
   disruptions:
     approvalMode: Manual
   nodeTemplate:
@@ -35,7 +35,7 @@ spec:
   inlet: LoadBalancer
   enableIstioSidecar: true
   nodeSelector:
-    node-role.kubernetes.io/master: ''
+    node-role.kubernetes.io/master: ""
   tolerations:
     - effect: NoSchedule
       operator: Exists
@@ -47,7 +47,7 @@ metadata:
 spec:
   uid: 10056
   sshPublicKeys:
-  - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSNdUmV2ekit0rFrQE9IoRsVqKTJfR8h+skMYjXHBv/nJN6J2eBvQlebnhfZngxTvHYYxl0XeRu3KEz5v23gIidT21o9x0+tD4b2PcyZ24o64GwnF/oFnQ9mYBJDRisZNdXYPadTp/RafQ0qNUX/6h8vZYlSPM77dhW7Oyf6hcbaniAmOD30bO89UM//VHbllGgfhlIbU382/EnPOfGvAHReATADBBHmxxtTCLbu48rN35DlOtMgPob3ZwOsJI3keRrIZOf5qxeF3VB0Ox4inoR6PUzWMFLCJyIMp7hzY+JLakO4dqfvRJZjgTZHQUvjDs+aeUcH8tD4Wd5NDzmxnHLtJup0lkHkqgjo6vqWIcQeDXuXsk3+YGw0PwMpwO2HMVPs2SnfT6cZ+Mo6Dmq0t1EjtSBXLMe5C5aac5w6NrXuypRQDoce7p3uZP2TVsxmpyvkd6RyiWr+wuOOB3h/k8q+kRh4LKzivJMEkZoZeCxkJiIWDknxEAU1sl25W4hEU= e2e@nodeuser"
+    - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSNdUmV2ekit0rFrQE9IoRsVqKTJfR8h+skMYjXHBv/nJN6J2eBvQlebnhfZngxTvHYYxl0XeRu3KEz5v23gIidT21o9x0+tD4b2PcyZ24o64GwnF/oFnQ9mYBJDRisZNdXYPadTp/RafQ0qNUX/6h8vZYlSPM77dhW7Oyf6hcbaniAmOD30bO89UM//VHbllGgfhlIbU382/EnPOfGvAHReATADBBHmxxtTCLbu48rN35DlOtMgPob3ZwOsJI3keRrIZOf5qxeF3VB0Ox4inoR6PUzWMFLCJyIMp7hzY+JLakO4dqfvRJZjgTZHQUvjDs+aeUcH8tD4Wd5NDzmxnHLtJup0lkHkqgjo6vqWIcQeDXuXsk3+YGw0PwMpwO2HMVPs2SnfT6cZ+Mo6Dmq0t1EjtSBXLMe5C5aac5w6NrXuypRQDoce7p3uZP2TVsxmpyvkd6RyiWr+wuOOB3h/k8q+kRh4LKzivJMEkZoZeCxkJiIWDknxEAU1sl25W4hEU= e2e@nodeuser"
   passwordHash: "$6$vUn3pWjfLzk8iARF$JTR4j5IV0u5aD7O/xK8ZBN4ie/1TE1YwLzfPutpJ4BCJozy1Rgw.Pl4x6gDiUwsPyQcylCuf/oxbL0iMqFdPL/"
   isSudoer: true
 ---

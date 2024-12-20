@@ -28,6 +28,7 @@ standard:
 subnetCIDR: 10.50.0.0/24
 masterNodeGroup:
   replicas: ${MASTERS_COUNT}
+  zones: [3]
   instanceClass:
     machineSize: Standard_F4
     urn: OpenLogic:CentOS:8_3:8.3.2021020400
