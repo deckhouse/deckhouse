@@ -38,7 +38,7 @@ kubectl get ms
 
 If the synchronization is successful, you will see output similar to the one below:
 
-```console
+```shell
 $ kubectl get ms
 NAME        COUNT   SYNC   MSG
 example     2       16s
@@ -79,7 +79,176 @@ The complete list of modules available from all module sources created in the cl
 kubectl get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
-After creating the `ModuleSource` resource and successful synchronization, _module releases_, i. e., [ModuleRelease](../../cr.html#modulerelease) resources will begin to be created in the cluster (DKP creates them automatically, you don't need to do it manually). Use the following command to print the list of releases:
+After creating the `ModuleSource` resource and successful synchronization, _modules_ — [Module](../../cr.html#module) resources should start appearing in the cluster (DKP creates them automatically, you do not need to create them). You can view the list of modules using the following command:
+
+```shell
+kubectl get module
+```
+
+Example of obtaining a list of modules:
+
+```сonsole
+$ kubectl get module
+NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
+module-one                   Available   False     False                      
+module-two                   Available   False     False                      
+```
+
+To get additional information about the module, use the following command:
+
+```shell
+kubectl get module module-one -oyaml
+```
+
+Example of output:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: "2024-12-12T10:49:40Z"
+  generation: 1
+  name: module-one
+  resourceVersion: "241504954"
+  uid: 3ae75474-8e96-4105-a939-6df71cba82d8
+properties:
+  availableSources:
+  - example
+status:
+  conditions:
+  - lastProbeTime: "2024-12-12T10:49:41Z"
+    lastTransitionTime: "2024-12-12T10:49:41Z"
+    message: disabled
+    reason: Disabled
+    status: "False"
+    type: EnabledByModuleConfig
+  - lastProbeTime: "2024-12-12T10:49:41Z"
+    lastTransitionTime: "2024-12-12T10:49:41Z"
+    status: "False"
+    type: EnabledByModuleManager
+  - lastProbeTime: "2024-12-16T15:46:26Z"
+    lastTransitionTime: "2024-12-12T10:49:41Z"
+    message: not installed
+    reason: NotInstalled
+    status: "False"
+    type: IsReady
+  phase: Available
+```
+
+You can find available sources from which the module can be downloaded in the Module (there is only one in the example).
+
+Next, you need to enable the module. To do this, you need to create a ModuleConfig with the name of the module.
+
+The parameter `enabled` in ModuleConfig is responsible for enabling the module. If the module is available from multiple sources (resource ModuleSource), the required source can be specified in the `source` parameter.
+
+The update policy (the name of the ModuleUpdatePolicy) can be specified in the `updatePolicy` parameter. It is not necessary to specify the update policy; in this case, it will be inherited from the Deckhouse update parameters.
+
+Example of ModuleConfig for enabling the module `module-one` from the source `example`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: module-one
+spec:
+  enabled: true
+  source: example
+```
+
+After turning on the module, it should enter the download phase:
+
+```shell
+$ kubectl get module module-one
+NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
+module-one           example  Downloading   False     False
+```
+
+{% alert level="warning" %}
+If the module has not entered the download phase, check the module source (ModuleSource), as the module may not be able to download.
+{% endalert %}
+
+After a successful download, the module will enter the installation phase (`Installing`):
+
+```shell
+$ kubectl get module module-one
+NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
+module-one  900      example  Installing    False     False
+```
+
+If the module was successfully installed, it will enter the `Ready` phase:
+
+```shell
+$ kubectl get module module-one
+NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
+module-one  900      example  Ready  True     True
+```
+
+Example of a Module object in the cluster when the module has been successfully installed:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: "2024-11-18T15:34:15Z"
+  generation: 1
+  name: module-one
+  resourceVersion: "242153004"
+  uid: 7111cee7-50cd-4ecf-ba20-d691b13b0f59
+properties:
+  availableSources:
+  - example
+  releaseChannel: Stable
+  requirements:
+    deckhouse: '> v1.63.0'
+    kubernetes: '> v1.25.0'
+  source: example
+  version: v0.7.24
+  weight: 910
+status:
+  conditions:
+  - lastProbeTime: "2024-12-12T15:49:35Z"
+    lastTransitionTime: "2024-12-12T15:49:35Z"
+    status: "True"
+    type: EnabledByModuleConfig
+  - lastProbeTime: "2024-12-17T09:35:27Z"
+    lastTransitionTime: "2024-12-12T15:49:39Z"
+    status: "True"
+    type: EnabledByModuleManager
+  - lastProbeTime: "2024-12-17T09:35:27Z"
+    lastTransitionTime: "2024-12-17T09:35:25Z"
+    status: "True"
+    type: IsReady
+  - lastProbeTime: "2024-12-17T09:32:50Z"
+    lastTransitionTime: "2024-12-17T09:32:50Z"
+    status: "False"
+    type: IsOverridden
+  hooksState: 'v0.7.24/hooks/moduleVersion.py: ok'
+  phase: Ready
+```
+
+In the Module, you can see the current installed version of the module, its size, the source from which it was downloaded, its dependencies, and the release channel.
+
+In case of any errors, the module will enter the `Error` phase:
+
+```console
+$ kubectl get module module-one
+NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
+module-one  910      example  Error  True     Error
+```
+
+If the enabled module has several available sources, and a source for the module is not explicitly selected in its ModuleConfig, the module will enter the `Conflict` phase:
+
+```console
+$ kubectl get module module-one
+NAME        WEIGHT   SOURCE   PHASE     ENABLED  READY
+module-one                    Conflict  Fasle    False
+```
+
+To resolve the conflict, specify the source of the module (ModuleSource name) explicitly in ModuleConfig.
+
+After downloading the module, the module releases will appear in the cluster — ModuleRelease objects.
+
+You can view the list of releases using the following command:
 
 ```shell
 kubectl get mr
@@ -90,8 +259,8 @@ An example of retrieving the list of module releases:
 ```console
 $ kubectl get mr
 NAME                       PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
-module-one-v1.21.3         Superseded   deckhouse       33h              
-module-one-v1.22.0         Deployed     deckhouse       33h              
+module-one-v0.7.23         Superseded   deckhouse       33h              
+module-one-v0.7.24         Deployed     deckhouse       33h              
 module-two-v1.2.0          Superseded   deckhouse       48d              
 module-two-v1.2.1          Superseded   deckhouse       48d              
 module-two-v1.2.3          Deployed     deckhouse       48d              
@@ -99,10 +268,10 @@ module-two-v1.2.4          Superseded   deckhouse       44d
 module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
 ```
 
-If there is a module release in `Deployed` status, this module can be [enabled](#enabling-the-module) in the cluster. If a module release is in `Superseded` status, it means that the module release is out of date, and there is a newer release to replace it.
+If the module release is in the `Superseded` status, it means that the module release is outdated, and there is a newer release that has replaced it.
 
 {% alert level="warning" %}
-If a module release is Pending, it means that manual confirmation is required to install it (see [module update policy](#module-update-policy) below). You can confirm the module release using the following command (specify the _moduleRelease_ name):
+If a module release is `Pending`, it means that manual confirmation is required to install it (see [module update policy](#module-update-policy) below). You can confirm the module release using the following command (specify the moduleRelease name):
 
 ```shell
 kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
@@ -113,25 +282,11 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ### Switching the module to a different module source
 
 Follow these steps to deploy a module from a different module source:
-1. Find out what [update policy](#module-update-policy) is used for the module:
+1. Create a new [ModuleSource resource](#module-source).
 
-   ```shell
-   kubectl get mr
-   ```
+1. Specify it in the `source` field in ModuleConfig.
 
-   Look up the `UPDATE POLICY` for the module releases.
-
-2. Before dropping this update policy, make sure there are no releases awaiting to be deployed (in Pending state) that fall under the policy being dropped or modified (or the _labelSelector_ used by the policy no longer matches your module):
-
-   ```shell
-   kubectl delete mup <POLICY_NAME>
-   ```
-
-3. Create a new [ModuleSource](#module-source) resource.
-
-4. Create a new [ModuleUpdatePolicy](#module-update-policy) resource with the correct labels (source) for the new _ModuleSource_.
-
-5. Confirm that new _ModuleReleases_ for a module are created from a new _ModuleSource_ according to the update policy.
+1. Ensure that new module releases (ModuleRelease objects) are created from the new module source in accordance with the update policy:
 
    ```shell
    kubectl get mr
@@ -144,29 +299,16 @@ The module update policy refers to the rules that DKP uses to update modules in 
 - the release channel to use for updates;
 - time windows for automatic updates during which the module update is permitted.
 
-You do not have to create the `ModuleUpdatePolicy` resource. If the update policy for a module is not defined (there is no corresponding `ModuleUpdatePolicy` resource), the update settings match the update settings of DKP (the [update](../../modules/002-deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module).
+You do not have to create the ModuleUpdatePolicy resource. If the update policy for a module is not defined (there is no corresponding ModuleUpdatePolicy resource), the update settings match the update settings of DKP (the [update](../../modules/002-deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module).
 
-{% alert level="info" %}
-To avoid downloading modules defined in `ModuleUpdatePolicy`, set the [spec.update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) parameter to `Ignore`.
-{% endalert %}
-
-{% alert level="warning" %}
-If a module is subject to more than one update policy (condition in the `labelSelector` parameter), the modules will not be updated until the module becomes subject to a single update policy.
-{% endalert %}
-
-The following is an example of the `ModuleUpdatePolicy` resource that defines the update policy for the `module-1` module of the `example` module source (the `example` ModuleSource). The update policy enables automatic module updates on Mondays and Wednesdays between 13:30 and 14:00 UTC:
+Example of the ModuleUpdatePolicy resource, whose update policy allows automatic module updates on Mondays and Wednesdays from 13:30 to 14:00 UTC:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ModuleUpdatePolicy
 metadata:
   name: example-update-policy
 spec:
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        source: example
-        module: module-1
   releaseChannel: Alpha
   update:
     mode: Auto
@@ -178,64 +320,7 @@ spec:
       to: "14:00"
 ```
 
-### moduleReleaseSelector — usage examples
-
-- Apply the policy to all _ModuleSource_ `deckhouse` modules:
-
-  ```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        source: deckhouse
-  ```
-
-- Apply the policy to the `deckhouse-admin` module independently of _ModuleSource_:
-
-  ```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        module: deckhouse-admin
-  ```
-
-- Apply the policy to the `deckhouse-admin` module from the `deckhouse` _ModuleSource_:
-  
-  ```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchLabels:
-        module: deckhouse-admin
-        source: deckhouse
-  ```
-
-- Apply the policy only to the `deckhouse-admin` and `secrets-store-integration` modules in the `deckhouse` _ModuleSource_:
-  
-  ```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchExpressions:
-      - key: module
-        operator: In
-        values:
-        - deckhouse-admin
-        - secrets-store-integration
-      matchLabels:
-        source: deckhouse
-  ```
-
-- Apply the policy to all `deckhouse` _ModuleSource_ modules except for `deckhouse-admin`:
-
-  ```yaml
-  moduleReleaseSelector:
-    labelSelector:
-      matchExpressions:
-      - key: module
-        operator: NotIn
-        values:
-        - deckhouse-admin
-      matchLabels:
-        source: deckhouse
-  ```
+The update policy is specified in the `updatePolicy` field in ModuleConfig.
 
 ## Enabling the module
 
@@ -250,14 +335,15 @@ The module must be in the list.
 Below is an example of the output:
 
 ```console
-$ kubectl get modules
-NAME                                  WEIGHT   STATE      SOURCE
+$ kubectl get module
+NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
 ...
-module-test                           900      Disabled   example
+module-one                   Available   False     False                      
+module-two                   Available   False     False     
 ...
 ```
 
-It shows that the `module-test` module can be enabled.
+It shows that the `module-one` module can be enabled.
 
 If the module is not in the list, check that [module source](#module-source) is defined and the module is listed in the module source. Also check the [update policy](#module-update-policy) of the module (if defined). If the module update policy is not defined, it matches the DKP update policy (the [releaseChannel](../../modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter and the [update](../../modules/002-deckhouse/configuration.html#parameters-update) section of the `deckhouse` module parameters).
 
@@ -270,13 +356,13 @@ You can enable the module similarly to built-in DKP modules using any of the fol
 
 - Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..
 
-  Below is an example of a [ModuleConfig](../../cr.html#moduleconfig) that enables and configures the `module-1` module in the cluster:
+  Below is an example of a [ModuleConfig](../../cr.html#moduleconfig) that enables and configures the `module-one` module in the cluster:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
   kind: ModuleConfig
   metadata:
-    name: module-1
+    name: module-one
   spec:
     enabled: true
     settings:
@@ -293,17 +379,33 @@ If there were errors while enabling a module in the cluster, you can learn about
   kubectl -n d8-system logs -l app=deckhouse
   ```
 
-- View the `ModuleConfig` resource of the module:
+- View the `Module` in more detail:
 
-  Here is an example of the error message for `module-1`:
+  ```console
+  kubectl get module module-one -oyaml
+  ```
+  
+- View the `ModuleConfig` resource of the module.
+
+  Here is an example of the error message for `module-one`:
 
   ```console
   $ kubectl get moduleconfig module-1
   NAME        ENABLED   VERSION   AGE   MESSAGE
-  module-1    true                7s    Ignored: unknown module name
+  module-one  true                7s    Ignored: unknown module name
   ```
 
-Similar to [_DeckhouseRelease_](../../cr.html#deckhouserelease) (a DKP release resource), modules have a [_ModuleRelease_](../../cr.html#modulerelease) resource. DKP creates _ModuleRelease_ resources based on what is stored in the container registry. When troubleshooting module issues, check the module releases available in the cluster as well:
+- View the `ModuleSource` resource.
+
+  Example output if the module source has problems with downloading the module:
+
+  ```console
+  $ kubectl get ms
+  NAME        COUNT   SYNC   MSG
+  example     2       16s    Some errors occurred. Inspect status for details
+  ```
+
+Similar to [DeckhouseRelease](../../cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](../../cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the module releases available in the cluster as well:
 
 ```shell
 kubectl get mr

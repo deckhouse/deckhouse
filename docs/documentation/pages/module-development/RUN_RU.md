@@ -80,7 +80,7 @@ module-1 module-2
 kubectl get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
-После создания ресурса `ModuleSource` и успешной синхронизации, в кластере должны начать появляться _модули_ — ресурсы [Module](../../cr.html#module) (DKP создает их автоматически, создавать их не нужно). 
+После создания ресурса `ModuleSource` и успешной синхронизации, в кластере должны начать появляться _модули_ — ресурсы [Module](../../cr.html#module) (DKP создает их автоматически, создавать их не нужно).
 Посмотреть список модулей можно с помощью следующей команды:
 
 ```shell
@@ -96,9 +96,10 @@ module-one                   Available   False     False
 module-two                   Available   False     False                      
 ```
 
-Чтобы посмотреть на модуль подробнее можно выполнить следующую команду:
+Чтобы получить дополнительную информацию о модуле, выполните следующую команду:
+
 ```shell
-$ kubectl get module module-one -oyaml
+kubectl get module module-one -oyaml
 ```
 
 Пример вывода:
@@ -136,11 +137,15 @@ status:
   phase: Available
 ```
 
-В ресурсе модуля указаны доступные источники из которых его можно скачать(в нашем случае он лишь один).
+В Module указаны доступные источники из которых его можно скачать (в примере он только один).
 
-Следующим шагом нужно включить модуль, для этого нужно создать одноименый модуль конфиг.
+Далее нужно включить модуль. Для этого нужно создать ModuleConfig с названием модуля.
 
-В нем потребуется указать что модуль требуется включить, указать источник(если доступен всего один источник то указывать опционально) и политику обновления(опционально, если не указывать будет унаследована политика обновления самого deckhouse):
+За включение модуля отвечает параметр `enabled` ModuleConfig. Если модуль доступен из нескольких источников (ресурс ModuleSource), необходимый источник можно указать в параметре `source`.
+
+Политику обновления (имя ModuleUpdatePolicy) можно указать в параметре `updatePolicy`. Политику обновления можно не указывать, — в этом случае она будет унаследована от параметров обновления Deckhouse. :
+
+Пример ModuleConfig для включения модуля `module-one` из источника `example`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -152,7 +157,7 @@ spec:
   source: example
 ```
 
-После этого модуль должен перейти в фазу скачивания:
+После включения модуля, он должен перейти в фазу скачивания (`Downloading`):
 
 ```shell
 $ kubectl get module module-one
@@ -161,12 +166,10 @@ module-one           example  Downloading   False     False
 ```
 
 {% alert level="warning" %}
-
-Если модуль не перешел в данную фазу стоит проверить источник, возможно он не может скачать модуль.
-
+Если модуль не перешел в фазу скачивания, проверьте источник модуля (ModuleSource), возможно модуль не может скачаться.
 {% endalert %}
 
-После успешного скачивания модуль перейдет в фазу установки:
+После успешного скачивания модуль перейдет в фазу установки (`Installing`):
 
 ```shell
 $ kubectl get module module-one
@@ -174,7 +177,7 @@ NAME        WEIGHT   SOURCE   PHASE         ENABLED   READY
 module-one  900      example  Installing    False     False
 ```
 
-Если модуль успешно установился, то он перейдет в фазу готов:
+Если модуль успешно установился, то он перейдет в фазу готовности (`Ready`):
 
 ```shell
 $ kubectl get module module-one
@@ -182,7 +185,7 @@ NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
 module-one  900      example  Ready  True     True
 ```
 
-Посмотрим на ресурс модуля в данный момент:
+Пример объекта Module в кластере, когда модуль успешно установился:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -225,9 +228,9 @@ status:
   phase: Ready
 ```
 
-Мы можем увидеть в нем текущую установленную версию модуля, его вес, источник откуда он скачался, его зависимости и релизный канал.
+В Module можно увидеть текущую установленную версию модуля, его вес, источник откуда он скачался, его зависимости и релизный канал.
 
-При возникновении каких либо ошибок модуль перейдет в фазу ошибки:
+При возникновении каких либо ошибок, модуль перейдет в фазу ошибки (`Error`):
 
 ```console
 $ kubectl get module module-one
@@ -235,7 +238,7 @@ NAME        WEIGHT   SOURCE   PHASE  ENABLED  READY
 module-one  910      example  Error  True     Error
 ```
 
-В случае если модуль включен, и имеет несколько доступных источников, а в модуль конфиге явно не выбран источник, модуль перейдет в фазу конфликта:
+Если у включенного модуля есть несколько доступных источников, и в его ModuleConfig явно не выбран источник модуля, модуль перейдет в фазу конфликта (`Conflict`):
 
 ```console
 $ kubectl get module module-one
@@ -243,9 +246,9 @@ NAME        WEIGHT   SOURCE   PHASE     ENABLED  READY
 module-one                    Conflict  Fasle    False
 ```
 
-Чтобы решить конфликт, укажите источник явно в конфиге модуля.
+Чтобы разрешить конфликт, укажите источник модуля (имя ModuleSource) явно в ModuleConfig.
 
-После скачивания модуля в кластере появится модуль релиз модуля.
+После скачивания модуля в кластере появятся релизы модуля — объекты ModuleRelease.
 
 Посмотреть список релизов можно с помощью следующей команды:
 
@@ -254,6 +257,7 @@ kubectl get mr
 ```
 
 Пример получения списка релизов модулей:
+
 ```console
 $ kubectl get mr
 NAME                       PHASE        UPDATE POLICY   TRANSITIONTIME   MESSAGE
@@ -266,11 +270,10 @@ module-two-v1.2.4          Superseded   deckhouse       44d
 module-two-v1.2.5          Pending      deckhouse       44d              Waiting for the 'release.deckhouse.io/approved: \"true\"' annotation
 ```
 
-Если релиз модуля находится в статусе Superseded, это значит что релиз модуля устарел, и есть более новый релиз, который его заменил.
+Если релиз модуля находится в статусе `Superseded`, это значит что релиз модуля устарел, и есть более новый релиз, который его заменил.
 
 {% alert level="warning" %}
-
-Если релиз модуля находится в статусе Pending, то это значит что он требует ручного подтверждения для установки (смотри далее [про политику обновления модуля](#политика-обновления-модуля)). Подтвердить релиз модуля можно следующей командой (укажите имя _moduleRelease_):
+Если релиз модуля находится в статусе `Pending`, то это значит что он требует ручного подтверждения для установки (смотри далее [про политику обновления модуля](#политика-обновления-модуля)). Подтвердить релиз модуля можно следующей командой (укажите имя moduleRelease):
 
 ```shell
 kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
@@ -284,9 +287,9 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 
 1. Создайте новый [ресурс ModuleSource](#источник-модулей).
 
-2. Укажите его в поле `source` у модуль конфига.
+1. Укажите его в поле `source` в ModuleConfig.
 
-3. Проверьте, что новые _ModuleRelease_ для модуля создаются из нового _ModuleSource_ в соответствии с политикой обновления.
+1. Проверьте, что новые релизы модуля (объекты ModuleRelease) создаются из нового источника модулей в соответствии с политикой обновления:
 
    ```shell
    kubectl get mr
@@ -299,9 +302,9 @@ kubectl annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 - канал стабильности, используемый при обновлении;
 - окна автоматического обновления, в пределах которых разрешено обновление модуля.
 
-Создавать ресурс `ModuleUpdatePolicy` не обязательно. Если политика обновления для модуля не определена (отсутствует соответствующий ресурс `ModuleUpdatePolicy`), то настройки обновления соответствуют настройкам обновления самого DKP (параметр [update](../../modules/002-deckhouse/configuration.html#parameters-update) модуля `deckhouse`).
+Создавать ресурс ModuleUpdatePolicy не обязательно. Если политика обновления для модуля не определена (отсутствует соответствующий ресурс ModuleUpdatePolicy), то настройки обновления соответствуют настройкам обновления самого DKP (параметр [update](../../modules/002-deckhouse/configuration.html#parameters-update) модуля `deckhouse`).
 
-Пример ресурса `ModuleUpdatePolicy`, данная политика обновления разрешает автоматическое обновление модуля по понедельникам и средам с 13:30 до 14:00 UTC:
+Пример ресурса ModuleUpdatePolicy, политика обновления которого разрешает автоматическое обновление модуля по понедельникам и средам с 13:30 до 14:00 UTC:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -320,7 +323,7 @@ spec:
       to: "14:00"
 ```
 
-Политика обновления указывается в поле `updatePolicy` модуль конфига.
+Политика обновления указывается в поле `updatePolicy` в ModuleConfig.
 
 ## Включение модуля в кластере
 
@@ -381,10 +384,8 @@ module-two                   Available   False     False
 
 - Посмотреть ресурс `Module` подробнее:
 
-  Посмотреть можно следующей командой:
-
   ```console
-  $ kubectl get module module-1 -oyaml
+  kubectl get module module-one -oyaml
   ```
   
 - Посмотреть ресурс `ModuleConfig` модуля:
@@ -392,14 +393,14 @@ module-two                   Available   False     False
   Пример вывода информации об ошибке модуля `module-1`:
 
   ```console
-  $ kubectl get moduleconfig module-1
+  $ kubectl get moduleconfig module-one
   NAME        ENABLED   VERSION   AGE   MESSAGE
-  module-1    true                7s    Ignored: unknown module name
+  module-one  true                7s    Ignored: unknown module name
   ```
 
 - Посмотреть ресурс `ModuleSource`:
-    
-  Пример вывода если у источник есть проблемы со скачиванием модуля:
+
+  Пример вывода если у источника модуля есть проблемы со скачиванием модуля:
 
   ```console
   $ kubectl get ms
@@ -407,7 +408,7 @@ module-two                   Available   False     False
   example     2       16s    Some errors occurred. Inspect status for details
   ```
 
-По аналогии [с _DeckhouseRelease_](../../cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [_ModuleRelease_](../../cr.html#modulerelease). DKP создает ресурсы _ModuleRelease_ исходя из того, что хранится в container registry. 
+По аналогии [с DeckhouseRelease](../../cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](../../cr.html#modulerelease). DKP создает ресурсы ModuleRelease исходя из того, что хранится в container registry.
 При поиске проблем с модулем проверьте также доступные в кластере релизы модуля:
 
 ```shell

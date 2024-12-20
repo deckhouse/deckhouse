@@ -199,7 +199,7 @@ lang: ru
        mode: Auto
    EOF
    ```
-   
+
 1. Создайте ModuleConfig, где укажите источник модуля (параметр `source`), политику обновления (параметр `updatePolicy`) и установите параметр `enabled` в `true`:
 
    ```shell
@@ -259,11 +259,12 @@ lang: ru
 Если в кластере существует ModuleUpdatePolicy версии v1alpha1, то необходимо выполнить следующие шаги по миграции на версию v1alpha2:
 
 Если в кластере в каком-либо ModuleUpdatePolicy версии v1alpha1 определен `moduleReleaseSelector`, то для всех модулей, которые подходят под этот селектор, в системе мониторинга будут гореть алерты [ModuleHasDeprecatedUpdatePolicy](../../alerts.html#monitoring-deckhouse-modulehasdeprecatedupdatepolicy). В этом случае выполните следующие шаги по миграции на версию v1alpha2 ModuleUpdatePolicy:
-- Укажите политику обновления для соответствующих модулей в параметре `properties.updatePolicy` moduleConfig. 
+- Укажите политику обновления для соответствующих модулей в параметре `properties.updatePolicy` moduleConfig.
 - Выполните следующую команду, указав необходимый ModuleUpdatePolicy:
 
   ```shell
   kubectl patch moduleupdatepolicies.v1alpha1.deckhouse.io <MUP_NAME> --type='json' \
     -p='[{"op": "replace", "path": "/spec/moduleReleaseSelector/labelSelector/matchLabels", "value": {"": ""}}]'
   ```
+
 {% endraw %}
