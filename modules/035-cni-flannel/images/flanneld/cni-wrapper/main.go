@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -30,8 +31,7 @@ import (
 )
 
 const (
-	wrapperAim          = "/entrypoint"
-	iptablesFullCommand = "/sbin/iptables"
+	wrapperAim = "/entrypoint"
 )
 
 func runCNI(done chan<- error, pidChan chan<- int) {
@@ -79,74 +79,52 @@ func deleteConfigFiles(configsDir string, cni string) {
 	}
 }
 
-func execIptables(args ...string) (string, error) {
-	args = append(args, "--wait")
-	cmd := exec.Command(iptablesFullCommand, args...)
-	output, err := cmd.CombinedOutput()
-	return string(output), err
-}
-
 func clearIptables(chainPrefixes []string) {
-	tables := []string{"filter", "nat", "mangle", "raw"}
-	standardChains := []string{"PREROUTING", "POSTROUTING", "INPUT", "FORWARD", "OUTPUT"}
+	log.Printf("started clearing CNI prefixes: %s", strings.Join(chainPrefixes, ", "))
 
-	log.Printf("clear CNI prefixes: %s", strings.Join(chainPrefixes, ", "))
+	cmd := exec.Command("/sbin/iptables-save")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Println("failed to get current iptables rules")
+		return
+	}
 
-	for _, table := range tables {
-		for _, standardChain := range standardChains {
-			output, err := execIptables("-t", table, "-L", standardChain, "--line-numbers")
-			if err != nil {
-				continue
+	restoreCommands := ""
+	for _, line := range strings.Split(string(output), "\n") {
+		prefixInLine := false
+		for _, prefix := range chainPrefixes {
+			if strings.Contains(line, prefix) {
+				prefixInLine = true
+				break
 			}
-			log.Printf("table %s: clear rules in chain %s", table, standardChain)
-			lines := strings.Split(strings.TrimSpace(output), "\n")
-			for i := len(lines) - 1; i >= 0; i-- {
-				for _, chain := range chainPrefixes {
-					if strings.Contains(lines[i], chain) {
-						lineSlice := strings.Fields(lines[i])
-						number := lineSlice[0]
-						out, err := execIptables("-t", table, "-D", standardChain, number)
-						if err != nil {
-							log.Printf("table %s: %s", table, out)
-						}
-					}
-				}
-			}
+		}
+		if !prefixInLine {
+			restoreCommands += fmt.Sprintln(line)
 		}
 	}
 
-	for _, table := range tables {
-		output, err := execIptables("-t", table, "-S")
-		if err != nil {
-			continue
-		}
+	tmpfile, err := os.CreateTemp("", "iptables-restore-")
+	if err != nil {
+		log.Printf("failed to create temporary file: %v", err)
+		return
+	}
+	defer os.Remove(tmpfile.Name())
 
-		log.Printf("table %s: clear CNI chains", table)
-		lines := strings.Split(strings.TrimSpace(output), "\n")
-		for _, rule := range lines {
-			for _, chain := range chainPrefixes {
-				if strings.HasPrefix(rule, "-N") && strings.Contains(rule, chain) {
-					commandTail := strings.TrimPrefix(rule, "-N ")
-					out, err := execIptables("-t", table, "-F", commandTail)
-					if err != nil {
-						log.Printf("table %s: %s", table, out)
-					}
-				}
-			}
-		}
-		log.Printf("table %s: delete CNI chains", table)
-		lines = strings.Split(strings.TrimSpace(output), "\n")
-		for _, rule := range lines {
-			for _, chain := range chainPrefixes {
-				if strings.HasPrefix(rule, "-N") && strings.Contains(rule, chain) {
-					commandTail := strings.TrimPrefix(rule, "-N ")
-					out, err := execIptables("-t", table, "-X", commandTail)
-					if err != nil {
-						log.Printf("table %s: %s", table, out)
-					}
-				}
-			}
-		}
+	if _, err = tmpfile.Write([]byte(restoreCommands)); err != nil {
+		log.Printf("failed to write to temporary file: %v", err)
+		return
+	}
+	if err = tmpfile.Close(); err != nil {
+		log.Printf("failed to close temporary file: %v", err)
+		return
+	}
+
+	cmd = exec.Command("/sbin/iptables-restore", tmpfile.Name())
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("failed to clear iptables: %s\n%s", err, output)
+	} else {
+		log.Printf("iptables cleared successfully")
 	}
 }
 
@@ -285,7 +263,7 @@ func main() {
 	// 	}
 	// }
 
-	log.Println("start system cleaning")
+	log.Println("started system cleaning")
 
 	deleteConfigFiles("/etc/cni/net.d/", "flannel")
 	deleteInterfaces([]string{"cni0"})
