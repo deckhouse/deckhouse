@@ -53,7 +53,7 @@ except HTTPError as e:
     if e.getcode() == 401:
         sys.stderr.write("Bootstrap-token compiled in this bootstrap.sh script is expired. Looks like more than 4 hours passed from the time it's been issued.\n")
         sys.exit(2)
-    print("Access to {} return HTTP Error {}: {}".format(sys.argv[2], e.getcode(), e.read()[:255]))
+    sys.stderr.write("Access to {} return HTTP Error {}: {}".format(sys.argv[2], e.getcode(), e.read()[:255]))
     sys.exit(1)
 data = json.loads(response.read())
 sys.stdout.write(data["bootstrap"])
