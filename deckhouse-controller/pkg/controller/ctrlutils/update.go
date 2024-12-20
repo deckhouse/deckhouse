@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -67,12 +66,11 @@ func UpdateWithRetry(ctx context.Context, c client.Client, obj client.Object, f 
 		fn.Apply(options)
 	}
 
-	release := new(v1alpha1.DeckhouseRelease)
 	key := client.ObjectKeyFromObject(obj)
 
 	return retry.OnError(options.OnErrorBackoff, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(options.RetryOnConflictBackoff, func() error {
-			if err := c.Get(ctx, key, release); err != nil {
+			if err := c.Get(ctx, key, obj); err != nil {
 				return client.IgnoreNotFound(err)
 			}
 
@@ -86,10 +84,10 @@ func UpdateWithRetry(ctx context.Context, c client.Client, obj client.Object, f 
 			}
 
 			if options.statusUpdate {
-				return c.Status().Update(ctx, release)
+				return c.Status().Update(ctx, obj)
 			}
 
-			return c.Update(ctx, release)
+			return c.Update(ctx, obj)
 		})
 	})
 }
