@@ -28,15 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
-	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/go_lib/updater"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	aoapp "github.com/flant/addon-operator/pkg/app"
 	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
@@ -52,6 +43,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
+	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/updater"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -81,7 +82,8 @@ type deckhouseReleaseReconciler struct {
 	clusterUUID             string
 	releaseVersionImageHash string
 
-	imageRegistry string
+	imageRegistry            string
+	deckhouseIsBootstrapping bool
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
@@ -297,6 +299,13 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 
 		imagesRegistry = registrySecret.ImageRegistry
+
+		r.imageRegistry = registrySecret.ImageRegistry
+		r.deckhouseIsBootstrapping = registrySecret.ClusterIsBootstrapped != `"true"`
+		defer func() {
+			r.imageRegistry = ""
+			r.deckhouseIsBootstrapping = false
+		}()
 	}
 
 	// TODO: ready check service?
@@ -336,7 +345,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 		if releaseData.IsUpdating {
 			// note: if pod is ready and release is updating - patch annotations if changed
-			// here we patch updating annotation
+			// here, we patch updating annotation
 			// but we have no patch here, because we have no predicted release and just change update settings (what???)
 			_ = deckhouseUpdater.ChangeUpdatingFlag(false)
 
@@ -420,8 +429,23 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	if dr.GetForce() {
+		err := r.ApplyForcedRelease(ctx, dr, order)
+		if err != nil {
+			return res, fmt.Errorf("apply forced release: %w", err)
+		}
 
+		// TODO: in original code we return empty result (reconcile was ended)
+		// is it correct???
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
+
+	err = r.ApplyPredictedRelease(ctx, dr, order)
+	if err != nil {
+		// TODO: check what is it???
+		return r.wrapApplyReleaseError(err)
+	}
+
+	// return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 
 	////////////////////////////////////////////////////
 	// New Logic End
@@ -490,10 +514,13 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 }
 
 // ApplyForcedRelease deploys forced release without any checks (windows, requirements, approvals and so on)
-func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedRI *d8updater.ReleaseInfo) error {
+func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, order *d8updater.CalculatingResult) error {
 	r.logger.Warn("forcing release", slog.String("release", dr.GetName()))
 
-	result := r.runReleaseDeploy(ctx, dr, deployedRI)
+	err := r.runReleaseDeploy(ctx, dr, order.DeployedReleaseInfo)
+	if err != nil {
+		return fmt.Errorf("run release deploy: %w", err)
+	}
 
 	// TODO: if force, make ALL previous releases superseded??? or just deployed?
 	// // Outdate all previous releases
@@ -506,7 +533,51 @@ func (r *deckhouseReleaseReconciler) ApplyForcedRelease(ctx context.Context, dr 
 	// 	}
 	// }
 
-	return result
+	return nil
+}
+
+// ApplyPredictedRelease applies predicted release, checks everything:
+//   - Deckhouse is ready (except patch)
+//   - Canary settings
+//   - Manual approving
+//   - Release requirements
+//
+// In addition to the regular error, ErrDeployConditionsNotMet or NotReadyForDeployError is returned as appropriate.
+func (r *deckhouseReleaseReconciler) ApplyPredictedRelease(ctx context.Context, dr *v1alpha1.DeckhouseRelease, order *d8updater.CalculatingResult) error {
+	// if deckhouse pod has bootstrap image -> apply first release
+	// doesn't matter which is update mode
+	if r.deckhouseIsBootstrapping && order.IsSingle {
+		err := r.runReleaseDeploy(ctx, dr, order.DeployedReleaseInfo)
+		if err != nil {
+			return fmt.Errorf("run single bootstrapping release deploy: %w", err)
+		}
+
+		return nil
+	}
+
+	// metricLabels := NewReleaseMetricLabels(predictedRelease)
+
+	// if order.IsPatch {
+	// 	err = r.checkPatchReleaseConditions(predictedRelease, metricLabels)
+	// } else {
+	// 	err = r.checkMinorReleaseConditions(predictedRelease, metricLabels)
+	// }
+
+	// r.setReleaseQueueDepthLabel(metricLabels)
+
+	// // if the predicted release has an index less than the number of awaiting releases
+	// // calculate and set releaseDepthQueue label
+	// r.metricsUpdater.UpdateReleaseMetric(predictedRelease.GetName(), metricLabels)
+	// if err != nil {
+	// 	return fmt.Errorf("check release %s conditions: %w", predictedRelease.GetName(), err)
+	// }
+
+	err := r.runReleaseDeploy(ctx, dr, order.DeployedReleaseInfo)
+	if err != nil {
+		return fmt.Errorf("run release deploy: %w", err)
+	}
+
+	return nil
 }
 
 // 1) bump deckhouse deployment (retry if error)
@@ -644,9 +715,10 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 
 func (r *deckhouseReleaseReconciler) wrapApplyReleaseError(err error) (ctrl.Result, error) {
 	var res ctrl.Result
+
 	var notReadyErr *updater.NotReadyForDeployError
 	if errors.As(err, &notReadyErr) {
-		r.logger.Info(err.Error())
+		r.logger.Warn(err.Error())
 		// TODO: requeue all releases if deckhouse update settings is changed
 		// requeueAfter := notReadyErr.RetryDelay()
 		// if requeueAfter == 0 {
@@ -816,8 +888,6 @@ func (r *deckhouseReleaseReconciler) getRegistrySecret(ctx context.Context) (*ut
 	}
 
 	regSecret, _ := utils.ParseDeckhouseRegistrySecret(secret.Data)
-
-	r.imageRegistry = regSecret.ImageRegistry
 
 	return regSecret, nil
 }

@@ -56,6 +56,7 @@ type CalculatingResult struct {
 	Message string
 
 	IsPatch  bool
+	IsSingle bool
 	IsLatest bool
 
 	DeployedReleaseInfo *ReleaseInfo
@@ -76,6 +77,14 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 	releases, err := p.listReleases(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list releases: %w", err)
+	}
+
+	if len(releases) == 1 {
+		return &CalculatingResult{
+			Order:    Process,
+			IsSingle: true,
+			IsLatest: true,
+		}, nil
 	}
 
 	slices.SortFunc(releases, func(a, b v1alpha1.DeckhouseRelease) int {
