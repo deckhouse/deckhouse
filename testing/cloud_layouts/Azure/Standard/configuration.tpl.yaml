@@ -29,7 +29,7 @@ subnetCIDR: 10.50.0.0/24
 masterNodeGroup:
   replicas: ${MASTERS_COUNT}
   instanceClass:
-    machineSize: Standard_F4
+    machineSize: Standard_F4s_v2
     urn: OpenLogic:CentOS:8_3:8.3.2021020400
     enableExternalIP: true
 provider:
