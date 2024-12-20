@@ -25,12 +25,20 @@ spec:
 
 * Тег образа контейнера **spec.imageTag** может быть любым. Например, ~pr333~, ~my-branch~.
 
-Необязательный интервал времени **spec.scanInterval** устанавливает интервал для проверки образов в registry. По умолчанию задан интервал в 15 секунд.
+Необязательный интервал времени **spec.scanInterval** устанавливает интервал для проверки образов в registry. По умолчанию задан интервал в 15 секунд. Для принудительного обновления можно изменить интервал, либо установить аннотацию `renew=""`.
 
-Для принудительного обновления можно задать больший интервал, а также использовать аннотацию `renew=""`.
+Результат применения ModulePullOverride можно увидеть в сообщении (колонка `MESSAGE`) при получении информации об ModulePullOverride. Значение `Ready` означает применение параметров ModulePullOverride. Любое другое значение означает наличие конфликтов.
+
+Пример отсутствия конфликтов при применении ModulePullOverride:
+
+```console
+$ kubectl get modulepulloverrides.deckhouse.io 
+NAME      UPDATED   MESSAGE
+example1  10s       Ready
+```
 
 Требования к модулю:
-* Модуль должен существовать, иначе у модуля будет ошибка `The module not found`.
+* Модуль должен существовать, иначе сообщение у ModulePullOverride будет *The module not found*.
 
   Пример:
 
@@ -40,7 +48,7 @@ spec:
   example1  10s       The module not found
   ```
 
-* Модуль не должен быть встроенным, иначе у модуля будет ошибка `The module is embedded`. 
+* Модуль не должен быть встроенным, иначе сообщение у ModulePullOverride будет *The module is embedded*.
 
   Пример:
 
@@ -50,7 +58,7 @@ spec:
   ingress-nginx  10s      The module is embedded
   ```
 
-* Модуль должен быть включен, иначе у модуля будет ошибка `The module disabled`:
+* Модуль должен быть включен, иначе сообщение у ModulePullOverride будет *The module disabled*.
 
   Пример:
 
@@ -60,7 +68,7 @@ spec:
   example  7s        The module disabled
   ```
 
-* Модуль должен иметь источник, иначе у модуля будет ошибка `The module does not have an active source`:
+* Модуль должен иметь источник, иначе сообщение у ModulePullOverride будет *The module does not have an active source*.
   
   Пример:
 
@@ -70,7 +78,7 @@ spec:
   example    12s       The module does not have an active source
   ```
 
-* Источник модуля должен существовать, иначе у модуля будет ошибка `The source not found`:
+* Источник модуля должен существовать, иначе сообщение у ModulePullOverride будет *The source not found*.
 
   Пример:
 
