@@ -3,19 +3,28 @@ image: dev-prebuild
 fromImage: common-base
 git:
 - add: /
+  to: /chroot/deckhouse
+  stageDependencies:
+    setup:
+      - '**/*'
+  includePaths:
+  - modules
+  - shell_lib.sh
+  - shell_lib
+  excludePaths:
+{{- include "exclude_modules_dir_from_images" .  | nindent 2}}
+{{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
+- add: /
   to: /deckhouse
   stageDependencies:
     setup:
       - '**/*'
   includePaths:
   - candi
-  - modules
   - global-hooks
-  - shell_lib.sh
-  - shell_lib
   - deckhouse-controller/entrypoint.sh
   - deckhouse-controller/crds/*.yaml
-  - jq_lib
+  - deckhouse-controller/wrapper
   - helm_lib
   - python_lib
   excludePaths:
@@ -24,17 +33,17 @@ git:
 - url: {{ .SOURCE_REPO }}/flant/shell-operator
   tag: v1.4.10
   add: /frameworks/shell
-  to: /deckhouse/shell-operator/frameworks/shell
+  to: /chroot/deckhouse/shell-operator/frameworks/shell
 {{ .Files.Get (printf "tools/build_includes/modules-with-exclude-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
 - artifact: deckhouse-controller
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
-  after: setup
+  after: install
 - artifact: jq
   add: /usr/bin/jq
-  to: /usr/bin/jq
+  to: /chroot/usr/bin/jq
   after: setup
 - artifact: version-map-artifact
   add: /version_map_{{ $.Env }}.yml
@@ -48,7 +57,7 @@ shell:
   - |
 {{- range $key := list "default" "managed" "minimal" }}
     # Add bundle {{ $key }}
-    cat <<"EOD" > /deckhouse/modules/values-{{ $key }}.yaml
+    cat <<"EOD" > /chroot/deckhouse/modules/values-{{ $key }}.yaml
       {{- range $_, $edition := $.Editions }}
     {{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 4 }}
         {{- if eq $.Env $edition.name }}
@@ -72,7 +81,7 @@ shell:
     EOD
     chmod +x /deckhouse/deckhouse
     # Create symlink to grant entrypoint.sh write permission
-    ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
+    ln -fs /tmp/values.yaml /chroot/deckhouse/modules/values.yaml
     # Create deckhouse group
     groupadd -g 64535 deckhouse
     # Create deckhouse user
@@ -82,6 +91,23 @@ shell:
     # Create symlink to vim-console
     ln -fs /usr/bin/vim-console /usr/bin/vim
     ln -fs /usr/bin/vim-console /usr/bin/vi
+    # Create chroot dir
+    setcap cap_sys_chroot=+ep /deckhouse/deckhouse-controller/wrapper
+    mkdir -p /chroot/tmp /chroot/bin /chroot/usr/local /chroot/dev
+    cp -r /bin /chroot/
+    cp -r --remove-destination /usr/bin /chroot/usr/
+    cp -r /lib /chroot/
+    cp -r /lib64 /chroot/
+    mv /usr/local/bin /chroot/usr/local/
+    chown deckhouse:deckhouse -R /chroot
+    ln -s /chroot/deckhouse/modules /deckhouse/modules
+    ln -s /chroot/deckhouse/downloaded /deckhouse/downloaded
+    ln -s /chroot/deckhouse/shell_lib /deckhouse/shell_lib
+    ln -s /chroot/deckhouse/shell_lib.sh /deckhouse/shell_lib.sh
+    ln -s /chroot/deckhouse/shell-operator /deckhouse/shell-operator
+    ln -s /chroot/usr/bin/jq /usr/bin/jq
+    ln -s /chroot/usr/local/bin /usr/local/bin
+    mknod -m 0666 /chroot/dev/null c 1 3
 docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
@@ -94,10 +120,10 @@ fromImage: dev-prebuild
 import:
 - image: images-digests
   add: /images_digests.json
-  to: /deckhouse/modules/images_digests.json
+  to: /chroot/deckhouse/modules/images_digests.json
   after: setup
 - image: images-digests
   add: /images_digests.json
-  to: /deckhouse/modules/040-node-manager/images_digests.json
+  to: /chroot/deckhouse/modules/040-node-manager/images_digests.json
   after: setup
 ---

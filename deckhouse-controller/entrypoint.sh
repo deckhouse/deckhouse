@@ -42,6 +42,9 @@ run_deckhouse() {
   EXITCODE="${?}"
 }
 
+mkdir /chroot/tmp/addon-operator
+ln -s /chroot/tmp/addon-operator /tmp/addon-operator
+
 declare -A bundles_map; bundles_map=( ["Default"]="default" ["Minimal"]="minimal" ["Managed"]="managed" )
 
 bundle=${DECKHOUSE_BUNDLE:-Default}
@@ -51,13 +54,13 @@ if [[ ! ${bundles_map[$bundle]+_} ]]; then
 
 EOF
     exit 1
-  fi
+fi
 
 cat <<EOF
 {"msg": "-- Starting Deckhouse using bundle $bundle --"}
 EOF
 
-coreModulesDir=$(echo ${MODULES_DIR} | awk -F ":" '{print $1}')
+coreModulesDir=$(echo /chroot${MODULES_DIR} | awk -F ":" '{print $1}')
 cat "${coreModulesDir}"/values-"${bundles_map[$bundle]}".yaml > /tmp/values.yaml
 
 set +o pipefail
