@@ -79,7 +79,7 @@ Create the `resources.yml` file.
 <div class="dimmer-block-content">
 {% endif %}
 
-<div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or revision == 'be' or revision == 'se' or page.ee_only == true %} active{% endif %}" markdown="1">
+<div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
 {% if page.lang == 'ru' %}
 {% include getting_started/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
 {% else %}
