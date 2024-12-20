@@ -238,8 +238,8 @@ spec:
           volumeMounts:
           - mountPath: /tmp
             name: tmp
-          - mountPath: /chroot/tmp
-            name: tmp
+          - mountPath: /chroot/tmp/addon-operator
+            name: chrootTmp
           - mountPath: /.kube
             name: kube
           - mountPath: /certs
@@ -304,6 +304,9 @@ spec:
       - emptyDir:
           medium: Memory
         name: tmp
+      - emptyDir:
+          medium: Memory
+        name: chrootTmp
       - emptyDir:
           medium: Memory
         name: kube
