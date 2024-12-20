@@ -4,19 +4,19 @@ kind: ClusterConfiguration
 clusterType: Cloud
 cloud:
   provider: Azure
-  prefix: 'candi-${PREFIX}'
+  prefix: "candi-${PREFIX}"
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: '${KUBERNETES_VERSION}'
-defaultCRI: '${CRI}'
+kubernetesVersion: "${KUBERNETES_VERSION}"
+defaultCRI: "${CRI}"
 clusterDomain: "cluster.local"
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  devBranch: '${DEV_BRANCH}'
+  devBranch: "${DEV_BRANCH}"
   imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
-  registryDockerCfg: '${DECKHOUSE_DOCKERCFG}'
+  registryDockerCfg: "${DECKHOUSE_DOCKERCFG}"
 ---
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
@@ -28,16 +28,18 @@ standard:
 subnetCIDR: 10.50.0.0/24
 masterNodeGroup:
   replicas: ${MASTERS_COUNT}
-  zones: [3]
+  zones:
+    - "1"
+    - "3"
   instanceClass:
     machineSize: Standard_F4
     urn: OpenLogic:CentOS:8_3:8.3.2021020400
     enableExternalIP: true
 provider:
-  subscriptionId: '${SUBSCRIPTION_ID}'
-  clientId: '${CLIENT_ID}'
-  clientSecret: '${CLIENT_SECRET}'
-  tenantId: '${TENANT_ID}'
+  subscriptionId: "${SUBSCRIPTION_ID}"
+  clientId: "${CLIENT_ID}"
+  clientSecret: "${CLIENT_SECRET}"
+  tenantId: "${TENANT_ID}"
   location: "westeurope"
 ---
 apiVersion: deckhouse.io/v1alpha1
