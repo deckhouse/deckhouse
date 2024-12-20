@@ -1,6 +1,4 @@
 ---
-{{- $istioCniVersion := "1.19.7" }}
----
 # Based on https://github.com/istio/istio/blob/1.19.7/cni/deployments/kubernetes/Dockerfile.install-cni
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -21,4 +19,4 @@ docker:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
 final: false
-from: istio/install-cni:{{ $istioOperatorVersion }}@sha256:94b0b7728cfaeb0595afbcd69aad05f8c4fbda2dbfdbeddb25d12934c0f673b1
+from: istio/install-cni:1.19.7@sha256:94b0b7728cfaeb0595afbcd69aad05f8c4fbda2dbfdbeddb25d12934c0f673b1
