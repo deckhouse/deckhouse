@@ -22,8 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/singlethreaded"
 )
 
-func DefineServerCommand(parent *kingpin.Application) *kingpin.CmdClause {
-	cmd := parent.Command("server", "Start dhctl as GRPC server.")
+func DefineServerCommand(parent *kingpin.Application, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -32,8 +31,7 @@ func DefineServerCommand(parent *kingpin.Application) *kingpin.CmdClause {
 	return cmd
 }
 
-func DefineSingleThreadedServerCommand(parent *kingpin.Application) *kingpin.CmdClause {
-	cmd := parent.Command("_server", "Start dhctl as GRPC server. Single threaded version.")
+func DefineSingleThreadedServerCommand(parent *kingpin.Application, cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
