@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"path"
 	"sort"
 	"time"
@@ -126,6 +127,8 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	}
 
 	newSemver, err := semver.NewVersion(releaseChecker.releaseMetadata.Version)
+	// TODO remove it
+	r.logger.Info("checkDeckhouseRelease", "newSemver", newSemver)
 	if err != nil {
 		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
 		return fmt.Errorf("parse semver: %w", err)
@@ -211,6 +214,10 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 			}
 
 			actual := release.GetVersion()
+			// TODO: remove it
+			r.logger.Info("checkDeckhouseRelease",
+				slog.String("actual", actual.String()),
+				slog.String("newSemver", newSemver.String()))
 			for !actual.Equal(newSemver) {
 				if actual, err = releaseChecker.StepByStepUpdate(ctx, newSemver); err != nil {
 					releaseChecker.logger.Error(fmt.Sprintf("step by step update failed. err: %v", err))
@@ -547,6 +554,10 @@ func (dcr *DeckhouseReleaseChecker) getLastVersion(ctx context.Context, target *
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
+	// TODO remove it
+	dcr.logger.Info("listTags",
+		slog.Any("tags", tags))
+
 	c, err := semver.NewConstraint(fmt.Sprintf("~%d.%d", target.Major(), target.Minor()))
 	if err != nil {
 		return nil, fmt.Errorf("new constraint: %w", err)
@@ -559,10 +570,15 @@ func (dcr *DeckhouseReleaseChecker) getLastVersion(ctx context.Context, target *
 			dcr.logger.Error(fmt.Sprintf("unable to parse semver from the registry Version: %v. This version will be skipped.", ver))
 			continue
 		}
+		// TODO remove it
+		dcr.logger.Info("getLastVersion: range tags", "newSemver", newSemver)
 		if c.Check(newSemver) {
 			collection = append(collection, newSemver)
 		}
 	}
+
+	// TODO remove it
+	dcr.logger.Info("getLastVersion: range tags", "collection", collection)
 
 	if len(collection) == 0 {
 		return nil, fmt.Errorf("next minor version is missed")
