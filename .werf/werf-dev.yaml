@@ -31,7 +31,7 @@ import:
 - artifact: deckhouse-controller
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
-  after: setup
+  after: beforeSetup
 - artifact: jq
   add: /usr/bin/jq
   to: /usr/bin/jq
