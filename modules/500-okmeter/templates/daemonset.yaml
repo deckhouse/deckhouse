@@ -45,7 +45,6 @@ spec:
       annotations:
         apiTokenChecksum: {{ .Values.okmeter.apiKey | sha256sum }}
     spec:
-      serviceAccountName: okmeter
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
