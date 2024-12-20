@@ -239,7 +239,7 @@ spec:
           - mountPath: /tmp
             name: tmp
           - mountPath: /chroot/tmp/addon-operator
-            name: chrootTmp
+            name: chroot-tmp
           - mountPath: /.kube
             name: kube
           - mountPath: /certs
@@ -306,7 +306,7 @@ spec:
         name: tmp
       - emptyDir:
           medium: Memory
-        name: chrootTmp
+        name: chroot-tmp
       - emptyDir:
           medium: Memory
         name: kube
