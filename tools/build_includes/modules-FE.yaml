@@ -174,11 +174,6 @@
   stageDependencies:
     setup:
         - '**/*.go'
-- add: /ee/modules/040-node-manager/capi/huaweicloud 2
-  to: /deckhouse/modules/040-node-manager/capi/huaweicloud 2
-  stageDependencies:
-    setup:
-        - '**/*.go'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
   stageDependencies:
