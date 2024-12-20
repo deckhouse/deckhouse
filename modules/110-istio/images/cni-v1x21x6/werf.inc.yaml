@@ -1,0 +1,22 @@
+---
+# Based on https://github.com/istio/istio/blob/1.21.6/cni/deployments/kubernetes/Dockerfile.install-cni
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /opt/cni/bin/istio-cni
+  to: /opt/cni/bin/istio-cni
+  after: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+  add: /usr/local/bin/install-cni
+  to: /usr/local/bin/install-cni
+  after: setup
+docker:
+  ENV:
+    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"
+  WORKDIR: "/opt/cni/bin"
+  ENTRYPOINT: ["/usr/local/bin/install-cni"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
+final: false
+from: istio/install-cni:1.21.6@sha256:6c85a016e612d7a095ed32546dbe7f973672b31cc1930c26a747232d38ff372a
