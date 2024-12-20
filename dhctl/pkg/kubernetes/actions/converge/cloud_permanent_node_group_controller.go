@@ -60,7 +60,7 @@ func (c *CloudPermanentNodeGroupController) addNodes() error {
 
 	err := log.Process("terraform", fmt.Sprintf("Pipelines %s for %s-%s-%v", c.layoutStep, c.config.ClusterPrefix, c.name, nodesIndexToCreate), func() error {
 		var err error
-		nodesToWait, err = ParallelBootstrapAdditionalNodes(c.client, c.config, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext)
+		nodesToWait, err = ParallelBootstrapAdditionalNodes(c.client, c.config, nodesIndexToCreate, c.layoutStep, c.name, c.cloudConfig, true, c.terraformContext, log.GetDefaultLogger(), false)
 		return err
 	})
 	if err != nil {
@@ -115,7 +115,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(nodeName string) error {
 		return ErrConvergeInterrupted
 	}
 
-	err = SaveNodeTerraformState(c.client, nodeName, c.name, outputs.TerraformState, nodeGroupSettingsFromConfig)
+	err = SaveNodeTerraformState(c.client, nodeName, c.name, outputs.TerraformState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}

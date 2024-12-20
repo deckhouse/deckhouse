@@ -75,7 +75,7 @@ func (s *StateSaver) Start(runner *Runner) error {
 
 	var err error
 	s.doneCh = make(chan struct{})
-	s.watcher, err = fs.StartFileWatcher(s.runner.statePath, s.FsEventHandler, s.doneCh)
+	s.watcher, err = fs.StartFileWatcher(s.runner.statePath, s.FsEventHandler, s.doneCh, s.runner.logger)
 	if err != nil {
 		return fmt.Errorf("fs watcher for intermediate terraform state file: %s: %v", s.runner.statePath, err)
 	}
