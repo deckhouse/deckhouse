@@ -341,6 +341,9 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
+            nodeDrainTimeout:
+              type: [integer]
+              additionalProperties: true
             fencing:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object

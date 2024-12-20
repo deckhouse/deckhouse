@@ -66,9 +66,12 @@ spec:
   {{- if $ng.cloudInstances.quickShutdown }}
       drainTimeout: 5m
       maxEvictRetries: 9
-  {{- else if $ng.cloudInstances.drainTimeoutSec }}
-      drainTimeout: {{$ng.cloudInstances.drainTimeoutSec}}s
-      maxEvictRetries: {{ div $ng.cloudInstances.drainTimeoutSec 20 }}
+  {{- else if $ng.nodeDrainTimeout }}
+      drainTimeout: {{$ng.nodeDrainTimeout}}s
+      maxEvictRetries: {{ div $ng.nodeDrainTimeout 20 }}
+  {{- else }}
+      drainTimeout: 600s
+      maxEvictRetries: 30
   {{- end }}
       nodeTemplate:
         metadata:

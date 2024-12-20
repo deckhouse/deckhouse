@@ -23,9 +23,20 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func NewDrainer(kubeClient kubernetes.Interface) *Helper {
+type HelperConfig struct {
+	Client              kubernetes.Interface
+	Force               *bool
+	IgnoreAllDaemonSets *bool
+	DeleteEmptyDirData  *bool
+	GracePeriodSeconds  *int
+	Timeout             *time.Duration
+	Out                 io.Writer
+	ErrOut              io.Writer
+}
+
+func NewDrainer(config HelperConfig) *Helper {
 	drainer := &Helper{
-		Client:              kubeClient,
+		Client:              config.Client,
 		Force:               true,
 		IgnoreAllDaemonSets: true,
 		DeleteEmptyDirData:  true, // same as DeleteLocalData
@@ -34,6 +45,28 @@ func NewDrainer(kubeClient kubernetes.Interface) *Helper {
 		Timeout: 5 * time.Minute,
 		Out:     io.Discard,
 		ErrOut:  io.Discard,
+	}
+
+	if config.Force != nil {
+		drainer.Force = *config.Force
+	}
+	if config.IgnoreAllDaemonSets != nil {
+		drainer.IgnoreAllDaemonSets = *config.IgnoreAllDaemonSets
+	}
+	if config.DeleteEmptyDirData != nil {
+		drainer.DeleteEmptyDirData = *config.DeleteEmptyDirData
+	}
+	if config.GracePeriodSeconds != nil {
+		drainer.GracePeriodSeconds = *config.GracePeriodSeconds
+	}
+	if config.Timeout != nil {
+		drainer.Timeout = *config.Timeout
+	}
+	if config.Out != nil {
+		drainer.Out = config.Out
+	}
+	if config.ErrOut != nil {
+		drainer.ErrOut = config.ErrOut
 	}
 
 	return drainer

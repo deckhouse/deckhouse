@@ -20,7 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
@@ -31,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -92,7 +95,7 @@ metadata:
 	})
 
 	Context("draining_nodes", func() {
-		var initialState = `
+		initialState := `
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -125,7 +128,7 @@ data:
   worker: dXBkYXRlZA== # updated
   undisruptable-worker: dXBkYXRlZA== # updated
 `
-		var nodeNames = []string{"worker-1", "worker-2", "worker-3"}
+		nodeNames := []string{"worker-1", "worker-2", "worker-3"}
 		for _, gDraining := range []bool{true, false} {
 			for _, gUnschedulable := range []bool{true, false} {
 				Context(fmt.Sprintf("Draining: %t, Unschedulable: %t", gDraining, gUnschedulable), func() {
@@ -172,11 +175,76 @@ data:
 		}
 	})
 
+	Context("getDrainTimeout function", func() {
+		const (
+			defaultDrainTimeout = 10 * time.Minute
+		)
+
+		BeforeEach(func() {
+			f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+		})
+
+		Context("NodeGroup exists with nodeDrainTimeout set", func() {
+			BeforeEach(func() {
+				nodeGroupYAML := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-group
+spec:
+  nodeType: Static
+  nodeDrainTimeout: 300
+status:
+  desired: 1
+  ready: 1
+`
+				f.BindingContexts.Set(f.KubeStateSet(nodeGroupYAML))
+				f.RunHook()
+			})
+
+			It("Should return the specified drain timeout", func() {
+				input := &go_hook.HookInput{Logger: log.NewNop()}
+				client := f.KubeClient()
+
+				drainTimeout := getDrainTimeout(input, client, "worker-group")
+				Expect(drainTimeout).To(Equal(5 * time.Minute))
+			})
+		})
+
+		Context("NodeGroup exists without nodeDrainTimeout", func() {
+			BeforeEach(func() {
+				nodeGroupYAML := `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-group
+spec:
+  nodeType: Static
+  nodeDrainTimeout: 300
+status:
+  desired: 1
+  ready: 1
+`
+				f.BindingContexts.Set(f.KubeStateSet(nodeGroupYAML))
+				f.RunHook()
+			})
+
+			It("Should return the default drain timeout", func() {
+				input := &go_hook.HookInput{Logger: log.NewNop()}
+				client := f.KubeClient()
+
+				drainTimeout := getDrainTimeout(input, client, "default-group")
+				Expect(drainTimeout).To(Equal(defaultDrainTimeout))
+			})
+		})
+	})
+
 	Context("simulate error", func() {
 		var event *eventsv1.Event
 
 		BeforeEach(func() {
-
 			st := f.KubeStateSet("")
 			f.BindingContexts.Set(st)
 
@@ -203,7 +271,6 @@ data:
 
 	Context("simulate error metrics", func() {
 		BeforeEach(func() {
-
 			st := f.KubeStateSet(`
 ---
 apiVersion: v1

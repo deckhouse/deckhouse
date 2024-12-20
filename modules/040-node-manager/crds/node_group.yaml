@@ -1493,6 +1493,11 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
+                nodeDrainTimeout:
+                  type: integer
+                  description: |
+                    Maximum drain time of Node
+                    This parameter specifies the maximum time the controller will attempt to migrate pods to a new node during a machine rollout. If this time expires, the machine will be forcibly deleted.
                 cri:
                   type: object
                   description: |
@@ -1646,11 +1651,6 @@ spec:
                       deprecated: true
                       description: |
                         Lowers CloudEphemeral machine drain timeout to 5 minutes.
-                    drainTimeoutSec:
-                      type: integer
-                      description: |
-                        Maximum drain time of CloudEphemeral machines in seconds
-                      default: 600
                     zones:
                       description: |
                         List of availability zones to create instances in.
@@ -1763,21 +1763,6 @@ spec:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
                           type: string
-                  oneOf:
-                    - required: [quickShutdown]
-                      properties:
-                        quickShutdown:
-                          type: boolean
-                          deprecated: true
-                      not:
-                        required: [drainTimeoutSec]
-                    - required: [drainTimeoutSec]
-                      properties:
-                        drainTimeoutSec:
-                          type: integer
-                          default: 600
-                      not:
-                        required: [quickShutdown]
                 nodeTemplate:
                   description: |
                     Specification of some of the fields that will be maintained in all nodes of the group.

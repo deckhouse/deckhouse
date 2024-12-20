@@ -536,6 +536,9 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	if !nodeGroupSpec.Fencing.IsEmpty() {
 		res["fencing"] = nodeGroupSpec.Fencing
 	}
+	if nodeGroupSpec.NodeDrainTimeout != nil {
+		res["nodeDrainTimeout"] = nodeGroupSpec.NodeDrainTimeout
+	}
 	return res
 }
 
