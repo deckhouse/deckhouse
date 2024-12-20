@@ -59,62 +59,62 @@ EOF
 
 # Auth certs
 if [ ! -f "$registry_pki_path/auth.key" ]; then
-    /opt/deckhouse/bin/openssl genrsa -out "$registry_pki_path/auth.key" 2048
+    openssl genrsa -out "$registry_pki_path/auth.key" 2048
 fi
 if [ ! -f "$registry_pki_path/auth.csr" ]; then
-    /opt/deckhouse/bin/openssl req -new -key "$registry_pki_path/auth.key" \
+    openssl req -new -key "$registry_pki_path/auth.key" \
     -subj "/ST=./L=./O=./OU=./CN=embedded-registry-auth" \
     -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
     -out "$registry_pki_path/auth.csr"
 fi
 if [ ! -f "$registry_pki_path/auth.crt" ]; then
-    /opt/deckhouse/bin/openssl x509 -req -in "$registry_pki_path/auth.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
+    openssl x509 -req -in "$registry_pki_path/auth.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
     -out "$registry_pki_path/auth.crt" -days 3650 -sha256 \
     -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
 # Distribution certs
 if [ ! -f "$registry_pki_path/distribution.key" ]; then
-    /opt/deckhouse/bin/openssl genrsa -out "$registry_pki_path/distribution.key" 2048
+    openssl genrsa -out "$registry_pki_path/distribution.key" 2048
 fi
 if [ ! -f "$registry_pki_path/distribution.csr" ]; then
-    /opt/deckhouse/bin/openssl req -new -key "$registry_pki_path/distribution.key" \
+    openssl req -new -key "$registry_pki_path/distribution.key" \
     -subj "/CN=embedded-registry-distribution" \
     -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
     -out "$registry_pki_path/distribution.csr"
 fi
 if [ ! -f "$registry_pki_path/distribution.crt" ]; then
-    /opt/deckhouse/bin/openssl x509 -req -in "$registry_pki_path/distribution.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
+    openssl x509 -req -in "$registry_pki_path/distribution.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
     -out "$registry_pki_path/distribution.crt" -days 3650 -sha256 \
     -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
 # Auth token certs
 if [ ! -f "$registry_pki_path/token.key" ]; then
-    /opt/deckhouse/bin/openssl genrsa -out "$registry_pki_path/token.key" 2048
+    openssl genrsa -out "$registry_pki_path/token.key" 2048
 fi
 if [ ! -f "$registry_pki_path/token.csr" ]; then
-    /opt/deckhouse/bin/openssl req -new -key "$registry_pki_path/token.key" \
+    openssl req -new -key "$registry_pki_path/token.key" \
     -subj "/CN=embedded-registry-auth-token" \
     -out "$registry_pki_path/token.csr"
 fi
 if [ ! -f "$registry_pki_path/token.crt" ]; then
-    /opt/deckhouse/bin/openssl x509 -req -in "$registry_pki_path/token.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
+    openssl x509 -req -in "$registry_pki_path/token.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
     -out "$registry_pki_path/token.crt" -days 3650 -sha256
 fi
 
 # Seaweedfs certs
 if [ ! -f "$registry_pki_path/seaweedfs.key" ]; then
-    /opt/deckhouse/bin/openssl genrsa -out "$registry_pki_path/seaweedfs.key" 2048
+    openssl genrsa -out "$registry_pki_path/seaweedfs.key" 2048
 fi
 if [ ! -f "$registry_pki_path/seaweedfs.csr" ]; then
-    /opt/deckhouse/bin/openssl req -new -key "$registry_pki_path/seaweedfs.key" \
+    openssl req -new -key "$registry_pki_path/seaweedfs.key" \
     -subj "/CN=embedded-registry-seaweedfs" \
     -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip}" \
     -out "$registry_pki_path/seaweedfs.csr"
 fi
 if [ ! -f "$registry_pki_path/seaweedfs.crt" ]; then
-    /opt/deckhouse/bin/openssl x509 -req -in "$registry_pki_path/seaweedfs.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
+    openssl x509 -req -in "$registry_pki_path/seaweedfs.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
     -out "$registry_pki_path/seaweedfs.crt" -days 3650 -sha256 \
     -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip}")
 fi

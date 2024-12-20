@@ -14,5 +14,9 @@
 # limitations under the License.
 
 set -Eeo pipefail
-mkdir -p /opt/deckhouse/bin
-cp -f openssl /opt/deckhouse/bin
+rm -f /opt/deckhouse/bin/cfssl
+rm -f /opt/deckhouse/bin/cfssl-bundle
+rm -f /opt/deckhouse/bin/cfssl-certinfo
+rm -f /opt/deckhouse/bin/cfssl-newkey
+rm -f /opt/deckhouse/bin/cfssl-scan
+rm -f /opt/deckhouse/bin/cfssljson

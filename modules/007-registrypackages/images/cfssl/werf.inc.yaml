@@ -1,0 +1,49 @@
+{{- $version := "1.6.5" }}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ $.Images.BASE_SCRATCH }}
+import:
+- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - cfssl
+  - cfssl-bundle
+  - cfssl-certinfo
+  - cfssl-newkey
+  - cfssl-scan
+  - cfssljson
+  - install
+  - uninstall
+  before: setup
+docker:
+  LABEL:
+    distro: all
+    version: all
+    cfssl: {{ $version }}
+    cfssl-bundle: {{ $version }}
+    cfssl-certinfo: {{ $version }}
+    cfssl-newkey: {{ $version }}
+    cfssl-scan: {{ $version }}
+    cfssljson: {{ $version }}
+---
+artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+shell:
+  beforeInstall:
+  - apk add --no-cache openssh-client
+  setup:
+  - export GOPROXY={{ $.GOPROXY }}
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - git clone -b v{{ $version }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/cloudflare/cfssl.git /src && cd /src
+  - make GOOS=linux GOARCH=amd64 CGO_ENABLED=0 
+  - make install
+  - chmod +x /src/bin/*
+  - mv /src/bin/* /

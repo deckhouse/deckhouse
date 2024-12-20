@@ -410,6 +410,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"registrypackages": map[string]interface{}{
 		"amazonEc2Utils220":         "imageHash-registrypackages-amazonEc2Utils220",
+		"cfssl165":                  "imageHash-registrypackages-cfssl165",
 		"containerd1724":            "imageHash-registrypackages-containerd1724",
 		"crictl127":                 "imageHash-registrypackages-crictl127",
 		"crictl128":                 "imageHash-registrypackages-crictl128",
@@ -450,7 +451,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"lsblk2402":                 "imageHash-registrypackages-lsblk2402",
 		"netcat110481":              "imageHash-registrypackages-netcat110481",
 		"nvmeCli211":                "imageHash-registrypackages-nvmeCli211",
-		"openssl332":                "imageHash-registrypackages-openssl332",
 		"socat1734":                 "imageHash-registrypackages-socat1734",
 		"tomlMerge01":               "imageHash-registrypackages-tomlMerge01",
 		"virtWhat125":               "imageHash-registrypackages-virtWhat125",

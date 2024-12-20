@@ -14,4 +14,10 @@
 # limitations under the License.
 
 set -Eeo pipefail
-rm -f /opt/deckhouse/bin/openssl
+mkdir -p /opt/deckhouse/bin
+cp -f cfssl /opt/deckhouse/bin
+cp -f cfssl-bundle /opt/deckhouse/bin
+cp -f cfssl-certinfo /opt/deckhouse/bin
+cp -f cfssl-newkey /opt/deckhouse/bin
+cp -f cfssl-scan /opt/deckhouse/bin
+cp -f cfssljson /opt/deckhouse/bin
