@@ -42,8 +42,8 @@ shell:
   setup:
   - export GOPROXY={{ $.GOPROXY }}
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone -b v{{ $version }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/cloudflare/cfssl.git /src && cd /src
+  - git clone -b v{{ $version }} --single-branch --depth=1 {{ $.SOURCE_REPO }}/cloudflare/cfssl.git src && cd ./src
   - make GOOS=linux GOARCH=amd64 CGO_ENABLED=0 
   - make install
-  - chmod +x /src/bin/*
-  - mv /src/bin/* /
+  - chmod +x ./bin/*
+  - mv ./bin/* /
