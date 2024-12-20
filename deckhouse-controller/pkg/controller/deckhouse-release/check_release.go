@@ -283,8 +283,8 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 		ObjectMeta: metav1.ObjectMeta{
 			Name: releaseChecker.releaseMetadata.Version,
 			Annotations: map[string]string{
-				"release.deckhouse.io/isUpdating": "false",
-				"release.deckhouse.io/notified":   "false",
+				v1alpha1.DeckhouseReleaseAnnotationIsUpdating: "false",
+				v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
 			},
 		},
 		Spec: v1alpha1.DeckhouseReleaseSpec{
@@ -299,13 +299,13 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 	}
 
 	if releaseChecker.releaseMetadata.Suspend {
-		release.ObjectMeta.Annotations["release.deckhouse.io/suspended"] = "true"
+		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationSuspended] = "true"
 	}
 	if cooldownUntil != nil {
-		release.ObjectMeta.Annotations["release.deckhouse.io/cooldown"] = cooldownUntil.UTC().Format(time.RFC3339)
+		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationCooldown] = cooldownUntil.UTC().Format(time.RFC3339)
 	}
 	if notificationShiftTime != nil {
-		release.ObjectMeta.Annotations["release.deckhouse.io/notification-time-shift"] = "true"
+		release.ObjectMeta.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift] = "true"
 	}
 
 	return client.IgnoreAlreadyExists(r.client.Create(ctx, release))
@@ -648,7 +648,7 @@ func buildSuspendAnnotation(suspend bool) []byte {
 	p := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"annotations": map[string]interface{}{
-				"release.deckhouse.io/suspended": annotationValue,
+				v1alpha1.DeckhouseReleaseAnnotationSuspended: annotationValue,
 			},
 		},
 	}

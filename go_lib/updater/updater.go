@@ -490,7 +490,7 @@ func (u *Updater[R]) runReleaseDeploy(predictedRelease R, currentRelease *R) err
 			ctx,
 			predictedRelease,
 			map[string]interface{}{
-				"release.deckhouse.io/apply-now": nil,
+				v1alpha1.DeckhouseReleaseAnnotationApplyNow: nil,
 			})
 		if err != nil {
 			return fmt.Errorf("remove apply-now annotation: %w", err)
@@ -579,7 +579,7 @@ func (u *Updater[R]) ApplyForcedRelease(ctx context.Context) error {
 
 	// remove annotation
 	err := u.kubeAPI.PatchReleaseAnnotations(ctx, forcedRelease, map[string]any{
-		"release.deckhouse.io/force": nil,
+		v1alpha1.DeckhouseReleaseAnnotationForce: nil,
 	})
 	if err != nil {
 		return fmt.Errorf("patch force annotation: %w", err)
