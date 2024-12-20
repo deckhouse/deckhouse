@@ -588,10 +588,14 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 	val, ok := dr.GetAnnotations()[deckhouseReleaseAnnotationDryrun]
 	if ok && val == "true" {
 		go func() {
+			r.logger.Debug("dryrun start soon...")
+
 			time.Sleep(3 * time.Second)
 
+			r.logger.Debug("dryrun started")
+
 			// because we do not know how long is parent context and how long will be update
-			// 1 minute - magic const
+			// 1 minute - magic constant
 			ctxwt, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 			defer cancel()
 
@@ -614,7 +618,7 @@ func (r *deckhouseReleaseReconciler) bumpDeckhouseDeployment(ctx context.Context
 					continue
 				}
 
-				// patch releases to trigger their requeue
+				// update releases to trigger their requeue
 				err := ctrlutils.UpdateWithRetry(ctxwt, r.client, release, func() error {
 					release.Annotations[deckhouseReleaseAnnotationTriggeredByDryrun] = dr.GetName()
 
