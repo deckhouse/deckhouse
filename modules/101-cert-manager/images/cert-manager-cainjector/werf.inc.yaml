@@ -2,8 +2,8 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/cert-manager-controller-artifact-{{ $version | replace "." "-" }}
-  add: /build/cert-manager/_bin/server/cainjector-linux-amd64
+- image: {{ $.ModuleName }}/cert-manager-controller-artifact-{{ $version | replace "." "-" }}
+  add: /cainjector-linux-amd64
   to: /bin/cainjector
   before: setup
 docker:
