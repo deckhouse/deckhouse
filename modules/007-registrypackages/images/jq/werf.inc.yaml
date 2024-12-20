@@ -35,3 +35,6 @@ import:
   add: /usr/bin/jq
   to: /jq
   before: setup
+shell:
+  setup:
+  - chmod +x /jq /install /uninstall
