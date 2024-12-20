@@ -59,47 +59,47 @@ EOF
 
 # Auth certs
 if [ ! -f "$registry_pki_path/auth.key" ]; then
-    openssl genrsa -out "$registry_pki_path/auth.key" 2048
+    /opt/deckhouse/bin/openssl genrsa -out "$registry_pki_path/auth.key" 2048
 fi
 if [ ! -f "$registry_pki_path/auth.csr" ]; then
-    openssl req -new -key "$registry_pki_path/auth.key" \
+    /opt/deckhouse/bin/openssl req -new -key "$registry_pki_path/auth.key" \
     -subj "/CN=embedded-registry-auth" \
     -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
     -out "$registry_pki_path/auth.csr"
 fi
 if [ ! -f "$registry_pki_path/auth.crt" ]; then
-    openssl x509 -req -in "$registry_pki_path/auth.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
+    /opt/deckhouse/bin/openssl x509 -req -in "$registry_pki_path/auth.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
     -out "$registry_pki_path/auth.crt" -days 3650 -sha256 \
     -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
 # Distribution certs
 if [ ! -f "$registry_pki_path/distribution.key" ]; then
-    openssl genrsa -out "$registry_pki_path/distribution.key" 2048
+    /opt/deckhouse/bin/openssl genrsa -out "$registry_pki_path/distribution.key" 2048
 fi
 if [ ! -f "$registry_pki_path/distribution.csr" ]; then
-    openssl req -new -key "$registry_pki_path/distribution.key" \
+    /opt/deckhouse/bin/openssl req -new -key "$registry_pki_path/distribution.key" \
     -subj "/CN=embedded-registry-distribution" \
     -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
     -out "$registry_pki_path/distribution.csr"
 fi
 if [ ! -f "$registry_pki_path/distribution.crt" ]; then
-    openssl x509 -req -in "$registry_pki_path/distribution.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
+    /opt/deckhouse/bin/openssl x509 -req -in "$registry_pki_path/distribution.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
     -out "$registry_pki_path/distribution.crt" -days 3650 -sha256 \
     -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 fi
 
 # Auth token certs
 if [ ! -f "$registry_pki_path/token.key" ]; then
-    openssl genrsa -out "$registry_pki_path/token.key" 2048
+    /opt/deckhouse/bin/openssl genrsa -out "$registry_pki_path/token.key" 2048
 fi
 if [ ! -f "$registry_pki_path/token.csr" ]; then
-    openssl req -new -key "$registry_pki_path/token.key" \
+    /opt/deckhouse/bin/openssl req -new -key "$registry_pki_path/token.key" \
     -subj "/CN=embedded-registry-auth-token" \
     -out "$registry_pki_path/token.csr"
 fi
 if [ ! -f "$registry_pki_path/token.crt" ]; then
-    openssl x509 -req -in "$registry_pki_path/token.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
+    /opt/deckhouse/bin/openssl x509 -req -in "$registry_pki_path/token.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
     -out "$registry_pki_path/token.crt" -days 3650 -sha256
 fi
 
@@ -266,6 +266,7 @@ EOF
 /opt/deckhouse/bin/crictl pull {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.common "pause") }}
 
 bash "$IGNITER_DIR/stop_system_registry_igniter.sh"
+
 
 {{- end }}
 {{- end }}

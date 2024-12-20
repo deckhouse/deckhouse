@@ -35,7 +35,7 @@ if [[ "$internal_registry_domain" == *":"* ]]; then
 fi
 
 # Install igniter packages
-bb-package-install "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}"
+bb-package-install "dockerAuth:{{ .images.systemRegistry.dockerAuth }}" "dockerDistribution:{{ .images.systemRegistry.dockerDistribution }}" "openssl:{{ .images.registrypackages.openssl332 }}"
 
 # Create a directories for the system registry configuration
 mkdir -p $IGNITER_DIR
@@ -59,27 +59,27 @@ EOF
 {{- end }}
 
 # Auth certs
-openssl genrsa -out "$IGNITER_DIR/auth.key" 2048
+/opt/deckhouse/bin/openssl genrsa -out "$IGNITER_DIR/auth.key" 2048
 
-openssl req -new -key "$IGNITER_DIR/auth.key" \
+/opt/deckhouse/bin/openssl req -new -key "$IGNITER_DIR/auth.key" \
 -subj "/CN=embedded-registry-auth" \
 -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
 -out "$IGNITER_DIR/auth.csr"
 
-openssl x509 -req -in "$IGNITER_DIR/auth.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
+/opt/deckhouse/bin/openssl x509 -req -in "$IGNITER_DIR/auth.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
 -out "$IGNITER_DIR/auth.crt" -days 365 -sha256 \
 -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 
 
 # Distribution certs
-openssl genrsa -out "$IGNITER_DIR/distribution.key" 2048
+/opt/deckhouse/bin/openssl genrsa -out "$IGNITER_DIR/distribution.key" 2048
 
-openssl req -new -key "$IGNITER_DIR/distribution.key" \
+/opt/deckhouse/bin/openssl req -new -key "$IGNITER_DIR/distribution.key" \
 -subj "/CN=embedded-registry-distribution" \
 -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
 -out "$IGNITER_DIR/distribution.csr"
 
-openssl x509 -req -in "$IGNITER_DIR/distribution.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
+/opt/deckhouse/bin/openssl x509 -req -in "$IGNITER_DIR/distribution.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
 -out "$IGNITER_DIR/distribution.crt" -days 365 -sha256 \
 -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
 

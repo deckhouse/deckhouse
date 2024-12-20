@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-rm -rf /var/lib/bashible/kubeadm
-bb-package-remove kubeadm
-
-{{- if and .registry.registryMode (ne .registry.registryMode "Direct") }}
-bb-package-remove seaweedfs dockerAuth dockerDistribution etcd openssl
-rm -rf $IGNITER_DIR
-{{- end }}
-
-rm -f /tmp/bootstrap.sh
-rm -rf /tmp/candi-bundle*
-rm -f /tmp/bundle*.tar
-rm -f /tmp/kubeadm-config*
-
-# needs for dhctl bootstrap restarting check
-echo "OK" > /opt/deckhouse/first-control-plane-bashible-ran
+set -Eeo pipefail
+mkdir -p /opt/deckhouse/bin
+cp -f openssl /opt/deckhouse/bin
