@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	d8updater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release/updater"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -45,7 +46,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -334,6 +334,17 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		}
 	}
 
+	////////////////////////////////////////////////////
+	// New Logic start
+	//
+	// 1) Calculate task for current release
+	// 1.1) if skip - update phase to Skipped and stop reconcile
+	// 1.2) if await - update phase to Pending and requeue
+	// 1.3) if process - go forward
+	// 2) Check requirements
+	// 2.1) if not met any requirements - update phase to Pending with all requirements errors and requeue
+	// 3) Apply if force with force logic ???
+	// 4) Apply ussually release
 	oCalc := d8updater.NewOrderCalculator(r.client, r.logger)
 	order, err := oCalc.CalculatePendingReleaseOrder(ctx, dr)
 	if err != nil {
@@ -341,6 +352,8 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	}
 
 	switch order.Order {
+	case d8updater.Process:
+		// pass
 	case d8updater.Skip:
 		err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
 			Phase:   v1alpha1.DeckhouseReleasePhaseSkipped,
@@ -359,10 +372,9 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 		})
 		if err != nil {
 			r.logger.Warn("await order status update ", slog.String("name", dr.GetName()), log.Err(err))
-			return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 		}
 
-		return res, nil
+		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
 	// add to reconciler???
@@ -396,6 +408,10 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
+
+	////////////////////////////////////////////////////
+	// New Logic End
+	//
 
 	{
 		var releases v1alpha1.DeckhouseReleaseList
@@ -700,33 +716,22 @@ func (r *deckhouseReleaseReconciler) newUpdaterKubeAPI() *d8updater.KubeAPI {
 func (r *deckhouseReleaseReconciler) updateReleaseStatus(ctx context.Context, dr *v1alpha1.DeckhouseRelease, status *v1alpha1.DeckhouseReleaseStatus) error {
 	r.logger.Debugf("refresh the %q release status", dr.GetName())
 
-	// events happen quite often, so conflicts happen often, default backoff not suitable
-	backoff := wait.Backoff{
+	return ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
+		if dr.Status.Phase != status.Phase {
+			dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
+		}
+
+		dr.Status.Phase = status.Phase
+		dr.Status.Message = status.Message
+
+		return nil
+	}, ctrlutils.WithOnErrorBackoff(&wait.Backoff{
 		Steps: 6,
 		// magic number
 		Duration: 20 * time.Millisecond,
 		Factor:   1.0,
 		Jitter:   0.1,
-	}
-
-	release := new(v1alpha1.DeckhouseRelease)
-
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-		return retry.RetryOnConflict(backoff, func() error {
-			if err := r.client.Get(ctx, client.ObjectKey{Name: dr.GetName()}, release); err != nil {
-				return err
-			}
-
-			if release.Status.Phase != status.Phase {
-				release.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
-			}
-
-			release.Status.Phase = status.Phase
-			release.Status.Message = status.Message
-
-			return r.client.Status().Update(ctx, release)
-		})
-	})
+	}))
 }
 
 func getDeckhouseContainerIndex(containers []corev1.Container) int {

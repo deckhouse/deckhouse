@@ -54,11 +54,25 @@ const (
 type CalculatingResult struct {
 	Order   Order
 	Message string
+
+	IsPatch  bool
+	IsLatest bool
+
+	DeployedReleaseInfo *ReleaseInfo
+}
+
+type ReleaseInfo struct {
+	Name    string
+	Version *semver.Version
 }
 
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 
 func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *v1alpha1.DeckhouseRelease) (*CalculatingResult, error) {
+	if dr.GetPhase() != v1alpha1.DeckhouseReleasePhasePending {
+		return nil, ErrReleasePhaseIsNotPending
+	}
+
 	releases, err := p.listReleases(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list releases: %w", err)
@@ -68,31 +82,26 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 		return a.GetVersion().Compare(b.GetVersion())
 	})
 
-	deployedIdx := slices.IndexFunc(releases, func(a v1alpha1.DeckhouseRelease) bool {
-		return a.Status.Phase == v1alpha1.DeckhouseReleasePhaseDeployed
-	})
-
-	currentDeployedReleaseVersion := releases[deployedIdx].GetVersion()
-
-	relIdx, _ := slices.BinarySearchFunc(releases, dr.GetVersion(), func(a v1alpha1.DeckhouseRelease, b *semver.Version) int {
-		return a.GetVersion().Compare(b)
-	})
-
-	if dr.GetPhase() != v1alpha1.DeckhouseReleasePhasePending {
-		return nil, ErrReleasePhaseIsNotPending
-	}
+	deployedReleaseInfo := p.getDeployedReleaseInfo(releases)
 
 	// if we have a deployed a release
-	if currentDeployedReleaseVersion != nil {
+	if deployedReleaseInfo != nil {
 		// if deployed version is greater than the pending one, this pending release should be superseded
-		if currentDeployedReleaseVersion.GreaterThan(dr.GetVersion()) {
+		if deployedReleaseInfo.Version.GreaterThan(dr.GetVersion()) {
 			return &CalculatingResult{
 				Order: Skip,
 			}, nil
 		}
 	}
 
+	relIdx, _ := slices.BinarySearchFunc(releases, dr.GetVersion(), func(a v1alpha1.DeckhouseRelease, b *semver.Version) int {
+		return a.GetVersion().Compare(b)
+	})
+
+	isLatestRelease := relIdx == len(releases)-1
+
 	// check previous release
+	// only for awaiting purpose
 	if relIdx > 0 {
 		prevRelease := releases[relIdx-1]
 
@@ -114,26 +123,34 @@ func (p *OrderCalculator) CalculatePendingReleaseOrder(ctx context.Context, dr *
 	}
 
 	// check next release
+	// patch calculate logic
 	if len(releases)-1 > relIdx {
 		nextRelease := releases[relIdx+1]
 
-		// if nextRelease version is not greater in major or minor version than current release
-		// it's definitely greater at patch version
+		// if nextRelease version is greater in major or minor version
+		// current release is definitely greatest at patch version
 		if dr.GetVersion().Major() < nextRelease.GetVersion().Major() ||
 			dr.GetVersion().Minor() < nextRelease.GetVersion().Minor() {
 			return &CalculatingResult{
-				Order: Process,
+				Order:               Process,
+				IsPatch:             true,
+				IsLatest:            isLatestRelease,
+				DeployedReleaseInfo: deployedReleaseInfo,
 			}, nil
 		}
 
 		return &CalculatingResult{
-			Order: Skip,
+			Order:   Skip,
+			IsPatch: true,
 		}, nil
 	}
 
-	// if we have no neighbours
+	// neighbours checks passed
+	// only minor/major releases must be here
 	return &CalculatingResult{
-		Order: Process,
+		Order:               Process,
+		IsLatest:            isLatestRelease,
+		DeployedReleaseInfo: deployedReleaseInfo,
 	}, nil
 }
 
@@ -145,4 +162,21 @@ func (p *OrderCalculator) listReleases(ctx context.Context) ([]v1alpha1.Deckhous
 	}
 
 	return releases.Items, nil
+}
+
+func (p *OrderCalculator) getDeployedReleaseInfo(releases []v1alpha1.DeckhouseRelease) *ReleaseInfo {
+	deployedIdx := slices.IndexFunc(releases, func(a v1alpha1.DeckhouseRelease) bool {
+		return a.Status.Phase == v1alpha1.DeckhouseReleasePhaseDeployed
+	})
+
+	if deployedIdx == -1 {
+		return nil
+	}
+
+	deployedDR := releases[deployedIdx]
+
+	return &ReleaseInfo{
+		Name:    deployedDR.GetName(),
+		Version: deployedDR.GetVersion(),
+	}
 }
