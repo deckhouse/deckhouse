@@ -58,7 +58,7 @@ shell:
   - |
 {{- range $key := list "default" "managed" "minimal" }}
     # Add bundle {{ $key }}
-    cat <<"EOD" > /deckhouse/modules/values-{{ $key }}.yaml
+    cat <<"EOD" > /chroot/deckhouse/modules/values-{{ $key }}.yaml
       {{- range $_, $edition := $.Editions }}
     {{- $.Files.Get (printf "%s/values-%s.yaml" $edition.modulesDir $key ) | nindent 4 }}
         {{- if eq $.Env $edition.name }}
@@ -82,7 +82,7 @@ shell:
     EOD
     chmod +x /deckhouse/deckhouse
     # Create symlink to grant entrypoint.sh write permission
-    ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
+    ln -fs /tmp/values.yaml /chroot/deckhouse/modules/values.yaml
     # Create deckhouse group
     groupadd -g 64535 deckhouse
     # Create deckhouse user
