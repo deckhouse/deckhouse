@@ -15,6 +15,7 @@ git:
   - shell_lib
   - deckhouse-controller/entrypoint.sh
   - deckhouse-controller/crds/*.yaml
+  - deckhouse-controller/wrapper
   - jq_lib
   - helm_lib
   - python_lib
@@ -83,7 +84,7 @@ shell:
     ln -fs /usr/bin/vim-console /usr/bin/vim
     ln -fs /usr/bin/vim-console /usr/bin/vi
     # Create chroot dir
-    setcap cap_sys_chroot=+ep /usr/bin/deckhouse-controller
+    setcap cap_sys_chroot=+ep /deckhouse/wrapper
     mkdir -p /chroot/tmp
     cp -r /usr/bin /chroot/
     cp -r /usr/lib /chroot/
