@@ -99,8 +99,8 @@ shell:
     cp -r /usr/lib /chroot/
     cp -r /usr/lib64 /chroot/
     chown deckhouse:deckhouse -R /chroot
-    ln -s /chroot/deckhouse/modules /etc/deckhouse/modules
-    ln -s /chroot/deckhouse/downloaded /etc/deckhouse/downloaded
+    ln -s /chroot/deckhouse/modules /deckhouse/modules
+    ln -s /chroot/deckhouse/downloaded /deckhouse/downloaded
 docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
