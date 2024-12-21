@@ -356,7 +356,7 @@ The `/templates` directory contains [Helm templates](https://helm.sh/docs/chart_
 
 * To facilitate working with templates, use [lib-helm](https://github.com/deckhouse/lib-helm), which is a set of extra functions that make it easier to work with global and module values.
 
-* Accesses to the registry from the _ModuleSource_ resource are available at the `.Values.<moduleName>.registry.dockercfg` path.
+* Accesses to the registry from the ModuleSource resource are available at the `.Values.<moduleName>.registry.dockercfg` path.
 
 * To use these functions to pull image pools in controllers, create a secret and add it to the corresponding parameter: `"imagePullSecrets": [{"name":"registry-creds"}]`.
 
@@ -378,7 +378,7 @@ You can find an example of an OpenAPI schema in [module template](https://github
 
 ### config-values.yaml
 
-This file is required to validate the module parameters that the user can configure via [_ModuleConfig_](../../cr.html#moduleconfig).
+This file is required to validate the module parameters that the user can configure via [ModuleConfig](../../cr.html#moduleconfig).
 
 To render the schema in the documentation on the site or in the documentation module in the cluster, create:
 - the `doc-ru-config-values.yaml` file with a structure similar to that of the `config-values.yaml` file. Keep only the translated description parameters in the `doc-ru-config-values.yaml` file;

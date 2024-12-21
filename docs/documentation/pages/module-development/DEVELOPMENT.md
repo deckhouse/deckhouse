@@ -7,31 +7,88 @@ permalink: en/module-development/development/
 
 When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](../../cr.html#modulepulloverride) resource is used for this purpose.
 
-An example:
+An example of ModulePullOverride:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ModulePullOverride
 metadata:
   name: <module-name>
 spec:
   imageTag: <tag of the module image>
   scanInterval: <image digest check interval. Default: 15s>
-  source: <ModuleSource ref>
 ```
 
 Requirements for the resource parameters:
-* The **metadata.name** module name must match the module name in the *ModuleSource* (the `.status.modules.[].name` parameter).
+* The module name (`metadata.name`) must match the module name in the ModuleSource (`.status.modules.[].name`).
 
-* The **spec.imageTag** container image tag can be anything, e.g., ~pr333~, ~my-branch~.
+* The container image tag (`spec.imageTag`) can be anything, e.g., `pr333`, `my-branch`.
 
-* The *ModuleSource* **spec.source** parameter provides the data for registry authorization.
+The `spec.scanInterval` time interval (optional) defines the interval for scanning images in the registry. The default interval is 15 seconds.
+To force scan you can change the interval or set the `renew=""` annotation on ModulePullOverride.
 
-The **spec.scanInterval** time interval (optional) defines the interval for scanning images in the registry. The default interval is 15 seconds.
+You can get the result of applying ModulePullOverride in the message (column `MESSAGE`) when retrieving ModulePullOverride information. The value `Ready` indicates the successful application of ModulePullOverride parameters. Any other value indicates conflict.
 
-You can specify a longer interval to force a refresh, and use the `renew=“”` annotation.
+Example of absence of conflicts when using ModulePullOverride:
 
-Below is an example of the command:
+```console
+$ kubectl get modulepulloverrides.deckhouse.io 
+NAME      UPDATED   MESSAGE
+example1  10s       Ready
+```
+
+Requirements for the module:
+* The module must exist; otherwise the message for ModulePullOverride will be *The module not found*.
+
+  An example:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME      UPDATED   MESSAGE
+  example1  10s       The module not found
+  ```
+
+* The module must not be embedded Deckhouse module; otherwise the message in ModulePullOverride will be *The module is embedded*.
+
+  An example:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME           UPDATED  MESSAGE
+  ingress-nginx  10s      The module is embedded
+  ```
+
+* The module must be enabled; otherwise, the message for ModulePullOverride will be *The module disabled*.
+
+  An example:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME     UPDATED   MESSAGE
+  example  7s        The module disabled
+  ```
+
+* The module must have a source; otherwise the message at ModulePullOverride will be *The module does not have an active source*.
+  
+  An example:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME       UPDATED   MESSAGE
+  example    12s       The module does not have an active source
+  ```
+
+* The source for the module must exist; otherwise the message for ModulePullOverride will be *The source not found*.
+
+  An example:
+
+  ```console
+  $ kubectl get modulepulloverrides.deckhouse.io 
+  NAME       UPDATED   MESSAGE
+  example    12s       The source not found
+  ```
+
+To update the module without waiting for the next update cycle to begin, you can execute the following command:
 
 ```sh
 kubectl annotate mpo <name> renew=""
@@ -39,12 +96,53 @@ kubectl annotate mpo <name> renew=""
 
 ## How it works
 
-When developing this resource, the specified module will not consider *ModuleUpdatePolicy*, nor will it load or create *ModuleRelease* objects.
+After creating ModulePullOverride, the corresponding module will not consider ModuleUpdatePolicy, and will also not load and create ModuleRelease objects. The module will be loaded upon every change of the `imageDigest` parameter, after which it will be applied in the cluster. The ModuleSource status will have `overridden: true`, which indicates that ModulePullOverride is being used instead of ModuleUpdatePolicy. Also, the corresponding Module object will have an `IsOverridden` field in its status, and the module version from `imageTag`.
 
-Instead, the module will be pulled every time the `imageDigest` parameter is changed and it will be applied in the cluster.
-At the same time, that module will get the `overridden: true` attribute in the status of the [ModuleSource](../../cr.html#modulesource) resource, indicating that the [ModulePullOverride](../../cr.html#modulepulloverride) resource is being used.
+An example:
 
-The module will keep running after *ModulePullOverride* is removed. However, if the [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) policy is applied to the module, new releases (if available) will be pulled to replace the current "developer version".
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: "2024-11-18T15:34:15Z"
+  generation: 16
+  labels:
+    deckhouse.io/epoch: "1326105356"
+  name: example
+  resourceVersion: "230347744"
+  uid: 7111cee7-50cd-4ecf-ba20-d691b13b0f59
+properties:
+  availableSources:
+  - example
+  releaseChannel: Stable
+  requirements:
+    deckhouse: '> v1.63.0'
+    kubernets: '> v1.30.0'
+  source: example
+  version: mpo-tag
+  weight: 910
+status:
+  conditions:
+  - lastProbeTime: "2024-12-03T15:57:20Z"
+    lastTransitionTime: "2024-12-03T15:57:20Z"
+    status: "True"
+    type: EnabledByModuleConfig
+  - lastProbeTime: "2024-12-03T15:59:58Z"
+    lastTransitionTime: "2024-12-03T15:57:26Z"
+    status: "True"
+    type: EnabledByModuleManager
+  - lastProbeTime: "2024-12-03T15:59:58Z"
+    lastTransitionTime: "2024-12-03T15:56:23Z"
+    status: "True"
+    type: IsReady
+  - lastProbeTime: "2024-12-03T15:59:48Z"
+    lastTransitionTime: "2024-12-03T15:56:47Z"
+    status: "True"
+    type: IsOverridden
+  phase: Ready
+```
+
+The module will keep running after ModulePullOverride is removed. But if there is a [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) for the module, new releases of the module (ModuleRelease) will be pulled to replace the current "developer version".
 
 ### An example
 
@@ -70,42 +168,40 @@ The module will keep running after *ModulePullOverride* is removed. However, if 
      modulesCount: 2
    ```
 
-1. Create a [ModulePullOverride](../../cr.html#modulepulloverride) resource for the `echo` module:
+1. Enable the module and create [ModulePullOverride](../../cr.html#modulepulloverride) for the `echo` module:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: ModulePullOverride
    metadata:
      name: echo
    spec:
      imageTag: main-patch-03354
-     source: test
    ```
 
-   This resource will be validating the `registry.example.com/deckhouse/modules/echo:main-patch-03354` image tag (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
+  After creating ModulePullOverride, the image tag `registry.example.com/deckhouse/modules/echo:main-patch-03354` will be used for the module (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
 
-1. The status of this resource will change with each update:
+1. The ModulePullOverride will change with each update of the module:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1alpha2
    kind: ModulePullOverride
    metadata:
      name: echo
    spec:
      imageTag: main-patch-03354
      scanInterval: 15s
-     source: test
    status:
      imageDigest: sha256:ed958cc2156e3cc363f1932ca6ca2c7f8ae1b09ffc1ce1eb4f12478aed1befbc
-     message: ""
+     message: "Ready"
      updatedAt: "2023-12-07T08:41:21Z"
    ```
 
    where:
-   - **imageDigest** is the unique identifier of the container image that was pulled.
-   - **lastUpdated** is the time when the image was last pulled.
+   - `imageDigest` is the unique identifier of the container image that was pulled.
+   - `lastUpdated` is the time when the image was last pulled.
 
-1. In this case, *ModuleSource* would look as follows:
+1. In this case, ModuleSource would look as follows:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
