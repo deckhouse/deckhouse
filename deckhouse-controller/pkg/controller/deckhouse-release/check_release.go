@@ -23,8 +23,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"path"
-	"regexp"
 	"sort"
 	"time"
 
@@ -127,6 +127,8 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 	}
 
 	newSemver, err := semver.NewVersion(releaseChecker.releaseMetadata.Version)
+	// TODO remove it
+	r.logger.Info("checkDeckhouseRelease", "newSemver", newSemver)
 	if err != nil {
 		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
 		return fmt.Errorf("parse semver: %w", err)
@@ -212,9 +214,13 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 			}
 
 			actual := release.GetVersion()
+			// TODO: remove it
+			r.logger.Info("checkDeckhouseRelease",
+				slog.String("actual", actual.String()),
+				slog.String("newSemver", newSemver.String()))
 			for !actual.Equal(newSemver) {
-				if actual, err = releaseChecker.StepByStepUpdate(ctx, actual, newSemver); err != nil {
-					releaseChecker.logger.Errorf("step by step update failed. err: %v", err)
+				if actual, err = releaseChecker.StepByStepUpdate(ctx, newSemver); err != nil {
+					releaseChecker.logger.Error(fmt.Sprintf("step by step update failed. err: %v", err))
 					labels := map[string]string{
 						"version": release.GetVersion().Original(),
 					}
@@ -314,12 +320,18 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 
 func NewDeckhouseReleaseChecker(opts []cr.Option, logger *log.Logger, dc dependency.Container, moduleManager moduleManager, imagesRegistry, releaseChannel string) (*DeckhouseReleaseChecker, error) {
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
-	regCli, err := dc.GetRegistryClient(path.Join(imagesRegistry, "release-channel"), opts...)
+	relCli, err := dc.GetRegistryClient(path.Join(imagesRegistry, "release-channel"), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	regCli, err := dc.GetRegistryClient(imagesRegistry, opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	dcr := &DeckhouseReleaseChecker{
+		releaseClient:  relCli,
 		registryClient: regCli,
 		logger:         logger,
 		moduleManager:  moduleManager,
@@ -330,10 +342,11 @@ func NewDeckhouseReleaseChecker(opts []cr.Option, logger *log.Logger, dc depende
 }
 
 type DeckhouseReleaseChecker struct {
-	registryClient cr.Client
-	logger         *log.Logger
-	moduleManager  moduleManager
+	releaseClient cr.Client
+	logger        *log.Logger
+	moduleManager moduleManager
 
+	registryClient  cr.Client
 	releaseChannel  string
 	releaseMetadata ReleaseMetadata
 	tags            []string
@@ -349,7 +362,7 @@ func (dcr *DeckhouseReleaseChecker) releaseCanarySettings() canarySettings {
 }
 
 func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash string) (string, error) {
-	image, err := dcr.registryClient.Image(context.TODO(), dcr.releaseChannel)
+	image, err := dcr.releaseClient.Image(context.TODO(), dcr.releaseChannel)
 	if err != nil {
 		return "", err
 	}
@@ -517,8 +530,8 @@ func (dcr *DeckhouseReleaseChecker) CalculateReleaseDelay(ts metav1.Time, cluste
 	return nil
 }
 
-func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, actual, target *semver.Version) (*semver.Version, error) {
-	nextVersion, err := dcr.nextVersion(ctx, actual, target)
+func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, target *semver.Version) (*semver.Version, error) {
+	nextVersion, err := dcr.getLastVersion(ctx, target)
 	if err != nil {
 		return nil, fmt.Errorf("get next version: %w", err)
 	}
@@ -542,43 +555,38 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, actual
 	return nextVersion, nil
 }
 
-func (dcr *DeckhouseReleaseChecker) nextVersion(ctx context.Context, actual, target *semver.Version) (*semver.Version, error) {
-	if actual.Major() != target.Major() {
-		return nil, fmt.Errorf("major version updated") // TODO step by step update for major version
-	}
-
-	if actual.Minor() == target.Minor() {
-		return dcr.getMaxPatch(ctx, 1, actual.Minor())
-	}
-
-	// Here we get the following minor with the maximum patch version.
-	// <major.minor+1.max>
-	return dcr.getMaxPatch(ctx, 1, actual.IncMinor().Minor())
-}
-
-func (dcr *DeckhouseReleaseChecker) getMaxPatch(ctx context.Context, major, minor uint64) (*semver.Version, error) {
+func (dcr *DeckhouseReleaseChecker) getLastVersion(ctx context.Context, target *semver.Version) (*semver.Version, error) {
 	tags, err := dcr.listTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
-	expr := fmt.Sprintf("^v%d.%d.([0-9]+)$", major, minor)
-	r, err := regexp.Compile(expr)
+	// TODO remove it
+	dcr.logger.Info("listTags",
+		slog.Any("tags", tags))
+
+	c, err := semver.NewConstraint(fmt.Sprintf("~%d.%d", target.Major(), target.Minor()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new constraint: %w", err)
 	}
 
 	collection := make([]*semver.Version, 0)
 	for _, ver := range tags {
-		if r.MatchString(ver) {
-			newSemver, err := semver.NewVersion(ver)
-			if err != nil {
-				dcr.logger.Errorf("unable to parse semver from the registry Version: %v. This version will be skipped.", ver)
-				continue
-			}
+		newSemver, err := semver.NewVersion(ver)
+		if err != nil {
+			// a lot stacktrace
+			// dcr.logger.Error(fmt.Sprintf("unable to parse semver from the registry Version: %v. This version will be skipped.", ver))
+			continue
+		}
+		// TODO remove it
+		dcr.logger.Info("getLastVersion: range tags", "newSemver", newSemver)
+		if c.Check(newSemver) {
 			collection = append(collection, newSemver)
 		}
 	}
+
+	// TODO remove it
+	dcr.logger.Info("getLastVersion: collection", "collection", collection)
 
 	if len(collection) == 0 {
 		return nil, fmt.Errorf("next minor version is missed")
