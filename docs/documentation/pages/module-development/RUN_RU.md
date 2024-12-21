@@ -243,7 +243,7 @@ module-one  910      example  Error  True     Error
 ```console
 $ kubectl get module module-one
 NAME        WEIGHT   SOURCE   PHASE     ENABLED  READY
-module-one                    Conflict  Fasle    False
+module-one                    Conflict  False    False
 ```
 
 Чтобы разрешить конфликт, укажите источник модуля (имя ModuleSource) явно в ModuleConfig.

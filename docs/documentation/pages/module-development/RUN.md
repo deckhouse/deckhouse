@@ -241,7 +241,7 @@ If the enabled module has several available sources, and a source for the module
 ```console
 $ kubectl get module module-one
 NAME        WEIGHT   SOURCE   PHASE     ENABLED  READY
-module-one                    Conflict  Fasle    False
+module-one                    Conflict  False    False
 ```
 
 To resolve the conflict, specify the source of the module (ModuleSource name) explicitly in ModuleConfig.
