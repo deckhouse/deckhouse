@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -46,6 +47,7 @@ type UploadScript struct {
 	stdoutHandler func(string)
 
 	timeout time.Duration
+	ctx     context.Context
 }
 
 func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *UploadScript {
@@ -68,6 +70,10 @@ func (u *UploadScript) WithStdoutHandler(handler func(string)) {
 
 func (u *UploadScript) WithTimeout(timeout time.Duration) {
 	u.timeout = timeout
+}
+
+func (u *UploadScript) WithContext(ctx context.Context) {
+	u.ctx = ctx
 }
 
 func (u *UploadScript) WithEnvs(envs map[string]string) {
@@ -111,6 +117,10 @@ func (u *UploadScript) Execute() (stdout []byte, err error) {
 
 	if u.timeout > 0 {
 		scriptCmd.WithTimeout(u.timeout)
+	}
+
+	if u.ctx != nil {
+		scriptCmd.WithContext(u.ctx)
 	}
 
 	if u.cleanupAfterExec {
@@ -203,6 +213,11 @@ func (u *UploadScript) ExecuteBundle(parentDir, bundleDir string) (stdout []byte
 	bundleCmd.WithStdoutHandler(handler)
 	bundleCmd.CaptureStdout(nil)
 	bundleCmd.CaptureStderr(nil)
+
+	if u.ctx != nil {
+		bundleCmd.WithContext(u.ctx)
+	}
+
 	err = bundleCmd.Run()
 	if err != nil {
 		if lastStep != "" {

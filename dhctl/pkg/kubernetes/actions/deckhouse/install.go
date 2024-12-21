@@ -296,6 +296,62 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 		})
 	}
 
+	for nodeName, dataDevices := range cfg.NodesDataDevices {
+		getKubernetesDataDevicePathManifest := func() interface{} {
+			return manifests.SecretMasterKubernetesDataDevicePath(nodeName, []byte(dataDevices.KubeDataDevicePath))
+		}
+
+		getSystemRegistryDataDevicePathManifest := func() interface{} {
+			return manifests.SecretMasterSystemRegistryDataDevicePath(nodeName, []byte(dataDevices.SystemRegistryDataDevicePath))
+		}
+		tasks = append(tasks, []actions.ManifestTask{
+			{
+				Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
+				Manifest: getKubernetesDataDevicePathManifest,
+				CreateFunc: func(manifest interface{}) error {
+					_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+					return err
+				},
+				UpdateFunc: func(manifest interface{}) error {
+					data, err := json.Marshal(manifest.(*apiv1.Secret))
+					if err != nil {
+						return err
+					}
+					_, err = kubeCl.CoreV1().Secrets("d8-system").Patch(
+						context.TODO(),
+						"d8-masters-kubernetes-data-device-path",
+						types.MergePatchType,
+						data,
+						metav1.PatchOptions{},
+					)
+					return err
+				},
+			},
+			{
+				Name:     `Secret "d8-masters-system-registry-data-device-path"`,
+				Manifest: getSystemRegistryDataDevicePathManifest,
+				CreateFunc: func(manifest interface{}) error {
+					_, err := kubeCl.CoreV1().Secrets("d8-system").Create(context.TODO(), manifest.(*apiv1.Secret), metav1.CreateOptions{})
+					return err
+				},
+				UpdateFunc: func(manifest interface{}) error {
+					data, err := json.Marshal(manifest.(*apiv1.Secret))
+					if err != nil {
+						return err
+					}
+					_, err = kubeCl.CoreV1().Secrets("d8-system").Patch(
+						context.TODO(),
+						"d8-masters-system-registry-data-device-path",
+						types.MergePatchType,
+						data,
+						metav1.PatchOptions{},
+					)
+					return err
+				},
+			},
+		}...)
+	}
+
 	if len(cfg.ClusterConfig) > 0 {
 		tasks = append(tasks, actions.ManifestTask{
 			Name:     `Secret "d8-cluster-configuration"`,
@@ -316,7 +372,7 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 			Name: `Secret "d8-provider-cluster-configuration"`,
 			Manifest: func() interface{} {
 				return manifests.SecretWithProviderClusterConfig(
-					cfg.ProviderClusterConfig, cfg.CloudDiscovery,
+					cfg.ProviderClusterConfig, cfg.CloudDiscovery, cfg.SystemRegistryConfig,
 				)
 			},
 			CreateFunc: func(manifest interface{}) error {
@@ -420,6 +476,10 @@ func CreateDeckhouseManifests(kubeCl *client.KubernetesClient, cfg *config.Deckh
 	tasks = append(tasks, controllerDeploymentTask(kubeCl, cfg))
 
 	result := &ManifestsResult{}
+
+	if err := config.CheckOrSetupSystemRegistryModuleConfig(cfg); err != nil {
+		return result, err
+	}
 
 	if len(cfg.ModuleConfigs) > 0 {
 		prepareModuleConfig(cfg.ModuleConfigs[0], result)

@@ -61,6 +61,15 @@ resource "ovirt_disk" "master-kubernetes-data" {
   sparse            = false
 }
 
+resource "ovirt_disk" "master-system-registry-data" {
+  count             = var.systemRegistryEnable ? 1 : 0
+  format            = "raw"
+  size              = local.master_system_registry_disk_size
+  storage_domain_id = local.storage_domain_id
+  alias             = join("-", [local.master_node_name, "system-registry-data"])
+  sparse            = false
+}
+
 resource "ovirt_disk_attachment" "master-kubernetes-data-attachment" {
   disk_id        = ovirt_disk.master-kubernetes-data.id
   disk_interface = "virtio_scsi"
@@ -69,11 +78,29 @@ resource "ovirt_disk_attachment" "master-kubernetes-data-attachment" {
   active         = true
 }
 
+resource "ovirt_disk_attachment" "master-system-registry-data-attachment" {
+  count          = var.systemRegistryEnable ? 1 : 0
+  disk_id        = ovirt_disk.master-system-registry-data[0].id
+  disk_interface = "virtio_scsi"
+  vm_id          = ovirt_vm.master_vm.id
+  bootable       = false
+  active         = true
+
+  depends_on = [ovirt_disk_attachment.master-kubernetes-data-attachment]
+}
+
 resource "ovirt_vm_start" "master_vm" {
   vm_id      = ovirt_vm.master_vm.id
   #stop_behavior = "stop"
   force_stop = true
 
-  depends_on = [ovirt_nic.master_vm_nic, ovirt_disk.master-kubernetes-data, ovirt_disk_attachment.master-kubernetes-data-attachment, ovirt_disk_resize.master_boot_disk_resize]
+  depends_on = [
+    ovirt_nic.master_vm_nic,
+    ovirt_disk.master-kubernetes-data,
+    ovirt_disk_attachment.master-kubernetes-data-attachment,
+    ovirt_disk.master-system-registry-data,
+    ovirt_disk_attachment.master-system-registry-data-attachment,
+    ovirt_disk_resize.master_boot_disk_resize,
+  ]
 }
 
