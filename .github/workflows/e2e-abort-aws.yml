@@ -86,6 +86,7 @@ jobs:
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
       edition: ${{ steps.check.outputs.edition }}
       multimaster: ${{ steps.check.outputs.multimaster }}
+      cis: ${{ steps.check.outputs.cis }}
     steps:
 
       # <template: checkout_step>
