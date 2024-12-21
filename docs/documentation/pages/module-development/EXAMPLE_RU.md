@@ -214,13 +214,13 @@ lang: ru
          updatePolicy: helloworld-policy
    ```
 
-1. Проверьте ресурс *ModuleSource* (в статусе не должно содержаться ошибок и должны быть перечислены доступные модули):
+1. Проверьте ModuleSource (в статусе не должно содержаться ошибок и должны быть перечислены доступные модули):
 
    ```shell
    kubectl get ms ghcr -o yaml
    ```
 
-1. Убедитесь, что были созданы новые ресурсы [ModuleRelease](../../cr.html#modulerelease) для модуля:
+1. Убедитесь, что были созданы новые объекты [ModuleRelease](../../cr.html#modulerelease) для модуля:
 
    ```shell
    kubectl get mr

@@ -25,9 +25,9 @@ spec:
 
 * Тег образа контейнера (`spec.imageTag`) может быть любым. Например, `pr333`, `my-branch`.
 
-Необязательный интервал времени **spec.scanInterval** устанавливает интервал для проверки образов в registry. По умолчанию задан интервал в 15 секунд. Для принудительного обновления можно изменить интервал, либо установить аннотацию `renew=""`.
+Необязательный интервал времени `spec.scanInterval` устанавливает интервал для проверки образов в registry. По умолчанию задан интервал в 15 секунд. Для принудительного обновления можно изменить интервал, либо установить на ModulePullOverride аннотацию `renew=""`.
 
-Результат применения ModulePullOverride можно увидеть в сообщении (колонка `MESSAGE`) при получении информации об ModulePullOverride. Значение `Ready` означает применение параметров ModulePullOverride. Любое другое значение означает наличие конфликтов.
+Результат применения ModulePullOverride можно увидеть в сообщении (колонка `MESSAGE`) при получении информации об ModulePullOverride. Значение `Ready` означает применение параметров ModulePullOverride. Любое другое значение означает конфликт.
 
 Пример отсутствия конфликтов при применении ModulePullOverride:
 
@@ -48,7 +48,7 @@ example1  10s       Ready
   example1  10s       The module not found
   ```
 
-* Модуль не должен быть встроенным, иначе сообщение у ModulePullOverride будет *The module is embedded*.
+* Модуль не должен быть встроенным модулем Deckhouse, иначе сообщение у ModulePullOverride будет *The module is embedded*.
 
   Пример:
 
@@ -96,12 +96,9 @@ kubectl annotate mpo <name> renew=""
 
 ## Принцип действия
 
-После создания этого ресурса указанный модуль не будет учитывать *ModuleUpdatePolicy*, а также не будет загружать и создавать объекты *ModuleRelease*.
+После создания ModulePullOverride, соответствующий модуль не будет учитывать ModuleUpdatePolicy, а также не будет загружать и создавать объекты ModuleRelease. Модуль будет загружаться при каждом изменении параметра `imageDigest`, после чего будет применяться в кластере. В статусе ModuleSource модуль получит признак `overridden: true`, который указывает на то, что используется ModulePullOverride, а не ModuleUpdatePolicy. Также, соответствущий объект Module будет иметь в статусе поле `IsOverridden` и версию модуля из `imageTag`.
 
-Вместо этого модуль будет загружаться при каждом изменении параметра `imageDigest` и будет применяться в кластере.
-При этом в статусе ресурса [ModuleSource](../../cr.html#modulesource) этот модуль получит признак `overridden: true`, который укажет на то, что используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
-
-Также ресурс модуля будет иметь в статусе признак `IsOverridden` и версию модуля из `imageTag`. Пример:
+Пример:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -145,7 +142,7 @@ status:
   phase: Ready
 ```
 
-После удаления *ModulePullOverride* модуль продолжит функционировать, но если для него применена политика [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), то при наличии загрузятся новые релизы, которые заменят текущую "версию разработчика".
+После удаления ModulePullOverride модуль продолжит работать. Но, если для модуля существует [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), то загрузятся новые релизы модуля (ModuleRelease), которые заменят текущую "версию разработчика".
 
 ### Пример
 
@@ -171,7 +168,7 @@ status:
      modulesCount: 2
    ```
 
-1. Включите модуль и создайте ресурс [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
+1. Включите модуль и создайте [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -182,9 +179,9 @@ status:
      imageTag: main-patch-03354
    ```
 
-   Этот ресурс будет проверять тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
+   После создания ModulePullOverride, для модуля будет использоваться тег образа `registry.example.com/deckhouse/modules/echo:main-patch-03354` (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
 
-1. При каждом обновлении - статус этого ресурса будет меняться:
+1. Данные ModulePullOverride будут меняться при каждом обновлении модуля:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -201,10 +198,10 @@ status:
    ```
 
    где:
-   - **imageDigest** — уникальный идентификатор образа контейнера, который был загружен.
-   - **lastUpdated** — время последней загрузки образа.
+   - `imageDigest` — уникальный идентификатор образа контейнера, который был загружен.
+   - `lastUpdated` — время последней загрузки образа.
 
-1. При этом *ModuleSource* приобретет вид:
+1. При этом ModuleSource приобретет вид:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -260,9 +257,7 @@ registry.example.io
 ```
 
 {% alert level="warning" %}
-
 Container registry должен поддерживать вложенную структуру репозиториев. Подробнее об этом [в разделе требований](../#требования).  
-
 {% endalert %}
 
 Далее приведен список команд для работы с источником модулей. В примерах используется утилита [crane](https://github.com/google/go-containerregistry/tree/main/cmd/crane#crane). Установите ее [по инструкции](https://github.com/google/go-containerregistry/tree/main/cmd/crane#installation). Для macOS воспользуйтесь `brew`.

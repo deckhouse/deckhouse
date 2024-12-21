@@ -16,7 +16,7 @@ lang: ru
 
 Чтобы указать в кластере источник, откуда нужно загружать информацию о модулях, необходимо создать ресурс [ModuleSource](../../cr.html#modulesource). В этом ресурсе указывается адрес container registry, откуда DKP будет загружать модули, параметры аутентификации и другие настройки.
 
-Пример ресурса `ModuleSource`:
+Пример ресурса ModuleSource:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -29,7 +29,7 @@ spec:
     dockerCfg: <base64 encoded credentials>
 ```
 
-После создания ресурса `ModuleSource` DKP начнет выполнять периодическую (раз в три минуты) синхронизацию данных с источником модулей (загружать информацию о модулях, доступны в источнике).
+После создания ресурса ModuleSource DKP начнет выполнять периодическую (раз в три минуты) синхронизацию данных с источником модулей (загружать информацию о модулях, доступны в источнике).
 
 Проверить состояние синхронизации можно с помощью следующей команды:
 
@@ -53,7 +53,7 @@ NAME        COUNT   SYNC   MSG
 example     2       16s    Some errors occurred. Inspect status for details
 ```
 
-Подробную информацию об ошибках можно получить в поле `pullError` в статусе ресурса _ModuleSource_.
+Подробную информацию об ошибках можно получить в поле `pullError` в статусе ресурса ModuleSource.
 
 Пример получения подробной информации об ошибках из источника модулей `example`:
 
@@ -65,7 +65,7 @@ module-2 module error:
   fetch image error: GET https://registry.example.com/v2/deckhouse/modules/module-2/release/manifests/stable: MANIFEST_UNKNOWN: manifest unknown; map[Tag:stable]
 ```
 
-В случае успешной синхронизации, поле `.status.modules` ресурса _ModuleSource_ будет содержать список модулей, доступных для включения в кластере.
+В случае успешной синхронизации, поле `.status.modules` ресурса ModuleSource будет содержать список модулей, доступных для включения в кластере.
 
 Пример получения списка модулей, доступных из источника модулей `example`:
 
@@ -80,7 +80,7 @@ module-1 module-2
 kubectl get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
-После создания ресурса `ModuleSource` и успешной синхронизации, в кластере должны начать появляться _модули_ — ресурсы [Module](../../cr.html#module) (DKP создает их автоматически, создавать их не нужно).
+После создания ресурса ModuleSource и успешной синхронизации, в кластере должны начать появляться _модули_ — ресурсы [Module](../../cr.html#module) (DKP создает их автоматически, создавать их не нужно).
 Посмотреть список модулей можно с помощью следующей команды:
 
 ```shell
@@ -228,7 +228,7 @@ status:
   phase: Ready
 ```
 
-В Module можно увидеть текущую установленную версию модуля, его вес, источник откуда он скачался, его зависимости и релизный канал.
+В Module можно увидеть текущую установленную версию модуля, его вес, источник откуда он скачался, зависимости и релизный канал.
 
 При возникновении каких либо ошибок, модуль перейдет в фазу ошибки (`Error`):
 
@@ -376,21 +376,21 @@ module-two                   Available   False     False
 ### Если что-то пошло не так
 
 Если при включении модуля в кластере возникли ошибки, то получить информацию о них можно следующими способами:
-- Посмотреть журнал DKP:
+- Посмотреть журнал Deckhouse:
 
   ```shell
   kubectl -n d8-system logs -l app=deckhouse
   ```
 
-- Посмотреть ресурс `Module` подробнее:
+- Посмотреть объект Module подробнее:
 
   ```console
   kubectl get module module-one -oyaml
   ```
   
-- Посмотреть ресурс `ModuleConfig` модуля:
+- Посмотреть объект ModuleConfig модуля:
 
-  Пример вывода информации об ошибке модуля `module-1`:
+  Пример вывода информации об ошибке модуля `module-one`:
 
   ```console
   $ kubectl get moduleconfig module-one
@@ -398,7 +398,7 @@ module-two                   Available   False     False
   module-one  true                7s    Ignored: unknown module name
   ```
 
-- Посмотреть ресурс `ModuleSource`:
+- Посмотреть объект ModuleSource:
 
   Пример вывода если у источника модуля есть проблемы со скачиванием модуля:
 
@@ -408,8 +408,8 @@ module-two                   Available   False     False
   example     2       16s    Some errors occurred. Inspect status for details
   ```
 
-По аналогии [с DeckhouseRelease](../../cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](../../cr.html#modulerelease). DKP создает ресурсы ModuleRelease исходя из того, что хранится в container registry.
-При поиске проблем с модулем проверьте также доступные в кластере релизы модуля:
+По аналогии [с DeckhouseRelease](../../cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](../../cr.html#modulerelease). DKP создает ModuleRelease исходя из того, что хранится в container registry.
+При поиске проблем с модулем проверьте также доступные в кластере ModuleRelease:
 
 ```shell
 kubectl get mr
@@ -423,7 +423,7 @@ NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAG
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
 
-В примере вывода показан _ModuleRelease_, когда режим обновления (параметр [update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) ресурса _ModuleUpdatePolicy_ установлен в `Manual`. В этом случае необходимо вручную подтвердить установку новой версии модуля, установив на релиз аннотацию `modules.deckhouse.io/approved="true"`:
+В примере вывода показан ModuleRelease, когда режим обновления (параметр [update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) ModuleUpdatePolicy установлен в `Manual`. В этом случае необходимо вручную подтвердить установку новой версии модуля, установив на ModuleRelease аннотацию `modules.deckhouse.io/approved="true"`:
 
 ```shell
 kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"

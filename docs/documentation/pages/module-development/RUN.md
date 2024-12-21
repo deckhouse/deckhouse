@@ -15,7 +15,7 @@ Follow these steps to run the module in a cluster:
 
 Create a [ModuleSource](../../cr.html#modulesource) resource to set the source to fetch module information from. This resource will contain the address of the container registry to pull modules from, authentication parameters, and other settings.
 
-An example of a `ModuleSource` resource:
+An example of a ModuleSource resource:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -28,7 +28,7 @@ spec:
     dockerCfg: <base64 encoded credentials>
 ```
 
-After the `ModuleSource` resource is created, DKP will start to perform periodic (every three minutes) data synchronization with the module source (fetching information about the modules available in the source).
+After the ModuleSource resource is created, DKP will start to perform periodic (every three minutes) data synchronization with the module source (fetching information about the modules available in the source).
 
 Use the following command to check the synchronization status:
 
@@ -41,7 +41,7 @@ If the synchronization is successful, you will see output similar to the one bel
 ```shell
 $ kubectl get ms
 NAME        COUNT   SYNC   MSG
-example     2       16s
+example     2       16s    Ready
 ```
 
 If there are synchronization errors, the `MSG` column will contain a general description of the error, e.g.:
@@ -52,19 +52,19 @@ NAME        COUNT   SYNC   MSG
 example     2       16s    Some errors occurred. Inspect status for details
 ```
 
-Detailed error information can be found in the `status.moduleErrors` field of the _ModuleSource_ resource.
+Detailed error information can be found in the `pullError` field in the status of the ModuleSource resource.
 
 For example, here's how you can get detailed error description from the `example` module source:
 
 ```console
-$ kubectl  get ms example -o jsonpath='{range .status.moduleErrors[*]}{.name}{" module error:\n\t"}{.error}{"\n"}{end}'
+$ kubectl get ms example -o jsonpath='{range .status.modules[*]}{.name}{" module error:\n\t"}{.pullError}{"\n"}{end}'
 module-1 module error:
   fetch image error: GET https://registry.example.com/v2/deckhouse/modules/module-1/release/manifests/stable: MANIFEST_UNKNOWN: manifest unknown; map[Tag:stable]
 module-2 module error:
   fetch image error: GET https://registry.example.com/v2/deckhouse/modules/module-2/release/manifests/stable: MANIFEST_UNKNOWN: manifest unknown; map[Tag:stable]
 ```
 
-If synchronization is successful, the `.status.modules` field of the _ModuleSource_ resource will contain a list of modules ready to be enabled in the cluster.
+If synchronization is successful, the `.status.modules` field of the ModuleSource resource will contain a list of modules ready to be enabled in the cluster.
 
 Here is an example of how you can get a list of modules available from the `example` module source:
 
@@ -79,13 +79,13 @@ The complete list of modules available from all module sources created in the cl
 kubectl get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
-After creating the `ModuleSource` resource and successful synchronization, _modules_ — [Module](../../cr.html#module) resources should start appearing in the cluster (DKP creates them automatically, you do not need to create them). You can view the list of modules using the following command:
+After creating the ModuleSource resource and successful synchronization, _modules_ — [Module](../../cr.html#module) resources should start appearing in the cluster (DKP creates them automatically, you do not need to create them). You can view the list of modules using the following command:
 
 ```shell
 kubectl get module
 ```
 
-Example of obtaining a list of modules:
+Example of getting a list of modules:
 
 ```сonsole
 $ kubectl get module
@@ -373,19 +373,19 @@ You can enable the module similarly to built-in DKP modules using any of the fol
 ### Troubleshooting
 
 If there were errors while enabling a module in the cluster, you can learn about them as follows:
-- View the DKP log:
+- View Deckhouse log:
 
   ```shell
   kubectl -n d8-system logs -l app=deckhouse
   ```
 
-- View the `Module` in more detail:
+- View the Module object in more detail:
 
   ```console
   kubectl get module module-one -oyaml
   ```
   
-- View the `ModuleConfig` resource of the module.
+- View the ModuleConfig object of the module.
 
   Here is an example of the error message for `module-one`:
 
@@ -395,7 +395,7 @@ If there were errors while enabling a module in the cluster, you can learn about
   module-one  true                7s    Ignored: unknown module name
   ```
 
-- View the `ModuleSource` resource.
+- View the ModuleSource object.
 
   Example output if the module source has problems with downloading the module:
 
@@ -405,7 +405,7 @@ If there were errors while enabling a module in the cluster, you can learn about
   example     2       16s    Some errors occurred. Inspect status for details
   ```
 
-Similar to [DeckhouseRelease](../../cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](../../cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the module releases available in the cluster as well:
+Similar to [DeckhouseRelease](../../cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](../../cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the ModuleRelease available in the cluster as well:
 
 ```shell
 kubectl get mr
@@ -413,13 +413,13 @@ kubectl get mr
 
 Output example:
 
-```shell
+```console
 $ kubectl get mr
 NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAGE
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
 
-The example output above illustrates _ModuleRelease_ message when the update mode ([update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) of the _ModuleUpdatePolicy_ resource is set to `Manual`. In this case, you must manually confirm the installation of the new module version by adding the `modules.deckhouse.io/approved="true"` annotation to the release:
+The example output above illustrates ModuleRelease message when the update mode ([update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) of the ModuleUpdatePolicy is set to `Manual`. In this case, you must manually confirm the installation of the new module version by adding the `modules.deckhouse.io/approved="true"` annotation to the ModuleRelease:
 
 ```shell
 kubectl annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"

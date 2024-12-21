@@ -101,7 +101,7 @@ Highlights:
 <!--
 ## Stages of specific module features @TODO
 
-The *ModuleConfig* resource allows you to control additional module options. These options can be marked as `Experimental`, `Preview`, `GA` or `Deprecated` in the `x-feature-stage` parameter in the OpenAPI schema `x-feature-stage: Experimental|Preview|GA|Deprecated` (the default value is `GA`).
+The ModuleConfig resource allows you to control additional module options. These options can be marked as `Experimental`, `Preview`, `GA` or `Deprecated` in the `x-feature-stage` parameter in the OpenAPI schema `x-feature-stage: Experimental|Preview|GA|Deprecated` (the default value is `GA`).
 
 A warning is shown when attempting to enable functions that have stages other than `GA`.
 
