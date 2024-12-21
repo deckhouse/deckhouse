@@ -89,7 +89,7 @@ kubectl get module
 
 Пример получения списка модулей:
 
-```сonsole
+```console
 $ kubectl get module
 NAME       WEIGHT   SOURCE   PHASE       ENABLED   READY
 module-one                   Available   False     False                      
