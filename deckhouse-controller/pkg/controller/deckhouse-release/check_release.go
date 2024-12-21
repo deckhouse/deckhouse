@@ -574,7 +574,8 @@ func (dcr *DeckhouseReleaseChecker) getLastVersion(ctx context.Context, target *
 	for _, ver := range tags {
 		newSemver, err := semver.NewVersion(ver)
 		if err != nil {
-			dcr.logger.Error(fmt.Sprintf("unable to parse semver from the registry Version: %v. This version will be skipped.", ver))
+			// a lot stacktrace
+			// dcr.logger.Error(fmt.Sprintf("unable to parse semver from the registry Version: %v. This version will be skipped.", ver))
 			continue
 		}
 		// TODO remove it
