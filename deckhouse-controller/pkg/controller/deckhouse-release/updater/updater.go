@@ -38,9 +38,6 @@ import (
 )
 
 const (
-	IsUpdatingAnnotation = "release.deckhouse.io/isUpdating"
-	NotifiedAnnotation   = "release.deckhouse.io/notified"
-
 	deckhouseClusterConfigurationConfig = "d8-cluster-configuration"
 	systemNamespace                     = "kube-system"
 	k8sAutomaticVersion                 = "Automatic"
@@ -67,6 +64,8 @@ func NewDeckhouseUpdater(
 		releaseData,
 		podIsReady,
 		clusterBootstrapping,
+		// whats purpose of image registry here?
+		// maybe we want to get it when create instance?
 		NewKubeAPI(client, dc, imagesRegistry),
 		newMetricsUpdater(metricStorage),
 		newWebhookDataSource(logger),
@@ -96,6 +95,7 @@ func NewKubeAPI(client client.Client, dc dependency.Container, imagesRegistry st
 	return &KubeAPI{client: client, dc: dc, imagesRegistry: imagesRegistry}
 }
 
+// kubernetes service?
 type KubeAPI struct {
 	client         client.Client
 	dc             dependency.Container
@@ -132,7 +132,7 @@ func (api *KubeAPI) PatchReleaseApplyAfter(release *v1alpha1.DeckhouseRelease, a
 		},
 		"metadata": map[string]interface{}{
 			"annotations": map[string]string{
-				"release.deckhouse.io/notification-time-shift": "true",
+				v1alpha1.DeckhouseReleaseAnnotationNotificationTimeShift: "true",
 			},
 		},
 	})
@@ -183,8 +183,8 @@ func (api *KubeAPI) DeployRelease(ctx context.Context, release *v1alpha1.Deckhou
 
 func (api *KubeAPI) SaveReleaseData(ctx context.Context, release *v1alpha1.DeckhouseRelease, data updater.DeckhouseReleaseData) error {
 	return api.PatchReleaseAnnotations(ctx, release, map[string]interface{}{
-		IsUpdatingAnnotation: strconv.FormatBool(data.IsUpdating),
-		NotifiedAnnotation:   strconv.FormatBool(data.Notified),
+		v1alpha1.DeckhouseReleaseAnnotationIsUpdating: strconv.FormatBool(data.IsUpdating),
+		v1alpha1.DeckhouseReleaseAnnotationNotified:   strconv.FormatBool(data.Notified),
 	})
 }
 

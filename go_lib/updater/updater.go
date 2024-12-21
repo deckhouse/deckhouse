@@ -76,7 +76,8 @@ type Updater[R v1alpha1.Release] struct {
 
 	deckhousePodIsReady      bool
 	deckhouseIsBootstrapping bool
-	releaseData              DeckhouseReleaseData
+
+	releaseData DeckhouseReleaseData
 }
 
 func NewUpdater[R v1alpha1.Release](
@@ -489,7 +490,7 @@ func (u *Updater[R]) runReleaseDeploy(predictedRelease R, currentRelease *R) err
 			ctx,
 			predictedRelease,
 			map[string]interface{}{
-				"release.deckhouse.io/apply-now": nil,
+				v1alpha1.DeckhouseReleaseAnnotationApplyNow: nil,
 			})
 		if err != nil {
 			return fmt.Errorf("remove apply-now annotation: %w", err)
@@ -518,13 +519,17 @@ func (u *Updater[R]) PredictNextRelease(release R) {
 		}
 	}
 
+	// TODO: remove double loop???
 	for i, rl := range u.releases {
 		switch rl.GetPhase() {
 		case PhaseSuperseded, PhaseSuspended, PhaseSkipped:
 			// pass
 
 		case PhasePending:
+			// TODO: get check result and update release within
 			releaseRequirementsMet := u.checkReleaseRequirements(rl)
+
+			// note: here's we have assignment of predicted release
 			u.processPendingRelease(i, rl, releaseRequirementsMet)
 			// update metric only for the release that initiated prediction so as not to provoke metrics churn on every prediction
 			if rl.GetName() == release.GetName() {
@@ -574,7 +579,7 @@ func (u *Updater[R]) ApplyForcedRelease(ctx context.Context) error {
 
 	// remove annotation
 	err := u.kubeAPI.PatchReleaseAnnotations(ctx, forcedRelease, map[string]any{
-		"release.deckhouse.io/force": nil,
+		v1alpha1.DeckhouseReleaseAnnotationForce: nil,
 	})
 	if err != nil {
 		return fmt.Errorf("patch force annotation: %w", err)
