@@ -320,12 +320,18 @@ func (r *deckhouseReleaseReconciler) createRelease(ctx context.Context, releaseC
 
 func NewDeckhouseReleaseChecker(opts []cr.Option, logger *log.Logger, dc dependency.Container, moduleManager moduleManager, imagesRegistry, releaseChannel string) (*DeckhouseReleaseChecker, error) {
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
-	regCli, err := dc.GetRegistryClient(path.Join(imagesRegistry, "release-channel"), opts...)
+	relCli, err := dc.GetRegistryClient(path.Join(imagesRegistry, "release-channel"), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	regCli, err := dc.GetRegistryClient(imagesRegistry, opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	dcr := &DeckhouseReleaseChecker{
+		releaseClient:  relCli,
 		registryClient: regCli,
 		logger:         logger,
 		moduleManager:  moduleManager,
@@ -336,10 +342,11 @@ func NewDeckhouseReleaseChecker(opts []cr.Option, logger *log.Logger, dc depende
 }
 
 type DeckhouseReleaseChecker struct {
-	registryClient cr.Client
-	logger         *log.Logger
-	moduleManager  moduleManager
+	releaseClient cr.Client
+	logger        *log.Logger
+	moduleManager moduleManager
 
+	registryClient  cr.Client
 	releaseChannel  string
 	releaseMetadata ReleaseMetadata
 	tags            []string
@@ -355,7 +362,7 @@ func (dcr *DeckhouseReleaseChecker) releaseCanarySettings() canarySettings {
 }
 
 func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash string) (string, error) {
-	image, err := dcr.registryClient.Image(context.TODO(), dcr.releaseChannel)
+	image, err := dcr.releaseClient.Image(context.TODO(), dcr.releaseChannel)
 	if err != nil {
 		return "", err
 	}
@@ -529,7 +536,7 @@ func (dcr *DeckhouseReleaseChecker) StepByStepUpdate(ctx context.Context, target
 		return nil, fmt.Errorf("get next version: %w", err)
 	}
 
-	image, err := dcr.registryClient.Image(ctx, nextVersion.Original())
+	image, err := dcr.releaseClient.Image(ctx, nextVersion.Original())
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
 	}
@@ -578,7 +585,7 @@ func (dcr *DeckhouseReleaseChecker) getLastVersion(ctx context.Context, target *
 	}
 
 	// TODO remove it
-	dcr.logger.Info("getLastVersion: range tags", "collection", collection)
+	dcr.logger.Info("getLastVersion: collection", "collection", collection)
 
 	if len(collection) == 0 {
 		return nil, fmt.Errorf("next minor version is missed")
