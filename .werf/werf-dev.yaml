@@ -3,13 +3,22 @@ image: dev-prebuild
 fromImage: common-base
 git:
 - add: /
+  to: /chroot/deckhouse
+  stageDependencies:
+    setup:
+      - '**/*'
+  includePaths:
+  - modules
+  excludePaths:
+{{- include "exclude_modules_dir_from_images" .  | nindent 2}}
+{{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
+- add: /
   to: /deckhouse
   stageDependencies:
     setup:
       - '**/*'
   includePaths:
   - candi
-  - modules
   - global-hooks
   - shell_lib.sh
   - shell_lib
@@ -90,6 +99,8 @@ shell:
     cp -r /usr/lib /chroot/
     cp -r /usr/lib64 /chroot/
     chown deckhouse:deckhouse -R /chroot
+    ln -s /chroot/deckhouse/modules /etc/deckhouse/modules
+    ln -s /chroot/deckhouse/downloaded /etc/deckhouse/downloaded
 docker:
   ENV:
     MODULES_DIR: /deckhouse/modules
@@ -102,10 +113,10 @@ fromImage: dev-prebuild
 import:
 - image: images-digests
   add: /images_digests.json
-  to: /deckhouse/modules/images_digests.json
+  to: /chroot/deckhouse/modules/images_digests.json
   after: setup
 - image: images-digests
   add: /images_digests.json
-  to: /deckhouse/modules/040-node-manager/images_digests.json
+  to: /chroot/deckhouse/modules/040-node-manager/images_digests.json
   after: setup
 ---
