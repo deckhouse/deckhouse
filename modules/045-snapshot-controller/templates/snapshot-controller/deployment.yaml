@@ -1,3 +1,5 @@
+{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
+{{- $snapshotControllerImageName := join "" (list "snapshotController" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
 {{- define "snapshot_controller_resources" }}
 cpu: 10m
 memory: 25Mi
@@ -73,7 +75,7 @@ spec:
         - --v=5
         - --leader-election=true
         - --http-endpoint=127.0.0.1:8080
-        image: {{ include "helm_lib_module_image" (list . "snapshotController") }}
+        image: {{ include "helm_lib_module_image" (list . $snapshotControllerImageName) }}
         imagePullPolicy: IfNotPresent
         resources:
           requests:
