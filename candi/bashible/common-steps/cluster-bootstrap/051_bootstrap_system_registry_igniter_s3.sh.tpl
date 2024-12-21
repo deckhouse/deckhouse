@@ -58,31 +58,78 @@ bb-sync-file "$IGNITER_DIR/upstream-registry-ca.crt" - << EOF
 EOF
 {{- end }}
 
+bb-sync-file "$IGNITER_DIR/profiles.json" - << EOF
+{
+    "signing": {
+        "default": {
+            "expiry": "87600h"
+        },
+        "profiles": {
+            "client-server": {
+                "expiry": "87600h",
+                "usages": [
+                    "signing",
+                    "digital signature",
+                    "key encipherment",
+                    "client auth",
+                    "server auth"
+                ]
+            },
+            "auth-token": {
+                "expiry": "87600h",
+                "usages": [
+                    "signing",
+                    "digital signature",
+                    "key encipherment",
+                    "client auth",
+                    "server auth"
+                ]
+            }
+        }
+    }
+}
+EOF
+bb-sync-file "$IGNITER_DIR/client-server.json" - << EOF
+{
+  "hosts": ["127.0.0.1", "localhost", "${discovered_node_ip}", "${internal_registry_domain}"],
+  "key": {"algo": "rsa", "size": 2048}
+}
+EOF
+bb-sync-file "$IGNITER_DIR/auth-token.json" - << EOF
+{
+  "key": {"algo": "rsa", "size": 2048}
+}
+EOF
+
 # Auth certs
-openssl genrsa -out "$IGNITER_DIR/auth.key" 2048
-
-openssl req -new -key "$IGNITER_DIR/auth.key" \
--subj "/CN=embedded-registry-auth" \
--addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
--out "$IGNITER_DIR/auth.csr"
-
-openssl x509 -req -in "$IGNITER_DIR/auth.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
--out "$IGNITER_DIR/auth.crt" -days 365 -sha256 \
--extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
-
+/opt/deckhouse/bin/cfssl gencert \
+  -cn="embedded-registry-auth" \
+  -ca="$IGNITER_DIR/ca.crt" \
+  -ca-key="$IGNITER_DIR/ca.key" \
+  -config="$IGNITER_DIR/profiles.json" \
+  -profile="client-server" "$IGNITER_DIR/client-server.json" | /opt/deckhouse/bin/cfssljson -bare "${IGNITER_DIR}/auth"
+mv "${IGNITER_DIR}/auth.pem" "${IGNITER_DIR}/auth.crt"
+mv "${IGNITER_DIR}/auth-key.pem" "${IGNITER_DIR}/auth.key"
 
 # Distribution certs
-openssl genrsa -out "$IGNITER_DIR/distribution.key" 2048
+/opt/deckhouse/bin/cfssl gencert \
+  -cn="embedded-registry-distribution" \
+  -ca="$IGNITER_DIR/ca.crt" \
+  -ca-key="$IGNITER_DIR/ca.key" \
+  -config="$IGNITER_DIR/profiles.json" \
+  -profile="client-server" "$IGNITER_DIR/client-server.json" | /opt/deckhouse/bin/cfssljson -bare "${IGNITER_DIR}/distribution"
+mv "${IGNITER_DIR}/distribution.pem" "${IGNITER_DIR}/distribution.crt"
+mv "${IGNITER_DIR}/distribution-key.pem" "${IGNITER_DIR}/distribution.key"
 
-openssl req -new -key "$IGNITER_DIR/distribution.key" \
--subj "/CN=embedded-registry-distribution" \
--addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
--out "$IGNITER_DIR/distribution.csr"
-
-openssl x509 -req -in "$IGNITER_DIR/distribution.csr" -CA "$IGNITER_DIR/ca.crt" -CAkey "$IGNITER_DIR/ca.key" -CAcreateserial \
--out "$IGNITER_DIR/distribution.crt" -days 365 -sha256 \
--extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
-
+# Auth token certs
+/opt/deckhouse/bin/cfssl gencert \
+  -cn="embedded-registry-auth-token" \
+  -ca="$IGNITER_DIR/ca.crt" \
+  -ca-key="$IGNITER_DIR/ca.key" \
+  -config="$IGNITER_DIR/profiles.json" \
+  -profile="auth-token" "$IGNITER_DIR/auth-token.json" | /opt/deckhouse/bin/cfssljson -bare "${IGNITER_DIR}/token"
+mv "${IGNITER_DIR}/token.pem" "${IGNITER_DIR}/token.crt"
+mv "${IGNITER_DIR}/token-key.pem" "${IGNITER_DIR}/token.key"
 
 bb-sync-file "$IGNITER_DIR/auth_config.yaml" - << EOF
 server:
@@ -92,8 +139,8 @@ server:
 token:
   issuer: "Registry server"
   expiration: 900
-  certificate: "$IGNITER_DIR/auth.crt"
-  key: "$IGNITER_DIR/auth.key"
+  certificate: "$IGNITER_DIR/token.crt"
+  key: "$IGNITER_DIR/token.key"
 
 users:
   # Password is specified as a BCrypt hash. Use htpasswd -nB USERNAME to generate.
@@ -191,7 +238,7 @@ auth:
     realm: https://127.0.0.1:5051/auth
     service: Docker registry
     issuer: Registry server
-    rootcertbundle: "$IGNITER_DIR/auth.crt"
+    rootcertbundle: "$IGNITER_DIR/token.crt"
     autoredirect: false
 EOF
 

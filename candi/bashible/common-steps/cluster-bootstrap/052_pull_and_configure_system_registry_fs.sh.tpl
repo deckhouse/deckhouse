@@ -57,51 +57,78 @@ bb-sync-file "$registry_pki_path/upstream-registry-ca.crt" - << EOF
 EOF
 {{- end }}
 
+bb-sync-file "$registry_pki_path/profiles.json" - << EOF
+{
+    "signing": {
+        "default": {
+            "expiry": "87600h"
+        },
+        "profiles": {
+            "client-server": {
+                "expiry": "87600h",
+                "usages": [
+                    "signing",
+                    "digital signature",
+                    "key encipherment",
+                    "client auth",
+                    "server auth"
+                ]
+            },
+            "auth-token": {
+                "expiry": "87600h",
+                "usages": [
+                    "signing",
+                    "digital signature",
+                    "key encipherment",
+                    "client auth",
+                    "server auth"
+                ]
+            }
+        }
+    }
+}
+EOF
+bb-sync-file "$registry_pki_path/client-server.json" - << EOF
+{
+  "hosts": ["127.0.0.1", "localhost", "${discovered_node_ip}", "${internal_registry_domain}"],
+  "key": {"algo": "rsa", "size": 2048}
+}
+EOF
+bb-sync-file "$registry_pki_path/auth-token.json" - << EOF
+{
+  "key": {"algo": "rsa", "size": 2048}
+}
+EOF
+
 # Auth certs
-if [ ! -f "$registry_pki_path/auth.key" ]; then
-    openssl genrsa -out "$registry_pki_path/auth.key" 2048
-fi
-if [ ! -f "$registry_pki_path/auth.csr" ]; then
-    openssl req -new -key "$registry_pki_path/auth.key" \
-    -subj "/CN=embedded-registry-auth" \
-    -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
-    -out "$registry_pki_path/auth.csr"
-fi
-if [ ! -f "$registry_pki_path/auth.crt" ]; then
-    openssl x509 -req -in "$registry_pki_path/auth.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
-    -out "$registry_pki_path/auth.crt" -days 3650 -sha256 \
-    -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
-fi
+/opt/deckhouse/bin/cfssl gencert \
+  -cn="embedded-registry-auth" \
+  -ca="$registry_pki_path/ca.crt" \
+  -ca-key="$registry_pki_path/ca.key" \
+  -config="$registry_pki_path/profiles.json" \
+  -profile="client-server" "$registry_pki_path/client-server.json" | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/auth"
+mv "${registry_pki_path}/auth.pem" "${registry_pki_path}/auth.crt"
+mv "${registry_pki_path}/auth-key.pem" "${registry_pki_path}/auth.key"
 
 # Distribution certs
-if [ ! -f "$registry_pki_path/distribution.key" ]; then
-    openssl genrsa -out "$registry_pki_path/distribution.key" 2048
-fi
-if [ ! -f "$registry_pki_path/distribution.csr" ]; then
-    openssl req -new -key "$registry_pki_path/distribution.key" \
-    -subj "/CN=embedded-registry-distribution" \
-    -addext "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}" \
-    -out "$registry_pki_path/distribution.csr"
-fi
-if [ ! -f "$registry_pki_path/distribution.crt" ]; then
-    openssl x509 -req -in "$registry_pki_path/distribution.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
-    -out "$registry_pki_path/distribution.crt" -days 3650 -sha256 \
-    -extfile <(printf "subjectAltName=IP:127.0.0.1,DNS:localhost,IP:${discovered_node_ip},DNS:${internal_registry_domain}")
-fi
+/opt/deckhouse/bin/cfssl gencert \
+  -cn="embedded-registry-distribution" \
+  -ca="$registry_pki_path/ca.crt" \
+  -ca-key="$registry_pki_path/ca.key" \
+  -config="$registry_pki_path/profiles.json" \
+  -profile="client-server" "$registry_pki_path/client-server.json" | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/distribution"
+mv "${registry_pki_path}/distribution.pem" "${registry_pki_path}/distribution.crt"
+mv "${registry_pki_path}/distribution-key.pem" "${registry_pki_path}/distribution.key"
 
 # Auth token certs
-if [ ! -f "$registry_pki_path/token.key" ]; then
-    openssl genrsa -out "$registry_pki_path/token.key" 2048
-fi
-if [ ! -f "$registry_pki_path/token.csr" ]; then
-    openssl req -new -key "$registry_pki_path/token.key" \
-    -subj "/CN=embedded-registry-auth-token" \
-    -out "$registry_pki_path/token.csr"
-fi
-if [ ! -f "$registry_pki_path/token.crt" ]; then
-    openssl x509 -req -in "$registry_pki_path/token.csr" -CA "$registry_pki_path/ca.crt" -CAkey "$registry_pki_path/ca.key" -CAcreateserial \
-    -out "$registry_pki_path/token.crt" -days 3650 -sha256
-fi
+/opt/deckhouse/bin/cfssl gencert \
+  -cn="embedded-registry-auth-token" \
+  -ca="$registry_pki_path/ca.crt" \
+  -ca-key="$registry_pki_path/ca.key" \
+  -config="$registry_pki_path/profiles.json" \
+  -profile="auth-token" "$registry_pki_path/auth-token.json" | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/token"
+mv "${registry_pki_path}/token.pem" "${registry_pki_path}/token.crt"
+mv "${registry_pki_path}/token-key.pem" "${registry_pki_path}/token.key"
 
 bb-sync-file /etc/kubernetes/system-registry/auth_config/config.yaml - << EOF
 server:
