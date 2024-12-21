@@ -356,7 +356,7 @@ conversions:
 
 * Для упрощения работы с шаблонами используйте [lib-helm](https://github.com/deckhouse/lib-helm) – это набор дополнительных функций, которые облегчают работу с глобальными и модульными значениями.
 
-* Доступы в registry из ресурса _ModuleSource_ доступны по пути `.Values.<имяМодуля>.registry.dockercfg`.
+* Доступы в registry из ресурса ModuleSource доступны по пути `.Values.<имяМодуля>.registry.dockercfg`.
 
 * Чтобы использовать эти функции для пула образов в контроллерах, создайте секрет и добавьте его в соответствующий параметр: `"imagePullSecrets": [{"name":"registry-creds"}]`.
 
@@ -378,7 +378,7 @@ conversions:
 
 ### config-values.yaml
 
-Необходим для проверки параметров модуля, которые пользователь может настроить через [_ModuleConfig_](../../cr.html#moduleconfig).
+Необходим для проверки параметров модуля, которые пользователь может настроить через [ModuleConfig](../../cr.html#moduleconfig).
 
 Чтобы схема была представлена в документации на сайте или в модуле documentation в кластере, создайте:
 - файл `doc-ru-config-values.yaml` со структурой, аналогичной структуре файла `config-values.yaml`. В файле `doc-ru-config-values.yaml` оставьте только переведенные параметры description;
