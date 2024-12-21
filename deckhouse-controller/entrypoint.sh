@@ -51,14 +51,18 @@ if [[ ! ${bundles_map[$bundle]+_} ]]; then
 
 EOF
     exit 1
-  fi
+fi
 
 cat <<EOF
 {"msg": "-- Starting Deckhouse using bundle $bundle --"}
 EOF
 
-coreModulesDir=$(echo ${MODULES_DIR} | awk -F ":" '{print $1}')
+coreModulesDir=$(echo /chroot${MODULES_DIR} | awk -F ":" '{print $1}')
 cat "${coreModulesDir}"/values-"${bundles_map[$bundle]}".yaml > /tmp/values.yaml
+
+if [ ${ADDON_OPERATOR_SHELL_CHROOT_DIR} != "" ]; then
+    ln -s ${ADDON_OPERATOR_SHELL_CHROOT_DIR}/tmp/addon-operator /tmp/addon-operator
+fi
 
 set +o pipefail
 set +e

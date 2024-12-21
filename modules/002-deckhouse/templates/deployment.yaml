@@ -128,7 +128,7 @@ spec:
         - name: deckhouse
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
           command:
-            - /deckhouse/deckhouse
+            - /deckhouse/deckhouse-controller/wrapper
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
           imagePullPolicy: Always
           env:
@@ -196,6 +196,8 @@ spec:
               value: "/certs"
             - name: ADDON_OPERATOR_CRD_EXTRA_LABELS
               value: "heritage=deckhouse"
+            - name: ADDON_OPERATOR_SHELL_CHROOT_DIR
+              value: "/chroot"
             - name: HELM3LIB
               value: "yes"
             - name: HELM_HISTORY_MAX
@@ -236,12 +238,14 @@ spec:
           volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /chroot/tmp/addon-operator
+            name: chroot-tmp
           - mountPath: /.kube
             name: kube
           - mountPath: /certs
             name: certs
             readOnly: true
-          - mountPath: /deckhouse/downloaded
+          - mountPath: /chroot/deckhouse/downloaded
             name: downloaded
         - name: kube-rbac-proxy
           {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
@@ -300,6 +304,9 @@ spec:
       - emptyDir:
           medium: Memory
         name: tmp
+      - emptyDir:
+          medium: Memory
+        name: chroot-tmp
       - emptyDir:
           medium: Memory
         name: kube
