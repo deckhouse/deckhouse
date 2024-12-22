@@ -2,7 +2,7 @@ type: object
 properties:
   storageClass:
     description: |
-      > **УСТАРЕВШИЙ**. Теперь его значение задается в [global.modules.storageClass](#parameters-modules-storageclass).
+      > **Устарел**. Используйте параметр [settings.modules.storageClass](#parameters-modules-storageclass).
 
       Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
 
