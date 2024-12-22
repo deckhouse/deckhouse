@@ -595,7 +595,6 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 
 		suite.cleanupPaths([]string{symlink, module.downloadedPath, module.symlinkPath})
 	})
-
 }
 
 func (suite *ModuleLoaderTestSuite) modulePullOverride(name string) *v1alpha2.ModulePullOverride {

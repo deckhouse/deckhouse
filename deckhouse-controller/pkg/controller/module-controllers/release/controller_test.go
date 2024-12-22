@@ -185,20 +185,16 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	suite.Run("deploy with outdated module releases", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml"))
-		err = suite.updateModuleReleasesStatuses()
-		require.NoError(suite.T(), err)
-		mr := suite.getModuleRelease("echo-v0.4.54")
-		_, err = suite.ctr.handlePendingRelease(context.TODO(), mr)
+		suite.updateModuleReleasesStatuses()
+		_, err = suite.ctr.handlePendingRelease(context.TODO(), suite.getModuleRelease("echo-v0.4.54"))
 		require.NoError(suite.T(), err)
 	})
 
 	suite.Run("clean up for a deployed module release with outdated module releases", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml"))
-		err = suite.updateModuleReleasesStatuses()
-		require.NoError(suite.T(), err)
-		mr := suite.getModuleRelease("echo-v0.4.54")
-		_, err = suite.ctr.handleDeployedRelease(context.TODO(), mr)
+		suite.updateModuleReleasesStatuses()
+		_, err = suite.ctr.handleDeployedRelease(context.TODO(), suite.getModuleRelease("echo-v0.4.54"))
 		require.NoError(suite.T(), err)
 	})
 
@@ -223,8 +219,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("install new module in manual mode with deckhouse release approval annotation", func() {
 		suite.setupReleaseController(suite.fetchTestFileData("new-module-manual-mode.yaml"))
-		mr := suite.getModuleRelease(suite.testMRName)
-		_, err = suite.ctr.handleRelease(ctx, mr)
+		_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease(suite.testMRName))
 		require.NoError(suite.T(), err)
 	})
 
@@ -241,8 +236,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-patch-update.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease("parca-1.26.3")
-			_, err = suite.ctr.handleRelease(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
 			require.NoError(suite.T(), err)
 		})
 
@@ -258,8 +252,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-minor-update.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease("parca-1.27.0")
-			_, err = suite.ctr.handleRelease(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
 			require.NoError(suite.T(), err)
 		})
 
@@ -275,8 +268,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease("parca-1.27.0")
-			_, err = suite.ctr.handleRelease(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
 			require.NoError(suite.T(), err)
 		})
 
@@ -287,8 +279,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease("parca-1.26.3")
-			_, err = suite.ctr.handleRelease(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.26.3"))
 			require.NoError(suite.T(), err)
 		})
 
@@ -299,8 +290,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease("parca-1.27.0")
-			_, err = suite.ctr.handleRelease(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
 			require.NoError(suite.T(), err)
 		})
 
@@ -311,8 +301,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release-approved.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			mr := suite.getModuleRelease("parca-1.27.0")
-			_, err = suite.ctr.handleRelease(ctx, mr)
+			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease("parca-1.27.0"))
 			require.NoError(suite.T(), err)
 		})
 	})
@@ -353,7 +342,7 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 	suite.T().Fatal("Loop was broken")
 }
 
-func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() error {
+func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() {
 	releases := new(v1alpha1.ModuleReleaseList)
 	require.NoError(suite.T(), suite.client.List(context.TODO(), releases))
 
@@ -362,8 +351,6 @@ func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() error {
 		release.Status.Phase = caser.String(release.Labels[v1alpha1.ModuleReleaseLabelStatus])
 		require.NoError(suite.T(), suite.client.Status().Update(context.TODO(), &release))
 	}
-
-	return nil
 }
 
 type reconcilerOption func(*reconciler)
