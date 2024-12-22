@@ -69,7 +69,7 @@ resource "vcd_vapp_vm" "node" {
   }
 
   customization {
-    force = false
+    force = true
     enabled = true
   }
 
