@@ -39,7 +39,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -79,8 +78,8 @@ func TestReleaseControllerTestSuite(t *testing.T) {
 type ReleaseControllerTestSuite struct {
 	controllersuite.Suite
 
-	kubeClient client.Client
-	ctr        *reconciler
+	client client.Client
+	ctr    *reconciler
 
 	testDataFileName string
 	testMRName       string
@@ -105,7 +104,7 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 		return
 	}
 
-	goldenFile := filepath.Join("./testdata/releaseController", "golden", suite.testDataFileName)
+	goldenFile := filepath.Join("./testdata/releases", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
 
 	if flags.Golden {
@@ -355,19 +354,13 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 }
 
 func (suite *ReleaseControllerTestSuite) updateModuleReleasesStatuses() error {
-	var releases v1alpha1.ModuleReleaseList
-	err := suite.kubeClient.List(context.TODO(), &releases)
-	if err != nil {
-		return err
-	}
+	releases := new(v1alpha1.ModuleReleaseList)
+	require.NoError(suite.T(), suite.client.List(context.TODO(), releases))
 
 	caser := cases.Title(language.English)
 	for _, release := range releases.Items {
-		release.Status.Phase = caser.String(release.ObjectMeta.Labels["status"])
-		err = suite.kubeClient.Status().Update(context.TODO(), &release)
-		if err != nil {
-			return err
-		}
+		release.Status.Phase = caser.String(release.Labels[v1alpha1.ModuleReleaseLabelStatus])
+		require.NoError(suite.T(), suite.client.Status().Update(context.TODO(), &release))
 	}
 
 	return nil
@@ -462,7 +455,7 @@ type: Opaque
 	}
 
 	suite.ctr = rec
-	suite.kubeClient = c
+	suite.client = c
 }
 
 func skipNotSpecErrors(errs []error) []error {
@@ -519,7 +512,7 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(obj string) client.O
 }
 
 func (suite *ReleaseControllerTestSuite) fetchTestFileData(filename string) string {
-	dir := "./testdata/releaseController"
+	dir := "./testdata/releases"
 	data, err := os.ReadFile(filepath.Join(dir, filename))
 	require.NoError(suite.T(), err)
 
@@ -529,32 +522,30 @@ func (suite *ReleaseControllerTestSuite) fetchTestFileData(filename string) stri
 }
 
 func (suite *ReleaseControllerTestSuite) getModuleRelease(name string) *v1alpha1.ModuleRelease {
-	var mr v1alpha1.ModuleRelease
-	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &mr)
+	release := new(v1alpha1.ModuleRelease)
+	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, release)
 	require.NoError(suite.T(), err)
 
-	return &mr
+	return release
 }
 
 func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 	result := bytes.NewBuffer(nil)
 
-	var mslist v1alpha1.ModuleSourceList
-	err := suite.kubeClient.List(suite.Context(), &mslist)
-	require.NoError(suite.T(), err)
+	sources := new(v1alpha1.ModuleSourceList)
+	require.NoError(suite.T(), suite.client.List(suite.Context(), sources))
 
-	for _, item := range mslist.Items {
-		got, _ := yaml.Marshal(item)
+	for _, source := range sources.Items {
+		got, _ := yaml.Marshal(source)
 		result.WriteString("---\n")
 		result.Write(got)
 	}
 
-	var mrlist v1alpha1.ModuleReleaseList
-	err = suite.kubeClient.List(context.TODO(), &mrlist)
-	require.NoError(suite.T(), err)
+	releases := new(v1alpha1.ModuleReleaseList)
+	require.NoError(suite.T(), suite.client.List(context.TODO(), releases))
 
-	for _, item := range mrlist.Items {
-		got, _ := yaml.Marshal(item)
+	for _, release := range releases.Items {
+		got, _ := yaml.Marshal(release)
 		result.WriteString("---\n")
 		result.Write(got)
 	}

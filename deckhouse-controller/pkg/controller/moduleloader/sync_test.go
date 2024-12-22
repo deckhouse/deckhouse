@@ -254,7 +254,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 
 			time.Sleep(50 * time.Millisecond)
 
-			suite.setupModuleLoader(string(suite.parseTestdata("override", tc.filename)))
+			suite.setupModuleLoader(string(suite.parseTestdata("overrides", tc.filename)))
 			require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
 
 			newStatValues, err := os.Stat(module.valuesPath)
@@ -299,7 +299,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupModuleLoader(string(suite.parseTestdata("override", "mpo.yaml")))
+		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
@@ -330,7 +330,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupModuleLoader(string(suite.parseTestdata("override", "mpo.yaml")))
+		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
 
 		_, err := os.Stat(module.valuesPath)
@@ -374,7 +374,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupModuleLoader(string(suite.parseTestdata("override", "mpo.yaml")))
+		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
@@ -422,7 +422,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupModuleLoader(string(suite.parseTestdata("override", "mpo.yaml")))
+		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
@@ -471,7 +471,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupModuleLoader(string(suite.parseTestdata("release", "release.yaml")))
+		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
@@ -498,7 +498,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupModuleLoader(string(suite.parseTestdata("release", "release.yaml")))
+		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
 
 		_, err := os.Stat(module.valuesPath)
@@ -538,7 +538,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupModuleLoader(string(suite.parseTestdata("release", "release.yaml")))
+		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
@@ -582,7 +582,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 
 		time.Sleep(50 * time.Millisecond)
 
-		suite.setupModuleLoader(string(suite.parseTestdata("release", "release.yaml")))
+		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
