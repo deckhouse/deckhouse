@@ -33,7 +33,7 @@ func moduleReleaseValidationHandler() http.Handler {
 		if raw.(*v1alpha1.ModuleRelease).GetPhase() == v1alpha1.ModuleReleasePhaseDeployed {
 			// UserInfo groups: [system:serviceaccounts system:serviceaccounts:d8-system system:authenticated]
 			if review.UserInfo.Username != "system:serviceaccount:d8-system:deckhouse" {
-				return rejectResult("manual deleting module releases is forbidden")
+				return rejectResult("manual deleting deployed module releases is forbidden")
 			}
 		}
 		return allowResult("")
