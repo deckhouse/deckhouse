@@ -100,6 +100,8 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		c.lastState = state
 	}
 
+	panic("TEST PANIC")
+
 	if err := c.applyParams(); err != nil {
 		return nil, err
 	}
