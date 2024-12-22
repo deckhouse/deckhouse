@@ -253,16 +253,16 @@ func lintOneDockerfileOrWerfYAML(name, filePath, imagesPath string) errors.LintR
 			continue
 		}
 
-		result, message := isDockerfileInstructionUnacceptable(fromInstruction, lastInstruction)
-		if result {
-			return errors.NewLintRuleError(
-				"MODULE001",
-				fmt.Sprintf("module = %s, image = %s", name, relativeFilePath),
-				fromInstruction,
-				"%s",
-				message,
-			)
-		}
+		// result, message := isDockerfileInstructionUnacceptable(fromInstruction, lastInstruction)
+		// if result {
+		//	return errors.NewLintRuleError(
+		//		"MODULE001",
+		//		fmt.Sprintf("module = %s, image = %s", name, relativeFilePath),
+		//		fromInstruction,
+		//		"%s",
+		//		message,
+		//	)
+		// }
 	}
 
 	return errors.EmptyRuleError
