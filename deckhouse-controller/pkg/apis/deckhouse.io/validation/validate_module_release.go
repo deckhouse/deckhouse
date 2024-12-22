@@ -33,7 +33,7 @@ func moduleReleaseValidationHandler() http.Handler {
 		if raw.(*v1alpha1.ModuleRelease).GetPhase() == v1alpha1.ModuleReleasePhaseDeployed {
 			// UserInfo groups: [system:serviceaccounts system:serviceaccounts:d8-system system:authenticated]
 			if review.UserInfo.Username != "system:serviceaccount:d8-system:deckhouse" {
-				return rejectResult("manual Module change is forbidden")
+				return rejectResult("manual deleting module releases is forbidden")
 			}
 		}
 		return allowResult("")
@@ -41,12 +41,12 @@ func moduleReleaseValidationHandler() http.Handler {
 
 	// Create webhook.
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{
-		ID:        "module-operations",
+		ID:        "module-release-operations",
 		Validator: vf,
 		// logger is nil, because webhook has Info level for reporting about http handler
 		// and we get a log of useless spam here. So we decided to use Noop logger here
 		Logger: nil,
-		Obj:    &v1alpha1.Module{},
+		Obj:    &v1alpha1.ModuleRelease{},
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
