@@ -156,21 +156,17 @@ func writeSections(settings writeSettings) {
 		}
 
 		info, err := os.Stat(file)
-		deckhouseDir := "/deckhouse"
-		if strings.HasPrefix(strings.TrimPrefix(file, prefix), "/modules") {
-			deckhouseDir = "/chroot/deckhouse"
-		}
 		if err == nil && !info.IsDir() {
 			addEntries = append(addEntries, addEntry{
 				Add:               strings.TrimPrefix(file, workDir),
-				To:                filepath.Join(deckhouseDir, strings.TrimPrefix(file, prefix)),
+				To:                filepath.Join("/chroot/deckhouse", strings.TrimPrefix(file, prefix)),
 				ExcludePaths:      nil,
 				StageDependencies: stageDependenciesFile,
 			})
 		} else {
 			addEntries = append(addEntries, addEntry{
 				Add:               strings.TrimPrefix(file, workDir),
-				To:                filepath.Join(deckhouseDir, strings.TrimPrefix(file, prefix)),
+				To:                filepath.Join("/chroot/deckhouse", strings.TrimPrefix(file, prefix)),
 				ExcludePaths:      settings.ExcludePaths,
 				StageDependencies: settings.StageDependencies,
 			})
