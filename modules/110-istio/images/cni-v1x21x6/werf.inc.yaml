@@ -19,10 +19,6 @@ docker:
   WORKDIR: "/opt/cni/bin"
   ENTRYPOINT: ["/usr/local/bin/install-cni"]
 ---
-# image: {{ .ModuleName }}/{{ .ImageName }}-binary-artifact
-# final: false
-# from: istio/install-cni:1.21.6@sha256:6c85a016e612d7a095ed32546dbe7f973672b31cc1930c26a747232d38ff372a
----
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
 from: {{ .Images.BASE_GOLANG_23_ALPINE_DEV }}
