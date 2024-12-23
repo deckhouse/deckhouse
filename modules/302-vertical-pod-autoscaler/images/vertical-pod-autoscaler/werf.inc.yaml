@@ -1,5 +1,6 @@
-artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
 - add: /{{ $.ModulePath }}/modules/302-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
@@ -14,10 +15,11 @@ shell:
     - mv vertical-pod-autoscaler /src/vertical-pod-autoscaler
     - rm -rf /src/autoscaler /src/vertical-pod-autoscaler/e2e/ /patches /src/autoscaler/.git/
 ---
-artifact: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: {{ .Images.BASE_GOLANG_23_ALPINE }}
+final: false
 import:
-  - artifact: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -40,5 +42,5 @@ shell:
     - cd /src/vertical-pod-autoscaler/pkg/updater
     - go build -ldflags="-s -w" -o /updater
 
-    - chown 64535:64535 /admission-controller  /updater /recommender
+    - chown 64535:64535 /updater /recommender /admission-controller
     - chmod 0700 /updater /recommender /admission-controller
