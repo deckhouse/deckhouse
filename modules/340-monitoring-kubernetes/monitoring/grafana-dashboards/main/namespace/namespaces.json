@@ -24,7 +24,7 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 61,
+  "id": 24,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -552,7 +552,6 @@
         "y": 0
       },
       "id": 4,
-      "links": [],
       "options": {
         "cellHeight": "sm",
         "footer": {
@@ -566,7 +565,7 @@
         "showHeader": true
       },
       "pageSize": 50,
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.4.5",
       "scroll": true,
       "showHeader": true,
       "sort": {
@@ -1138,7 +1137,6 @@
         "y": 8
       },
       "id": 332,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -1272,7 +1270,6 @@
         "y": 8
       },
       "id": 564,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -1425,7 +1422,6 @@
         "y": 13
       },
       "id": 6,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1592,7 +1588,6 @@
         "y": 13
       },
       "id": 10,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1740,7 +1735,6 @@
         "y": 22
       },
       "id": 333,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1877,7 +1871,6 @@
         "y": 22
       },
       "id": 386,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -2014,7 +2007,6 @@
         "y": 29
       },
       "id": 315,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -2552,7 +2544,6 @@
         "y": 37
       },
       "id": 40,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -2738,7 +2729,6 @@
         "y": 37
       },
       "id": 41,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -2890,7 +2880,6 @@
         "y": 46
       },
       "id": 361,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -3026,7 +3015,6 @@
         "y": 46
       },
       "id": 387,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -3467,7 +3455,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "bits/sec(SI)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -3510,7 +3498,7 @@
               }
             ]
           },
-          "unit": "Bps"
+          "unit": "bps"
         },
         "overrides": [
           {
@@ -3552,7 +3540,6 @@
         "y": 55
       },
       "id": 79,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3577,7 +3564,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum by (namespace) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval])) \n-\n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval]))\n    *  \n    sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n  )\n))\nor sum by (namespace) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval])) ",
+          "expr": "(sum by (namespace) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval])*8) \n-\n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval])*8)\n    *  \n    sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n  )\n))\nor sum by (namespace) (rate(container_network_receive_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval])*8) ",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -3610,7 +3597,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "bits/sec(SI)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -3653,7 +3640,7 @@
               }
             ]
           },
-          "unit": "Bps"
+          "unit": "bps"
         },
         "overrides": [
           {
@@ -3695,7 +3682,6 @@
         "y": 55
       },
       "id": 276,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3720,7 +3706,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "(sum by (namespace) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval])) \n- \n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval]))\n    *  \n    sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n  )\n))\nor\nsum by (namespace) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval])) ",
+          "expr": "(sum by (namespace) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval])*8) \n- \n(\n  sum by (namespace) (\n    sum by (namespace, pod) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval])*8)\n    *  \n    sum by (namespace, pod) (kube_pod_info{host_network=\"true\",namespace=~\"$namespace\"})\n  )\n))\nor\nsum by (namespace) (rate(container_network_transmit_bytes_total{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval])*8) ",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }}",
@@ -3849,7 +3835,6 @@
         "y": 64
       },
       "id": 156,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3984,7 +3969,6 @@
         "y": 64
       },
       "id": 277,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4137,7 +4121,6 @@
         "y": 73
       },
       "id": 519,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4273,7 +4256,6 @@
         "y": 73
       },
       "id": 520,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4377,7 +4359,6 @@
         "y": 80
       },
       "id": 521,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4409,7 +4390,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 38,
+  "schemaVersion": 39,
   "tags": [
     "main"
   ],
@@ -4417,7 +4398,7 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "default",
           "value": "default"
         },
