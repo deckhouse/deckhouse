@@ -137,7 +137,7 @@ To add a static node to a cluster (bare metal server or virtual machine), follow
    metadata:
      name: static-0
    spec:
-     # Укажите IP-адрес сервера статического узла.
+     # Specify the static node server's IP address.
      address: "<SERVER-IP>"
      credentialsRef:
        kind: SSHCredentials

@@ -152,7 +152,7 @@ You might need to add an extra root certificate, for example, to access internal
 You can add a root certificate as a NodeGroupConfiguration resource.
 
 {% alert level="warning" %}
-THe following example is for Ubuntu OS.
+The following example is for Ubuntu OS.
 The method of adding certificates to the store may differ depending on the OS.
 
 To adapt the script to a different OS, modify the [`bundles`](../../../../reference/cr/nodegroup.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter.
