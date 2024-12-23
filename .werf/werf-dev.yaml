@@ -11,6 +11,8 @@ git:
   - modules
   - shell_lib.sh
   - shell_lib
+  - helm_lib
+  - python_lib
   excludePaths:
 {{- include "exclude_modules_dir_from_images" .  | nindent 2}}
 {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
@@ -25,8 +27,6 @@ git:
   - deckhouse-controller/entrypoint.sh
   - deckhouse-controller/crds/*.yaml
   - deckhouse-controller/wrapper
-  - helm_lib
-  - python_lib
   excludePaths:
 {{- include "exclude_modules_dir_from_images" .  | nindent 2}}
 {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
@@ -102,6 +102,8 @@ shell:
     chown deckhouse:deckhouse -R /chroot
     ln -s /chroot/deckhouse/modules /deckhouse/modules
     ln -s /chroot/deckhouse/downloaded /deckhouse/downloaded
+    ln -s /chroot/deckhouse/python_lib /deckhouse/python_lib
+    ln -s /chroot/deckhouse/helm_lib /deckhouse/helm_lib
     ln -s /chroot/deckhouse/shell_lib /deckhouse/shell_lib
     ln -s /chroot/deckhouse/shell_lib.sh /deckhouse/shell_lib.sh
     ln -s /chroot/deckhouse/shell-operator /deckhouse/shell-operator
