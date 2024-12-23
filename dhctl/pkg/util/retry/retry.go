@@ -101,6 +101,11 @@ func (l *Loop) WithContext(ctx context.Context) *Loop {
 	return l
 }
 
+func (l *Loop) WithLogger(logger log.Logger) *Loop {
+	l.logger = logger
+	return l
+}
+
 func (l *Loop) WithShowError(flag bool) *Loop {
 	l.showError = flag
 	return l

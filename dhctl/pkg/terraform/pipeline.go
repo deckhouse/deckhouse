@@ -86,11 +86,8 @@ func ApplyPipeline(r RunnerInterface, name string, extractFn func(r RunnerInterf
 		return err
 	}
 
-	if r.IsLogToBuffer() {
-		return extractedData, pipelineFunc()
-	}
-
-	err := log.Process("terraform", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
+	logger := r.GetLogger()
+	err := logger.LogProcess("terraform", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
 	return extractedData, err
 }
 

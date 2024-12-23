@@ -140,6 +140,8 @@ type Logger interface {
 
 	ProcessLogger() ProcessLogger
 
+	CreateBufferLogger(buffer *bytes.Buffer) Logger
+
 	Write([]byte) (int, error)
 }
 
@@ -280,6 +282,10 @@ func (d *PrettyLogger) Write(content []byte) (int, error) {
 	return len(content), nil
 }
 
+func (d *PrettyLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return NewPrettyLogger(LoggerOptions{OutStream: buffer})
+}
+
 func prettyJSON(content []byte) string {
 	result := &bytes.Buffer{}
 	if err := json.Indent(result, content, "", "  "); err != nil {
@@ -320,6 +326,10 @@ func NewJSONLogger(opts LoggerOptions) *SimpleLogger {
 		logger:  l,
 		isDebug: opts.IsDebug,
 	}
+}
+
+func (d *SimpleLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return NewJSONLogger(LoggerOptions{OutStream: buffer})
 }
 
 func (d *SimpleLogger) ProcessLogger() ProcessLogger {
@@ -399,6 +409,10 @@ type DummyLogger struct{}
 
 func (d *DummyLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
+}
+
+func (d *DummyLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return NewSimpleLogger(LoggerOptions{OutStream: buffer})
 }
 
 func (d *DummyLogger) FlushAndClose() error {
@@ -543,6 +557,10 @@ func (d *SilentLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
 }
 
+func (d *SilentLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return d
+}
+
 func (d *SilentLogger) LogProcess(_, t string, run func() error) error {
 	err := run()
 	return err
@@ -609,6 +627,26 @@ func NewTeeLogger(l Logger, writer io.WriteCloser, bufferSize int) (*TeeLogger, 
 		buf: buf,
 		out: writer,
 	}, nil
+}
+
+func (d *TeeLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	var l Logger
+	switch d.l.(type) {
+	case *PrettyLogger:
+		l = NewPrettyLogger(LoggerOptions{OutStream: buffer})
+	case *SimpleLogger:
+		l = NewJSONLogger(LoggerOptions{OutStream: buffer})
+	default:
+		l = d.l
+	}
+
+	buf := bufio.NewWriterSize(d.out, 4096) // 1024 bytes may not be enough when executing in parallel
+
+	return &TeeLogger{
+		l:   l,
+		buf: buf,
+		out: d.out,
+	}
 }
 
 func (d *TeeLogger) FlushAndClose() error {

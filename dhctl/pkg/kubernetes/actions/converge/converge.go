@@ -15,6 +15,7 @@
 package converge
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -244,6 +245,13 @@ func (r *Runner) converge() error {
 		}
 
 		var nodeGroupsWithStateInCluster []string
+		var nodeGroupsWithoutStateInCluster []config.TerraNodeGroupSpec
+
+		type checkResult struct {
+			name    string
+			buffLog *bytes.Buffer
+			err     error
+		}
 
 		for _, group := range terraNodeGroups {
 			// Skip if node group terraform state exists, we will update node group state below
@@ -251,9 +259,11 @@ func (r *Runner) converge() error {
 				nodeGroupsWithStateInCluster = append(nodeGroupsWithStateInCluster, group.Name)
 				continue
 			}
-			if err := r.createPreviouslyNotExistedNodeGroup(group, metaConfig); err != nil {
-				return err
-			}
+
+			nodeGroupsWithoutStateInCluster = append(nodeGroupsWithoutStateInCluster, group)
+		}
+		if err := r.parallelCreatePreviouslyNotExistedNodeGroup(nodeGroupsWithoutStateInCluster, metaConfig); err != nil {
+			return err
 		}
 
 		for _, nodeGroupName := range sortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
@@ -368,31 +378,8 @@ func (r *Runner) updateClusterState(metaConfig *config.MetaConfig) error {
 	})
 }
 
-func (r *Runner) createPreviouslyNotExistedNodeGroup(group config.TerraNodeGroupSpec, metaConfig *config.MetaConfig) error {
-	return log.Process("converge", fmt.Sprintf("Add NodeGroup %s (replicas: %v)️", group.Name, group.Replicas), func() error {
-		err := CreateNodeGroup(r.kubeCl, group.Name, metaConfig.NodeGroupManifest(group))
-		if err != nil {
-			return err
-		}
-
-		nodeCloudConfig, err := GetCloudConfig(r.kubeCl, group.Name, ShowDeckhouseLogs)
-		if err != nil {
-			return err
-		}
-
-		var nodesIndexToCreate []int
-
-		for i := 0; i < group.Replicas; i++ {
-			nodesIndexToCreate = append(nodesIndexToCreate, i)
-		}
-
-		_, err = ParallelBootstrapAdditionalNodes(r.kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, r.terraformContext)
-		if err != nil {
-			return err
-		}
-
-		return WaitForNodesBecomeReady(r.kubeCl, group.Name, group.Replicas)
-	})
+func (r *Runner) parallelCreatePreviouslyNotExistedNodeGroup(groups []config.TerraNodeGroupSpec, metaConfig *config.MetaConfig) error {
+	return ParallelCreateNodeGroup(r.kubeCl, metaConfig, groups, r.terraformContext)
 }
 
 func GetMetaConfig(kubeCl *client.KubernetesClient) (*config.MetaConfig, error) {

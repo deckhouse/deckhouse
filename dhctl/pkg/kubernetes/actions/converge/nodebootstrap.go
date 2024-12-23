@@ -18,7 +18,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -37,7 +36,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
 	if isConverge {
-		nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName)
+		nodeExists, err := IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
 		if err != nil {
 			return err
 		} else if nodeExists {
@@ -58,6 +57,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
 			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
 		},
+		RunnerLogger: log.GetDefaultLogger(),
 	})
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
@@ -69,7 +69,7 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 		return ErrConvergeInterrupted
 	}
 
-	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
+	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
@@ -77,11 +77,9 @@ func BootstrapAdditionalNode(kubeCl *client.KubernetesClient, cfg *config.MetaCo
 	return nil
 }
 
-func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, buff *bytes.Buffer, saveLogToBuffer bool) error {
+func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, runnerLogger log.Logger) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
-
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
-
 	// TODO pass cache as argument or better refact func
 	runner := terraformContext.GetBootstrapNodeRunner(cfg, cache.Global(), terraform.BootstrapNodeRunnerOptions{
 		AutoApprove:     true,
@@ -90,11 +88,10 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 		NodeGroupName:   nodeGroupName,
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
-		LogToBuffer:     saveLogToBuffer,
-
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
 			NewNodeStateSaver(kubeCl, nodeName, nodeGroupName, nodeGroupSettings),
 		},
+		RunnerLogger: runnerLogger,
 	})
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.OnlyState)
@@ -106,20 +103,15 @@ func BootstrapAdditionalNodeForParallelRun(kubeCl *client.KubernetesClient, cfg 
 		return ErrConvergeInterrupted
 	}
 
-	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings)
+	err = SaveNodeTerraformState(kubeCl, nodeName, nodeGroupName, outputs.TerraformState, nodeGroupSettings, runnerLogger)
 	if err != nil {
 		return err
-	}
-
-	if saveLogToBuffer {
-		logs := runner.GetLog()
-		buff.WriteString(strings.Join(logs, "\n"))
 	}
 
 	return nil
 }
 
-func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, nodesIndexToCreate []int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) ([]string, error) {
+func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, nodesIndexToCreate []int, step, nodeGroupName, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext, ngLogger log.Logger, saveLogToBuffer bool) ([]string, error) {
 
 	var (
 		nodesToWait []string
@@ -128,14 +120,14 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 	)
 
 	type checkResult struct {
-		name    string
-		buffLog *bytes.Buffer
-		err     error
+		name        string
+		buffNodeLog *bytes.Buffer
+		err         error
 	}
 
 	for _, indexCandidate := range nodesIndexToCreate {
 		candidateName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, indexCandidate)
-		nodeExists, err := IsNodeExistsInCluster(kubeCl, candidateName)
+		nodeExists, err := IsNodeExistsInCluster(kubeCl, candidateName, ngLogger)
 		if err != nil {
 			return nil, err
 		} else if nodeExists {
@@ -143,62 +135,160 @@ func ParallelBootstrapAdditionalNodes(kubeCl *client.KubernetesClient, cfg *conf
 		}
 	}
 
-	if len(nodesIndexToCreate) > 1 {
-		log.WarnF("Many pipelines will run in parallel, terraform output for nodes %s-%v will be displayed after main execution.\n\n", nodeGroupName, nodesIndexToCreate[1:])
+	if len(nodesIndexToCreate) > 1 && !saveLogToBuffer {
+		ngLogger.LogWarnF("Many pipelines will run in parallel, terraform output for nodes %s-%v will be displayed after main execution.\n\n", nodeGroupName, nodesIndexToCreate[1:])
 	}
 
 	resultsChan := make(chan checkResult, len(nodesIndexToCreate))
 	for i, indexCandidate := range nodesIndexToCreate {
-		saveLogToBuffer := true
 		candidateName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, indexCandidate)
-		var buffLog bytes.Buffer
 		wg.Add(1)
-		go func(i, indexCandidate int, candidateName string) {
+		go func(i, indexCandidate int, candidateName string, logger log.Logger, saveLogToBuffer bool) {
 			defer wg.Done()
-			if i == 0 {
-				saveLogToBuffer = false
+			var buffNodeLog bytes.Buffer
+			var nodeLogger log.Logger
+
+			nodeLogger = ngLogger.CreateBufferLogger(&buffNodeLog)
+			if i == 0 && !saveLogToBuffer {
+				nodeLogger = ngLogger
 			}
-			err := BootstrapAdditionalNodeForParallelRun(kubeCl, cfg, indexCandidate, step, nodeGroupName, cloudConfig, true, terraformContext, &buffLog, saveLogToBuffer)
+			err := BootstrapAdditionalNodeForParallelRun(kubeCl, cfg, indexCandidate, step, nodeGroupName, cloudConfig, true, terraformContext, nodeLogger)
 
 			resultsChan <- checkResult{
-				name:    candidateName,
-				buffLog: &buffLog,
-				err:     err,
+				name:        candidateName,
+				buffNodeLog: &buffNodeLog,
+				err:         err,
 			}
 			mu.Lock()
 			nodesToWait = append(nodesToWait, candidateName)
 			mu.Unlock()
-		}(i, indexCandidate, candidateName)
+		}(i, indexCandidate, candidateName, ngLogger, saveLogToBuffer)
 	}
 
-	go func() {
-		wg.Wait()
-		close(resultsChan)
-	}()
+	wg.Wait()
+	close(resultsChan)
 
 	for candidate := range resultsChan {
 		if candidate.err != nil {
 			return nodesToWait, candidate.err
 		}
-		if candidate.buffLog.Len() == 0 {
+		if candidate.buffNodeLog.Len() == 0 {
 			continue
 		}
-		currentLogger := log.GetProcessLogger()
-		currentLogger.LogProcessStart(fmt.Sprintf("Output log [%s]", candidate.name))
-		scanner := bufio.NewScanner(candidate.buffLog)
+
+		scanner := bufio.NewScanner(candidate.buffNodeLog)
 		for scanner.Scan() {
-			log.InfoLn(scanner.Text())
+			ngLogger.LogInfoLn((scanner.Text()))
 		}
-		currentLogger.LogProcessEnd()
 	}
 	return nodesToWait, nil
+}
+
+func ParallelCreateNodeGroup(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, terraformContext *terraform.TerraformContext) error {
+	msg := "Create NodeGroups "
+	for _, group := range terraNodeGroups {
+		msg += fmt.Sprintf("%s (replicas: %v)️; ", group.Name, group.Replicas)
+	}
+
+	return log.Process("converge", msg, func() error {
+		var (
+			mu sync.Mutex
+			wg sync.WaitGroup
+		)
+		type checkResult struct {
+			name    string
+			buffLog *bytes.Buffer
+			err     error
+		}
+		currentLogger := log.GetDefaultLogger()
+
+		ngWaitMap := make(map[string]int)
+		resultsChan := make(chan checkResult, len(terraNodeGroups))
+		for i, group := range terraNodeGroups {
+			wg.Add(1)
+			go func(i int, group config.TerraNodeGroupSpec) {
+				defer wg.Done()
+
+				var (
+					buffNGLog       bytes.Buffer
+					ngLogger        log.Logger
+					saveLogToBuffer bool
+				)
+
+				if i == 0 {
+					saveLogToBuffer = false
+					ngLogger = currentLogger
+				} else {
+					saveLogToBuffer = true
+					ngLogger = currentLogger.CreateBufferLogger(&buffNGLog)
+				}
+
+				err := CreateNodeGroup(kubeCl, group.Name, ngLogger, metaConfig.NodeGroupManifest(group))
+				if err != nil {
+					resultsChan <- checkResult{
+						name:    group.Name,
+						buffLog: &buffNGLog,
+						err:     err,
+					}
+					return
+				}
+
+				nodeCloudConfig, err := GetCloudConfig(kubeCl, group.Name, ShowDeckhouseLogs, ngLogger)
+				if err != nil {
+					resultsChan <- checkResult{
+						name:    group.Name,
+						buffLog: &buffNGLog,
+						err:     err,
+					}
+					return
+				}
+
+				var nodesIndexToCreate []int
+				for i := 0; i < group.Replicas; i++ {
+					nodesIndexToCreate = append(nodesIndexToCreate, i)
+				}
+
+				_, err = ParallelBootstrapAdditionalNodes(kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, terraformContext, ngLogger, saveLogToBuffer)
+
+				resultsChan <- checkResult{
+					name:    group.Name,
+					buffLog: &buffNGLog,
+					err:     err,
+				}
+				mu.Lock()
+				ngWaitMap[group.Name] = group.Replicas
+				mu.Unlock()
+			}(i, group)
+		}
+
+		wg.Wait()
+		close(resultsChan)
+
+		for ng := range resultsChan {
+			if ng.err != nil {
+				return ng.err
+			}
+			if ng.buffLog.Len() == 0 {
+				continue
+			}
+			currentPLogger := log.GetProcessLogger()
+			currentPLogger.LogProcessStart(fmt.Sprintf("Output NG [%s] log", ng.name))
+			scanner := bufio.NewScanner(ng.buffLog)
+			for scanner.Scan() {
+				log.InfoLn(scanner.Text())
+			}
+			currentPLogger.LogProcessEnd()
+		}
+
+		return WaitForNodesBecomeReady(kubeCl, ngWaitMap)
+	})
 }
 
 func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.MetaConfig, index int, cloudConfig string, isConverge bool, terraformContext *terraform.TerraformContext) (*terraform.PipelineOutputs, error) {
 	nodeName := NodeName(cfg, MasterNodeGroupName, index)
 
 	if isConverge {
-		nodeExists, existsErr := IsNodeExistsInCluster(kubeCl, nodeName)
+		nodeExists, existsErr := IsNodeExistsInCluster(kubeCl, nodeName, log.GetDefaultLogger())
 		if existsErr != nil {
 			return nil, existsErr
 		} else if nodeExists {
@@ -217,6 +307,7 @@ func BootstrapAdditionalMasterNode(kubeCl *client.KubernetesClient, cfg *config.
 		AdditionalStateSaverDestinations: []terraform.SaverDestination{
 			NewNodeStateSaver(kubeCl, nodeName, MasterNodeGroupName, nil),
 		},
+		RunnerLogger: log.GetDefaultLogger(),
 	})
 
 	outputs, err := terraform.ApplyPipeline(runner, nodeName, terraform.GetMasterNodeResult)

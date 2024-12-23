@@ -26,6 +26,13 @@ trustedPeers:
     {{- end }}
   {{- end }}
 {{- end }}
+{{- if $context.Values.userAuthn.internal.dexClientCRDs }}
+  {{- range $crd := $context.Values.userAuthn.internal.dexClientCRDs }}
+    {{- if $crd.allowAccessToKubernetes }}
+- {{ $crd.id }}
+    {{- end }}
+  {{- end }}
+{{- end }}
 {{- if $context.Values.userAuthn.publishAPI.enabled }}
 - kubeconfig-generator
 {{- end }}
