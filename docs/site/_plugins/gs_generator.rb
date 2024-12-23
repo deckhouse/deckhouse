@@ -86,6 +86,7 @@ class DKP_GSPage < Jekyll::Page
 
     self.data['ee_only'] = true if @installData['ee_only']
     self.data['ce_only'] = true if @installData['ce_only']
+    self.data['se_support'] = true if @installData['se_support']
 
     self.content = "{% include #{globalData['step']['header']} %}\n\n"
 

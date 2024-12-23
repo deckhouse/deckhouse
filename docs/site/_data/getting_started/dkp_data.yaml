@@ -306,6 +306,7 @@ installTypes:
   vsphere:
     iconPath: images/icons/platforms/corp_cloud_vmware.png
     ee_only: true
+    se_support: true
     type: cloud
     name:
       en: VMware vSphere
@@ -543,6 +544,7 @@ installTypes:
   zvirt:
     iconPath: images/icons/platforms/zvirt.png
     ee_only: true
+    se_support: true
     layout:
       code: standard
       name: Standard
