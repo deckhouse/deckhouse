@@ -8149,7 +8149,7 @@
         "name": "vhost",
         "options": [],
         "query": {
-          "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\"}, vhost)",
+          "query": "label_values(ingress_nginx_${metric}_info{job=\"nginx-ingress-controller\",controller=~\"$controller\"}, vhost)",
           "refId": "main-vhost-Variable-Query"
         },
         "refresh": 2,
