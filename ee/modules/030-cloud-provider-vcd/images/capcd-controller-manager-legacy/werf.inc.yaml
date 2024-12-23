@@ -2,7 +2,7 @@
   {{- $version := toString $key }}
   {{- $image_version := $version | replace "." "-" }}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
 git:
