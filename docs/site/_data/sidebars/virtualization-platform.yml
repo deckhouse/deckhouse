@@ -67,7 +67,7 @@ entries:
                 ru: Управление узлами
               folders:
                 - title:
-                    en: NodeGroup
+                    en: Node groups
                     ru: Группы узлов
                   url: /virtualization-platform/documentation/admin/platform-management/node-management/node-group.html
                 - title:
@@ -79,8 +79,8 @@ entries:
                     ru: Настройка узлов
                   folders:
                     - title:
-                        en: NodeGroupConfiguration
-                        ru: Конфигурация групп узлов
+                        en: Node configuration
+                        ru: Конфигурация узлов
                       url: /virtualization-platform/documentation/admin/platform-management/node-management/configuration.html
                     - title:
                         en: OS configuration
@@ -90,6 +90,10 @@ entries:
                         en: Containerd configuration
                         ru: Настройка containerd
                       url: /virtualization-platform/documentation/admin/platform-management/node-management/containerd.html
+                    - title:
+                        en: Advanced configuration
+                        ru: Расширенные настройки
+                      url: /virtualization-platform/documentation/admin/platform-management/node-management/advanced.html
             - title:
                 en: Control plane
                 ru: Управляющий слой
