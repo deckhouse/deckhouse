@@ -1,0 +1,9 @@
+upmeter:
+  features:
+    - summary: Added `backup.deckhouse.io/cluster-config` label to relevant module CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10568
+user-authn:
+  features:
+    - summary: add dexclient with the specific annotation to kubernetes client trustedPeers
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11193
+

@@ -44,6 +44,8 @@
     Once `disableSBOMGeneration` set to true, ALL current SBOM reports are deleted (one-time operation).
  - **[registrypackages]** Update containerd to v1.7.24. [#10966](https://github.com/deckhouse/deckhouse/pull/10966)
  - **[service-with-healthchecks]** A new module has been added that performs additional checks. Based on the results of these checks, traffic can be directed to different internal processes internally independently and only if they are ready. [#9371](https://github.com/deckhouse/deckhouse/pull/9371)
+ - **[upmeter]** Added `backup.deckhouse.io/cluster-config` label to relevant module CRDs. [#10568](https://github.com/deckhouse/deckhouse/pull/10568)
+ - **[user-authn]** add dexclient with the specific annotation to kubernetes client trustedPeers [#11193](https://github.com/deckhouse/deckhouse/pull/11193)
  - **[user-authz]** New use subroles for DKP, and DVP aggregation. [#10936](https://github.com/deckhouse/deckhouse/pull/10936)
  - **[user-authz]** Replace use admin roles with use user roles for manage manager roles. [#10681](https://github.com/deckhouse/deckhouse/pull/10681)
     Reducing rights for manage manager roles.
