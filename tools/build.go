@@ -159,14 +159,14 @@ func writeSections(settings writeSettings) {
 		if err == nil && !info.IsDir() {
 			addEntries = append(addEntries, addEntry{
 				Add:               strings.TrimPrefix(file, workDir),
-				To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+				To:                filepath.Join("/chroot/deckhouse", strings.TrimPrefix(file, prefix)),
 				ExcludePaths:      nil,
 				StageDependencies: stageDependenciesFile,
 			})
 		} else {
 			addEntries = append(addEntries, addEntry{
 				Add:               strings.TrimPrefix(file, workDir),
-				To:                filepath.Join("/deckhouse", strings.TrimPrefix(file, prefix)),
+				To:                filepath.Join("/chroot/deckhouse", strings.TrimPrefix(file, prefix)),
 				ExcludePaths:      settings.ExcludePaths,
 				StageDependencies: settings.StageDependencies,
 			})
