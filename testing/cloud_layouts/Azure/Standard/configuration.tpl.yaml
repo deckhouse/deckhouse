@@ -11,16 +11,12 @@ kubernetesVersion: "${KUBERNETES_VERSION}"
 defaultCRI: "${CRI}"
 clusterDomain: "cluster.local"
 ---
-apiVersion: deckhouse.io/v2alpha1
+apiVersion: deckhouse.io/v1
 kind: InitConfiguration
-registry:
-  mode: Proxy
-  proxy:
-    storageMode: Fs
-    imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
-    dockerCfg: '${DECKHOUSE_DOCKERCFG}'
 deckhouse:
-  devBranch: '${DEV_BRANCH}'
+  devBranch: "${DEV_BRANCH}"
+  imagesRepo: dev-registry.deckhouse.io/sys/deckhouse-oss
+  registryDockerCfg: "${DECKHOUSE_DOCKERCFG}"
 ---
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
