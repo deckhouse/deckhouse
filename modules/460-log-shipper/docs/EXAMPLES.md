@@ -553,6 +553,17 @@ spec:
         log-shipper.deckhouse.io/exclude: "true"
 ```
 
+## Exclude logs of a certain Container inside the Pod
+
+To exclude logs of a certain Container inside the Pod, you need to add the following annotation to the Pod
+
+```yaml
+vector.dev/exclude-containers: "container1,container2"
+```
+
+This annotation will make Vector skip logs originating from the `container1` and `container2` of the Pod marked with the annotation, while logs from other Containers in the Pod will still be collected.
+More information about this feature can be found on [vector's official website](https://vector.dev/docs/reference/configuration/sources/kubernetes_logs/#container-exclusion)
+
 ## Enable Buffering
 
 The log buffering configuration is essential for improving the reliability and performance of the log collection system. Buffering can be useful in the following cases:
