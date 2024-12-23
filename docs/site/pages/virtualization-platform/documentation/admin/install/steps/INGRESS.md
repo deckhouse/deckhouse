@@ -48,10 +48,12 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 
 {% offtopic title="Example output..." %}
-```
+
+```console
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+
 {% endofftopic %}
 
 ## DNS Configuration
@@ -184,7 +186,7 @@ To access the cluster's web interfaces, you can create a static user:
      name: admin
    spec:
      email: admin@my-dvp-cluster.example.com
-     password: '<BASE64 СТРОКА С ПРЕДЫДУЩЕГО ШАГА>'
+     password: '<BASE64 PASSWORD>'
    
    EOF
    ```

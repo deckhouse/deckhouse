@@ -49,10 +49,12 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 ```
 
 {% offtopic title="Пример вывода..." %}
-```
+
+```console
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
 ```
+
 {% endofftopic %}
 
 ## Настройка DNS

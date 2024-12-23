@@ -40,7 +40,7 @@ permalink: en/virtualization-platform/documentation/admin/install/requirements.h
      - Network access from the **installation machine** (see p.1) on port `22322/TCP`.
    - Required software:
      - The `cloud-utils` and `cloud-init` packages must be installed.
-   > **Важно.** The container runtime will be installed automatically, so the `containerd` and/or `docker` packages must not be pre-installed.
+   > **Warning.** The container runtime will be installed automatically, so the `containerd` and/or `docker` packages must not be pre-installed.
 
 1. **Servers for worker nodes**
 

@@ -13,5 +13,4 @@ Deckhouse Virtualization Platform should be installed with these steps:
 1. [Adding nodes](nodes.html);
 1. [Setup storage](storage.html);
 1. [Setup virtualization](virtualization.html);
-1. [Setup Ingress and DNS](ingress.html);
-1. [Настройка доступа](access.html).
+1. [Setup Ingress and DNS](ingress.html).
