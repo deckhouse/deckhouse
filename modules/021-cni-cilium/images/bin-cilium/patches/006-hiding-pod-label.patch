@@ -1,0 +1,226 @@
+diff --git a/operator/pkg/ciliumendpointslice/manager.go b/operator/pkg/ciliumendpointslice/manager.go
+index 6de6fb7166..4b94035ea5 100644
+--- a/operator/pkg/ciliumendpointslice/manager.go
++++ b/operator/pkg/ciliumendpointslice/manager.go
+@@ -13,6 +13,7 @@ import (
+ 	"k8s.io/client-go/util/workqueue"
+ 
+ 	cilium_v2 "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2alpha1"
++	"github.com/cilium/cilium/pkg/labels"
+ 	"github.com/cilium/cilium/pkg/lock"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ )
+@@ -150,6 +151,13 @@ func newCESManagerIdentity(workQueue workqueue.RateLimitingInterface, maxCEPsInC
+ // addCEPtoCES inserts the CEP in a CES, if the CEP already exists in a CES
+ // it replaces with new CEP.
+ func (c *cesMgr) addCEPtoCES(cep *cilium_v2.CoreCiliumEndpoint, ces *cesTracker) {
++	if _, exist := cep.Labels[labels.IDNameHiddenPod]; exist {
++		log.WithFields(logrus.Fields{
++			logfields.CEPName: cep.Name,
++		}).Debug("Detected hidden CEP, prevent queueing it in the CES")
++		return
++	}
++
+ 	ces.backendMutex.Lock()
+ 	defer ces.backendMutex.Unlock()
+ 	// If cep already exists in ces, compare new cep with cached cep.
+@@ -614,7 +622,14 @@ func (c *cesManagerIdentity) InsertCEPInCache(cep *cilium_v2.CoreCiliumEndpoint,
+ 	// 3) CES UPDATE to k8s-apiserver, inserting the given CEP in existing CES
+ 	if cesName, exists := c.desiredCESs.getCESName(GetCEPNameFromCCEP(cep, ns)); exists {
+ 		if c.cesToIdentity[cesName] != cep.IdentityID {
+-			c.RemoveCEPFromCache(GetCEPNameFromCCEP(cep, ns), DelayedCESSyncTime)
++			delay := DelayedCESSyncTime
++			if _, exist := cep.Labels[labels.IDNameHiddenPod]; exist {
++				log.WithFields(logrus.Fields{
++					logfields.CEPName: cep.Name,
++				}).Debug("Detected hidden CEP, force removing old CEP")
++				delay = DefaultCESSyncTime
++			}
++			c.RemoveCEPFromCache(GetCEPNameFromCCEP(cep, ns), delay)
+ 		} else {
+ 			if ces, ok := c.desiredCESs.getCESTracker(cesName); ok {
+ 				// add a cep into the ces
+diff --git a/operator/watchers/cilium_endpoint.go b/operator/watchers/cilium_endpoint.go
+index 7c1b240f77..fffa4b4648 100644
+--- a/operator/watchers/cilium_endpoint.go
++++ b/operator/watchers/cilium_endpoint.go
+@@ -139,6 +139,7 @@ func transformToCiliumEndpoint(obj interface{}) (interface{}, error) {
+ 				ResourceVersion: concreteObj.ResourceVersion,
+ 				OwnerReferences: concreteObj.OwnerReferences,
+ 				UID:             concreteObj.UID,
++				Labels:          concreteObj.Labels,
+ 			},
+ 			Status: cilium_api_v2.EndpointStatus{
+ 				Identity:   concreteObj.Status.Identity,
+diff --git a/pkg/endpoint/bpf.go b/pkg/endpoint/bpf.go
+index 7cf0dcf319..83bde2cdcb 100644
+--- a/pkg/endpoint/bpf.go
++++ b/pkg/endpoint/bpf.go
+@@ -595,7 +595,11 @@ func (e *Endpoint) regenerateBPF(regenContext *regenerationContext) (revnum uint
+ 	if !datapathRegenCtxt.epInfoCache.IsHost() || option.Config.EnableHostFirewall {
+ 		// Hook the endpoint into the endpoint and endpoint to policy tables then expose it
+ 		stats.mapSync.Start()
+-		err = lxcmap.WriteEndpoint(datapathRegenCtxt.epInfoCache)
++		if e.HaveSpecialLabel() {
++			lxcmap.DeleteElement(datapathRegenCtxt.epInfoCache)
++		} else {
++			err = lxcmap.WriteEndpoint(datapathRegenCtxt.epInfoCache)
++		}
+ 		stats.mapSync.End(err == nil)
+ 		if err != nil {
+ 			return 0, compilationExecuted, fmt.Errorf("Exposing new BPF failed: %w", err)
+diff --git a/pkg/endpoint/cache.go b/pkg/endpoint/cache.go
+index 3920d46935..3487baec72 100644
+--- a/pkg/endpoint/cache.go
++++ b/pkg/endpoint/cache.go
+@@ -43,6 +43,7 @@ type epInfoCache struct {
+ 	options                                *option.IntOptions
+ 	lxcMAC                                 mac.MAC
+ 	ifIndex                                int
++	haveSpecialLabel                       bool
+ 
+ 	// endpoint is used to get the endpoint's logger.
+ 	//
+@@ -78,12 +79,17 @@ func (e *Endpoint) createEpInfoCache(epdir string) *epInfoCache {
+ 		options:                e.Options.DeepCopy(),
+ 		lxcMAC:                 e.mac,
+ 		ifIndex:                e.ifIndex,
++		haveSpecialLabel:       e.HaveSpecialLabel(),
+ 
+ 		endpoint: e,
+ 	}
+ 	return ep
+ }
+ 
++func (ep *epInfoCache) HaveSpecialLabel() bool {
++	return ep.haveSpecialLabel
++}
++
+ func (ep *epInfoCache) GetIfIndex() int {
+ 	return ep.ifIndex
+ }
+diff --git a/pkg/endpoint/endpoint.go b/pkg/endpoint/endpoint.go
+index 4a2b401797..1cf5ec1be9 100644
+--- a/pkg/endpoint/endpoint.go
++++ b/pkg/endpoint/endpoint.go
+@@ -410,6 +410,11 @@ func (e *Endpoint) IsHost() bool {
+ 	return e.isHost
+ }
+ 
++func (e *Endpoint) HaveSpecialLabel() bool {
++	_, found := e.OpLabels.GetIdentityLabel(labels.IDNameHiddenPod)
++	return found
++}
++
+ // SetIsHost is a convinient method to create host endpoints for testing.
+ func (ep *Endpoint) SetIsHost(isHost bool) {
+ 	ep.isHost = isHost
+diff --git a/pkg/ipcache/ipcache.go b/pkg/ipcache/ipcache.go
+index 59f89704c1..cc3de9cad0 100644
+--- a/pkg/ipcache/ipcache.go
++++ b/pkg/ipcache/ipcache.go
+@@ -76,6 +76,8 @@ type K8sMetadata struct {
+ 	PodName string
+ 	// NamedPorts is the set of named ports for the pod
+ 	NamedPorts types.NamedPortMap
++	// HidingFromIpcache is flag for exluding pod from ipcache map
++	HidingFromIpcache bool
+ }
+ 
+ // Configuration is init-time configuration for the IPCache.
+@@ -302,6 +304,11 @@ func (ipc *IPCache) upsertLocked(
+ 		}
+ 	}
+ 
++	if k8sMeta != nil && k8sMeta.HidingFromIpcache {
++		scopedLog.Debug("Prevent upsert to ipcache map by special hiding flag")
++		return
++	}
++
+ 	var cidrCluster cmtypes.PrefixCluster
+ 	var oldIdentity *Identity
+ 	callbackListeners := true
+diff --git a/pkg/k8s/apis/cilium.io/v2alpha1/types.go b/pkg/k8s/apis/cilium.io/v2alpha1/types.go
+index df388cc5ca..48ef16bfc0 100644
+--- a/pkg/k8s/apis/cilium.io/v2alpha1/types.go
++++ b/pkg/k8s/apis/cilium.io/v2alpha1/types.go
+@@ -39,6 +39,7 @@ type CoreCiliumEndpoint struct {
+ 	// +kubebuilder:validation:Optional
+ 	Encryption cilium_v2.EncryptionSpec `json:"encryption,omitempty"`
+ 	NamedPorts models.NamedPorts        `json:"named-ports,omitempty"`
++	Labels     map[string]string        `json:"labels,omitempty"`
+ }
+ 
+ // +genclient
+diff --git a/pkg/k8s/factory_functions.go b/pkg/k8s/factory_functions.go
+index 6b63866ddf..456a0187ba 100644
+--- a/pkg/k8s/factory_functions.go
++++ b/pkg/k8s/factory_functions.go
+@@ -1115,6 +1115,7 @@ func ConvertCEPToCoreCEP(cep *cilium_v2.CiliumEndpoint) *cilium_v2alpha1.CoreCil
+ 		Encryption: cep.Status.Encryption,
+ 		IdentityID: identityID,
+ 		NamedPorts: cep.Status.NamedPorts.DeepCopy(),
++		Labels:     cep.Labels,
+ 	}
+ }
+ 
+diff --git a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
+index 418b23cbc2..c0e328c862 100644
+--- a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
++++ b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
+@@ -89,7 +89,9 @@ func (cs *cesSubscriber) OnUpdate(oldCES, newCES *cilium_v2a1.CiliumEndpointSlic
+ 			// LocalNode already has the latest CEP.
+ 			// Hence, skip processing endpointupdate for localNode CEPs.
+ 			if p := cs.epCache.LookupPodName(k8sUtils.GetObjNamespaceName(cep)); p != nil {
+-				continue
++				if !p.HaveSpecialLabel() {
++					continue
++				}
+ 			}
+ 			cs.deleteCEPfromCES(CEPName, newCES.GetName(), cep)
+ 		}
+diff --git a/pkg/k8s/watchers/pod.go b/pkg/k8s/watchers/pod.go
+index 9647f08f5b..44668827f1 100644
+--- a/pkg/k8s/watchers/pod.go
++++ b/pkg/k8s/watchers/pod.go
+@@ -873,9 +873,11 @@ func (k *K8sWatcher) updatePodHostData(oldPod, newPod *slim_corev1.Pod, oldPodIP
+ 
+ 	hostKey := node.GetEndpointEncryptKeyIndex()
+ 
++	_, hidingFromIpcache := newPod.ObjectMeta.Labels[labels.IDNameHiddenPod]
+ 	k8sMeta := &ipcache.K8sMetadata{
+-		Namespace: newPod.Namespace,
+-		PodName:   newPod.Name,
++		Namespace:         newPod.Namespace,
++		PodName:           newPod.Name,
++		HidingFromIpcache: hidingFromIpcache,
+ 	}
+ 
+ 	// Store Named ports, if any.
+diff --git a/pkg/labels/labels.go b/pkg/labels/labels.go
+index 1c026356fa..9b572d05c9 100644
+--- a/pkg/labels/labels.go
++++ b/pkg/labels/labels.go
+@@ -59,6 +59,10 @@ const (
+ 	// IDNameUnknown is the label used to to identify an endpoint with an
+ 	// unknown identity.
+ 	IDNameUnknown = "unknown"
++
++	// IDNameHiddenPod is the label used to identify an endpoint hidden from
++	// network access
++	IDNameHiddenPod = "network.deckhouse.io/hidden-pod"
+ )
+ 
+ var (
+diff --git a/pkg/maps/lxcmap/lxcmap.go b/pkg/maps/lxcmap/lxcmap.go
+index 51261df078..1d2104cc8f 100644
+--- a/pkg/maps/lxcmap/lxcmap.go
++++ b/pkg/maps/lxcmap/lxcmap.go
+@@ -55,6 +55,7 @@ const (
+ // EndpointFrontend is the interface to implement for an object to synchronize
+ // with the endpoint BPF map.
+ type EndpointFrontend interface {
++	HaveSpecialLabel() bool
+ 	LXCMac() mac.MAC
+ 	GetNodeMAC() mac.MAC
+ 	GetIfIndex() int
