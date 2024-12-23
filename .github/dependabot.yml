@@ -394,7 +394,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/bashible-apiserver"
+  directory: "/modules/040-node-manager/images/bashible-apiserver/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -421,7 +421,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/fencing-agent"
+  directory: "/modules/040-node-manager/images/fencing-agent/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
