@@ -70,7 +70,7 @@ spec:
         name: auth-config-volume
       - mountPath: /system_registry_pki
         name: system-registry-pki-volume
-  {{- if and (eq .Registry.Mode "Detached") (gt (len .Mirrorer.Upstreams) 0) false }}
+  {{- if and (eq .Registry.Mode "Detached") (gt (len .Mirrorer.Upstreams) 0) }}
   - name: mirrorer
     image: {{ .Images.Mirrorer }}
     imagePullPolicy: IfNotPresent

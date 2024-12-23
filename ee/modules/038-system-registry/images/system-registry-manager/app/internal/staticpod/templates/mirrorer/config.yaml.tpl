@@ -14,6 +14,5 @@ remote:
 - "{{ $ip }}:5001"
 {{- end }}
 {{- else }}
-remote:
-  - "{{ .Address }}:5001"
+remote: []
 {{- end }}

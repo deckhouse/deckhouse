@@ -444,30 +444,9 @@ func (nc *nodeController) handleMasterNode(ctx context.Context, node *corev1.Nod
 	}
 
 	if moduleConfig.Settings.Mode == state.RegistryModeDetached {
-		var isFirstMasterNode bool
-
-		isFirstMasterNode, err = nc.isFirstMasterNode(ctx, node)
+		err = nc.applyStaticPodConfig(ctx, node.Name, staticPodConfig)
 		if err != nil {
-			err = fmt.Errorf("cannot check node is first master node: %w", err)
-			return
-		}
-		log = log.WithValues("firstMasterNode", isFirstMasterNode)
-
-		if isFirstMasterNode {
-			log.Info("Processing first master node for mode == detached")
-			err = nc.applyStaticPodConfig(ctx, node.Name, staticPodConfig)
-			if err != nil {
-				err = fmt.Errorf("apply static pod configuration error: %w", err)
-			}
-
-			return
-		}
-
-		log.Info("Shutdown node static pod on non-master node for mode = detached")
-		err = nc.deleteStaticPodConfig(ctx, node.Name, false)
-		if err != nil {
-			err = fmt.Errorf("delete static pod configuration error: %w", err)
-			return
+			err = fmt.Errorf("apply static pod configuration error: %w", err)
 		}
 
 		return
@@ -841,25 +820,6 @@ func (nc *nodeController) loadGlobalPKI(ctx context.Context) (ret state.GlobalPK
 	}
 
 	return
-}
-
-func (nc *nodeController) isFirstMasterNode(ctx context.Context, node *corev1.Node) (bool, error) {
-	nodes, err := nc.getAllMasterNodes(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	for _, item := range nodes.Items {
-		if item.Name == node.Name {
-			continue
-		}
-
-		if item.CreationTimestamp.Before(&node.CreationTimestamp) {
-			return false, nil
-		}
-	}
-
-	return true, nil
 }
 
 func (nc *nodeController) getAllMasterNodesInternalIPs(ctx context.Context) (ips []string, err error) {

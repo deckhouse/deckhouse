@@ -153,7 +153,7 @@ func (rs *syncer) handleTag(ctx context.Context, src name.Tag) {
 	}
 
 	copyStartTime := time.Now()
-	log.Debug("Copy tag start", "start_time", copyStartTime)
+	log.Info("Copy tag start", "start_time", copyStartTime)
 
 	if err := rs.pusher.Push(ctx, dst, srcManifest); err != nil {
 		log.Error(
@@ -167,7 +167,7 @@ func (rs *syncer) handleTag(ctx context.Context, src name.Tag) {
 	tagsCount := rs.copied.Add(1)
 	copyEndTime := time.Now()
 
-	log.Debug(
+	log.Info(
 		"Copy tag done",
 		"start_time", copyStartTime,
 		"end_time", copyEndTime,
