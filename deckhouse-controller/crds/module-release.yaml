@@ -24,9 +24,9 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the configuration for Deckhouse release.
+            Defines the configuration for a Deckhouse release.
 
-            **Deckhouse creates ModuleRelease resources by itself.**
+            **ModuleRelease resources are created by Deckhouse.**
           required:
             - spec
           properties:
@@ -45,28 +45,28 @@ spec:
                   x-doc-examples: ['v1.0.0']
                 weight:
                   type: integer
-                  description: Module weight.
+                  description: Module _weight_ (priority).
                 applyAfter:
                   type: string
-                  description: Marks release as a part of canary release. This release will be delayed until this time.
+                  description: Time until which the release will be delayed.
                 requirements:
                   type: object
                   description: Deckhouse release requirements.
                   properties:
                     deckhouse:
                       type: string
-                      description: The cluster Deckhouse version requirement.
+                      description: Required Deckhouse version.
                     kubernetes:
                       type: string
-                      description: The cluster Kubernetes version requirement.
+                      description: Required Kubernetes version.
                     modules:
                       type: object
-                      description: The module dependency requirements.
+                      description: Other modules required.
                       additionalProperties:
                         type: string
                 changelog:
                   type: object
-                  description: Release's changelog for module.
+                  description: Release's changelog for the module.
                   x-kubernetes-preserve-unknown-fields: true
             status:
               type: object
@@ -89,10 +89,10 @@ spec:
                 approved:
                   type: boolean
                   description: |
-                    The status of the release's readiness for deployment. It makes sense only for Manual updates (`update.mode: Manual`).
+                    Status indicating that the release is ready for deployment. For the Manual update mode only (`update.mode: Manual`).
                 size:
                   type: integer
-                  description: Size of module image.
+                  description: Size of the module image.
                 pullDuration:
                   type: string
                   description: Module loading duration.

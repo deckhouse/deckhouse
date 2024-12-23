@@ -6,7 +6,7 @@ spec:
           description: |
             Определяет конфигурацию релизов модулей Deckhouse.
 
-            **Ресурсы ModuleRelease создает Deckhouse.**
+            **Ресурсы ModuleRelease создаёт Deckhouse.**
           properties:
             spec:
               properties:
@@ -19,7 +19,7 @@ spec:
                 applyAfter:
                   description: Время, до которого отложено обновление.
                 requirements:
-                  description: Структура содержащая требования, необходимые для применения релиза.
+                  description: Необходимые требования для применения релиза.
                   properties:
                     deckhouse:
                       description: Требование к версии Deckhouse.

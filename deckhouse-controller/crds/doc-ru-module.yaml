@@ -4,7 +4,7 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Репрезентация модуля
+            Репрезентация модуля.
 
           properties:
             properties:
@@ -13,7 +13,7 @@ spec:
                   description: |
                     _Вес_ (приоритет) модуля.
                 availableSources:
-                  description: Доступные источники скачивания модуля.
+                  description: Доступные источники для скачивания модуля.
                 source:
                   description: Источник из которого скачен модуль (иначе пусто).
                 releaseChannel:
@@ -25,7 +25,7 @@ spec:
                 version:
                   description: Версия модуля.
                 requirements:
-                  description: Структура содержащая требования, необходимые для включения модуля.
+                  description: Необходимые требования для включения модуля.
                   properties:
                     deckhouse:
                       description: Требование к версии Deckhouse.
