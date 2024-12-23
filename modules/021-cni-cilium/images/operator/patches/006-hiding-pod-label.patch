@@ -1,5 +1,5 @@
 diff --git a/operator/pkg/ciliumendpointslice/manager.go b/operator/pkg/ciliumendpointslice/manager.go
-index 6de6fb7166..267fde0909 100644
+index 6de6fb7166..4b94035ea5 100644
 --- a/operator/pkg/ciliumendpointslice/manager.go
 +++ b/operator/pkg/ciliumendpointslice/manager.go
 @@ -13,6 +13,7 @@ import (
@@ -24,6 +24,22 @@ index 6de6fb7166..267fde0909 100644
  	ces.backendMutex.Lock()
  	defer ces.backendMutex.Unlock()
  	// If cep already exists in ces, compare new cep with cached cep.
+@@ -614,7 +622,14 @@ func (c *cesManagerIdentity) InsertCEPInCache(cep *cilium_v2.CoreCiliumEndpoint,
+ 	// 3) CES UPDATE to k8s-apiserver, inserting the given CEP in existing CES
+ 	if cesName, exists := c.desiredCESs.getCESName(GetCEPNameFromCCEP(cep, ns)); exists {
+ 		if c.cesToIdentity[cesName] != cep.IdentityID {
+-			c.RemoveCEPFromCache(GetCEPNameFromCCEP(cep, ns), DelayedCESSyncTime)
++			delay := DelayedCESSyncTime
++			if _, exist := cep.Labels[labels.IDNameHiddenPod]; exist {
++				log.WithFields(logrus.Fields{
++					logfields.CEPName: cep.Name,
++				}).Debug("Detected hidden CEP, force removing old CEP")
++				delay = DefaultCESSyncTime
++			}
++			c.RemoveCEPFromCache(GetCEPNameFromCCEP(cep, ns), delay)
+ 		} else {
+ 			if ces, ok := c.desiredCESs.getCESTracker(cesName); ok {
+ 				// add a cep into the ces
 diff --git a/operator/watchers/cilium_endpoint.go b/operator/watchers/cilium_endpoint.go
 index 7c1b240f77..fffa4b4648 100644
 --- a/operator/watchers/cilium_endpoint.go
@@ -149,7 +165,7 @@ index 6b63866ddf..456a0187ba 100644
  }
  
 diff --git a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
-index 418b23cbc2..551a2f7330 100644
+index 418b23cbc2..c0e328c862 100644
 --- a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
 +++ b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
 @@ -89,7 +89,9 @@ func (cs *cesSubscriber) OnUpdate(oldCES, newCES *cilium_v2a1.CiliumEndpointSlic
@@ -163,14 +179,6 @@ index 418b23cbc2..551a2f7330 100644
  			}
  			cs.deleteCEPfromCES(CEPName, newCES.GetName(), cep)
  		}
-@@ -159,6 +161,7 @@ func (cs *cesSubscriber) deleteCEPfromCES(CEPName, CESName string, c *types.Cili
- 	if !needUpdate {
- 		return
- 	}
-+
- 	cep, exists := cs.cepMap.getCEPLocked(CEPName)
- 	if !exists {
- 		log.WithFields(logrus.Fields{
 diff --git a/pkg/k8s/watchers/pod.go b/pkg/k8s/watchers/pod.go
 index 9647f08f5b..44668827f1 100644
 --- a/pkg/k8s/watchers/pod.go
@@ -216,5 +224,3 @@ index 51261df078..1d2104cc8f 100644
  	LXCMac() mac.MAC
  	GetNodeMAC() mac.MAC
  	GetIfIndex() int
--- 
-2.34.1
