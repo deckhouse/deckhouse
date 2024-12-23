@@ -1,0 +1,180 @@
+kind: HuaweiCloudClusterConfiguration
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    description: |
+      Описывает конфигурацию облачного кластера в Huawei Cloud.
+
+      Используется облачным провайдером, если управляющий слой кластера размещён в облаке.
+
+      Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
+
+      ```shell
+      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      ```
+    doc-search: |
+      ProviderClusterConfiguration
+    properties:
+      sshPublicKey:
+        type: string
+        description: Публичный ключ для доступа на узлы.
+      zones:
+        description: |
+          Глобальное ограничение набора зон, с которыми работает данный облачный провайдер.
+      masterNodeGroup:
+        description: |
+          Спецификация для описания NodeGroup master-узлов.
+
+          > Чтобы изменения вступили в силу, после изменения параметров секции `masterNodeGroup` выполните команду `dhctl converge`.
+        properties:
+          replicas:
+            description: |
+              Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы оно было нечетным.
+          instanceClass:
+            description: |
+              Частичное содержимое полей [HuaweiCloudInstanceClass](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass).
+            properties: &instanceClassProperties_ru
+              flavorName: &instanceClassFlavorName_ru
+                description: |
+                  Тип заказываемых виртуальных машин.
+              imageName: &instanceClassImageName_ru
+                description: |
+                  Имя образа виртуальной машины, который будет использоваться для инстанса.
+
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти на странице [Поддерживаемые версии Kubernetes и ОС](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+              rootDiskSize: &instanceClassRootDiskSize_ru
+                description: |
+                  Размер root-диска. Значение указывается в гигабайтах.
+
+                  Параметр также влияет на тип диска. Особенности применения параметра описаны в разделе [Как использовать rootDiskSize и когда он предпочтителен](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#как-использовать-rootdisksize-и-когда-он-предпочтителен).
+              etcdDiskSizeGb:
+                description: |
+                  Размер диска для etcd. Значение указывается в гигабайтах.
+          volumeTypeMap:
+            description: |
+              Словарь типов дисков для хранения данных etcd и конфигурационных файлов Kubernetes.
+
+              Формат элементов словаря: `<ЗОНА ДОСТУПНОСТИ>: <ТИП ДИСКА>` (см. пример).
+
+              Если указан параметр `rootDiskSize`, этот же тип диска будет использован в качестве загрузочного диска виртуальной машины.
+
+              Всегда рекомендуется использовать самые быстрые диски, предоставляемые провайдером.
+
+              Если значение, указанное в `replicas`, превышает количество элементов в словаре, master-узлы, чьи номера превышают
+              длину словаря, получают значения, начиная с начала словаря. Если для словаря из примера указано `replicas: 5`, с типом
+              диска `fast-eu-1a` будут master-0, master-2 и master-4, а с типом диска `fast-eu-1b` будут master-1 и master-3.
+          serverGroup:
+            description: |
+              ServerGroup объединяет инстансы в группу. Инстансы в такой группе будут размещены на одном гипервизоре (affinity) или на разных гипервизорах (anti-affinity). Это позволяет повысить отказоустойчивость кластера.
+            properties:
+              policy:
+                description: |
+                  Политика распределения инстансов:
+
+                  - `AntiAffinity` — размещает инстансы на разных гипервизорах. Данной политикой управляет Deckhouse.
+      nodeGroups:
+        description: |
+          Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
+        items:
+          properties:
+            name:
+              description: |
+                Имя NodeGroup, которое будет использоваться для генерации имен узлов.
+            replicas:
+              description: |
+                Количество узлов.
+            nodeTemplate:
+              description: |
+                Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
+              properties:
+                labels:
+                  description: |
+                    Список лейблов, которые будут прикреплены ко всем ресурсам кластера (если они это поддерживают).
+
+                    Аналогично [стандартному полю `metadata.labels`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+
+                    Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины.
+                  x-doc-example: |
+                    ```yaml
+                    labels:
+                      environment: production
+                      app: warp-drive-ai
+                    ```
+                annotations:
+                  description: |
+                    Аналогично [стандартному полю `metadata.annotations`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta).
+                  x-doc-example: |
+                    ```yaml
+                    annotations:
+                      ai.fleet.com/discombobulate: "true"
+                    ```
+                taints:
+                  description: |
+                    Аналогично [полю `.spec.taints`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) из объекта Node.
+
+                    > Доступны только поля `effect`, `key`, `values`.
+                  x-doc-example: |
+                    ```yaml
+                    taints:
+                    - effect: NoExecute
+                      key: ship-class
+                      value: frigate
+                    ```
+            instanceClass:
+              description: |
+                Частичное содержимое полей.
+              properties:
+                <<: *instanceClassProperties_ru
+      layout:
+        description: |
+          Название схемы размещения.
+
+          Возможные схемы размещения провайдера описаны на странице [Схемы размещения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html).
+      standard:
+        type: object
+        description: |
+          Настройки для [схемы размещения `Standard`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/layouts.html#standard).
+        properties:
+          internalNetworkCIDR: &internalNetworkCIDR_ru
+            description: |
+              Адресация для внутренней сети узлов кластера.
+          internalNetworkDNSServers:
+            description: |
+              Список адресов рекурсивных DNS внутренней сети.
+          internalNetworkSecurity: &internalNetworkSecurity_ru
+            description: |
+              Флаг, который определяет необходимость настройки [SecurityGroups](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/faq.html#как-проверить-поддерживает-ли-провайдер-securitygroups) на портах внутренней сети.
+          enableEIP:
+            description: |
+                Включите Elastic IP для мастер узлов.
+      provider:
+        description: |
+          [Параметры подключения](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/environment.html) к API Huawei Cloud.
+
+          Совпадают с параметрами, передаваемыми в поле `connection` в модуле [cloud-provider-huaweicloud](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/030-cloud-provider-huaweicloud/configuration.html#parameters).
+        properties:
+          cloud:
+            description: |
+              Конечная точка поставщика облачных услуг.
+          region:
+            description: |
+              Регион Huawei Cloud, в котором будет развернут кластер.
+          accessKey:
+            description: |
+              Ключ доступа к облаку Huawei Cloud.
+          secretKey:
+            description: |
+              Секретный ключ облака Huawei Cloud.
+          insecure:
+            description: |
+              Доверять самоподписанным SSL-сертификатам.
+          authURL:
+            description: |
+              URL-адрес аутентификации личности.
+          domainName:
+            description: |
+              Имя учетной записи IAM для охвата.
+          projectID:
+            description: |
+              Идентификатор проекта.

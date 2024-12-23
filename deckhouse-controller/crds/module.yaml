@@ -81,7 +81,7 @@ spec:
                     - Conflict
                     - Ready
                     - Error
-                    #TODO(ipaqsa): delete it
+                    # TODO(ipaqsa): delete after 1.68
                     - Pending
                     - Enqueued
                     - NotInstalled

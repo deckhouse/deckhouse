@@ -21,12 +21,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gookit/color"
-	"github.com/sirupsen/logrus"
 	"github.com/werf/logboek"
 	"github.com/werf/logboek/pkg/level"
 	"github.com/werf/logboek/pkg/types"
@@ -70,8 +69,9 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 	switch loggerType {
 	case "pretty":
 		defaultLogger = NewPrettyLogger(opts)
-	case "simple":
-		defaultLogger = NewSimpleLogger(opts)
+	// todo: add simple logger when our slog implementation will be support not only json formatter
+	// case "simple":
+	// 	defaultLogger = NewSimpleLogger(opts)
 	case "json":
 		defaultLogger = NewJSONLogger(opts)
 	case "silent":
@@ -81,16 +81,16 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 	}
 
 	// Mute Shell-Operator logs
-	logrus.SetLevel(logrus.PanicLevel)
+	log.Default().SetLevel(log.LevelFatal)
 	if opts.IsDebug {
 		// Enable shell-operator log, because it captures klog output
 		// todo: capture output of klog with default logger instead
-		logrus.SetLevel(logrus.DebugLevel)
+		log.Default().SetLevel(log.LevelDebug)
 		klog.InitFlags(nil)
 		_ = flag.CommandLine.Parse([]string{"-v=10"})
 
 		// Wrap them with our default logger
-		logrus.SetOutput(defaultLogger)
+		log.Default().SetOutput(defaultLogger)
 	} else {
 		klog.SetOutput(io.Discard)
 		flags := &flag.FlagSet{}
@@ -134,10 +134,13 @@ type Logger interface {
 
 	LogSuccess(string)
 	LogFail(string)
+	LogFailRetry(string)
 
 	LogJSON([]byte)
 
 	ProcessLogger() ProcessLogger
+
+	CreateBufferLogger(buffer *bytes.Buffer) Logger
 
 	Write([]byte) (int, error)
 }
@@ -256,6 +259,10 @@ func (d *PrettyLogger) LogFail(l string) {
 	d.LogInfoF("️⛱️️ %s", l)
 }
 
+func (d *PrettyLogger) LogFailRetry(l string) {
+	d.LogFail(l)
+}
+
 func (d *PrettyLogger) LogWarnLn(a ...interface{}) {
 	a = append([]interface{}{"❗ ~ "}, a...)
 	d.LogInfoLn(color.New(color.Bold).Sprint(a...))
@@ -275,6 +282,10 @@ func (d *PrettyLogger) Write(content []byte) (int, error) {
 	return len(content), nil
 }
 
+func (d *PrettyLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return NewPrettyLogger(LoggerOptions{OutStream: buffer})
+}
+
 func prettyJSON(content []byte) string {
 	result := &bytes.Buffer{}
 	if err := json.Indent(result, content, "", "  "); err != nil {
@@ -285,38 +296,40 @@ func prettyJSON(content []byte) string {
 }
 
 type SimpleLogger struct {
-	logger  *logrus.Entry
+	logger  *log.Logger
 	isDebug bool
 }
 
 func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
-	l := &logrus.Logger{
-		Level: logrus.DebugLevel,
-		Formatter: &logrus.TextFormatter{
-			DisableColors:   true,
-			TimestampFormat: "2006-01-02 15:04:05",
-			FullTimestamp:   true,
-		},
-	}
+	//todo: now unused, need change formatter to text when our slog implementation will support it
+	l := log.NewLogger(log.Options{})
 
 	if opts.OutStream != nil {
-		l.Out = opts.OutStream
-	} else {
-		l.Out = os.Stdout
+		l.SetOutput(opts.OutStream)
 	}
 
-	// l.Formatter = &logrus.JSONFormatter{}
 	return &SimpleLogger{
-		logger:  logrus.NewEntry(l),
+		logger:  l,
 		isDebug: opts.IsDebug,
 	}
 }
 
 func NewJSONLogger(opts LoggerOptions) *SimpleLogger {
-	simpleLogger := NewSimpleLogger(opts)
-	simpleLogger.logger.Logger.Formatter = &logrus.JSONFormatter{}
+	//json is default formatter for our slog implementation
+	l := log.NewLogger(log.Options{})
 
-	return simpleLogger
+	if opts.OutStream != nil {
+		l.SetOutput(opts.OutStream)
+	}
+
+	return &SimpleLogger{
+		logger:  l,
+		isDebug: opts.IsDebug,
+	}
+}
+
+func (d *SimpleLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return NewJSONLogger(LoggerOptions{OutStream: buffer})
 }
 
 func (d *SimpleLogger) ProcessLogger() ProcessLogger {
@@ -328,9 +341,9 @@ func (d *SimpleLogger) FlushAndClose() error {
 }
 
 func (d *SimpleLogger) LogProcess(p, t string, run func() error) error {
-	d.logger.WithField("action", "start").WithField("process", p).Infoln(t)
+	d.logger.With("action", "start").With("process", p).Info(t)
 	err := run()
-	d.logger.WithField("action", "end").WithField("process", p).Infoln(t)
+	d.logger.With("action", "end").With("process", p).Info(t)
 	return err
 }
 
@@ -339,7 +352,7 @@ func (d *SimpleLogger) LogInfoF(format string, a ...interface{}) {
 }
 
 func (d *SimpleLogger) LogInfoLn(a ...interface{}) {
-	d.logger.Infoln(a...)
+	d.logger.Infof("%v", a)
 }
 
 func (d *SimpleLogger) LogErrorF(format string, a ...interface{}) {
@@ -347,7 +360,7 @@ func (d *SimpleLogger) LogErrorF(format string, a ...interface{}) {
 }
 
 func (d *SimpleLogger) LogErrorLn(a ...interface{}) {
-	d.logger.Errorln(a...)
+	d.logger.Errorf("%v", a)
 }
 
 func (d *SimpleLogger) LogDebugF(format string, a ...interface{}) {
@@ -358,16 +371,21 @@ func (d *SimpleLogger) LogDebugF(format string, a ...interface{}) {
 
 func (d *SimpleLogger) LogDebugLn(a ...interface{}) {
 	if d.isDebug {
-		d.logger.Debugln(a...)
+		d.logger.Debugf("%v", a)
 	}
 }
 
 func (d *SimpleLogger) LogSuccess(l string) {
-	d.logger.WithField("status", "SUCCESS").Infoln(l)
+	d.logger.With("status", "SUCCESS").Info(l)
 }
 
 func (d *SimpleLogger) LogFail(l string) {
-	d.logger.WithField("status", "FAIL").Errorln(l)
+	d.logger.With("status", "FAIL").Error(l)
+}
+
+func (d *SimpleLogger) LogFailRetry(l string) {
+	// there used warn log level because in retry cycle we don't want to catch stacktraces which exist as default in Error and Fatal log level of slog logger
+	d.logger.With("status", "FAIL").Warn(l)
 }
 
 func (d *SimpleLogger) LogWarnF(format string, a ...interface{}) {
@@ -375,11 +393,11 @@ func (d *SimpleLogger) LogWarnF(format string, a ...interface{}) {
 }
 
 func (d *SimpleLogger) LogWarnLn(a ...interface{}) {
-	d.logger.Warnln(a...)
+	d.logger.Warnf("%v", a)
 }
 
 func (d *SimpleLogger) LogJSON(content []byte) {
-	d.logger.Infoln(string(content))
+	d.logger.Info(string(content))
 }
 
 func (d *SimpleLogger) Write(content []byte) (int, error) {
@@ -391,6 +409,10 @@ type DummyLogger struct{}
 
 func (d *DummyLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
+}
+
+func (d *DummyLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return NewSimpleLogger(LoggerOptions{OutStream: buffer})
 }
 
 func (d *DummyLogger) FlushAndClose() error {
@@ -438,6 +460,10 @@ func (d *DummyLogger) LogSuccess(l string) {
 
 func (d *DummyLogger) LogFail(l string) {
 	fmt.Println(l)
+}
+
+func (d *DummyLogger) LogFailRetry(l string) {
+	d.LogFail(l)
 }
 
 func (d *DummyLogger) LogWarnLn(a ...interface{}) {
@@ -531,6 +557,10 @@ func (d *SilentLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
 }
 
+func (d *SilentLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return d
+}
+
 func (d *SilentLogger) LogProcess(_, t string, run func() error) error {
 	err := run()
 	return err
@@ -564,6 +594,9 @@ func (d *SilentLogger) LogSuccess(l string) {
 func (d *SilentLogger) LogFail(l string) {
 }
 
+func (d *SilentLogger) LogFailRetry(l string) {
+}
+
 func (d *SilentLogger) LogWarnLn(a ...interface{}) {
 }
 
@@ -594,6 +627,26 @@ func NewTeeLogger(l Logger, writer io.WriteCloser, bufferSize int) (*TeeLogger, 
 		buf: buf,
 		out: writer,
 	}, nil
+}
+
+func (d *TeeLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	var l Logger
+	switch d.l.(type) {
+	case *PrettyLogger:
+		l = NewPrettyLogger(LoggerOptions{OutStream: buffer})
+	case *SimpleLogger:
+		l = NewJSONLogger(LoggerOptions{OutStream: buffer})
+	default:
+		l = d.l
+	}
+
+	buf := bufio.NewWriterSize(d.out, 4096) // 1024 bytes may not be enough when executing in parallel
+
+	return &TeeLogger{
+		l:   l,
+		buf: buf,
+		out: d.out,
+	}
 }
 
 func (d *TeeLogger) FlushAndClose() error {
@@ -680,6 +733,12 @@ func (d *TeeLogger) LogSuccess(l string) {
 
 func (d *TeeLogger) LogFail(l string) {
 	d.l.LogFail(l)
+
+	d.writeToFile(l)
+}
+
+func (d *TeeLogger) LogFailRetry(l string) {
+	d.l.LogFailRetry(l)
 
 	d.writeToFile(l)
 }

@@ -33,8 +33,10 @@ type versionWatcher struct {
 	logger      *log.Logger
 }
 
-func (w *versionWatcher) watch(path string) (err error) {
-	if w.watcher, err = fsnotify.NewWatcher(); err != nil {
+func (w *versionWatcher) watch(path string) error {
+	var err error
+	w.watcher, err = fsnotify.NewWatcher()
+	if err != nil {
 		return err
 	}
 	if err = w.watcher.Add(path); err != nil {
@@ -46,7 +48,7 @@ func (w *versionWatcher) watch(path string) (err error) {
 			if !ok {
 				return nil
 			}
-			if err = w.handler(path); err != nil {
+			if err := w.handler(path); err != nil {
 				return err
 			}
 		case err, ok := <-w.watcher.Errors:
@@ -68,7 +70,7 @@ func (w *versionWatcher) handler(path string) error {
 	}
 	parsed, err := semver.NewVersion(strings.TrimSpace(string(content)))
 	if err != nil {
-		w.logger.Error("failed to parse version", "path", path, "content", string(content), "err", err)
+		w.logger.Error("failed to parse version", "path", path, "content", string(content), log.Err(err))
 		return err
 	}
 	if w.lastVersion == nil || !w.lastVersion.Equal(parsed) {

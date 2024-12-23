@@ -70,6 +70,9 @@ mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
 shell:
+  beforeInstall:
+  - apk add --no-cache git openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GOPROXY={{ $.GOPROXY }}
   - git clone --depth 1 --branch v3.4.3 {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-random.git /src-provider-random

@@ -2,13 +2,17 @@
 {{- $_ := set . "UsePrebuildJekyllImage" true }}
 {{- $_ := set . "Mode" "production" }}
 {{- $_ := set . "Edition" "EE" }}
-{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") -}}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "SE-plus") (eq $.Env "EE") -}}
   {{- $_ := set . "Edition" $.Env }}
 {{- else if eq $.Env "FE"  }}
   {{- $_ := set . "Edition" "EE" }}
 {{- else }}
   {{- $_ := set . "Mode" $.Env }}
 {{- end }}
+
+{{- $context := . }}
+{{- $_ := set $context "ModulePath" "../../" }}
+
 project: deckhouse-web
 configVersion: 1
 cleanup:
@@ -75,18 +79,36 @@ shell:
         bundle --version
   setup:
   - |
-        # "Build static files"
+        # "Generating CR schemas for DVP..."
+        cd /srv/jekyll-data/site/
+        export MODULES_RAW_DIR=/rawdata
+        export CRD_PATH=virtualization-platform/crds
+        export OPENAPI_PATH=virtualization-platform/openapi
+        bash ./prepare_resources.sh
+
+        # "Building static files"
         cd /srv/jekyll-data/site/
         export JEKYLL_ENV=production
         mkdir -m 777 -p /app/_site/
-        jekyll build -d /app/_site/ --config _config.yml
+        jekyll build -d /app/_site/ --config  _config.yml
 git:
+- add: /docs/documentation
+  to: /srv/jekyll-data/site
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - js/lunr*.js
+  - js/pdf.worker.min.js
+  - js/search.js
+  - _data/rbac/
+  - _includes/rbac/
+  stageDependencies:
+    setup: '**/*'
 - add: /docs/site
   to: /srv/jekyll-data/site
   owner: jekyll
   group: jekyll
   excludePaths:
-  - '**/*.sh'
   - LOCAL_DEV.md
   - werf*.yaml
   - docker-compose*.yml
@@ -97,6 +119,150 @@ git:
   stageDependencies:
     install: ['Gemfile','Gemfile.lock']
     setup: '**/*'
+- add: /{{ .ModulePath }}
+  to: /rawdata/crds
+{{/*  to: /srv/jekyll-data/site/_data/schemas/virtualization-platform/crds*/}}
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "**/*-admission-policy-engine/crds/*.yaml"
+  - "**/*-cert-manager/crds/*.yaml"
+  - "**/*-chrony/crds/*.yaml"
+  - "**/*-cilium-hubble/crds/*.yaml"
+  - "**/*-cni-cilium/crds/*.yaml"
+  - "**/*-control-plane-manager/crds/*.yaml"
+  - "**/*-descheduler/crds/*.yaml"
+  - "**/*-extended-monitoring/crds/*.yaml"
+  - "**/*-ingress-nginx/crds/*.yaml"
+  - "**/*-l2-load-balancer/crds/*.yaml"
+  - "**/*-log-shipper/crds/*.yaml"
+  - "**/*-loki/crds/*.yaml"
+  - "**/*-metallb/crds/*.yaml"
+  - "**/*-monitoring-custom/crds/*.yaml"
+  - "**/*-monitoring-deckhouse/crds/*.yaml"
+  - "**/*-monitoring-kubernetes-control-plane/crds/*.yaml"
+  - "**/*-monitoring-kubernetes/crds/*.yaml"
+  - "**/*-monitoring-ping/crds/*.yaml"
+  - "**/*-multitenancy-manager/crds/*.yaml"
+  - "**/*-node-manager/crds/*.yaml"
+  - "**/*-operator-prometheus/crds/*.yaml"
+  - "**/*-prometheus-metrics-adapter/crds/*.yaml"
+  - "**/*-prometheus/crds/*.yaml"
+  - "**/*-snapshot-controller/crds/*.yaml"
+  - "**/*-upmeter/crds/*.yaml"
+  - "**/*-user-authn/crds/*.yaml"
+  - "**/*-user-authz/crds/*.yaml"
+  - "**/*-vertical-pod-autoscaler/crds/*.yaml"
+  stageDependencies:
+    setup: '**/*'
+# add moduleConfigs schemas
+- url: https://github.com/deckhouse/virtualization.git
+  branch: main
+  add: /
+  to: /rawdata/external/modules/virtualization
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "crds/*.yaml"
+  - "openapi/config-values.yaml"
+  - "openapi/doc-ru-config-values.yaml"
+  stageDependencies:
+    setup: '**/*'
+- url: https://github.com/deckhouse/sds-replicated-volume.git
+  branch: main
+  add: /
+  to: /rawdata/external/modules/sds-replicated-volume
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "crds/*.yaml"
+  - "openapi/config-values.yaml"
+  - "openapi/doc-ru-config-values.yaml"
+  stageDependencies:
+    setup: '**/*'
+- url: https://github.com/deckhouse/sds-node-configurator.git
+  branch: main
+  add: /
+  to: /rawdata/external/modules/sds-node-configurator
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "crds/*.yaml"
+  - "openapi/config-values.yaml"
+  - "openapi/doc-ru-config-values.yaml"
+  stageDependencies:
+    setup: '**/*'
+- url: https://github.com/deckhouse/sds-local-volume.git
+  branch: main
+  add: /
+  to: /rawdata/external/modules/sds-local-volume
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  - "crds/*.yaml"
+  - "openapi/config-values.yaml"
+  - "openapi/doc-ru-config-values.yaml"
+  stageDependencies:
+    setup: '**/*'
+- add: /{{ .ModulePath }}
+  to: /rawdata/openapi
+{{/*  to: /srv/jekyll-data/site/_data/schemas/virtualization-platform/crds*/}}
+  owner: jekyll
+  group: jekyll
+  includePaths:
+  #- "**/*-l2-load-balancer/openapi/*"
+  #- "**/*-node-manager/openapi/*"
+  - "**/*-admission-policy-engine/openapi/*"
+  - "**/*-cert-manager/openapi/*"
+  - "**/*-chrony/openapi/*"
+  - "**/*-cilium-hubble/openapi/*"
+  - "**/*-cni-cilium/openapi/*"
+  - "**/*-control-plane-manager/openapi/*"
+  - "**/*-descheduler/openapi/*"
+  - "**/*-extended-monitoring/openapi/*"
+  - "**/*-ingress-nginx/openapi/*"
+  - "**/*-log-shipper/openapi/*"
+  - "**/*-loki/openapi/*"
+  - "**/*-monitoring-custom/openapi/*"
+  - "**/*-monitoring-deckhouse/openapi/*"
+  - "**/*-monitoring-kubernetes-control-plane/openapi/*"
+  - "**/*-monitoring-kubernetes/openapi/*"
+  - "**/*-monitoring-ping/openapi/*"
+  - "**/*-multitenancy-manager/openapi/*"
+  - "**/*-operator-prometheus/openapi/*"
+  - "**/*-prometheus-metrics-adapter/openapi/*"
+  - "**/*-prometheus/openapi/*"
+  - "**/*-snapshot-controller/openapi/*"
+  - "**/*-upmeter/openapi/*"
+  - "**/*-user-authn/openapi/*"
+  - "**/*-user-authz/openapi/*"
+  - "**/*-vertical-pod-autoscaler/openapi/*"
+  - "**/se/modules/*-metallb/openapi/*"
+  excludePaths:
+  - "**/global-hooks/"
+  - "**/testdata/"
+  stageDependencies:
+    setup: '**/*'
+- add: /global-hooks/openapi
+  to: /rawdata/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*config-values.yaml','doc-ru-config-values.yaml']
+- add: /candi/openapi
+  to: /rawdata/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
+  includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+- add: /deckhouse-controller/crds
+  to: /rawdata/global
+  owner: jekyll
+  group: jekyll
+  stageDependencies:
+    setup: ['**/*']
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 import:
   - artifact: site-external-artifacts

@@ -348,7 +348,7 @@ func (dcr *DeckhouseReleaseChecker) releaseCanarySettings() canarySettings {
 	return dcr.releaseMetadata.Canary[dcr.releaseChannel]
 }
 
-func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash string) (digestHash string, err error) {
+func (dcr *DeckhouseReleaseChecker) FetchReleaseMetadata(previousImageHash string) (string, error) {
 	image, err := dcr.registryClient.Image(context.TODO(), dcr.releaseChannel)
 	if err != nil {
 		return "", err

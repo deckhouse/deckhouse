@@ -9,7 +9,7 @@ metadata:
     rbac.deckhouse.io/kind: manage
     rbac.deckhouse.io/level: module
     rbac.deckhouse.io/namespace: d8-admission-policy-engine
-  name: d8:manage:capability:module:admission-policy-engine:view
+  name: d8:manage:permission:module:admission-policy-engine:view
 rules:
 - apiGroups:
   - deckhouse.io

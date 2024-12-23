@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/api/core/v1"
@@ -88,11 +89,11 @@ func semverMin(versions []*semver.Version) *semver.Version {
 	return res
 }
 
-func patchNodeGroupStatus(patcher *object_patch.PatchCollector, nodeGroupName string, patch interface{}) {
+func patchNodeGroupStatus(patcher go_hook.PatchCollector, nodeGroupName string, patch interface{}) {
 	patcher.MergePatch(patch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"))
 }
 
-func setNodeGroupStatus(patcher *object_patch.PatchCollector, nodeGroupName string, statusField string, value interface{}) {
+func setNodeGroupStatus(patcher go_hook.PatchCollector, nodeGroupName string, statusField string, value interface{}) {
 	statusPatch := map[string]interface{}{
 		"status": map[string]interface{}{
 			statusField: value,

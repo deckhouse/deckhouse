@@ -835,6 +835,33 @@ The full list of plugins is available in the [Kubernetes documentation](https://
 
 ### Working logic
 
+#### Scheduler profiles
+
+There are two predefined scheduler profiles:
+
+* `default-scheduler`: The default profile that distributes pods to nodes with the lowest load;
+* `high-node-utilization`: A profile that places pods on nodes with the highest load.
+
+To specify a scheduler profile, use the `spec.schedulerName` parameter in the pod manifest.
+
+Example of using a profile:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: scheduler-example
+  labels:
+    name: scheduler-example
+spec:
+  schedulerName: high-node-utilization
+  containers:
+  - name: example-pod
+    image: registry.k8s.io/pause:2.0  
+```
+
+#### Pod scheduling stages
+
 The selection process starts with the `Filtering` phase. During it, `filter` plugins select nodes that satisfy filter conditions such as `taints`, `nodePorts`, `nodeName`, `unschedulable`, etc.
 If the nodes are in different zones, the scheduler alternates zones when selecting to ensure that all Pods will not end up in the same zone.
 

@@ -21,7 +21,7 @@
 {!{ end -}!}
 
 {!{- define "e2e_kubernetes_default_version" -}!}
-1.27
+1.29
 {!{- end -}!}
 
 # job for set e2e requirement status
@@ -290,6 +290,7 @@ check_e2e_labels:
     {!{ printf "run_%s_%s: ${{ steps.check.outputs.run_%s_%s }}" $cri $kubernetesVersionSlug $cri $kubernetesVersionSlug }!}
 {!{- end -}!}
 {!{- end }!}
+    edition: ${{ steps.check.outputs.edition }}
     multimaster: ${{ steps.check.outputs.multimaster }}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
@@ -345,7 +346,9 @@ check_e2e_labels:
     KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
 {!{- end }!}
     EVENT_LABEL: ${{ github.event.label.name }}
-    WERF_ENV: "${{ fromJson(inputs.test_config).edition || 'FE'}}"
+{!{- if coll.Has $ctx "manualRun" }!}
+    WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
+{!{- end }!}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
@@ -548,7 +551,7 @@ check_e2e_labels:
 {!{- end }!}
 
     - name: Cleanup bootstrapped cluster
-      if: {!{ coll.Has $ctx "manualRun" | test.Ternary "success()" "always()" }!}
+      if: {!{ coll.Has $ctx "manualRun" | test.Ternary "inputs.autodelete||success()" "always()" }!}
       id: cleanup_cluster
       timeout-minutes: 60
       env:

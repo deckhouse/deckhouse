@@ -27,7 +27,10 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client
   setup:
+    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
     - git clone -b applied/{{ $version }} --depth 1 {{ $.SOURCE_REPO }}/netcat src
     - cd src
     - make linux LDFLAGS='-static' DFLAGS='-DDEBIAN_VERSION=\"Flant\"'

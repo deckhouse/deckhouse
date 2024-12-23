@@ -145,7 +145,7 @@ func renderMachineClassChecksum(templateContent []byte, ng *nodeGroupValue) (str
 	return checksum, nil
 }
 
-func getChecksumTemplate(values *go_hook.PatchableValues) ([]byte, error) {
+func getChecksumTemplate(values go_hook.PatchableValuesCollector) ([]byte, error) {
 	cloudType := values.Get("nodeManager.internal.cloudProvider.type").String()
 	if cloudType == "" {
 		// Can be empty for the first run even in cloud.
@@ -167,7 +167,7 @@ func readChecksumTemplate(cloudType string) ([]byte, error) {
 func getChecksumTemplatePath(cloudType string) string {
 	// Memorize: we can not use MODULES_DIR env variable anymore
 	// because MODULES_DIR could contain multiple paths, joined with colon (:) in the unpredictable order
-	for _, dir := range []string{"/deckhouse/modules", "/deckhouse/ee/modules", "/deckhouse/ee/fe/modules"} {
+	for _, dir := range []string{"/deckhouse/modules", "/deckhouse/ee/modules", "/deckhouse/ee/fe/modules", "/deckhouse/ee/se-plus/modules"} {
 		checksumFilePath := filepath.Join(dir, fmt.Sprintf("030-cloud-provider-%s", cloudType), "cloud-instance-manager", "machine-class.checksum")
 		if _, err := os.Stat(checksumFilePath); err == nil {
 			return checksumFilePath

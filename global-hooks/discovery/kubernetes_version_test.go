@@ -204,7 +204,7 @@ subsets:
 			Context(fmt.Sprintf("%s created", s.title), func() {
 				BeforeEach(func() {
 					dependency.TestDC.HTTPClient.DoMock.
-						Set(func(_ *http.Request) (rp1 *http.Response, err error) {
+						Set(func(_ *http.Request) (*http.Response, error) {
 							return versionsResponse(initialVersion), nil
 						})
 					f.BindingContexts.Set(f.KubeStateSet(podState))
@@ -228,7 +228,7 @@ subsets:
 			const initialVersion = "1.19.2"
 			BeforeEach(func() {
 				dependency.TestDC.HTTPClient.DoMock.
-					Set(func(_ *http.Request) (rp1 *http.Response, err error) {
+					Set(func(_ *http.Request) (*http.Response, error) {
 						return versionsResponse(initialVersion), nil
 					})
 				f.BindingContexts.Set(f.KubeStateSet(stateEndpoints(endpointsOne)))
@@ -316,7 +316,7 @@ status:
 			const initialVersion = "1.19.2"
 			BeforeEach(func() {
 				dependency.TestDC.HTTPClient.DoMock.
-					Set(func(req *http.Request) (rp1 *http.Response, err error) {
+					Set(func(req *http.Request) (*http.Response, error) {
 						switch req.Host {
 						case "10.245.0.1":
 							return versionsResponse(initialVersion), nil
@@ -364,7 +364,7 @@ status:
 		endpointsState := stateEndpoints(endpointsOne)
 		BeforeEach(func() {
 			dependency.TestDC.HTTPClient.DoMock.
-				Set(func(_ *http.Request) (rp1 *http.Response, err error) {
+				Set(func(_ *http.Request) (*http.Response, error) {
 					return versionsResponse(initialVersion), nil
 				})
 			f.BindingContexts.Set(f.KubeStateSet(endpointsState))
@@ -401,7 +401,7 @@ status:
 			Context("Change version", func() {
 				BeforeEach(func() {
 					dependency.TestDC.HTTPClient.DoMock.
-						Set(func(_ *http.Request) (rp1 *http.Response, err error) {
+						Set(func(_ *http.Request) (*http.Response, error) {
 							return versionsResponse(verToChange), nil
 						})
 					f.RunHook()
@@ -441,7 +441,7 @@ status:
 				Context("Change version", func() {
 					BeforeEach(func() {
 						dependency.TestDC.HTTPClient.DoMock.
-							Set(func(_ *http.Request) (rp1 *http.Response, err error) {
+							Set(func(_ *http.Request) (*http.Response, error) {
 								return versionsResponse(verToChange), nil
 							})
 						f.RunHook()
@@ -467,7 +467,7 @@ status:
 
 			BeforeEach(func() {
 				dependency.TestDC.HTTPClient.DoMock.
-					Set(func(_ *http.Request) (rp1 *http.Response, err error) {
+					Set(func(_ *http.Request) (*http.Response, error) {
 						return versionsResponse(initialVersion), nil
 					})
 
@@ -493,7 +493,7 @@ status:
 		k8sVer := initVers[1]
 		BeforeEach(func() {
 			dependency.TestDC.HTTPClient.DoMock.
-				Set(func(req *http.Request) (rp1 *http.Response, err error) {
+				Set(func(req *http.Request) (*http.Response, error) {
 					host := strings.Split(req.Host, ":")[0]
 					ver := initVers[indexOf(host, endpointsMul)]
 					return versionsResponse(ver), nil
@@ -534,7 +534,7 @@ status:
 				k8sVer := changeVers[1]
 				BeforeEach(func() {
 					dependency.TestDC.HTTPClient.DoMock.
-						Set(func(req *http.Request) (rp1 *http.Response, err error) {
+						Set(func(req *http.Request) (*http.Response, error) {
 							host := strings.Split(req.Host, ":")[0]
 							ver := changeVers[indexOf(host, endpointsMul)]
 							return versionsResponse(ver), nil
@@ -578,7 +578,7 @@ status:
 					k8sVer := changeVers[1]
 					BeforeEach(func() {
 						dependency.TestDC.HTTPClient.DoMock.
-							Set(func(req *http.Request) (rp1 *http.Response, err error) {
+							Set(func(req *http.Request) (*http.Response, error) {
 								host := strings.Split(req.Host, ":")[0]
 								ver := changeVers[indexOf(host, endpointsMul)]
 								return versionsResponse(ver), nil
@@ -631,7 +631,7 @@ status:
 
 		BeforeEach(func() {
 			dependency.TestDC.HTTPClient.DoMock.
-				Set(func(req *http.Request) (rp1 *http.Response, err error) {
+				Set(func(req *http.Request) (*http.Response, error) {
 					host := strings.Split(req.Host, ":")[0]
 					ver := initVers[indexOf(host, endpointsMul)]
 					return versionsResponse(ver), nil

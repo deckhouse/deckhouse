@@ -27,8 +27,11 @@ git:
       setup:
       - '**/*'
 shell:
+  beforeInstall:
+    - apk add --no-cache openssh-client
   setup:
   - export CC=clang
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} {{ $.SOURCE_REPO }}/curl/curl.git
   - cd /curl
   - autoreconf -fi

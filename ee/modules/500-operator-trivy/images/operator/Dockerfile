@@ -1,7 +1,7 @@
 ARG BASE_DISTROLESS
-ARG BASE_GOLANG_22_ALPINE_DEV
+ARG BASE_GOLANG_23_ALPINE_DEV
 
-FROM $BASE_GOLANG_22_ALPINE_DEV AS build
+FROM $BASE_GOLANG_23_ALPINE_DEV AS build
 ARG GOPROXY
 ARG SOURCE_REPO
 ENV GOPROXY=${GOPROXY} \
@@ -11,7 +11,11 @@ ENV GOPROXY=${GOPROXY} \
     GOARCH=amd64
 
 WORKDIR /src
-RUN git clone --depth 1 --branch v0.22.0 ${SOURCE_REPO}/aquasecurity/trivy-operator.git .
+RUN apk add --no-cache openssh-client
+RUN mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+RUN --mount=type=ssh git clone --depth 1 --branch v0.22.0 ${SOURCE_REPO}/aquasecurity/trivy-operator.git .
+RUN --mount=type=ssh git clone --depth 1 --branch flant-v0.53.0-csaf-dependency-fix ${SOURCE_REPO}/aquasecurity/trivy.git
+RUN go work init && go work use trivy && go work use .
 
 COPY patches/001-add-registry-secret-as-dockerconfigjson.patch /src
 COPY patches/002-skip-some-checks.patch /src

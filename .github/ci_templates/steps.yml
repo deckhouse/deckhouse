@@ -175,3 +175,30 @@
     rm bin
 # </template: unlink_bin_step>
 {!{- end -}!}
+
+{!{ define "login_git_step" }!}
+# <template: login_git_step>
+- name: Start ssh-agent
+  uses: {!{ index (ds "actions") "ssh-agent" }!}
+  with:
+    ssh-private-key: |
+      ${{secrets.SOURCE_REPO_SSH_KEY}}
+- name: Add ssh_known_hosts
+  run: |
+    HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+    echo "::add-mask::$HOST"
+    IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+    for IP in $IPS; do
+      echo "::add-mask::$IP"
+    done
+    mkdir -p ~/.ssh
+    touch ~/.ssh/known_hosts
+    HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+    while IFS= read -r KEY_LINE; do
+      CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+      if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+        echo "$KEY_LINE" >> ~/.ssh/known_hosts
+      fi
+    done <<< "$HOST_KEYS"
+# </template: login_git_step>
+{!{- end -}!}

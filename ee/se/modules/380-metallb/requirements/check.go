@@ -4,33 +4,19 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license.
 See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
+// TODO: Delete this file and the corresponding requirements in 'release.yaml' after version 1.67.
 package requirements
 
 import (
-	"errors"
-
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 const (
-	metallbConfigurationStatusKey             = "metallb:ConfigurationStatus"
 	metallbConfigurationStatusRequirementsKey = "metallbHasStandardConfiguration"
 )
 
 func init() {
-	checkRequirementConfigurationStatus := func(_ string, getter requirements.ValueGetter) (bool, error) {
-		configurationStatusRaw, exists := getter.Get(metallbConfigurationStatusKey)
-		if !exists {
-			return true, nil
-		}
-
-		if configurationStatus, ok := configurationStatusRaw.(string); ok {
-			if configurationStatus == "Misconfigured" {
-				return false, errors.New(
-					"[metallb] cluster misconfigured, see ClusterAlerts for details",
-				)
-			}
-		}
+	checkRequirementConfigurationStatus := func(_ string, _ requirements.ValueGetter) (bool, error) {
 		return true, nil
 	}
 	requirements.RegisterCheck(metallbConfigurationStatusRequirementsKey, checkRequirementConfigurationStatus)

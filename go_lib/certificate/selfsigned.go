@@ -51,7 +51,7 @@ func WithSigningDefaultUsage(usage []string) SigningOption {
 	}
 }
 
-func GenerateSelfSignedCert(logger go_hook.ILogger, cn string, ca Authority, options ...interface{}) (Certificate, error) {
+func GenerateSelfSignedCert(logger go_hook.Logger, cn string, ca Authority, options ...interface{}) (Certificate, error) {
 	logger.Debugf("Generate self-signed cert for %s", cn)
 	request := &csr.CertificateRequest{
 		CN: cn,

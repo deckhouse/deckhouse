@@ -82,6 +82,8 @@ defaults:
       sidebar: main
       multilang: true
       comparable: true
+      product_code: kubernetes-platform
+      search_bage_enabled: true
       lang: en
   - scope:
       path: "pages/includes"
@@ -97,6 +99,26 @@ defaults:
     values:
       toc_in_sidebar: true
       toc: false
+      layout: guide
+      search_bage_enabled: false
+  - scope:
+      path: "pages/virtualization-platform"
+    values:
+      toc_in_sidebar: false
+      toc: false
+      product_code: virtualization-platform
+      documentation_state: develop
+      search_bage_enabled: true
+      sidebar: virtualization-platform
+      sitemap_include: false
+  - scope:
+      path: "pages/virtualization-platform/guides"
+      type: "pages"
+    values:
+      toc_in_sidebar: true
+      toc: false
+      sitemap_include: false
+      layout: guide
   - scope:
       path: "modules_ru"
       type: "pages"
@@ -133,12 +155,6 @@ defaults:
       path: "*/031-ceph-csi"
       type: "pages"
     values:
-      featureStatus: deprecated
-  - scope:
-      path: "*/381-l2-load-balancer"
-      type: "pages"
-    values:
-      d8Revision: ee
       featureStatus: deprecated
   - scope:
       path: "*/500-operator-trivy"
@@ -186,6 +202,18 @@ defaults:
       path: "*/500-openvpn"
       type: "pages"
     values:
+      featureStatus: experimental
+  - scope:
+      path: "*/610-service-with-healthchecks"
+      type: "pages"
+    values:
+      featureStatus: experimental
+      d8Revision: ee
+  - scope:
+      path: "*/160-multitenancy-manager"
+      type: "pages"
+    values:
+      d8Revision: ee
       featureStatus: experimental
 timezone: Europe/Moscow
 

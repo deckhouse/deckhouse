@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	appsv1 "k8s.io/api/apps/v1"
@@ -66,7 +66,7 @@ type deckhouseReleaseReconciler struct {
 	moduleManager moduleManager
 
 	updateSettings *helpers.DeckhouseSettingsContainer
-	metricStorage  *metric_storage.MetricStorage
+	metricStorage  *metricstorage.MetricStorage
 
 	preflightCountDown      *sync.WaitGroup
 	clusterUUID             string
@@ -74,7 +74,7 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metric_storage.MetricStorage,
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage *metricstorage.MetricStorage,
 	preflightCountDown *sync.WaitGroup, logger *log.Logger,
 ) error {
 	r := &deckhouseReleaseReconciler{
@@ -122,7 +122,8 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		Complete(ctr)
 }
 
-func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	var result ctrl.Result
 	r.logger.Debugf("%s release processing started", req.Name)
 	defer func() { r.logger.Debugf("%s release processing complete: %+v", req.Name, result) }()
 
@@ -134,7 +135,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricReleasesGroup)
 
 	release := new(v1alpha1.DeckhouseRelease)
-	err = r.client.Get(ctx, req.NamespacedName, release)
+	err := r.client.Get(ctx, req.NamespacedName, release)
 	if err != nil {
 		r.logger.Debugf("get release: %s", err.Error())
 		// The DeckhouseRelease resource may no longer exist, in which case we stop
@@ -154,14 +155,10 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return r.createOrUpdateReconcile(ctx, release)
 }
 
-func (r *deckhouseReleaseReconciler) PreflightCheck(ctx context.Context) (err error) {
-	defer func() {
-		if err == nil {
-			r.preflightCountDown.Done()
-		}
-	}()
-
+func (r *deckhouseReleaseReconciler) PreflightCheck(ctx context.Context) error {
 	r.clusterUUID = r.getClusterUUID(ctx)
+	r.preflightCountDown.Done()
+
 	return nil
 }
 

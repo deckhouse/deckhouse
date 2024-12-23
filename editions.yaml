@@ -49,14 +49,21 @@ editions:
   excludeModules:
   - dashboard
 
+- name: SE-plus
+  modulesDir: "ee/se-plus/modules"
+  terraformProviders:
+    - vsphere
+    - ovirt
+  excludeModules:
+  - dashboard
+
 - name: EE
   modulesDir: "ee/modules"
   terraformProviders:
     - openstack
-    - vsphere
     - vcd
-    - ovirt
     - decort
+    - huaweicloud
 
 - name: FE
   modulesDir: "ee/fe/modules"

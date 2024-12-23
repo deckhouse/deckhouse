@@ -29,25 +29,6 @@ import (
 )
 
 const (
-	initConfigurationError = `%s fields in InitConfiguration are deprecated.
-Please use ModuleConfig 'deckhouse' section in configuration. Example:
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterConfiguration
-...
-apiVersion: deckhouse.io/v1alpha1
-kind: InitConfiguration
-...
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  settings:
-    %s
-`
-
 	DefaultBundle   = "Default"
 	DefaultLogLevel = "Info"
 )
@@ -125,6 +106,18 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	if len(metaConfig.DeckhouseConfig.ConfigOverrides) > 0 {
 		return nil, fmt.Errorf("Support for 'configOverrides' was removed. Please use ModuleConfig's instead.")
+	}
+
+	if metaConfig.DeckhouseConfig.ReleaseChannel != "" {
+		return nil, fmt.Errorf("Support for 'releaseChannel' was removed. Please use 'deckhouse' ModuleConfig's settings instead.")
+	}
+
+	if metaConfig.DeckhouseConfig.Bundle != "" {
+		return nil, fmt.Errorf("Support for 'bundle' in InitConfiguration was removed. Please use 'deckhouse' ModuleConfig's settings instead.")
+	}
+
+	if metaConfig.DeckhouseConfig.LogLevel != "" {
+		return nil, fmt.Errorf("Support for 'logLevel' in InitConfiguration was removed. Please use 'deckhouse' ModuleConfig's settings instead.")
 	}
 
 	clusterConfig, err := metaConfig.ClusterConfigYAML()

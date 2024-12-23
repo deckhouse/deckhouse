@@ -17,21 +17,21 @@ limitations under the License.
 package d8updater
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 
 	"github.com/deckhouse/deckhouse/go_lib/updater"
 )
 
 const d8ReleaseBlockedMetricName = "d8_release_info"
 
-func newMetricsUpdater(metricStorage *metric_storage.MetricStorage) *metricsUpdater {
+func newMetricsUpdater(metricStorage *metricstorage.MetricStorage) *metricsUpdater {
 	return &metricsUpdater{
 		metricStorage: metricStorage,
 	}
 }
 
 type metricsUpdater struct {
-	metricStorage *metric_storage.MetricStorage
+	metricStorage *metricstorage.MetricStorage
 }
 
 func (mu *metricsUpdater) UpdateReleaseMetric(name string, metricLabels updater.MetricLabels) {

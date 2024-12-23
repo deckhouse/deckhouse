@@ -70,15 +70,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/ee/modules/021-cni-cilium/images/egress-gateway-agent"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/ee/modules/025-static-routing-manager/images/agent"
   labels:
   - "type/dependencies"
@@ -98,42 +89,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/ee/modules/030-cloud-provider-vcd/images/cloud-data-discoverer"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/ee/modules/030-cloud-provider-vsphere/images/cloud-data-discoverer"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/ee/modules/030-cloud-provider-zvirt/images/capz-controller-manager/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/ee/modules/030-cloud-provider-zvirt/images/cloud-controller-manager/src"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/ee/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -169,7 +124,61 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/modules/610-service-with-healthchecks/images/artifact"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/650-runtime-audit-engine/hack/far-converter"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/se-plus/modules/030-cloud-provider-vsphere/images/cloud-data-discoverer"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/capz-controller-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-controller-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/se-plus/modules/030-cloud-provider-zvirt/images/cloud-data-discoverer"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -421,15 +430,6 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/042-kube-dns/images/resolv-watcher"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
   directory: "/modules/042-kube-dns/images/sts-pods-hosts-appender-init-container"
   labels:
   - "type/dependencies"
@@ -666,6 +666,15 @@ updates:
 # pip
 - package-ecosystem: "pip"
   directory: "/ee/modules/650-runtime-audit-engine/images/rules-loader"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "pip"
+  directory: "/modules/002-deckhouse/images/webhook-handler"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

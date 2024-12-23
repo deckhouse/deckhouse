@@ -24,12 +24,8 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-var (
-	deprecatedCRDs = []string{
-		"externalmodulesources.deckhouse.io",
-		"externalmodulereleases.deckhouse.io",
-	}
-)
+// list of CRDs to delete, like "externalmodulesources.deckhouse.io"
+var deprecatedCRDs = []string{}
 
 type kubeClient interface {
 	kubernetes.Interface

@@ -6,6 +6,9 @@ spec:
   description: This is an example from the Deckhouse documentation.
   projectTemplateName: secure
   parameters:
+    allowedUIDs:
+      min: 1
+      max: 2
     resourceQuota:
       requests:
         cpu: 1

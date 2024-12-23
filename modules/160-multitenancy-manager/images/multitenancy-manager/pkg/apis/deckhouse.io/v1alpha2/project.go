@@ -25,18 +25,29 @@ const (
 	ProjectStateError     = "Error"
 	ProjectStateDeploying = "Deploying"
 	ProjectStateDeployed  = "Deployed"
-)
 
-const (
 	ConditionTypeProjectTemplateFound     = "ProjectTemplateFound"
 	ConditionTypeProjectValidated         = "Validated"
 	ConditionTypeProjectResourcesUpgraded = "ResourcesUpgraded"
-)
 
-const (
 	ConditionTypeTrue    = "True"
 	ConditionTypeFalse   = "False"
 	ConditionTypeUnknown = "Unknown"
+
+	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
+
+	ProjectFinalizer = "projects.deckhouse.io/project-exists"
+
+	ProjectLabelVirtualProject = "projects.deckhouse.io/virtual-project"
+
+	ResourceLabelProject  = "projects.deckhouse.io/project"
+	ResourceLabelTemplate = "projects.deckhouse.io/project-template"
+
+	ResourceLabelHeritage        = "heritage"
+	ResourceHeritageMultitenancy = "multitenancy-manager"
+	ResourceHeritageDeckhouse    = "deckhouse"
+
+	ReleaseLabelHashsum = "hashsun"
 )
 
 const (
@@ -181,6 +192,15 @@ type Condition struct {
 	Type               string      `json:"type,omitempty"`
 	Status             string      `json:"status,omitempty"`
 	Message            string      `json:"message,omitempty"`
+}
+
+func NewCondition(condType, condStatus, condMessage string) *Condition {
+	return &Condition{
+		Type:               condType,
+		Status:             condStatus,
+		Message:            condMessage,
+		LastTransitionTime: metav1.Now(),
+	}
 }
 
 func (c *Condition) DeepCopy() *Condition {

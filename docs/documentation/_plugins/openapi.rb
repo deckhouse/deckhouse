@@ -1,3 +1,5 @@
+require 'cgi'
+
 CONVERTER = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
 
 module Jekyll
@@ -355,7 +357,7 @@ module Jekyll
         end
 
         if attributes.has_key?('pattern')
-            result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <code class="resources__attrs_content">%s</code></p>),get_i18n_term("pattern").capitalize, attributes['pattern']))
+            result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <code class="resources__attrs_content">%s</code></p>),get_i18n_term("pattern").capitalize, CGI.escapeHTML(attributes['pattern'])  ))
         end
 
         if attributes.has_key?('minLength') || attributes.has_key?('maxLength')

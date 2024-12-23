@@ -46,9 +46,21 @@
         },
         {
           "title": "Документация",
-          "url": "/products/kubernetes-platform/modules/virtualization/stable/",
+          "url": "/products/virtualization-platform/documentation/",
           "target": "",
           "rel": "doc"
+        },
+        {
+          "title": "Быстрый старт",
+          "url": "/products/virtualization-platform/gs/bm/",
+          "target": "",
+          "rel": ""
+        },
+        {
+          "title": "Подготовка к Production",
+          "url": "/products/virtualization-platform/guides/production.html",
+          "target": "",
+          "rel": ""
         }
       ]
     },
@@ -113,14 +125,14 @@
       ]
     },
     {
-      "title": "Delivery",
-      "url": "/products/delivery/",
+      "title": "Delivery Kit",
+      "url": "/products/delivery-kit/",
       "target": "",
       "rel": "",
       "items": [
         {
           "title": "О продукте",
-          "url": "/products/delivery/",
+          "url": "/products/delivery-kit/",
           "target": "",
           "rel": ""
         },

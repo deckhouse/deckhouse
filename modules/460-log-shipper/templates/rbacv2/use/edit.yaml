@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: log-shipper
-    rbac.deckhouse.io/aggregate-to-role: manager
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
     rbac.deckhouse.io/kind: use
   name: d8:use:capability:module:log-shipper:edit
 rules:

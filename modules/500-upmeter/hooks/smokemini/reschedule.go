@@ -19,7 +19,6 @@ package smokemini
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/scheduler"
 	"github.com/deckhouse/deckhouse/modules/500-upmeter/hooks/smokemini/internal/snapshot"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -157,7 +157,7 @@ func reschedule(input *go_hook.HookInput) error {
 	x, newSts, err := sched.Schedule(state, nodes)
 	if err != nil {
 		if errors.Is(err, scheduler.ErrSkip) {
-			logger.Info("scheduler skip", slog.String("error", err.Error()))
+			logger.Info("scheduler skip", log.Err(err))
 			return nil
 		}
 		return err
@@ -207,7 +207,7 @@ func parseBoolSnapshot(rs []go_hook.FilterResult) []bool {
 	return ret
 }
 
-func getSmokeMiniImage(values *go_hook.PatchableValues) string {
+func getSmokeMiniImage(values go_hook.PatchableValuesCollector) string {
 	var (
 		registry = values.Get("global.modulesImages.registry.base").String()
 		digest   = values.Get("global.modulesImages.digests.upmeter.smokeMini").String()
@@ -215,10 +215,10 @@ func getSmokeMiniImage(values *go_hook.PatchableValues) string {
 	return registry + "@" + digest
 }
 
-func getSmokeMiniStorageClass(values *go_hook.PatchableValues, storageClassSnap []go_hook.FilterResult) string {
+func getSmokeMiniStorageClass(values go_hook.PatchableValuesCollector, storageClassSnap []go_hook.FilterResult) string {
 	var (
 		k8s = getK8sDefaultStorageClass(storageClassSnap)
-		d8  = values.Get("global.storageClass").String()
+		d8  = values.Get("global.modules.storageClass").String()
 		sm  = values.Get("upmeter.smokeMini.storageClass").String()
 	)
 	return firstNonEmpty(sm, d8, k8s, snapshot.DefaultStorageClass)
@@ -237,7 +237,7 @@ func firstNonEmpty(xs ...string) string {
 
 // smokeMiniEnabled returns true if smoke-mini is not disabled. This function is to avoid reversed
 // boolean naming.
-func smokeMiniEnabled(v *go_hook.PatchableValues) bool {
+func smokeMiniEnabled(v go_hook.PatchableValuesCollector) bool {
 	disabled := v.Get("upmeter.smokeMiniDisabled").Bool()
 	return !disabled
 }

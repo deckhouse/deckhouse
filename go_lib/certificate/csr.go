@@ -24,7 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
-func GenerateCSR(logger go_hook.ILogger, cn string, options ...Option) (csrPEM, key []byte, err error) {
+func GenerateCSR(logger go_hook.Logger, cn string, options ...Option) ([]byte, []byte, error) {
 	request := &csr.CertificateRequest{
 		CN:         cn,
 		KeyRequest: csr.NewKeyRequest(),
@@ -43,12 +43,12 @@ func GenerateCSR(logger go_hook.ILogger, cn string, options ...Option) (csrPEM, 
 	log.SetOutput(&buf)
 	defer log.SetOutput(logWriter)
 
-	csrPEM, key, err = g.ProcessRequest(request)
+	csrPEM, key, err := g.ProcessRequest(request)
 	if err != nil && logger != nil {
 		logger.Error(buf.String())
 	}
 
-	return
+	return csrPEM, key, err
 }
 
 // Validator does nothing and will never return an error. It exists because creating a
