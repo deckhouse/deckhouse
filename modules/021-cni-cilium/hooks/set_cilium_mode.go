@@ -94,12 +94,12 @@ func setCiliumMode(input *go_hook.HookInput) error {
 		}
 	}
 
-	value, ok = input.ConfigValues.GetOk("cniCilium.masqueradeMode")
+	value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
 	if ok {
 		input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
 	}
 
-	value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
+	value, ok = input.ConfigValues.GetOk("cniCilium.tunnelMode")
 	if ok {
 		switch value.String() {
 		case "VXLAN":
