@@ -14,7 +14,7 @@ func TestConfigLoad(t *testing.T) {
 	configText :=
 		`
 ca: /system_registry_pki/ca.crt
-sleep: 10s
+sleep: 10
 users:
   puller:
     name: puller-user
