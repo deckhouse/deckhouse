@@ -154,13 +154,21 @@ func (s *apiServer) handleStaticPodPost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if resp.Mirrorer, err = model.processTemplate(
-		mirrorerConfigTemplateName,
-		mirrorerConfigPath,
-		&model.Hashes.MirrorerTemplate,
-	); err != nil {
-		sendInternalError("Error processing Mirrorer template", err)
-		return
+	if model.Registry.Mode == RegistryModeDetached {
+		if resp.Mirrorer, err = model.processTemplate(
+			mirrorerConfigTemplateName,
+			mirrorerConfigPath,
+			&model.Hashes.MirrorerTemplate,
+		); err != nil {
+			sendInternalError("Error processing Mirrorer template", err)
+			return
+		}
+	} else {
+		// Delete the mirrorer config file
+		if resp.Mirrorer, err = deleteFile(mirrorerConfigPath); err != nil {
+			sendInternalError("Error deleting Mirrorer config file", err)
+			return
+		}
 	}
 
 	if resp.Pod, err = model.processTemplate(

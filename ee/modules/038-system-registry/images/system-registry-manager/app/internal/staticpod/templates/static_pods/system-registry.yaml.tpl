@@ -11,7 +11,9 @@ metadata:
   annotations:
     authConfigHash: {{ quote .Hashes.AuthTemplate }}
     distributionConfigHash: {{ quote .Hashes.DistributionTemplate }}
+    {{- if eq .Registry.Mode "Detached" }}
     mirrorerConfigHash: {{ quote .Hashes.MirrorerTemplate }}
+    {{- end }}
     caCertHash: {{ quote .Hashes.CACert }}
     authCertHash: {{ quote .Hashes.AuthCert }}
     authKeyHash: {{ quote .Hashes.AuthKey }}
@@ -68,19 +70,18 @@ spec:
         name: auth-config-volume
       - mountPath: /system_registry_pki
         name: system-registry-pki-volume
+  {{- if and (eq .Registry.Mode "Detached") (gt (len .Mirrorer.Upstreams) 0) false }}
   - name: mirrorer
     image: {{ .Images.Mirrorer }}
     imagePullPolicy: IfNotPresent
-    env:
-      - name: HOST_IP
-        value: {{ .Address }}
-      - name: NODE_NAME
-        value: {{ .NodeName }}
+    args:
+      - /config/config.yaml
     volumeMounts:
       - mountPath: /config
         name: mirrorer-config-volume
       - mountPath: /system_registry_pki
         name: system-registry-pki-volume
+  {{- end }}
   priorityClassName: system-node-critical
   volumes:
   # PKI volumes
@@ -101,10 +102,12 @@ spec:
     hostPath:
       path: /etc/kubernetes/system-registry/distribution_config
       type: DirectoryOrCreate
+  {{- if eq .Registry.Mode "Detached" }}
   - name: mirrorer-config-volume
     hostPath:
       path: /etc/kubernetes/system-registry/mirrorer
       type: DirectoryOrCreate
+  {{- end }}
   # Data volume
   - name: distribution-data-volume
     hostPath:
