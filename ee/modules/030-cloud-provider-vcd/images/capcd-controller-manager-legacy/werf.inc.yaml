@@ -1,38 +1,51 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
+  {{- $image_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-fromImage: common/distroless
-import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-    add: /cluster-api-provider-cloud-director
-    to: /cluster-api-provider-cloud-director
-    before: setup
-docker:
-  ENTRYPOINT: ["/cluster-api-provider-cloud-director"]
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
 git:
   - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
     stageDependencies:
       install:
         - '**/*'
+shell:
+  install:
+    - export VERSION="v1.2.0"
+    - git clone --depth 1 --branch $VERSION {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
+    - cd /src
+    - git apply /patches/*.patch --verbose
+    - rm -rf .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+fromImage: common/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+    add: /cluster-api-provider-cloud-director
+    to: /cluster-api-provider-cloud-director
+    before: setup
+docker:
+  ENTRYPOINT: ["/cluster-api-provider-cloud-director"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_GOLANG_20_BUSTER }}
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+    add: /src
+    to: /src
+    before: install
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
 shell:
-  beforeInstall:
-    - apt update && apt install -y ca-certificates git
   install:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY={{ $.GOPROXY }}
     - export VERSION="v1.2.0"
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone --depth 1 --branch ${VERSION} {{ $.SOURCE_REPO }}/vmware/cluster-api-provider-cloud-director /src
     - cd /src
-    - git apply /patches/*.patch --verbose
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/vmware/cluster-api-provider-cloud-director/release.Version=${VERSION}" -o /cluster-api-provider-cloud-director
     - chown 64535:64535 /cluster-api-provider-cloud-director
     - chmod 0755 /cluster-api-provider-cloud-director
