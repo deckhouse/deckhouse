@@ -48,7 +48,6 @@ shell:
     - find /patches -name '*.patch' | xargs git apply --verbose
     - rm -rf vendor
     - rm -rf .git
-    - go mod tidy
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
@@ -66,6 +65,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src
+  - go mod download
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X version.Version={{ $value.csi.zvirt }}" -o /ovirt-csi-driver ./cmd/ovirt-csi-driver/ovirt-csi-driver.go
  {{- end }}
 {{- end }}
