@@ -32,12 +32,6 @@ resource "ovirt_vm" "master_vm" {
       placement_policy_host_ids
     ]
   }
-
-  timeouts {
-    create = var.resourceManagementTimeout
-    delete = var.resourceManagementTimeout
-    update = var.resourceManagementTimeout
-  }
 }
 
 data "ovirt_disk_attachments" "master-vm-boot-disk-attachment" {
