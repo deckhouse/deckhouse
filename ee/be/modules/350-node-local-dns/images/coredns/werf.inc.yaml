@@ -1,14 +1,64 @@
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/350-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src
+  - git clone --depth 1 {{ $.SOURCE_REPO }}/coredns/coredns.git --branch "v1.12.0" /src
+  - git apply /patches/*.patch --verbose
+  - rm -r .git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+git:
+- add: /{{ $.ModulePath }}modules/350-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*'
+  includePaths:
+    - '*.sh'
+mount:
+- fromPath: ~/go-pkg-cache
+  to: /go/pkg
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache make bash rsync
+  install:
+  - export GO_VERSION=${GOLANG_VERSION}
+  - export GOPROXY={{ $.GOPROXY }}
+  - cd /src
+  - go mod tidy
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -ldflags="-s -w" -o coredns
+  - chmod -R 0700 /src/coredns
+  - chown -R 64535:64535 /src/coredns
+  - chmod -R 0700 /src/*.sh
+  - chown -R 64535:64535 /src/*.sh
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
   includePaths:
@@ -19,45 +69,29 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-coredns-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/coredns
   to: /coredns
+  before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /src
+  to: /
+  includePaths:
+  - '**/*.sh'
   before: setup
 docker:
   ENTRYPOINT: ["/coredns"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-coredns-artifact
-from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
-shell:
-  beforeInstall:
-  - apk add --no-cache git openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - mkdir -p /src
-  - git clone --depth 1 --branch v1.9.3 {{ $.SOURCE_REPO }}/coredns/coredns.git /src
-  - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -ldflags="-s -w" -o coredns
-  - chmod -R 0700 /src/coredns
-  - chown -R 64535:64535 /src/coredns
----
 {{ $corednsBinaries := "/usr/bin/dig /bin/echo /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
-git:
-- add: /{{ $.ModulePath }}modules/350-{{ $.ModuleName }}/images/{{ $.ImageName }}
-  to: /relocate
-  stageDependencies:
-    install:
-    - '**/*'
-  includePaths:
-    - '*.sh'
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+fromImage: common/relocate-artifact
+final: false
 shell:
+  beforeInstall:
+    - apt-get update -y
+    - apt-get install -y bind-utils curl jq
+    - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
   install:
     - /binary_replace.sh -i "{{ $corednsBinaries }}" -o /relocate
     - |
