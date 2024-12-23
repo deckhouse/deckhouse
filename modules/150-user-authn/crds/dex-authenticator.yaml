@@ -167,7 +167,7 @@ spec:
                         description: |-
                           The value that the toleration must match.
 
-                          Must be empty if the operator parameter is set to `Exists`.
+                          Must be empty if the `operator` parameter is set to `Exists`.
                         type: string
                     type: object
                   type: array
@@ -335,7 +335,7 @@ spec:
                         description: |-
                           The value that the toleration must match.
 
-                          Must be empty if the operator parameter is set to `Exists`.
+                          Must be empty if the `operator` parameter is set to `Exists`.
                         type: string
                     type: object
                   type: array
