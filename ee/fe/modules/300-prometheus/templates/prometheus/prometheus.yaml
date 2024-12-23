@@ -54,11 +54,7 @@ metadata:
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus")) | nindent 2 }}
 spec:
-{{- if (.Values.global.enabledModules | has "prompp") }}
-  replicas: 1
-{{- else }}
   replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
-{{- end }}
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
 {{- if (.Values.global.enabledModules | has "prompp") }}
@@ -176,7 +172,7 @@ spec:
               app.kubernetes.io/name: prometheus
               prometheus: longterm
           topologyKey: kubernetes.io/hostname
-{{- if and (include "helm_lib_ha_enabled" .) (not (.Values.global.enabledModules | has "prompp")) }}
+{{- if (include "helm_lib_ha_enabled" .) }}
       requiredDuringSchedulingIgnoredDuringExecution:
       - labelSelector:
           matchLabels:
@@ -186,12 +182,10 @@ spec:
 {{- end }}
   scrapeInterval: {{ .Values.prometheus.scrapeInterval | default "30s"}}
   evaluationInterval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
-{{- if not (.Values.global.enabledModules | has "prompp") }}
   # Empty field because when scraping metrics via the Federation API,
   # labels from externalLabels are being added,
   # which makes the series in long-term storage and regular Prometheus different
   externalLabels: {}
-{{- end }}
   prometheusExternalLabelName: ""
   replicaExternalLabelName: ""
   serviceAccountName: prometheus
@@ -237,7 +231,6 @@ spec:
     matchLabels:
       prometheus: main
       component: rules
-{{- if not (.Values.global.enabledModules | has "prompp") }}
 {{- $externalLabels := .Values.prometheus.externalLabels }}
 {{- $externalLabels = merge (dict "prometheus" "deckhouse") $externalLabels }}
 {{- if .Values.prometheus.internal.remoteWrite }}
@@ -287,9 +280,6 @@ spec:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- else }}
-  remoteWrite: []
-{{- end }}
   additionalScrapeConfigs:
     name: prometheus-main-additional-configs
     key: scrapes.yaml
@@ -313,7 +303,6 @@ spec:
 {{- end }}
 {{- if or $alertmanagers_byservice $alertmanagers_internal }}
   alerting:
-{{- if not (.Values.global.enabledModules | has "prompp") }}
     alertmanagers:
   {{- if $alertmanagers_byservice }}
     {{- range .Values.prometheus.internal.alertmanagers.byService }}
@@ -335,9 +324,6 @@ spec:
         insecureSkipVerify: true
     {{- end }}
   {{- end }}
-{{- end }}
-{{- else }}
-  alerting: []
 {{- end }}
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/
