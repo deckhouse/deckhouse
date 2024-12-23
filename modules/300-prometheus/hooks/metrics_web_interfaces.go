@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -44,30 +43,28 @@ import (
 //     2. Relative path to grafana container (/public/img/mylogo.png)
 //     3. Data URI base64 string
 
-var (
-	_ = sdk.RegisterFunc(&go_hook.HookConfig{
-		Queue: "/modules/prometheus/web_interfaces",
-		Kubernetes: []go_hook.KubernetesConfig{
-			{
-				Name:       "ingresses",
-				ApiVersion: "networking.k8s.io/v1",
-				Kind:       "Ingress",
-				LabelSelector: &v1.LabelSelector{
-					MatchLabels: map[string]string{
-						"heritage": "deckhouse",
-					},
-					MatchExpressions: []v1.LabelSelectorRequirement{
-						{
-							Key:      "module",
-							Operator: v1.LabelSelectorOpExists,
-						},
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue: "/modules/prometheus/web_interfaces",
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "ingresses",
+			ApiVersion: "networking.k8s.io/v1",
+			Kind:       "Ingress",
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"heritage": "deckhouse",
+				},
+				MatchExpressions: []v1.LabelSelectorRequirement{
+					{
+						Key:      "module",
+						Operator: v1.LabelSelectorOpExists,
 					},
 				},
-				FilterFunc: filterIngress,
 			},
+			FilterFunc: filterIngress,
 		},
-	}, domainMetricHandler)
-)
+	},
+}, domainMetricHandler)
 
 type exportedWebInterface struct {
 	Icon string
@@ -160,8 +157,7 @@ func domainMetricHandler(input *go_hook.HookInput) error {
 		domain := sn.(exportedWebInterface)
 
 		if globalHTTPSMode == "OnlyInURI" {
-			re := regexp.MustCompile(`^http://`)
-			domain.URL = re.ReplaceAllString(domain.URL, "https://")
+			domain.URL = strings.ReplaceAll(domain.URL, "http://", "https://")
 		}
 
 		input.MetricsCollector.Set(
