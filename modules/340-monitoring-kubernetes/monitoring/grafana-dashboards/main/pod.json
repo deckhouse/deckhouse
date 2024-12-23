@@ -24,7 +24,7 @@
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 117,
+  "id": 10,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -55,7 +55,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -626,7 +627,6 @@
         "y": 0
       },
       "id": 141,
-      "links": [],
       "options": {
         "cellHeight": "sm",
         "footer": {
@@ -639,7 +639,7 @@
         },
         "showHeader": true
       },
-      "pluginVersion": "10.2.2",
+      "pluginVersion": "10.4.5",
       "targets": [
         {
           "datasource": {
@@ -1044,7 +1044,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           }
@@ -1058,7 +1059,6 @@
         "y": 9
       },
       "id": 47,
-      "links": [],
       "options": {
         "alignValue": "left",
         "legend": {
@@ -1141,7 +1141,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1191,7 +1192,6 @@
         "y": 17
       },
       "id": 166,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -1277,7 +1277,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1327,7 +1328,6 @@
         "y": 17
       },
       "id": 167,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -1428,7 +1428,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1478,7 +1479,6 @@
         "y": 22
       },
       "id": 2,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1569,7 +1569,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -1645,7 +1646,6 @@
         "y": 22
       },
       "id": 3,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1746,7 +1746,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1796,7 +1797,6 @@
         "y": 31
       },
       "id": 76,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -1886,7 +1886,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1936,7 +1937,6 @@
         "y": 31
       },
       "id": 123,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -2024,7 +2024,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2074,7 +2075,6 @@
         "y": 39
       },
       "id": 36,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -2370,7 +2370,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2450,7 +2451,6 @@
         "y": 47
       },
       "id": 7,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -2514,7 +2514,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 56
       },
       "id": 12,
       "panels": [],
@@ -2569,7 +2569,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2616,10 +2617,9 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 66
+        "y": 57
       },
       "id": 6,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -2704,7 +2704,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
@@ -2797,10 +2798,9 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 66
+        "y": 57
       },
       "id": 8,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -2904,7 +2904,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -2951,10 +2952,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 75
+        "y": 66
       },
       "id": 106,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -3040,7 +3040,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -3087,10 +3088,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 75
+        "y": 66
       },
       "id": 136,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -3137,7 +3137,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 74
       },
       "id": 16,
       "panels": [
@@ -3506,7 +3506,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 84
+        "y": 75
       },
       "id": 25,
       "panels": [],
@@ -3528,7 +3528,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "bits/sec(SI)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -3572,11 +3572,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
-          "unit": "Bps"
+          "unit": "bps"
         },
         "overrides": [
           {
@@ -3612,10 +3613,9 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 85
+        "y": 76
       },
       "id": 27,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3633,13 +3633,23 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_receive_bytes_total{pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_receive_bytes_total{pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])*8)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
+          "range": true,
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "# Return -1 for Pods with 'hostNetwork: true' to use in value mappings.\nkube_pod_info{host_network=\"true\",namespace=\"$namespace\", pod=\"$pod\"}\n*\n-1",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3648,7 +3658,6 @@
         }
       ],
       "title": "Receive",
-      "transformations": [],
       "type": "timeseries"
     },
     {
@@ -3666,7 +3675,7 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "bits/sec(SI)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -3710,11 +3719,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               }
             ]
           },
-          "unit": "Bps"
+          "unit": "bps"
         },
         "overrides": [
           {
@@ -3750,10 +3760,9 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 85
+        "y": 76
       },
       "id": 62,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3773,13 +3782,23 @@
       "pluginVersion": "8.5.13",
       "targets": [
         {
-          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_transmit_bytes_total{pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval]))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "# Select Pods with hostNetwork: false.\nkube_pod_info{host_network=\"false\",namespace=\"$namespace\", pod=\"$pod\"}\n* on(pod)\n# Sum data rate for all interfaces in the Pod.\nsum by(pod) (rate(container_network_transmit_bytes_total{pod=\"$pod\", namespace=\"$namespace\"}[$__rate_interval])*8)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ pod }}",
+          "range": true,
           "refId": "A"
         },
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
           "expr": "# Return -1 for Pods with 'hostNetwork: true' to use in value mappings.\nkube_pod_info{host_network=\"true\",namespace=\"$namespace\", pod=\"$pod\"}\n*\n-1",
           "format": "time_series",
           "intervalFactor": 1,
@@ -3788,7 +3807,6 @@
         }
       ],
       "title": "Transmit",
-      "transformations": [],
       "type": "timeseries"
     },
     {
@@ -3801,7 +3819,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 92
+        "y": 83
       },
       "id": 30,
       "panels": [],
@@ -3856,7 +3874,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -3903,10 +3922,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 93
+        "y": 84
       },
       "id": 32,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -3994,7 +4012,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -4041,10 +4060,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 93
+        "y": 84
       },
       "id": 63,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4094,7 +4112,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 101
+        "y": 92
       },
       "id": 150,
       "panels": [],
@@ -4150,7 +4168,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -4197,10 +4216,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 102
+        "y": 93
       },
       "id": 148,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4287,7 +4305,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -4334,10 +4353,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 102
+        "y": 93
       },
       "id": 151,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4417,7 +4435,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -4433,10 +4452,9 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 110
+        "y": 101
       },
       "id": 152,
-      "links": [],
       "options": {
         "legend": {
           "calcs": [
@@ -4474,7 +4492,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 118
+        "y": 109
       },
       "id": 156,
       "panels": [
@@ -4974,7 +4992,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 38,
+  "schemaVersion": 39,
   "tags": [
     "main"
   ],
@@ -5062,7 +5080,7 @@
       {
         "allValue": "",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -5097,7 +5115,7 @@
       {
         "allValue": ".*",
         "current": {
-          "selected": false,
+          "selected": true,
           "text": [
             "All"
           ],
@@ -5234,6 +5252,6 @@
   "timezone": "",
   "title": "Namespace / Controller / Pod",
   "uid": "m41rB4yiz1",
-  "version": 2,
+  "version": 1,
   "weekStart": ""
 }
