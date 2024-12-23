@@ -26,7 +26,7 @@
         max by (uid) (label_replace(ebpf_exporter_oom_kills{cgroup_path=~".*burstable.*"}, "uid", "$1", "cgroup_path", ".+burstable/pod(.*)"))
       )
   - alert: EbpfExporterKernelNotSupported
-    expr: min by (job) (ebpf_exporter_btf_support_unavailable_in_kernel{job="ebpf-exporter"}) == 1
+    expr: min by (job, node) (ebpf_exporter_btf_support_unavailable_in_kernel{job="ebpf-exporter"}) == 1
     for: 3m
     labels:
       severity_level: "8"
