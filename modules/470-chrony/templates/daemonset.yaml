@@ -360,7 +360,8 @@ spec:
   {{- end }}
       - image: {{ include "helm_lib_module_image" (list . "chronyExporter") }}
         name: chrony-exporter
-        {{- include "helm_lib_module_container_security_context_privileged" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+          fsGroup: 64535
         args:
         - '--web.listen-address=127.0.0.1:4228'
         - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
