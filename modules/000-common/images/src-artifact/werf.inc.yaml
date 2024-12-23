@@ -1,5 +1,5 @@
 ---
-image: {{ $.ModuleName }}/src-artifact
+image: {{ .ModuleName }}/src-artifact
 fromImage: common/alt-p11-artifact
 final: false
 shell:

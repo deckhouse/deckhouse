@@ -14,7 +14,7 @@ docker:
   ENTRYPOINT: ["/csi-node-driver-registrar"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.registrar }} {{ $.SOURCE_REPO }}/kubernetes-csi/node-driver-registrar.git /src

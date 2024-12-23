@@ -14,7 +14,7 @@ docker:
   ENTRYPOINT: ["/csi-resizer"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.resizer }} {{ $.SOURCE_REPO }}/kubernetes-csi/external-resizer.git /src

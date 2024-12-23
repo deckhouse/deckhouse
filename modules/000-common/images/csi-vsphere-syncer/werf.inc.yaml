@@ -13,7 +13,7 @@ docker:
   ENTRYPOINT: ["/bin/vsphere-syncer"]
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 shell:
   install:
   - git clone --depth 1 --branch {{ $value.csi.vsphere }} {{ $.SOURCE_REPO }}/kubernetes-sigs/vsphere-csi-driver.git /src

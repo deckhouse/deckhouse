@@ -1,6 +1,6 @@
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 shell:
   install:
   - git clone --branch 7.4.0 --depth 1 {{ $.SOURCE_REPO }}/redis/redis.git /src

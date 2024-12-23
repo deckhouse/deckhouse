@@ -8,7 +8,7 @@ import:
   before: setup
 ---
 artifact: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+fromImage: common/src-artifact
 shell:
   install:
   - git clone {{ $.SOURCE_REPO }}/kubernetes-sigs/iptables-wrappers.git /src
