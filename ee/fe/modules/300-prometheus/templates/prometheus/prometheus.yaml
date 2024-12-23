@@ -59,12 +59,9 @@ spec:
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
 {{- if (.Values.global.enabledModules | has "prompp") }}
   image: {{ include "helm_lib_module_image" (list (include "prompp-context" . | fromYaml) "prompp") }}
-{{- else }}
-  image: {{ include "helm_lib_module_image" (list . "prometheus") }}
-{{- end }}
-{{- if (.Values.global.enabledModules | has "prompp") }}
   version: v2.53.2
 {{- else }}
+  image: {{ include "helm_lib_module_image" (list . "prometheus") }}
   version: v2.45.2
 {{- end }}
   enableRemoteWriteReceiver: true
