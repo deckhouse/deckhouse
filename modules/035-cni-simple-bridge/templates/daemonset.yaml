@@ -74,7 +74,7 @@ spec:
           runAsNonRoot: false
           runAsUser: 0
         command:
-        - /bin/simple-bridge
+        - /cni-wrapper
         env:
         {{- if hasKey .Values.global "clusterConfiguration" }}
           {{- if .Values.global.clusterConfiguration.cloud }}

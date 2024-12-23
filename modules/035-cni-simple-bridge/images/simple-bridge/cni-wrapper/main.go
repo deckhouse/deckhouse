@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	wrapperAim = "/sbin/iptables-wrapper"
+	wrapperAim = "/bin/simple-bridge"
 )
 
 func runCNI(done chan<- error, pidChan chan<- int) {
