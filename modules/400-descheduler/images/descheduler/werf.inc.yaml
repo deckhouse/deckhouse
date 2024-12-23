@@ -33,6 +33,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go mod download -x
+  - go mod vendor
   - go build -ldflags "-s -w -X sigs.k8s.io/descheduler/pkg/version.version={{ $version }}" -o /descheduler sigs.k8s.io/descheduler/cmd/descheduler
   - chown 64535:64535 /descheduler
   - chmod 0700 /descheduler
