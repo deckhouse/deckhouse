@@ -3,10 +3,7 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": {
-          "type": "datasource",
-          "uid": "grafana"
-        },
+        "datasource": "-- Grafana --",
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -24,10 +21,7 @@
   "panels": [
     {
       "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1005,10 +999,7 @@
         "mode": "spectrum"
       },
       "dataFormat": "tsbuckets",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -1918,10 +1909,7 @@
     },
     {
       "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -3533,10 +3521,7 @@
         "mode": "spectrum"
       },
       "dataFormat": "tsbuckets",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -3636,10 +3621,7 @@
     },
     {
       "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -4010,10 +3992,7 @@
         "mode": "spectrum"
       },
       "dataFormat": "tsbuckets",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
+      "datasource": "$ds_prometheus",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -4430,8 +4409,7 @@
     ]
   },
   "timezone": "",
-  "title": "DNS test",
-  "uid": "HrJTjvuizf",
-  "version": 1,
-  "weekStart": ""
+  "title": "DNS (node local)",
+  "uid": "HrJTjvuizfeDs",
+  "version": 3
 }
