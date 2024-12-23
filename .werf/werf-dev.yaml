@@ -8,6 +8,7 @@ git:
     setup:
       - '**/*'
   includePaths:
+  - candi
   - modules
   - shell_lib.sh
   - shell_lib
@@ -22,7 +23,6 @@ git:
     setup:
       - '**/*'
   includePaths:
-  - candi
   - global-hooks
   - deckhouse-controller/entrypoint.sh
   - deckhouse-controller/crds/*.yaml
@@ -107,6 +107,7 @@ shell:
     ln -s /chroot/deckhouse/shell_lib /deckhouse/shell_lib
     ln -s /chroot/deckhouse/shell_lib.sh /deckhouse/shell_lib.sh
     ln -s /chroot/deckhouse/shell-operator /deckhouse/shell-operator
+    ln -s /chroot/deckhouse/candi /deckhouse/candi
     ln -s /chroot/usr/bin/jq /usr/bin/jq
     ln -s /chroot/usr/local/bin /usr/local/bin
     mknod -m 0666 /chroot/dev/null c 1 3
