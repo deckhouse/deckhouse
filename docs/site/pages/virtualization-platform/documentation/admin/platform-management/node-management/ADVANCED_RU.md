@@ -126,7 +126,7 @@ spec:
 
 ## Как использовать containerd с поддержкой Nvidia GPU?
 
-1. Создайте отдельную NodeGroup для GPU-нод:
+1. Создайте отдельную NodeGroup для GPU-узлов:
 
    ```yaml
    apiVersion: deckhouse.io/v1
